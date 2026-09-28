@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   distributedPackExchange,
   distributedPackSpellAreaExchange,
+  expectedGroupActivationSchedule,
   expectedPackSize,
+  expectedSummonRoster,
   expectedSpellPackCoverage,
   ordinaryPackSizeDistribution,
   packExchange,
@@ -55,6 +57,77 @@ describe('simultaneous pack arithmetic', () => {
     expect(result.seconds).toBe(12.5);
     expect(result.expectedDamageTaken).toBe(2.5);
     expect(result.expectedGotHitInterruptions).toBe(0.625);
+  });
+
+  it('keeps group AI off byte-identical and activates ordinary members in visibility waves', () => {
+    const legacy = packExchange({ ...inventedDuel, packSize: 3 });
+    const explicitOff = packExchange({
+      ...inventedDuel,
+      packSize: 3,
+      groupAi: { policy: 'off' },
+    });
+    const expected = packExchange({
+      ...inventedDuel,
+      packSize: 3,
+      groupAi: {
+        policy: 'expected',
+        activationRelation: 'ordinary',
+        effects: { summoning: false, fallenFear: false },
+      },
+    });
+
+    expect(JSON.stringify(explicitOff)).toBe(JSON.stringify(legacy));
+    expect(expectedGroupActivationSchedule(3, 'ordinary')).toEqual([0, 1, 2]);
+    expect(expectedGroupActivationSchedule(3, 'unique-independent')).toEqual([0, 1, 2]);
+    expect(expectedGroupActivationSchedule(3, 'unique-leashed')).toEqual([0, 0, 0]);
+    expect(expected.expectedDamageTaken).toBeLessThan(legacy.expectedDamageTaken);
+    expect(expected.groupAi?.expectedActivationWaveSeconds).toBe(2);
+  });
+
+  it('adds source-rate summon arrivals when summoning is the only enabled group effect', () => {
+    const fixedRoster = packExchange({ ...inventedDuel, packSize: 1 });
+    const summoned = packExchange({
+      ...inventedDuel,
+      packSize: 1,
+      groupAi: {
+        policy: 'expected',
+        routine: 'SkeletonKing',
+        intelligence: 0,
+        distanceToEnemy: 4,
+        effects: { concurrency: false, fallenFear: false },
+      },
+    });
+    const hork = expectedSummonRoster({
+      routine: 'HorkDemon',
+      intelligence: 2,
+      distanceToEnemy: 4,
+      engagementSeconds: 1,
+      expansion: 'hellfire',
+      remainingMonsterCapacity: 10,
+    });
+
+    expect(summoned.groupAi?.expectedExtraMembers).toBe(2);
+    expect(summoned.groupAi?.expectedRosterSize).toBe(3);
+    expect(summoned.seconds).toBeGreaterThan(fixedRoster.seconds);
+    expect(hork.probabilityPerEligibleDecision).toBe(0.47);
+    expect(hork.expectedExtraMembers).toBe(0.47);
+  });
+
+  it('removes Fallen attacker-time after each death when fear is the only enabled group effect', () => {
+    const baseline = packExchange({ ...inventedDuel, packSize: 3 });
+    const feared = packExchange({
+      ...inventedDuel,
+      packSize: 3,
+      groupAi: {
+        policy: 'expected',
+        routine: 'Fallen',
+        monsterLevel: 1,
+        effects: { concurrency: false, summoning: false },
+      },
+    });
+
+    expect(feared.groupAi?.fallenFearAttackerSecondsRemoved).toBeGreaterThan(0);
+    expect(feared.expectedDamageTaken).toBeLessThan(baseline.expectedDamageTaken);
   });
 
   it('focuses closing members at their current distances and removes pre-contact kills', () => {

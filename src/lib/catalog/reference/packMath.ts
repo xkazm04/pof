@@ -8,9 +8,84 @@ export const ORDINARY_UNIQUE_MINIONS = 8;
 export type RangedPackApproachPolicy = 'off' | 'expected';
 export type RangedPackApproachGeometry = 'shared-engagement-ring';
 export type RangedPackKitePolicy = 'off' | 'step-back-after-action';
+export type GroupAiPolicy = 'off' | 'expected';
+export type GroupAiActivationRelation = 'ordinary' | 'unique-leashed' | 'unique-independent';
+export type GroupAiSummonerRoutine = 'SkeletonKing' | 'HorkDemon';
 
 /** Explicit pack geometry parameter; it is a model assumption, not a table value. */
 export const DEFAULT_RANGED_PACK_APPROACH_GEOMETRY: RangedPackApproachGeometry = 'shared-engagement-ring';
+
+/**
+ * Named visibility-wave geometry. Only heroVisionRadius and gameLogicTicksPerSecond are engine
+ * values: player.cpp:2338 initializes _pLightRad to 10, player.cpp:2531 passes it to vision,
+ * monster.cpp:4278-4317 wakes each visible monster, options.cpp:843 defaults to 20 logic ticks/s,
+ * and diablo.cpp:1525-1539 processes monsters once per logic tick. PlaceGroup itself performs an
+ * unbounded random walk for ordinary groups (monster.cpp:308-375), so the spread and advance speed
+ * below are explicit model assumptions rather than Diablo values.
+ */
+export const GROUP_AI_VISIBILITY_WAVE_GEOMETRY = {
+  id: 'uniform-place-group-visibility-band',
+  heroVisionRadius: 10,
+  assumedPlacementSpreadRadius: 4,
+  assumedAdvanceTilesPerSecond: 4,
+  fallenFearRadius: 4,
+  gameLogicTicksPerSecond: 20,
+  assumedEligibleSummonDecisionSeconds: 1,
+  assumedSummonCapacity: 2,
+} as const;
+
+export interface PackGroupAiEffects {
+  readonly concurrency?: boolean;
+  readonly summoning?: boolean;
+  readonly fallenFear?: boolean;
+}
+
+export interface PackGroupAiInput {
+  readonly policy: GroupAiPolicy;
+  readonly activationRelation?: GroupAiActivationRelation;
+  readonly routine?: string;
+  readonly monsterLevel?: number;
+  readonly intelligence?: number;
+  readonly distanceToEnemy?: number;
+  readonly gameMode?: 'single' | 'multi';
+  readonly expansion?: 'diablo' | 'hellfire';
+  readonly remainingMonsterCapacity?: number;
+  /** Time already spent in the W86 closing phase before contact. */
+  readonly elapsedSeconds?: number;
+  /** Test/audit switches; production expected mode enables all three effects. */
+  readonly effects?: PackGroupAiEffects;
+}
+
+export interface ExpectedSummonRosterInput {
+  readonly routine: string | undefined;
+  readonly intelligence: number;
+  readonly distanceToEnemy: number;
+  readonly engagementSeconds: number;
+  readonly gameMode?: 'single' | 'multi';
+  readonly expansion?: 'diablo' | 'hellfire';
+  readonly remainingMonsterCapacity?: number;
+}
+
+export interface ExpectedSummonRoster {
+  readonly routine: GroupAiSummonerRoutine | null;
+  readonly probabilityPerEligibleDecision: number;
+  readonly expectedEligibleDecisions: number;
+  readonly remainingMonsterCapacity: number;
+  readonly expectedExtraMembers: number;
+  readonly expectedSecondsBetweenArrivals: number | null;
+}
+
+export interface PackGroupAiExpectation {
+  readonly policy: 'expected';
+  readonly geometryAssumption: typeof GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id;
+  readonly activationRelation: GroupAiActivationRelation;
+  readonly activationScheduleSeconds: readonly number[];
+  readonly expectedActivationWaveSeconds: number;
+  readonly expectedExtraMembers: number;
+  readonly expectedRosterSize: number;
+  readonly fallenFearAttackerSecondsRemoved: number;
+  readonly effects: Required<PackGroupAiEffects>;
+}
 
 /**
  * Named geometry assumptions, not Diablo data values. Pack members occupy distinct uniformly
@@ -41,6 +116,8 @@ export interface PackDuelExpectation {
   hitRecoverySeconds: number;
   /** Missile-capable routines are not constrained by adjacent melee slots. */
   ranged: boolean;
+  /** Omitted/off preserves the legacy simultaneous fixed-roster arithmetic exactly. */
+  groupAi?: PackGroupAiInput;
 }
 
 export interface PackExchangeInput extends PackDuelExpectation {
@@ -54,6 +131,9 @@ export interface PackExchangePhase {
   seconds: number;
   expectedDamageTaken: number;
   expectedGotHitInterruptions: number;
+  waitingForActivationSeconds?: number;
+  attackerSeconds?: number;
+  fallenFearAttackerSecondsRemoved?: number;
 }
 
 export interface PackExchangeExpectation {
@@ -63,6 +143,7 @@ export interface PackExchangeExpectation {
   expectedDamageTaken: number;
   expectedGotHitInterruptions: number;
   phases: PackExchangePhase[];
+  groupAi?: PackGroupAiExpectation;
 }
 
 export interface PackSpellAreaDuel {
@@ -262,6 +343,258 @@ export function requestedUniquePackSize(pack: unknown): number {
   return String(pack).toLowerCase() === 'none' ? 1 : 1 + ORDINARY_UNIQUE_MINIONS;
 }
 
+const ALL_GROUP_AI_EFFECTS: Required<PackGroupAiEffects> = {
+  concurrency: true,
+  summoning: true,
+  fallenFear: true,
+};
+
+function enabledGroupAiEffects(input: PackGroupAiInput): Required<PackGroupAiEffects> {
+  return {
+    concurrency: input.effects?.concurrency ?? true,
+    summoning: input.effects?.summoning ?? true,
+    fallenFear: input.effects?.fallenFear ?? true,
+  };
+}
+
+/**
+ * Expected order statistics for the named uniform visibility band. Ordinary and Independent
+ * members wake separately at monster.cpp:4278-4317. FollowTheLeader shares activation for intact
+ * Leashed packs at monster.cpp:1674-1686, so their entire schedule is zero.
+ */
+export function expectedGroupActivationSchedule(
+  packSize: number,
+  relation: GroupAiActivationRelation = 'ordinary',
+  elapsedSeconds: number = 0,
+): number[] {
+  if (!Number.isInteger(packSize) || packSize < 1) {
+    throw new Error(`packSize must be a positive integer (got ${packSize})`);
+  }
+  requireNonNegativeFinite('elapsedSeconds', elapsedSeconds);
+  if (relation === 'unique-leashed' || packSize === 1) return Array(packSize).fill(0);
+  const geometry = GROUP_AI_VISIBILITY_WAVE_GEOMETRY;
+  const visibilityBandTiles = 2 * geometry.assumedPlacementSpreadRadius;
+  const waveSeconds = visibilityBandTiles / geometry.assumedAdvanceTilesPerSecond;
+  return Array.from({ length: packSize }, (_, index) => Math.max(
+    0,
+    index / (packSize - 1) * waveSeconds - elapsedSeconds,
+  ));
+}
+
+/**
+ * Expected independent arrivals from the two engine summoner predicates. Probabilities are per
+ * eligible Stand decision: Skeleton King uses max(6, 4*intelligence+35)% at distance >=3 and 6%
+ * nearer (monster.cpp:2374-2429); Hork Demon uses (2*intelligence+43)% at distance >=3
+ * (monster.cpp:3009-3064). The engine limit is remaining global monster capacity
+ * (ActiveMonsterCount < MaxMonsters), represented by the explicit remaining-capacity parameter.
+ */
+export function expectedSummonRoster(input: ExpectedSummonRosterInput): ExpectedSummonRoster {
+  for (const [name, value] of [
+    ['intelligence', input.intelligence],
+    ['distanceToEnemy', input.distanceToEnemy],
+    ['engagementSeconds', input.engagementSeconds],
+  ] as const) requireNonNegativeFinite(name, value);
+  const remainingMonsterCapacity = input.remainingMonsterCapacity
+    ?? GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedSummonCapacity;
+  requireNonNegativeFinite('remainingMonsterCapacity', remainingMonsterCapacity);
+
+  const routine = input.routine === 'SkeletonKing' || input.routine === 'HorkDemon'
+    ? input.routine
+    : null;
+  let probabilityPerEligibleDecision = 0;
+  if (routine === 'SkeletonKing' && (input.gameMode ?? 'single') === 'single') {
+    const threshold = input.distanceToEnemy >= 3
+      ? Math.max(6, 4 * input.intelligence + 35)
+      : 6;
+    probabilityPerEligibleDecision = Math.min(1, threshold / 100);
+  } else if (routine === 'HorkDemon' && input.expansion === 'hellfire'
+    && input.distanceToEnemy >= 3) {
+    probabilityPerEligibleDecision = Math.min(1, (2 * input.intelligence + 43) / 100);
+  }
+  const expectedEligibleDecisions = input.engagementSeconds
+    / GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedEligibleSummonDecisionSeconds;
+  const expectedExtraMembers = Math.min(
+    remainingMonsterCapacity,
+    expectedEligibleDecisions * probabilityPerEligibleDecision,
+  );
+  return {
+    routine,
+    probabilityPerEligibleDecision,
+    expectedEligibleDecisions,
+    remainingMonsterCapacity,
+    expectedExtraMembers,
+    expectedSecondsBetweenArrivals: probabilityPerEligibleDecision === 0
+      ? null
+      : GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedEligibleSummonDecisionSeconds
+        / probabilityPerEligibleDecision,
+  };
+}
+
+interface WeightedPackMember {
+  activationSeconds: number;
+  remaining: number;
+}
+
+function expectedGroupAiPackExchange(
+  input: PackExchangeInput,
+  adjacentSlots: number,
+): PackExchangeExpectation {
+  const groupAi = input.groupAi!;
+  const effects = enabledGroupAiEffects(groupAi);
+  const relation = groupAi.activationRelation ?? 'ordinary';
+  const activationScheduleSeconds = effects.concurrency
+    ? expectedGroupActivationSchedule(input.packSize, relation, groupAi.elapsedSeconds ?? 0)
+    : Array(input.packSize).fill(0) as number[];
+  const baseEngagementSeconds = input.packSize * input.secondsToKill;
+  const summons = effects.summoning ? expectedSummonRoster({
+    routine: groupAi.routine,
+    intelligence: groupAi.intelligence ?? 0,
+    distanceToEnemy: groupAi.distanceToEnemy ?? 4,
+    engagementSeconds: baseEngagementSeconds,
+    gameMode: groupAi.gameMode,
+    expansion: groupAi.expansion,
+    remainingMonsterCapacity: groupAi.remainingMonsterCapacity,
+  }) : {
+    routine: null,
+    probabilityPerEligibleDecision: 0,
+    expectedEligibleDecisions: 0,
+    remainingMonsterCapacity: groupAi.remainingMonsterCapacity
+      ?? GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedSummonCapacity,
+    expectedExtraMembers: 0,
+    expectedSecondsBetweenArrivals: null,
+  } satisfies ExpectedSummonRoster;
+  const members: WeightedPackMember[] = activationScheduleSeconds.map((activationSeconds) => ({
+    activationSeconds,
+    remaining: 1,
+  }));
+  const summonEntries = Math.ceil(summons.expectedExtraMembers - Number.EPSILON * 16);
+  let summonWeight = summons.expectedExtraMembers;
+  for (let index = 0; index < summonEntries; index++) {
+    const remaining = Math.min(1, summonWeight);
+    members.push({
+      activationSeconds: baseEngagementSeconds * (index + 1) / (summonEntries + 1),
+      remaining,
+    });
+    summonWeight -= remaining;
+  }
+  members.sort((left, right) => left.activationSeconds - right.activationSeconds);
+
+  const activeWeight = (atSeconds: number): number => members.reduce(
+    (sum, member) => sum + (member.activationSeconds <= atSeconds ? member.remaining : 0),
+    0,
+  );
+  const engagedAt = (atSeconds: number): number => {
+    const active = activeWeight(atSeconds);
+    return input.ranged ? active : Math.min(active, adjacentSlots);
+  };
+  const attackerSecondsBetween = (start: number, duration: number): number => {
+    if (duration <= 0) return 0;
+    const end = start + duration;
+    const boundaries = [
+      start,
+      ...members
+        .filter((member) => member.remaining > 0
+          && member.activationSeconds > start && member.activationSeconds < end)
+        .map((member) => member.activationSeconds),
+      end,
+    ].sort((left, right) => left - right);
+    let attackerSeconds = 0;
+    for (let index = 0; index < boundaries.length - 1; index++) {
+      attackerSeconds += engagedAt(boundaries[index]) * (boundaries[index + 1] - boundaries[index]);
+    }
+    return attackerSeconds;
+  };
+
+  const fallenFearSeconds = effects.fallenFear && groupAi.routine === 'Fallen'
+    ? Math.max(8 - (groupAi.monsterLevel ?? 0), 2)
+      / GROUP_AI_VISIBILITY_WAVE_GEOMETRY.gameLogicTicksPerSecond
+    : 0;
+  const phases: PackExchangePhase[] = [];
+  let elapsedSeconds = 0;
+  let pendingFearSeconds = 0;
+  let totalFearAttackerSecondsRemoved = 0;
+  let alive = members.reduce((sum, member) => sum + member.remaining, 0);
+  while (alive > Number.EPSILON * 16) {
+    let waitingForActivationSeconds = 0;
+    if (activeWeight(elapsedSeconds) <= Number.EPSILON * 16) {
+      const nextActivation = members
+        .filter((member) => member.remaining > Number.EPSILON * 16)
+        .reduce((next, member) => Math.min(next, member.activationSeconds), Infinity);
+      waitingForActivationSeconds = Math.max(0, nextActivation - elapsedSeconds);
+      elapsedSeconds += waitingForActivationSeconds;
+    }
+    const currentlyActive = activeWeight(elapsedSeconds);
+    const killWeight = Math.min(1, currentlyActive);
+    const baseSeconds = input.secondsToKill * killWeight;
+    const rawAttackerSeconds = attackerSecondsBetween(elapsedSeconds, baseSeconds);
+    const fearAttackerSecondsRemoved = attackerSecondsBetween(
+      elapsedSeconds,
+      Math.min(baseSeconds, pendingFearSeconds),
+    );
+    const attackerSeconds = Math.max(0, rawAttackerSeconds - fearAttackerSecondsRemoved);
+    totalFearAttackerSecondsRemoved += fearAttackerSecondsRemoved;
+    const averageEngagedAttackers = baseSeconds === 0 ? engagedAt(elapsedSeconds) : attackerSeconds / baseSeconds;
+    const interruptionRate = input.secondsToKill === 0
+      ? input.expectedGotHitInterruptions === 0 ? 0 : Infinity
+      : input.expectedGotHitInterruptions / input.secondsToKill * averageEngagedAttackers;
+    const recoveryLoad = interruptionRate * input.hitRecoverySeconds;
+    const timeMultiplier = recoveryLoad < 1 ? 1 / (1 - recoveryLoad) : Infinity;
+    const expectedDamageTaken = input.secondsToKill === 0
+      ? input.expectedDamageTaken === 0 ? 0 : Infinity
+      : input.expectedDamageTaken / input.secondsToKill * attackerSeconds * timeMultiplier;
+    const expectedGotHitInterruptions = interruptionRate === 0
+      ? 0
+      : interruptionRate * baseSeconds * timeMultiplier;
+    const seconds = waitingForActivationSeconds + baseSeconds * timeMultiplier;
+    phases.push({
+      alive,
+      engagedAttackers: averageEngagedAttackers,
+      seconds,
+      expectedDamageTaken,
+      expectedGotHitInterruptions,
+      waitingForActivationSeconds,
+      attackerSeconds,
+      fallenFearAttackerSecondsRemoved: fearAttackerSecondsRemoved,
+    });
+    if (!Number.isFinite(seconds)) break;
+
+    let remainingKillWeight = killWeight;
+    for (const member of members) {
+      if (remainingKillWeight <= Number.EPSILON * 16) break;
+      if (member.activationSeconds > elapsedSeconds || member.remaining <= 0) continue;
+      const removed = Math.min(member.remaining, remainingKillWeight);
+      member.remaining -= removed;
+      remainingKillWeight -= removed;
+    }
+    alive = Math.max(0, alive - killWeight);
+    elapsedSeconds += baseSeconds * timeMultiplier;
+    pendingFearSeconds = fallenFearSeconds * killWeight;
+  }
+
+  return {
+    packSize: input.packSize,
+    adjacentSlots,
+    seconds: phases.reduce((sum, phase) => sum + phase.seconds, 0),
+    expectedDamageTaken: phases.reduce((sum, phase) => sum + phase.expectedDamageTaken, 0),
+    expectedGotHitInterruptions: phases.reduce(
+      (sum, phase) => sum + phase.expectedGotHitInterruptions,
+      0,
+    ),
+    phases,
+    groupAi: {
+      policy: 'expected',
+      geometryAssumption: GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id,
+      activationRelation: relation,
+      activationScheduleSeconds,
+      expectedActivationWaveSeconds: activationScheduleSeconds[activationScheduleSeconds.length - 1] ?? 0,
+      expectedExtraMembers: summons.expectedExtraMembers,
+      expectedRosterSize: input.packSize + summons.expectedExtraMembers,
+      fallenFearAttackerSecondsRemoved: totalFearAttackerSecondsRemoved,
+      effects,
+    },
+  };
+}
+
 /**
  * Integrate one homogeneous pack over the hero's one-at-a-time kill phases. For phase k, melee
  * exposure is min(k, adjacentSlots), while every ranged survivor remains engaged. The duel's
@@ -287,6 +620,9 @@ export function packExchange(input: PackExchangeInput): PackExchangeExpectation 
     ['hitRecoverySeconds', input.hitRecoverySeconds],
   ] as const) {
     if (!Number.isFinite(value) || value < 0) throw new Error(`${name} must be a non-negative finite number (got ${value})`);
+  }
+  if (input.groupAi?.policy === 'expected') {
+    return expectedGroupAiPackExchange(input, adjacentSlots);
   }
 
   const phases: PackExchangePhase[] = [];
@@ -324,6 +660,48 @@ export function packExchange(input: PackExchangeInput): PackExchangeExpectation 
  * existing recursive hero GotHit load is solved.
  */
 export function packSpellAreaExchange(input: PackSpellAreaExchangeInput): PackSpellAreaExchangeExpectation {
+  if (input.groupAi?.policy === 'expected') {
+    const withoutGroupAi = { ...input, groupAi: { policy: 'off' as const } };
+    const fixedRosterArea = packSpellAreaExchange(withoutGroupAi);
+    const fixedRosterSingleTarget = packExchange(withoutGroupAi);
+    const groupedSingleTarget = packExchange(input);
+    const finiteRatio = (numerator: number, denominator: number): number => {
+      if (denominator === 0) return numerator === 0 ? 1 : Infinity;
+      if (!Number.isFinite(numerator) || !Number.isFinite(denominator)) {
+        return numerator === denominator ? 1 : Infinity;
+      }
+      return numerator / denominator;
+    };
+    const timeRatio = finiteRatio(groupedSingleTarget.seconds, fixedRosterSingleTarget.seconds);
+    const damageRatio = finiteRatio(
+      groupedSingleTarget.expectedDamageTaken,
+      fixedRosterSingleTarget.expectedDamageTaken,
+    );
+    const interruptionRatio = finiteRatio(
+      groupedSingleTarget.expectedGotHitInterruptions,
+      fixedRosterSingleTarget.expectedGotHitInterruptions,
+    );
+    const rosterRatio = groupedSingleTarget.groupAi!.expectedRosterSize / input.packSize;
+    const expectedCasts = fixedRosterArea.expectedCasts * rosterRatio;
+    const phases = fixedRosterArea.phases.map((phase) => ({
+      ...phase,
+      seconds: phase.seconds * timeRatio,
+      expectedDamageTaken: phase.expectedDamageTaken * damageRatio,
+      expectedGotHitInterruptions: phase.expectedGotHitInterruptions * interruptionRatio,
+      expectedCasts: phase.expectedCasts * rosterRatio,
+    }));
+    return {
+      ...fixedRosterArea,
+      seconds: fixedRosterArea.seconds * timeRatio,
+      expectedDamageTaken: fixedRosterArea.expectedDamageTaken * damageRatio,
+      expectedGotHitInterruptions:
+        fixedRosterArea.expectedGotHitInterruptions * interruptionRatio,
+      expectedCasts,
+      expectedManaSpent: expectedCasts * input.spellArea.manaPerCast,
+      phases,
+      groupAi: groupedSingleTarget.groupAi,
+    };
+  }
   const adjacentSlots = input.adjacentSlots ?? DEFAULT_ADJACENT_SLOTS;
   const legacy = packExchange(input);
   const area = input.spellArea;
@@ -500,9 +878,35 @@ export function rangedPackApproachExchange(input: RangedPackApproachInput): Rang
   const shotDistances: number[] = [];
   let neverContacts = false;
   const speed = input.approachTilesPerSecond;
+  const groupAi = input.contactDuel.groupAi;
+  const groupAiEffects = groupAi?.policy === 'expected'
+    ? enabledGroupAiEffects(groupAi)
+    : ALL_GROUP_AI_EFFECTS;
+  const activationSchedule = groupAi?.policy === 'expected' && groupAiEffects.concurrency
+    ? expectedGroupActivationSchedule(
+        input.packSize,
+        groupAi.activationRelation,
+        groupAi.elapsedSeconds ?? 0,
+      )
+    : Array(input.packSize).fill(0) as number[];
 
   if (speed !== null && distance > 1) {
     while (survivingMembers > 0 && distance > 1) {
+      const membersKilled = input.packSize - survivingMembers;
+      const activatedMembers = activationSchedule.filter((activation) => activation <= seconds).length;
+      if (activatedMembers <= membersKilled) {
+        const nextActivation = activationSchedule[membersKilled];
+        const waitSeconds = Math.max(0, nextActivation - seconds);
+        const contactSeconds = (distance - 1) / speed;
+        if (contactSeconds < waitSeconds) {
+          seconds += contactSeconds;
+          distance = 1;
+          break;
+        }
+        seconds += waitSeconds;
+        distance = Math.max(1, distance - speed * waitSeconds);
+        if (distance <= 1) break;
+      }
       const distanceAfterAction = distance - speed * input.playerActionSeconds;
       // Match the duel convention: an action completing exactly at adjacency is still free.
       if (distanceAfterAction < 1 - Number.EPSILON) {
@@ -555,22 +959,44 @@ export function rangedPackApproachExchange(input: RangedPackApproachInput): Rang
     kiteStepTiles,
     kiteStepSeconds,
   };
+  const contactDuel = groupAi?.policy === 'expected'
+    ? {
+        ...input.contactDuel,
+        groupAi: {
+          ...groupAi,
+          elapsedSeconds: (groupAi.elapsedSeconds ?? 0) + seconds,
+        },
+      }
+    : input.contactDuel;
   const contact = survivingMembers === 0 || neverContacts
     ? null
     : input.contactSpellArea
       ? packSpellAreaExchange({
-          ...input.contactDuel,
+          ...contactDuel,
           packSize: survivingMembers,
           adjacentSlots,
           spellArea: input.contactSpellArea,
         })
-      : packExchange({ ...input.contactDuel, packSize: survivingMembers, adjacentSlots });
+      : packExchange({ ...contactDuel, packSize: survivingMembers, adjacentSlots });
   const contactPlayerActions = contact == null
     ? 0
     : 'expectedCasts' in contact
       ? contact.expectedCasts
       : input.contactPlayerActionsToKill * survivingMembers;
   const expectedPlayerActions = playerActions + contactPlayerActions;
+  const approachGroupAi: PackGroupAiExpectation | undefined = groupAi?.policy === 'expected'
+    ? contact?.groupAi ?? {
+        policy: 'expected',
+        geometryAssumption: GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id,
+        activationRelation: groupAi.activationRelation ?? 'ordinary',
+        activationScheduleSeconds: activationSchedule,
+        expectedActivationWaveSeconds: activationSchedule[activationSchedule.length - 1] ?? 0,
+        expectedExtraMembers: 0,
+        expectedRosterSize: input.packSize,
+        fallenFearAttackerSecondsRemoved: 0,
+        effects: groupAiEffects,
+      }
+    : undefined;
   return {
     packSize: input.packSize,
     adjacentSlots,
@@ -582,6 +1008,7 @@ export function rangedPackApproachExchange(input: RangedPackApproachInput): Rang
     contact,
     expectedPlayerActions,
     expectedManaSpent: expectedPlayerActions * (input.manaPerAction ?? 0),
+    ...(approachGroupAi ? { groupAi: approachGroupAi } : {}),
   };
 }
 
@@ -590,6 +1017,14 @@ export interface DistributedPackExchangeExpectation {
   secondsPerPack: number;
   expectedDamageTakenPerPack: number;
   expectedGotHitInterruptionsPerPack: number;
+  groupAi?: {
+    readonly policy: 'expected';
+    readonly geometryAssumption: typeof GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id;
+    readonly expectedActivationWaveSecondsPerPack: number;
+    readonly expectedExtraMembersPerPack: number;
+    readonly expectedRosterSize: number;
+    readonly fallenFearAttackerSecondsRemovedPerPack: number;
+  };
 }
 
 export interface DistributedPackSpellAreaExchangeExpectation extends DistributedPackExchangeExpectation {
@@ -618,6 +1053,36 @@ export interface DistributedRangedPackApproachExpectation extends DistributedPac
   readonly expectedAttackersSuppressedPerCast?: number;
 }
 
+function distributedGroupAiSummary(
+  exchanges: readonly {
+    readonly probability: number;
+    readonly exchange: PackExchangeExpectation;
+  }[],
+): NonNullable<DistributedPackExchangeExpectation['groupAi']> | undefined {
+  if (exchanges.some((item) => item.exchange.groupAi === undefined)) return undefined;
+  return {
+    policy: 'expected',
+    geometryAssumption: GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id,
+    expectedActivationWaveSecondsPerPack: exchanges.reduce(
+      (sum, item) => sum + item.probability * item.exchange.groupAi!.expectedActivationWaveSeconds,
+      0,
+    ),
+    expectedExtraMembersPerPack: exchanges.reduce(
+      (sum, item) => sum + item.probability * item.exchange.groupAi!.expectedExtraMembers,
+      0,
+    ),
+    expectedRosterSize: exchanges.reduce(
+      (sum, item) => sum + item.probability * item.exchange.groupAi!.expectedRosterSize,
+      0,
+    ),
+    fallenFearAttackerSecondsRemovedPerPack: exchanges.reduce(
+      (sum, item) => sum + item.probability
+        * item.exchange.groupAi!.fallenFearAttackerSecondsRemoved,
+      0,
+    ),
+  };
+}
+
 /** Average the exact integer-size exchanges; never substitutes a fractional mean pack size. */
 export function distributedPackExchange(
   outcomes: readonly PackSizeOutcome[],
@@ -629,6 +1094,7 @@ export function distributedPackExchange(
     ...outcome,
     exchange: packExchange({ ...duel, packSize: outcome.size, adjacentSlots }),
   }));
+  const groupAi = distributedGroupAiSummary(exchanges);
   return {
     expectedPackSize: expectedPackSize(outcomes),
     secondsPerPack: exchanges.reduce((sum, item) => sum + item.probability * item.exchange.seconds, 0),
@@ -640,6 +1106,7 @@ export function distributedPackExchange(
       (sum, item) => sum + item.probability * item.exchange.expectedGotHitInterruptions,
       0,
     ),
+    ...(groupAi ? { groupAi } : {}),
   };
 }
 
@@ -659,6 +1126,7 @@ export function distributedPackSpellAreaExchange(
     (sum, item) => sum + item.probability * item.exchange.expectedCasts,
     0,
   );
+  const groupAi = distributedGroupAiSummary(exchanges);
   const castWeighted = (value: (exchange: PackSpellAreaExchangeExpectation) => number) =>
     expectedCastsPerPack === 0
       ? 0
@@ -688,6 +1156,7 @@ export function distributedPackSpellAreaExchange(
     expectedAttackersSuppressedPerCast: castWeighted(
       (exchange) => exchange.expectedAttackersSuppressedPerCast,
     ),
+    ...(groupAi ? { groupAi } : {}),
   };
 }
 
@@ -719,6 +1188,7 @@ export function distributedRangedPackApproachExchange(
             ? sum + item.probability * contact.expectedCasts * value(contact)
             : sum;
         }, 0) / expectedContactCasts;
+  const groupAi = distributedGroupAiSummary(exchanges);
   return {
     expectedPackSize: expectedPackSize(outcomes),
     secondsPerPack: weighted((exchange) => exchange.seconds),
@@ -733,6 +1203,7 @@ export function distributedRangedPackApproachExchange(
     expectedManaSpentPerPack: weighted((exchange) => exchange.expectedManaSpent),
     expectedRetreatStepsPerPack: weighted((exchange) => exchange.approach.retreatSteps),
     expectedRetreatSecondsPerPack: weighted((exchange) => exchange.approach.retreatSeconds),
+    ...(groupAi ? { groupAi } : {}),
     ...(input.contactSpellArea ? {
       spell: input.contactSpellArea.spell,
       spellLevel: input.contactSpellArea.spellLevel,

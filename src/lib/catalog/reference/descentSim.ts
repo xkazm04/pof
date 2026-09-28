@@ -56,6 +56,7 @@ import {
 import {
   DEFAULT_ADJACENT_SLOTS,
   DEFAULT_RANGED_PACK_APPROACH_GEOMETRY,
+  GROUP_AI_VISIBILITY_WAVE_GEOMETRY,
   distributedPackExchange,
   distributedPackSpellAreaExchange,
   distributedRangedPackApproachExchange,
@@ -65,6 +66,9 @@ import {
   type DistributedPackExchangeExpectation,
   type DistributedRangedPackApproachExpectation,
   type DistributedPackSpellAreaExchangeExpectation,
+  type GroupAiActivationRelation,
+  type GroupAiPolicy,
+  type PackGroupAiInput,
   type RangedPackApproachGeometry,
   type RangedPackApproachPolicy,
   type RangedPackKitePolicy,
@@ -101,6 +105,7 @@ export type SpellAreaInPacks = SpellAreaInPacksPolicy;
 export type RangedPackApproach = RangedPackApproachPolicy;
 export type RangedPackGeometry = RangedPackApproachGeometry;
 export type RangedPackKite = RangedPackKitePolicy;
+export type GroupAi = GroupAiPolicy;
 
 type DistributedPackCombatExpectation = DistributedPackExchangeExpectation
   | DistributedPackSpellAreaExchangeExpectation
@@ -170,6 +175,7 @@ export interface DescentUniquePackSize {
   monster: string;
   pack: string;
   requestedPackSize: number | null;
+  activationRelation?: Exclude<GroupAiActivationRelation, 'ordinary'> | null;
 }
 
 export interface DescentPackExpectation {
@@ -181,6 +187,14 @@ export interface DescentPackExpectation {
   sustainable: boolean;
   typePackSizes: DescentMonsterPackSize[];
   eligibleUniquePacks: DescentUniquePackSize[];
+  /** Present only for the opt-in expected group-AI policy. */
+  groupAi?: {
+    policy: 'expected';
+    geometry: typeof GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id;
+    expectedActivationWaveSecondsPerPack: number | null;
+    expectedExtraMembersPerPack: number | null;
+    expectedFallenFearAttackerSecondsRemovedPerPack: number | null;
+  };
   /** Present only for the opt-in expected spell-area policy. */
   spellArea?: {
     policy: 'expected';
@@ -548,6 +562,8 @@ export interface DescentSimulation {
   rangedPackKite?: Exclude<RangedPackKitePolicy, 'off'>;
   rangedPackKiteStepSeconds?: number;
   rangedPackKiteStepTiles?: number;
+  /** Omitted for the byte-compatible fixed-roster/simultaneous pack default. */
+  groupAi?: 'expected';
   /** Omitted for the byte-compatible default. */
   purchases?: 'defence';
   /** Omitted for the byte-compatible unidentified-sale default. */
@@ -600,6 +616,8 @@ export interface SimulateDescentInput {
   rangedPackKiteStepSeconds?: number;
   /** Distance gained by a completed retreat step; defaults to one tile. */
   rangedPackKiteStepTiles?: number;
+  /** Visibility activation, summon arrivals, and Fallen morale; defaults to off. */
+  groupAi?: GroupAi;
   /** Town purchases are opt-in; the default spends no gold on equipment. */
   purchases?: DescentPurchases;
   /** Mid-depth recovery is opt-in; the default retains floor-wide sustain. */
@@ -1443,6 +1461,7 @@ function assumptions(
   rangedPackKite: RangedPackKite,
   rangedPackKiteStepSeconds: number,
   rangedPackKiteStepTiles: number,
+  groupAi: GroupAi,
   defensiveAffixes: DefensiveAffixes,
   offensiveAffixes: OffensiveAffixes,
   purchases: DescentPurchases,
@@ -1515,7 +1534,22 @@ function assumptions(
       value: 'depth 1 singleton; depth 2 singleton or 2..3; later singleton or 3..5',
       source: '.reference/devilutionX/Source/monster.cpp PlaceGroup caller branches',
       detail: 'The expected pack count is ambient population divided by expected requested size. Placement retries, occupied-tile failures, and final population-cap truncation need a dungeon seed and are excluded. Eligible uniques remain outside totals, but their unique-plus-eight-minion requested packs are reported together.',
-    }, ...(rangedPackApproach === 'expected' ? [{
+    }, ...(groupAi === 'expected' ? [{
+      id: 'group-ai-visibility-wave',
+      value: GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id,
+      source: '.reference/devilutionX/Source/monster.cpp:308-380,1674-1728,4278-4317; player.cpp:2338,2531',
+      detail: `The hero vision radius is the engine's ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.heroVisionRadius} tiles. Ordinary and Independent members use expected order statistics across a named uniform visibility band with an assumed ±${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedPlacementSpreadRadius}-tile spread and ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedAdvanceTilesPerSecond} tiles/s advance; PlaceGroup supplies no ordinary spread bound. Intact Leashed packs activate together. These spread and advance numbers are geometry assumptions, not game values.`,
+    }, {
+      id: 'group-ai-summon-roster',
+      value: `expected arrivals, capacity ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedSummonCapacity}`,
+      source: '.reference/devilutionX/Source/monster.cpp:2374-2429,3009-3064,3778-3851',
+      detail: `Skeleton King uses max(6, 4*intelligence+35)% per eligible distant Stand decision (6% nearer); Hellfire Hork Demon uses (2*intelligence+43)% at distance >=3. Expected arrivals are min(remaining capacity, eligible decisions × probability), with one eligible decision per assumed ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedEligibleSummonDecisionSeconds}s and ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.assumedSummonCapacity} free global slots. Spawn combat uses the summoner row's homogeneous duel rates because a deterministic skeleton/Hork spawn type is unavailable. Vanilla descent excludes Hork's Hellfire-only event.`,
+    }, {
+      id: 'group-ai-fallen-fear',
+      value: `radius ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.fallenFearRadius}; max(8-level,2) / ${GROUP_AI_VISIBILITY_WAVE_GEOMETRY.gameLogicTicksPerSecond}s`,
+      source: '.reference/devilutionX/Source/monster.cpp:2314-2370,3996-4030,4450-4467; options.cpp:843; diablo.cpp:1525-1539',
+      detail: 'Every kill temporarily removes living Fallen attackers in the compact radius-4 pack from pressure for the Retreat counter. Converting counter decrements to seconds assumes the Fallen reaches Stand and runs FallenAi once per 20 Hz logic tick; movement animation can lengthen the elapsed retreat. The model subtracts that attacker-time but does not add exact retreat pathing or later war-cry rally bursts.',
+    }] : []), ...(rangedPackApproach === 'expected' ? [{
       id: 'ranged-pack-approach-geometry',
       value: rangedPackGeometry,
       source: 'explicit geometry parameter; .reference/devilutionX/Source/monster.cpp:1085-1114,4257-4332 plus W34/W63 bestiary effective locomotion',
@@ -1935,6 +1969,13 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
   if (!(rangedPackKiteStepTiles > 0) || !Number.isFinite(rangedPackKiteStepTiles)) {
     throw new Error(`rangedPackKiteStepTiles must be a positive finite number (got ${rangedPackKiteStepTiles})`);
   }
+  const groupAi = input.groupAi ?? 'off';
+  if (!(['off', 'expected'] as const).includes(groupAi)) {
+    throw new Error(`unknown group AI policy ${input.groupAi}`);
+  }
+  if (groupAi === 'expected' && encounter !== 'packs') {
+    throw new Error('groupAi:expected requires encounter:packs');
+  }
   const gear = input.gear ?? (input.className === 'warrior' || input.weapon ? 'none' : 'expected');
   if (!(['none', 'expected'] as const).includes(gear)) throw new Error(`unknown gear policy ${gear}`);
   const defensiveAffixes = input.defensiveAffixes ?? 'none';
@@ -2298,6 +2339,20 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const base = unique ? ordinaryByType.get(wrapper.raw.type) : undefined;
       if (unique && !base) throw new Error(`${wrapper.entity.id} has no supplied monstdat base ${wrapper.raw.type}`);
       const monster = monsterProfile(wrapper, input.difficulty, base, input.gameMode);
+      const groupAiInput: PackGroupAiInput | undefined = groupAi === 'expected' ? {
+        policy: 'expected',
+        activationRelation: unique
+          ? String(wrapper.raw.monsterPack ?? wrapper.entity.data.pack).toLowerCase() === 'leashed'
+            ? 'unique-leashed'
+            : 'unique-independent'
+          : 'ordinary',
+        routine: monsterRoutine(wrapper),
+        monsterLevel: numericStat(base ?? wrapper, 'Level'),
+        intelligence: monsterIntelligence(wrapper),
+        distanceToEnemy: DEFAULT_RANGED_ENGAGEMENT_DISTANCE,
+        gameMode: input.gameMode,
+        expansion: 'diablo',
+      } : undefined;
       const exchange = playerAttack === 'melee'
         ? monsterUsesMissileWhenAdjacent(wrapper)
           ? monsterExchangeModel(wrapper, monster, base, input.wrappers, 1)
@@ -2364,6 +2419,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
           hitRecoverySeconds: playerHitRecoverySeconds,
           ranged: exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic',
+          ...(groupAiInput ? { groupAi: groupAiInput } : {}),
         };
         return result.packSpell
           ? distributedPackSpellAreaExchange(
@@ -2409,6 +2465,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           expectedGotHitInterruptions: contactResult.gotHit?.expectedInterruptionsBeforeKill ?? 0,
           hitRecoverySeconds: playerHitRecoverySeconds,
           ranged: rangedMonster,
+          ...(groupAiInput ? { groupAi: groupAiInput } : {}),
         };
         const distanceActions = new Map<number, number>();
         return distributedRangedPackApproachExchange(spellAreaPackOutcomes, {
@@ -2578,6 +2635,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         approachSpeed: exchange?.speed,
         rangedMonster: exchange?.monsterAttack === 'ranged-arrow' || exchange?.monsterAttack === 'ranged-magic',
         expectedGotHitInterruptions: result.gotHit?.expectedInterruptionsBeforeKill ?? 0,
+        ...(groupAiInput ? { groupAiInput } : {}),
         expectedLifeStolen: result.steal?.expectedLifePerKill ?? 0,
         expectedManaStolen: result.steal?.expectedManaPerKill ?? 0,
         ...(spellAreaInPacks === 'expected' || rangedPackApproach === 'expected' ? {
@@ -2624,6 +2682,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           expectedGotHitInterruptions: row.expectedGotHitInterruptions,
           hitRecoverySeconds: recoverySeconds,
           ranged: row.rangedMonster,
+          ...(row.groupAiInput ? { groupAi: row.groupAiInput } : {}),
         }, adjacentSlots);
         return sum + exchange.expectedDamageTakenPerPack * packsPerType;
       }, 0);
@@ -3008,6 +3067,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
         expectedGotHitInterruptions: row.expectedGotHitInterruptions,
         hitRecoverySeconds: playerHitRecoverySeconds,
         ranged: row.rangedMonster,
+        ...(row.groupAiInput ? { groupAi: row.groupAiInput } : {}),
       }, adjacentSlots);
       if (spellAreaInPacks !== 'expected' || !row.packCombat
         || !('expectedTargetsAffectedPerCast' in row.packCombat)) {
@@ -3486,6 +3546,16 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       const suppressed = numericPackField(pack, 'expectedAttackersSuppressedPerCast') ?? 0;
       return sum + suppressed * row.spellExpectedKills;
     }, 0) / areaSpellKills;
+    const groupAiRows = groupAi === 'expected'
+      ? packRows.map((row) => 'groupAi' in row ? row.groupAi : undefined)
+      : [];
+    const meanGroupAiField = (field: keyof NonNullable<DistributedPackExchangeExpectation['groupAi']>) => {
+      if (groupAiRows.length === 0 || groupAiRows.some((summary) => summary === undefined)) return null;
+      return groupAiRows.reduce((sum, summary) => {
+        const value = summary?.[field];
+        return sum + (typeof value === 'number' ? value : 0);
+      }, 0) / groupAiRows.length;
+    };
     const packExpectation: DescentPackExpectation | undefined = encounter === 'packs' ? {
       adjacentSlots,
       expectedPackSize: placementPackSize,
@@ -3509,8 +3579,25 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
           monster: wrapper?.entity.name ?? monsterId,
           pack: pack == null ? 'unresolved' : String(pack),
           requestedPackSize: pack == null ? null : requestedUniquePackSize(pack),
+          ...(groupAi === 'expected' ? {
+            activationRelation: pack == null || String(pack).toLowerCase() === 'none'
+              ? null
+              : String(pack).toLowerCase() === 'leashed'
+                ? 'unique-leashed' as const
+                : 'unique-independent' as const,
+          } : {}),
         };
       }),
+      ...(groupAi === 'expected' ? {
+        groupAi: {
+          policy: 'expected' as const,
+          geometry: GROUP_AI_VISIBILITY_WAVE_GEOMETRY.id,
+          expectedActivationWaveSecondsPerPack: meanGroupAiField('expectedActivationWaveSecondsPerPack'),
+          expectedExtraMembersPerPack: meanGroupAiField('expectedExtraMembersPerPack'),
+          expectedFallenFearAttackerSecondsRemovedPerPack:
+            meanGroupAiField('fallenFearAttackerSecondsRemovedPerPack'),
+        },
+      } : {}),
       ...(spellAreaInPacks === 'expected' ? {
         spellArea: {
           policy: 'expected' as const,
@@ -3747,6 +3834,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       rangedPackKiteStepSeconds,
       rangedPackKiteStepTiles,
     } : {}),
+    ...(groupAi === 'expected' ? { groupAi } : {}),
     ...(exchangeModel === 'cadence' ? { exchangeModel } : {}),
     ...(purchases === 'defence' ? { purchases } : {}),
     ...(saleIdentify === 'when-profitable' ? { saleIdentify } : {}),
@@ -3770,6 +3858,7 @@ export function simulateDescent(input: SimulateDescentInput): DescentSimulation 
       rangedPackKite,
       rangedPackKiteStepSeconds,
       rangedPackKiteStepTiles,
+      groupAi,
       defensiveAffixes,
       offensiveAffixes,
       purchases,
@@ -3865,6 +3954,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
     ...(simulation.offensiveAffixes === 'expected' ? ['expected-offensive-affixes'] : []),
     ...(simulation.spellAreaInPacks === 'expected' ? ['expected-spell-area-in-packs'] : []),
     ...(simulation.rangedPackApproach === 'expected' ? ['expected-ranged-pack-approach'] : []),
+    ...(simulation.groupAi === 'expected' ? ['expected-group-ai'] : []),
     ...(simulation.purchases === 'defence' ? ['expected-defensive-store-purchases'] : []),
     ...(simulation.recovery === 'town-portal' ? ['town-portal-recovery'] : []),
   ]);
@@ -3920,6 +4010,7 @@ export function descentEntity(input: SimulateDescentInput): ReferenceWrapper {
             rangedPackKiteStepTiles: simulation.rangedPackKiteStepTiles,
           } : {}),
         } : {}),
+        ...(simulation.groupAi === 'expected' ? { groupAi: simulation.groupAi } : {}),
         ...(simulation.purchases === 'defence' ? { purchases: simulation.purchases } : {}),
         ...(simulation.recovery === 'town-portal' ? { recovery: simulation.recovery } : {}),
       },

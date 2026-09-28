@@ -536,6 +536,7 @@ describe('simulateDescent', () => {
     const explicitNoPurchases = simulateDescent({ ...input, purchases: 'none' });
     const explicitNoRecovery = simulateDescent({ ...input, recovery: 'none' });
     const explicitNoRangedPackApproach = simulateDescent({ ...input, rangedPackApproach: 'off' });
+    const explicitNoGroupAi = simulateDescent({ ...input, groupAi: 'off' });
 
     expect(JSON.stringify(explicit)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitDuel)).toBe(JSON.stringify(omitted));
@@ -543,6 +544,7 @@ describe('simulateDescent', () => {
     expect(JSON.stringify(explicitNoPurchases)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoRecovery)).toBe(JSON.stringify(omitted));
     expect(JSON.stringify(explicitNoRangedPackApproach)).toBe(JSON.stringify(omitted));
+    expect(JSON.stringify(explicitNoGroupAi)).toBe(JSON.stringify(omitted));
     expect(Object.keys(explicit.levels[0])).toEqual([
       'depth',
       'poolSize',
@@ -953,6 +955,37 @@ describe('simulateDescent', () => {
     expect(result.levels[0].pack!.expectedGotHitInterruptions).toBeGreaterThan(0);
     expect(result.levels[1].pack).toMatchObject({ expectedPackSize: 1.75, expectedPacks: 2 / 1.75 });
     expect(result.assumptions.find((item) => item.id === 'adjacent-slots')).toMatchObject({ value: 8 });
+  });
+
+  it('feeds opt-in visibility-wave group AI into pack damage and reports its geometry', () => {
+    const input = {
+      className: 'warrior' as const,
+      policy: 'none' as const,
+      tilesPerLevel: 60,
+      gameMode: 'single' as const,
+      difficulty: 'normal' as const,
+      encounter: 'packs' as const,
+      adjacentSlots: 8,
+      wrappers: [warrior, monster, ...curve],
+      locations,
+    };
+    const legacy = simulateDescent(input);
+    const expected = simulateDescent({ ...input, groupAi: 'expected' });
+
+    expect(expected).toMatchObject({ encounter: 'packs', groupAi: 'expected' });
+    expect(expected.levels[2].pack?.groupAi).toMatchObject({
+      policy: 'expected',
+      geometry: 'uniform-place-group-visibility-band',
+      expectedExtraMembersPerPack: 0,
+      expectedFallenFearAttackerSecondsRemovedPerPack: 0,
+    });
+    expect(expected.levels[2].expectedDamageTaken)
+      .toBeLessThan(legacy.levels[2].expectedDamageTaken!);
+    expect(expected.assumptions.map((item) => item.id)).toEqual(expect.arrayContaining([
+      'group-ai-visibility-wave',
+      'group-ai-summon-roster',
+      'group-ai-fallen-fear',
+    ]));
   });
 
   it('keeps ranged pack approach off byte-identical and changes Rogue pack time and damage when enabled', () => {

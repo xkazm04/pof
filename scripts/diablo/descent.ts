@@ -17,6 +17,7 @@
  *     [--ranged-pack-geometry shared-engagement-ring]
  *     [--ranged-pack-kite off|step-back-after-action]
  *     [--ranged-pack-kite-step-seconds N] [--ranged-pack-kite-step-tiles N]
+ *     [--group-ai off|expected]
  *     [--buy none|defence]
  *     [--recovery none|town-portal] [--portal-trip-seconds N]
  *     [--chain]
@@ -44,6 +45,7 @@ import {
   type RangedPackApproach,
   type RangedPackGeometry,
   type RangedPackKite,
+  type GroupAi,
   type SaleIdentify,
   type SorcererCombatPolicy,
   type SpellAreaInPacks,
@@ -181,6 +183,15 @@ if (!(rangedPackKiteStepTiles > 0) || !Number.isFinite(rangedPackKiteStepTiles))
   console.error('--ranged-pack-kite-step-tiles must be a positive number');
   process.exit(2);
 }
+const groupAi = (arg('group-ai') ?? 'off') as GroupAi;
+if (!(['off', 'expected'] as const).includes(groupAi)) {
+  console.error('--group-ai must be off|expected');
+  process.exit(2);
+}
+if (groupAi === 'expected' && encounter !== 'packs') {
+  console.error('--group-ai expected requires --encounter packs');
+  process.exit(2);
+}
 const recovery = (arg('recovery') ?? 'none') as DescentRecovery;
 if (!(['none', 'town-portal'] as const).includes(recovery)) {
   console.error('--recovery must be none|town-portal');
@@ -225,6 +236,7 @@ const simulationInput = {
   rangedPackKite,
   rangedPackKiteStepSeconds,
   rangedPackKiteStepTiles,
+  groupAi,
   recovery,
   townPortalTripSeconds,
   wrappers,
@@ -279,6 +291,18 @@ console.table(result.levels.map((level) => {
         ? null
         : Number(level.pack!.expectedGotHitInterruptions.toFixed(2)),
       'pack sustainable': level.pack!.sustainable ? 'yes' : 'no',
+      ...(groupAi === 'expected' ? {
+        'activation wave seconds/pack': level.pack!.groupAi?.expectedActivationWaveSecondsPerPack == null
+          ? null
+          : Number(level.pack!.groupAi.expectedActivationWaveSecondsPerPack.toFixed(2)),
+        'summons/pack': level.pack!.groupAi?.expectedExtraMembersPerPack == null
+          ? null
+          : Number(level.pack!.groupAi.expectedExtraMembersPerPack.toFixed(2)),
+        'Fallen attacker-seconds removed/pack':
+          level.pack!.groupAi?.expectedFallenFearAttackerSecondsRemovedPerPack == null
+            ? null
+            : Number(level.pack!.groupAi.expectedFallenFearAttackerSecondsRemovedPerPack.toFixed(2)),
+      } : {}),
       ...(spellAreaInPacks === 'expected' ? {
         'targets/cast': level.pack!.spellArea?.expectedTargetsAffectedPerCast == null
           ? null
@@ -444,13 +468,15 @@ if (result.goldFlow) {
 }
 
 const path = join(
-  homedir(),
-  'Documents',
-  'Obsidian',
-  'pof',
-  'Diablo',
-  'Combat',
-  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${spellAreaInPacks === 'expected' ? '-expected-spell-area' : ''}${rangedPackApproach === 'expected' ? '-expected-ranged-approach' : ''}${rangedPackKite === 'step-back-after-action' ? '-kite' : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
+  process.env.POF_DESCENT_REPORT_DIR ?? join(
+    homedir(),
+    'Documents',
+    'Obsidian',
+    'pof',
+    'Diablo',
+    'Combat',
+  ),
+  `descent-${className}-${policy}${gear === 'expected' ? '-expected-gear' : ''}${className === 'sorcerer' && sorcererCombatPolicy === 'mixed' ? '-mixed' : ''}${sustainIncome === 'gold-and-sales' ? '-gold-and-sales' : ''}${saleIdentify === 'when-profitable' ? '-identify-profitable' : ''}${encounter === 'packs' ? `-packs-${adjacentSlots}-slots` : ''}${spellAreaInPacks === 'expected' ? '-expected-spell-area' : ''}${rangedPackApproach === 'expected' ? '-expected-ranged-approach' : ''}${rangedPackKite === 'step-back-after-action' ? '-kite' : ''}${groupAi === 'expected' ? '-expected-group-ai' : ''}${defensiveAffixes === 'expected' ? '-expected-defense' : ''}${offensiveAffixes === 'expected' ? '-expected-offense' : ''}${purchases === 'defence' ? '-buy-defence' : ''}${recovery === 'town-portal' ? '-town-portal-recovery' : ''}${townPortalTripSeconds !== DEFAULT_TOWN_PORTAL_TRIP_SECONDS_ASSUMPTION ? `-${townPortalTripSeconds}s-town-trip` : ''}${chain ? '-chain' : ''}.json`,
 );
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, JSON.stringify(result, null, 2));
