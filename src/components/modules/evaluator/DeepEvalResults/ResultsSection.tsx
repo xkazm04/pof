@@ -11,6 +11,19 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, statusBg, statusBorder } f
 import { EVAL_ACCENT, SEVERITY_CONFIG } from './constants';
 import { ModuleSection } from './ModuleSection';
 
+/**
+ * Why a module failed, per pass: the named reason for each errored pass, or
+ * "not finished" for passes a cancel cut short (they have no error of their own).
+ */
+function failureReason(result: DeepEvalResult, moduleId: string): string {
+  const errors = Object.entries(result.passErrors?.[moduleId] ?? {});
+  if (errors.length > 0) return errors.map(([pass, reason]) => `${pass}: ${reason}`).join('; ');
+  const unfinished = Object.entries(result.passStatuses?.[moduleId] ?? {})
+    .filter(([, s]) => s === 'pending' || s === 'running')
+    .map(([pass]) => pass);
+  return unfinished.length > 0 ? `not finished (${unfinished.join(', ')})` : 'evaluation incomplete';
+}
+
 export function ResultsSection({
   result,
   diff,
@@ -113,11 +126,19 @@ export function ResultsSection({
       {/* Failed modules: their findings are incomplete and were excluded from the baseline merge */}
       {result.failedModules.length > 0 && (
         <div
+          data-testid="pof-deep-eval-failed-modules"
           className="px-3 py-2 rounded-lg text-xs"
           style={{ backgroundColor: statusBg(STATUS_WARNING, 0.05), border: `1px solid ${statusBorder(STATUS_WARNING, 0.20)}`, color: STATUS_WARNING }}
         >
           {result.failedModules.length} module{result.failedModules.length !== 1 ? 's' : ''} failed to evaluate
-          ({result.failedModules.join(', ')}) — excluded from the regression baseline; re-run them to refresh their findings.
+          — excluded from the regression baseline; re-run them to refresh their findings.
+          <ul className="mt-1 space-y-0.5">
+            {result.failedModules.map((m) => (
+              <li key={m}>
+                <span className="font-semibold">{m}</span>: {failureReason(result, m)}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

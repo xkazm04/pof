@@ -6,14 +6,19 @@
  * Each pass produces structured findings that are collected, deduplicated, and
  * aggregated into a comprehensive scan report.
  *
- * This engine runs client-side and calls the existing /api/claude-terminal/query
- * endpoint for each evaluation pass.
+ * The engine is transport-free: each pass goes through an injected
+ * {@link PassExecutor}. The server job (`deep-eval-job.ts`, behind
+ * `/api/evaluator/deep-eval`) supplies one that spawns the Claude CLI via
+ * cli-service; tests supply a fake, so the orchestration is testable at zero
+ * model cost. (It used to run in the browser and POST `{ prompt, cwd }` to
+ * /api/claude-terminal/query, which requires `projectPath` and answered 400,
+ * so every pass of every run landed 'error'.)
  */
 
 import type { SubModuleId } from '@/types/modules';
-import { buildEvalPrompt, PASS_LABELS, getEvaluableModuleIds, getPassesForModule } from './module-eval-prompts';
+import { buildEvalPrompt, getEvaluableModuleIds, getPassesForModule } from './module-eval-prompts';
 import type { EvalPass } from './module-eval-prompts';
-import { parseFindings, deduplicateFindings, aggregateFindings } from './finding-collector';
+import { parseFindingsStrict, deduplicateFindings, aggregateFindings } from './finding-collector';
 import type { EvalFinding, ScanFindings } from './finding-collector';
 import { buildProjectContextHeader } from '@/lib/prompt-context';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
@@ -63,6 +68,31 @@ ${body}`;
 
 export type EvalStatus = 'idle' | 'running' | 'completed' | 'error' | 'cancelled';
 
+export type PassStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped';
+
+/**
+ * Runs ONE evaluation pass and resolves with the model's raw text output. Rejects
+ * with the failure (its message becomes the pass's `cli-error: ...` reason), or
+ * with an `AbortError` when `signal` fires.
+ */
+export type PassExecutor = (
+  prompt: string,
+  projectPath: string,
+  signal: AbortSignal,
+  /** Which cell this pass is, for attribution and logging. */
+  cell: { moduleId: string; pass: EvalPass },
+) => Promise<string>;
+
+/** A pass that ended: what the ledger persists and a resumed run replays. */
+export interface PassOutcome {
+  moduleId: string;
+  pass: EvalPass;
+  status: 'done' | 'error';
+  findings: EvalFinding[];
+  /** Why the pass failed (`unparseable-output`, `cli-error: ...`); null when done. */
+  error: string | null;
+}
+
 export interface EvalProgress {
   status: EvalStatus;
   currentModule: string | null;
@@ -70,7 +100,7 @@ export interface EvalProgress {
   completedSteps: number;
   totalSteps: number;
   /** Module -> pass -> status */
-  passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>>;
+  passStatuses: Record<string, Record<EvalPass, PassStatus>>;
   /** Intermediate results as they come in */
   findings: EvalFinding[];
   error: string | null;
@@ -85,6 +115,16 @@ export interface DeepEvalOptions {
   projectContext: ProjectContext;
   /** Project CWD for CLI execution */
   projectPath: string;
+  /** Runs each pass (the server job's CLI executor, or a test fake). */
+  executePass: PassExecutor;
+  /** Scan id to stamp findings with (default `deep-<now>`); a resumed job reuses its own. */
+  scanId?: string;
+  /** Cancels the run; in-flight passes see it through their executor's signal. */
+  signal?: AbortSignal;
+  /** Passes an earlier run of this scan already finished: `done` ones are not re-run. */
+  resumeFrom?: PassOutcome[];
+  /** Called as each pass ends (done or error): the per-pass persistence hook. */
+  onPassEnd?: (outcome: PassOutcome) => void;
   /** Callback for progress updates */
   onProgress?: (progress: EvalProgress) => void;
 }
@@ -101,18 +141,20 @@ export interface DeepEvalResult {
    * or prior findings get dropped and falsely reported as RESOLVED.
    */
   failedModules: string[];
+  /** Final status of every (module, pass) cell. */
+  passStatuses: Record<string, Record<EvalPass, PassStatus>>;
+  /**
+   * Why each failed pass failed, per module: `unparseable-output` (the pass ran but
+   * returned no JSON findings array, so it is unmeasured, never "clean") or
+   * `cli-error: <message>`. Empty for a module whose passes all finished.
+   */
+  passErrors: Record<string, Partial<Record<EvalPass, string>>>;
 }
 
 // ─── Engine ──────────────────────────────────────────────────────────────────
 
-let abortController: AbortController | null = null;
-
-/**
- * Cancel any running deep evaluation.
- */
-export function cancelDeepEval(): void {
-  abortController?.abort();
-  abortController = null;
+function abortError(): DOMException {
+  return new DOMException('Evaluation cancelled', 'AbortError');
 }
 
 /**
@@ -124,6 +166,9 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
     passes,
     projectContext,
     projectPath,
+    executePass,
+    resumeFrom = [],
+    onPassEnd,
     onProgress,
   } = options;
 
@@ -135,17 +180,18 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
     ? passes
     : Array.from(new Set(moduleIds.flatMap((m) => passesFor(m))));
 
-  abortController = new AbortController();
-  const signal = abortController.signal;
+  const signal = options.signal ?? new AbortController().signal;
 
-  const scanId = `deep-${Date.now()}`;
+  const scanId = options.scanId ?? `deep-${Date.now()}`;
   const startTime = Date.now();
   const allFindings: EvalFinding[] = [];
 
   // Initialize progress
-  const passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>> = {};
+  const passStatuses: Record<string, Record<EvalPass, PassStatus>> = {};
+  const passErrors: Record<string, Partial<Record<EvalPass, string>>> = {};
   for (const moduleId of moduleIds) {
-    passStatuses[moduleId] = {} as Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>;
+    passStatuses[moduleId] = {} as Record<EvalPass, PassStatus>;
+    passErrors[moduleId] = {};
     for (const pass of passesFor(moduleId)) {
       passStatuses[moduleId][pass] = 'pending';
     }
@@ -192,17 +238,31 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
     moduleId: string;
     pass: EvalPass;
   }
-  const workItems: WorkItem[] = [];
-  for (const moduleId of moduleIds) {
-    for (const pass of passesFor(moduleId)) {
-      workItems.push({ index: workItems.length, moduleId, pass });
-    }
-  }
   // Per-work-item findings slots. Flattening these in `index` order reproduces
   // the exact `allFindings` sequence the serial loop produced, regardless of
   // which pass finishes first under concurrency — so dedup/aggregate output is
   // byte-identical to the sequential version.
-  const findingsByIndex: EvalFinding[][] = workItems.map(() => []);
+  const findingsByIndex: EvalFinding[][] = [];
+  const workItems: WorkItem[] = [];
+  // Resume: a pass an earlier run of this scan already finished ('done') is
+  // replayed from its recorded findings into its own slot, never re-run.
+  const resumed = new Map(
+    resumeFrom.filter((o) => o.status === 'done').map((o) => [`${o.moduleId}::${o.pass}`, o.findings]),
+  );
+  for (const moduleId of moduleIds) {
+    for (const pass of passesFor(moduleId)) {
+      const index = findingsByIndex.length;
+      const prior = resumed.get(`${moduleId}::${pass}`);
+      findingsByIndex.push(prior ?? []);
+      if (prior) {
+        passStatuses[moduleId][pass] = 'done';
+        completedSteps++;
+      } else {
+        workItems.push({ index, moduleId, pass });
+      }
+    }
+  }
+  if (resumed.size > 0) emitProgress();
 
   // Bounded concurrency. Claude CLI passes are slow (30-120s) and rate-limited,
   // so we cap in-flight passes at a small pool rather than firing all ~69 at
@@ -219,45 +279,33 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
   // which is acceptable for a progress indicator.
   const runPass = async (item: WorkItem): Promise<void> => {
     const { index, moduleId, pass } = item;
-    if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
+    if (signal.aborted) throw abortError();
 
     progress.currentModule = moduleId;
     progress.currentPass = pass;
     passStatuses[moduleId][pass] = 'running';
     emitProgress();
 
+    let error: string | null = null;
     try {
       const fullPrompt = buildDeepEvalPassPrompt(projectContext, moduleId as SubModuleId, pass);
+      const rawOutput = await executePass(fullPrompt, projectPath, signal, { moduleId, pass });
+      if (signal.aborted) throw abortError();
 
-      const response = await fetch('/api/claude-terminal/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: fullPrompt,
-          cwd: projectPath,
-        }),
-        signal,
-      });
-
-      if (!response.ok) {
-        passStatuses[moduleId][pass] = 'error';
-        completedSteps++;
-        emitProgress();
-        return;
-      }
-
-      // Collect streamed response
-      const rawOutput = await collectStreamResponse(response, signal);
-
-      // Parse findings from output — into this task's own slot.
-      findingsByIndex[index] = parseFindings(rawOutput, scanId, moduleId as SubModuleId, pass);
-
-      passStatuses[moduleId][pass] = 'done';
+      // Parse findings from output — into this task's own slot. A pass that ran
+      // but returned no findings array is UNMEASURED, not clean: it errors with a
+      // named reason instead of reading as zero findings.
+      const parsed = parseFindingsStrict(rawOutput, scanId, moduleId as SubModuleId, pass);
+      if (parsed.ok) findingsByIndex[index] = parsed.data;
+      else error = parsed.error;
     } catch (err) {
       if ((err as Error).name === 'AbortError') throw err;
-      passStatuses[moduleId][pass] = 'error';
+      error = `cli-error: ${err instanceof Error ? err.message : String(err)}`;
     }
 
+    passStatuses[moduleId][pass] = error ? 'error' : 'done';
+    if (error) passErrors[moduleId][pass] = error;
+    onPassEnd?.({ moduleId, pass, status: error ? 'error' : 'done', findings: findingsByIndex[index], error });
     completedSteps++;
     emitProgress();
   };
@@ -270,7 +318,7 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
     let cursor = 0;
     const worker = async (): Promise<void> => {
       while (cursor < workItems.length) {
-        if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
+        if (signal.aborted) throw abortError();
         const item = workItems[cursor++];
         await runPass(item);
       }
@@ -303,6 +351,8 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
       modulesEvaluated: moduleIds,
       passesRun,
       failedModules: modulesWithErroredPasses(moduleIds, passStatuses),
+      passStatuses: snapshotStatuses(passStatuses),
+      passErrors,
     };
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
@@ -336,16 +386,25 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
       modulesEvaluated: modulesFullyCompleted(moduleIds, passStatuses),
       passesRun,
       failedModules: modulesWithErroredPasses(moduleIds, passStatuses),
+      passStatuses: snapshotStatuses(passStatuses),
+      passErrors,
     };
-  } finally {
-    abortController = null;
   }
+}
+
+/** Per-module row copies, so a returned result never aliases the live cells. */
+function snapshotStatuses(
+  passStatuses: Record<string, Record<EvalPass, PassStatus>>,
+): Record<string, Record<EvalPass, PassStatus>> {
+  const out: Record<string, Record<EvalPass, PassStatus>> = {};
+  for (const m in passStatuses) out[m] = { ...passStatuses[m] };
+  return out;
 }
 
 /** Modules whose evaluation is incomplete: any pass errored (or never ran). */
 function modulesWithErroredPasses(
   moduleIds: string[],
-  passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>>,
+  passStatuses: Record<string, Record<EvalPass, PassStatus>>,
 ): string[] {
   return moduleIds.filter((m) =>
     Object.values(passStatuses[m] ?? {}).some((s) => s === 'error' || s === 'pending' || s === 'running'),
@@ -356,71 +415,9 @@ function modulesWithErroredPasses(
  *  aborted run may honestly claim as evaluated. */
 function modulesFullyCompleted(
   moduleIds: string[],
-  passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>>,
+  passStatuses: Record<string, Record<EvalPass, PassStatus>>,
 ): string[] {
   return moduleIds.filter((m) =>
     Object.values(passStatuses[m] ?? {}).every((s) => s === 'done' || s === 'skipped'),
   );
-}
-
-// ─── Stream collector ────────────────────────────────────────────────────────
-
-async function collectStreamResponse(response: Response, signal: AbortSignal): Promise<string> {
-  const reader = response.body?.getReader();
-  if (!reader) return '';
-
-  const decoder = new TextDecoder();
-  let output = '';
-
-  try {
-    while (true) {
-      if (signal.aborted) {
-        reader.cancel();
-        throw new DOMException('Evaluation cancelled', 'AbortError');
-      }
-
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-
-      // Parse SSE events — extract text content
-      const lines = chunk.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          if (data === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === 'text' || parsed.type === 'content') {
-              output += parsed.text ?? parsed.content ?? '';
-            } else if (parsed.type === 'result') {
-              output += parsed.text ?? parsed.content ?? parsed.result ?? '';
-            } else if (typeof parsed === 'string') {
-              output += parsed;
-            }
-          } catch {
-            // Not JSON, might be raw text
-            if (data.trim() && data !== '[DONE]') {
-              output += data;
-            }
-          }
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-
-  return output;
-}
-
-/**
- * Run deep eval for a single module (convenience wrapper).
- */
-export async function runSingleModuleEval(
-  moduleId: SubModuleId,
-  options: Omit<DeepEvalOptions, 'moduleIds'>,
-): Promise<DeepEvalResult> {
-  return runDeepEval({ ...options, moduleIds: [moduleId] });
 }

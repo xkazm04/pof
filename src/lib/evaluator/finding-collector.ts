@@ -4,6 +4,8 @@
 
 import type { SubModuleId } from '@/types/modules';
 import type { EvalPass } from './module-eval-prompts';
+import { ok, err } from '@/types/result';
+import type { Result } from '@/types/result';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -149,6 +151,9 @@ function extractBalancedJson(text: string): unknown {
  * The CLI should return a JSON array, but we handle markdown fences, leading
  * prose, and noise — including combat-trace output that prints a call graph
  * before the JSON findings array.
+ *
+ * Lenient: output with no findings array reads as zero findings. A caller that
+ * must tell "clean" from "unmeasured" uses {@link parseFindingsStrict}.
  */
 export function parseFindings(
   raw: string,
@@ -156,6 +161,24 @@ export function parseFindings(
   moduleId: SubModuleId,
   pass: EvalPass,
 ): EvalFinding[] {
+  const parsed = parseFindingsStrict(raw, scanId, moduleId, pass);
+  return parsed.ok ? parsed.data : [];
+}
+
+/** Why a pass's output yielded no findings array. */
+export type FindingsParseError = 'unparseable-output';
+
+/**
+ * Strict form of {@link parseFindings}: `[]` is a clean pass (`ok`, no findings),
+ * but output with no parseable JSON findings array is `unparseable-output`, so an
+ * unmeasured pass is spelled differently from a clean one.
+ */
+export function parseFindingsStrict(
+  raw: string,
+  scanId: string,
+  moduleId: SubModuleId,
+  pass: EvalPass,
+): Result<EvalFinding[], FindingsParseError> {
   const trimmed = raw.trim();
 
   // Prefer a fenced code block if one is present anywhere in the output;
@@ -170,10 +193,10 @@ export function parseFindings(
     parsed = extractBalancedJson(trimmed);
   }
 
-  if (!Array.isArray(parsed)) return [];
+  if (!Array.isArray(parsed)) return err('unparseable-output');
 
   const timestamp = Date.now();
-  return parsed
+  return ok(parsed
     .filter((item): item is RawFinding =>
       typeof item === 'object' && item !== null && 'description' in item,
     )
@@ -190,7 +213,7 @@ export function parseFindings(
       suggestedFix: String(item.suggestedFix ?? ''),
       effort: validateEffort(String(item.effort ?? 'medium')),
       timestamp,
-    }));
+    })));
 }
 
 // ─── Fingerprinting ──────────────────────────────────────────────────────────
