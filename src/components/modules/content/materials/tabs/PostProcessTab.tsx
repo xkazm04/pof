@@ -2,18 +2,13 @@
 
 import { useCallback } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
-import { useProjectStore } from '@/stores/projectStore';
-import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
+import { TaskFactory } from '@/lib/cli-task';
 import { MODULE_COLORS } from '@/lib/constants';
-import { PostProcessStackBuilder } from '../PostProcessStackBuilder';
 import type { PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
+import { PostProcessStackBuilder } from '../PostProcessStackBuilder';
 
 /** The Post-Process tab, owning its own CLI session (see ConfiguratorTab). */
 export function PostProcessTab() {
-  const projectName = useProjectStore((s) => s.projectName);
-  const projectPath = useProjectStore((s) => s.projectPath);
-  const ueVersion = useProjectStore((s) => s.ueVersion);
-
   const cli = useModuleCLI({
     moduleId: 'materials',
     sessionKey: 'materials-postprocess',
@@ -21,9 +16,11 @@ export function PostProcessTab() {
     accentColor: MODULE_COLORS.content,
   });
 
+  // On the CLITask rail (same as ConfiguratorTab): prompt evolution can adopt a
+  // variant for it and the inspector previews the exact string that dispatches.
   const handleGenerate = useCallback((spec: PostProcessStackSpec) => {
-    cli.sendPrompt(buildPostProcessPrompt(spec, { projectName, projectPath, ueVersion }));
-  }, [cli, projectName, projectPath, ueVersion]);
+    void cli.execute(TaskFactory.postProcess('materials', spec, 'Post-Process Stack'));
+  }, [cli]);
 
   return <PostProcessStackBuilder onGenerate={handleGenerate} isGenerating={cli.isRunning} />;
 }

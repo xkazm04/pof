@@ -4,12 +4,14 @@ import { TaskFactory, buildTaskPrompt } from '@/lib/cli-task';
 import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
 import { toStackSpec } from '@/lib/post-process-studio/stack-spec';
 import { DEFAULT_EFFECTS } from '@/lib/post-process-studio/effects';
+import { GET, POST } from '@/app/api/post-process-studio/route';
 import type { PPStudioEffect } from '@/types/post-process-studio';
 import type { ProjectContext } from '@/lib/prompt-context';
 
 /**
  * Post-process on the CLITask rail (the material-configurator three-part move):
- * one builder, one task type, one variant key.
+ * one builder, one task type, one variant key — and the server-side second
+ * builder retired.
  */
 
 const CTX: ProjectContext = { projectName: 'PoF', projectPath: 'C:\\proj\\PoF', ueVersion: '5.8.0' };
@@ -53,5 +55,24 @@ describe('post-process on the CLITask rail', () => {
     expect(ka.startsWith('post-process::')).toBe(true);
     expect(variantKeyForTask(b)?.checklistItemId).toBe(ka);
     expect(variantKeyForTask(c)?.checklistItemId).not.toBe(ka);
+  });
+});
+
+describe('/api/post-process-studio — the second builder is retired', () => {
+  it("POST {action:'generate'} no longer builds a prompt (400)", async () => {
+    // Before retirement this was `POST(new Request(... {action:'generate', effects}))` → 200
+    // with a second, generic prompt. The retired handler takes no body: every action is 400.
+    const res = await POST();
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json).not.toHaveProperty('data.prompt');
+  });
+
+  it('[guard] GET still serves the 7 presets', async () => {
+    const res = await GET();
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.presets).toHaveLength(7);
   });
 });
