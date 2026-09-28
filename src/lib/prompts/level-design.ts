@@ -123,6 +123,16 @@ INSTRUCTIONS:
 4. Verify the fix compiles`;
 }
 
+/**
+ * Machine-readable gate data (`RoomConnection.requires` / `RoomNode.grants`) for
+ * the codegen prompt — '' when absent or empty, so an ungated document's prompt
+ * is byte-identical to the one it always produced.
+ */
+function gateLine(prefix: string, keys: string[] | undefined, suffix = ''): string {
+  const ids = (keys ?? []).map((k) => k.trim()).filter(Boolean);
+  return ids.length > 0 ? `${prefix}${ids.join(', ')}${suffix}` : '';
+}
+
 export function buildNarrativeCodegenPrompt(doc: LevelDesignDocument, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
 
@@ -148,14 +158,14 @@ ROOMS (${doc.rooms.length}):
 ${doc.rooms.map((r) => `  - ${r.name}: ${r.type}, difficulty ${r.difficulty}, pacing ${r.pacing}
     Description: ${r.description}
     Encounters: ${r.encounterDesign}
-    Spawns: ${r.spawnEntries.map((s) => `${s.enemyClass}x${s.count} W${s.wave}`).join(', ') || 'none'}`
+    Spawns: ${r.spawnEntries.map((s) => `${s.enemyClass}x${s.count} W${s.wave}`).join(', ') || 'none'}${gateLine('\n    Grants: ', r.grants)}`
   ).join('\n')}
 
 CONNECTIONS:
 ${doc.connections.map((c) => {
     const from = doc.rooms.find((r) => r.id === c.fromId)?.name ?? c.fromId;
     const to = doc.rooms.find((r) => r.id === c.toId)?.name ?? c.toId;
-    return `  - ${from} ${c.bidirectional ? '<->' : '->'} ${to}${c.condition ? ` (${c.condition})` : ''}`;
+    return `  - ${from} ${c.bidirectional ? '<->' : '->'} ${to}${gateLine(' [requires: ', c.requires, ']')}${c.condition ? ` (${c.condition})` : ''}`;
   }).join('\n')}
 
 PACING NOTES: ${doc.pacingNotes}
