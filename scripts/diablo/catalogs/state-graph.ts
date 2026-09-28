@@ -1,4 +1,5 @@
 import { aiDecisionGraphEntities, seedAiDecisionGraphSteps } from '@/lib/catalog/reference/aiDecisionGraphs';
+import { withGroupAi } from '@/lib/catalog/reference/groupAiLedger';
 import { seedStateGraphSteps, stateGraphEntities } from '@/lib/catalog/reference/stateGraphSpecs';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
@@ -6,7 +7,10 @@ import type { CatalogHandler } from './types';
 
 const allStateGraphEntities = (wrappers: readonly ReferenceWrapper[] = []) => [
   ...stateGraphEntities(),
-  ...aiDecisionGraphEntities(wrappers),
+  ...aiDecisionGraphEntities(wrappers).map((wrapper) => ({
+    ...wrapper,
+    entity: withGroupAi(wrapper.entity),
+  })),
 ];
 
 export const stateGraphHandler: CatalogHandler = {
