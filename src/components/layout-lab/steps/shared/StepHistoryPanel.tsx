@@ -6,6 +6,9 @@ import { StatusTag } from '@/components/ui/StatusTag';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { readProduceDirection } from '@/lib/catalog/produceDirection';
 import type { ArtifactRevision } from '@/lib/pipeline-artifacts-db';
+import { useLabStep } from '../../labPipelineStore';
+import { diffRevision } from './revisionDiff';
+import { RevisionCompare, levelOf, wouldGradeWord, type RevisionDryRun } from './RevisionCompare';
 import type { LabTheme } from '../../theme';
 
 /** ISO → readable stamp. Derived from the row, never from a render-time clock. */
@@ -15,7 +18,8 @@ function stamp(iso: string | undefined): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
 }
 
-const LEVEL = { pass: 'ok', deferred: 'warn', pending: 'warn', fail: 'bad' } as const;
+const REVISIONS_URL = '/api/pipeline-artifacts/revisions';
+const postJson = (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 /**
  * Previous versions of ONE step, with a restore.
@@ -29,6 +33,11 @@ const LEVEL = { pass: 'ok', deferred: 'warn', pending: 'warn', fail: 'bad' } as 
  * mount across a 342-step map. A restore re-grades server-side, so the panel reports when
  * the restored verdict differs from the one the archived version carried rather than
  * letting a stale `pass` reappear as if it had been re-proven.
+ *
+ * Compare before restore: per row, a field-level diff against the output on screen (the
+ * lab store's current artifact) plus the server's dry-run re-grade (`dryRun: true` — no
+ * write, no archived version, no spent history slot), so a restore is a decision made
+ * with the content and the verdict in view rather than a try-then-undo.
  */
 export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   t: LabTheme;
@@ -43,6 +52,10 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [comparing, setComparing] = useState<number | null>(null);
+  const [dryRuns, setDryRuns] = useState<Record<number, RevisionDryRun>>({});
+  const [compareError, setCompareError] = useState<string | null>(null);
+  const current = useLabStep(entityId, step);
 
   const load = useCallback(async () => {
     setError(null);
@@ -58,14 +71,23 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
     if (next && revisions === null) void load();
   }
 
+  async function compare(rev: ArtifactRevision) {
+    if (comparing === rev.id) { setComparing(null); return; }
+    setComparing(rev.id);
+    setCompareError(null);
+    if (dryRuns[rev.id]) return;
+    const res = await tryApiFetch<RevisionDryRun>(REVISIONS_URL, postJson({ revisionId: rev.id, dryRun: true }));
+    if (res.ok) setDryRuns((d) => ({ ...d, [rev.id]: res.data }));
+    else setCompareError(res.error);
+  }
+
   async function restore(rev: ArtifactRevision) {
     setBusy(true);
     setNotice(null);
     setError(null);
     try {
       const res = await apiFetch<{ artifact: { status: string }; regraded: boolean; archivedStatus: string }>(
-        '/api/pipeline-artifacts/revisions',
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revisionId: rev.id }) },
+        REVISIONS_URL, postJson({ revisionId: rev.id }),
       );
       // A restore brings back CONTENT, not a verdict — say so whenever the two differ.
       setNotice(
@@ -73,6 +95,9 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
           ? `Restored. Re-graded to “${res.artifact.status}” — this version was archived as “${res.archivedStatus}”.`
           : `Restored version from ${stamp(rev.updatedAt)}.`,
       );
+      // The on-screen output changed, so every earlier comparison is stale.
+      setComparing(null);
+      setDryRuns({});
       await load();
       onRestored?.();
     } catch (e) {
@@ -110,6 +135,11 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
           )}
           {revisions?.map((r) => {
             const dir = readProduceDirection(r.data);
+            const dry = dryRuns[r.id];
+            const btn = {
+              fontSize: 13, padding: '4px 10px', cursor: busy ? 'wait' : 'pointer', color: t.text,
+              border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, background: 'transparent',
+            } as const;
             return (
               <div
                 key={r.id} data-testid="step-history-row" data-revision={r.id}
@@ -118,23 +148,36 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
                   padding: '8px 10px', border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0,
                 }}
               >
-                <StatusTag level={LEVEL[r.status as keyof typeof LEVEL] ?? 'warn'} word={r.status.toUpperCase()} />
+                <StatusTag level={levelOf(r.status)} word={r.status.toUpperCase()} />
                 <span className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>{stamp(r.updatedAt)}</span>
                 <span style={{ fontSize: 13, color: t.muted, minWidth: 0, flex: 1 }}>
                   {dir?.direction ? `“${dir.direction}”` : 'no direction recorded'}
                 </span>
                 <button
+                  type="button" onClick={() => void compare(r)} disabled={busy}
+                  data-testid="step-history-compare" aria-expanded={comparing === r.id}
+                  aria-label={`Compare the version from ${stamp(r.updatedAt)} with the current output`}
+                  className={`focus-ring ${t.fontMono}`} style={btn}
+                >
+                  ⇄ Compare
+                </button>
+                <button
                   type="button" onClick={() => void restore(r)} disabled={busy}
                   data-testid="step-history-restore"
-                  aria-label={`Restore the version from ${stamp(r.updatedAt)}`}
-                  className={`focus-ring ${t.fontMono}`}
-                  style={{
-                    fontSize: 13, padding: '4px 10px', cursor: busy ? 'wait' : 'pointer', color: t.text,
-                    border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, background: 'transparent',
-                  }}
+                  aria-label={`Restore the version from ${stamp(r.updatedAt)}${dry ? ` (${wouldGradeWord(dry).toLowerCase()})` : ''}`}
+                  className={`focus-ring ${t.fontMono}`} style={btn}
                 >
                   ↺ Restore
                 </button>
+                {comparing === r.id && compareError && (
+                  <InlineErrorRetry dense message={`Couldn’t compare this version: ${compareError}`} onRetry={() => { setComparing(null); void compare(r); }} />
+                )}
+                {comparing === r.id && dry && (
+                  <RevisionCompare
+                    t={t} dry={dry} hasCurrent={!!current}
+                    rows={diffRevision({ data: current?.data, ueAssets: current?.ueAssets }, { data: r.data, ueAssets: r.ueAssets })}
+                  />
+                )}
               </div>
             );
           })}

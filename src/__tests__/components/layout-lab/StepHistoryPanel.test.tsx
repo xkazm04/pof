@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
 
 import { StepHistoryPanel } from '@/components/layout-lab/steps/shared/StepHistoryPanel';
 import { LAB_THEMES } from '@/components/layout-lab/theme';
 import { PRODUCE_DIRECTION_KEY } from '@/lib/catalog/produceDirection';
+import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
 
 const t = LAB_THEMES[0];
 
@@ -92,5 +93,65 @@ describe('<StepHistoryPanel />', () => {
 
     expect(await screen.findByText(/db is down/)).toBeTruthy();
     expect(screen.queryByTestId('step-history-empty')).toBeNull();
+  });
+});
+
+describe('<StepHistoryPanel /> — compare before restore', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useLabPipelineStore.setState({
+      byEntity: { e1: { 'Concept Brief': { done: true, data: { brief: 'v9' }, ueAssets: [], at: '2026-09-28T10:00:00.000Z' } } },
+    });
+  });
+  afterEach(() => { useLabPipelineStore.setState({ byEntity: {} }); });
+
+  /** GET → the revision list; POST dryRun → the would-grade; POST restore → the restore result. */
+  function stubCompareRoutes(list: unknown, dry: unknown, restored: unknown) {
+    const fn = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = init?.method === 'POST' ? JSON.parse(String(init.body)) : null;
+      const data = !body ? list : body.dryRun ? dry : restored;
+      return { ok: true, json: async () => ({ success: true, data }) };
+    });
+    vi.stubGlobal('fetch', fn as unknown as typeof fetch);
+    return fn;
+  }
+  const posts = (f: ReturnType<typeof vi.fn>) => f.mock.calls
+    .filter(([, init]) => (init as RequestInit | undefined)?.method === 'POST')
+    .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+
+  it('diffs the revision against the current output and shows its dry-run re-grade — with zero writes', async () => {
+    const f = stubCompareRoutes(
+      [rev(2, { status: 'pass' })],
+      { regraded: true, wouldStatus: 'fail', wouldTier: 'L0', wouldReason: 'brief too short', archivedStatus: 'pass' },
+      { artifact: { status: 'fail' }, regraded: true, archivedStatus: 'pass' },
+    );
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-compare'));
+
+    const verdict = await screen.findByTestId('step-history-would-grade');
+    expect(verdict.textContent).toContain('WOULD GRADE FAIL — archived as PASS');
+    const rows = screen.getAllByTestId('step-history-diff-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('brief');
+    expect(rows[0].textContent).toContain('v9');
+    expect(rows[0].textContent).toContain('v2');
+
+    expect(posts(f)).toEqual([{ revisionId: 2, dryRun: true }]);
+  });
+
+  it('[guard] Restore still POSTs {revisionId} only, shows the re-grade notice and calls onRestored', async () => {
+    const f = stubCompareRoutes(
+      [rev(1, { status: 'pass' })],
+      { regraded: true, wouldStatus: 'fail', archivedStatus: 'pass' },
+      { artifact: { status: 'fail' }, regraded: true, archivedStatus: 'pass' },
+    );
+    const onRestored = renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-restore'));
+
+    await waitFor(() => expect(onRestored).toHaveBeenCalled());
+    expect((await screen.findByTestId('step-history-notice')).textContent).toMatch(/re-graded/i);
+    expect(posts(f)).toEqual([{ revisionId: 1 }]);
   });
 });
