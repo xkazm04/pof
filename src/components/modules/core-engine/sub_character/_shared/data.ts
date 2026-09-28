@@ -479,31 +479,8 @@ export function deviationColor(dev: number): string {
 
 /* ── Blueprint Property Inspector ────────────────────────────────────────── */
 
-export interface BlueprintProperty {
-  name: string;
-  category: string;
-  current: number | string;
-  defaultVal: number | string;
-  isModified: boolean;
-}
-
-export const BLUEPRINT_PROPERTIES: BlueprintProperty[] = [
-  { name: 'MaxWalkSpeed', category: 'Movement', current: 400, defaultVal: 600, isModified: true },
-  { name: 'MaxSprintSpeed', category: 'Movement', current: 780, defaultVal: 600, isModified: true },
-  { name: 'JumpZVelocity', category: 'Movement', current: 520, defaultVal: 420, isModified: true },
-  { name: 'GravityScale', category: 'Movement', current: 1.0, defaultVal: 1.0, isModified: false },
-  { name: 'AirControl', category: 'Movement', current: 0.35, defaultVal: 0.2, isModified: true },
-  { name: 'BaseDamage', category: 'Combat', current: 25, defaultVal: 10, isModified: true },
-  { name: 'CritMultiplier', category: 'Combat', current: 2.0, defaultVal: 1.5, isModified: true },
-  { name: 'AttackSpeed', category: 'Combat', current: 1.2, defaultVal: 1.0, isModified: true },
-  { name: 'BlockReduction', category: 'Combat', current: 0.5, defaultVal: 0.5, isModified: false },
-  { name: 'HitStunDuration', category: 'Combat', current: 0.3, defaultVal: 0.25, isModified: true },
-  { name: 'ArmLength', category: 'Camera', current: 800, defaultVal: 400, isModified: true },
-  { name: 'FOV', category: 'Camera', current: 90, defaultVal: 90, isModified: false },
-  { name: 'LagSpeed', category: 'Camera', current: 10, defaultVal: 15, isModified: true },
-  { name: 'CameraOffset', category: 'Camera', current: '0,60,0', defaultVal: '0,0,0', isModified: true },
-  { name: 'RotationLag', category: 'Camera', current: 8, defaultVal: 10, isModified: true },
-];
+/* Property rows derive from the persisted feel stack: see `inspectorRows` in
+ * `@/lib/character/inspector-fields` (INSPECTOR_FIELDS / INSPECTOR_UNMAPPED). */
 
 export const PROPERTY_CATEGORIES = ['Movement', 'Combat', 'Camera'];
 

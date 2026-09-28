@@ -1,24 +1,33 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { STATUS_WARNING, OPACITY_25, withOpacity } from '@/lib/chart-colors';
+import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
+import { findBasePreset, inspectorRows, INSPECTOR_LAYER_ID } from '@/lib/character/inspector-fields';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../_shared/design';
-import {
-  ACCENT, BLUEPRINT_PROPERTIES, PROPERTY_CATEGORIES, PROPERTY_CAT_COLORS,
-  type BlueprintProperty,
-} from '../_shared/data';
+import { ACCENT, PROPERTY_CATEGORIES, PROPERTY_CAT_COLORS } from '../_shared/data';
 import { PropertyColumn } from './PropertyColumn';
 
 /**
  * 3-column property inspector — one column per category (Movement | Combat | Camera).
  * Each column independently collapsible (collapse ignored while a search is active).
+ *
+ * A view and editor of the persisted feel stack: rows are `inspectorRows(base,
+ * feelLayers)` and an edit is a `set` modifier in the 'Inspector overrides'
+ * layer, so it survives remounts and ships through AI Feel's Apply prompt.
  */
 export function PropertyInspector() {
   const [propSearch, setPropSearch] = useState('');
-  const [properties, setProperties] = useState<BlueprintProperty[]>(() =>
-    BLUEPRINT_PROPERTIES.map((p) => ({ ...p })),
+  const baseFeelPresetId = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const feelLayers = useCharacterBlueprintStore((s) => s.feelLayers);
+  const setInspectorOverride = useCharacterBlueprintStore((s) => s.setInspectorOverride);
+  const clearInspectorOverrides = useCharacterBlueprintStore((s) => s.clearInspectorOverrides);
+  const { rows: properties, unmappedCount } = useMemo(
+    () => inspectorRows(findBasePreset(baseFeelPresetId).profile, feelLayers),
+    [baseFeelPresetId, feelLayers],
   );
+  const hasOverrides = feelLayers.some((l) => l.id === INSPECTOR_LAYER_ID);
   const [highlightedProps, setHighlightedProps] = useState<Set<string>>(new Set());
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const highlightTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -32,9 +41,7 @@ export function PropertyInspector() {
   }, []);
 
   const handlePropertyChange = useCallback((name: string, value: number) => {
-    setProperties((prev) =>
-      prev.map((p) => (p.name === name ? { ...p, current: value, isModified: value !== p.defaultVal } : p)),
-    );
+    setInspectorOverride(name, value);
     setHighlightedProps((prev) => {
       const next = new Set(prev);
       next.add(name);
@@ -53,7 +60,7 @@ export function PropertyInspector() {
         highlightTimers.current.delete(name);
       }, 2000),
     );
-  }, []);
+  }, [setInspectorOverride]);
 
   useEffect(
     () => () => {
@@ -71,7 +78,7 @@ export function PropertyInspector() {
   }, [propSearch, properties]);
 
   const modifiedCount = properties.filter((p) => p.isModified).length;
-  const defaultCount = properties.filter((p) => !p.isModified).length;
+  const defaultCount = properties.filter((p) => p.applies && !p.isModified).length;
 
   return (
     <BlueprintPanel className="p-4">
@@ -122,7 +129,22 @@ export function PropertyInspector() {
             <span className="w-1.5 h-1.5 rounded-full bg-text-muted opacity-40" />
             <span className="text-text-muted">{defaultCount} default</span>
           </span>
+          {unmappedCount > 0 && (
+            <span className="text-text-muted opacity-60" title="Not modelled by the feel profile: shown for reference, never applied to UE">
+              {unmappedCount} not applied
+            </span>
+          )}
         </div>
+        {hasOverrides && (
+          <button
+            type="button"
+            onClick={clearInspectorOverrides}
+            className="ml-auto flex items-center gap-1 text-xs font-mono text-text-muted hover:text-text transition-colors cursor-pointer"
+            title="Remove the 'Inspector overrides' layer from the feel stack"
+          >
+            <RotateCcw className="w-3 h-3" /> Reset overrides
+          </button>
+        )}
       </div>
     </BlueprintPanel>
   );

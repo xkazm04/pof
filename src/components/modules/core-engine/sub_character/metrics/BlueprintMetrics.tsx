@@ -1,13 +1,16 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   STATUS_SUCCESS, STATUS_ERROR,
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
 } from '@/lib/chart-colors';
 import { NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
+import { resolveStack } from '@/lib/feel-adjustment-layers';
+import { cameraMetricValues, findBasePreset } from '@/lib/character/inspector-fields';
+import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import {
   CLASS_TREE,
-  BLUEPRINT_PROPERTIES,
   SCALING_PROPS,
   HITBOX_ZONES,
   INPUT_BINDINGS,
@@ -89,18 +92,21 @@ export function HitboxMetric() {
   );
 }
 
-/** "FOV | Arm | Lag" compact stats */
+/** "FOV | Arm | Lag" compact stats — from the resolved feel stack (what Apply writes). */
 export function CameraMetric() {
-  const fov = BLUEPRINT_PROPERTIES.find((p) => p.name === 'FOV');
-  const arm = BLUEPRINT_PROPERTIES.find((p) => p.name === 'ArmLength');
-  const lag = BLUEPRINT_PROPERTIES.find((p) => p.name === 'LagSpeed');
+  const baseFeelPresetId = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const feelLayers = useCharacterBlueprintStore((s) => s.feelLayers);
+  const { fov, arm, lag } = useMemo(
+    () => cameraMetricValues(resolveStack(findBasePreset(baseFeelPresetId).profile, feelLayers)),
+    [baseFeelPresetId, feelLayers],
+  );
   return (
     <div className="flex items-center gap-1 text-[9px] font-mono tabular-nums">
-      <span style={{ color: ACCENT_ORANGE }}>{fov?.current ?? '—'}</span>
+      <span style={{ color: ACCENT_ORANGE }}>{fov}</span>
       <span className="text-text-muted">|</span>
-      <span style={{ color: ACCENT_CYAN }}>{arm?.current ?? '—'}</span>
+      <span style={{ color: ACCENT_CYAN }}>{arm}</span>
       <span className="text-text-muted">|</span>
-      <span style={{ color: ACCENT_EMERALD }}>{lag?.current ?? '—'}</span>
+      <span style={{ color: ACCENT_EMERALD }}>{lag}</span>
     </div>
   );
 }

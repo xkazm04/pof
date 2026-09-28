@@ -7,6 +7,11 @@ import {
   type AdjustmentLayer,
   type LayerModifier,
 } from '@/lib/feel-adjustment-layers';
+import {
+  setInspectorOverride as upsertInspectorOverride,
+  clearInspectorOverrides as dropInspectorOverrides,
+  findBasePreset,
+} from '@/lib/character/inspector-fields';
 
 /* ── Sub-tab → UE file mapping ─────────────────────────────────────────────── */
 
@@ -43,6 +48,11 @@ interface CharacterBlueprintState {
   moveFeelLayer: (id: string, dir: 'up' | 'down') => void;
   setLayerModifiers: (id: string, modifiers: LayerModifier[]) => void;
   clearFeelLayers: () => void;
+
+  /** Property Inspector edit → `set` modifier in the reserved 'Inspector overrides'
+   *  layer of `feelLayers` (see `@/lib/character/inspector-fields`). */
+  setInspectorOverride: (name: string, value: number) => void;
+  clearInspectorOverrides: () => void;
 }
 
 export const useCharacterBlueprintStore = create<CharacterBlueprintState>()(
@@ -90,6 +100,16 @@ export const useCharacterBlueprintStore = create<CharacterBlueprintState>()(
         })),
 
       clearFeelLayers: () => set({ feelLayers: [] }),
+
+      setInspectorOverride: (name, value) =>
+        set((state) => ({
+          feelLayers: upsertInspectorOverride(
+            state.feelLayers, name, value, findBasePreset(state.baseFeelPresetId).profile,
+          ),
+        })),
+
+      clearInspectorOverrides: () =>
+        set((state) => ({ feelLayers: dropInspectorOverrides(state.feelLayers) })),
     }),
     {
       name: 'pof-character-feel-stack',
