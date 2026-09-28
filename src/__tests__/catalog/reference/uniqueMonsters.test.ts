@@ -70,9 +70,9 @@ describe('effectiveUniqueMonstersForPromotion', () => {
       laws: ['d1-timing-law', 'd1-ai-bat-law'],
       attackKinds: ['melee', 'special', 'missile'],
       locomotion: { laws: ['d1-timing-law'], walkTicksPerStep: 21, tilesPerSecondWhileWalking: 20 / 21 },
-      attackCycleTicks: 16,
-      attackCycleSeconds: 0.8,
-      hitDelaySeconds: 0.4,
+      attackCycleTicks: 15,
+      attackCycleSeconds: 0.75,
+      hitDelaySeconds: 0.35,
     });
     expect((data.derived as Record<string, number>).walkTicksPerStep).toBeCloseTo(29.925, 12);
     expect((data.derived as Record<string, number>).tilesPerSecond).toBeCloseTo(20 / 29.925, 12);

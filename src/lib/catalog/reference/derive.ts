@@ -13,6 +13,7 @@
  */
 import { contentHash } from '@/lib/catalog/reference/hash';
 import { AI_LAW_IDS, aiRoutineLaw, attackKindsOf, behaviourLawTexts, expectedTicks, timingLaw, walkTicksPerStep } from '@/lib/catalog/reference/behaviourScale';
+import { actionMarkerTick } from '@/lib/catalog/reference/animationTiming';
 import { AFFIX_POWERS, affixTargetsOf } from '@/lib/catalog/ingest/diablo1Affixes';
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { monsterHitPoints, type Difficulty, type IntegerRange } from '@/lib/catalog/reference/combatMath';
@@ -142,7 +143,7 @@ export function deriveMonsterTiming(data: Record<string, unknown>, ai: string, i
     };
   }
 
-  const hitDelaySeconds = (action * rates![2]) / t.ticksPerSecond;
+  const hitDelaySeconds = actionMarkerTick(action, rates![2]) / t.ticksPerSecond;
   try {
     const routineLaw = aiRoutineLaw(ai);
     const ticks = expectedTicks({

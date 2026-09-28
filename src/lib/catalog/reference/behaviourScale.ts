@@ -14,6 +14,7 @@
  */
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { attackKindsOf, D1_AI_ROUTINES, isD1AiRoutineId, type AiRoutineRoll, type D1AiRoutineId } from '@/lib/catalog/reference/aiRoutines';
+import { actionMarkerTick, animationEndTick } from '@/lib/catalog/reference/animationTiming';
 import { stableStringify } from '@/lib/catalog/reference/hash';
 import type { ConversionLoss } from '@/lib/catalog/reference/playerScale';
 
@@ -271,8 +272,11 @@ export interface ExpectedTicks {
 /** Expected routine-cadence ticks per started step and attack, including idle decisions, pauses and animations. */
 export function expectedTicks(m: BehaviourInput, walkExtra: number): ExpectedTicks {
   const walk = walkTicksPerStep(m, walkExtra);
-  const attack = m.attackFrames * (m.attackRate ?? 1);
-  const specialAttack = (m.specialAttackFrames ?? m.attackFrames) * (m.specialAttackRate ?? m.attackRate ?? 1);
+  const attack = animationEndTick(m.attackFrames, m.attackRate ?? 1);
+  const specialAttackFrames = m.specialAttackFrames ?? m.attackFrames;
+  const specialAttack = specialAttackFrames === 0
+    ? 0
+    : animationEndTick(specialAttackFrames, m.specialAttackRate ?? m.attackRate ?? 1);
   const law = aiRoutineLaw(m.ai);
   const model = law.model;
   if (model.kind === 'shared-per-tick') {
@@ -367,7 +371,7 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
   const ledger: ConversionLoss[] = [
     { field: 'walkSpeed', grade: 'approximate', reason: 'the reference steps tile by tile with random hesitations; PoF moves continuously at their MEAN speed, scaled by the monster/hero speed ratio' },
     { field: 'attackCycle', grade: 'approximate', reason: 'the reference re-rolls its decision every tick; the cooldown is the EXPECTED time from one swing to the next' },
-    { field: 'hitDelay', grade: 'full', reason: 'the action frame at one tick per frame, in real seconds' },
+    { field: 'hitDelay', grade: 'full', reason: 'the one-based action marker checked against the zero-based current frame, in real seconds' },
   ];
   const law = aiRoutineLaw(m.ai);
   const cmPerTile = target.walkSpeed * heroTicksPerTile / t.ticksPerSecond;
@@ -386,7 +390,7 @@ export function convertBehaviour(m: BehaviourInput, hero: { walkFrames: number }
     walkSpeed: target.walkSpeed * heroTicksPerTile / ticks.step,
     attackCycleSeconds: ticks.attack / t.ticksPerSecond,
     ...(ticks.shoot === undefined ? {} : { shootCycleSeconds: ticks.shoot / t.ticksPerSecond }),
-    hitDelaySeconds: m.actionFrame * (m.attackRate ?? 1) / t.ticksPerSecond,
+    hitDelaySeconds: actionMarkerTick(m.actionFrame, m.attackRate ?? 1) / t.ticksPerSecond,
     ticks,
     ledger,
     basis: `${m.ai} routine at intelligence ${m.intelligence}; speed ratio to a hero stepping every ${heroTicksPerTile} ticks ↔ PoF player ${target.walkSpeed} cm/s`,

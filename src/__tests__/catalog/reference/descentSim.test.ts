@@ -70,8 +70,9 @@ const acidMissile = wrapper('d1-missile-acid', 'vfx', 'missiles/misdat.tsv', {
 
 const graphics = ['unarmed', 'unarmedShield', 'sword', 'swordShield', 'bow', 'axe', 'mace', 'maceShield', 'staff'];
 const animations = {
-  attack: Object.fromEntries(graphics.map((graphic) => [graphic, { frames: 1, actionFrame: 1 }])),
-  cast: { frames: 1, actionFrame: 1 },
+  // Two frames: the engine ends an action when its last frame is already active, so this is a one-tick (0.05 s) action.
+  attack: Object.fromEntries(graphics.map((graphic) => [graphic, { frames: 2, actionFrame: 1 }])),
+  cast: { frames: 2, actionFrame: 1 },
   block: { frames: 1 },
   hitRecovery: { frames: 1 },
 };

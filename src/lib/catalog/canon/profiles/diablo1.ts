@@ -17,6 +17,7 @@ import { DIABLO1_LOCATION_LAWS } from '@/lib/catalog/reference/locationSpecsData
 import { DIABLO1_CURRENCY_LAWS } from '@/lib/catalog/reference/currencySpecsData';
 import { DIABLO1_DAMAGE_UNITS_LAWS } from '@/lib/catalog/reference/damageUnitsLawData';
 import { DIABLO1_ENCOUNTER_LAWS } from '@/lib/catalog/reference/encounterSpecsData';
+import { DIABLO1_HERO_ANIMATION_LAWS } from '@/lib/catalog/reference/heroAnimationLawsData';
 import { DIABLO1_LOOT_LAWS } from '@/lib/catalog/reference/lootSpecsData';
 import { DIABLO1_MONSTER_RUNTIME_LAWS } from '@/lib/catalog/reference/monsterRuntimeLawsData';
 import { DIABLO1_MOVEMENT_LAWS } from '@/lib/catalog/reference/movementSpecsData';
@@ -61,15 +62,7 @@ export const DIABLO1_CANON: readonly ProjectRule[] = [
   { id: 'd1-timing-law', profile: 'diablo1', category: 'game', scope: 'bestiary', title: 'Game time and movement law (engine-derived)',
     body: "Game time, derived from the engine: the simulation advances 20 ticks per second and every monster runs its AI on every tick, except that a SEARCH monster whose path planning starts a step skips its routine that tick. A monster walk moves one tile and lasts the walk animation's frames plus 1 tick; a hero walk starts one frame earlier. An attack lands on its action frame; tick ordering: d1-monster-animation-timing-law.",
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/diablo.cpp (gnTickDelay = 50 ms)', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/monster.cpp (ProcessMonsters -> AiProc every tick; MonsterWalk moves one tile at the last frame; walk anim -1 skipped frame)'] },
-  { id: 'd1-hero-attack-timing-law', profile: 'diablo1', category: 'game', scope: 'characters', title: 'Attack timing by class and weapon',
-    body: 'Hero attack timing, derived from the engine: usable weapon and shield choose one of nine weapon graphics, then the hero class supplies its frame count and contact marker. Each frame costs one game tick; contact or bow release occurs one frame before the one-based marker. Melee Quick, Fast, Faster and Fastest skip 1, 2, 3 and 4 frames; bows skip 1 or 2 for Quick or Fast only outside Hellfire. Base speed belongs to class and graphic, not the item.',
-    refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/items.cpp#L2674-L2704', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L174-L228', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L2234-L2285'] },
-  { id: 'd1-hero-casting-timing-law', profile: 'diablo1', category: 'game', scope: 'characters', title: 'Casting timing',
-    body: 'Hero casting timing, derived from the engine: fire, lightning and magic casting graphics all use the caster class\'s frame count and release marker. Every frame costs one game tick, no casting frames are skipped, the spell is released at the marker, and the full cast ends on the last frame. Attack-speed effects do not shorten casting.',
-    refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L236-L277', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L1007-L1025', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L2288-L2290'] },
-  { id: 'd1-hero-block-timing-law', profile: 'diablo1', category: 'game', scope: 'characters', title: 'Block timing',
-    body: 'Hero block timing, derived from the engine: the class table supplies the frame count and every nonfinal frame costs three game ticks. The final frame omits the other frames\' two extra delay ticks. Fast Block skips all but the final two frames, retaining a two-frame sequence. The class table has no separate block action marker.',
-    refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L951-L959', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L2605-L2623', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/engine/animationinfo.cpp#L139-L157'] },
+  ...DIABLO1_HERO_ANIMATION_LAWS,
   { id: 'd1-class-skills-law', profile: 'diablo1', category: 'game', scope: 'characters', title: 'Class skills',
     body: 'Class skills, derived from the engine: Warrior Repair restores durability while permanently shrinking maximum durability, but can destroy an item at zero maximum; Rogue Disarm tests twice Dexterity minus five times dungeon level against a random roll and clears a successful trap; Sorcerer Recharge restores a spell staff while permanently shrinking maximum charges, but can reach zero without restoring. These skills consume no mana.',
     refs: ['https://github.com/diasurgical/devilutionX/blob/4138a82/Source/items.cpp#L4870-L4925', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/player.cpp#L1071-L1092', 'https://github.com/diasurgical/devilutionX/blob/4138a82/Source/spells.cpp#L147-L208'] },

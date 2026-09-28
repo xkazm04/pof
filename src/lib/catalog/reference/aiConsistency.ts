@@ -17,6 +17,7 @@ import {
   walkTicksPerStep,
   type BehaviourInput,
 } from '@/lib/catalog/reference/behaviourScale';
+import { animationEndTick } from '@/lib/catalog/reference/animationTiming';
 import { STATE_GRAPH_SPECS_DATA } from '@/lib/catalog/reference/stateGraphSpecsData';
 
 export type AiConsistencyVerdict = 'agree' | 'disagree' | 'not-comparable';
@@ -366,10 +367,13 @@ const graphRates = (
     isTransitionEntrypoint(entrypoint))])];
   const stateIndex = new Map(states.map((entrypoint, index) => [entrypoint, index]));
   const primaryIndex = stateIndex.get(primary)!;
+  const specialAttackFrames = input.specialAttackFrames ?? input.attackFrames;
   const timing: GraphTiming = {
     walk: walkTicksPerStep(input, walkExtraTicks),
-    attack: input.attackFrames * (input.attackRate ?? 1),
-    special: (input.specialAttackFrames ?? input.attackFrames) * (input.specialAttackRate ?? input.attackRate ?? 1),
+    attack: animationEndTick(input.attackFrames, input.attackRate ?? 1),
+    special: specialAttackFrames === 0
+      ? 0
+      : animationEndTick(specialAttackFrames, input.specialAttackRate ?? input.attackRate ?? 1),
     intelligence: input.intelligence,
   };
   const transition = (state: AiProfileEntrypoint, action: AiActionNode): { next: number; extraTicks: number } => {

@@ -74,7 +74,7 @@ describe('convertBehaviour', () => {
       const b = convertBehaviour({ ...base, ai, intelligence: 3 }, HERO, TARGET);
       const bareTicksPerTile = base.walkFrames + t.walkExtraTicks;
       expect(b.walkSpeed).toBeLessThanOrEqual(cmPerTile / (bareTicksPerTile * tick) + 1e-9);
-      expect(b.attackCycleSeconds).toBeGreaterThanOrEqual(base.attackFrames * tick - 1e-9);
+      expect(b.attackCycleSeconds).toBeGreaterThanOrEqual((base.attackFrames - 1) * tick - 1e-9);
     }
   });
 
@@ -86,7 +86,7 @@ describe('convertBehaviour', () => {
 
   it('lands its hit on the action frame, in real seconds', () => {
     const b = convertBehaviour({ ...base, ai: 'SkeletonMelee', intelligence: 0 }, HERO, TARGET);
-    expect(b.hitDelaySeconds).toBeCloseTo(base.actionFrame * tick, 10);
+    expect(b.hitDelaySeconds).toBeCloseTo((base.actionFrame - 1) * tick, 10);
   });
 
   it('grades every field and names both anchors', () => {
@@ -108,16 +108,16 @@ describe('locomotion and routine cadence stay separate', () => {
     const input = { ...base, intelligence: 1 };
     expect(expectedTicks({ ...input, ai: 'Zombie' }, t.walkExtraTicks)).toEqual({
       step: 18.333333333333336,
-      attack: 16.333333333333336,
+      attack: 15.333333333333334,
     });
     expect(expectedTicks({ ...input, ai: 'SkeletonMelee' }, t.walkExtraTicks)).toEqual({
       step: 16.425,
-      attack: 18.75,
+      attack: 17.75,
     });
     expect(expectedTicks({ ...input, ai: 'SkeletonRanged' }, t.walkExtraTicks)).toEqual({
       step: 11,
-      attack: 66.8235294117647,
-      shoot: 27.999999999999996,
+      attack: 65.8235294117647,
+      shoot: 26.999999999999996,
     });
   });
 
@@ -126,31 +126,31 @@ describe('locomotion and routine cadence stay separate', () => {
       ...base, ai: 'Fat', intelligence: 0, specialAttackFrames: 5, specialAttackRate: 2,
     }, t.walkExtraTicks);
     // Step: 11 + (1-.70) * (21 ticks to var2>20 + (.80/.20) failures) = 18.5.
-    // Attack: conditional animation (.15*9 + .05*10)/.20 + .80/.20 idle failures = 13.25.
+    // Attack: both invented animations end at tick 8; add .80/.20 idle failures = 12.
     expect(ticks.step).toBe(18.5);
-    expect(ticks.attack).toBeCloseTo(13.25, 12);
+    expect(ticks.attack).toBeCloseTo(12, 12);
   });
 
   it('hand-computes repeated pauses after the post-move chance (Rhino, invented animations)', () => {
     const ticks = expectedTicks({ ...base, ai: 'Rhino', intelligence: 0 }, t.walkExtraTicks);
-    // Step: 11 + (1-.83) * 14.5 / .33. Attack: 9 + .72/.28 idle decisions.
+    // Step: 11 + (1-.83) * 14.5 / .33. Attack: 8 + .72/.28 idle decisions.
     expect(ticks.step).toBeCloseTo(11 + 0.17 * 14.5 / 0.33, 12);
-    expect(ticks.attack).toBeCloseTo(9 + 0.72 / 0.28, 12);
+    expect(ticks.attack).toBeCloseTo(8 + 0.72 / 0.28, 12);
   });
 
   it('hand-computes a forced post-pause action (Snake, invented animations)', () => {
     const ticks = expectedTicks({ ...base, ai: 'Snake', intelligence: 0 }, t.walkExtraTicks);
     expect(ticks).toEqual({
       step: 11 + 0.35 * 19.5,
-      attack: 9 + 0.8 * 14.5,
+      attack: 8 + 0.8 * 14.5,
     });
   });
 
   it('hand-computes adjacent retreats and the distinct at-range post-shot delay (Succubus, invented animations)', () => {
     expect(expectedTicks({ ...base, ai: 'Succubus', intelligence: 0 }, t.walkExtraTicks)).toEqual({
       step: 11,
-      attack: 44.166666666666664,
-      shoot: 18.5,
+      attack: 43.166666666666664,
+      shoot: 17.5,
     });
   });
 
@@ -159,8 +159,8 @@ describe('locomotion and routine cadence stay separate', () => {
       ...base, ai: 'AcidUnique', intelligence: 0, specialAttackFrames: 5, specialAttackRate: 2,
     }, t.walkExtraTicks)).toEqual({
       step: 11,
-      attack: 35.666666666666664,
-      shoot: 10,
+      attack: 33.666666666666664,
+      shoot: 8,
     });
   });
 
@@ -169,14 +169,14 @@ describe('locomotion and routine cadence stay separate', () => {
       ...base, ai: 'Magma', intelligence: 0, specialAttackFrames: 5, specialAttackRate: 2,
     }, t.walkExtraTicks);
     // At d=2: 5% special shots precede each otherwise-certain step. At d>=3: shots have 10% chance.
-    expect(ticks.step).toBeCloseTo(11 + 0.05 / 0.95 * 10, 12);
-    expect(ticks.shoot).toBe(10 + 0.9 / 0.1 * 11);
+    expect(ticks.step).toBeCloseTo(11 + 0.05 / 0.95 * 8, 12);
+    expect(ticks.shoot).toBe(8 + 0.9 / 0.1 * 11);
     // Adjacent shared roll: 5% special, next 55% melee, 40% repeated 9.5-tick pauses.
-    expect(ticks.attack).toBeCloseTo((0.05 * 10 + 0.55 * 9) / 0.6 + 0.4 / 0.6 * 9.5, 12);
+    expect(ticks.attack).toBeCloseTo(8 + 0.4 / 0.6 * 9.5, 12);
   });
 
   it('uses bare action animations for deterministic routines (Butcher, invented animations)', () => {
-    expect(expectedTicks({ ...base, ai: 'Butcher', intelligence: 0 }, t.walkExtraTicks)).toEqual({ step: 11, attack: 9 });
+    expect(expectedTicks({ ...base, ai: 'Butcher', intelligence: 0 }, t.walkExtraTicks)).toEqual({ step: 11, attack: 8 });
   });
 });
 
@@ -191,7 +191,7 @@ describe('SkeletonRanged (W09): an archer never approaches, shoots on a per-tick
   it('shoots no faster than its attack animation, and a smarter archer shoots sooner', () => {
     const dull = convertBehaviour({ ...base, ai: 'SkeletonRanged', intelligence: 0 }, HERO, TARGET);
     const sharp = convertBehaviour({ ...base, ai: 'SkeletonRanged', intelligence: 3 }, HERO, TARGET);
-    expect(dull.attackCycleSeconds).toBeGreaterThanOrEqual(base.attackFrames / t.ticksPerSecond);
+    expect(dull.attackCycleSeconds).toBeGreaterThanOrEqual((base.attackFrames - 1) / t.ticksPerSecond);
     expect(sharp.attackCycleSeconds).toBeLessThan(dull.attackCycleSeconds);
   });
   it('holds position and converts its keep-away distance through the same tile the speed uses', () => {

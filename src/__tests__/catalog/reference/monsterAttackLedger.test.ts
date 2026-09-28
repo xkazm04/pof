@@ -76,6 +76,17 @@ describe('monsterAttackLedger', () => {
     expect(ledger.timing.special).toMatchObject({ frameCount: 9, frameDelay: 3, marker: 0, hitTick: null });
   });
 
+  it('maps a one-based first-frame marker to tick zero and the last frame to (frames - 1) * rate', () => {
+    const ledger = attackLedgerFor(syntheticRow({ animFrameNum: '1' }), 'Fat');
+    expect(ledger.timing.attack).toMatchObject({
+      frameCount: 6,
+      frameDelay: 2,
+      marker: 1,
+      hitTick: 0,
+      recoverTick: 10,
+    });
+  });
+
   it('removes special melee when the marker is zero and restores it when positive', () => {
     const absent = attackLedgerFor(syntheticRow(), 'Fat');
     expect(absent.specialMarkerPresent).toBe(false);
@@ -155,10 +166,11 @@ describe('monsterAttackLedger', () => {
     expect(promoted.raw).toBe(unique.raw);
   });
 
-  it('reports parity and cadence disagreements as findings without editing older laws', () => {
+  it('reports timing parity after the cadence correction', () => {
     expect(MONSTER_ATTACK_LEDGER_FINDINGS).toEqual(expect.arrayContaining([
       expect.objectContaining({ dataset: 'monsterRuntimeLawsData', field: 'animationTiming', status: 'agree' }),
-      expect.objectContaining({ dataset: 'behaviourScale', field: 'hitDelaySeconds', status: 'disagree' }),
+      expect.objectContaining({ dataset: 'behaviourScale', field: 'hitDelaySeconds', status: 'agree' }),
+      expect.objectContaining({ dataset: 'behaviourScale', field: 'attackAnimationTicks', status: 'agree' }),
       expect.objectContaining({ dataset: 'combatDuel', field: 'monsterCadence', status: 'caller-input' }),
     ]));
   });

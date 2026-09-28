@@ -1,4 +1,5 @@
 import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
+import { animationEndTick } from '@/lib/catalog/reference/animationTiming';
 
 export type Difficulty = 'normal' | 'nightmare' | 'hell';
 export type GameMode = 'single' | 'multi';
@@ -102,14 +103,15 @@ export function attackTiming(
   const ordinarySkips: Record<FastAttackTier, number> = { none: 0, quick: 1, fast: 2, faster: 3, fastest: 4 };
   const bowSkips: Record<FastAttackTier, number> = { none: 0, quick: 1, fast: 2, faster: 0, fastest: 0 };
   const skipped = (weaponGraphic === 'bow' ? bowSkips : ordinarySkips)[fastAttackTier];
-  const ticks = checkedFrames(animation.frames - skipped, `${weaponGraphic} attack after ${fastAttackTier} skipping`);
+  const effectiveFrames = checkedFrames(animation.frames - skipped, `${weaponGraphic} attack after ${fastAttackTier} skipping`);
+  const ticks = animationEndTick(effectiveFrames, 1);
   return { ...animation, ticks, seconds: ticks / timingLaw().ticksPerSecond };
 }
 
 /** Implements canon law `d1-hero-casting-timing-law`. */
 export function castTiming(classAnimations: Pick<ClassAnimations, 'cast'>): ActionTiming & { releaseTicks: number; releaseSeconds: number } {
   const animation = checkedAction(classAnimations.cast, 'cast');
-  const ticks = animation.frames;
+  const ticks = animationEndTick(animation.frames, 1);
   const ticksPerSecond = timingLaw().ticksPerSecond;
   return {
     ...animation,

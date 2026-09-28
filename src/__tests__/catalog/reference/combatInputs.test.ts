@@ -75,8 +75,8 @@ describe('combat wrapper adapters', () => {
     const sword = wrapper('d1-test-sword', 'items', {
       subtype: 'Sword', stats: [{ label: 'Damage Min', value: '6' }, { label: 'Damage Max', value: '10' }],
     });
-    // 12 one-tick attack frames / 20 ticks per second = 0.6 seconds.
-    expect(referenceBuild(animated, 4, sword)).toMatchObject({ weaponGraphic: 'sword', swingSeconds: 0.6 });
+    // 12 one-tick attack frames end when frame 12 is active: 11 ticks / 20 per second = 0.55 seconds (W92).
+    expect(referenceBuild(animated, 4, sword)).toMatchObject({ weaponGraphic: 'sword', swingSeconds: 0.55 });
   });
 
   it('puts per-class, weapon-graphic swing seconds in promoted item reference data', () => {
@@ -93,9 +93,9 @@ describe('combat wrapper adapters', () => {
       classWrapper('d1-class-rogue', '14'),
       classWrapper('d1-class-sorcerer', '16'),
     ]);
-    // Frames / 20: 12/20=.6, 14/20=.7, 16/20=.8 seconds.
+    // (Frames - 1) / 20: 11/20=.55, 13/20=.65, 15/20=.75 seconds (the action ends on its last frame, W92).
     expect(derived.entity.data.derived).toMatchObject({
-      swingSecondsByClass: { warrior: 0.6, rogue: 0.7, sorcerer: 0.8 },
+      swingSecondsByClass: { warrior: 0.55, rogue: 0.65, sorcerer: 0.75 },
       swingSecondsBasis: expect.stringContaining('sword class animation'),
     });
   });

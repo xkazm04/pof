@@ -37,7 +37,7 @@ describe('fireboltAt', () => {
   const n = fireboltAt(caster, 1, 5);
   it('computes damage, cast timing (20 ticks/s), and casts per pool', () => {
     expect(n.damage).toEqual({ minimum: 4, maximum: 13, mean: 8.5 }); // 20/8 → 2, + 1 + 1
-    expect(n.castTime).toBeCloseTo(0.5);
+    expect(n.castTime).toBeCloseTo(0.45);
     expect(n.releaseTime).toBeCloseTo(0.3);
     expect(n.manaRegenPerSec).toBe(0);
     expect(n.castsPerPool).toBe(4); // 21 / 5
@@ -73,7 +73,7 @@ describe('seedSpellSteps — Balance', () => {
 
   it('writes a cast-limited hit rate the real Balance step reconciles', () => {
     const seed = seedSpellSteps(bolt, caster)[1];
-    expect(seed.data.balance).toMatchObject({ baseDamage: 8.5, castTime: 0.5, limiter: 'castTime', hitDPS: 17, manaRegenPerSec: 0 });
+    expect(seed.data.balance).toMatchObject({ baseDamage: 8.5, castTime: 0.45, limiter: 'castTime', hitDPS: 18.889, manaRegenPerSec: 0 });
     const balance = seed.data.balance as Record<string, unknown>;
     balance.kind = 'damage';
     balance.components = ['hitDPS'];

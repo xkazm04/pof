@@ -13,7 +13,7 @@ import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import type { ReferenceWrapper } from './wrapper';
 import { resistanceKey } from '@/lib/catalog/canon/elements';
 import { CAST_LAW_ID, SPELL_LAW_IDS, fireboltAt, type ReferenceCaster } from './spellLaw';
-import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
+import { castTiming } from '@/lib/catalog/reference/combatMath';
 import { damage } from '@/lib/catalog/reference/spellMath';
 import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
 import { SPELL_STATUS_ENTITY_IDS } from '@/lib/catalog/reference/statusSpecs';
@@ -175,13 +175,16 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
     }
   }
   const legacyFirebolt = caster && r.id === 'Firebolt' ? fireboltAt(caster, 1, manaCost) : null;
+  const casting = caster
+    ? castTiming({ cast: { frames: caster.castingFrames, actionFrame: caster.castingActionFrame } })
+    : undefined;
   const meanDamage = legacyFirebolt?.damage.mean ?? evaluated?.mean ?? null;
   const damageType = spec ? (spec.element === 'none' ? null : spec.element[0].toUpperCase() + spec.element.slice(1)) : element;
   // A zero-cost row is a free class skill: only its cast animation limits it (W20, D-B8). Its cast time needs the named
   // reference caster's casting frames (d1-timing-law ticks); without a caster the cast time is a gap, never invented.
   const free = manaCost === 0;
   const gate = free
-    ? { gatedBy: 'cast-time', castTime: caster ? Number((caster.castingFrames / timingLaw().ticksPerSecond).toFixed(3)) : REFERENCE_GAP }
+    ? { gatedBy: 'cast-time', castTime: casting ? Number(casting.seconds.toFixed(3)) : REFERENCE_GAP }
     : { gatedBy: 'resource' };
   const effect = spec
     ? {
@@ -240,9 +243,8 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
   }];
   // Balance is conditional on damage; utility effects deliberately carry no damage fields.
   if (hasDamage && caster) {
-    const tps = timingLaw().ticksPerSecond;
-    const castTime = caster.castingFrames / tps;
-    const releaseTime = caster.castingActionFrame / tps;
+    const castTime = casting!.seconds;
+    const releaseTime = casting!.releaseSeconds;
     const hitDPS = meanDamage == null ? REFERENCE_GAP : Number((meanDamage / castTime).toFixed(3));
     seeds.push({
       catalogId: 'spellbook', entityId: w.entity.id, step: 'Balance',

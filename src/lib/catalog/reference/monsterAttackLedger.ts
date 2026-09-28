@@ -1,5 +1,6 @@
 /** Ordered, engine-derived attack sequencing for Diablo I monsters. */
 import { D1_AI_ROUTINES, isD1AiRoutineId, type D1AiRoutineId } from '@/lib/catalog/reference/aiRoutines';
+import { actionMarkerTick, animationEndTick } from '@/lib/catalog/reference/animationTiming';
 import { monsterDamageByDifficulty, type Difficulty, type IntegerRange, type MonsterProfile } from '@/lib/catalog/reference/combatMath';
 import { D1_MONSTER_ATTACK_LEDGER_DATA } from '@/lib/catalog/reference/monsterAttackLedgerData';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
@@ -146,7 +147,7 @@ function timing(
   if (!Number.isInteger(frameCount) || frameCount < 0) throw new Error(`${animation} frame count must be non-negative`);
   if (!Number.isInteger(frameDelay) || frameDelay < 1) throw new Error(`${animation} frame delay must be positive`);
   const validMarker = frameCount > 0 && Number.isInteger(marker) && marker > 0 && marker <= frameCount;
-  const hitTick = validMarker ? (marker - 1) * frameDelay : null;
+  const hitTick = validMarker ? actionMarkerTick(marker, frameDelay) : null;
   const hitWindowTicks = hitTick === null
     ? []
     : Array.from({ length: firstTickOnly || marker === frameCount ? 1 : frameDelay }, (_, offset) => hitTick + offset);
@@ -161,7 +162,7 @@ function timing(
     hitTick,
     hitProcessingTick: hitTick === null ? null : hitTick + 1,
     hitWindowTicks,
-    recoverTick: frameCount === 0 ? 0 : (frameCount - 1) * frameDelay,
+    recoverTick: frameCount === 0 ? 0 : animationEndTick(frameCount, frameDelay),
   };
 }
 
@@ -343,15 +344,15 @@ export const MONSTER_ATTACK_LEDGER_FINDINGS: readonly MonsterAttackLedgerFinding
     refs: ['.reference/devilutionX/Source/missiles.cpp:643-672', '.reference/devilutionX/Source/missiles.cpp:2976-3025', '.reference/devilutionX/Source/missiles.cpp:3048-3060', '.reference/devilutionX/Source/missiles.cpp:3378-3390', '.reference/devilutionX/Source/missiles.cpp:3425-3477', '.reference/devilutionX/Source/missiles.cpp:3940-3961'],
   },
   {
-    dataset: 'behaviourScale', field: 'hitDelaySeconds', status: 'disagree',
+    dataset: 'behaviourScale', field: 'hitDelaySeconds', status: 'agree',
     ledger: '(animFrameNum - 1) * rate[6][Attack] / ticksPerSecond from decision tick to first hit check',
-    other: 'deriveMonsterTiming and convertBehaviour use animFrameNum * rate[6][Attack] / ticksPerSecond',
+    other: 'deriveMonsterTiming and convertBehaviour use the shared one-based action-marker tick helper',
     refs: ['src/lib/catalog/reference/derive.ts:145', 'src/lib/catalog/reference/behaviourScale.ts:389', '.reference/devilutionX/Source/monster.cpp:1271-1277'],
   },
   {
-    dataset: 'behaviourScale', field: 'attackAnimationTicks', status: 'disagree',
+    dataset: 'behaviourScale', field: 'attackAnimationTicks', status: 'agree',
     ledger: 'the last frame is observed at offset (frames[6][Attack] - 1) * rate[6][Attack], then Stand may decide again in the same ProcessMonsters loop',
-    other: 'expectedTicks charges frames[6][Attack] * rate[6][Attack] for every started attack animation',
+    other: 'expectedTicks uses the shared last-frame tick helper for every started attack animation',
     refs: ['src/lib/catalog/reference/behaviourScale.ts:274-275', '.reference/devilutionX/Source/monster.cpp:1290-1292', '.reference/devilutionX/Source/monster.cpp:4321-4333'],
   },
   {

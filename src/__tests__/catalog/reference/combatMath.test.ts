@@ -64,16 +64,16 @@ const ANIMATIONS: ClassAnimations = {
 
 describe('Diablo I hero animation timing', () => {
   it('derives attack ticks and seconds, including the distinct vanilla bow skips', () => {
-    // Faster sword: 12 declared frames - 3 skipped = 9 ticks; 9 / 20 = 0.45 seconds.
-    expect(attackTiming(ANIMATIONS, 'sword', 'faster')).toEqual({ frames: 12, actionFrame: 7, ticks: 9, seconds: 0.45 });
-    // Faster does not skip vanilla bow frames: 13 / 20 = 0.65 seconds. Fast skips 2: 11 / 20 = 0.55.
-    expect(attackTiming(ANIMATIONS, 'bow', 'faster').seconds).toBe(0.65);
-    expect(attackTiming(ANIMATIONS, 'bow', 'fast').seconds).toBe(0.55);
+    // Faster sword: the last of 12 frames is active at tick 11; three initial skips make that tick 8.
+    expect(attackTiming(ANIMATIONS, 'sword', 'faster')).toEqual({ frames: 12, actionFrame: 7, ticks: 8, seconds: 0.4 });
+    // Faster does not skip vanilla bow frames: end tick 12 / 20 = 0.6 seconds. Fast skips 2: tick 10 / 20 = 0.5.
+    expect(attackTiming(ANIMATIONS, 'bow', 'faster').seconds).toBe(0.6);
+    expect(attackTiming(ANIMATIONS, 'bow', 'fast').seconds).toBe(0.5);
   });
 
   it('derives cast, block, and hit-recovery timing by hand', () => {
-    // Cast: 10 one-tick frames = 0.5 s; release marker 6 = 0.3 s.
-    expect(castTiming(ANIMATIONS)).toMatchObject({ frames: 10, actionFrame: 6, ticks: 10, seconds: 0.5, releaseSeconds: 0.3 });
+    // Cast: the last of 10 frames is active at tick 9 = 0.45 s; release marker 6 remains tick 6 = 0.3 s.
+    expect(castTiming(ANIMATIONS)).toMatchObject({ frames: 10, actionFrame: 6, ticks: 9, seconds: 0.45, releaseSeconds: 0.3 });
     // Block: 5*3-(3-1)=13 ticks; Fast Block keeps 2*3-2=4 ticks.
     expect(blockTiming(ANIMATIONS)).toEqual({ frames: 5, ticks: 13, seconds: 0.65 });
     expect(blockTiming(ANIMATIONS, true)).toEqual({ frames: 5, ticks: 4, seconds: 0.2 });

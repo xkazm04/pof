@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DIABLO1 } from '@/lib/catalog/reference/sources';
 import { aiRoutineCadenceStatus, timingLaw } from '@/lib/catalog/reference/behaviourScale';
+import { animationEndTick } from '@/lib/catalog/reference/animationTiming';
 import { effectiveUniqueMonstersForPromotion } from '@/lib/catalog/reference/uniqueMonsters';
 import { wrapTable } from '@/lib/catalog/reference/wrapper';
 
@@ -45,7 +46,7 @@ describe('real monstdat cadence before/after guard', () => {
       const rates = numbers(wrapper.entity.data.animRates);
       const intelligence = Number(wrapper.entity.data.intelligence);
       const walk = frames[1] * rates[1] + t.walkExtraTicks;
-      const attack = frames[2] * rates[2];
+      const attack = animationEndTick(frames[2], rates[2]);
       let step: number;
       let attackCycle: number;
       if (ai === 'Zombie') {

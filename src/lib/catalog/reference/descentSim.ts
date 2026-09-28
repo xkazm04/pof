@@ -31,6 +31,7 @@ import {
   type WeaponGraphic,
 } from '@/lib/catalog/reference/combatMath';
 import { aggregateClassWrappers } from '@/lib/catalog/reference/classHeroes';
+import { animationEndTick } from '@/lib/catalog/reference/animationTiming';
 import { timingLaw } from '@/lib/catalog/reference/behaviourScale';
 import { contentHash } from '@/lib/catalog/reference/hash';
 import { D1_AI_ROUTINES, isD1AiRoutineId } from '@/lib/catalog/reference/aiRoutines';
@@ -1217,13 +1218,13 @@ function numericCsv(value: unknown): number[] | undefined {
   return values.every(Number.isFinite) ? values : undefined;
 }
 
-/** MonsterGraphic::GotHit is index 3; its frame count times rate is the interrupt duration. */
+/** MonsterGraphic::GotHit is index 3; its mode ends as soon as the zero-based last frame is active. */
 function monsterHitRecoverySeconds(wrapper: ReferenceWrapper, base?: ReferenceWrapper): number | undefined {
   const animationOwner = base ?? wrapper;
   const frames = numericCsv(animationOwner.raw.animFrames ?? animationOwner.entity.data.animFrames);
   const rates = numericCsv(animationOwner.raw.animRates ?? animationOwner.entity.data.animRates);
   if (!frames || !rates || !(frames[3] > 0) || !(rates[3] > 0)) return undefined;
-  return frames[3] * rates[3] / timingLaw().ticksPerSecond;
+  return animationEndTick(frames[3], rates[3]) / timingLaw().ticksPerSecond;
 }
 
 function monsterRecoveryFamily(wrapper: ReferenceWrapper): NonNullable<DuelOptions['monsterFamily']> {
@@ -1598,7 +1599,7 @@ function assumptions(
         id: 'monster-hit-recovery-lock',
         value: 'hard spell hits remove monster attack time and can stun-lock',
         source: '.reference/devilutionX/Source/missiles.cpp:278-351; .reference/devilutionX/Source/monster.cpp:661-669,986-996,1470-1478,3963-3994',
-        detail: 'Each non-resistant hard hit starts or restarts the target GotHit animation (frame count × rate); resistant spell hits play the sound but skip M_StartHit. Expected recovery starts per cast remove the same fraction of attack opportunity, capped at a hard-hit stun-lock when load reaches one. Golems and petrified targets do not enter recovery. Partially completed attacks and exact collision-vs-animation phase are not simulated.',
+        detail: 'Each non-resistant hard hit starts or restarts the target GotHit animation and ends when its last frame is active, at (frame count - 1) × rate ticks; resistant spell hits play the sound but skip M_StartHit. Expected recovery starts per cast remove the same fraction of attack opportunity, capped at a hard-hit stun-lock when load reaches one. Golems and petrified targets do not enter recovery. Partially completed attacks and exact collision-vs-animation phase are not simulated.',
       },
       {
         id: 'mana-recovery',

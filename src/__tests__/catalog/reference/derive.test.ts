@@ -46,7 +46,7 @@ describe('MONSTER_DERIVE', () => {
     expect(d.tilesPerSecond).toBeLessThanOrEqual(locomotion.tilesPerSecondWhileWalking);
     expect(d.tilesPerSecond).toBeCloseTo(t.ticksPerSecond / d.walkTicksPerStep, 10);
     expect(d.attackCycleSeconds).toBeCloseTo(d.attackCycleTicks / t.ticksPerSecond, 10);
-    expect(d.hitDelaySeconds).toBeCloseTo(8 / t.ticksPerSecond, 10);
+    expect(d.hitDelaySeconds).toBeCloseTo(7 / t.ticksPerSecond, 10);
   });
 
   it('derives animation-only locomotion and attack kinds for an unmodelled routine', () => {
@@ -76,8 +76,8 @@ describe('MONSTER_DERIVE', () => {
   it('derives a formerly-gapped ranged cadence and reports only genuinely state-dependent routines as gaps', () => {
     expect(MONSTER_DERIVE.derive(monster({}, ['Succubus']))).toMatchObject({
       walkTicksPerStep: 21,
-      attackCycleTicks: 105.50000000000001,
-      shootCycleTicks: 21.5,
+      attackCycleTicks: 104.50000000000001,
+      shootCycleTicks: 20.5,
     });
     expect(MONSTER_DERIVE.derive(monster({}, ['Counselor']))).toMatchObject({
       gap: expect.stringMatching(/Counselor.*not modelled.*fade.*circle.*retreat/),
