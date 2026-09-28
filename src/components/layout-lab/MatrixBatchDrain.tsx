@@ -1,12 +1,14 @@
 'use client';
 
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
-import { drainFrameLabel, drainFrameUrl } from '@/lib/test-gate-runner/frameUrl';
 import type { LabTheme } from './theme';
 import { Button } from './ui/Button';
 import type { BatchGateNote } from './batchDrainModel';
 import type { BatchDrainState, BatchEntity } from './hooks/useBatchDrain';
 import { MatrixBindIcons } from './MatrixBindIcons';
+import { DrainFrameLinks } from '@/components/layout-lab/DrainFrameLinks';
+// The executor-absent rule (ran 0 + skipped > 0) is shared with the per-entity coach drain.
+import { ranNothing } from '@/components/layout-lab/entityDrainOutcome';
 
 interface Props {
   t: LabTheme;
@@ -17,21 +19,6 @@ interface Props {
   onCancel: () => void;
   /** Dismiss the finished run's summary — without it the last run pins in the header forever. */
   onDismiss: () => void;
-}
-
-/**
- * Did this run execute nothing at all? `ran: 0` with skipped gates means every job was
- * refused before it started — and with the lab's bridge-only executor that is almost always
- * "no UE editor was listening". Pure so the rule is testable without a render.
- *
- * A locked/errored batch is deliberately NOT this state: the lease refused the run, the
- * executor never got a say, and blaming the executor there would send the operator to fix
- * the wrong thing.
- */
-export function ranNothing(summary: { ran: number; skipped: number; entitiesLocked: number; entitiesErrored: number } | null): boolean {
-  if (!summary) return false;
-  if (summary.entitiesLocked > 0 || summary.entitiesErrored > 0) return false;
-  return summary.ran === 0 && summary.skipped > 0;
 }
 
 /**
@@ -202,31 +189,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
       )}
 
       {/* Captured L4 frames — the runner hoists these so a human LOOKS; make them openable. */}
-      {!running && summary && summary.screenshots.length > 0 && (
-        <div data-testid="batch-drain-frames" style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 12, color: t.muted }}>
-            {summary.screenshots.length} captured frame{summary.screenshots.length > 1 ? 's' : ''} — open one and judge the render yourself:
-          </span>
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {summary.screenshots.map((shot) => {
-              const label = drainFrameLabel(shot);
-              return (
-                <li key={shot}>
-                  <a href={drainFrameUrl(shot)} target="_blank" rel="noreferrer"
-                    data-testid="batch-drain-frame-link" title={shot}
-                    className="focus-ring"
-                    style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: t.ink, textDecoration: 'none' }}>
-                    <img src={drainFrameUrl(shot)} alt={`Captured gate frame ${label}`}
-                      loading="lazy" width={128} height={72}
-                      style={{ width: 128, height: 72, objectFit: 'cover', border: `1px solid ${t.line}`, borderRadius: t.glass ? 4 : 0, background: t.panel }} />
-                    <span style={{ maxWidth: 128, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+      {!running && summary && <DrainFrameLinks t={t} frames={summary.screenshots} testIdPrefix="batch-drain" />}
 
       {/* Sibling pass: bind already-generated 2D art onto stub artifacts and re-grade. */}
       <MatrixBindIcons t={t} />
