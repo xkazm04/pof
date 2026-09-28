@@ -137,6 +137,12 @@ describe('monsterAttackLedger', () => {
     expect(flash.steps.find((entry) => entry.phase === 'missile')?.what).toContain('other three offsets');
   });
 
+  it('records the Counselor-family Fireball terminal blast pass', () => {
+    const ledger = monsterAttackLedgerSpec('Counselor')!;
+    const projectile = ledger.sequences.find((sequence) => sequence.missile?.includes('Fireball'))!;
+    expect(projectile.steps.find((entry) => entry.phase === 'missile')?.what).toContain('3x3 blast');
+  });
+
   it('attaches data.attackLedger without changing the stored raw row', () => {
     const source = wrapper();
     const [promoted] = withMonsterAttackLedgers([source]);

@@ -114,14 +114,9 @@ describe('monster missile behaviour graphs', () => {
     expect(source.entity.data.missileGraphs).toBeUndefined();
   });
 
-  it('reports protected-dataset disagreements and the Hellfire scope exclusion', () => {
-    expect(MONSTER_MISSILE_BEHAVIOUR_GRAPH_FINDINGS).toEqual(expect.arrayContaining([
-      expect.objectContaining({ dataset: 'missileSpecsData', owner: 'Rhino', field: 'lifetime' }),
-      expect.objectContaining({ dataset: 'missileSpecsData', owner: 'LightningControl', field: 'spawnedMissiles' }),
-      expect.objectContaining({ dataset: 'missileSpecsData', owner: 'ThinLightningControl', field: 'spawnedMissiles' }),
-      expect.objectContaining({ dataset: 'monsterMissileDamageData', owner: 'Fireball', field: 'hitCount' }),
-      expect.objectContaining({ dataset: 'monsterAttackLedgerData', owner: 'Counselor/Zhar/Lazarus Fireball' }),
+  it('reports only the justified Hellfire scope exclusion after the older datasets are corrected', () => {
+    expect(MONSTER_MISSILE_BEHAVIOUR_GRAPH_FINDINGS).toEqual([
       expect.objectContaining({ dataset: 'monsterAttackLedgerData', owner: 'HorkDemon/HorkSpawn', field: 'scope' }),
-    ]));
+    ]);
   });
 });

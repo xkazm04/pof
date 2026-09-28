@@ -75,6 +75,12 @@ const profile: MonsterProfile = {
 };
 
 describe('monster missile damage sources', () => {
+  it('counts the Fireball flight target and its one-time terminal blast check', () => {
+    const fireball = monsterMissileDamageSource('Fireball', 'Counselor');
+    expect(fireball.hitCount).toEqual({ kind: 'fixed', hits: 2 });
+    expect(fireball.omittedEffects).toEqual([]);
+  });
+
   it('keeps every source structured and pinned to engine and missile-data lines', () => {
     expect(MONSTER_MISSILE_DAMAGE_SOURCES.length).toBe(17);
     for (const source of MONSTER_MISSILE_DAMAGE_SOURCES) {

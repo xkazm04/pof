@@ -60,6 +60,15 @@ const monster = (id: string, file: string, ai: string): ReferenceWrapper => ({
 });
 
 describe('engine-derived missile specifications', () => {
+  it('records source-specific lightning children and Rhino runtime termination', () => {
+    expect(MISSILE_SPAWNS.filter((spawn) => spawn.parent === 'LightningControl').map((spawn) => spawn.child))
+      .toEqual(['Lightning']);
+    expect(MISSILE_SPAWNS.filter((spawn) => spawn.parent === 'ThinLightningControl').map((spawn) => spawn.child))
+      .toEqual(['ThinLightning']);
+    expect(MISSILE_BEHAVIOUR_SPECS.find((spec) => spec.missileIds.includes('Rhino'))?.lifetime)
+      .toContain('No decrementing lifetime');
+  });
+
   it('covers every vanilla missile enum exactly once across every unique behaviour pair', () => {
     expect(MISSILE_BEHAVIOUR_SPECS).toHaveLength(52);
     const pairs = MISSILE_BEHAVIOUR_SPECS.map((specification) =>

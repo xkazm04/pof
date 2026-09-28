@@ -172,7 +172,7 @@ const counselorProjectile = (routine: D1AiRoutineId, decideRef: string): Monster
   decideRef,
   channel: 'engine',
   damageFormula: 'Firebolt/Fireball receive one RandomIntBetween(minDamage,maxDamage) whole-HP value; ChargedBolt uses its AddChargedBolt monster constant; Lightning segments use 2*RandomIntBetween(minDamage,maxDamage) already in 1/64-HP units and floor each hit to 64',
-  collision: 'Firebolt/Fireball are stopping moving projectiles; ChargedBolt stops into its impact animation; LightningControl lays persistent Lightning segments whose hits do not consume their duration.',
+  collision: 'Firebolt is a stopping moving projectile. Fireball termination on a flight hit, blocking terrain, or expiry performs a one-time line-visible 3x3 blast pass before its animation-only phase, so the direct target can be checked again. ChargedBolt stops into its impact animation; LightningControl lays persistent Lightning segments whose hits do not consume their duration.',
   refs: [monster('2753-2758'), missiles('1903-2024'), missiles('267-271'), missiles('2976-3025'), missiles('3359-3390'), missiles('3992-4030')],
 });
 

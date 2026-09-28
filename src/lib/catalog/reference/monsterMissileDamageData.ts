@@ -115,8 +115,8 @@ export const MONSTER_MISSILE_DAMAGE_SOURCES_DATA = [
   },
   {
     missile: 'Fireball', routines: ['Counselor', 'Zhar', 'Lazarus'], formula: { kind: 'monster-normal' },
-    projectilesPerAttack: 1, collision: 'ordinary-fixed', hitCount: { kind: 'fixed', hits: 1 },
-    omittedEffects: ['The line-visible 3x3 termination blast and any second hit after the flight collision are omitted.'],
+    projectilesPerAttack: 1, collision: 'ordinary-fixed', hitCount: { kind: 'fixed', hits: 2 },
+    omittedEffects: [],
     refs: [monster(2756), monster(2757), missile(1977), missile(3099), missile(3112), missile(3118), missile(3123), missile(3136), misdat(8)],
   },
   {
