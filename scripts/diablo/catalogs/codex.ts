@@ -1,6 +1,7 @@
 import { loreBooks, seedLoreSteps } from '@/lib/catalog/reference/loreBooks';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+import { withPromotionLoreFacts } from './loreFacts';
 import type { CatalogHandler } from './types';
 
 let unresolved: { entry: string; line: string }[] = [];
@@ -10,7 +11,7 @@ export const codexHandler: CatalogHandler = {
   pool: (_db, _sourceId, wrappers) => {
     const report = loreBooks(wrappers);
     unresolved = report.unresolved;
-    return report.wrappers as unknown as ReferenceWrapper[];
+    return withPromotionLoreFacts(report.wrappers as unknown as ReferenceWrapper[]);
   },
   seed: (ctx) => {
     const report = loreBooks(listWrappers(ctx.db, { sourceId: ctx.sourceId }));

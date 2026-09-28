@@ -4,6 +4,7 @@ import { heroBarkTrees, seedHeroBarkSteps, type HeroBarkTreesResult } from '@/li
 import { monsterTalkTrees, seedMonsterTalkSteps, type MonsterTalkTreesResult } from '@/lib/catalog/reference/monsterTalk';
 import { withTalkLedger } from '@/lib/catalog/reference/talkLedger';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+import { withPromotionLoreFacts } from './loreFacts';
 import type { CatalogHandler, CatalogReport } from './types';
 
 let dialogueReport: DialogueTreesResult | null = null;
@@ -16,14 +17,14 @@ export const dialogTreesHandler: CatalogHandler = {
     dialogueReport = dialogueTrees(wrappers);
     heroBarkReport = heroBarkTrees(wrappers);
     monsterTalkReport = monsterTalkTrees(wrappers);
-    return [
+    return withPromotionLoreFacts([
       ...dialogueReport.wrappers,
       ...monsterTalkReport.wrappers,
       ...heroBarkReport.wrappers,
     ].map((wrapper) => ({
       ...wrapper,
       entity: withTalkLedger(wrapper.entity),
-    })) as unknown as ReferenceWrapper[];
+    })) as unknown as ReferenceWrapper[]);
   },
   seed: (ctx) => {
     for (const item of seededEntities('dialog-trees').filter(

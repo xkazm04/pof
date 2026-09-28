@@ -1,13 +1,14 @@
 import { seededEntities } from '@/lib/catalog/seed';
 import { seedQuestCausalityStep, withQuestCausality } from '@/lib/catalog/reference/questCausality';
 import { seedQuestSteps } from '@/lib/catalog/reference/questSpecs';
+import { withPromotionLoreFacts } from './loreFacts';
 import type { CatalogHandler } from './types';
 
 export const questsHandler: CatalogHandler = {
   catalogId: 'quests',
-  pool: (_db, _sourceId, wrappers) => wrappers
+  pool: (_db, _sourceId, wrappers) => withPromotionLoreFacts(wrappers
     .filter((wrapper) => wrapper.catalogId === 'quests')
-    .map((wrapper) => ({ ...wrapper, entity: withQuestCausality(wrapper.entity) })),
+    .map((wrapper) => ({ ...wrapper, entity: withQuestCausality(wrapper.entity) }))),
   seed: (ctx) => {
     const conversations = seededEntities('dialog-trees').filter((entity) => entity.id.startsWith('d1-dialog-TOWN_'));
     for (const storedEntity of seededEntities('quests').filter(
