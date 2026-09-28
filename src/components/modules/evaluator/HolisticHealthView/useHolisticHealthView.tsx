@@ -24,6 +24,7 @@ export function useHolisticHealthView() {
   const fetchHealth = useProjectHealthStore((s) => s.fetchHealth);
 
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
+  const completionLedger = useModuleStore((s) => s.checklistCompletedAt);
   const scanHistory = useEvaluatorStore((s) => s.scanHistory);
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
@@ -65,11 +66,11 @@ export function useHolisticHealthView() {
   }, [crashStats]);
 
   const handleRefresh = useCallback(() => {
-    fetchHealth(checklistProgress, scanHistory, lastScan, perfInput, crashInput);
-  }, [fetchHealth, checklistProgress, scanHistory, lastScan, perfInput, crashInput]);
+    fetchHealth(checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger);
+  }, [fetchHealth, checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger]);
 
-  // The server result is a pure, deterministic function of exactly these five
-  // inputs (see computeProjectHealth). `checklistProgress`/`scanHistory`/`lastScan`
+  // The server result is a pure function of exactly these six inputs plus the
+  // request time (see computeProjectHealth). `checklistProgress`/`scanHistory`/`lastScan`
   // are fresh object/array references on every store touch, so depending on their
   // identity re-POSTs even when their *values* are unchanged. Key the auto-fetch on
   // a primitive value-signature instead: it changes iff the POST body changes, so we
@@ -78,8 +79,8 @@ export function useHolisticHealthView() {
   // churn no longer counts). `handleRefresh` is intentionally excluded; the signature
   // captures every value it reads.
   const inputsSignature = useMemo(
-    () => JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput }),
-    [checklistProgress, scanHistory, lastScan, perfInput, crashInput],
+    () => JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger }),
+    [checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger],
   );
 
   useEffect(() => {
