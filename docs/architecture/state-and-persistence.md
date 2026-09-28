@@ -14,6 +14,7 @@ server and client through a uniform API envelope.
 | `src/stores/navigationStore.ts` | Active category/sub-module, sidebar mode |
 | `src/components/cli/store/cliPanelStore.ts` | Terminal sessions, tab order, inline-height preference |
 | `src/services/ProjectModuleBridge.ts` | Runtime bridge that breaks the project↔module circular dep |
+| `src/services/projectTransition.ts` | The one project-flip owner: enumerated triggers + ordered outgoing-project teardown |
 | `src/lib/db.ts` | `getDb()` singleton — creates `~/.pof/pof.db`, WAL, all DDL |
 | `src/lib/catalog-db.ts` | `catalog_lifecycle` + `catalog_entities` table helpers (pattern representative) |
 | `src/lib/pipeline-artifacts-db.ts` | `pipeline_artifacts` + `pipeline_artifact_revisions` table helpers |
@@ -88,10 +89,11 @@ a reload.
 `completeSetup` (line 79) auto-saves to recents and then branches: new projects call
 `saveModuleProgress`, existing ones call `loadModuleProgress` — both delegated to the bridge.
 
-`switchProject` (line 203) saves the current project, calls
-`useCLIPanelStore.getState().clearAllSessions()` to prevent cross-project CLI leakage, cancels
-open session-log entries, touches the target's `last_opened_at` in SQLite, restores target state,
-then calls `loadModuleProgress` for the target.
+`switchProject` saves the current project to recents, hands the outgoing-project teardown to the
+flip owner (`transitionProject({ kind: 'switch' })`, section 2b), touches the target's
+`last_opened_at` in SQLite, restores target state, then calls `loadModuleProgress` for the target.
+`resetProject(trigger = 'new' | 'delete')` runs the same teardown before clearing the identity. The
+store does not import the CLI panel store or any other per-project cache.
 
 The store registers itself at module scope (line 296):
 ```ts
@@ -164,6 +166,26 @@ Exported surface:
 - `getChecklistProgress()` — snapshot read, used by `projectStore.saveToRecent`
 - `scheduleAutoSave()` — called by `moduleStore` after every checklist mutation; restarts a
   `createTimerLifecycle` debounced 2 seconds (line 70–76)
+
+### 2b. Project-flip owner (`src/services/projectTransition.ts`)
+
+Everything that must happen to the OUTGOING project when the open project changes lives in one
+ordered list, `TEARDOWN_STEPS`, run by `transitionProject({ kind, from })`:
+`save-outgoing-progress` → `cancel-auto-save` → `clear-module-progress` → `clear-cli-sessions` →
+`cancel-open-session-log` (fire-and-forget) → `clear-activity-feed`.
+
+- **Triggers** are enumerated: `PROJECT_FLIP_TRIGGERS = ['switch', 'new', 'delete']`. Each runs the
+  full list. TopBar handlers call the store action only; they never clear a cache themselves.
+- **Recorded exclusion**: `PROJECT_FLIP_EXCLUSIONS = ['rename']`. Rename changes `projectName`
+  only and never rewrites `projectPath` (no folder moves on disk), so it runs no teardown.
+- **Placement**: the owner sits below both the identity store (`projectStore` calls it) and the
+  caches (it imports `cliPanelStore`, `activityFeedStore` and the bridge).
+- **Isolation**: each step runs in its own try/catch. A throwing step is reported through
+  `logger.warn` and the flip still completes. The synchronous steps finish before
+  `transitionProject` returns, so `resetProject` can clear the identity immediately.
+  `switchProject` awaits the returned promise (the outgoing save) before loading the target.
+- **Adding a per-project cache** means adding one entry to `TEARDOWN_STEPS`. The activity feed is
+  on the list because its events carry Fix prompts written for the project that was open.
 
 ---
 
