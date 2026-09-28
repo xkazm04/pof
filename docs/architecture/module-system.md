@@ -174,6 +174,8 @@ are pinned by `__tests__/components/modules/ReviewableModuleViewConsumers.test.t
 
 **`ChecklistItem.dependsOn` is intra-module only.** These are checklist item IDs (e.g., `'ae-1'`), not feature keys. Cross-module ordering is expressed in `MODULE_PREREQUISITES` (module level) or `FeatureDefinition.dependsOn` (feature level), not in checklist `dependsOn`.
 
+**A live-channel panel's mount is a subscription, never a connection.** Project Setup mounts `UE5ConnectionPanel` unconditionally and, once a project exists, `LiveStateSyncPanel` (`project-setup/LiveStateSyncPanel/`, the ws://…/pof/live editor channel: selection, viewport, PIE, property watches). `useLiveStateSync` only subscribes to the `ue5LiveState` singleton on mount; the socket opens on the user's Connect click alone (pinned by `__tests__/components/project-setup/live-state-sync-mount.test.tsx`, 0 sockets after mounting Project Setup). While the handshake is in flight the header shows a disabled `Connecting…` (a second `connect()` would `cleanup()` the handshake), and a snapshot retained through an unexpected close renders under a `live-state-stale` note rather than as live. Each selected actor with an object path offers `Watch…`, which prefills the property-watch form from `actor.path` and focuses Property (`selectionWatch.ts`; `live-state-selection-watch.test.tsx`).
+
 ---
 
 ## See Also
