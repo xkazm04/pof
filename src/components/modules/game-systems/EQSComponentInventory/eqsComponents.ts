@@ -3,16 +3,17 @@ import {
   EQS_LINE_OF_SIGHT, EQS_ELEVATION_ADVANTAGE,
   eqsFloat, eqsClampMeta,
 } from '@/lib/ai-director/eqs-defaults';
-import type { EQSComponentDef } from './types';
+import { EQS_CATALOG, type EQSComponentKind } from '@/lib/ai-director/eqs-catalog';
+import type { ComponentKind, EQSComponentDef } from './types';
 
-export const EQS_COMPONENTS: EQSComponentDef[] = [
+/** Inventory-only detail per catalog component: description, output and UPROPERTYs. */
+type InventoryDetail = Pick<EQSComponentDef, 'description' | 'outputType' | 'properties'>;
+
+// Component identity (displayName / cppClass / kind / parentClass / cost) lives in
+// the single-source `eqs-catalog.ts`; this table only adds what the inventory shows.
+const INVENTORY_DETAIL: Record<string, InventoryDetail> = {
   // ── Context ──
-  {
-    id: 'ctx-target-actor',
-    displayName: 'TargetActor',
-    cppClass: 'UEnvQueryContext_TargetActor',
-    kind: 'context',
-    parentClass: 'UEnvQueryContext',
+  'ctx-target-actor': {
     description: 'Resolves the TargetActor blackboard key to an AActor* for use as query center.',
     properties: [
       {
@@ -24,12 +25,7 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
     ],
   },
   // ── Generators ──
-  {
-    id: 'gen-attack-positions',
-    displayName: 'Attack Ring Positions',
-    cppClass: 'UEnvQueryGenerator_AttackPositions',
-    kind: 'generator',
-    parentClass: 'UEnvQueryGenerator_ProjectedPoints',
+  'gen-attack-positions': {
     description: 'Generates points in a ring around a context actor at a configurable melee attack distance. Nav-projected via TraceMode=Navigation.',
     outputType: 'TArray<FNavLocation>',
     properties: [
@@ -62,12 +58,7 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
       },
     ],
   },
-  {
-    id: 'gen-patrol-points',
-    displayName: 'Patrol Points',
-    cppClass: 'UEnvQueryGenerator_PatrolPoints',
-    kind: 'generator',
-    parentClass: 'UEnvQueryGenerator_ProjectedPoints',
+  'gen-patrol-points': {
     description: 'Generates random navigable points in an annular ring around the querier for patrol behavior. Nav-projected via TraceMode=Navigation.',
     outputType: 'TArray<FNavLocation>',
     properties: [
@@ -94,12 +85,7 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
       },
     ],
   },
-  {
-    id: 'gen-cover-positions',
-    displayName: 'Cover Positions',
-    cppClass: 'UEnvQueryGenerator_CoverPositions',
-    kind: 'generator',
-    parentClass: 'UEnvQueryGenerator_ProjectedPoints',
+  'gen-cover-positions': {
     description: 'Traces level geometry in annular rings around a threat actor to find positions behind walls, pillars, and elevation changes. Points without nearby geometry are discarded.',
     outputType: 'TArray<FNavLocation>',
     properties: [
@@ -154,14 +140,8 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
     ],
   },
   // ── Tests ──
-  {
-    id: 'test-flank-angle',
-    displayName: 'Flank Angle',
-    cppClass: 'UEnvQueryTest_FlankAngle',
-    kind: 'test',
-    parentClass: 'UEnvQueryTest',
+  'test-flank-angle': {
     description: 'Scores positions by the angle between the target\'s forward vector and the direction from target to test point. 0\u00B0 = front, 180\u00B0 = behind.',
-    cost: 'Low',
     outputType: 'float (0\u2013180\u00B0)',
     properties: [
       {
@@ -185,14 +165,8 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
       },
     ],
   },
-  {
-    id: 'test-path-exists',
-    displayName: 'Path Exists To Querier',
-    cppClass: 'UEnvQueryTest_PathExists',
-    kind: 'test',
-    parentClass: 'UEnvQueryTest',
+  'test-path-exists': {
     description: 'Tests whether a valid navigation path exists from the querier to each item. Returns 1.0 if reachable, 0.0 if not. Use as a filter.',
-    cost: 'High',
     outputType: 'float (0.0 / 1.0 binary)',
     properties: [
       {
@@ -216,14 +190,8 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
       },
     ],
   },
-  {
-    id: 'test-line-of-sight',
-    displayName: 'Line of Sight Exposure',
-    cppClass: 'UEnvQueryTest_LineOfSight',
-    kind: 'test',
-    parentClass: 'UEnvQueryTest',
+  'test-line-of-sight': {
     description: 'Scores positions by LOS exposure to a threat using multi-height traces. 0.0 = fully exposed, 1.0 = fully occluded (best cover).',
-    cost: 'High',
     outputType: 'float (0.0\u20131.0)',
     properties: [
       {
@@ -262,14 +230,8 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
       },
     ],
   },
-  {
-    id: 'test-elevation-advantage',
-    displayName: 'Elevation Advantage',
-    cppClass: 'UEnvQueryTest_ElevationAdvantage',
-    kind: 'test',
-    parentClass: 'UEnvQueryTest',
+  'test-elevation-advantage': {
     description: 'Scores positions by elevation relative to a reference actor. Higher positions receive better scores \u2014 simulates high ground tactical advantage.',
-    cost: 'Low',
     outputType: 'float (0.0\u20131.0)',
     properties: [
       {
@@ -294,4 +256,25 @@ export const EQS_COMPONENTS: EQSComponentDef[] = [
       },
     ],
   },
-];
+};
+
+/** The inventory's coarser grouping: score and filter tests are both "Tests". */
+const inventoryKind = (kind: EQSComponentKind): ComponentKind =>
+  kind === 'test-score' || kind === 'test-filter' ? 'test' : kind === 'generator' ? 'generator' : 'context';
+
+/**
+ * Every custom EQS component implemented in `Source/PoF/AI/EQS/` — the catalog's
+ * `source` entries, in catalog order. Proposed (squad codegen) and engine
+ * built-in components are catalogued but not listed here.
+ */
+export const EQS_COMPONENTS: EQSComponentDef[] = EQS_CATALOG
+  .filter((c) => c.status === 'source')
+  .map((c) => ({
+    id: c.id,
+    displayName: c.displayName,
+    cppClass: c.cppClass,
+    kind: inventoryKind(c.kind),
+    parentClass: c.parentClass,
+    ...(c.cost ? { cost: c.cost } : {}),
+    ...(INVENTORY_DETAIL[c.id] ?? { description: c.summary, properties: [] }),
+  }));

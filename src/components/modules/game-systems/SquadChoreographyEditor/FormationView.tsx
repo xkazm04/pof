@@ -6,6 +6,7 @@ import {
 } from '@/lib/chart-colors';
 import type { DirectorConfig, DirectorResult } from '@/types/squad-tactics';
 import { ROLE_DEFINITIONS } from '@/lib/ai-director/squad-engine';
+import { formatComponentRef } from '@/lib/ai-director/eqs-catalog';
 import {
   ROLE_COLORS, SVG_SIZE, SVG_CENTER, DRAW_RADIUS,
 } from './constants';
@@ -331,7 +332,7 @@ export function FormationView({
                     <span className="text-2xs text-text-muted ml-auto">{def.engagementRange[0]}-{def.engagementRange[1]} UU</span>
                   </div>
                   <div className="flex items-center gap-1 ml-3.5 flex-wrap">
-                    {[...def.generators, ...def.tests].map((t, i) => (
+                    {[...def.generators, ...def.tests].map(formatComponentRef).map((t, i) => (
                       <span
                         key={i}
                         className="text-2xs font-mono px-1.5 py-0.5 rounded"
