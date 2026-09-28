@@ -7,6 +7,10 @@ import {
 } from '@/lib/chart-colors';
 import type { GraphNode, HeatmapConfig, BudgetBar } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
+import {
+  computeZonePlaytime, computeCumulativePath,
+  type WorldModel, type ZonePlaytimeEstimate, type CumulativePath,
+} from '@/lib/world/world-model';
 
 /* ── Canonical Zone Names ──────────────────────────────────────────────────── */
 
@@ -63,7 +67,7 @@ export const ZONES: ZoneRecord[] = [
   { id: 'z-korriban', name: ZONE_NAMES.KORRIBAN, displayName: 'Korriban Sith Academy', cx: 75, cy: 55, type: 'combat', status: 'locked', levelRange: '22-35', levelMin: 22, levelMax: 35, connections: ['z-nar-shaddaa', 'z-kashyyyk', 'z-malachor'], group: 'combat', color: '#ef4444', topoSize: 22, topoX: 700, topoY: 150 },
   { id: 'z-malachor', name: ZONE_NAMES.MALACHOR_V, displayName: 'Malachor V Ruins', cx: 85, cy: 35, type: 'boss', status: 'locked', levelRange: '30-50', levelMin: 30, levelMax: 50, connections: ['z-korriban', 'z-nar-shaddaa'], group: 'boss', color: '#7f1d1d', topoSize: 20, topoX: 850, topoY: 250 },
   // Ashen Forest — catalog-pipeline target asset (zone-map). Scorched continuation of Whisper Woods.
-  // Appended last so the hand-indexed ENEMY_DENSITY_CONFIG.cells rows (0–5) stay valid.
+  // Enemy density is keyed by zone id (ENEMY_DENSITY_BY_ZONE_ID), so ZONES order is not load-bearing.
   { id: 'z-ashen', name: ZONE_NAMES.ASHEN_FOREST, displayName: 'Ashen Forest', cx: 58, cy: 16, type: 'combat', status: 'active', levelRange: '3-5', levelMin: 3, levelMax: 5, connections: ['z4'], group: 'combat', color: ACCENT_ORANGE, topoSize: 22, topoX: 300, topoY: 30 },
 ];
 
@@ -219,25 +223,33 @@ export const ASSET_FEATURES = [
 
 /* ── 10.2 Enemy Density Heatmap Data ──────────────────────────────────────── */
 
+/** Sector columns of the density heatmap. */
+const DENSITY_SECTORS = ['NW', 'NE', 'Center', 'SW', 'SE'];
+/** Enemies per sector that render as full heat (value 1.0). */
+const DENSITY_FULL_SCALE = 20;
+
+/**
+ * Authored enemies per sector (NW, NE, Center, SW, SE), keyed by zone id.
+ * A zone with no entry has no density data: its combat time reports as not
+ * measured (the five KOTOR zones have never been authored).
+ */
+export const ENEMY_DENSITY_BY_ZONE_ID: Readonly<Record<string, readonly number[]>> = {
+  z1: [0, 0, 1, 0, 0],          // Sanctuary - almost none
+  z2: [6, 9, 12, 4, 7],         // Whisper Woods
+  z3: [10, 8, 16, 13, 11],      // Crystal Caves
+  z4: [14, 17, 19, 12, 15],     // Bandit Camp
+  z5: [16, 18, 20, 17, 14],     // Deep Core
+  z6: [8, 7, 20, 8, 7],         // Ruined Keep
+  'z-ashen': [6, 9, 11, 5, 7],  // Ashen Forest — scorched woods, moderate ash-wraith density (~38, on par with Whisper Woods)
+};
+
+/** Heatmap view of ENEMY_DENSITY_BY_ZONE_ID (rows = ZONES, derived — never hand-indexed). */
 export const ENEMY_DENSITY_CONFIG: HeatmapConfig = {
   rows: ZONES.map(z => z.name),
-  cols: ['NW', 'NE', 'Center', 'SW', 'SE'],
-  cells: [
-    // Sanctuary - almost none
-    { row: 0, col: 0, value: 0.0, label: '0' }, { row: 0, col: 1, value: 0.0, label: '0' }, { row: 0, col: 2, value: 0.05, label: '1' }, { row: 0, col: 3, value: 0.0, label: '0' }, { row: 0, col: 4, value: 0.0, label: '0' },
-    // Whisper Woods
-    { row: 1, col: 0, value: 0.3, label: '6' }, { row: 1, col: 1, value: 0.45, label: '9' }, { row: 1, col: 2, value: 0.6, label: '12' }, { row: 1, col: 3, value: 0.2, label: '4' }, { row: 1, col: 4, value: 0.35, label: '7' },
-    // Crystal Caves
-    { row: 2, col: 0, value: 0.5, label: '10' }, { row: 2, col: 1, value: 0.4, label: '8' }, { row: 2, col: 2, value: 0.8, label: '16' }, { row: 2, col: 3, value: 0.65, label: '13' }, { row: 2, col: 4, value: 0.55, label: '11' },
-    // Bandit Camp
-    { row: 3, col: 0, value: 0.7, label: '14' }, { row: 3, col: 1, value: 0.85, label: '17' }, { row: 3, col: 2, value: 0.95, label: '19' }, { row: 3, col: 3, value: 0.6, label: '12' }, { row: 3, col: 4, value: 0.75, label: '15' },
-    // Deep Core
-    { row: 4, col: 0, value: 0.8, label: '16' }, { row: 4, col: 1, value: 0.9, label: '18' }, { row: 4, col: 2, value: 1.0, label: '20' }, { row: 4, col: 3, value: 0.85, label: '17' }, { row: 4, col: 4, value: 0.7, label: '14' },
-    // Ruined Keep
-    { row: 5, col: 0, value: 0.4, label: '8' }, { row: 5, col: 1, value: 0.35, label: '7' }, { row: 5, col: 2, value: 1.0, label: '20' }, { row: 5, col: 3, value: 0.4, label: '8' }, { row: 5, col: 4, value: 0.35, label: '7' },
-    // Ashen Forest (row 11 — appended index) — scorched woods, moderate ash-wraith density (~38, on par with Whisper Woods)
-    { row: 11, col: 0, value: 0.3, label: '6' }, { row: 11, col: 1, value: 0.45, label: '9' }, { row: 11, col: 2, value: 0.55, label: '11' }, { row: 11, col: 3, value: 0.25, label: '5' }, { row: 11, col: 4, value: 0.35, label: '7' },
-  ],
+  cols: DENSITY_SECTORS,
+  cells: ZONES.flatMap((z, row) => (ENEMY_DENSITY_BY_ZONE_ID[z.id] ?? []).map((n, col) => ({
+    row, col, value: n / DENSITY_FULL_SCALE, label: String(n),
+  }))),
 };
 
 /* ── 10.4 World Streaming Budget Data ──────────────────────────────────────── */
@@ -449,145 +461,37 @@ export const CURRENT_DAY = 5;
 
 /* ── 10.11 Critical Path Playtime Estimator Data ──────────────────────────── */
 
-/** Seconds per enemy kill estimate (varies by zone difficulty via level) */
-const SECONDS_PER_ENEMY = 8;
-/** Seconds per boss phase (includes mechanics, dodging, healing) */
-const SECONDS_PER_BOSS_PHASE = 90;
-/** Base exploration time per zone in seconds (traversal, NPC, loot pickup) */
-const BASE_EXPLORATION_SEC: Record<ZoneRecord['type'], number> = {
-  hub: 120,     // 2 min — minimal combat, mostly NPC interaction
-  combat: 300,  // 5 min — traversal + side encounters
-  boss: 180,    // 3 min — linear run to boss arena
-};
+// The playtime math lives in the pure world model (`@/lib/world/world-model`);
+// this section only assembles the static world from the tables above.
 
-export interface ZonePlaytimeEstimate {
-  zoneId: string;
-  zoneName: string;
-  /** Total enemies across all sectors */
-  enemyCount: number;
-  /** Estimated combat time in seconds */
-  combatSec: number;
-  /** Boss fight time in seconds (0 if no boss) */
-  bossSec: number;
-  /** Exploration / traversal time in seconds */
-  explorationSec: number;
-  /** Total zone time in seconds */
-  totalSec: number;
-}
-
-/** Per-zone playtime breakdown derived from enemy density + boss phases + zone type */
-export const ZONE_PLAYTIME: ZonePlaytimeEstimate[] = ZONES.map(z => {
-  // Sum enemy count from heatmap
-  const zoneIdx = ENEMY_DENSITY_CONFIG.rows.indexOf(z.name);
-  const enemyCount = ENEMY_DENSITY_CONFIG.cells
-    .filter(c => c.row === zoneIdx)
-    .reduce((sum, c) => sum + parseInt(c.label ?? '0'), 0);
-
-  const combatSec = enemyCount * SECONDS_PER_ENEMY;
-
-  // Boss phases
-  const boss = BOSS_ARENAS.find(b => b.zone === z.name);
-  const bossSec = boss ? boss.phases * SECONDS_PER_BOSS_PHASE : 0;
-
-  const explorationSec = BASE_EXPLORATION_SEC[z.type];
-  const totalSec = combatSec + bossSec + explorationSec;
-
-  return { zoneId: z.id, zoneName: z.name, enemyCount, combatSec, bossSec, explorationSec, totalSec };
-});
-
-const playtimeByZoneId = new Map(ZONE_PLAYTIME.map(p => [p.zoneId, p]));
+export type {
+  ZonePlaytimeEstimate, PlaytimePathMode, PathSegment, CumulativeNode, CumulativePath, WorldModel,
+} from '@/lib/world/world-model';
+export { formatPlaytime } from '@/lib/world/world-model';
 
 /** Parse "1.2s" -> 1.2 */
 function parseEstTime(s: string): number {
   return parseFloat(s.replace('s', '')) || 0;
 }
 
-export type PlaytimePathMode = 'critical' | 'all';
+/** The hand-authored world as a WorldModel: ZONES + ZONE_EDGES + density + boss arenas, keyed by zone id. */
+export const STATIC_WORLD: WorldModel = {
+  zones: ZONES.map(z => ({ id: z.id, name: z.name, type: z.type, levelMin: z.levelMin, levelMax: z.levelMax })),
+  edges: ZONE_EDGES.map(e => ({
+    fromId: e.fromId, toId: e.toId, transitionSec: parseEstTime(e.estTime), criticalPath: e.criticalPath,
+  })),
+  enemiesByZoneId: Object.fromEntries(
+    Object.entries(ENEMY_DENSITY_BY_ZONE_ID).map(([id, sectors]) => [id, sectors.reduce((a, n) => a + n, 0)]),
+  ),
+  bossPhasesByZoneId: Object.fromEntries(ZONES.flatMap(z => {
+    const boss = BOSS_ARENAS.find(b => b.zone === z.name);
+    return boss ? [[z.id, boss.phases]] : [];
+  })),
+};
 
-export interface PathSegment {
-  fromId: string;
-  toId: string;
-  transitionSec: number;
-  criticalPath: boolean;
-}
+/** Per-zone playtime of the static world (derived from the model; kept for existing consumers). */
+export const ZONE_PLAYTIME: ZonePlaytimeEstimate[] = computeZonePlaytime(STATIC_WORLD);
 
-export interface CumulativeNode {
-  zoneId: string;
-  zoneName: string;
-  /** Cumulative seconds when arriving at this node (including prior zones + transitions) */
-  cumulativeSec: number;
-  /** This zone's own playtime */
-  zoneSec: number;
-}
-
-/**
- * BFS / topological walk from the start node (z1 = Sanctuary) to compute
- * cumulative playtime along the critical path or all reachable paths.
- */
-function computeCumulativePath(mode: PlaytimePathMode): { nodes: CumulativeNode[]; segments: PathSegment[]; totalSec: number } {
-  const edges = ZONE_EDGES.filter(e => mode === 'critical' ? e.criticalPath : true);
-  const segments: PathSegment[] = edges.map(e => ({
-    fromId: e.fromId, toId: e.toId,
-    transitionSec: parseEstTime(e.estTime),
-    criticalPath: e.criticalPath,
-  }));
-
-  // Build adjacency list (directed graph)
-  const adj = new Map<string, { toId: string; transitionSec: number }[]>();
-  for (const s of segments) {
-    if (!adj.has(s.fromId)) adj.set(s.fromId, []);
-    adj.get(s.fromId)!.push({ toId: s.toId, transitionSec: s.transitionSec });
-  }
-
-  // Longest-path walk (DAG) — use topological BFS with max cumulative
-  const cumulative = new Map<string, number>();
-  const startId = 'z1';
-  const startPlaytime = playtimeByZoneId.get(startId)?.totalSec ?? 0;
-  cumulative.set(startId, startPlaytime);
-
-  // BFS in topological order (simple since our zone graph is a DAG)
-  const queue = [startId];
-  const visited = new Set<string>();
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (visited.has(current)) continue;
-    visited.add(current);
-    const currentCum = cumulative.get(current) ?? 0;
-    for (const { toId, transitionSec } of adj.get(current) ?? []) {
-      const zoneTime = playtimeByZoneId.get(toId)?.totalSec ?? 0;
-      const arrival = currentCum + transitionSec + zoneTime;
-      if (arrival > (cumulative.get(toId) ?? 0)) {
-        cumulative.set(toId, arrival);
-      }
-      queue.push(toId);
-    }
-  }
-
-  // Build nodes array ordered by cumulative time
-  const nodes: CumulativeNode[] = Array.from(cumulative.entries())
-    .map(([zoneId, cumulativeSec]) => ({
-      zoneId,
-      zoneName: zoneById.get(zoneId)?.name ?? zoneId,
-      cumulativeSec,
-      zoneSec: playtimeByZoneId.get(zoneId)?.totalSec ?? 0,
-    }))
-    .sort((a, b) => a.cumulativeSec - b.cumulativeSec);
-
-  const totalSec = Math.max(...Array.from(cumulative.values()), 0);
-  return { nodes, segments, totalSec };
-}
-
-/** Pre-computed paths for both modes */
-export const CRITICAL_PATH = computeCumulativePath('critical');
-export const ALL_PATHS = computeCumulativePath('all');
-
-/** Format seconds to "Xm Ys" or "Xh Ym" */
-export function formatPlaytime(sec: number): string {
-  if (sec < 60) return `${Math.round(sec)}s`;
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
-  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
-  const h = Math.floor(m / 60);
-  const rm = m % 60;
-  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
-}
+/** Cumulative paths of the static world for both modes (derived from the model). */
+export const CRITICAL_PATH: CumulativePath = computeCumulativePath(STATIC_WORLD, 'critical');
+export const ALL_PATHS: CumulativePath = computeCumulativePath(STATIC_WORLD, 'all');

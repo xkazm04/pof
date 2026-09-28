@@ -1,19 +1,22 @@
 /**
  * Playtime budget targeting + interest-curve helpers.
  *
- * Pure functions over the canonical ZONE_PLAYTIME / CRITICAL_PATH data —
- * keep this file logic-only so the React components stay thin.
+ * Pure functions over the world model (`@/lib/world/world-model`) — priced
+ * with its single cost table; the static world is the default input.
+ * Keep this file logic-only so the React components stay thin.
  */
 
 import {
-  ZONE_PLAYTIME,
-  CRITICAL_PATH,
-  ALL_PATHS,
+  computeZonePlaytime,
+  computeCumulativePath,
+  resolveCosts,
   formatPlaytime,
+  type PlaytimeCosts,
+  type WorldModel,
   type ZonePlaytimeEstimate,
   type PlaytimePathMode,
-  type CumulativeNode,
-} from '../_shared/data';
+} from '@/lib/world/world-model';
+import { STATIC_WORLD } from '../_shared/data';
 
 /** Seconds in 6 hours — the recommendation in the requirement. */
 export const DEFAULT_TARGET_SEC = 6 * 3600;
@@ -27,10 +30,6 @@ export const BUDGET_TOLERANCE = 0.10;
 /** Bands used by the interest curve. */
 export const GRIND_THRESHOLD = 0.70;
 export const DEAD_THRESHOLD = 0.20;
-
-/** Per-second cost knobs (mirror data.ts internals; intentionally duplicated to keep this file self-contained). */
-const SEC_PER_ENEMY = 8;
-const SEC_PER_BOSS_PHASE = 90;
 
 /** Per-zone intensity in [0,1]. Combat density + a 1.5× boss weight. */
 export function intensityScore(zp: ZonePlaytimeEstimate): number {
@@ -67,7 +66,11 @@ export interface Lever {
  *
  * Returned levers are *order-preserving* (most-impactful first) and capped at 3.
  */
-export function suggestLevers(zp: ZonePlaytimeEstimate, targetZoneSec: number): Lever[] {
+export function suggestLevers(
+  zp: ZonePlaytimeEstimate, targetZoneSec: number, costs?: Partial<PlaytimeCosts>,
+): Lever[] {
+  const { secPerEnemy, secPerBossPhase } = resolveCosts(costs);
+  const enemies = zp.enemyCount ?? 0;
   const delta = zp.totalSec - targetZoneSec;
   const out: Lever[] = [];
   const absDelta = Math.abs(delta);
@@ -79,23 +82,23 @@ export function suggestLevers(zp: ZonePlaytimeEstimate, targetZoneSec: number): 
     const bossShare = zp.bossSec / totalNonExp;
     // Combat lever (only if zone has enemies)
     if (zp.combatSec > 0) {
-      const dropEnemies = Math.min(zp.enemyCount, Math.ceil((absDelta * combatShare) / SEC_PER_ENEMY));
+      const dropEnemies = Math.min(enemies, Math.ceil((absDelta * combatShare) / secPerEnemy));
       if (dropEnemies > 0) {
         out.push({
           label: `Drop ${dropEnemies} enemy spawn${dropEnemies === 1 ? '' : 's'}`,
-          detail: `${zp.enemyCount} → ${zp.enemyCount - dropEnemies} (saves ${formatPlaytime(dropEnemies * SEC_PER_ENEMY)})`,
-          savesSec: dropEnemies * SEC_PER_ENEMY,
+          detail: `${enemies} → ${enemies - dropEnemies} (saves ${formatPlaytime(dropEnemies * secPerEnemy)})`,
+          savesSec: dropEnemies * secPerEnemy,
         });
       }
     }
     if (zp.bossSec > 0) {
-      const phases = zp.bossSec / SEC_PER_BOSS_PHASE;
-      const dropPhases = Math.min(Math.floor(phases) - 1, Math.ceil((absDelta * bossShare) / SEC_PER_BOSS_PHASE));
+      const phases = zp.bossSec / secPerBossPhase;
+      const dropPhases = Math.min(Math.floor(phases) - 1, Math.ceil((absDelta * bossShare) / secPerBossPhase));
       if (dropPhases > 0) {
         out.push({
           label: `Cut ${dropPhases} boss phase${dropPhases === 1 ? '' : 's'}`,
-          detail: `${phases} → ${phases - dropPhases} phases (saves ${formatPlaytime(dropPhases * SEC_PER_BOSS_PHASE)})`,
-          savesSec: dropPhases * SEC_PER_BOSS_PHASE,
+          detail: `${phases} → ${phases - dropPhases} phases (saves ${formatPlaytime(dropPhases * secPerBossPhase)})`,
+          savesSec: dropPhases * secPerBossPhase,
         });
       }
     }
@@ -110,19 +113,21 @@ export function suggestLevers(zp: ZonePlaytimeEstimate, targetZoneSec: number): 
     }
   } else {
     // Under budget — propose adds
-    const addEnemies = Math.ceil(absDelta / SEC_PER_ENEMY);
+    const addEnemies = Math.ceil(absDelta / secPerEnemy);
     if (addEnemies > 0 && absDelta > 30) {
       out.push({
         label: `Add ${addEnemies} enemy spawn${addEnemies === 1 ? '' : 's'}`,
-        detail: `${zp.enemyCount} → ${zp.enemyCount + addEnemies} (adds ${formatPlaytime(addEnemies * SEC_PER_ENEMY)})`,
-        savesSec: -addEnemies * SEC_PER_ENEMY,
+        detail: zp.combatMeasured
+          ? `${enemies} → ${enemies + addEnemies} (adds ${formatPlaytime(addEnemies * secPerEnemy)})`
+          : `combat not measured → ${addEnemies} (adds ${formatPlaytime(addEnemies * secPerEnemy)})`,
+        savesSec: -addEnemies * secPerEnemy,
       });
     }
     if (zp.bossSec === 0 && absDelta > 120) {
       out.push({
         label: `Introduce a mini-boss (1 phase)`,
-        detail: `Adds ${formatPlaytime(SEC_PER_BOSS_PHASE)} of high-intensity pacing`,
-        savesSec: -SEC_PER_BOSS_PHASE,
+        detail: `Adds ${formatPlaytime(secPerBossPhase)} of high-intensity pacing`,
+        savesSec: -secPerBossPhase,
       });
     }
     if (absDelta > 60) {
@@ -147,11 +152,20 @@ export interface InterestPoint {
   band: 'grind' | 'dead' | 'mid';
 }
 
-const playtimeByZoneId = new Map(ZONE_PLAYTIME.map(p => [p.zoneId, p]));
-
-export function buildInterestPoints(mode: PlaytimePathMode): InterestPoint[] {
-  const path = mode === 'critical' ? CRITICAL_PATH : ALL_PATHS;
-  return path.nodes.map((n: CumulativeNode) => {
+/**
+ * Interest points along a world's cumulative path. `buildInterestPoints(mode)`
+ * prices the static world; pass any WorldModel (a generated candidate, a what-if
+ * scenario) as `buildInterestPoints(world, mode, costs?)`.
+ */
+export function buildInterestPoints(mode: PlaytimePathMode): InterestPoint[];
+export function buildInterestPoints(world: WorldModel, mode: PlaytimePathMode, costs?: Partial<PlaytimeCosts>): InterestPoint[];
+export function buildInterestPoints(
+  worldOrMode: WorldModel | PlaytimePathMode, modeArg?: PlaytimePathMode, costs?: Partial<PlaytimeCosts>,
+): InterestPoint[] {
+  const world = typeof worldOrMode === 'string' ? STATIC_WORLD : worldOrMode;
+  const mode = typeof worldOrMode === 'string' ? worldOrMode : modeArg ?? 'critical';
+  const playtimeByZoneId = new Map(computeZonePlaytime(world, costs).map(p => [p.zoneId, p]));
+  return computeCumulativePath(world, mode, costs).nodes.map((n) => {
     const zp = playtimeByZoneId.get(n.zoneId);
     const intensity = zp ? intensityScore(zp) : 0;
     const band: InterestPoint['band'] =
