@@ -2,6 +2,7 @@ import type { SubModuleId } from '@/types/modules';
 import type {
   PromptVariant,
   ABTest,
+  ABTestView,
   EvolutionStats,
   ModuleEvolutionStats,
   EvolutionSuggestion,
@@ -26,6 +27,7 @@ import {
   pickVariant,
   type JudgeScores,
 } from './ab-testing';
+import { toTestView } from './verdict';
 import { getPromptVariantFitness } from './judge-fitness';
 import { logger } from '@/lib/logger';
 import { type Result, err } from '@/types/result';
@@ -279,6 +281,24 @@ export function getAllTests(): ABTest[] {
 }
 
 /**
+ * Persisted tests (optionally one module's) as the UI reads them: each row
+ * annotated with its verdict reading on the best basis available NOW. The reading
+ * is computed at read time from the judge scores — never stored — so a concluded
+ * test's basis is today's evidence, and there is no schema to migrate.
+ */
+export function getTestViews(moduleId?: SubModuleId): ABTestView[] {
+  const judged = judgeScoresByVariant();
+  return getAllABTests()
+    .filter((t) => !moduleId || t.moduleId === moduleId)
+    .map((t) => toTestView(t, judged));
+}
+
+/** One test annotated with its current verdict reading. */
+export function getTestView(test: ABTest): ABTestView {
+  return toTestView(test, judgeScoresByVariant());
+}
+
+/**
  * What the judge fleet independently found about each variant, keyed by variant
  * id — the evidence that lets an A/B be settled by something better than the
  * run's own report of itself.
@@ -335,13 +355,14 @@ export function recordTestTrial(
 /**
  * Conclude a test on demand. Refuses — with a reason — while either variant is
  * still below `MIN_TRIALS_PER_VARIANT`, so a test that was never actually served
- * cannot crown a winner (see {@link forceConclude}).
+ * cannot crown a winner (see {@link forceConclude}). Crowns on the same judge
+ * scores auto-conclude reads, and returns the reading it crowned on.
  */
-export function concludeTest(testId: string): Result<ABTest, string> {
+export function concludeTest(testId: string): Result<ABTestView, string> {
   const test = getABTestById(testId);
   if (!test) return err('Test not found');
 
-  const result = forceConclude(test);
+  const result = forceConclude(test, judgeScoresByVariant());
   if (!result.ok) return result;
 
   upsertABTest(result.data);

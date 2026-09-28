@@ -6,7 +6,8 @@ import {
   mutateVariant,
   getVariantsForItem,
   getVariantsForModule,
-  getAllTests,
+  getTestViews,
+  getTestView,
   startABTest,
   recordTestTrial,
   concludeTest,
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
         const slot = body.variantId as 'A' | 'B';
         const result = recordTestTrial(body.testId, slot, body.success, body.durationMs ?? 0);
         if (!result) return apiError('Test not found or not running', 404);
-        return apiSuccess(result);
+        return apiSuccess(getTestView(result));
       }
 
       case 'conclude-test': {
@@ -139,9 +140,9 @@ export async function POST(req: NextRequest) {
       case 'get-tests': {
         // List persisted A/B tests (all statuses) so the UI can show / conclude
         // them after a reload. Without this, started tests vanished from the
-        // Tests tab while Stats still counted them as Active.
-        const tests = getAllTests().filter((t) => !body.moduleId || t.moduleId === body.moduleId);
-        return apiSuccess(tests);
+        // Tests tab while Stats still counted them as Active. Each row carries
+        // its verdict reading (basis, band, floor shortfall) — see verdict.ts.
+        return apiSuccess(getTestViews(body.moduleId as SubModuleId | undefined));
       }
 
       case 'get-suggestions': {

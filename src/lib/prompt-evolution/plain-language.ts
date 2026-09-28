@@ -1,4 +1,5 @@
-import type { ABTest, PromptCluster } from '@/types/prompt-evolution';
+import type { ABTest, ABTestVerdict, PromptCluster } from '@/types/prompt-evolution';
+import { TIE_MARGIN, readTestVerdict } from './verdict';
 
 /**
  * Plain-language layer for the Prompt Evolution view's Simple Mode.
@@ -10,10 +11,6 @@ import type { ABTest, PromptCluster } from '@/types/prompt-evolution';
  * wall-clock: everything is derived from the supplied records so it stays pure
  * and unit-testable.
  */
-
-/** Rates within this margin are treated as a tie on success — speed breaks it.
- *  Mirrors the 0.05 tie threshold in `evaluateTest` (ab-testing.ts). */
-const TIE_MARGIN = 0.05;
 
 export interface PlainVerdict {
   /** Which slot won, or null when it is a tie / still inconclusive. */
@@ -32,10 +29,6 @@ export interface PlainVerdict {
 
 function pct(rate: number): number {
   return Math.round(rate * 100);
-}
-
-function rateOf(successes: number, trials: number): number {
-  return trials > 0 ? successes / trials : 0;
 }
 
 function avgMs(totalMs: number, trials: number): number {
@@ -57,18 +50,22 @@ export function plainConfidence(confidence: number): string {
 
 /**
  * Build a plain-language verdict for an A/B test. `labelA` / `labelB` are the
- * human variant labels (falls back to "Wording A" / "Wording B").
+ * human variant labels (falls back to "Wording A" / "Wording B"). `verdict` is
+ * the reading to state (the server's, from `verdict.ts`); without one the
+ * self-reported reading is used. Rates, the tie margin and the basis all come
+ * from it — this layer only words them.
  */
 export function explainTestVerdict(
   test: ABTest,
   labelA?: string,
   labelB?: string,
+  verdict: ABTestVerdict = readTestVerdict(test),
 ): PlainVerdict {
   const nameA = labelA?.trim() || 'Wording A';
   const nameB = labelB?.trim() || 'Wording B';
 
-  const rateA = rateOf(test.variantASuccesses, test.variantATrials);
-  const rateB = rateOf(test.variantBSuccesses, test.variantBTrials);
+  const { rateA, rateB } = verdict;
+  const judged = verdict.basis === 'judge';
   const totalTrials = test.variantATrials + test.variantBTrials;
 
   // Resolve the winning slot. Prefer the recorded winnerId; otherwise infer
@@ -80,10 +77,12 @@ export function explainTestVerdict(
   const concluded = test.status === 'concluded' && Boolean(test.winnerId);
 
   // Inconclusive: still running with no clear lead, or no trials at all.
-  if (!concluded && (totalTrials < 2 || Math.abs(rateA - rateB) < TIE_MARGIN)) {
+  if (!concluded && (totalTrials < 2 || verdict.tie)) {
     const detail = totalTrials === 0
       ? 'No runs recorded yet.'
-      : `So far: ${nameA} succeeded ${test.variantASuccesses} of ${test.variantATrials}, ${nameB} succeeded ${test.variantBSuccesses} of ${test.variantBTrials}.`;
+      : judged
+        ? `So far the judges passed ${nameA} ${pct(rateA)}% of ${verdict.trialsA} verdicts and ${nameB} ${pct(rateB)}% of ${verdict.trialsB}.`
+        : `So far: ${nameA} succeeded ${test.variantASuccesses} of ${test.variantATrials}, ${nameB} succeeded ${test.variantBSuccesses} of ${test.variantBTrials}.`;
     return {
       winnerSlot: null,
       concluded: false,
@@ -102,6 +101,8 @@ export function explainTestVerdict(
   const winTrials = slot === 'A' ? test.variantATrials : test.variantBTrials;
   const winRate = slot === 'A' ? rateA : rateB;
   const loseRate = slot === 'A' ? rateB : rateA;
+  const winEvidence = slot === 'A' ? verdict.trialsA : verdict.trialsB;
+  const loseEvidence = slot === 'A' ? verdict.trialsB : verdict.trialsA;
   const winAvg = slot === 'A'
     ? avgMs(test.variantATotalDurationMs, test.variantATrials)
     : avgMs(test.variantBTotalDurationMs, test.variantBTrials);
@@ -110,13 +111,33 @@ export function explainTestVerdict(
     : avgMs(test.variantATotalDurationMs, test.variantATrials);
 
   const headline = concluded ? `${winnerName} wins` : `${winnerName} is ahead`;
-  const detail = `It succeeded ${winSucc} of ${winTrials} times (${pct(winRate)}%), compared with ${pct(loseRate)}% for ${loserName}.`;
 
-  // "Why this won" mirrors the engine's decision rule: a clear success-rate
-  // gap wins on results; a near-tie is broken by whichever finished faster.
+  // A recorded winner the current evidence now clearly disfavours (e.g. crowned
+  // on a self-report before the judges scored both arms) is stated as such —
+  // never as "the winner, at a lower rate than the loser".
+  if (loseRate - winRate >= TIE_MARGIN) {
+    const evidence = judged ? "the judges' verdicts" : 'the recorded runs';
+    return {
+      winnerSlot: slot,
+      concluded,
+      headline,
+      detail: `${winnerName} was picked, but ${evidence} now favour ${loserName}: ${pct(loseRate)}% vs ${pct(winRate)}%.`,
+      why: 'The evidence has changed since this test was decided — consider running it again.',
+      confidenceNote: plainConfidence(test.confidence),
+    };
+  }
+
+  const detail = judged
+    ? `The judges passed its work ${pct(winRate)}% of the time over ${winEvidence} verdicts, compared with ${pct(loseRate)}% for ${loserName} over ${loseEvidence} verdicts.`
+    : `It succeeded ${winSucc} of ${winTrials} times (${pct(winRate)}%), compared with ${pct(loseRate)}% for ${loserName}.`;
+
+  // "Why this won" mirrors the engine's decision rule (verdict.ts decideWinner):
+  // a clear rate gap wins on results; a near-tie is broken by whichever finished faster.
   let why: string;
   if (Math.abs(winRate - loseRate) >= TIE_MARGIN) {
-    why = `${winnerName} finished the task successfully more often than ${loserName}.`;
+    why = judged
+      ? `The judges passed ${winnerName}'s work more often than ${loserName}'s.`
+      : `${winnerName} finished the task successfully more often than ${loserName}.`;
   } else if (winAvg < loseAvg) {
     why = `Both succeeded about equally often, but ${winnerName} finished faster on average.`;
   } else {

@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import { apiFetch } from '@/lib/api-utils';
+import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
 import type {
   PromptVariant,
   ABTest,
+  ABTestView,
   PromptCluster,
   EvolutionStats,
   EvolutionSuggestion,
@@ -17,7 +18,7 @@ import type {
 // ── Stable empty constants ──────────────────────────────────────────────────
 
 const EMPTY_VARIANTS: PromptVariant[] = [];
-const EMPTY_TESTS: ABTest[] = [];
+const EMPTY_TESTS: Array<ABTest | ABTestView> = [];
 const EMPTY_CLUSTERS: PromptCluster[] = [];
 const EMPTY_SUGGESTIONS: EvolutionSuggestion[] = [];
 const EMPTY_FITNESS: PromptVersionFitness[] = [];
@@ -38,12 +39,20 @@ const EMPTY_STATS: EvolutionStats = {
 let variantsRequestSeq = 0;
 let suggestionsRequestSeq = 0;
 
+/**
+ * What a decide-now press came to. A refusal (409 "not enough trials") is an
+ * ANSWER for the card to show next to the test — not a store-wide error, which
+ * would hide every panel of the view behind the banner.
+ */
+export type ConcludeOutcome = { ok: true; test: ABTestView } | { ok: false; reason: string };
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 interface PromptEvolutionState {
   // Data
   variants: PromptVariant[];
-  abTests: ABTest[];
+  /** Server reads carry their verdict reading (`ABTestView`); a just-started test may not. */
+  abTests: Array<ABTest | ABTestView>;
   clusters: PromptCluster[];
   suggestions: EvolutionSuggestion[];
   stats: EvolutionStats;
@@ -84,7 +93,7 @@ interface PromptEvolutionState {
   mutateVariant: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
   startABTest: (moduleId: SubModuleId, checklistItemId: string, variantAId: string, variantBId: string) => Promise<ABTest | null>;
   recordTrial: (testId: string, variantSlot: 'A' | 'B', success: boolean, durationMs: number) => Promise<ABTest | null>;
-  concludeTest: (testId: string) => Promise<ABTest | null>;
+  concludeTest: (testId: string) => Promise<ConcludeOutcome>;
   clusterPrompts: (moduleId: SubModuleId) => Promise<void>;
   loadStats: () => Promise<void>;
   loadPromptFitness: () => Promise<void>;
@@ -140,7 +149,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
 
   loadTests: async (moduleId) => {
     try {
-      const abTests = await apiFetch<ABTest[]>('/api/prompt-evolution', {
+      const abTests = await apiFetch<ABTestView[]>('/api/prompt-evolution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get-tests', ...(moduleId ? { moduleId } : {}) }),
@@ -247,7 +256,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
 
   recordTrial: async (testId, variantSlot, success, durationMs) => {
     try {
-      const test = await apiFetch<ABTest>('/api/prompt-evolution', {
+      const test = await apiFetch<ABTestView>('/api/prompt-evolution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -269,20 +278,17 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   },
 
   concludeTest: async (testId) => {
-    try {
-      const test = await apiFetch<ABTest>('/api/prompt-evolution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'conclude-test', testId }),
-      });
-      set((s) => ({
-        abTests: s.abTests.map((t) => (t.id === testId ? test : t)),
-      }));
-      return test;
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to conclude test' });
-      return null;
-    }
+    const result = await tryApiFetch<ABTestView>('/api/prompt-evolution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'conclude-test', testId }),
+    });
+    if (!result.ok) return { ok: false, reason: result.error || 'Failed to conclude test' };
+    const test = result.data;
+    set((s) => ({
+      abTests: s.abTests.map((t) => (t.id === testId ? test : t)),
+    }));
+    return { ok: true, test };
   },
 
   clusterPrompts: async (moduleId) => {
