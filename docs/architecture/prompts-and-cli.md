@@ -21,6 +21,7 @@ calls in strings.
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
 | `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
+| `src/lib/prompt-evolution/challenge.ts` | `planChallenge()` — pure preflight for "test version X against the current one": incumbent (active, else seeded root) = arm A, diff summary, per-arm judge evidence (unjudged = `null`), blocks (`already-current`, `identical-prompt`, `test-running`, `no-incumbent`, `unknown-version`) |
 | `src/lib/prompt-evolution/verdict.ts` | THE A/B verdict seam — `readFitness()` / `readTestVerdict()` (basis, rates, band, tie, per-arm shortfall, `canConclude`) and `decideWinner()` (the one crowning rule) |
 | `src/lib/prompt-evolution/judge-fitness.ts` | `stampPromptVersion()` / `computeVersionFitness()` — joins judge verdicts to the quality-pack version that produced the artifact |
 | `src/lib/prompts/quality/index.ts` | Quality pack + `PROMPT_VERSION` (hand-bumped) + `packFingerprint()` drift detector |
@@ -616,6 +617,15 @@ handler puts into the callback's `staticFields`. The loop has three legs:
 Adopting a winner / restoring a version flips the `active` flag, which changes what leg 1
 serves once no test is running.
 
+**One running test per item.** `engine.startABTest` returns `Result<ABTest, string>` and
+refuses — naming the running test — while another test is still `running` on the same
+(module, item); `start-ab-test` answers **409** with that reason. The reason: leg 1 serves
+from the NEWEST running test (`running[running.length - 1]`) while leg 2 books to the
+FIRST running test the served variant is an arm of (`getABTestsForItem` is `created_at ASC`),
+so two concurrent tests sharing a baseline were served by one and counted on the other,
+and the older test's challenger was never served again. Conclude (or let auto-conclude
+finish) before starting the next test on the item.
+
 **Leg 0 — fuel (baseline auto-seeding).** On a fresh DB there are no variants at all, so
 leg 1 returned `null` forever and the rail never fired. The REAL dispatch path
 (`useModuleCLI.execute` → `composeTaskDispatch(task, ctx, { seed: true })`) therefore
@@ -663,7 +673,19 @@ excluded because they belong to no experiment.
 `OptimizerPanel` now offers "save as challenger variant": pick the checklist item, and
 `usePromptEvolution.handleSaveChallenger` seeds the baseline from the registry prompt
 (idempotent), saves the optimized text via `createVariant`, and starts the A/B test between
-them — so leg 1 begins serving both arms on the next dispatches.
+them — so leg 1 begins serving both arms on the next dispatches. A 409 (a test is already
+running) comes back inline as the save result: the store's `startABTest` returns
+`StartOutcome` (`{ ok, test } | { ok: false, reason }`) and never writes `store.error`.
+
+**Challenge the current version from History.** Each non-current node in
+`PromptVersionTimeline` offers *Challenge current*, which opens `ChallengePreflight`:
+`planChallenge` (see the file map) over the loaded history, `store.abTests` and
+`store.variantFitness` (`loadVariantFitness()` → `get-variant-fitness`, the first client
+reader of that route) — diff incumbent → challenger (`PromptDiffView`), the mutation class,
+each arm's trial stats and judge score or *unjudged*, or the blocker with a link to the
+running test. *Start A/B test* calls `store.startChallenge(challengerId)`, which always
+puts the current version in arm A. The `start-ab-test` suggestion opens History on its
+item (via `store.selectedChecklistItemId`) instead of asking the user to pick a partner.
 
 ---
 
