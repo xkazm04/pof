@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
+import type { StepModeOverride, StepModeOverrides } from '@/lib/one-shot/runPlan';
 
 /**
  * `analyzed` is a RESTING phase: the distribution is on screen and the operator picks the gap
@@ -37,6 +38,11 @@ export interface OneShotJobState {
   /** The gap the current proposal is aimed at; `null` = the model picked (or no basis). */
   target: GapTarget | null;
   totalSteps: number;
+  /**
+   * The run plan's per-step author choices (label → 'cli' | 'deterministic'); absent = the step's
+   * default. Read by every run path (run / resume / retry); cleared by `reset` (a new analyze).
+   */
+  stepModeOverrides: StepModeOverrides;
 
   // actions
   reset: () => void;
@@ -48,6 +54,8 @@ export interface OneShotJobState {
   setDistribution: (d: CatalogDistribution | null) => void;
   setTarget: (t: GapTarget | null) => void;
   setTotalSteps: (n: number) => void;
+  /** Choose who authors `label` in the run plan; `null` returns it to its default. */
+  setStepMode: (label: string, mode: StepModeOverride | null) => void;
   incRefinementTurn: (forceMore: boolean) => boolean;
   recordStep: (r: StepResult) => void;
   /** Replace the recorded outcome of `r.step` in place (append if unseen) — a retry keeps run order. */
@@ -61,7 +69,7 @@ const REFINEMENT_TURN_CAP = 3;
 
 const INITIAL: Pick<
   OneShotJobState,
-  'jobId' | 'phase' | 'catalogId' | 'draftEntityId' | 'proposal' | 'refinementTurns' | 'currentStepIndex' | 'stepResults' | 'lastSummary' | 'distribution' | 'target' | 'totalSteps'
+  'jobId' | 'phase' | 'catalogId' | 'draftEntityId' | 'proposal' | 'refinementTurns' | 'currentStepIndex' | 'stepResults' | 'lastSummary' | 'distribution' | 'target' | 'totalSteps' | 'stepModeOverrides'
 > = {
   jobId: null,
   phase: 'idle',
@@ -75,6 +83,7 @@ const INITIAL: Pick<
   distribution: null,
   target: null,
   totalSteps: 0,
+  stepModeOverrides: {},
 };
 
 const IN_FLIGHT: readonly OneShotPhase[] = ['analyzing', 'proposing', 'refining', 'awaitingRun', 'running'];
@@ -108,6 +117,12 @@ export const useOneShotJobStore = create<OneShotJobState>()(
       setDistribution: (distribution) => set({ distribution }),
       setTarget: (target) => set({ target }),
       setTotalSteps: (totalSteps) => set({ totalSteps }),
+      setStepMode: (label, mode) =>
+        set((s) => {
+          const next = { ...s.stepModeOverrides };
+          if (mode) next[label] = mode; else delete next[label];
+          return { stepModeOverrides: next };
+        }),
       incRefinementTurn: (forceMore) => {
         const cur = get().refinementTurns;
         if (cur >= REFINEMENT_TURN_CAP && !forceMore) return false;

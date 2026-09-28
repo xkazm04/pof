@@ -4,21 +4,12 @@ import { useOneShotJobStore, type OneShotPhase, type StepResult } from '@/stores
 import { useCatalogStore } from '@/stores/catalogStore';
 import { eventBus } from '@/lib/event-bus';
 import { logger } from '@/lib/logger';
-import { decide } from './skip-policy';
-import type { ArchetypeId, ViewDescriptor, AcceptanceTier } from './types';
-import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 import { createPostJson, createProposalPhases } from './proposalPhases';
-import { stepsForProfile } from '@/lib/catalog/stepScope';
+import { decideStep, stepRefsFor, type OrchestratorStepRef } from './runPlan';
 
-export interface OrchestratorStepRef {
-  label: string;
-  archetype: ArchetypeId;
-  tier: AcceptanceTier;
-  view: ViewDescriptor;
-  autoMode?: 'cli' | 'deterministic' | 'skip';
-}
+export type { OrchestratorStepRef } from './runPlan';
 
 export interface OrchestratorOptions {
   fetchImpl?: typeof fetch;
@@ -43,33 +34,22 @@ export interface Orchestrator {
   cancel(): void;
 }
 
-function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
-  const pipeline = getCatalogPipeline(catalogId);
-  if (!pipeline) return [];
-  // One-shot drafts are the project's own entities: steps scoped to other canon profiles are not theirs (D18).
-  return stepsForProfile(pipeline).map((s) => {
-    const res = s.accept ? s.accept({}) : { tier: 'L0' as const };
-    return {
-      label: s.label,
-      archetype: s.archetype,
-      tier: (res?.tier ?? 'L0') as AcceptanceTier,
-      view: s.view,
-    };
-  });
-}
-
 export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator {
   // Resolve the global lazily: a module-level orchestrator must see a fetch installed later.
   const fetchImpl: typeof fetch = opts.fetchImpl ?? ((input, init) => fetch(input, init));
-  const stepsFor = opts.stepsFor ?? defaultStepsFor;
+  const stepsFor = opts.stepsFor ?? stepRefsFor;
   let _cancelled = false;
 
   const postJson = createPostJson(fetchImpl);
   const phases = createProposalPhases(postJson);
 
-  /** Run one step on the draft through the skip policy → its recorded result. */
+  /**
+   * Run one step on the draft through the skip policy → its recorded result. The mode is the run
+   * plan's (`decideStep` with the operator's `stepModeOverrides`), read at dispatch time so
+   * approveAndRun, resume and retryFailed all send what the plan showed.
+   */
   async function runStep(catalogId: string, entityId: string, s: OrchestratorStepRef): Promise<StepResult> {
-    const dec = decide(s.archetype, s.tier, s.view, { autoMode: s.autoMode });
+    const dec = decideStep(s, useOneShotJobStore.getState().stepModeOverrides);
     if (dec.mode === 'skip-needs-art') return { step: s.label, outcome: 'skipped', reason: 'needs human selection' };
     if (dec.mode === 'defer-runtime') return { step: s.label, outcome: 'deferred', reason: `${dec.tier} pending the test-gate runner` };
     try {
