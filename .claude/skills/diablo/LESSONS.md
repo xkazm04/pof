@@ -165,3 +165,6 @@
 - **The xhigh stall watchdog (40 min of event silence) can reap healthy runs.** 2026-09-28 ~01:00–01:47 three xhigh runs (a large audit
   JSON, a big write task, a report) were reaped while composing; codex itself answered normally. Resume the same session with
   `POF_CODEX_STALL_MIN=80` and ask for incremental file writes / short evidence strings — the research is kept in the session.
+- **Audit A/B must be blind and paired under ONE auditor.** The same 16 dialog briefs scored 92.7 % under one xhigh auditor and
+  82.3 % under another (W89); a cross-auditor comparison showed a false regression. Mix both variants in one audit with hidden X/Y
+  labels (key kept in the vault) and tell the auditor what NOT to grade (rebuild/UE proposals).
