@@ -12,8 +12,10 @@ import type {
   PromptOptimizationResult,
   VariantVersionHistory,
   PromptVersionFitness,
+  PromptVariantFitness,
   SeededBaseline,
 } from '@/types/prompt-evolution';
+import { planChallenge } from '@/lib/prompt-evolution/challenge';
 
 // ── Stable empty constants ──────────────────────────────────────────────────
 
@@ -22,6 +24,7 @@ const EMPTY_TESTS: Array<ABTest | ABTestView> = [];
 const EMPTY_CLUSTERS: PromptCluster[] = [];
 const EMPTY_SUGGESTIONS: EvolutionSuggestion[] = [];
 const EMPTY_FITNESS: PromptVersionFitness[] = [];
+const EMPTY_VARIANT_FITNESS: PromptVariantFitness[] = [];
 const EMPTY_STATS: EvolutionStats = {
   totalVariants: 0,
   activeABTests: 0,
@@ -46,6 +49,13 @@ let suggestionsRequestSeq = 0;
  */
 export type ConcludeOutcome = { ok: true; test: ABTestView } | { ok: false; reason: string };
 
+/**
+ * What a start press came to. The server refuses (409) a second running test on
+ * an item; like a refused conclude, that is an answer for the caller to show
+ * inline, not a store-wide error.
+ */
+export type StartOutcome = { ok: true; test: ABTest } | { ok: false; reason: string };
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 interface PromptEvolutionState {
@@ -58,6 +68,8 @@ interface PromptEvolutionState {
   stats: EvolutionStats;
   /** Judge-scored quality per quality-pack prompt version (null score = unjudged). */
   promptFitness: PromptVersionFitness[];
+  /** Judge-scored quality per served variant (null score = unjudged, never 0). */
+  variantFitness: PromptVariantFitness[];
   selectedModuleId: SubModuleId | null;
   selectedChecklistItemId: string | null;
   selectedVariantId: string | null;
@@ -91,12 +103,15 @@ interface PromptEvolutionState {
   createVariant: (moduleId: SubModuleId, checklistItemId: string, prompt: string) => Promise<PromptVariant | null>;
   seedBaseline: (moduleId: SubModuleId, checklistItemId: string, prompt: string) => Promise<SeededBaseline | null>;
   mutateVariant: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
-  startABTest: (moduleId: SubModuleId, checklistItemId: string, variantAId: string, variantBId: string) => Promise<ABTest | null>;
+  startABTest: (moduleId: SubModuleId, checklistItemId: string, variantAId: string, variantBId: string) => Promise<StartOutcome>;
+  /** Test a version from the loaded history against the current one (A = current, B = challenger). */
+  startChallenge: (challengerId: string) => Promise<StartOutcome>;
   recordTrial: (testId: string, variantSlot: 'A' | 'B', success: boolean, durationMs: number) => Promise<ABTest | null>;
   concludeTest: (testId: string) => Promise<ConcludeOutcome>;
   clusterPrompts: (moduleId: SubModuleId) => Promise<void>;
   loadStats: () => Promise<void>;
   loadPromptFitness: () => Promise<void>;
+  loadVariantFitness: () => Promise<void>;
   loadSuggestions: (moduleId: SubModuleId) => Promise<void>;
   getBestVariant: (moduleId: SubModuleId, checklistItemId: string) => Promise<PromptVariant | null>;
   loadVersionHistory: (moduleId: SubModuleId, checklistItemId: string) => Promise<void>;
@@ -112,6 +127,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   suggestions: EMPTY_SUGGESTIONS,
   stats: EMPTY_STATS,
   promptFitness: EMPTY_FITNESS,
+  variantFitness: EMPTY_VARIANT_FITNESS,
   selectedModuleId: null,
   selectedChecklistItemId: null,
   selectedVariantId: null,
@@ -239,19 +255,28 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   },
 
   startABTest: async (moduleId, checklistItemId, variantAId, variantBId) => {
-    set({ isMutating: true, error: null });
-    try {
-      const test = await apiFetch<ABTest>('/api/prompt-evolution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start-ab-test', moduleId, checklistItemId, variantId: variantAId, testId: variantBId }),
-      });
-      set((s) => ({ abTests: [...s.abTests, test], isMutating: false }));
-      return test;
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to start test', isMutating: false });
-      return null;
+    set({ isMutating: true });
+    const result = await tryApiFetch<ABTest>('/api/prompt-evolution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start-ab-test', moduleId, checklistItemId, variantId: variantAId, testId: variantBId }),
+    });
+    if (!result.ok) {
+      set({ isMutating: false });
+      return { ok: false, reason: result.error || 'Failed to start test' };
     }
+    const test = result.data;
+    set((s) => ({ abTests: [...s.abTests, test], isMutating: false }));
+    return { ok: true, test };
+  },
+
+  startChallenge: async (challengerId) => {
+    const { versionHistory, abTests, variantFitness } = get();
+    if (!versionHistory) return { ok: false, reason: 'Load this item’s history first.' };
+    const plan = planChallenge({ history: versionHistory, candidateId: challengerId, runningTests: abTests, fitness: variantFitness });
+    if (!plan.ok) return { ok: false, reason: plan.error.message };
+    const { moduleId, checklistItemId, incumbentId } = plan.data;
+    return get().startABTest(moduleId, checklistItemId, incumbentId, challengerId);
   },
 
   recordTrial: async (testId, variantSlot, success, durationMs) => {
@@ -328,6 +353,19 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
       set({ promptFitness });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to load prompt fitness' });
+    }
+  },
+
+  loadVariantFitness: async () => {
+    try {
+      const variantFitness = await apiFetch<PromptVariantFitness[]>('/api/prompt-evolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-variant-fitness' }),
+      });
+      set({ variantFitness });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load variant fitness' });
     }
   },
 

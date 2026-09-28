@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   History, GitCompareArrows, X, Loader2, FlaskConical,
 } from 'lucide-react';
@@ -13,6 +13,8 @@ import type { SubModuleId } from '@/types/modules';
 import { ACCENT } from './constants';
 import { CompareTree } from './CompareTree';
 import { EmptyHistory } from './EmptyHistory';
+import { ChallengePreflight } from './ChallengePreflight';
+import { planChallenge } from '@/lib/prompt-evolution/challenge';
 
 // ── Main timeline panel ──────────────────────────────────────────────────────
 
@@ -28,13 +30,25 @@ export function PromptVersionTimeline({
   const isRestoring = usePromptEvolutionStore((s) => s.isRestoring);
   const loadVersionHistory = usePromptEvolutionStore((s) => s.loadVersionHistory);
   const restoreVariant = usePromptEvolutionStore((s) => s.restoreVariant);
+  const abTests = usePromptEvolutionStore((s) => s.abTests);
+  const variantFitness = usePromptEvolutionStore((s) => s.variantFitness);
+  const loadVariantFitness = usePromptEvolutionStore((s) => s.loadVariantFitness);
+  const startChallenge = usePromptEvolutionStore((s) => s.startChallenge);
+  const setActiveSubTab = usePromptEvolutionStore((s) => s.setActiveSubTab);
 
-  const [selectedItemId, setSelectedItemId] = useState('');
+  // A suggestion ("start A/B test") may open History on an item: start there.
+  const [selectedItemId, setSelectedItemId] = useState(
+    () => usePromptEvolutionStore.getState().selectedChecklistItemId ?? '',
+  );
   const [compare, setCompare] = useState<string[]>([]);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const handleSelectItem = useCallback((itemId: string) => {
     setSelectedItemId(itemId);
     setCompare([]);
+    setChallengeId(null);
     if (selectedModuleId && itemId) {
       loadVersionHistory(selectedModuleId, itemId);
     }
@@ -54,6 +68,25 @@ export function PromptVersionTimeline({
     if (restored) toast.success(`Restored “${restored.label}” as the current version`);
   }, [restoreVariant]);
 
+  const openChallenge = useCallback((id: string) => {
+    setChallengeId(id);
+    setStartError(null);
+    loadVariantFitness();
+  }, [loadVariantFitness]);
+
+  const handleStartChallenge = useCallback(async () => {
+    if (!challengeId) return;
+    setIsStarting(true);
+    const started = await startChallenge(challengeId);
+    setIsStarting(false);
+    if (!started.ok) {
+      setStartError(started.reason);
+      return;
+    }
+    setChallengeId(null);
+    toast.success('A/B test started — dispatch this checklist item a few times to collect trials.');
+  }, [challengeId, startChallenge]);
+
   const showHistory =
     versionHistory && selectedItemId && versionHistory.checklistItemId === selectedItemId
       ? versionHistory
@@ -69,6 +102,13 @@ export function PromptVersionTimeline({
     const [before, after] = a.variant.createdAt <= b.variant.createdAt ? [a, b] : [b, a];
     return { before, after };
   })();
+
+  const challengePlan = useMemo(
+    () => (showHistory && challengeId
+      ? planChallenge({ history: showHistory, candidateId: challengeId, runningTests: abTests, fitness: variantFitness })
+      : null),
+    [showHistory, challengeId, abTests, variantFitness],
+  );
 
   const compareSlot = (id: string) => {
     const idx = compare.indexOf(id);
@@ -122,6 +162,17 @@ export function PromptVersionTimeline({
         </SurfaceCard>
       )}
 
+      {challengePlan && (
+        <ChallengePreflight
+          plan={challengePlan}
+          isStarting={isStarting}
+          startError={startError}
+          onStart={handleStartChallenge}
+          onCancel={() => setChallengeId(null)}
+          onOpenTests={() => setActiveSubTab('tests')}
+        />
+      )}
+
       {/* Lineage tree */}
       {showHistory ? (
         showHistory.versions.length === 0 ? (
@@ -146,13 +197,15 @@ export function PromptVersionTimeline({
                   compareSlot={compareSlot}
                   onToggleCompare={toggleCompare}
                   onRestore={handleRestore}
+                  onChallenge={openChallenge}
                   isRestoring={isRestoring}
                 />
               ))}
             </div>
             <p className="text-2xs text-text-muted mt-2">
               Pick two versions’ <span className="text-text">Compare</span> buttons to see a side-by-side diff, or
-              <span className="text-text"> Restore</span> any version to make it current.
+              <span className="text-text"> Restore</span> any version to make it current, or
+              <span className="text-text"> Challenge current</span> to A/B test it against the current one.
             </p>
           </SurfaceCard>
         )
