@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseTsv } from '@/lib/catalog/ingest/tsv';
+import { missileBehaviourGraphsForSpell } from '@/lib/catalog/reference/missileBehaviourGraphs';
 import { withSpellCastLedgers } from '@/lib/catalog/reference/spellCastLedger';
 import { withSpellMechanics } from '@/lib/catalog/reference/spellMechanics';
 import { referenceCaster } from '@/lib/catalog/reference/spellLaw';
@@ -10,10 +11,23 @@ import type { CatalogHandler } from './types';
 
 export const spellbookHandler: CatalogHandler = {
   catalogId: 'spellbook',
-  pool: (_db, _sourceId, wrappers) => withSpellCastLedgers(
-    withSpellMechanics(wrappers.filter((wrapper) => wrapper.catalogId === 'spellbook')),
-    wrappers,
-  ),
+  pool: (_db, _sourceId, wrappers) => {
+    const spellWrappers = withSpellCastLedgers(
+      withSpellMechanics(wrappers.filter((wrapper) => wrapper.catalogId === 'spellbook')),
+      wrappers,
+    );
+    return spellWrappers.map((wrapper) => {
+      if (wrapper.file !== 'spells/spelldat.tsv') return wrapper;
+      const missileGraphs = missileBehaviourGraphsForSpell(wrapper.raw.id ?? wrapper.key);
+      return {
+        ...wrapper,
+        entity: {
+          ...wrapper.entity,
+          data: { ...wrapper.entity.data, missileGraphs },
+        },
+      };
+    });
+  },
   seed: (ctx) => {
     let caster;
     if (ctx.root) {

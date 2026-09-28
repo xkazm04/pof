@@ -97,6 +97,13 @@ describe('castLedgerFor', () => {
         missile: 'Firebolt', parent: null, speed: 13, blockable: true,
         damageColumns: { damageMinimum: '2', damageMaximum: '7' },
         damageUnits: 'whole-hit-points',
+        kineticsByLevel: expect.arrayContaining([
+          expect.objectContaining({
+            spellLevel: 1,
+            speed: { formula: '(16+min(2*S,47))/16 for player casts', tilesPerTick: 1.125 },
+            lifetime: expect.objectContaining({ ticks: 256 }),
+          }),
+        ]),
       }),
       expect.objectContaining({ missile: 'MagmaBallExplosion', parent: 'Firebolt', depth: 1 }),
     ]));
@@ -125,8 +132,31 @@ describe('castLedgerFor', () => {
     expect(ledger.missileChain).toEqual(expect.arrayContaining([
       expect.objectContaining({
         missile: 'FireWall', parent: 'FireWallControl', damageUnits: 'already-shifted-fixed-point',
+        kineticsByLevel: expect.arrayContaining([
+          expect.objectContaining({ spellLevel: 15, lifetime: expect.objectContaining({ ticks: 2560 }) }),
+        ]),
       }),
     ]));
+  });
+
+  it('includes a later target-action child and computes kinetics for every chain node', () => {
+    const resurrect = spellRow('Resurrect', 'Resurrect');
+    const related = [
+      resurrect,
+      ...classRows(),
+      missileRow('Resurrect', 'AddResurrect', '', 'Magic', ''),
+      missileRow('ResurrectBeam', 'AddResurrectBeam', 'ProcessResurrectBeam', 'Magic', ''),
+    ];
+    const ledger = castLedgerFor(resurrect, related);
+    expect(ledger.missileChain.map((missile) => ({
+      missile: missile.missile,
+      parent: missile.parent,
+      spawn: missile.spawn,
+      levels: missile.kineticsByLevel.length,
+    }))).toEqual([
+      { missile: 'Resurrect', parent: null, spawn: 'initial', levels: 15 },
+      { missile: 'ResurrectBeam', parent: 'Resurrect', spawn: 'on target action', levels: 15 },
+    ]);
   });
 
   it('has no spellMath/playerSpellHits disagreements for the five required synthetic spell rows', () => {

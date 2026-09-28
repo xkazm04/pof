@@ -1,5 +1,10 @@
 import { castTiming } from '@/lib/catalog/reference/combatMath';
 import {
+  missileBehaviourGraph,
+  resolveMissileKinetics,
+  type ResolvedMissileKinetics,
+} from '@/lib/catalog/reference/missileBehaviourGraphs';
+import {
   MISSILE_SPAWNS,
   blockability,
   classifyMissileFlags,
@@ -75,7 +80,7 @@ export interface InstantiatedMissileNode {
   readonly missile: string;
   readonly parent: string | null;
   readonly depth: number;
-  readonly spawn: 'initial' | 'on hit' | 'on expiry' | 'per tick' | 'on cast';
+  readonly spawn: 'initial' | 'on hit' | 'on expiry' | 'per tick' | 'on cast' | 'on target action';
   readonly rowFound: boolean;
   readonly addFn?: string;
   readonly processFn?: string;
@@ -90,6 +95,7 @@ export interface InstantiatedMissileNode {
   readonly engineCollision?: string;
   readonly damageUnits?: PlayerSpellCollisionDamage;
   readonly damageByLevel?: readonly { spellLevel: number; min: number; max: number; mean: number }[];
+  readonly kineticsByLevel: readonly ResolvedMissileKinetics[];
 }
 
 export interface InstantiatedSpellCastLedger extends SpellCastLedger {
@@ -297,6 +303,19 @@ function missileSeeds(initialMissiles: readonly string[], allowedMissiles: Reado
       seeds.push({ missile: edge.child, parent: parent.missile, depth: parent.depth + 1, spawn: edge.when });
     }
   }
+  for (const child of allowedMissiles) {
+    if (seen.has(child)) continue;
+    const parent = seeds.find((candidate) => missileBehaviourGraph(candidate.missile)
+      ?.spawns.some((spawn) => spawn.missile === child));
+    if (!parent) continue;
+    seen.add(child);
+    seeds.push({
+      missile: child,
+      parent: parent.missile,
+      depth: parent.depth + 1,
+      spawn: child === 'ResurrectBeam' ? 'on target action' : 'on cast',
+    });
+  }
   return seeds;
 }
 
@@ -317,6 +336,7 @@ function missileChain(
   initialMissiles: readonly string[],
   relatedRows: readonly ReferenceWrapper[],
   levels: readonly InstantiatedSpellLevel[],
+  characterLevel: number,
 ): InstantiatedMissileNode[] {
   const allowed = new Set([...initialMissiles, ...ledger.spawnedMissiles]);
   const seeds = missileSeeds(initialMissiles, allowed);
@@ -382,6 +402,12 @@ function missileChain(
         damageUnits,
         damageByLevel: computedDamage,
       } : {}),
+      kineticsByLevel: levels.map((level) => resolveMissileKinetics(
+        seed.missile,
+        level.spellLevel,
+        characterLevel,
+        relatedRows,
+      )),
     };
   });
 }
@@ -459,7 +485,7 @@ export function instantiateSpellCastLedger(
     referenceCaster: reference.caster,
     castTimingByClass: Object.fromEntries(classes.map((entry) => [entry.heroClass, entry.timing])),
     levels,
-    missileChain: missileChain(ledger, initialMissiles, relatedRows, levels),
+    missileChain: missileChain(ledger, initialMissiles, relatedRows, levels, reference.caster.level),
   };
 }
 
