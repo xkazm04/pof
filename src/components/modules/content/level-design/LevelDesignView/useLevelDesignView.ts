@@ -18,7 +18,8 @@ import {
   buildStreamingZonePrompt,
   buildProceduralLevelPrompt,
 } from '@/lib/prompts/level-design';
-import type { RoomNode, SyncDivergence, LevelDesignDocument } from '@/types/level-design';
+import type { RoomNode, SyncDivergence } from '@/types/level-design';
+import type { LevelEditOp } from '@/lib/level-design/level-edit';
 import type { StreamingZonePlannerConfig } from '../StreamingZonePlanner';
 import {
   procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore,
@@ -27,7 +28,7 @@ import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
 import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
-import { useDocCommitBuffer, type CommitOptions, type DocPatch } from './useDocCommitBuffer';
+import { useDocCommitBuffer } from './useDocCommitBuffer';
 
 export function useLevelDesignView() {
   const {
@@ -50,7 +51,6 @@ export function useLevelDesignView() {
   const buffer = useDocCommitBuffer({ baseDoc: serverDoc, updateDoc });
   const {
     doc: activeDoc,
-    stage,
     stageDebounced,
     commit,
     flush: flushDoc,
@@ -59,13 +59,15 @@ export function useLevelDesignView() {
     saveError,
     isSaving,
     isDirty,
+    edit,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    undoDepth,
+    undoLabel,
+    redoLabel,
   } = buffer;
-
-  const applyEdit = useCallback((patch: DocPatch, mode: EditCommitMode = 'commit', opts?: CommitOptions) => {
-    if (mode === 'stage') stage(patch, opts);
-    else if (mode === 'debounce') stageDebounced(patch, opts);
-    else commit(patch, opts);
-  }, [stage, stageDebounced, commit]);
 
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -252,19 +254,33 @@ export function useLevelDesignView() {
     if (!result.ok) toast.error(`Could not delete the level design: ${result.error}`);
   }, [deleteDoc]);
 
-  const handleUpdateRooms = useCallback((rooms: RoomNode[], mode?: EditCommitMode) => {
-    applyEdit({ rooms }, mode, { marksDocAhead: true });
-  }, [applyEdit]);
+  // Every flow-editor gesture is a named op (see `@/lib/level-design/level-edit`):
+  // one reducer decides the patch, its inverse and its sync consequence, so one
+  // act is one write and every act is undoable. A refused op says why.
+  const handleEdit = useCallback((op: LevelEditOp, mode?: EditCommitMode): boolean => {
+    const result = edit(op, mode);
+    if (!result.ok) toast.error(result.error);
+    return result.ok;
+  }, [edit]);
 
-  const handleUpdateConnections = useCallback((connections: LevelDesignDocument['connections']) => {
-    applyEdit({ connections });
-  }, [applyEdit]);
-
+  /** RoomDetailPanel keeps its `onUpdate(room, mode)` signature — it is an `update-room` op. */
   const handleRoomUpdate = useCallback((updatedRoom: RoomNode, mode?: EditCommitMode) => {
-    if (!activeDoc) return;
-    const rooms = activeDoc.rooms.map((r) => (r.id === updatedRoom.id ? updatedRoom : r));
-    applyEdit({ rooms }, mode, { marksDocAhead: true });
-  }, [activeDoc, applyEdit]);
+    handleEdit({ kind: 'update-room', room: updatedRoom }, mode);
+  }, [handleEdit]);
+
+  const handleUndo = useCallback(() => {
+    const result = undo();
+    if (!result.ok) toast.error(result.error);
+  }, [undo]);
+
+  const handleRedo = useCallback(() => {
+    const result = redo();
+    if (!result.ok) toast.error(result.error);
+  }, [redo]);
+
+  const editHistory = useMemo(() => ({
+    canUndo, canRedo, depth: undoDepth, undoLabel, redoLabel, onUndo: handleUndo, onRedo: handleRedo,
+  }), [canUndo, canRedo, undoDepth, undoLabel, redoLabel, handleUndo, handleRedo]);
 
   const handleGenerateRoomCode = useCallback((room: RoomNode) => {
     if (!activeDoc) return;
@@ -291,6 +307,11 @@ export function useLevelDesignView() {
   /** Code adopts the doc's value — the existing reconcile codegen task. */
   const handleReconcile = useCallback((divergence: SyncDivergence) => {
     if (!activeDoc) return;
+    // A row for a room that is gone would dispatch a CLI run against nothing.
+    if (!activeDoc.rooms.some((r) => r.id === divergence.roomId)) {
+      toast.error(`Room "${divergence.roomName || divergence.roomId}" is no longer in this design document — run Check Sync again.`);
+      return;
+    }
     const prompt = buildReconcilePrompt(divergence, activeDoc, ctx);
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
@@ -381,8 +402,8 @@ export function useLevelDesignView() {
     handleRvSync,
     rvChecklist,
     handleCreateDoc,
-    handleUpdateRooms,
-    handleUpdateConnections,
+    handleEdit,
+    editHistory,
     handleRoomUpdate,
     handleGenerateRoomCode,
     handleGenerateAllCode,

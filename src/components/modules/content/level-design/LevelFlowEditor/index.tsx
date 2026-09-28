@@ -12,7 +12,7 @@ export type { LevelFlowEditorProps } from './types';
 
 /** Shortcut hints surfaced to screen readers on the room list. */
 const ROOM_LIST_HINT =
-  'Arrow keys move between rooms, Shift plus arrow keys move the selected room, Enter selects, L starts a link, Delete removes a room, Escape cancels.';
+  'Arrow keys move between rooms, Shift plus arrow keys move the selected room, Enter selects, L starts a link, Delete removes a room, Escape cancels, Control plus Z undoes.';
 
 export function LevelFlowEditor(props: LevelFlowEditorProps) {
   const {
@@ -23,6 +23,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
     readOnly = false,
     findingsByRoom,
     onSelectRoom,
+    history,
   } = props;
 
   const {
@@ -38,7 +39,6 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
     dismissBlenderResult,
     armedConnectionId,
     toggleArmConnection,
-    disarmConnection,
     pendingDeleteRoomId,
     requestDeleteRoom,
     cancelDeleteRoom,
@@ -52,6 +52,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
     handleMouseMove,
     handleMouseUp,
     handleSvgMouseDown,
+    handleCanvasKeyDown,
     getRoomCenter,
     handleBlockoutInBlender,
   } = useLevelFlowEditor(props);
@@ -88,6 +89,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         connectionsLength={connections.length}
         blenderResult={blenderResult}
         dismissBlenderResult={dismissBlenderResult}
+        history={history}
       />
 
       {/* SVG Canvas */}
@@ -101,11 +103,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onKeyDown={(e) => {
-          if (e.key !== 'Escape') return;
-          if (connectingFrom) setConnectingFrom(null);
-          if (armedConnectionId) disarmConnection();
-        }}
+        onKeyDown={handleCanvasKeyDown}
       >
         <defs>
           {/* Blueprint Dot Grid */}
@@ -174,8 +172,8 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         title="Delete this room?"
         description={
           pendingLinkCount > 0
-            ? `"${pendingRoom?.name}" and its ${pendingLinkCount} ${pendingLinkCount === 1 ? 'link' : 'links'} will be removed. This can't be undone.`
-            : `"${pendingRoom?.name}" will be removed. This can't be undone.`
+            ? `"${pendingRoom?.name}" and its ${pendingLinkCount} ${pendingLinkCount === 1 ? 'link' : 'links'} will be removed. Undo brings it back (Ctrl+Z).`
+            : `"${pendingRoom?.name}" will be removed. Undo brings it back (Ctrl+Z).`
         }
         confirmLabel="Delete room"
       />

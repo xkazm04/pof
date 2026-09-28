@@ -47,8 +47,8 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleRvFix,
     handleRvSync,
     rvChecklist,
-    handleUpdateRooms,
-    handleUpdateConnections,
+    handleEdit,
+    editHistory,
     handleRoomUpdate,
     handleGenerateRoomCode,
     handleGenerateAllCode,
@@ -105,8 +105,8 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
             <LevelFlowEditor
               rooms={activeDoc.rooms}
               connections={activeDoc.connections}
-              onUpdateRooms={handleUpdateRooms}
-              onUpdateConnections={handleUpdateConnections}
+              onEdit={handleEdit}
+              history={editHistory}
               onSelectRoom={setSelectedRoomId}
               selectedRoomId={selectedRoomId}
               accentColor={MODULE_COLORS.content}
