@@ -22,6 +22,7 @@ import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { createStateEmitter } from '@/lib/state-emitter';
 import { createReconnectScheduler } from '@/lib/connection-lifecycle';
+import { recordWrite, observeUpdate, writeKey } from '@/lib/ue5-bridge/sync-ledger';
 import type {
   WSConnectionStatus,
   WSInboundMessage,
@@ -31,6 +32,7 @@ import type {
   PropertyWatchRequest,
   PropertyWatchUpdate,
   LiveEditorState,
+  WriteReceipt,
 } from '@/types/ue5-bridge';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -71,6 +73,12 @@ class UE5LiveStateClient {
   /** Latest property values keyed by watchId. */
   private watchValues = new Map<string, PropertyWatchUpdate>();
 
+  /**
+   * Client-side arrival sequence shared by writes and watch read-backs - the
+   * write ledger orders by this, never by UE timestamps.
+   */
+  private seq = 0;
+
   /** Frame rate tracker: count messages per second. */
   private messageCount = 0;
   private frameRate = 0;
@@ -82,11 +90,12 @@ class UE5LiveStateClient {
       wsStatus: 'disconnected',
       snapshot: null,
       propertyWatches: new Map(),
+      writes: new Map(),
       lastSnapshotTime: null,
       frameRate: 0,
     },
-    // propertyWatches is a Map — deep-clone it so subscribers can't mutate ours.
-    clone: (s) => ({ ...s, propertyWatches: new Map(s.propertyWatches) }),
+    // propertyWatches and writes are Maps — clone both so subscribers can't mutate ours.
+    clone: (s) => ({ ...s, propertyWatches: new Map(s.propertyWatches), writes: new Map(s.writes) }),
   });
 
   /** Live, read-only view of state for the client's own internal reads. */
@@ -135,6 +144,7 @@ class UE5LiveStateClient {
       wsStatus: 'disconnected',
       snapshot: null,
       propertyWatches: new Map(),
+      writes: new Map(),
       lastSnapshotTime: null,
       frameRate: 0,
     });
@@ -161,9 +171,25 @@ class UE5LiveStateClient {
     this.setState({ propertyWatches: next });
   }
 
-  /** Write a property value via the WebSocket channel. */
-  setProperty(objectPath: string, propertyName: string, value: unknown): void {
-    this.send({ type: 'set.property', payload: { objectPath, propertyName, value } });
+  /**
+   * Write a property value via the WebSocket channel. Returns a delivery
+   * receipt (`sent: false` when the socket was not OPEN) and records the write
+   * in the ledger, with the value currently watched on the exact key as base.
+   */
+  setProperty(objectPath: string, propertyName: string, value: unknown): WriteReceipt {
+    const sent = this.send({ type: 'set.property', payload: { objectPath, propertyName, value } });
+    let watched: PropertyWatchUpdate | undefined;
+    for (const w of this.state.propertyWatches.values()) {
+      if (w.objectPath === objectPath && w.propertyName === propertyName) watched = w;
+    }
+    const seq = ++this.seq;
+    const writes = recordWrite(this.state.writes, {
+      objectPath, propertyName,
+      base: watched?.value, baseKnown: watched !== undefined,
+      written: value, sent, seq,
+    });
+    this.setState({ writes });
+    return { key: writeKey(objectPath, propertyName), sent, seq };
   }
 
   /** Request a fresh full snapshot from UE5. */
@@ -336,7 +362,10 @@ class UE5LiveStateClient {
     this.watchValues.set(update.watchId, update);
     const next = new Map(this.state.propertyWatches);
     next.set(update.watchId, update);
-    this.setState({ propertyWatches: next });
+    const writes = observeUpdate(this.state.writes, update, ++this.seq);
+    this.setState(writes === this.state.writes
+      ? { propertyWatches: next }
+      : { propertyWatches: next, writes: new Map(writes) });
 
     eventBus.emit('ue5.ws.property', {
       watchId: update.watchId,
@@ -346,10 +375,13 @@ class UE5LiveStateClient {
 
   // ── Send ────────────────────────────────────────────────────────────────
 
-  private send(msg: WSOutboundMessage): void {
+  /** Send on an OPEN socket; returns whether the frame actually went out. */
+  private send(msg: WSOutboundMessage): boolean {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
+      return true;
     }
+    return false;
   }
 
   // ── Ping / Keepalive ────────────────────────────────────────────────────
