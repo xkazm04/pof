@@ -198,6 +198,20 @@ Suspension keeps a module mounted; **eviction unmounts it**, and any state livin
 
 The same file's seeding rule: `seedFromScan` / `seedFromBridge` (`StateMachineEditor/seed.ts`) turn the AnimBP scan or the live bridge manifest into editable states, reusing the read-only graph's `layoutStates` / `classifyState`; the editor's provenance strip says whether the canvas is the project's machine or a template. A seed is compared by CONTENT (`seedSignature`) because callers rebuild it each render, and it is adopted only while the canvas is untouched.
 
+## Canvas edits as named ops, with undo (level flow editor)
+
+The level flow editor has ONE write surface: `onEdit(op, mode)`. Every gesture is a named op from `LevelEditOp` (`src/lib/level-design/level-edit.ts`: `add-room`, `move-room`, `nudge-room`, `update-room`, `delete-room`, `link`, `unlink`) and one pure reducer, `applyLevelEdit(doc, op) → Result<{ patch, inverse, marksDocAhead }>`, decides what the op means:
+
+- **patch**: only the keys the op touched, with every reference to something it removed pruned in the SAME patch (`delete-room` drops the room's links, its `difficultyArc` id and its `syncReport` rows). One act is one commit, so one PUT.
+- **inverse**: the prior values of exactly those keys (snapshot-of-touched-keys), so it cannot drift from the forward op.
+- **marksDocAhead**: the op decides the sync consequence, not the setter. A link edit flips a `synced` doc to `doc-ahead` because the codegen prompt emits connections.
+
+`useDocCommitBuffer` (`LevelDesignView/`) applies an op to the live doc (`peek`, bridged over the gap between a write resolving and the next render) and routes it by `EditCommitMode`. Ops with the same `gestureKey` in a row are one gesture and one undo entry: a drag's `stage` frames plus its mouseup commit, held-arrow `nudge-room`s, or a debounced typing burst in one field of one room. The inverse is captured on the gesture's first frame. A debounced gesture closes when its commit starts (the pause, a blur, a doc switch), a staged one closes on its own commit. History is per document (switching documents empties it) and capped at `EDIT_HISTORY_LIMIT` = 50. A new edit after an undo clears redo. Undo and redo are each one commit with `marksDocAhead: true`, so an undo never claims `synced`.
+
+**External changes.** Before an undo or redo is applied, `rebaseHistoryPatch` compares the live doc against what the entry expects. If `syncReport` was rewritten since (a Check Sync landed between the edit and the undo), the live report is kept, so an undo never brings back stale divergence rows. If any other key drifted (for example "adopt code" edited a room), the history is cleared with a reason instead of overwriting that change.
+
+To add a canvas op, extend `LevelEditOp` and `applyLevelEdit` (plus a `gestureKey` and `describeLevelEdit` line). It then gets one-commit persistence and undo for free. Do not add another whole-array setter to `LevelFlowEditorProps`.
+
 ---
 
 ## Packaging pre-flight: a verdict states its own coverage
