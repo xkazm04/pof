@@ -10,18 +10,22 @@ import { formatTime } from './helpers';
 
 // ── Recommendations List ────────────────────────────────────────────────────
 
-export function RecommendationsList({ recommendations, acquiredAssets, projectName }: {
+export function RecommendationsList({ recommendations, acquiredAssets, projectName, hasUnreviewed = false }: {
   recommendations: AssetRecommendation[];
   acquiredAssets: Record<string, AcquiredAsset>;
   projectName: string;
+  /** Some features have no review verdict yet — the empty state points at the review list. */
+  hasUnreviewed?: boolean;
 }) {
   if (recommendations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <TrendingUp className="w-10 h-10 text-text-muted/30 mb-3" />
-        <p className="text-sm text-text-muted">No recommendations found</p>
+        <p className="text-sm text-text-muted">No feature gaps to fill</p>
         <p className="text-xs text-text-muted/70 mt-1">
-          Run a feature review on your modules to detect gaps
+          {hasUnreviewed
+            ? 'Review a module above to find its missing or partial features'
+            : 'No reviewed feature is missing or partial'}
         </p>
       </div>
     );
@@ -50,7 +54,7 @@ function RecommendationCard({ recommendation, acquiredAssets, projectName }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const { gap, assets } = recommendation;
-  const gapFeatures = gap.description.split(', ');
+  const gapFeatures = gap.featureNames;
 
   return (
     <SurfaceCard className="overflow-hidden">
