@@ -148,6 +148,24 @@ Features `KeyboardMetric` — reads the one `useResolvedBindings()` value (pure
 `resolveBindings` in `src/lib/character/input-bindings.ts`). "Apply to IMC_Default" only dispatches
 a CLI task on an explicit click, gated off at defaults and while any key conflicts.
 
+#### `useLabPipelineStore` (`src/components/layout-lab/labPipelineStore.ts`)
+
+The `/layout` lab's per-step artifacts under the `pof-lab-pipeline` key. Its persist options live in
+`src/components/layout-lab/labPipelinePersistence.ts` (`labPersistOptions`). **It persists the
+OUTBOX, not the in-memory map:** server rows are re-fetched and re-hydrated whenever an entity is
+opened, so `partialize` (`outboxOf`) writes every step EXCEPT one proven, by a server observation in
+this session, to be an exact copy of the row just observed — `done`, `ueAssets` and `data`
+INCLUDING the local-only `genHistory` canonically equal, no `error`, no `syncError` (`_provenance`
+is excluded: the server stamps it on every write). `hydrateEntity`, `refreshEntity` and
+`adoptServer` record each observation (`observeServerRow`); the proof is a `WeakMap` keyed by the
+artifact object, so any later write un-proves the step, a rehydrated (or legacy full-mirror) blob is
+unproven until a hydrate proves it, and neither the in-memory nor the persisted shape changes. Do
+not swap in `isServerDerived` as the admission rule: it is true for an adopt that kept local
+`genHistory`, for a never-synced produce whose `syncError` a newer server row cleared, and for
+drifted content — all local-only work. The storage adapter (`quotaSafeLocalStorage`) never throws:
+a refused write (quota) used to escape `set()` and skip the produce write-through; it is now
+recorded in the non-persisted `persistError` and shown as one line in `ProduceLogPanel`.
+
 ---
 
 ### 2. ProjectModuleBridge (`src/services/ProjectModuleBridge.ts`)
