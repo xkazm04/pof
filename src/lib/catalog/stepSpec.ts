@@ -12,6 +12,8 @@ export interface GenAssetRef {
   name: string;
   /** Served URL under /api/visual-gen/asset/… */
   url: string;
+  /** Identity its filename encodes (`meshSlug`); a 3D gallery slots only refs re-encoding its own step. */
+  slug?: string;
 }
 
 /**
