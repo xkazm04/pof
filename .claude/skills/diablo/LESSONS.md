@@ -168,3 +168,6 @@
 - **Audit A/B must be blind and paired under ONE auditor.** The same 16 dialog briefs scored 92.7 % under one xhigh auditor and
   82.3 % under another (W89); a cross-auditor comparison showed a false regression. Mix both variants in one audit with hidden X/Y
   labels (key kept in the vault) and tell the auditor what NOT to grade (rebuild/UE proposals).
+- **Derived stats are frozen on PROMOTED entities.** descentSim reads a monster's cadence from its promoted entity data, so a model
+  change to derive/behaviourScale reaches the descent only after re-promotion. W92's first "after" run measured only the hero half.
+  Order for any model wave: land → re-promote everything status.ts lists as stale → THEN run the after-measurement.
