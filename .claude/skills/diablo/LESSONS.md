@@ -171,3 +171,7 @@
 - **Derived stats are frozen on PROMOTED entities.** descentSim reads a monster's cadence from its promoted entity data, so a model
   change to derive/behaviourScale reaches the descent only after re-promotion. W92's first "after" run measured only the hero half.
   Order for any model wave: land → re-promote everything status.ts lists as stale → THEN run the after-measurement.
+- **Which lever to pull for produced truth (measured blind, W90–W102).** Engine-derived ledgers ON THE ENTITY fix facts (abilities +15,
+  AI wrong 22→11 %, dialog/quest design ~91 %); a direction that FORBIDS a structure removes invented states (14.6 → 0 %); a direction
+  that DEMANDS more facts backfires (spells −4..−8: more claims, more errors); paraphrased lore adds little. Before a produce round,
+  ask: does the entity carry a complete engine model of the thing being designed? If not, build that ledger first.
