@@ -10,9 +10,10 @@ import type { CatalogHandler } from './types';
 
 export const spellbookHandler: CatalogHandler = {
   catalogId: 'spellbook',
-  pool: (_db, _sourceId, wrappers) => withSpellCastLedgers(withSpellMechanics(
-    wrappers.filter((wrapper) => wrapper.catalogId === 'spellbook'),
-  )),
+  pool: (_db, _sourceId, wrappers) => withSpellCastLedgers(
+    withSpellMechanics(wrappers.filter((wrapper) => wrapper.catalogId === 'spellbook')),
+    wrappers,
+  ),
   seed: (ctx) => {
     let caster;
     if (ctx.root) {

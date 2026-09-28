@@ -5,8 +5,23 @@ import {
   SPELL_FIZZLE_RULE_DATA,
 } from '@/lib/catalog/reference/spellMechanicsData';
 import { SPELL_CAST_LEDGER_DATA } from '@/lib/catalog/reference/spellCastLedgerData';
+import {
+  auditInstantiatedSpellCastLedger,
+  instantiateSpellCastLedger,
+} from '@/lib/catalog/reference/spellCastLedgerInstantiate';
 import { SPELL_SPECS_DATA } from '@/lib/catalog/reference/spellSpecsData';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+
+export type {
+  InstantiatedCastTiming,
+  InstantiatedDuration,
+  InstantiatedHitTopology,
+  InstantiatedManaCost,
+  InstantiatedMissileNode,
+  InstantiatedSpellCastLedger,
+  InstantiatedSpellCastLedgerFinding,
+  InstantiatedSpellLevel,
+} from '@/lib/catalog/reference/spellCastLedgerInstantiate';
 
 export type SpellCastPhase = 'check' | 'add' | 'consume' | 'process' | 'end';
 export type SpellCastSource = 'spellbook' | 'scroll' | 'staff' | 'skill';
@@ -218,18 +233,36 @@ export function auditSpellCastLedgers(
 
 export const SPELL_CAST_LEDGER_FINDINGS: readonly SpellCastLedgerFinding[] = auditSpellCastLedgers();
 
-/** Attach code-owned ledgers to promoted spell rows; raw source wrappers remain untouched. */
-export function withSpellCastLedgers(wrappers: readonly ReferenceWrapper[]): ReferenceWrapper[] {
+/** Instantiate the generic engine sequence with one spell wrapper and its related runtime rows. */
+export function castLedgerFor(
+  spellWrapper: ReferenceWrapper,
+  relatedRows: readonly ReferenceWrapper[],
+) {
+  if (spellWrapper.catalogId !== 'spellbook' || spellWrapper.file !== 'spells/spelldat.tsv') {
+    throw new Error(`${spellWrapper.wrapperId} is not a spelldat spell wrapper`);
+  }
+  const spell = spellWrapper.raw.id ?? spellWrapper.key;
+  const ledger = spellCastLedger(spell);
+  if (!ledger) throw new Error(`${spellWrapper.entity.id} has no generic spell cast ledger`);
+  return instantiateSpellCastLedger(ledger, spellWrapper, relatedRows);
+}
+
+export { auditInstantiatedSpellCastLedger };
+
+/** Attach runtime-instantiated ledgers during promotion; source wrappers remain immutable. */
+export function withSpellCastLedgers(
+  wrappers: readonly ReferenceWrapper[],
+  relatedRows: readonly ReferenceWrapper[] = wrappers,
+): ReferenceWrapper[] {
   return wrappers.map((wrapper) => {
     if (wrapper.catalogId !== 'spellbook' || wrapper.file !== 'spells/spelldat.tsv') return wrapper;
     const spell = wrapper.raw.id ?? wrapper.key;
-    const castLedger = spellCastLedger(spell);
-    if (!castLedger) return wrapper;
+    if (!spellCastLedger(spell)) return wrapper;
     return {
       ...wrapper,
       entity: {
         ...wrapper.entity,
-        data: { ...wrapper.entity.data, castLedger },
+        data: { ...wrapper.entity.data, castLedger: castLedgerFor(wrapper, relatedRows) },
       },
     };
   });

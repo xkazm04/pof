@@ -16,7 +16,9 @@ function wrapper(spell: string): ReferenceWrapper {
   return {
     wrapperId: `synthetic:${spell}`,
     sourceId: 'synthetic', file: 'spells/spelldat.tsv', technique: 'synthetic',
-    key: spell, keyKind: 'column', raw: { id: spell }, rawHash: 'synthetic',
+    key: spell, keyKind: 'column', raw: {
+      id: spell, manaCost: '20', minMana: '4', manaMultiplier: '2', missiles: 'Firebolt',
+    }, rawHash: 'synthetic',
     catalogId: 'spellbook', mappingVersion: 'synthetic',
     entity: {
       id: `d1-${spell}`, catalogId: 'spellbook', name: spell,
@@ -27,6 +29,19 @@ function wrapper(spell: string): ReferenceWrapper {
         licenceNote: 'test fixture', ingestedAt: 'test-time',
       },
     },
+  };
+}
+
+function classRow(kind: 'attributes' | 'animations'): ReferenceWrapper {
+  const row = wrapper(`class-${kind}`);
+  return {
+    ...row,
+    file: `classes/sorcerer/${kind}.tsv`,
+    catalogId: 'characters',
+    raw: kind === 'attributes'
+      ? { baseMag: '16', baseMagicToHit: '50', adjMana: '10', lvlMana: '2', chrMana: '2' }
+      : { castingFrames: '8', castingActionFrame: '3' },
+    entity: { ...row.entity, catalogId: 'characters' },
   };
 }
 
@@ -107,9 +122,10 @@ describe('spellCastLedger', () => {
   });
 
   it('attaches data.castLedger only to promoted known spell rows', () => {
-    const [firebolt, unknown] = withSpellCastLedgers([wrapper('Firebolt'), wrapper('Synthetic')]);
-    expect(firebolt.entity.data.castLedger).toMatchObject({ spell: 'Firebolt' });
+    const rows = [wrapper('Firebolt'), wrapper('Synthetic')];
+    const [firebolt, unknown] = withSpellCastLedgers(rows, [...rows, classRow('attributes'), classRow('animations')]);
+    expect(firebolt.entity.data.castLedger).toMatchObject({ spell: 'Firebolt', instantiated: true });
     expect(unknown.entity.data.castLedger).toBeUndefined();
-    expect(firebolt.raw).toEqual({ id: 'Firebolt' });
+    expect(firebolt.raw).toEqual({ id: 'Firebolt', manaCost: '20', minMana: '4', manaMultiplier: '2', missiles: 'Firebolt' });
   });
 });
