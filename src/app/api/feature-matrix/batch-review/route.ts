@@ -6,7 +6,8 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
-import type { BatchReviewState } from '@/types/batch-review';
+import type { BatchReviewAbortRequest, BatchReviewStartRequest, BatchReviewState } from '@/types/batch-review';
+import { resolveBatchModules } from '@/lib/evaluator/stale-review-plan';
 
 // ── In-memory batch state (single batch at a time) ──
 
@@ -141,11 +142,10 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { action } = body;
+    const raw = (await request.json()) as BatchReviewStartRequest | BatchReviewAbortRequest;
 
     // Abort active batch
-    if (action === 'abort') {
+    if ('action' in raw && raw.action === 'abort') {
       if (activeBatch && activeBatch.status === 'running') {
         batchAborted = true;
         return apiSuccess({ message: 'Batch abort requested' });
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Read project settings from request body (client sends from localStorage)
+    const body = raw as BatchReviewStartRequest;
     const projectPath = body.projectPath;
     const projectName = body.projectName || '';
     const ueVersion = body.ueVersion || '5.5';
@@ -168,7 +169,13 @@ export async function POST(request: NextRequest) {
     }
 
     const appOrigin = body.appOrigin || getOriginFromRequest(request);
-    const modules = getModulesWithDefinitions();
+    // Optional scope: the Quality tab sends its stale set (or one module); omitted =
+    // every module with definitions. An unknown id refuses the whole request.
+    const scoped = resolveBatchModules(getModulesWithDefinitions(), body.moduleIds);
+    if (!scoped.ok) {
+      return apiError(scoped.error, 400);
+    }
+    const modules = scoped.data;
 
     if (modules.length === 0) {
       return apiError('No modules with feature definitions found', 400);
