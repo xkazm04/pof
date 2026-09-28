@@ -1,7 +1,7 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useReducer } from 'react';
 import { toast } from 'sonner';
 import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -20,7 +20,9 @@ import {
 } from '@/lib/prompts/level-design';
 import type { RoomNode, SyncDivergence, LevelDesignDocument } from '@/types/level-design';
 import type { StreamingZonePlannerConfig } from '../StreamingZonePlanner';
-import type { ProceduralLevelConfig } from '../ProceduralLevelWizard';
+import {
+  procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore,
+} from '@/components/modules/content/level-design/ProceduralLevelWizard/specState';
 import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
@@ -136,14 +138,22 @@ export function useLevelDesignView() {
     accentColor: MODULE_COLORS.content,
   });
 
-  // The wizard publishes its settled ProcgenSpec here so the UE dungeon tab can
-  // adopt it. Held at the view level because the two panels are sibling tabs;
-  // null until the wizard tab has been opened at least once, which is why the
-  // dungeon tab must render perfectly well without it.
-  const [procgenSpec, setProcgenSpec] = useState<ProcgenSpec | null>(null);
+  // The wizard's spec lives HERE, not in the wizard: the wizard is unmounted on
+  // every tab switch, and the UE dungeon tab adopts this same value. Every
+  // wizard render site (the empty state and the Procgen tab) edits this one
+  // reducer. The handoff is null until a wizard has been on screen, which is why
+  // the dungeon tab must render perfectly well without it.
+  const [procgenSpecState, dispatchProcgenSpec] = useReducer(
+    procgenSpecReducer, undefined, initialProcgenSpecState,
+  );
+  const procgenSpecStore = useMemo<ProcgenSpecStore>(
+    () => ({ state: procgenSpecState, dispatch: dispatchProcgenSpec }),
+    [procgenSpecState],
+  );
+  const procgenSpec: ProcgenSpec | null = procgenSpecState.shown ? procgenSpecState.spec : null;
 
-  const handleGenerateProcgen = useCallback((config: ProceduralLevelConfig) => {
-    const prompt = buildProceduralLevelPrompt(config, { projectName, projectPath, ueVersion });
+  const handleGenerateProcgen = useCallback((spec: ProcgenSpec) => {
+    const prompt = buildProceduralLevelPrompt(spec, { projectName, projectPath, ueVersion });
     procgenCli.sendPrompt(prompt);
   }, [procgenCli, projectName, projectPath, ueVersion]);
 
@@ -359,7 +369,7 @@ export function useLevelDesignView() {
     handleGenerateDungeon,
     handleScatter,
     procgenSpec,
-    setProcgenSpec,
+    procgenSpecStore,
     MODULE_ID,
     rvRefetch,
     rvLastCompletedId,

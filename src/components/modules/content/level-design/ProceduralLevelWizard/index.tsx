@@ -10,26 +10,26 @@ import { ConstraintsPanel } from './ConstraintsPanel';
 import { LivePreview } from './LivePreview';
 import { GenerateActions } from './GenerateActions';
 import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
-import type { ProceduralLevelConfig } from './types';
+import type { ProcgenSpecStore } from './specState';
 
-export type {
-  GenAlgorithm, LevelType, SizeParams, GameplayConstraints, ProceduralLevelConfig,
-} from './types';
+export type { GenAlgorithm, LevelType, SizeParams, GameplayConstraints } from './types';
+export type { ProcgenSpecState, ProcgenSpecAction, ProcgenSpecStore } from './specState';
 
 // ── Component ──
 
 interface ProceduralLevelWizardProps {
-  onGenerate: (config: ProceduralLevelConfig) => void;
+  /** Receives the {@link ProcgenSpec} on screen; the prompt decides what codegen reads of it. */
+  onGenerate: (spec: ProcgenSpec) => void;
   isGenerating: boolean;
   /**
-   * Publish the configured {@link ProcgenSpec} so the UE dungeon tab can adopt
-   * it. The wizard state is the spec's producer; adopting surfaces are expected
-   * to disclose which of its fields their engine ignores.
+   * The spec's owner, when it must outlive this component. The level-design
+   * view holds it so a tab switch keeps the designer's answers and the UE
+   * dungeon tab adopts the same value. Omitted, the wizard owns a private spec.
    */
-  onSpecChange?: (spec: ProcgenSpec) => void;
+  specStore?: ProcgenSpecStore;
 }
 
-export function ProceduralLevelWizard({ onGenerate, isGenerating, onSpecChange }: ProceduralLevelWizardProps) {
+export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: ProceduralLevelWizardProps) {
   const {
     algorithm, setAlgorithm,
     levelType,
@@ -54,7 +54,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, onSpecChange }
     ltNav,
     algDef,
     ltDef,
-  } = useProceduralLevelWizard({ onGenerate, onSpecChange });
+  } = useProceduralLevelWizard({ onGenerate, specStore });
 
   return (
     <div

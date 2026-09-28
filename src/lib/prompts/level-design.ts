@@ -2,7 +2,7 @@ import type { RoomNode, LevelDesignDocument, SyncDivergence } from '@/types/leve
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY, GENERATE_THE_DIRECTLY } from '@/lib/prompts/_shared';
 import type { StreamingZonePlannerConfig, StreamingZone, ZoneTransition } from '@/components/modules/content/level-design/StreamingZonePlanner';
-import type { ProceduralLevelConfig } from '@/components/modules/content/level-design/ProceduralLevelWizard';
+import { GAMEPLAY_CONSTRAINT_KEYS, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
 export function buildRoomCodegenPrompt(room: RoomNode, doc: LevelDesignDocument, ctx: ProjectContext): string {
@@ -362,7 +362,37 @@ const LEVEL_TYPE_DETAILS: Record<string, { name: string; structures: string }> =
   },
 };
 
-export function buildProceduralLevelPrompt(config: ProceduralLevelConfig, ctx: ProjectContext): string {
+/** One bullet per gameplay constraint. `ensureConnected` is absent: `llm-codegen` does not read it. */
+const CONSTRAINT_BULLETS: Record<(typeof GAMEPLAY_CONSTRAINT_KEYS)[number], string> = {
+  spawnPoints: '- **Spawn Points**: Player start position + enemy spawn locations distributed by room difficulty',
+  lootPlacement: '- **Loot Placement**: Treasure chests in dead-ends, item drops scaled by room difficulty, loot room at 60-70% progression',
+  bossRoom: '- **Boss Room**: Largest room, placed farthest from start, single entry corridor, arena-sized with cover',
+  secretRooms: '- **Secret Rooms**: 1-2 hidden rooms with destructible walls or hidden switches, bonus loot inside',
+  safeZones: '- **Safe Zones**: Rest areas near start and at ~50% progression, no enemy spawns, shop/save functionality',
+};
+
+/**
+ * The seed line sends the RESOLVED int32 the browser preview ran on; the label
+ * is provenance, never the value. A blank seed is DEFAULT_PREVIEW_SEED, not
+ * "random", and a label like "dark-keep" is not an int32 literal.
+ */
+function seedLine(spec: ProcgenSpec): string {
+  const label = spec.seedLabel.trim();
+  const source = label === ''
+    ? 'no seed was typed; this is the default seed the browser preview used'
+    : label === String(spec.seedValue)
+      ? 'as typed'
+      : `resolved from the seed label "${label}" exactly as the browser preview resolved it`;
+  return `- Seed: **${spec.seedValue}** (int32, ${source})`;
+}
+
+/**
+ * The C++ codegen prompt, built from the spec. It renders exactly the fields
+ * `PROCGEN_ENGINES['llm-codegen'].reads` declares: a mutation-walk test
+ * (procgen-codegen-prompt.test.ts) fails if a read field stops moving the text
+ * or an ignored one (`ensureConnected`) starts to.
+ */
+export function buildProceduralLevelPrompt(spec: ProcgenSpec, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     ...moduleKnowledge('level-design'),
@@ -374,24 +404,12 @@ export function buildProceduralLevelPrompt(config: ProceduralLevelConfig, ctx: P
     ],
   });
 
-  const algInfo = ALGORITHM_DETAILS[config.algorithm];
-  const ltInfo = LEVEL_TYPE_DETAILS[config.levelType];
+  const algInfo = ALGORITHM_DETAILS[spec.algorithm];
+  const ltInfo = LEVEL_TYPE_DETAILS[spec.levelType];
 
-  const enabledConstraints = Object.entries(config.constraints)
-    .filter(([, v]) => v)
-    .map(([k]) => k);
-
+  const enabledConstraints = GAMEPLAY_CONSTRAINT_KEYS.filter((k) => spec.constraints[k]);
   const constraintLines = enabledConstraints.length > 0
-    ? enabledConstraints.map((c) => {
-        switch (c) {
-          case 'spawnPoints': return '- **Spawn Points**: Player start position + enemy spawn locations distributed by room difficulty';
-          case 'lootPlacement': return '- **Loot Placement**: Treasure chests in dead-ends, item drops scaled by room difficulty, loot room at 60-70% progression';
-          case 'bossRoom': return '- **Boss Room**: Largest room, placed farthest from start, single entry corridor, arena-sized with cover';
-          case 'secretRooms': return '- **Secret Rooms**: 1-2 hidden rooms with destructible walls or hidden switches, bonus loot inside';
-          case 'safeZones': return '- **Safe Zones**: Rest areas near start and at ~50% progression, no enemy spawns, shop/save functionality';
-          default: return `- **${c}**`;
-        }
-      }).join('\n')
+    ? enabledConstraints.map((k) => CONSTRAINT_BULLETS[k]).join('\n')
     : '- No specific gameplay constraints selected.';
 
   return `${header}
@@ -409,34 +427,34 @@ Key parameters: ${algInfo.keyParams}
 ${ltInfo.structures}
 
 ### Size Parameters
-- Grid dimensions: **${config.size.gridWidth} x ${config.size.gridHeight}** cells
-- Room count: **${config.size.roomCountMin}** to **${config.size.roomCountMax}** rooms
-- Corridor width: **${config.size.corridorWidth}** cells
-${config.seed ? `- Seed: **${config.seed}**` : '- Seed: **Random** (generate via FMath::Rand())'}
+- Grid dimensions: **${spec.gridWidth} x ${spec.gridHeight}** cells
+- Room count: **${spec.roomCountMin}** to **${spec.roomCountMax}** rooms
+- Corridor width: **${spec.corridorWidth}** cells
+${seedLine(spec)}
 
 ### Gameplay Constraints
 ${constraintLines}
 
 ### Required Files (all under Source/${moduleName}/ProceduralGen/)
 
-1. **F${capitalize(config.levelType)}Cell** (USTRUCT)
+1. **F${capitalize(spec.levelType)}Cell** (USTRUCT)
    - ECellType enum: Empty, Floor, Wall, Door, Corridor, Spawn, Loot, BossEntrance
    - Position (FIntPoint), RoomId (int32, -1 if corridor), Metadata (TMap<FName, FString>)
 
-2. **F${capitalize(config.levelType)}Room** (USTRUCT)
+2. **F${capitalize(spec.levelType)}Room** (USTRUCT)
    - RoomId (int32), Bounds (FIntRect), RoomType (enum: Normal, Start, Boss, Treasure, Secret, Safe)
    - Connections (TArray<int32> — connected room IDs), Difficulty (float 0-1)
 
-3. **U${capitalize(config.algorithm)}Generator** (UObject)
+3. **U${capitalize(spec.algorithm)}Generator** (UObject)
    - Core generation algorithm implementation
-   - \`bool Generate(int32 Seed, FGenerationParams Params, TArray<F${capitalize(config.levelType)}Cell>& OutGrid, TArray<F${capitalize(config.levelType)}Room>& OutRooms)\`
+   - \`bool Generate(int32 Seed, FGenerationParams Params, TArray<F${capitalize(spec.levelType)}Cell>& OutGrid, TArray<F${capitalize(spec.levelType)}Room>& OutRooms)\`
    - Deterministic: same seed + params = same output
    - UPROPERTY parameters matching: ${algInfo.keyParams}
 
 4. **FGenerationParams** (USTRUCT)
-   - GridWidth (${config.size.gridWidth}), GridHeight (${config.size.gridHeight})
-   - RoomCountMin (${config.size.roomCountMin}), RoomCountMax (${config.size.roomCountMax})
-   - CorridorWidth (${config.size.corridorWidth}), Seed (int32)
+   - GridWidth (${spec.gridWidth}), GridHeight (${spec.gridHeight})
+   - RoomCountMin (${spec.roomCountMin}), RoomCountMax (${spec.roomCountMax})
+   - CorridorWidth (${spec.corridorWidth}), Seed (int32, default ${spec.seedValue})
    - All UPROPERTY(EditAnywhere) with sensible ClampMin/ClampMax
 
 5. **ULevelGeneratorSubsystem** (UWorldSubsystem)
@@ -448,7 +466,7 @@ ${constraintLines}
    - Uses Instanced Static Mesh Components for walls/floors (performance)
    - Spawns gameplay actors (doors, chests, spawn points) as individual actors
 
-6. **A${capitalize(config.levelType)}Visualizer** (AActor) — Editor/debug tool
+6. **A${capitalize(spec.levelType)}Visualizer** (AActor) — Editor/debug tool
    - Generates and renders the level in-editor for preview
    - UPROPERTY FGenerationParams with "Generate" button (CallInEditor)
    - Debug draw: room IDs, difficulty heat map, connection graph
@@ -461,7 +479,7 @@ ${enabledConstraints.includes('spawnPoints') ? `7. **USpawnPointDistributor** (U
    - Boss room gets dedicated boss spawn point
 ` : ''}
 ### UE5 Best Practices
-- Use FRandomStream with seed for all random operations (not FMath::Rand)
+- Use FRandomStream with seed for all random operations, seeded from Params.Seed (never an unseeded global RNG)
 - ISMC (Instanced Static Mesh Component) for repeated geometry (walls, floors)
 - Async generation: run algorithm on background thread, spawn actors on game thread
 - Data-driven: all generation parameters in a UDataAsset for easy iteration

@@ -8,10 +8,14 @@
  * room-template actors from a pool and cannot reproduce the browser preview's
  * grid — so these tests pin the DISCLOSURE, not just the plumbing.
  */
+import { useEffect, useReducer } from 'react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { ProcGenDungeonPanel } from '@/components/modules/content/level-design/ProcGenDungeonPanel';
 import { ProceduralLevelWizard } from '@/components/modules/content/level-design/ProceduralLevelWizard';
+import {
+  procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecState,
+} from '@/components/modules/content/level-design/ProceduralLevelWizard/specState';
 import { buildProcgenSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 
 afterEach(cleanup);
@@ -114,12 +118,19 @@ describe('the UE dungeon tab consumes the wizard spec', () => {
 });
 
 describe('the wizard produces the spec the panel consumes', () => {
-  it('publishes a spec with a resolved seed, and it drives the real disclosure', () => {
-    const onSpecChange = vi.fn();
-    render(<ProceduralLevelWizard onGenerate={vi.fn()} isGenerating={false} onSpecChange={onSpecChange} />);
+  it('the spec store it edits holds a resolved seed, and it drives the real disclosure', () => {
+    // The owner of the spec, as the level-design view holds it.
+    const held: { current: ProcgenSpecState | null } = { current: null };
+    function Owner() {
+      const [state, dispatch] = useReducer(procgenSpecReducer, undefined, initialProcgenSpecState);
+      useEffect(() => { held.current = state; });
+      return <ProceduralLevelWizard onGenerate={vi.fn()} isGenerating={false} specStore={{ state, dispatch }} />;
+    }
+    render(<Owner />);
 
-    expect(onSpecChange).toHaveBeenCalled();
-    const published = onSpecChange.mock.calls.at(-1)![0] as ProcgenSpec;
+    // Being on screen is what makes the spec adoptable.
+    expect(held.current!.shown).toBe(true);
+    const published = held.current!.spec;
     expect(Number.isInteger(published.seedValue)).toBe(true);
     expect(published.constraints).toBeTruthy();
     expect(published.algorithm).toBe('bsp');
