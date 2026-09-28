@@ -357,7 +357,10 @@ archived verdict can be stale and trusting a stored `status` would re-open the f
 that route closed. It returns `regraded` + `archivedStatus` so the UI can say when a restored version
 did **not** come back with the verdict it was archived under. A restore is itself a content-changing
 upsert, so the version it displaces is archived in turn — reverting is undoable. Surfaced per step by
-`layout-lab/steps/shared/StepHistoryPanel.tsx` (loaded on demand, not on mount across ~342 steps).
+`layout-lab/steps/shared/StepHistoryPanel.tsx` (loaded on demand, not on mount across ~342 steps). `POST {revisionId, dryRun: true}` is the compare-before-restore preview: the same read-only
+`gradeArtifact` run and **no upsert** (nothing archived, no history slot spent), answering the RAW
+`wouldStatus`/`wouldTier`/`wouldReason` the restore would persist; the panel shows it beside a
+`revisionDiff.ts` field diff against the on-screen artifact.
 
 **Dependency-injected variant** (`src/lib/visual-gen/asset-library-db.ts` — the local Asset Library
 backing `audio-asset-db.ts`'s style): the helpers take an explicit `Database` argument so they can be
