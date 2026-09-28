@@ -51,6 +51,17 @@ debounces a 2-second write to SQLite via `saveProgress` → `POST /api/project-p
 `setChecklistItem` (line 112) returns `state` unchanged when the value is already equal, avoiding
 a new object reference and unnecessary re-renders — the canonical no-op set pattern.
 
+**Completion ledger (`checklistCompletedAt`).** `checklistProgress` records THAT an item is done, never
+WHEN, so it cannot drive a velocity. `setChecklistItem` / `toggleChecklistItem` stamp
+`checklistCompletedAt[module][item] = Date.now()` on the first transition to done and remove the stamp on
+un-done (pure helpers in `src/lib/roadmap/completion-ledger.ts`). It is persisted in the `pof-modules`
+partialize only — not yet in the `project_progress` row — and is emptied by `clearProgress`, by a failed
+foreign load, and by a successful load of a different project (a same-project load keeps it, pruned to the
+items the loaded checklist says are done). The health engine (`computeProjectHealth(..., ledger, now)`)
+derives weekly velocity, the burn-up and milestone ETAs from these stamps only; done items without a stamp
+are reported as `velocitySample.undated`, never bucketed, and with no dated completion `avgVelocity` and
+every `predictedDate` are `null`. No series is simulated (the former seeded RNG is gone).
+
 `addScanFindings` (line 143) deduplicates by `file::description` key and skips the update when
 there are no novel findings (`if (novel.length === 0) return state`). Scan results are capped at
 100 per module; history entries are capped at 200 per module.
