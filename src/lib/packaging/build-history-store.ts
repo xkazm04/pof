@@ -124,6 +124,8 @@ export interface PlatformStats {
 
 export interface SizeTrendPoint {
   id: number;
+  /** Normalized project the build belongs to; `''` = unattributed. Lets a verdict NAME its baseline. */
+  projectId: string;
   platform: string;
   sizeBytes: number;
   version: string | null;
@@ -471,17 +473,21 @@ export function getSizeTrend(platform?: string, limit = 30, projectId?: string |
     "status = 'success'",
     ...(platform ? ['platform = ?'] : []),
   );
-  const query = `SELECT id, platform, size_bytes, version, created_at FROM build_history ${s.where} ORDER BY created_at ASC LIMIT ?`;
+  // The NEWEST window, returned oldest-first for drawing. `ORDER BY created_at ASC LIMIT`
+  // returned the OLDEST N, so the newest builds never reached the chart; `id DESC`
+  // breaks same-second ties the way insertion order does.
+  const query = `SELECT id, project_id, platform, size_bytes, version, created_at FROM build_history ${s.where} ORDER BY created_at DESC, id DESC LIMIT ?`;
 
   const params: (string | number)[] = platform
     ? [...s.params, normalizePlatformId(platform), limit]
     : [...s.params, limit];
   const rows = db.prepare(query).all(...params) as Array<{
-    id: number; platform: string; size_bytes: number; version: string | null; created_at: string;
+    id: number; project_id: string | null; platform: string; size_bytes: number; version: string | null; created_at: string;
   }>;
 
-  return rows.map((r) => ({
+  return rows.reverse().map((r) => ({
     id: r.id,
+    projectId: r.project_id ?? '',
     platform: r.platform,
     sizeBytes: r.size_bytes,
     version: r.version,

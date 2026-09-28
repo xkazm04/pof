@@ -11,6 +11,11 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface BuildComparisonProps {
   builds: BuildRecord[];
+  /**
+   * The pair to open on (A = baseline, B = regressor) — e.g. a flagged point on the
+   * Trends tab. Read at mount only; the caller keys the component to re-seed it.
+   */
+  initialPair?: { left: number; right: number } | null;
 }
 
 function DeltaBadge({ a, b, format, invertColor, metricLabel }: { a: number | null; b: number | null; format: (n: number) => string; invertColor?: boolean; metricLabel?: string }) {
@@ -92,9 +97,9 @@ function CompareRow({ label, icon, leftVal, rightVal, delta, bars }: {
   );
 }
 
-export function BuildComparison({ builds }: BuildComparisonProps) {
-  const [leftId, setLeftId] = useState<number | null>(builds.length >= 2 ? builds[1].id : null);
-  const [rightId, setRightId] = useState<number | null>(builds.length >= 1 ? builds[0].id : null);
+export function BuildComparison({ builds, initialPair }: BuildComparisonProps) {
+  const [leftId, setLeftId] = useState<number | null>(initialPair?.left ?? (builds.length >= 2 ? builds[1].id : null));
+  const [rightId, setRightId] = useState<number | null>(initialPair?.right ?? (builds.length >= 1 ? builds[0].id : null));
 
   const left = builds.find((b) => b.id === leftId);
   const right = builds.find((b) => b.id === rightId);
@@ -177,6 +182,7 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
       {/* Selectors */}
       <div className="flex items-center gap-2 mb-4">
         <select
+          aria-label="Build A"
           value={leftId ?? ''}
           onChange={(e) => setLeftId(Number(e.target.value) || null)}
           className="flex-1 bg-surface-deep border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50"
@@ -199,6 +205,7 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
         </button>
 
         <select
+          aria-label="Build B"
           value={rightId ?? ''}
           onChange={(e) => setRightId(Number(e.target.value) || null)}
           className="flex-1 bg-surface-deep border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50"

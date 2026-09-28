@@ -11,8 +11,10 @@ import { PLATFORM_IDS, platformLabel, normalizePlatformId } from '@/lib/packagin
 import { apiFetch } from '@/lib/api-utils';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useProjectStore } from '@/stores/projectStore';
-import { SizeTrendChart } from '../SizeTrendChart';
+import type { SizeBudgetsPayload } from '@/lib/packaging/size-verdict';
+import type { ComparePair } from '@/lib/packaging/size-trend-model';
 import { BuildComparison } from '../BuildComparison';
+import { TrendsTab } from './TrendsTab';
 import type { DashboardTab, SortKey, SortDir } from './types';
 import { RecordBuildForm } from './RecordBuildForm';
 import { MetricsRow } from './MetricsRow';
@@ -38,6 +40,13 @@ export function BuildHistoryDashboard() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set());
   const [scope, setScope] = useState<ProjectScopeCounts | null>(null);
+  const [budgets, setBudgets] = useState<SizeBudgetsPayload | null>(null);
+  // Set by a flagged Trends point: Compare opens on (baseline, regressor).
+  const [comparePair, setComparePair] = useState<ComparePair | null>(null);
+  const openPair = useCallback((pair: ComparePair) => {
+    setComparePair(pair);
+    setTab('compare');
+  }, []);
 
   // The active project travels EXPLICITLY on every read and on the manual record.
   // Wave 20 taught `insertBuild` to persist `project_id` but taught no CALLER to pass
@@ -119,6 +128,8 @@ export function BuildHistoryDashboard() {
         // The route has always computed this; the type used to omit it, so the one
         // fact that explains an empty tab was fetched and thrown away.
         scope?: ProjectScopeCounts;
+        // The budgets the gate judges against + whether the stored row was readable.
+        budgets?: SizeBudgetsPayload;
       }>(`/api/packaging/history?action=dashboard&limit=100&trendLimit=50${q}`);
       setBuilds(data.builds ?? []);
       setStats(data.stats ?? null);
@@ -126,6 +137,7 @@ export function BuildHistoryDashboard() {
       setVersion(data.version ?? '0.1.0');
       setNextVersion(data.nextVersion ?? '0.1.1');
       setScope(data.scope ?? null);
+      setBudgets(data.budgets ?? null);
     } catch (e) {
       console.error('Failed to fetch build history:', e);
     } finally {
@@ -240,14 +252,14 @@ export function BuildHistoryDashboard() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-border">
-        <button className={tabClass('history')} onClick={() => setTab('history')}>
+      <div className="flex items-center gap-1 border-b border-border" role="tablist">
+        <button role="tab" aria-selected={tab === 'history'} className={tabClass('history')} onClick={() => setTab('history')}>
           <span className="flex items-center gap-1"><History className="w-2.5 h-2.5" /> History</span>
         </button>
-        <button className={tabClass('trends')} onClick={() => setTab('trends')}>
+        <button role="tab" aria-selected={tab === 'trends'} className={tabClass('trends')} onClick={() => setTab('trends')}>
           <span className="flex items-center gap-1"><TrendingUp className="w-2.5 h-2.5" /> Trends</span>
         </button>
-        <button className={tabClass('compare')} onClick={() => setTab('compare')}>
+        <button role="tab" aria-selected={tab === 'compare'} className={tabClass('compare')} onClick={() => setTab('compare')}>
           <span className="flex items-center gap-1"><ArrowLeftRight className="w-2.5 h-2.5" /> Compare</span>
         </button>
       </div>
@@ -270,13 +282,15 @@ export function BuildHistoryDashboard() {
       )}
 
       {tab === 'trends' && (
-        <div className="rounded border border-border bg-background/60 p-4">
-          <SizeTrendChart data={trend} height={200} />
-        </div>
+        <TrendsTab trend={trend} budgets={budgets} onOpenPair={openPair} onApplied={fetchAll} />
       )}
 
       {tab === 'compare' && (
-        <BuildComparison builds={builds} />
+        <BuildComparison
+          key={comparePair ? `${comparePair.left}-${comparePair.right}` : 'default'}
+          builds={builds}
+          initialPair={comparePair}
+        />
       )}
     </div>
   );

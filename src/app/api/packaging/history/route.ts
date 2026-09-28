@@ -8,6 +8,9 @@ import {
 import {
   currentVersionFor, nextVersionFor, bumpIntent, formatVersion, autoIncrementOnSuccess,
 } from '@/lib/packaging/version-manager';
+import { budgetsPayload, setPlatformBudget } from '@/lib/packaging/size-budgets';
+import { budgetInputError } from '@/lib/packaging/size-verdict';
+import { SettingsBlobCorruptError } from '@/lib/settings/settings-blob';
 
 /** The project's version pair: current (max semver in scope) and what the next green cook takes. */
 function versionPayload(projectPath: string | null) {
@@ -47,6 +50,9 @@ export const GET = withRoute(async (request: NextRequest) => {
         // What this scope could NOT see, so an empty dashboard reads as "another
         // project owns these builds", never as "you have never built".
         scope: getBuildScopeReport(projectPath),
+        // The budgets the cook gate's [SIZE_BUDGET] verdicts are written against, and
+        // whether the stored row was readable (a corrupt row is reported, not hidden).
+        budgets: budgetsPayload(),
       });
     }
     case 'get': {
@@ -124,6 +130,20 @@ export const POST = withRoute(async (request: NextRequest) => {
       const projectPath = typeof body.projectPath === 'string' ? body.projectPath : null;
       const { current, next } = bumpIntent(projectPath, type);
       return apiSuccess({ version: formatVersion(current), parsed: current, nextVersion: formatVersion(next) });
+    }
+    case 'set-budget': {
+      // Retunes one platform's budget. Both halves must stay on (budget > 0, growth
+      // 1-100) and failOnRegression is never touched: this surface can move the gate,
+      // not switch it off.
+      const invalid = budgetInputError(body.platform, body.budgetBytes, body.growthPercent);
+      if (invalid) return apiError(invalid, 400);
+      try {
+        setPlatformBudget(body.platform, { budgetBytes: body.budgetBytes, growthPercent: body.growthPercent });
+      } catch (e) {
+        if (e instanceof SettingsBlobCorruptError) return apiError(e.message, 409);
+        throw e;
+      }
+      return apiSuccess({ budgets: budgetsPayload() });
     }
     default:
       return apiError(`Unknown action: ${action}`, 400);
