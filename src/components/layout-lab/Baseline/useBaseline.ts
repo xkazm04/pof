@@ -4,7 +4,7 @@ import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineS
 import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
-import { postArtifact, drainGates, deleteEntityArtifacts } from '../labArtifactClient';
+import { postArtifact, deleteEntityArtifacts } from '../labArtifactClient';
 import { useCachedArtifacts, invalidateArtifacts, retryArtifacts, refreshArtifacts } from '../labArtifactCache';
 import { toLabArtifacts } from '../labCatalogRefresh';
 import type { RefreshOutcome } from '../labPipelineStore';
@@ -12,7 +12,7 @@ import { labGrade } from '../labCheckerContext';
 import { useEntityArtifacts } from '../hooks/useEntityArtifacts';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
-import { useLabRunnerStore } from '../labRunnerStore';
+import { useEntityDrain } from '@/components/layout-lab/Baseline/useEntityDrain';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import { COLLAPSE_BREAKPOINT } from './constants';
@@ -58,11 +58,6 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     (i: number) => { if (onSelectStep) onSelectStep(i); else setLocalStepIdx(i); },
     [onSelectStep],
   );
-  // Drain state is keyed by `${catalogId}/${entityId}` — NOT a single instance-scoped
-  // boolean — so switching entities mid-drain neither blocks the new entity's drain nor
-  // attaches the "draining…" affordance to the wrong entity (each entity is tracked
-  // independently, and the `draining` flag below reflects only the SELECTED entity).
-  const [drainingKeys, setDrainingKeys] = useState<ReadonlySet<string>>(() => new Set());
   const [plainMode, setPlainMode] = useState(false);
   // Reset (local + server) state — a failed server delete must be reported, never swallowed.
   const [resetting, setResetting] = useState(false);
@@ -87,12 +82,6 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
 
   const catalogId = detail?.catalog.catalogId;
-
-  // The per-entity drain key for the CURRENTLY selected entity, and whether it is the
-  // one in flight — the value surfaced to the drain button + NextStepCoach, so the
-  // "draining…" affordance only ever attaches to the entity actually draining.
-  const drainKey = catalogId && entity ? `${catalogId}/${entity.id}` : null;
-  const draining = drainKey ? drainingKeys.has(drainKey) : false;
 
   // Single step-source lookup, collapsed behind the manifest resolver: the old
   // FINE_STEPS-vs-registry hybrid branch is gone. `detail.steps` is already the
@@ -272,29 +261,8 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     return () => window.removeEventListener('keydown', onKey);
   }, [openDrawer]);
 
-  // Operator-triggered drain of this entity's deferred L3/L4 gates, then invalidate
-  // the cache so the refreshed verdicts are re-read through the shared fetch path.
-  const runDrain = async () => {
-    if (!catalogId || !entity) return;
-    // Guard + track per entity: a drain already in flight for THIS entity is ignored,
-    // but a different entity can drain concurrently without being silently swallowed.
-    const key = `${catalogId}/${entity.id}`;
-    if (drainingKeys.has(key)) return;
-    setDrainingKeys((prev) => { const next = new Set(prev); next.add(key); return next; });
-    // Publish this session's drain scope so the header runner chip shows "draining …"
-    // (and never mistakes our own lease for another session's).
-    useLabRunnerStore.getState().setLocalDrain(key);
-    try {
-      await drainGates(catalogId, entity.id);
-      invalidateArtifacts(catalogId, entity.id);
-    } finally {
-      setDrainingKeys((prev) => { const next = new Set(prev); next.delete(key); return next; });
-      // Only clear the header lease if it's still OURS (a later drain for another entity
-      // may have taken it over while this one was in flight).
-      const runner = useLabRunnerStore.getState();
-      if (runner.localDrain === key) runner.setLocalDrain(null);
-    }
-  };
+  // The coach drain + its displayed outcome, keyed per entity (`useEntityDrain`).
+  const { draining, runDrain, drainOutcome, dismissDrainOutcome } = useEntityDrain(catalogId, entity?.id, steps);
 
   /** Dismiss a recorded produce failure for one step (see `labPipelineStore.clearError`). */
   const clearStepError = useCallback(
@@ -391,7 +359,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     refreshFromServer, refreshing, refreshError, refreshOutcome,
     dismissRefresh: () => { setRefreshOutcome(null); setRefreshError(null); },
     driftByStep, adoptServerStep, entitySteps,
-    runDrain,
+    runDrain, drainOutcome, dismissDrainOutcome,
     handleSelectCatalog, handleSelectEntity, selectStep,
   };
 }
