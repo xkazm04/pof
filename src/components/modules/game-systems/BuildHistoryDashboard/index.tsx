@@ -28,7 +28,10 @@ export function BuildHistoryDashboard() {
   const [builds, setBuilds] = useState<BuildRecord[]>([]);
   const [stats, setStats] = useState<BuildStats | null>(null);
   const [trend, setTrend] = useState<SizeTrendPoint[]>([]);
+  // The ACTIVE project's version pair — current (max in scope) and what the next green
+  // cook will be recorded as. Both come from the same scoped read as the rows.
   const [version, setVersion] = useState('0.1.0');
+  const [nextVersion, setNextVersion] = useState('0.1.1');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('date');
@@ -112,6 +115,7 @@ export function BuildHistoryDashboard() {
         stats: BuildStats | null;
         trend: SizeTrendPoint[];
         version: string;
+        nextVersion?: string;
         // The route has always computed this; the type used to omit it, so the one
         // fact that explains an empty tab was fetched and thrown away.
         scope?: ProjectScopeCounts;
@@ -120,6 +124,7 @@ export function BuildHistoryDashboard() {
       setStats(data.stats ?? null);
       setTrend(data.trend ?? []);
       setVersion(data.version ?? '0.1.0');
+      setNextVersion(data.nextVersion ?? '0.1.1');
       setScope(data.scope ?? null);
     } catch (e) {
       console.error('Failed to fetch build history:', e);
@@ -158,16 +163,18 @@ export function BuildHistoryDashboard() {
 
   const handleBump = useCallback(async (type: 'major' | 'minor' | 'patch') => {
     try {
-      const data = await apiFetch<{ version: string }>('/api/packaging/history', {
+      // A bump is an intent for THIS project's next green cook — never a global counter.
+      const data = await apiFetch<{ version: string; nextVersion: string }>('/api/packaging/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bump-version', type }),
+        body: JSON.stringify({ action: 'bump-version', type, projectPath }),
       });
       setVersion(data.version);
+      setNextVersion(data.nextVersion);
     } catch (e) {
       console.error('Failed to bump version:', e);
     }
-  }, []);
+  }, [projectPath]);
 
   // Escalates to `bad` exactly when the tab is BLIND — nothing on screen while builds
   // provably exist under another project.
@@ -214,7 +221,7 @@ export function BuildHistoryDashboard() {
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <RecordBuildForm onSubmit={handleRecord} version={version} />
+            <RecordBuildForm onSubmit={handleRecord} nextVersion={nextVersion} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -224,7 +231,7 @@ export function BuildHistoryDashboard() {
 
       {/* Metrics row */}
       {stats && (
-        <MetricsRow stats={stats} version={version} onBump={handleBump} />
+        <MetricsRow stats={stats} version={version} nextVersion={nextVersion} onBump={handleBump} />
       )}
 
       {/* Platform breakdown */}

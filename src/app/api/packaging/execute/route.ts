@@ -147,7 +147,7 @@ function finalizeDeps(): FinalizeDeps {
     lastGreenBaseline: (platform, projectId) => lastGreenBaseline(platform, projectId),
     evaluateBuildSize: (platform, sizeBytes, lastGreen, baseline) =>
       evaluateBuildSize(platform, sizeBytes, lastGreen, undefined, baseline),
-    nextVersion: () => autoIncrementOnSuccess(),
+    nextVersion: (projectId) => autoIncrementOnSuccess(projectId),
     insertBuild: (input) => insertBuild(input),
   };
 }

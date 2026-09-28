@@ -25,8 +25,9 @@ function MetricCard({ label, value, sub, icon, color }: {
   );
 }
 
-export function MetricsRow({ stats, version, onBump }: {
-  stats: BuildStats; version: string; onBump: (type: 'major' | 'minor' | 'patch') => void;
+export function MetricsRow({ stats, version, nextVersion, onBump }: {
+  stats: BuildStats; version: string; nextVersion: string;
+  onBump: (type: 'major' | 'minor' | 'patch') => void;
 }) {
   return (
     <div className="grid grid-cols-5 gap-2">
@@ -56,7 +57,7 @@ export function MetricsRow({ stats, version, onBump }: {
         icon={<AlertTriangle className="w-3 h-3" />}
         color={STATUS_ERROR}
       />
-      <VersionPanel version={version} onBump={onBump} />
+      <VersionPanel version={version} nextVersion={nextVersion} onBump={onBump} />
     </div>
   );
 }

@@ -326,6 +326,10 @@ export interface SmokeAttachment {
  *
  * The note is APPENDED (see {@link appendBuildNote}), so a `[SIZE_BUDGET]` note written
  * moments earlier survives.
+ *
+ * A condemned build KEEPS its version: the number is burned, not reissued
+ * (`version-manager.ts` derives a project's current version from every versioned row,
+ * whatever its status), so no recorded row value is ever rewritten here.
  */
 export function attachSmokeResultToLatestBuild(
   platform: string,
@@ -373,6 +377,18 @@ export function attachSmokeResultToLatestBuild(
 }
 
 // ---------- Analytics ----------
+
+/**
+ * Every version string recorded in scope of `projectId`, any status — the input the
+ * per-project version authority (`version-manager.ts`) takes its semver max over.
+ */
+export function getVersionsInScope(projectId?: string | null): string[] {
+  const s = buildScope(projectId, 'version IS NOT NULL');
+  const rows = getDb()
+    .prepare(`SELECT DISTINCT version FROM build_history ${s.where}`)
+    .all(...s.params) as Array<{ version: string }>;
+  return rows.map((r) => r.version);
+}
 
 export function getBuildStats(projectId?: string | null): BuildStats {
   const db = getDb();

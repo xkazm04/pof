@@ -5,7 +5,9 @@ import { Plus } from 'lucide-react';
 import { PLATFORM_IDS, platformLabel } from '@/lib/packaging/build-profiles';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 
-export function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string, unknown>) => void; version: string }) {
+// `nextVersion` is what the route will assign a green record (current + patch, or a
+// pending bump) — the CURRENT version used to sit under this 'Next:' label.
+export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Record<string, unknown>) => void; nextVersion: string }) {
   const [platform, setPlatform] = useState<string>(PLATFORM_IDS[0]);
   const [config, setConfig] = useState('Shipping');
   const [status, setStatus] = useState<'success' | 'failed'>('success');
@@ -28,7 +30,7 @@ export function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record
       <div className="flex items-center gap-1.5 mb-2.5">
         <Plus className="w-3 h-3" style={{ color: MODULE_COLORS.systems }} />
         <span className="text-xs font-medium text-text">Record Build</span>
-        <span className="ml-auto text-2xs text-text-muted font-mono">Next: v{version}</span>
+        <span className="ml-auto text-2xs text-text-muted font-mono">Next: v{nextVersion}</span>
       </div>
       <div className="grid grid-cols-5 gap-2">
         <div>

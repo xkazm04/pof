@@ -13,7 +13,9 @@
 //      project, and only when the cook produced a measurable size.
 //   2. Growth is evaluated against the baseline RECORD, so every verdict names build #N.
 //   3. VERSION SEMANTICS: bump-per-green-cook — only a build RECORDED green carries a
-//      version; failed, cancelled and smoke-failed builds are recorded unversioned.
+//      version; failed, cancelled and smoke-failed builds are recorded unversioned. The
+//      version is the COOKING PROJECT's next one (`nextVersion(projectPath)`), never a
+//      number another project's cooks advanced.
 
 import type { BuildRecordInput } from './build-history-store';
 import { describeSizeBaseline, type SizeBaselineRef, type SizeRegression } from './size-budgets';
@@ -38,7 +40,8 @@ export interface FinalizeDeps {
   evaluateBuildSize: (
     platform: string, sizeBytes: number, lastGreen: number | null, baseline: SizeBaselineRef | null,
   ) => SizeRegression | null;
-  nextVersion: () => string;
+  /** Takes the next version for a green build of `projectId` (the raw projectPath). */
+  nextVersion: (projectId: string) => string;
   insertBuild: (input: BuildRecordInput) => { id: number };
 }
 
@@ -85,7 +88,7 @@ export function finalizeCook(
 
   const smokeFailed = ctx.smoke?.failed === true;
   const status: BuildRecordInput['status'] = smokeFailed ? 'failed' : 'success';
-  const version = status === 'success' ? deps.nextVersion() : null;
+  const version = status === 'success' ? deps.nextVersion(projectPath) : null;
 
   const noteParts = [...lead];
   if (ctx.smoke) noteParts.push(ctx.smoke.note);
