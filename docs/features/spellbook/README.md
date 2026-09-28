@@ -35,5 +35,12 @@ Uses **L0 (data)** for brief/effect/targeting/balance/combo/animation/VFX/applie
 ## Status & notes
 Heavily ARPG-LAWS-driven: every numeric (DPS 19.5 target, ignite 31.5 over 4 s, crit ×2.5) carries a §-citation in the produce code. Each producible step embeds a §12 wiring contract (grantedBy / activatedBy / dependencies / verification). The Fireball is the granting source of `status-burning` — its Applies-Status step declares the Fireball end of that cross-catalog contract. Known gap: the `AM_Fireball_Cast` AnimMontage + Mixamo/Blender import path is unbuilt (plan.md §8) — the Animation step is config-spec only; the L3 test gates the actual firing.
 
+## Module surfaces (Ability Spellbook tab)
+The in-app Spellbook module (`src/components/modules/core-engine/sub_ability/`) renders from ONE pure projection, `buildSpellbookView({ live, appTags, entries })` in `_shared/spellbookView.ts`, with a fixed ownership split:
+- **The catalog owns the numbers.** Cooldown Flow rows, the ability radar, the Features metrics (`spellbookMetrics(view)`: GA = catalog entries, GE = the effect list) and the ability rows of the Ctrl+K index (`buildSpellbookSearchIndex(view)`) all read `useSpellbookEntries()` (seed + persisted rows). Tag-popover cooldown / mana cost for a tag that is a catalog ability are overlaid from the catalog too.
+- **Parsed C++ owns the vocabulary.** Tags, tag deps, attributes, usage frequency and the tag audit come from `useUE5SourceSync()`; in live mode the Cooldown Flow rows are the C++ player abilities with a cooldown tag, joined to the catalog on `abilityTag === entry.data.tag`. An ability with no catalog match gets `cd: null` ("CD in GE"), never 0.
+- **Every dataset says where it came from** (`view.provenance`: `catalog` / `ue-source` / `illustrative`). The hand-written tag/attribute lists are `illustrative` until a source is parsed.
+- **One fallback.** `useSpellbookData()` outside a provider returns a single memoised `buildSpellbookView({ live: null, ... })` over the seeded catalog, not a second typed-out literal.
+
 ---
 *See [`../pipeline-architecture.md`](../pipeline-architecture.md) for the View/Produce/Acceptance model and the L0–L4 acceptance ladder.*
