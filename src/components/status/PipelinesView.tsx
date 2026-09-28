@@ -26,6 +26,7 @@ import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusVerdicts } from './statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell } from '@/lib/status/statusModel';
 import {
@@ -189,11 +190,16 @@ interface UnknownLane {
 
 /** Stable empty list, so `built === null` doesn't hand a fresh array to memo dependents. */
 const NO_UNKNOWN_LANES: UnknownLane[] = [];
+/** Stable empty verdict index for a FAILED judge read (flagged `verdictsDegraded`). */
+const NO_VERDICTS: ReadonlyMap<string, JudgeVerdict[]> = new Map();
+
+/** The craft half of {@link VerdictLoad}, fetched by this view alone. */
+type CraftLoad = Pick<VerdictLoad, 'craftByCatalog' | 'craftDegraded'>;
 
 /** The two whole-project verdict streams, settled together. `craftByCatalog` is null when
  *  the craft fetch FAILED — absent gauges must never paint as A0. */
 interface VerdictLoad {
-  byCatalog: Map<string, JudgeVerdict[]>;
+  byCatalog: ReadonlyMap<string, JudgeVerdict[]>;
   craftByCatalog: Map<string, CraftVerdictView[]> | null;
   verdictsDegraded: boolean;
   craftDegraded: boolean;
@@ -241,30 +247,31 @@ export function PipelinesView({
   /** Non-null when the map could not be loaded at all — the view must SAY so rather than
    *  sit on "Loading…" forever (an honesty dashboard cannot fail silently). */
   const [error, setError] = useState<string | null>(null);
+  /** Judge verdicts come from the SHARED /status verdict read (one deduped request across
+   *  every tab, on the lab's 60 s verdict cache); craft verdicts are this view's own read. */
+  const { verdicts: judge, reload: reloadJudge } = useStatusVerdicts();
+  const [craftLoad, setCraftLoad] = useState<CraftLoad | null>(null);
   /** The two verdict streams, settled together. Null until they have. */
-  const [verdicts, setVerdicts] = useState<VerdictLoad | null>(null);
+  const verdicts = useMemo<VerdictLoad | null>(
+    () =>
+      judge && craftLoad
+        ? { ...craftLoad, byCatalog: judge.ok ? judge.byCatalog : NO_VERDICTS, verdictsDegraded: !judge.ok }
+        : null,
+    [judge, craftLoad],
+  );
   const [reload, setReload] = useState(0);
   const [highlight, setHighlight] = useState<Highlight>(null);
   // Clicking a cell opens the evidence modal (the stored output the gate evaluated),
   // NOT Item Focus — so a verdict can be audited against its actual proof.
   const [evidence, setEvidence] = useState<{ catalogId: string; step: string; cell: StepCell } | null>(null);
 
-  // Judge + craft verdicts are two whole-project reads, unchanged: one request each, and
-  // neither is per-catalog, so there is nothing to fan out.
+  // Craft verdicts are one whole-project read (not per-catalog, so nothing to fan out). The
+  // judge half is the shared read above.
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [verdictRes, craftRes] = await Promise.all([
-          tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts'),
-          tryApiFetch<CraftVerdictView[]>('/api/craft-verdicts'),
-        ]);
-        const byCatalog = new Map<string, JudgeVerdict[]>();
-        for (const v of verdictRes.ok ? verdictRes.data : []) {
-          const list = byCatalog.get(v.catalogId) ?? [];
-          list.push(v);
-          byCatalog.set(v.catalogId, list);
-        }
+        const craftRes = await tryApiFetch<CraftVerdictView[]>('/api/craft-verdicts');
         const craftByCatalog = new Map<string, CraftVerdictView[]>();
         for (const v of craftRes.ok ? craftRes.data : []) {
           const list = craftByCatalog.get(v.catalogId) ?? [];
@@ -272,10 +279,8 @@ export function PipelinesView({
           craftByCatalog.set(v.catalogId, list);
         }
         if (alive) {
-          setVerdicts({
-            byCatalog,
+          setCraftLoad({
             craftByCatalog: craftRes.ok ? craftByCatalog : null,
-            verdictsDegraded: !verdictRes.ok,
             craftDegraded: !craftRes.ok,
           });
         }
@@ -352,7 +357,8 @@ export function PipelinesView({
    *  the hard way and bails out of `ensure` on a stored error for the same reason). */
   const retry = () => {
     setError(null);
-    setVerdicts(null);
+    setCraftLoad(null);
+    reloadJudge();
     reloadArtifacts();
     setReload((n) => n + 1);
   };

@@ -6,6 +6,10 @@
  * (e.g. is the loot table that drops this sword itself gate-verified?). An optional
  * direction glyph (`▸` forward / `◂` reverse) + role prefix names the connecting edge.
  * The label/row refocuses the whole view onto this node when clicked.
+ *
+ * A node whose evidence could not be read (`node.unknown`) renders UNKNOWN + the reason and
+ * an em dash where the percentage goes — never 0%, never a row of R0 cells. A node graded
+ * without judge verdicts (`node.verdictsUnknown`) says so in its readiness label.
  */
 import type { FocusNode } from '@/lib/status/itemFocusModel';
 import { StatusCell } from './StatusCell';
@@ -31,15 +35,20 @@ export function MiniSwimlane({
   const { swimlane } = node;
   // A catalog with no registered pipeline has nothing to grade — showing "0%" there
   // reads as "graded and failing", which is a lie. Show an explicit no-data dash.
-  const graded = swimlane.cells.length > 0;
+  const graded = !!swimlane && swimlane.cells.length > 0;
   const edge = direction ? EDGE_WORD[direction] : 'focused entity';
   const relation = `${edge}${node.role ? `, as ${node.role}` : ''}`;
   const rowLabel = `${node.name} — ${relation} — ${node.catalogId}${node.missing ? ' — link target not found' : ''}. Focus this entity.`;
-  const pctLabel = graded
-    ? `${swimlane.readyPct}% of ${swimlane.cells.length} steps production-ready (R4+) · credible (R3+) ${swimlane.crediblePct}% · started (R1+) ${swimlane.startedPct}%${swimlane.blockedCount ? ` · ${swimlane.blockedCount} blocked` : ''}`
-    : 'No pipeline registered for this catalog — nothing to grade yet';
+  const unknownText = `UNKNOWN — ${node.catalogId} not graded (${node.unknownReason ?? 'no reason given'}) — not R0`;
+  const verdictNote = node.verdictsUnknown ? ' · judge verdicts unknown: checker status only' : '';
+  const pctLabel = !swimlane
+    ? unknownText
+    : graded
+      ? `${swimlane.readyPct}% of ${swimlane.cells.length} steps production-ready (R4+) · credible (R3+) ${swimlane.crediblePct}% · started (R1+) ${swimlane.startedPct}%${swimlane.blockedCount ? ` · ${swimlane.blockedCount} blocked` : ''}${verdictNote}`
+      : 'No pipeline registered for this catalog — nothing to grade yet';
   return (
     <div
+      data-testid={node.unknown ? `unknown-node-${node.catalogId}-${node.entityId}` : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -89,20 +98,89 @@ export function MiniSwimlane({
         role="img"
         aria-label={pctLabel}
         title={pctLabel}
-        style={{ width: 44, flexShrink: 0, textAlign: 'right', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: !graded ? 'var(--text-subtle)' : swimlane.readyPct > 0 ? 'var(--lab-ok)' : 'var(--lab-muted)' }}
+        style={{ width: 44, flexShrink: 0, textAlign: 'right', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: graded && swimlane.readyPct > 0 ? 'var(--lab-ok)' : graded ? 'var(--lab-muted)' : 'var(--text-subtle)' }}
       >
         {graded ? `${swimlane.readyPct}%` : '—'}
       </span>
       <div style={{ display: 'flex', gap: 'var(--lab-s1)' }}>
-        {!graded && (
+        {!swimlane ? (
+          <span style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-warn)', alignSelf: 'center' }}>
+            <strong style={{ fontFamily: 'var(--lab-font-mono)' }}>UNKNOWN</strong> — not graded: {node.unknownReason ?? 'no reason given'}
+          </span>
+        ) : !graded && (
           <span style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--text-subtle)', fontStyle: 'italic', alignSelf: 'center' }}>
             no pipeline registered for this catalog
           </span>
         )}
-        {swimlane.cells.map((cell) => (
+        {swimlane?.cells.map((cell) => (
           <StatusCell key={cell.label} cell={cell} />
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The degraded-read notice the entity-scoped tabs share — same wording family as the
+ * Pipelines banners. `artifacts`: a catalog's rows could not be read, so its rows are
+ * UNKNOWN (not R0). `verdicts`: judge verdicts did not load, so cells show checker status
+ * only. Either way the failure is SAID, with an operator-driven retry (nothing auto-retries).
+ */
+export function EvidenceReadNotice({
+  kind,
+  subject,
+  error,
+  onRetry,
+}: {
+  kind: 'artifacts' | 'verdicts';
+  subject?: string;
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 'var(--lab-s3)',
+        padding: 'var(--lab-s2) var(--lab-s3)',
+        margin: 'var(--lab-s2) 0 var(--lab-s3)',
+        fontSize: 'var(--lab-fs-xs)',
+        color: 'var(--lab-text)',
+        // shorthand first — a later `border` would wipe the warn stripe.
+        border: '1px solid var(--lab-line)',
+        borderLeft: '3px solid var(--lab-warn)',
+        borderRadius: 'var(--lab-r-sm)',
+      }}
+    >
+      <span style={{ minWidth: 0 }}>
+        <strong style={{ fontFamily: 'var(--lab-font-mono)' }}>PARTIAL</strong>
+        {kind === 'verdicts'
+          ? ' — judge verdicts did not load, so cells show gate/checker status only: a judged pass or fail is not reflected below.'
+          : ` — ${subject ?? 'this catalog'}'s artifacts could not be read, so its rows are UNKNOWN below, not R0 NOT WIRED.`}
+        {' '}({error})
+      </span>
+      <button
+        type="button"
+        className="focus-ring"
+        onClick={onRetry}
+        style={{
+          flexShrink: 0,
+          padding: 'var(--lab-s1) var(--lab-s2)',
+          fontSize: 'var(--lab-fs-xs)',
+          fontFamily: 'var(--lab-font-mono)',
+          fontWeight: 700,
+          color: 'var(--lab-ink)',
+          background: 'transparent',
+          border: '1px solid var(--lab-ink)',
+          borderRadius: 'var(--lab-r-sm)',
+          cursor: 'pointer',
+        }}
+      >
+        Retry
+      </button>
     </div>
   );
 }
