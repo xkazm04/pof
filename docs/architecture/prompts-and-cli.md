@@ -230,6 +230,16 @@ and stay invisible to prompt evolution — `material-patterns`,
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
 (`AIBehaviorView`). Converting each is the same three-part move as above.
 
+**Asset-Code Oracle remedies start on the rail (remedy -> rescan -> key diff).**
+`src/lib/asset-oracle/oracleRemedy.ts` plans only the task body for the two
+violation types a CLI can fix without a delete (`naming-mismatch`: editor rename
+that leaves redirectors; `missing-asset`: the BP subclass). `useAssetCodeOracle`
+dispatches it as ONE `ask-claude` CLITask via `useModuleCLI.execute` (session
+`asset-oracle-remedy`), so the handler composes the header. Its `onComplete`
+re-runs the oracle, and `oracleDiff` compares the stable violation ids
+(`<type>:<subject>`, recorded per scan as `violationKeys` in `marketplaceStore`)
+to show whether each targeted key resolved.
+
 **Checklist runs are scored by the judge fleet, not by their own report
 (phase 1).** A checklist callback POSTs `{ completed }` to
 `/api/checklist/complete`, which books the A/B trial with
