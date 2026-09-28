@@ -16,6 +16,7 @@ import {
 } from '@/lib/prompt-evolution/engine';
 import { MIN_TRIALS_PER_VARIANT } from '@/lib/prompt-evolution/ab-testing';
 import type { SubModuleId } from '@/types/modules';
+import { unwrap } from '@/types/result';
 
 const MOD = 'arpg-combat' as SubModuleId;
 const ITEM = 'ac-1';
@@ -80,7 +81,7 @@ describe('seeded item → challenger → trials', () => {
   it('records a trial for each dispatch once a challenger is under test', () => {
     const baseline = seedBaselineVariant(MOD, ITEM, STATIC_PROMPT)!.variant;
     const challenger = createVariant(MOD, ITEM, 'Optimized: verify the build compiles after the change.', 'user-edit');
-    const test = startABTest(MOD, ITEM, baseline.id, challenger.id);
+    const test = unwrap(startABTest(MOD, ITEM, baseline.id, challenger.id));
 
     // Two dispatches on the seeded item → two booked trials, visible in the history.
     dispatchOnce(true);

@@ -85,8 +85,11 @@ export async function POST(req: NextRequest) {
         if (!body.moduleId || !body.checklistItemId || !body.variantId || !body.testId) {
           return apiError('moduleId, checklistItemId, variantId (A), and testId (B) required', 400);
         }
-        const test = startABTest(body.moduleId as SubModuleId, body.checklistItemId, body.variantId, body.testId);
-        return apiSuccess(test);
+        const started = startABTest(body.moduleId as SubModuleId, body.checklistItemId, body.variantId, body.testId);
+        // 409: another test is still running on this item — one live test per item
+        // (serving reads the newest, booking the oldest; see engine.startABTest).
+        if (!started.ok) return apiError(started.error, 409);
+        return apiSuccess(started.data);
       }
 
       case 'record-trial': {

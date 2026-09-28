@@ -15,6 +15,7 @@ import {
   restoreVariant,
 } from '@/lib/prompt-evolution/engine';
 import type { SubModuleId } from '@/types/modules';
+import { unwrap } from '@/types/result';
 
 const MOD = 'arpg-combat' as SubModuleId;
 const ITEM = 'ac-1';
@@ -68,7 +69,7 @@ describe('engine — A/B success rate annotation', () => {
   it('aggregates trials/success rate per variant from its A/B tests', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'imperative-rewrite')!;
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
 
     // A: 3 wins of 4; B: 1 win of 4
     recordTestTrial(test.id, 'A', true, 100);
@@ -96,7 +97,7 @@ describe('engine — A/B success rate annotation', () => {
   it('counts wins from concluded tests', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'shorten')!;
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
     // Both arms must clear MIN_TRIALS_PER_VARIANT before a winner may be crowned.
     for (let i = 0; i < 3; i++) recordTestTrial(test.id, 'A', true, 50);
     for (let i = 0; i < 3; i++) recordTestTrial(test.id, 'B', false, 50);

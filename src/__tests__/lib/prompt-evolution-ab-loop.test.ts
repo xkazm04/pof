@@ -15,6 +15,7 @@ import {
 } from '@/lib/prompt-evolution/engine';
 import { MIN_TRIALS_PER_VARIANT } from '@/lib/prompt-evolution/ab-testing';
 import type { SubModuleId } from '@/types/modules';
+import { unwrap } from '@/types/result';
 
 const MOD = 'arpg-combat' as SubModuleId;
 const ITEM = 'ac-1';
@@ -53,7 +54,7 @@ describe('A/B loop — serve → record → conclude', () => {
   it('serves both arms of a running test and each run earns that arm a trial', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'imperative-rewrite')!;
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
 
     const servedIds: string[] = [];
     for (let i = 0; i < 8; i++) servedIds.push(runOnce(true).variant.id);
@@ -92,7 +93,7 @@ describe('A/B loop — serve → record → conclude', () => {
   it('refuses to crown a winner below the minimum-trials floor, and says why', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'add-verification')!;
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
 
     const zeroTrials = concludeTest(test.id);
     expect(zeroTrials.ok).toBe(false);
@@ -117,7 +118,7 @@ describe('A/B loop — serve → record → conclude', () => {
   it('concludes once both arms clear the floor, crowning the higher success rate', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'add-verification')!;
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
 
     for (let i = 0; i < MIN_TRIALS_PER_VARIANT; i++) {
       recordTrialForServedVariant(MOD, ITEM, a.id, false, 100);
@@ -141,7 +142,7 @@ describe('A/B loop — serve → record → conclude', () => {
   it('stops serving from a concluded test and falls back to the adopted version', () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = mutateVariant(a.id, 'shorten')!;
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
     for (let i = 0; i < MIN_TRIALS_PER_VARIANT; i++) {
       recordTrialForServedVariant(MOD, ITEM, a.id, true, 10);
       recordTrialForServedVariant(MOD, ITEM, b.id, true, 10);

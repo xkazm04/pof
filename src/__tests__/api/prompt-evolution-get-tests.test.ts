@@ -7,6 +7,7 @@ vi.mock('@/lib/db', () => ({ getDb: () => testDb }));
 import { createVariant, startABTest } from '@/lib/prompt-evolution/engine';
 import { POST } from '@/app/api/prompt-evolution/route';
 import type { SubModuleId } from '@/types/modules';
+import { unwrap } from '@/types/result';
 
 const MOD = 'arpg-combat' as SubModuleId;
 const ITEM = 'ac-1';
@@ -28,7 +29,7 @@ describe('prompt-evolution get-tests route', () => {
   it('returns persisted A/B tests so they survive a reload', async () => {
     const a = createVariant(MOD, ITEM, 'Implement a melee attack for the character.');
     const b = createVariant(MOD, ITEM, 'Add a melee combo with verification steps.');
-    const test = startABTest(MOD, ITEM, a.id, b.id);
+    const test = unwrap(startABTest(MOD, ITEM, a.id, b.id));
 
     const res = await post({ action: 'get-tests' });
     const json = await res.json();

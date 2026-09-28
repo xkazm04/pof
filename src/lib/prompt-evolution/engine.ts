@@ -30,7 +30,7 @@ import {
 import { toTestView } from './verdict';
 import { getPromptVariantFitness } from './judge-fitness';
 import { logger } from '@/lib/logger';
-import { type Result, err } from '@/types/result';
+import { type Result, ok, err } from '@/types/result';
 import {
   insertVariant,
   getVariantById,
@@ -255,15 +255,30 @@ export function mutateVariant(variantId: string, mutation: MutationType): Prompt
 
 // ── A/B Testing ─────────────────────────────────────────────────────────────
 
+/**
+ * Start an A/B test between two versions of one checklist item. Refuses — naming
+ * the running test — while another test is still running on the same (module,
+ * item): serving reads the NEWEST running test (`resolveDispatchVariant`) while
+ * trial booking takes the FIRST running test the served variant is an arm of
+ * (`recordTrialForServedVariant` / `recordTrialForVariantId`), so two concurrent
+ * tests sharing a baseline would be served by one and counted on the other, and
+ * the older challenger would never be served again.
+ */
 export function startABTest(
   moduleId: SubModuleId,
   checklistItemId: string,
   variantAId: string,
   variantBId: string,
-): ABTest {
+): Result<ABTest, string> {
+  const running = getABTestsForItem(moduleId, checklistItemId).find((t) => t.status === 'running');
+  if (running) {
+    return err(
+      `A/B test ${running.id} is already running on this item — conclude it before starting another (one running test per item).`,
+    );
+  }
   const test = createABTest(moduleId, checklistItemId, variantAId, variantBId);
   upsertABTest(test);
-  return test;
+  return ok(test);
 }
 
 export function getABTest(id: string): ABTest | null {
