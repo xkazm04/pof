@@ -15,7 +15,9 @@ function statText(label: string): string {
   return screen.getByText(label).parentElement?.textContent ?? '';
 }
 
-describe('DamageCalcSection — canon sandbox', () => {
+// Renders against the real seeded spellbook catalog; the first render takes several
+// seconds under a loaded suite, so the 5 s default would flake.
+describe('DamageCalcSection — canon sandbox', { timeout: 30_000 }, () => {
   it('case 7: defaults read 98.4; picking Fireball loads base 35 and the Fire resist path', () => {
     render(<DamageCalcSection />);
     expect(statText('Expected Damage')).toContain('98.4');
