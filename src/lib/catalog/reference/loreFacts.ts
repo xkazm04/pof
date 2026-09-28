@@ -147,6 +147,11 @@ function entityCandidates(entity: StoredCatalogEntity): { ids: string[]; labels:
 
 const labelsOf = (entity: LoreGraphEntity): string[] => [entity.name, ...entity.aliases];
 
+function eligibleSubjects(entity: StoredCatalogEntity, graph: LoreGraph): LoreGraphEntity[] {
+  if (entity.catalogId !== 'zone-map') return graph.entities;
+  return graph.entities.filter((subject) => words(subject.kind) === 'place');
+}
+
 function uniqueMatch(matches: LoreGraphEntity[]): LoreGraphEntity | undefined {
   const unique = [...new Map(matches.map((entity) => [entity.id, entity])).values()];
   return unique.length === 1 ? unique[0] : undefined;
@@ -161,19 +166,21 @@ export function resolveLoreSubject(
   graph: LoreGraph,
 ): LoreGraphEntity | undefined {
   const candidates = entityCandidates(entity);
+  const subjects = eligibleSubjects(entity, graph);
   const idKeys = new Set(candidates.ids.map(compact).filter(Boolean));
-  const byId = graph.entities.filter((subject) => idKeys.has(compact(subject.id)));
+  const byId = subjects.filter((subject) => idKeys.has(compact(subject.id)));
   if (byId.length) return uniqueMatch(byId);
 
   const labelKeys = new Set(candidates.labels.flatMap(exactLabelKeys).filter(Boolean));
-  const exact = graph.entities.filter((subject) =>
+  const exact = subjects.filter((subject) =>
     labelsOf(subject).some((label) => exactLabelKeys(label).some((key) => labelKeys.has(key))));
   if (exact.length) return uniqueMatch(exact);
 
   const candidatePhrases = candidates.labels.map(words).filter(Boolean);
-  return uniqueMatch(graph.entities.filter((subject) => labelsOf(subject).some((label) => {
-    const phrase = words(label);
-    return phrase.length >= 3 && candidatePhrases.some((candidate) => atPhraseEdge(candidate, phrase));
+  return uniqueMatch(subjects.filter((subject) => labelsOf(subject).some((label) => {
+    const phrases = [words(label), withoutLeadingArticle(label)];
+    return phrases.some((phrase) => phrase.length >= 3
+      && candidatePhrases.some((candidate) => atPhraseEdge(candidate, phrase)));
   })));
 }
 

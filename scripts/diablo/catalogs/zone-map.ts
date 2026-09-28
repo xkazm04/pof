@@ -1,11 +1,14 @@
 import { locationEntities, seedLocationSteps } from '@/lib/catalog/reference/locationSpecs';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+import { withPromotionLoreFacts } from './loreFacts';
 import type { CatalogHandler } from './types';
 
 export const zoneMapHandler: CatalogHandler = {
   catalogId: 'zone-map',
-  pool: (_db, _sourceId, wrappers) => locationEntities(wrappers) as unknown as ReferenceWrapper[],
+  pool: (_db, _sourceId, wrappers) => withPromotionLoreFacts(
+    locationEntities(wrappers) as unknown as ReferenceWrapper[],
+  ),
   seed: (ctx) => {
     const wrappers = locationEntities(listWrappers(ctx.db, { sourceId: ctx.sourceId }))
       .filter((item) => !ctx.ids || ctx.ids.includes(item.entity.id));

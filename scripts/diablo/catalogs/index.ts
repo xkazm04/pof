@@ -6,6 +6,7 @@ import { codexHandler } from './codex';
 import { currenciesHandler } from './currencies';
 import { combatMapHandler } from './combat-map';
 import { dialogTreesHandler } from './dialog-trees';
+import { factionsHandler } from './factions';
 import { itemsHandler } from './items';
 import { inputSchemesHandler, playerMovementHandler } from './movement-input';
 import { progressionCurvesHandler } from './progression-curves';
@@ -26,6 +27,7 @@ const handlers: CatalogHandler[] = [
   currenciesHandler,
   combatMapHandler,
   dialogTreesHandler,
+  factionsHandler,
   itemsHandler,
   inputSchemesHandler,
   playerMovementHandler,

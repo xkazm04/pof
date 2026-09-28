@@ -36,9 +36,14 @@ const graph: LoreGraph = {
   ],
 };
 
-const entity = (id: string, name: string, data: unknown = {}): StoredCatalogEntity => ({
+const entity = (
+  id: string,
+  name: string,
+  data: unknown = {},
+  catalogId = 'characters',
+): StoredCatalogEntity => ({
   id,
-  catalogId: 'characters',
+  catalogId,
   name,
   categoryPath: [],
   tags: [],
@@ -91,6 +96,20 @@ describe('lore fact matching', () => {
     };
     expect(resolveLoreSubject(entity('synthetic-e', 'Sage'), ambiguous)).toBeUndefined();
     expect(resolveLoreSubject(entity('synthetic-f', 'Mera Quil'), graph)).toBeUndefined();
+  });
+
+  it('limits zone-map candidates to places and still matches a place at a normalized name edge', () => {
+    const placeGraph: LoreGraph = {
+      ...graph,
+      entities: [
+        { id: 'glass-hall', name: 'The Glass Hall', aliases: [], kind: 'place' },
+        { id: 'orin-vale', name: 'Orin Vale', aliases: ['Orin'], kind: 'traveller' },
+      ],
+    };
+    expect(resolveLoreSubject(entity('d1-level-01', 'Glass Hall — Level 1', {}, 'zone-map'), placeGraph)?.id)
+      .toBe('glass-hall');
+    expect(resolveLoreSubject(entity('d1-level-02', 'Lower Vault / Orin', {}, 'zone-map'), placeGraph))
+      .toBeUndefined();
   });
 
   it('returns subject and object facts plus only prose records that mention the subject', () => {
