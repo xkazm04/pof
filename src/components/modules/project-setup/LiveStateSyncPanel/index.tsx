@@ -17,11 +17,12 @@ import {
   ACCENT_ORANGE, ACCENT_CYAN,
   OPACITY_15,
 } from '@/lib/chart-colors';
-import type { PropertyWatchRequest, UE5ConnectionStatus } from '@/types/ue5-bridge';
+import type { PropertyWatchRequest, SelectedActor, UE5ConnectionStatus } from '@/types/ue5-bridge';
 import { Header } from './Header';
 import { ViewportSection } from './ViewportSection';
 import { SelectionSection } from './SelectionSection';
 import { WatchesSection } from './WatchesSection';
+import { watchCountsByObjectPath, watchDraftFromActor, type WatchDraft } from './selectionWatch';
 
 // ── Pre-snapshot state copy ───────────────────────────────────────────────
 // Honest per-status copy: the panel must never claim "not connected" while the
@@ -99,8 +100,11 @@ export function LiveStateSyncPanel() {
   const [showSelection, setShowSelection] = useState(true);
   const [showWatches, setShowWatches] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // Prefill for the watch form from a selected actor; `key` remounts the form per pick.
+  const [watchDraft, setWatchDraft] = useState<(WatchDraft & { key: number }) | null>(null);
 
   const watchEntries = useMemo(() => Object.entries(propertyWatches), [propertyWatches]);
+  const watchCounts = useMemo(() => watchCountsByObjectPath(watchEntries), [watchEntries]);
   const preSnapshot = useMemo(() => statusCopy(wsStatus, wsPort), [wsStatus, wsPort]);
   const PreSnapshotIcon = preSnapshot.icon;
 
@@ -108,6 +112,13 @@ export function LiveStateSyncPanel() {
     watchProperty(req);
     setShowWatches(true);
   }, [watchProperty]);
+
+  const handleWatchActor = useCallback((actor: SelectedActor) => {
+    const draft = watchDraftFromActor(actor);
+    if (!draft) return;
+    setWatchDraft((prev) => ({ ...draft, key: (prev?.key ?? 0) + 1 }));
+    setShowWatches(true);
+  }, []);
 
   return (
     <SurfaceCard className="p-0 overflow-hidden" data-testid="live-state-sync-panel" role="region" aria-label="Live State Sync">
@@ -148,11 +159,33 @@ export function LiveStateSyncPanel() {
       {/* ── Live state sections ───────────────────────────────────── */}
       {snapshot && (
         <div className="divide-y divide-border/20">
+          {/* ── Stale frame: the client keeps the last snapshot through an
+                 unexpected close, so it must not read as live ─────────── */}
+          {!isLive && (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="live-state-stale"
+              data-ws-status={wsStatus}
+              className="flex items-center gap-2 px-4 py-2 text-2xs font-medium"
+              style={{ color: ACCENT_ORANGE, backgroundColor: `${ACCENT_ORANGE}${OPACITY_15}` }}
+            >
+              <AlertTriangle className="w-3 h-3 shrink-0" />
+              <span>{preSnapshot.title} · values below are from the last frame, not live</span>
+            </div>
+          )}
+
           {/* ── Viewport camera ──────────────────────────────────── */}
           <ViewportSection snapshot={snapshot} showViewport={showViewport} setShowViewport={setShowViewport} />
 
           {/* ── Selected actors ──────────────────────────────────── */}
-          <SelectionSection snapshot={snapshot} showSelection={showSelection} setShowSelection={setShowSelection} />
+          <SelectionSection
+            snapshot={snapshot}
+            showSelection={showSelection}
+            setShowSelection={setShowSelection}
+            watchCounts={watchCounts}
+            onWatchActor={handleWatchActor}
+          />
 
           {/* ── PIE state ────────────────────────────────────────── */}
           {snapshot.pieState && (
@@ -186,6 +219,7 @@ export function LiveStateSyncPanel() {
             setShowWatches={setShowWatches}
             unwatchProperty={unwatchProperty}
             handleAddWatch={handleAddWatch}
+            watchDraft={watchDraft}
           />
 
           {/* ── Dirty packages indicator ─────────────────────────── */}

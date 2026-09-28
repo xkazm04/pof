@@ -3,6 +3,7 @@ import { STATUS_ERROR, ACCENT_EMERALD } from '@/lib/chart-colors';
 import type { PropertyWatchRequest, PropertyWatchUpdate } from '@/types/ue5-bridge';
 import { PropertyWatchForm } from './PropertyWatchForm';
 import { formatClock } from './helpers';
+import type { WatchDraft } from './selectionWatch';
 
 interface WatchesSectionProps {
   watchEntries: [string, PropertyWatchUpdate][];
@@ -10,6 +11,8 @@ interface WatchesSectionProps {
   setShowWatches: (v: boolean) => void;
   unwatchProperty: (watchId: string) => void;
   handleAddWatch: (req: PropertyWatchRequest) => void;
+  /** Prefill from a selected actor; `key` remounts the form on each new pick. */
+  watchDraft?: (WatchDraft & { key: number }) | null;
 }
 
 export function WatchesSection({
@@ -18,6 +21,7 @@ export function WatchesSection({
   setShowWatches,
   unwatchProperty,
   handleAddWatch,
+  watchDraft,
 }: WatchesSectionProps) {
   return (
     <div>
@@ -74,7 +78,12 @@ export function WatchesSection({
           )}
 
           {/* Add watch form */}
-          <PropertyWatchForm onAdd={handleAddWatch} />
+          <PropertyWatchForm
+            key={watchDraft?.key ?? 0}
+            onAdd={handleAddWatch}
+            initialObjectPath={watchDraft?.objectPath}
+            focusProperty={!!watchDraft}
+          />
         </div>
       )}
     </div>

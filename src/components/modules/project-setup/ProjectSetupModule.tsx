@@ -15,6 +15,7 @@ import { ToolingBootstrapPanel } from './ToolingBootstrapPanel';
 import { ManifestPreview } from './ManifestPreview';
 import { BlueprintInspector } from './BlueprintInspector';
 import { UE5ConnectionPanel } from './UE5ConnectionPanel';
+import { LiveStateSyncPanel } from './LiveStateSyncPanel';
 import { ProjectNBACard } from '@/components/modules/shared/ProjectNBACard';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
@@ -179,6 +180,17 @@ export function ProjectSetupModule() {
             offline. Not dimmed by `dimUnless` either — it reports live truth
             rather than proposing a step. */}
         <UE5ConnectionPanel />
+
+        {/* Live State Sync — the editor's real-time channel (selection,
+            viewport, PIE, property watches over ws://…/pof/live), beside the
+            connection it depends on. Mounting only subscribes to the client
+            singleton: nothing connects until the user clicks Connect. Not
+            dimmed — like the connection card it reports live truth. */}
+        {hasProject && (
+          <div className="mb-6">
+            <LiveStateSyncPanel />
+          </div>
+        )}
 
         {/* Create Project */}
         {!hasProject && projectPath.trim() && (

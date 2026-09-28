@@ -1,15 +1,26 @@
 import { ChevronDown, ChevronRight, MapPin } from 'lucide-react';
 import { STATUS_NEUTRAL, ACCENT_PINK, OPACITY_15 } from '@/lib/chart-colors';
-import type { UE5EditorSnapshot } from '@/types/ue5-bridge';
+import type { SelectedActor, UE5EditorSnapshot } from '@/types/ue5-bridge';
 import { ActorRow } from './ActorRow';
+import { watchDraftFromActor } from './selectionWatch';
 
 interface SelectionSectionProps {
   snapshot: UE5EditorSnapshot;
   showSelection: boolean;
   setShowSelection: (v: boolean) => void;
+  /** Active watch count per object path. */
+  watchCounts?: Record<string, number>;
+  /** Start a property watch on a selected actor (only offered when it has a path). */
+  onWatchActor?: (actor: SelectedActor) => void;
 }
 
-export function SelectionSection({ snapshot, showSelection, setShowSelection }: SelectionSectionProps) {
+export function SelectionSection({
+  snapshot,
+  showSelection,
+  setShowSelection,
+  watchCounts,
+  onWatchActor,
+}: SelectionSectionProps) {
   return (
     <div>
       <button
@@ -41,7 +52,12 @@ export function SelectionSection({ snapshot, showSelection, setShowSelection }: 
           ) : (
             <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
               {snapshot.selectedActors.map((actor, i) => (
-                <ActorRow key={actor.path || i} actor={actor} />
+                <ActorRow
+                  key={actor.path || i}
+                  actor={actor}
+                  watchCount={watchCounts?.[actor.path] ?? 0}
+                  onWatch={onWatchActor && watchDraftFromActor(actor) ? () => onWatchActor(actor) : undefined}
+                />
               ))}
             </div>
           )}
