@@ -212,8 +212,19 @@ entity id. `MaterialsView` dispatches it via `useModuleCLI.execute`, never
 to `builder-material-configurator.md`) and
 `__tests__/lib/prompt-evolution/material-configurator-rail.test.ts`.
 
-**Remaining gap: 9 standalone builders still dispatch through raw `sendPrompt`**
-and stay invisible to prompt evolution — `material-patterns`, `post-process`,
+Phase 2 converted **post-process** the same way: `TaskFactory.postProcess(spec)`,
+a verbatim `post-process` handler and `postProcessVariantKey(spec)`. The config
+is the stack's one spec — `toStackSpec(effects, resolution)` in
+`lib/post-process-studio/stack-spec.ts` (live param values, estimator ms at the
+chosen resolution, budget, disabled ids) — so `buildPostProcessPrompt(spec)` is
+the only post-process builder and prints the GPU budget. Both the Recipe Studio
+and the Materials Post-Process tab dispatch it via `useModuleCLI.execute`; the
+old server-side builder (`POST /api/post-process-studio`) is retired (400, GET
+presets stays). Pinned by `task-post-process.md` (byte-identical to
+`builder-post-process.md`) and `prompt-evolution/post-process-rail.test.ts`.
+
+**Remaining gap: 8 standalone builders still dispatch through raw `sendPrompt`**
+and stay invisible to prompt evolution — `material-patterns`,
 `style-transfer` (`MaterialsView`), `audio-scene`, `audio-events`
 (`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `level-design`
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
