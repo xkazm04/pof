@@ -351,6 +351,17 @@ breakdown (`buildLiveTagAuditCategories`), never the static
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.
 
+**Batch feature review is scoped.** `POST /api/feature-matrix/batch-review` (body typed as
+`BatchReviewStartRequest` in `src/types/batch-review.ts`) runs `featureReview` tasks one
+module at a time; an optional `moduleIds` subset limits the batch (validated by
+`resolveBatchModules` in `src/lib/evaluator/stale-review-plan.ts` — an unknown id is a 400
+naming it, nothing starts), omitted = every module with definitions. The one client is
+`useBatchReview` (poll / start / abort / clear, `onSettled` once per running -> finished):
+the Scanner tab's `BatchReviewPanel` starts all modules, the Quality tab's
+`AggregateQualityDashboard` starts only its stale set (`selectStaleModuleIds`) or one
+selected module, badges each heatmap cell from `cellReviewState`, and refetches its
+roll-up when the batch settles.
+
 #### `buildTaskPrompt(task, ctx)` (`cli-task.ts:384`)
 
 The single code path for all prompt assembly — a switch on `task.type`:
