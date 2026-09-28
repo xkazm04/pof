@@ -43,6 +43,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
     exportPlanSummary,
     spawnPlacementSummary,
     preview,
+    spec,
     selectLevelType,
     toggleConstraint,
     updateSize,
@@ -90,7 +91,15 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
       <ConstraintsPanel constraints={constraints} toggleConstraint={toggleConstraint} />
 
       {/* ─── Live Preview ─── */}
-      <LivePreview preview={preview} seed={seed} algDef={algDef} />
+      <LivePreview
+        preview={preview}
+        seed={seed}
+        algDef={algDef}
+        spec={spec}
+        setSeed={setSeed}
+        updateSize={updateSize}
+        toggleConstraint={toggleConstraint}
+      />
 
       {/* ─── Generate ─── */}
       <GenerateActions
