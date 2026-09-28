@@ -444,3 +444,35 @@ buildStepProducePrompt(spec, entity, direction, { catalogId, rules, evidence, li
 - Test: `src/__tests__/api/one-shot/step-prompt.test.ts` pins the DISPATCHED string —
   contract, canon, evidence, license — and asserts it is byte-identical to what the shared
   builder produces from the same inputs.
+
+## 9. A stub written for another entity is a TEMPLATE, not a pass (2026-09-28)
+
+Most step `produce` bodies never read `entity.data` (31 of 33 pipeline files): they are the catalog
+exemplar's authored content with `e.name` swapped in — Captain Vael's stats, abilities and dialog
+binding for every character, Fireball's numbers for every spell. Written for the exemplar that IS its
+content; persisted for any other entity it graded `pass` while holding someone else's design, and then
+steered every later live produce through the sibling section ("stay consistent with them").
+
+- **Stamp (observed, not declared)** — `stampTemplate(catalogId, spec, entity, out, direction)`
+  (`src/lib/catalog/produceTemplate.ts`) adds `data.template = { exemplar, entity }` when the entity is
+  not its catalog's exemplar AND the body is data-blind: re-run with `data` blanked it returns a
+  byte-identical output (a throw counts as reading the entity). The exemplar is the first
+  `CATALOG_SECTIONS` seed (`exemplarIdFor`) — the entity the lab opens and the Rule 5 walker produces —
+  so the walker's stub pass is unchanged. No catalog id, or a catalog with no seed → never stamped.
+- **Write sites** — the one-shot deterministic branch (`POST /api/one-shot/step`, stamp is part of the
+  GRADED data) and the lab's stub Produce (`ArchetypeStep.dispatchProduce`). Live/CLI produce and
+  galleries are never stamped; a later live produce replaces the row's data and clears the stamp.
+  Not yet covered: the bespoke Items step frames (`useStaticStep` / `populateItemDemo`).
+- **Guard** — `templateGuard` (`acceptance/template.ts`) is composed with `sourcedGuard` at
+  `registerCatalogPipeline`, so every grading path reads it: a stamped would-be `pass` is held at
+  `pending` with a greppable `TEMPLATE: <exemplar> template, not produced for this entity (<id>)`
+  reason; a `fail` stays `fail` (the SOURCED pattern). One-shot reports that `pending` as outcome `fail`.
+- **Prompt** — `siblingStepsBlock` strips `template` (a `BOOKKEEPING_KEYS` entry) and labels such a
+  sibling `(<exemplar> template, not this entity's content — do not copy it)`.
+- **Hash** — `template` is deliberately NOT in `NON_CONTENT_KEYS` (`src/lib/judge/payload.ts`): changing
+  that set changes `VOLATILE_KEYS` and forces a `CONTENT_HASH_SCHEME` bump that would switch off stale
+  detection for every standing verdict. The stamp therefore counts as content for hashing, which only
+  makes a stub→live re-produce read as changed content (true).
+- The spec linter's content-read probe exempts `TEMPLATE_FIELD` exactly as it exempts `SOURCED_FIELD`.
+- Tests: `src/__tests__/catalog/acceptance/template-guard.test.ts`,
+  `src/__tests__/catalog/produce-template.test.ts`, `src/__tests__/api/one-shot/step-template.test.ts`.
