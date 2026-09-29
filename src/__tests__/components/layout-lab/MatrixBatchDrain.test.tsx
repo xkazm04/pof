@@ -61,17 +61,17 @@ describe('MatrixBatchDrain — summary is dismissible', () => {
   });
 
   /**
-   * …but the SIBLING disk-truth pass stays reachable. A catalog with nothing left to drain
-   * is exactly the state after a generation campaign, which is when the icon bind is needed —
-   * hiding it there is what kept it a hand-run curl.
+   * …but the SIBLING disk-truth passes stay reachable. A catalog with nothing left to drain
+   * is exactly the state after a generation campaign, which is when the settle is needed —
+   * hiding it there is what kept it a hand-run curl. It is scoped to the drain's own catalog.
    */
-  it('keeps the icon-bind affordance reachable when there is nothing to drain', () => {
+  it('keeps the catalog settle affordance reachable when there is nothing to drain', () => {
     render(
-      <MatrixBatchDrain t={LIGHT} deferredEntities={[]} state={idleState(null, 0)}
+      <MatrixBatchDrain t={LIGHT} deferredEntities={[]} state={{ ...idleState(null, 0), catalogId: 'bestiary' }}
         onStart={vi.fn()} onCancel={vi.fn()} onDismiss={vi.fn()} />,
     );
-    expect(screen.queryByTestId('bind-icons-run')).not.toBeNull();
-    expect(screen.queryByTestId('bind-icons-needs')).not.toBeNull();
+    expect(screen.queryByTestId('settle-preview')).not.toBeNull();
+    expect(screen.getByTestId('settle-needs').textContent).toContain('bestiary');
   });
 });
 

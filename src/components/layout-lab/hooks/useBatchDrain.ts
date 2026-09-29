@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { invalidateArtifacts } from '../labArtifactCache';
 import { drainCatalogGates } from '../labArtifactClient';
@@ -39,6 +39,10 @@ export interface BatchDrainState {
   summary: BatchDrainSummary | null;
   /** Total entities queued this run. */
   total: number;
+  /** The catalog this drain is scoped to — so the sibling settle panel (MatrixSettle) scopes to
+   *  it too without the matrix threading it twice. The hook always sets it; optional so a
+   *  hand-built state (tests) needs no change. */
+  catalogId?: string;
 }
 
 const IDLE: BatchDrainState = { running: false, cancelRequested: false, cancelEffect: null, activeEntityIds: new Set(), doneEntityIds: new Set(), summary: null, total: 0 };
@@ -161,5 +165,6 @@ export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEO
    *  Ignored while a batch is in flight — you can't dismiss a live run's counters. */
   const reset = useCallback(() => { if (!runningRef.current) setState(IDLE); }, []);
 
-  return { state, start, cancel, reset };
+  const scoped = useMemo(() => ({ ...state, catalogId }), [state, catalogId]);
+  return { state: scoped, start, cancel, reset };
 }

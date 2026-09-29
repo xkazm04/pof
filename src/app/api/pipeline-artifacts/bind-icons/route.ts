@@ -1,11 +1,7 @@
 import { NextRequest } from 'next/server';
-import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { bindIconsAll, type BindIconsFilter, type BindIconsDeps } from '@/lib/catalog/acceptance/bindIconsAll';
-import { buildIconList, resolveIconFor, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
-import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
-import { gradeArtifact } from '@/lib/catalog/headless';
+import { bindIconsAll, type BindIconsFilter } from '@/lib/catalog/acceptance/bindIconsAll';
+import { listIconLibrary, makeBindIconsDeps } from '@/lib/catalog/acceptance/bindIconsDeps';
 import '@/lib/catalog/pipelines/registry.generated';
 
 /**
@@ -21,61 +17,10 @@ import '@/lib/catalog/pipelines/registry.generated';
  * — `iconSlug(catalogId, step, entityId)` for the entity's own art, `iconSlug(catalogId,
  * step)` for the per-step fallback — an artifact with no generation history is skipped, and
  * the bind is disclosed in the artifact data (`iconBinding`) with the scope that served it.
+ *
+ * The library reader and the db wiring live in `bindIconsDeps.ts`, shared with the catalog
+ * re-settle (`/api/pipeline-artifacts/settle`), which runs this pass for one catalog.
  */
-function listLibrary(): GeneratedIcon[] {
-  const dir = join(process.cwd(), 'generated', 'icons');
-  let files: string[];
-  try {
-    files = readdirSync(dir);
-  } catch {
-    return []; // no library → nothing to bind, not an error
-  }
-  const stated = files.flatMap((name) => {
-    try {
-      const s = statSync(join(dir, name));
-      return s.isFile() ? [{ name, mtimeMs: s.mtimeMs }] : [];
-    } catch {
-      return [];
-    }
-  });
-  return buildIconList(stated);
-}
-
-function makeDeps(icons: GeneratedIcon[]): BindIconsDeps {
-  return {
-    listArtifacts: (filter) =>
-      listAllArtifacts(filter).map((a) => ({
-        catalogId: a.catalogId,
-        entityId: a.entityId,
-        step: a.step,
-        status: a.status,
-        data: a.data ?? {},
-      })),
-    // The library's own precedence — the entity's icon first, the per-step icon as the
-    // fallback (`resolveIconFor` picks the newest of whichever scope answered).
-    iconFor: (catalogId, step, entityId) => {
-      const hit = resolveIconFor(icons, catalogId, step, entityId);
-      return hit ? { url: hit.url, scope: hit.scope } : null;
-    },
-    grade: (catalogId, step, data, entityId) => {
-      const { graded, raw } = gradeArtifact(catalogId, step, data, entityId);
-      return graded ? raw : null;
-    },
-    save: (catalogId, entityId, step, data, res) => {
-      const existing = getArtifact(catalogId, entityId, step);
-      upsertArtifact({
-        catalogId, entityId, step,
-        data,
-        ueAssets: existing?.ueAssets ?? [],
-        status: res.status,
-        tier: res.tier,
-        ...(res.reason ? { reason: res.reason } : res.detail ? { reason: res.detail } : {}),
-      });
-    },
-    now: () => new Date().toISOString(),
-  };
-}
-
 function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undefined): BindIconsFilter {
   const catalogId = get('catalogId');
   const entityId = get('entityId');
@@ -85,9 +30,9 @@ function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undef
 /** GET — dry-run preview: what WOULD be bound and how each verdict would move. No writes. */
 export async function GET(req: NextRequest) {
   try {
-    const icons = listLibrary();
+    const icons = listIconLibrary();
     const sp = req.nextUrl.searchParams;
-    return apiSuccess(bindIconsAll(parseFilter((k) => sp.get(k)), makeDeps(icons), { apply: false, library: icons.length }));
+    return apiSuccess(bindIconsAll(parseFilter((k) => sp.get(k)), makeBindIconsDeps(icons), { apply: false, library: icons.length }));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'bind-icons GET failed', 500);
   }
@@ -97,9 +42,9 @@ export async function GET(req: NextRequest) {
  *  that already carries a real asset is skipped as `already-real`). */
 export async function POST(req: NextRequest) {
   try {
-    const icons = listLibrary();
+    const icons = listIconLibrary();
     const body = (await req.json().catch(() => ({}))) as { catalogId?: string; entityId?: string };
-    return apiSuccess(bindIconsAll(parseFilter((k) => body[k]), makeDeps(icons), { apply: true, library: icons.length }));
+    return apiSuccess(bindIconsAll(parseFilter((k) => body[k]), makeBindIconsDeps(icons), { apply: true, library: icons.length }));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'bind-icons POST failed', 500);
   }
