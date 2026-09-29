@@ -53,7 +53,8 @@ type PainterWrites =
 
 export type AudioScenePainterProps = PainterBaseProps & PainterWrites;
 
-export type PaintMode = 'select' | 'zone-rect' | 'zone-circle' | 'emitter';
+/** `listen`: place/drag the audition listener (the painter's only read-only tool). */
+export type PaintMode = 'select' | 'zone-rect' | 'zone-circle' | 'emitter' | 'listen';
 
 export interface DrawState {
   startX: number;

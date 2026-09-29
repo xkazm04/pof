@@ -8,6 +8,7 @@ import {
 } from '@/lib/audio-scene-viewport';
 import { useElementSize } from '@/hooks/useElementSize';
 import { resolveMembership } from '@/lib/audio-scene-ops';
+import type { ListenerPoint } from '@/lib/audio-scene-audition';
 import { useSceneBuffer } from '@/components/modules/content/audio/AudioView/useSceneBuffer';
 import { MINIMAP_W, MINIMAP_H, ZONE_COLORS } from './constants';
 import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
@@ -36,6 +37,9 @@ export function useAudioScenePainter({
   const [dragState, setDragState] = useState<{ id: string; type: 'zone' | 'emitter'; offsetX: number; offsetY: number } | null>(null);
   const [drawState, setDrawState] = useState<DrawState | null>(null);
   const [resizeState, setResizeState] = useState<{ zoneId: string; handle: string; startX: number; startY: number; origW: number; origH: number } | null>(null);
+  // LISTEN mode: the audition listener is component state only — never persisted.
+  const [listener, setListener] = useState<ListenerPoint | null>(null);
+  const listenerDrag = useRef(false);
 
   // ── Optimistic commit buffer ──
   // A drag/resize used to call `onUpdateZones` on EVERY mousemove: one PUT + one
@@ -114,6 +118,11 @@ export function useAudioScenePainter({
   // ── Zone drawing ──
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    if (paintMode === 'listen') { // anywhere on the canvas, over zones and emitters too
+      setListener(getSVGPoint(e));
+      listenerDrag.current = true;
+      return;
+    }
     const target = e.target as SVGElement;
     if (target !== svgRef.current && target.tagName !== 'rect') {
       return;
@@ -166,6 +175,10 @@ export function useAudioScenePainter({
   }, [paintMode, getSVGPoint, baseScene, runCommit, onSelectEmitter, onSelectZone, view]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (listenerDrag.current) {
+      setListener(getSVGPoint(e));
+      return;
+    }
     if (drawState) {
       const pt = getSVGPoint(e);
       setDrawState({ ...drawState, currentX: pt.x, currentY: pt.y });
@@ -205,6 +218,7 @@ export function useAudioScenePainter({
   }, [drawState, resizeState, isPanning, dragState, getSVGPoint, stageOps]);
 
   const handleMouseUp = useCallback(() => {
+    listenerDrag.current = false;
     if (drawState) {
       const x = Math.min(drawState.startX, drawState.currentX);
       const y = Math.min(drawState.startY, drawState.currentY);
@@ -396,7 +410,7 @@ export function useAudioScenePainter({
     if (isPanning) return 'grabbing';
     if (drawState) return 'crosshair';
     if (paintMode === 'zone-rect' || paintMode === 'zone-circle') return 'crosshair';
-    if (paintMode === 'emitter') return 'crosshair';
+    if (paintMode === 'emitter' || paintMode === 'listen') return 'crosshair';
     return 'grab';
   };
 
@@ -410,6 +424,7 @@ export function useAudioScenePainter({
     showMinimap,
     setShowMinimap,
     drawState,
+    listener,
     /** Scene as the user sees it: the optimistic buffer if one is live, else props. */
     sceneZones,
     sceneEmitters,
