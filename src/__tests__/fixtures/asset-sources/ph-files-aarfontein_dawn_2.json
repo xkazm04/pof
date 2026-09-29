@@ -1,0 +1,72 @@
+{
+ "hdri": {
+  "16k": {
+   "exr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/16k%2B/aarfontein_dawn_2_16k.exr",
+    "size": 1238905266
+   },
+   "hdr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/16k%2B/aarfontein_dawn_2_16k.hdr",
+    "size": 377536173
+   }
+  },
+  "24k": {
+   "exr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/16k%2B/aarfontein_dawn_2_24k.exr",
+    "size": 2808086107
+   },
+   "hdr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/16k%2B/aarfontein_dawn_2_24k.hdr",
+    "size": 833907615
+   }
+  },
+  "1k": {
+   "exr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/aarfontein_dawn_2_1k.exr",
+    "size": 5737577
+   },
+   "hdr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/aarfontein_dawn_2_1k.hdr",
+    "size": 1486826
+   }
+  },
+  "2k": {
+   "exr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/2k/aarfontein_dawn_2_2k.exr",
+    "size": 21448332
+   },
+   "hdr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/aarfontein_dawn_2_2k.hdr",
+    "size": 6156727
+   }
+  },
+  "4k": {
+   "exr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/4k/aarfontein_dawn_2_4k.exr",
+    "size": 82634608
+   },
+   "hdr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/aarfontein_dawn_2_4k.hdr",
+    "size": 25354437
+   }
+  },
+  "8k": {
+   "exr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/8k/aarfontein_dawn_2_8k.exr",
+    "size": 324036704
+   },
+   "hdr": {
+    "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/8k/aarfontein_dawn_2_8k.hdr",
+    "size": 101611743
+   }
+  }
+ },
+ "colorchart": {
+  "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Color%20Charts/aarfontein_dawn_2.zip",
+  "size": 568881669
+ },
+ "tonemapped": {
+  "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/aarfontein_dawn_2.jpg",
+  "size": 23626563
+ }
+}

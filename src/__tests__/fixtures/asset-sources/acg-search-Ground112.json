@@ -1,0 +1,98 @@
+{
+ "foundAssets": [
+  {
+   "assetId": "Ground112",
+   "displayName": "Ground 112",
+   "previewImage": {},
+   "tags": [
+    "112",
+    "ground",
+    "ground112"
+   ],
+   "downloadFolders": {
+    "default": {
+     "title": "default",
+     "downloadFiletypeCategories": {
+      "zip": {
+       "title": "zip",
+       "downloads": [
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_1K-JPG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_1K-JPG.zip",
+         "fileName": "Ground112_1K-JPG.zip",
+         "size": 9765076,
+         "filetype": "zip",
+         "attribute": "1K-JPG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_2K-JPG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_2K-JPG.zip",
+         "fileName": "Ground112_2K-JPG.zip",
+         "size": 32968802,
+         "filetype": "zip",
+         "attribute": "2K-JPG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_4K-JPG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_4K-JPG.zip",
+         "fileName": "Ground112_4K-JPG.zip",
+         "size": 117521144,
+         "filetype": "zip",
+         "attribute": "4K-JPG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_8K-JPG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_8K-JPG.zip",
+         "fileName": "Ground112_8K-JPG.zip",
+         "size": 424298680,
+         "filetype": "zip",
+         "attribute": "8K-JPG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_1K-PNG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_1K-PNG.zip",
+         "fileName": "Ground112_1K-PNG.zip",
+         "size": 20165010,
+         "filetype": "zip",
+         "attribute": "1K-PNG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_2K-PNG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_2K-PNG.zip",
+         "fileName": "Ground112_2K-PNG.zip",
+         "size": 74031868,
+         "filetype": "zip",
+         "attribute": "2K-PNG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_4K-PNG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_4K-PNG.zip",
+         "fileName": "Ground112_4K-PNG.zip",
+         "size": 281813059,
+         "filetype": "zip",
+         "attribute": "4K-PNG",
+         "zipContent": []
+        },
+        {
+         "fullDownloadPath": "https://ambientcg.com/get?file=Ground112_8K-PNG.zip",
+         "downloadLink": "https://ambientcg.com/get?file=Ground112_8K-PNG.zip",
+         "fileName": "Ground112_8K-PNG.zip",
+         "size": 1091386141,
+         "filetype": "zip",
+         "attribute": "8K-PNG",
+         "zipContent": []
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ ]
+}
