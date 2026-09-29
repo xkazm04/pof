@@ -268,6 +268,15 @@ Which 3D providers PoF can actually start is written down ONCE. `RUNNER_PROVIDER
 
 Adding a provider is one tuple id plus one table entry (and its job store) — not edits to the route, the status chain and the flags. Before the table, those were separate copies and TRELLIS.2 was offered as runnable by the forge, then refused by the route.
 
+## Tier-1 mesh gate: one gate request
+
+What a generated mesh is held to is derived ONCE. `gateRequestFor({ assetClass, stage, targetExtentM?, sentBudget? })` (`src/lib/visual-gen/gate-request.ts`, pure) returns `{ deps, gradedAs }`: the class from `resolveAssetClass` (absent / unrecognised is stated in `gradedAs`, never graded class-blind in silence), ceilings from `critiqueThresholdsFor`, size from `targetExtentM ?? nominalExtentFor`, orientation from `expectsUprightFor`, and a budget ONLY when one was actually sent.
+
+- The job-store builders are thin delegates that add only what their producer owns: `localCritiqueDeps` (TripoSR / Hunyuan / remediate: `raw`, no budget), `critiqueDepsForSpec` (Tripo: `raw`, the sent `faceLimit` in quads or triangles), `trellisGateDeps` (`raw`, the sent `decimation_target`), `critiqueDepsForFinish` (`finished`, `targetFaces`). A new producer is one call, not a fifth copy.
+- `CritiqueDeps.orientation` is forwarded by `critiqueMesh` to `scoreMesh`, so a lying character now draws `orientation-lying` on its job verdict, as the asset viewer already showed. It is a WARN (-15) that always carries its reason. Re-roll (`isAcceptable`), finish routing and remediation read fail codes only, so it never buys a paid roll or routes a finish.
+- `MeshFinishJob.gradedAs` is projected by `GET /api/visual-gen/mesh-finish/status`, so a finished mesh says what it was held to.
+- Follow-ups that become one call: the viewer's inline derivation (`asset-viewer/assetGrade.ts`) and the class-blind MCP gate (`blender-mcp/mcp-gate.ts`).
+
 ---
 
 ## Coding conventions
