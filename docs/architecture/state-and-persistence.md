@@ -469,10 +469,23 @@ human-labelled targets in `src/lib/judge/calibration.ts` without writing to `jud
 measuring the judge must not re-grade live content. Runs append to `~/.pof/judge-calibration.jsonl`
 (override with `POF_JUDGE_CALIBRATION_PATH`), and `calibrationDrift()` compares consecutive runs.
 `CALIBRATION_THRESHOLD` is 0.85 and enforcement is scoped to **non-provisional** labels only:
-`unrun` / `stale` / `unscored` / `provisional` are explicit not-proven standings, never a green. As
-shipped, all seeded targets are still `provisional`, so the standing reads UNCALIBRATED with 0
-confirmed targets backing any rate — the module, the harness output and the guard all say so out
-loud rather than implying an enforcement that no label yet supports.
+`unrun` / `stale` / `unscored` / `provisional` / `undersampled` (fewer than
+`CALIBRATION_MIN_CONFIRMED` = 10 confirmed) are explicit not-proven standings, never a green, and
+the guard fails the build only on `enforced-fail`. The seed targets in `CALIBRATION` stay
+`provisional`; a target is confirmed only through the **calibration bench**: the operator labels the
+artifact they are looking at (fail / placeholder / shippable) in the /status Evidence modal
+(`CalibrationLabelBar`), and `POST /api/judge-calibration` stores it in the additive
+`judge_calibration_labels` table (`src/lib/judge/calibration-labels-db.ts`, one row per
+catalog/entity/step) bound through `currentStepBinding` to the artifact's `stepContentHash` and the
+`RUBRIC_VERSION` in force — 400 when no artifact is on record, 409 when the content moved since the
+modal opened. `GET /api/judge-calibration` resolves the measured set with the pure
+`resolveCalibrationTargets` (`src/lib/judge/calibrationLabels.ts`): a label that still binds
+confirms its target, a label whose content or rubric moved is `excluded` with its reason and never
+counted, and `progress` counts confirmed labels by band toward the floor so a lopsided set shows.
+`judge-run --calibrate` reads that route through `calibrationTargetsFromResponse` — no fallback to
+the seed constant. The bar hides the judge's band for a target until a human label exists
+(anti-anchoring). Nothing in acceptance or `statusModel` reads the label table: labels measure the
+judge and never change a grade.
 
 `judge-run` also **plans before it spawns** (`src/lib/judge/fleetPlan.ts`, pure). It fetches the
 catalog's stored verdicts alongside its artifacts and, per (entity, step, judge class), asks
