@@ -16,15 +16,18 @@ import { BANDS } from './rubrics';
  *    (`src/__tests__/lib/judge/calibration.test.ts`) fails the build on `enforced-fail`.
  *  - Enforcement is scoped to NON-provisional targets, because a provisional label is seeded
  *    from prior evidence, not confirmed by a human — agreeing with an unconfirmed guess proves
- *    nothing. Today ALL {@link CALIBRATION} targets are provisional, so the honest standing of
- *    this project is `provisional`: the run reports a rate and the guard reports that ZERO
- *    confirmed labels back it. That is deliberately NOT a green.
+ *    nothing. ALL {@link CALIBRATION} seed targets are provisional; a target is confirmed only by
+ *    a calibration-bench label (`calibrationLabels.ts`) that still binds to the content on
+ *    record and the rubric in force. With no such label the standing is `provisional`, and under
+ *    {@link CALIBRATION_MIN_CONFIRMED} it is `undersampled` — deliberately NOT a green.
  *  - With no persisted run the standing is `unrun` and NOTHING about the judge is proven; a run
  *    scored under an older `RUBRIC_VERSION` is `stale` and likewise proves nothing about the
  *    rubric in force.
  *
- * Workflow: user hand-labels (fail / placeholder / shippable) and clears `provisional` →
- * `judge-run.ts --calibrate` scores those exact targets at the policy judge model (metered like
+ * Workflow: the operator labels the artifact they are looking at (fail / placeholder / shippable)
+ * in the /status Evidence modal → POST /api/judge-calibration binds the label to that content's
+ * `stepContentHash` and `RUBRIC_VERSION` (clearing `provisional` is that explicit act, never a
+ * source edit) → `judge-run.ts --calibrate` reads GET /api/judge-calibration and scores those exact targets at the policy judge model (metered like
  * any other draw, and recording NOTHING to `judge_verdicts` — calibration is measurement) → the
  * run is appended to {@link calibrationHistoryPath} → `computeAgreement` compares and
  * `evaluateCalibration` decides the standing. Re-run whenever `RUBRIC_VERSION` changes.
@@ -85,8 +88,9 @@ export function bandOf(score: number): Band {
 
 /**
  * Provisional seed — a handful of targets with strong prior evidence (documented honest
- * fails/passes from the gap-loop audit). The user must CONFIRM these (drop `provisional`) and
- * expand to ~20 spanning the map before the calibration is authoritative.
+ * fails/passes from the gap-loop audit). Never edited to confirm a label: confirmation is a
+ * content-bound calibration-bench label (`calibrationLabels.ts`), which replaces the seed at the
+ * same key. Expand to ~20 spanning the map before the calibration is authoritative.
  */
 export const CALIBRATION: CalibrationTarget[] = [
   { catalogId: 'characters', entityId: 'character-1', step: '3D Mesh', label: 'fail', provisional: true, note: 'Qwen already flagged the 3D face at 6/10 — a known hard fail.' },
@@ -265,7 +269,7 @@ export function evaluateCalibration(run: CalibrationRun | null | undefined, rubr
       scored: run.overall.scored,
       threshold: CALIBRATION_THRESHOLD,
       belowThreshold: belowOverall,
-      message: `PROVISIONAL — ${pct(run.overall.rate)} agreement over ${run.overall.scored} target(s), but 0 of them carry a confirmed human label, so nothing enforces the ${pct(CALIBRATION_THRESHOLD)} threshold${belowOverall ? ' (and the provisional rate is already under it)' : ''}. Confirm the labels in CALIBRATION (drop provisional) to make this binding.`,
+      message: `PROVISIONAL — ${pct(run.overall.rate)} agreement over ${run.overall.scored} target(s), but 0 of them carry a confirmed human label, so nothing enforces the ${pct(CALIBRATION_THRESHOLD)} threshold${belowOverall ? ' (and the provisional rate is already under it)' : ''}. Label artifacts in the /status Evidence modal (calibration bench) to make this binding.`,
     };
   }
   const below = run.confirmed.rate < CALIBRATION_THRESHOLD;
@@ -284,7 +288,7 @@ export function evaluateCalibration(run: CalibrationRun | null | undefined, rubr
       scored: run.overall.scored,
       threshold: CALIBRATION_THRESHOLD,
       belowThreshold: below,
-      message: `UNDERSAMPLED — ${pct(run.confirmed.rate)} agreement over ${run.confirmed.scored} confirmed target(s), below the ${CALIBRATION_MIN_CONFIRMED} needed to enforce the ${pct(CALIBRATION_THRESHOLD)} threshold: one disagreement here moves the rate by ${swing.toFixed(0)}pp, so neither a pass nor a fail is measurable${below ? ' (the rate is already under it)' : ''}. Confirm more labels in CALIBRATION (~20 spanning the map).`,
+      message: `UNDERSAMPLED — ${pct(run.confirmed.rate)} agreement over ${run.confirmed.scored} confirmed target(s), below the ${CALIBRATION_MIN_CONFIRMED} needed to enforce the ${pct(CALIBRATION_THRESHOLD)} threshold: one disagreement here moves the rate by ${swing.toFixed(0)}pp, so neither a pass nor a fail is measurable${below ? ' (the rate is already under it)' : ''}. Label more artifacts in the /status Evidence modal (~20 spanning the map and all three bands).`,
     };
   }
 

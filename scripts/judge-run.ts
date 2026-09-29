@@ -24,12 +24,16 @@
  *   npx tsx scripts/judge-run.ts --all --concurrency 4           # bounded pool (default 4)
  *   npx tsx scripts/judge-run.ts --calibrate [--dry]             # anti-drift: score the labelled set
  *
- * CALIBRATE: `--calibrate` scores the hand-labelled `src/lib/judge/calibration.ts` targets with
- * the same prompt/median/spend machinery as a fleet sweep and reports per-target agreement plus
+ * CALIBRATE: `--calibrate` scores the calibration set served by GET /api/judge-calibration
+ * (human labels given in the /status Evidence modal, each bound to the content hash and rubric
+ * version it was given against, plus the remaining provisional seeds in
+ * `src/lib/judge/calibration.ts`; labels whose content or rubric moved are listed as EXCLUDED and
+ * never counted) with the same prompt/median/spend machinery as a fleet sweep and reports per-target agreement plus
  * the aggregate rate, then APPENDS the run to `~/.pof/judge-calibration.jsonl` so drift between
  * runs is comparable. It writes NOTHING to `judge_verdicts` — measuring the judge must not
- * re-grade live content as a side effect. Enforcement is scoped to NON-provisional targets (all
- * three seeds are provisional today, so the honest standing is PROVISIONAL, not a green); exit
+ * re-grade live content as a side effect. Enforcement is scoped to NON-provisional targets (the
+ * seeds are provisional; only a bench label confirms a target, and under 10 confirmed the standing
+ * is UNDERSAMPLED, not a green); exit
  * code 4 means the measured rate is under `CALIBRATION_THRESHOLD`. `--dry` plans it for free.
  *
  * SKIP: a step whose stored verdict is BOUND to the content on record (same `stepContentHash`
@@ -97,13 +101,13 @@ import {
   buildCalibrationRun,
   calibrationDrift,
   calibrationKey,
-  CALIBRATION,
   CALIBRATION_THRESHOLD,
   evaluateCalibration,
   latestCalibrationRun,
   readCalibrationHistory,
   type CalibrationTarget,
 } from '../src/lib/judge/calibration';
+import { calibrationTargetsFromResponse } from '../src/lib/judge/calibrationLabels';
 import { getStepFact, isSyntheticEntity } from '../src/lib/status/statusModel';
 import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
@@ -132,7 +136,7 @@ const REJUDGE = has('rejudge');
 const NO_NESTED = has('no-nested');
 /** In-flight judge spawns. Bounded — each worker holds a real Claude CLI process. */
 const CONCURRENCY = Math.max(1, Number(arg('concurrency') ?? DEFAULT_JUDGE_CONCURRENCY));
-/** Anti-drift mode: score the hand-labelled CALIBRATION set and report agreement. */
+/** Anti-drift mode: score the calibration bench's set (GET /api/judge-calibration) and report agreement. */
 const CALIBRATE = has('calibrate');
 
 type Artifact = { entityId: string; step: string; status: string; data: Record<string, unknown> };
@@ -415,7 +419,12 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
 
 // ── Calibration (--calibrate) ────────────────────────────────────────────────
 /**
- * Score the hand-labelled `CALIBRATION` targets and report how far the judge sits from the human.
+ * Score the calibration bench's targets and report how far the judge sits from the human.
+ *
+ * The set comes from GET /api/judge-calibration through `calibrationTargetsFromResponse` — the
+ * confirmed, content-bound store labels plus the remaining provisional seeds. There is NO fallback
+ * to the seed constant: a run that could not read the confirmed labels would silently measure
+ * against none of them, so an unreachable or malformed read stops the run (exit 1).
  *
  * This is the mode the calibration module's threshold claim rests on: without it, `CALIBRATION`
  * and `computeAgreement` had ZERO consumers and the documented "guard test enforces 85%" was a
@@ -434,15 +443,28 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
 async function calibrate(tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }): Promise<number> {
   const scores: Record<string, number> = {};
   const unscored: Record<string, string> = {};
+  let body: unknown;
+  try {
+    body = await (await fetch(`${ORIGIN}/api/judge-calibration`)).json();
+  } catch (e) {
+    console.error(`calibrate: calibration labels unreachable at ${ORIGIN} (${e instanceof Error ? e.message : String(e)}) — is the dev server running?`);
+    return 1;
+  }
+  const loaded = calibrationTargetsFromResponse(body);
+  if (!loaded.ok) { console.error(`calibrate: ${loaded.error}`); return 1; }
+  const calTargets = loaded.data.targets;
   const byCatalog = new Map<string, CalibrationTarget[]>();
-  for (const t of CALIBRATION) byCatalog.set(t.catalogId, [...(byCatalog.get(t.catalogId) ?? []), t]);
-  const confirmed = CALIBRATION.filter((t) => !t.provisional).length;
+  for (const t of calTargets) byCatalog.set(t.catalogId, [...(byCatalog.get(t.catalogId) ?? []), t]);
+  const confirmed = calTargets.filter((t) => !t.provisional).length;
 
   console.log(
-    `calibrate: ${CALIBRATION.length} target(s), ${confirmed} with a CONFIRMED human label ` +
-    `(${CALIBRATION.length - confirmed} provisional), threshold ${(CALIBRATION_THRESHOLD * 100).toFixed(0)}%, ` +
+    `calibrate: ${calTargets.length} target(s), ${confirmed} with a CONFIRMED human label ` +
+    `(${calTargets.length - confirmed} provisional), threshold ${(CALIBRATION_THRESHOLD * 100).toFixed(0)}%, ` +
     `median-of-${MEDIAN} — verdicts are NOT recorded (measurement only)`,
   );
+  for (const x of loaded.data.excluded) {
+    console.log(`  EXCLUDED ${x.key} — human ${x.label}: ${x.reason} (not counted; re-label it in the /status Evidence modal)`);
+  }
 
   for (const [catalogId, targets] of byCatalog) {
     // An unreachable catalog is reported AS unreachable, never as "no stored artifact" — a
@@ -483,7 +505,7 @@ async function calibrate(tmpDir: string, policy: { cliModel: string; effort: str
 
   const prev = latestCalibrationRun();
   const run = buildCalibrationRun({
-    targets: CALIBRATION, scores, unscored,
+    targets: calTargets, scores, unscored,
     rubricVersion: RUBRIC_VERSION, model: policy.modelId, effort: policy.effort,
     spend: { costUsd: spend.costUsd, spawns: spend.spawns, unknownCost: spend.unknownCost },
   });
