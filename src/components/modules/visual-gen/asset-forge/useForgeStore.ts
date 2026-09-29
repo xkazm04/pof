@@ -8,7 +8,8 @@ import type {
   JobStatusResult,
   ImportedObject,
 } from '@/lib/blender-mcp/types';
-import type { ForgeCritique, ForgeGateProjection, ForgeStatusResponse } from './forgeJobStatus';
+import type { ForgeCritique, ForgeFinishState, ForgeGateProjection, ForgeStatusResponse } from './forgeJobStatus';
+import type { DeliveryRemedy } from '@/lib/visual-gen/delivery-remedy';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider, getProviderById, providerExecution } from '@/lib/visual-gen/providers';
 
@@ -75,6 +76,10 @@ export interface GenerationJob {
    * before any provider call, and the reason lands on `error`.
    */
   inputGateNote?: string;
+  /** The delivery's next step, as the status poll projected it (see `remedyFor`). */
+  remedy?: DeliveryRemedy;
+  /** Where the $0 local finish this card offered stands — set only by `finishJob`. */
+  finish?: ForgeFinishState;
 }
 
 interface ForgeState {
@@ -124,6 +129,11 @@ interface ForgeState {
    *  may well have finished. Unlike `retryJob`, this never pays for a new generation.
    *  No-op for a job `mcpReattachable` refuses. */
   reattachJob: (id: string) => void;
+  /** Explicit operator click on a `remedy.kind === 'finish'` card: POST the EXISTING $0
+   *  critique -> mesh-finish route (basename + dir, never a path), then poll its status on
+   *  the same tracked-poller rail as a generation. Never calls a generation route — the
+   *  only paid path stays `retryJob`, which still runs on `failed` jobs only. */
+  finishJob: (id: string) => Promise<void>;
   /** Runner-backed generation: POST to /api/visual-gen/generate, then poll /status.
    *  Serves BOTH modes — image-to-3d (TripoSR / Hunyuan3D / Tripo3D, `imageDataUrl`)
    *  and text-to-3d (Tripo3D, `prompt`). The prompt used to be dropped here, which
@@ -349,6 +359,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         error: 'Tracking stopped by operator — the remote generation may still be running.',
         completedAt: Date.now(),
       });
+    } else if (job?.finish?.state === 'running') {
+      // A stopped FINISH poll: the delivered mesh is untouched, the Blender run may not be.
+      get().updateJob(id, {
+        finish: { state: 'failed', error: 'Tracking stopped by operator — the Blender finish may still be running.' },
+      });
     }
   },
 
@@ -458,6 +473,37 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     trackMcpJob(id, job.mcpJobId!, mcpProvider);
   },
 
+  finishJob: async (id) => {
+    const job = get().jobs.find((j) => j.id === id);
+    if (!job || job.status !== 'completed' || job.remedy?.kind !== 'finish') return;
+    // One finish at a time per card, and never on top of a live poll.
+    if (job.finish?.state === 'running' || pollingIntervals.has(id)) return;
+    const { name, dir } = job.remedy;
+    get().updateJob(id, { finish: { state: 'running' } });
+
+    const res = await tryApiFetch<{ routed?: boolean; jobId?: string; reason?: string; note?: string }>(
+      '/api/visual-gen/mesh-finish/remediate',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, dir, assetClass: job.assetClass }),
+      },
+    );
+    // The card was removed while the POST was in flight: nothing is left to report to,
+    // so no orphan poll is started (the routed run itself is local and $0).
+    if (!get().jobs.some((j) => j.id === id)) return;
+    if (!res.ok) {
+      get().updateJob(id, { finish: { state: 'failed', error: res.error } });
+      return;
+    }
+    if (!res.data.routed || !res.data.jobId) {
+      get().updateJob(id, { finish: { state: 'refused', reason: res.data.reason ?? 'the finish route declined without a reason' } });
+      return;
+    }
+    get().updateJob(id, { finish: { state: 'running', note: res.data.note } });
+    trackFinishJob(id, res.data.jobId);
+  },
+
   submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
     const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass });
 
@@ -538,7 +584,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       pollFailures = 0;
       const {
         status, meshPath, error, critique, fidelity,
-        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl,
+        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl, remedy,
       } = res.data;
       if (status === 'done') {
         stop();
@@ -548,7 +594,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         // a gate rejected from one nothing ever measured.
         get().updateJob(localId, {
           status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
-          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl,
+          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy,
           // Refreshed from the store's own record; falls back to the 202's sentence
           // rather than blanking a line the operator has already read.
           ...(polledGradedAs !== undefined ? { gradedAs: polledGradedAs } : {}),
@@ -710,6 +756,76 @@ function trackMcpJob(localId: string, mcpJobId: string, mcpProvider: McpProvider
 
     // Still processing — update progress, then schedule the next poll.
     get().updateJob(localId, { progress });
+    scheduleNext();
+  }
+
+  trackPoller(localId, stop);
+  scheduleNext();
+}
+
+/** What GET /api/visual-gen/mesh-finish/status returns (the fields the card reads). */
+interface FinishStatusView {
+  status?: string;
+  meshPath?: string;
+  error?: string;
+  remediation?: { improved?: boolean; summary?: string };
+}
+
+/**
+ * The poll loop for ONE routed mesh-finish job, bound to the queue card that asked for it.
+ * Same termination guarantees as a generation poll (terminal status, consecutive misses,
+ * `FORGE_POLL_MAX_DURATION_MS`, operator stop), registered under the card's id so the
+ * queue's "Stop tracking" reaches it. It only ever GETs the finish status.
+ */
+function trackFinishJob(localId: string, finishJobId: string): void {
+  const get = useForgeStore.getState;
+  const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+  let pollFailures = 0;
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const pollStartedAt = Date.now();
+  const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
+  const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
+  const end = (finish: ForgeFinishState) => {
+    stop();
+    untrackPoller(localId);
+    get().updateJob(localId, { finish });
+  };
+
+  async function tick() {
+    timer = null;
+    if (stopped) return;
+    if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
+      end({ state: 'failed', error: `Gave up tracking the finish after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status.` });
+      return;
+    }
+    const res = await tryApiFetch<FinishStatusView>(
+      `/api/visual-gen/mesh-finish/status?jobId=${encodeURIComponent(finishJobId)}`,
+    );
+    if (stopped) return;
+    if (!res.ok) {
+      pollFailures++;
+      if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) { scheduleNext(); return; }
+      end({ state: 'failed', error: `Finish status polling failed ${pollFailures} times in a row: ${res.error}` });
+      return;
+    }
+    pollFailures = 0;
+    const { status, meshPath, error, remediation } = res.data;
+    if (status === 'done') {
+      end({
+        state: 'done',
+        // The strict before -> after line; absent only if the job was not routed, which
+        // this path never starts — so its absence is stated, not papered over.
+        summary: remediation?.summary ?? 'finished, but no before -> after re-grade was reported',
+        improved: remediation?.improved === true,
+        meshPath,
+      });
+      return;
+    }
+    if (status === 'error') {
+      end({ state: 'failed', error: error ?? 'the Blender finish failed' });
+      return;
+    }
     scheduleNext();
   }
 

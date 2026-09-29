@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { resolveRunnerJob } from '@/lib/visual-gen/runner-dispatch';
 import { projectCritique } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+import { remedyFor } from '@/lib/visual-gen/delivery-remedy';
 
 /**
  * GET /api/visual-gen/generate/status?jobId=...
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     // gate ran on and rejected, and the class budget in force was invisible.
     const gate = job as unknown as {
       attempts?: number; accepted?: boolean; ungated?: boolean; gateReason?: string; gradedAs?: string;
-      requestedFaceLimit?: number;
+      requestedFaceLimit?: number; spec?: { assetClass?: string };
     };
     return apiSuccess({
       status: job.status,
@@ -72,6 +73,12 @@ export async function GET(req: NextRequest) {
       // The face budget actually SENT to the generator (TRELLIS.2's native
       // `decimation_target`); absent for providers that take no budget input.
       requestedFaceLimit: gate.requestedFaceLimit,
+      // The delivery's next step ($0 finish / paid reroll / none, with why), derived HERE
+      // from the store-side findings the projected critique deliberately drops. Only a
+      // delivered mesh has one; it never changes `accepted`.
+      remedy: job.status === 'done'
+        ? remedyFor({ critique: job.critique, assetClass: gate.spec?.assetClass, meshPath: r?.meshPath })
+        : undefined,
       error: job.error,
     });
   } catch (e) {

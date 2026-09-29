@@ -10,6 +10,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import { useForgeStore, mcpReattachable, type GenerationJob } from './useForgeStore';
 import { jobOutcome, meshPreview, type ForgeOutcome } from './forgeJobStatus';
 import { CritiqueBadge } from './CritiqueBadge';
+import { FinishRemedy } from './FinishRemedy';
 
 /**
  * Card presentation per OUTCOME, not per transport status. `rejected` is the row
@@ -187,6 +188,9 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
           </div>
         )}
         {job.critique && <CritiqueBadge critique={job.critique} fidelity={job.fidelity} />}
+        {/* The verdict's next step: a $0 finish button, a paid-reroll note (never a new
+            paid button), or why no remedy applies. Only a delivery has one. */}
+        {delivered && <FinishRemedy job={job} previewTheme={FORGE_VIEWER_THEME} />}
         {/* The mesh itself. Asset Forge is where meshes are MADE and it used to show
             a path string; the shared lab viewer renders the real thing. What the
             asset route cannot serve today says so instead of showing nothing. */}
