@@ -5,6 +5,9 @@ import {
 import type { GaugeMetric } from '@/types/unique-tab-improvements';
 import { SCHEMA_VERSIONS } from './data';
 
+/** The schema version this build writes — the one SCHEMA_VERSIONS marks current. */
+const CURRENT_SCHEMA_VERSION = SCHEMA_VERSIONS.find((v) => v.isCurrent)?.version ?? 'unknown';
+
 /* ── Integrity Validation ────────────────────────────────────────────────── */
 
 export interface ValidationCheck {
@@ -13,7 +16,7 @@ export interface ValidationCheck {
 }
 
 export const VALIDATION_CHECKS: ValidationCheck[] = [
-  { id: 'version', label: 'Version Compatible', description: 'Schema version matches engine version', status: 'pass', detail: 'v1.2.5 == v1.2.5' },
+  { id: 'version', label: 'Version Compatible', description: 'Schema version matches engine version', status: 'pass', detail: `save ${CURRENT_SCHEMA_VERSION} == engine ${CURRENT_SCHEMA_VERSION}` },
   { id: 'health', label: 'Health Range Valid', description: 'HP within attribute bounds [0, MaxHP]', status: 'pass', detail: '380 <= 420 (MaxHP)' },
   { id: 'level', label: 'Level In Bounds', description: 'Level within valid range [1-100]', status: 'pass', detail: 'Lv.14 in [1..100]' },
   { id: 'equipped', label: 'EquippedSlots Referential', description: 'All EquippedSlots GUIDs exist in ItemInstances', status: 'pass', detail: '6/6 GUIDs verified in ItemInstances' },

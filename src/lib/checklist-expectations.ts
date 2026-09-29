@@ -10,6 +10,7 @@
  */
 
 import type { SemanticExpectation } from './cpp-semantic-parser';
+import { SAVE_GAME_CLASS, saveGamePropertyNames } from '@/lib/save-schema/fields';
 
 export interface ChecklistExpectation {
   /** Primary class to verify */
@@ -210,11 +211,13 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
   },
 
   // ── arpg-save ─────────────────────────────────────────────────────────────
+  // Derived from the one save-field authority — the same set the as-1 prompt asks
+  // for and the save-points State Schema declares.
   'as-1': {
     primary: {
-      className: 'UARPGSaveGame',
+      className: SAVE_GAME_CLASS,
       baseClass: 'USaveGame',
-      expectedProperties: ['PlayerLevel', 'InventoryData'],
+      expectedProperties: saveGamePropertyNames(),
       minBodyLines: 5,
     },
   },
