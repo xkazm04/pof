@@ -1,6 +1,7 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
+import { eventCueLine } from '@/lib/audio-event-sound';
 import type {
   AudioEventCatalogConfig,
   AudioEvent,
@@ -38,7 +39,9 @@ export function buildAudioEventPrompt(config: AudioEventCatalogConfig, ctx: Proj
         .map((e) =>
           `    - **${e.name}** → \`${e.trigger}\`\n` +
           `      Priority: ${e.priority} | Spatial: ${e.spatial.toUpperCase()} | Max concurrent: ${e.concurrency} | Cooldown: ${e.cooldownMs}ms\n` +
-          `      Tags: [${e.tags.join(', ')}]`
+          `      Tags: [${e.tags.join(', ')}]` +
+          // Only when the library was read: the REAL cue path or a labelled placeholder.
+          (config.bindings ? `\n      ${eventCueLine(e, config.bindings)}` : '')
         )
         .join('\n');
       return `  ### ${CATEGORY_LABELS[cat]} Events (${events.length})\n${eventLines}`;
@@ -88,7 +91,8 @@ ${categoryBlocks}
 3. **FAudioEventDefinition** (USTRUCT)
    - EventName (FName), Category, TriggerDelegate name, Priority, SpatialMode (2D/3D)
    - MaxConcurrentInstances (int32), CooldownMs (float)
-   - SoundCue (TSoftObjectPtr<USoundBase>), Tags (TArray<FName>)
+   - SoundCue (TSoftObjectPtr<USoundBase>), Tags (TArray<FName>)${config.bindings ? `
+   - SoundCue values: use EXACTLY each event's \`SoundCue:\` line above. Where it reads NONE — PLACEHOLDER, leave the pointer null and log a warning on PlayEvent; never invent an asset path` : ''}
 
 4. **UAudioEventDataAsset** (UDataAsset)
    - TArray<FAudioEventDefinition> Events — the catalog table

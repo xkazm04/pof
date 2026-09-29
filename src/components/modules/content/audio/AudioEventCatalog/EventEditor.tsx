@@ -9,6 +9,7 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { AudioEvent, EventCategory, PriorityLevel, SpatialMode } from './types';
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, CATEGORIES } from './constants';
+import { EventSoundPicker, type EventSoundLibrary } from './EventSoundPicker';
 
 // -- EventEditor --
 
@@ -16,10 +17,16 @@ export function EventEditor({
   event,
   onUpdate,
   onClose,
+  soundLibrary,
+  soundOnlyIds,
 }: {
   event: AudioEvent;
   onUpdate: (patch: Partial<AudioEvent>) => void;
   onClose: () => void;
+  /** The generated-audio library, read once by the catalog (GET only). */
+  soundLibrary: EventSoundLibrary;
+  /** Restrict the sound picker to these sets (a tie the suggester left open). */
+  soundOnlyIds?: readonly string[];
 }) {
   const [newTag, setNewTag] = useState('');
   const cfg = CATEGORY_CONFIG[event.category];
@@ -261,6 +268,18 @@ export function EventEditor({
             Add
           </button>
         </div>
+      </div>
+
+      {/* Library sound — the SoundCue this event class ships with */}
+      <div className="mt-6 pt-5 border-t border-border relative z-10">
+        <EventSoundPicker
+          idBase={fid('sound')}
+          category={event.category}
+          assetSetId={event.assetSetId}
+          library={soundLibrary}
+          onlyIds={soundOnlyIds}
+          onBind={(setId) => onUpdate({ assetSetId: setId })}
+        />
       </div>
     </SurfaceCard>
   );

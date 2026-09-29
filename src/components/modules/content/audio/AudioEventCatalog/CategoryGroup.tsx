@@ -8,6 +8,24 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { AudioEvent, EventCategory } from './types';
 import { CATEGORY_CONFIG, PRIORITY_CONFIG } from './constants';
+import { StatusTag } from '@/components/ui/StatusTag';
+import type { EventSoundStatus } from '@/lib/audio-event-sound';
+
+/** Each row's sound status, worded — never implied by colour alone. */
+const SOUND_WORD: Record<EventSoundStatus, string> = {
+  imported: 'sound imported',
+  'not-imported': 'sound not imported',
+  'set-missing': 'sound set missing',
+  unbound: 'no sound',
+  unknown: 'sound unknown',
+};
+
+function SoundChip({ status }: { status: EventSoundStatus }) {
+  if (status === 'imported') return <StatusTag level="ok" word="imported" iconClassName="w-2.5 h-2.5" />;
+  if (status === 'not-imported') return <StatusTag level="warn" word="not imported" iconClassName="w-2.5 h-2.5" />;
+  if (status === 'set-missing') return <StatusTag level="bad" word="set missing" iconClassName="w-2.5 h-2.5" />;
+  return <span className="text-xs text-text-muted whitespace-nowrap">{SOUND_WORD[status]}</span>;
+}
 
 // -- CategoryGroup --
 
@@ -18,6 +36,7 @@ export function CategoryGroup({
   onSelect,
   onDelete,
   onAdd,
+  soundStatus,
 }: {
   category: EventCategory;
   events: AudioEvent[];
@@ -25,6 +44,8 @@ export function CategoryGroup({
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  /** eventId → its library-sound status (absent until the catalog computes it). */
+  soundStatus?: Record<string, EventSoundStatus>;
 }) {
   const cfg = CATEGORY_CONFIG[category];
   const Icon = cfg.icon;
@@ -66,13 +87,14 @@ export function CategoryGroup({
           {events.map((evt) => {
             const priCfg = PRIORITY_CONFIG[evt.priority];
             const isEditing = editingEventId === evt.id;
+            const sound = soundStatus?.[evt.id];
             return (
               <div
                 key={evt.id}
                 role="button"
                 tabIndex={0}
                 aria-pressed={isEditing}
-                aria-label={`Edit ${evt.name} — ${priCfg.label} priority, ${evt.spatial === '3d' ? '3D' : '2D'} sound`}
+                aria-label={`Edit ${evt.name} — ${priCfg.label} priority, ${evt.spatial === '3d' ? '3D' : '2D'} sound${sound ? `, ${SOUND_WORD[sound]}` : ''}`}
                 onClick={() => onSelect(evt.id)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -148,6 +170,9 @@ export function CategoryGroup({
                     <span className="text-xs text-text-muted font-semibold">+{evt.tags.length - 2}</span>
                   )}
                 </div>
+
+                {/* Library sound status */}
+                {sound && <SoundChip status={sound} />}
 
                 {/* Delete — revealed on hover, and on keyboard focus so it is
                     reachable without a pointer. */}

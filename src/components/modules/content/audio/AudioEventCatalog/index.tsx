@@ -19,10 +19,18 @@ import {
 } from './constants';
 import { CategoryGroup } from './CategoryGroup';
 import { EventEditor } from './EventEditor';
+import { EventSoundCoverage } from './EventSoundCoverage';
+import { useAudioSetLibrary } from '@/components/modules/content/audio/AudioPropertyPanel/useAudioSetLibrary';
+import {
+  suggestEventSounds, eventSoundCoverage, eventSoundStatus, eventSoundBindings,
+  type EventSoundSuggestions,
+} from '@/lib/audio-event-sound';
 
 export type {
   EventCategory, SpatialMode, PriorityLevel, AudioEvent, AudioEventCatalogConfig,
 } from './types';
+
+const NO_SUGGESTIONS: EventSoundSuggestions = { suggested: {}, ambiguous: {} };
 
 // -- Props --
 
@@ -45,6 +53,13 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
   );
   const [filterCategory, setFilterCategory] = useState<EventCategory | 'all'>('all');
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  /** The event whose tied suggestions the user asked to pick from. */
+  const [pickFor, setPickFor] = useState<string | null>(null);
+
+  // The generated-audio library — two GETs, no writes, nothing generated or
+  // played. `null` while loading or unreadable, so coverage reads UNKNOWN.
+  const library = useAudioSetLibrary(true);
+  const libOptions = library.isLoading || library.error ? null : library.options;
 
   // Write-through: every edit lands in this scene's slot in the persisted store
   // immediately, so unmount (tab switch) and reload both keep the curated
@@ -109,7 +124,39 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
     [editingEventId, events],
   );
 
-  const config: AudioEventCatalogConfig = useMemo(() => ({ events }), [events]);
+  const selectEvent = useCallback((id: string) => { setPickFor(null); setEditingEventId(id); }, []);
+
+  // -- Library sound binding --
+
+  const suggestions = useMemo(
+    () => (libOptions ? suggestEventSounds(events, libOptions) : NO_SUGGESTIONS),
+    [events, libOptions],
+  );
+  const coverage = useMemo(() => eventSoundCoverage(events, libOptions), [events, libOptions]);
+  const soundStatus = useMemo(
+    () => Object.fromEntries(events.map((e) => [e.id, eventSoundStatus(e, libOptions)])),
+    [events, libOptions],
+  );
+  const soundLibrary = useMemo(
+    () => ({ options: libOptions, isLoading: library.isLoading, error: library.error }),
+    [libOptions, library.isLoading, library.error],
+  );
+
+  const applySuggestions = useCallback(() => {
+    setEvents((prev) => prev.map((e) => {
+      const setId = suggestions.suggested[e.id];
+      return setId && !e.assetSetId ? { ...e, assetSetId: setId } : e;
+    }));
+  }, [suggestions]);
+
+  const pickAmbiguous = useCallback((id: string) => { setPickFor(id); setEditingEventId(id); }, []);
+
+  // Bindings ride along only when the library was read: an unreadable library
+  // yields today's prompt, never "every event has no sound".
+  const config: AudioEventCatalogConfig = useMemo(
+    () => (libOptions ? { events, bindings: eventSoundBindings(events, libOptions) } : { events }),
+    [events, libOptions],
+  );
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto bg-surface-deep rounded-2xl border border-border relative w-full h-full">
@@ -144,6 +191,18 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
             </span>
           </div>
         </div>
+
+        <EventSoundCoverage
+          coverage={coverage}
+          suggestions={suggestions}
+          events={events}
+          options={libOptions}
+          isLoading={library.isLoading}
+          error={library.error}
+          retry={library.retry}
+          onApply={applySuggestions}
+          onPick={pickAmbiguous}
+        />
 
         {/* Filter bar */}
         <div
@@ -205,7 +264,7 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
                     category={cat}
                     events={[]}
                     editingEventId={editingEventId}
-                    onSelect={setEditingEventId}
+                    onSelect={selectEvent}
                     onDelete={deleteEvent}
                     onAdd={() => addEvent(cat)}
                   />
@@ -219,9 +278,10 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
                 category={cat}
                 events={catEvents}
                 editingEventId={editingEventId}
-                onSelect={setEditingEventId}
+                onSelect={selectEvent}
                 onDelete={deleteEvent}
                 onAdd={() => addEvent(cat)}
+                soundStatus={soundStatus}
               />
             );
           })}
@@ -240,6 +300,10 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
                 event={editingEvent}
                 onUpdate={(patch) => updateEvent(editingEvent.id, patch)}
                 onClose={() => setEditingEventId(null)}
+                soundLibrary={soundLibrary}
+                soundOnlyIds={pickFor === editingEvent.id && !editingEvent.assetSetId
+                  ? suggestions.ambiguous[editingEvent.id]
+                  : undefined}
               />
             </motion.div>
           )}
