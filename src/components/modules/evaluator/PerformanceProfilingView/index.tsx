@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useId } from 'react';
+import { useState, useCallback, useEffect, useId } from 'react';
 import {
   Gauge, Upload, Play, Cpu, MonitorDot,
   Zap, Activity, RefreshCw, Target, ShieldAlert,
@@ -21,6 +21,8 @@ import { ActorTickTable } from './ActorTickTable';
 import { MemoryChart } from './MemoryChart';
 import { FindingsSection } from './FindingsSection';
 import { StatCard } from './StatCard';
+import { SessionRail } from './SessionRail';
+import { SessionCompare } from './SessionCompare';
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -36,6 +38,9 @@ export function PerformanceProfilingView() {
   const generateSample = usePerformanceProfilingStore((s) => s.generateSample);
   const importCSV = usePerformanceProfilingStore((s) => s.importCSV);
   const runTriage = usePerformanceProfilingStore((s) => s.runTriage);
+  const listSessions = usePerformanceProfilingStore((s) => s.listSessions);
+  const comparison = usePerformanceProfilingStore((s) => s.comparison);
+  const clearComparison = usePerformanceProfilingStore((s) => s.clearComparison);
 
   const projectPath = useProjectStore((s) => s.projectPath);
 
@@ -50,6 +55,9 @@ export function PerformanceProfilingView() {
 
   const enemyId = useId();
   const fpsId = useId();
+
+  // The server keeps every capture for the process — surface them on the rail.
+  useEffect(() => { void listSessions(); }, [listSessions]);
 
   const handleGenerate = useCallback(async () => {
     setLastAction('generate');
@@ -213,6 +221,9 @@ export function PerformanceProfilingView() {
             />
           </div>
         )}
+
+        {/* Past captures: reopen, delete, or pick A/B to compare */}
+        <SessionRail />
       </div>
 
       {/* Content */}
@@ -227,6 +238,12 @@ export function PerformanceProfilingView() {
               ? 'Running AI triage…'
               : ''}
         </div>
+
+        {comparison && (
+          <div className="mb-5">
+            <SessionCompare comparison={comparison} onClose={clearComparison} />
+          </div>
+        )}
 
         {error && error !== dismissedError && (
           <InlineErrorRetry
