@@ -245,11 +245,20 @@ the browser or edge runtime).
 | `project_progress` | Full module state (checklist/health/verification/history) per project path |
 | `session_log` | Audit trail linking CLI sessions to modules and projects |
 | `request_log` | Idempotency-key replay detection for import/mutation routes |
-| `session_analytics` | Per-CLI-session prompt/outcome telemetry (analytics dashboard, insights, suggestions) |
+| `session_analytics` | Per-CLI-session prompt/outcome telemetry (analytics dashboard, insights, suggestions, Weekly Digest, Project Wrapped). `completed_at` is stored as ISO UTC; reporting periods are cut from it by one authority (see the note below). |
 | `telemetry_snapshots` | Genre-evolution signal snapshots |
 | `genre_suggestions` | Detected sub-genre suggestions (pending/accepted/dismissed) |
 | `checklist_metadata` | Per-item priority and notes |
 | `milestone_deadlines` | User-set target dates for deliverables |
+
+> **Reporting windows.** Every "which day / week / month is this row" decision for the session
+> ledger goes through `src/lib/analytics/report-window.ts`: `reportZone()` is the single declared
+> accessor (the server process's resolved Intl zone = the operator's calendar in this single-user
+> desktop app), and `dayKey` / `monthKey` / `weekKey` / `weekWindow` take the zone explicitly.
+> Windows are half-open `[start, end)` cut at zone midnight (DST-safe), weeks are Monday-first, and
+> calendar arithmetic runs on keys. `generateWeeklyDigest(ref?, zone?)` and
+> `aggregateProjectWrapped(rows, now, zone?)` read every key from it and echo `zone` on the result
+> (`periodEnd` is the exclusive next Monday). Nothing new is stored; tests pin an explicit zone.
 
 > `session_analytics` / `telemetry_snapshots` / `genre_suggestions` were previously
 > bootstrapped divergently (an unguarded per-call `CREATE TABLE` in `session-analytics-db.ts`
