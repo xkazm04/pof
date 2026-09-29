@@ -4,7 +4,7 @@ import { useSnapshots } from '@/hooks/useSnapshots';
 import type {
   PofTestSpec, PofTestResult, PofSnapshotDiffReport, PofSnapshotCaptureRequest,
 } from '@/types/pof-bridge';
-import type { TestSuite, SuiteRunResult } from './types';
+import type { TestSuite, SuiteRunResult, HarnessTab } from './types';
 import { TEMPLATE_SCENARIO } from './constants';
 import { generateId } from './helpers';
 
@@ -19,7 +19,7 @@ export function useTestHarnessPanel() {
 
   // ── UI state ──
   const [expanded, setExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<'suites' | 'results' | 'snapshots'>('suites');
+  const [activeTab, setActiveTab] = useState<HarnessTab>('waiting');
   const [editingScenarioIdx, setEditingScenarioIdx] = useState<number | null>(null);
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonDraft, setJsonDraft] = useState('');

@@ -16,6 +16,8 @@ import { useTestHarnessPanel } from './useTestHarnessPanel';
 import { SuitesTab } from './SuitesTab';
 import { ResultsTab } from './ResultsTab';
 import { SnapshotsTab } from './SnapshotsTab';
+import { WaitingTestsTab } from './WaitingTestsTab';
+import type { HarnessTab } from './types';
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -33,7 +35,8 @@ export function TestHarnessPanel() {
     runSuite, abortRun,
   } = useTestHarnessPanel();
 
-  const tabs: { id: typeof activeTab; label: string; count?: number }[] = [
+  const tabs: { id: HarnessTab; label: string; count?: number }[] = [
+    { id: 'waiting', label: 'Waiting tests' },
     { id: 'suites', label: 'Test Suites', count: suites.length },
     { id: 'results', label: 'Results', count: suiteRunHistory.length },
     { id: 'snapshots', label: 'Snapshots' },
@@ -59,10 +62,12 @@ export function TestHarnessPanel() {
       {expanded && (
         <div className="px-4 pb-4 space-y-3">
           {/* ── Tab bar ──────────────────────────────────────────────────── */}
-          <div className="flex gap-1 border-b border-border">
+          <div className="flex gap-1 border-b border-border" role="tablist" aria-label="Test Harness sections">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                role="tab"
+                aria-selected={activeTab === tab.id}
                 className="px-3 py-1.5 text-xs font-medium transition-colors"
                 style={{
                   color: activeTab === tab.id ? ACCENT_VIOLET : undefined,
@@ -80,6 +85,9 @@ export function TestHarnessPanel() {
 
           {/* ── Error banner ──────────────────────────────────────────── */}
           {error && <ErrorBanner message={error} />}
+
+          {/* ── Waiting tests Tab (default) ──────────────────────────── */}
+          {activeTab === 'waiting' && <WaitingTestsTab />}
 
           {/* ── Suites Tab ───────────────────────────────────────────── */}
           {activeTab === 'suites' && (
