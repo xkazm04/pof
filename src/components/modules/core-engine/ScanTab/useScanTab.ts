@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { usePaneHold } from '@/hooks/usePaneHold';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useModuleStore } from '@/stores/moduleStore';
 import { MODULE_LABELS } from '@/lib/module-registry';
@@ -69,7 +70,9 @@ export function useScanTab(moduleId: SubModuleId) {
   //     (it would otherwise stall with `isBatchFixing` stuck true forever, since
   //     no CLI run is dispatched and nothing would ever call onComplete again)
   //   • hook unmounted           — LRU eviction destroys the queue and progress
-  //     UI, so a further tick would dispatch a paid CLI run nobody can see
+  //     UI, so a further tick would dispatch a paid CLI run nobody can see. The
+  //     batch holds its pane (`usePaneHold`, below) so the LRU only does this
+  //     when every other candidate is held too — and then says so in the feed.
   // It deliberately does NOT pause under SuspendContext: a batch fix is a
   // user-initiated, paid, multi-minute CLI run, and hiding the module in the LRU
   // must not stall it — the same reasoning that keeps the forge poll alive
@@ -268,6 +271,9 @@ export function useScanTab(moduleId: SubModuleId) {
 
   // Batch fix progress
   const isBatchFixing = activeFixId !== null;
+  // Held for the whole batch, including the inter-item gap when no CLI session
+  // is running and the shell would otherwise see nothing live in this pane.
+  usePaneHold(isBatchFixing, 'Batch fix running');
   const fixProgress = fixTotalRef.current > 0
     ? fixTotalRef.current - fixQueue.length - (activeFixId ? 1 : 0)
     : 0;

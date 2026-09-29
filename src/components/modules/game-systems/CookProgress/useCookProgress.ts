@@ -1,11 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { usePaneHold } from '@/hooks/usePaneHold';
 import { type ListImperativeAPI } from 'react-window';
 import type { CookEvent, CookPhase } from '@/lib/packaging/cook-executor';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { ZERO_COUNTS, PIN_THRESHOLD_PX } from './constants';
 import { classifyCookLogLine, appendCookLog, lineFacets, formatCookTimestamp } from './helpers';
 import type { CookLogLine, CookLogFilter, CookLogCounts, CookProgressProps } from './types';
+
+/** The pane-hold reason the Activity Feed shows if the shell tears a cook down. */
+export const COOK_HOLD_REASON = 'UE cook running';
+
+/**
+ * THE cook's pane-hold rule — the one place its hold is released. The cook holds
+ * its keep-alive pane (`usePaneHold`) from the moment a request starts until the
+ * cook SETTLES, and today it settles when `result` is set: a `done` or `error`
+ * event, a stream that ends without one, or an HTTP failure. Unmounting the pane
+ * aborts the stream (and, server side, the UAT process tree), so the LRU must not
+ * choose this pane while the rule says held. Move the settle point here, nowhere
+ * else.
+ */
+export function cookHoldsPane(
+  request: CookProgressProps['request'],
+  result: { status: 'success' | 'failed' } | null,
+): boolean {
+  return request != null && result === null;
+}
 
 export function useCookProgress({ request, onComplete }: CookProgressProps) {
   const [phase, setPhase] = useState<CookPhase | null>(null);
@@ -38,6 +58,8 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
   // runs once the Errors view re-renders with rows.
   const pendingJumpRef = useRef(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  usePaneHold(cookHoldsPane(request, result), COOK_HOLD_REASON);
 
   useEffect(() => {
     if (!request) return;

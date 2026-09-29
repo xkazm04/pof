@@ -1,10 +1,19 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import { motion, AnimatePresence, useAnimationControls, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { SuspendContext } from '@/hooks/useSuspend';
+import { PaneIdContext, getPaneHolds, subscribePaneHolds } from '@/hooks/usePaneHold';
 
 // InlineTerminal is rendered with props *outside* the module Suspense boundary,
 // so it stays eagerly imported (lazifying it would suspend with no boundary).
@@ -25,6 +34,8 @@ import {
   resolveVisibleModule,
   observedLiveKey,
   observedLiveProbe,
+  pickPaneHolds,
+  type PaneHoldMap,
 } from './helpers';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
@@ -44,6 +55,35 @@ interface PendingEviction {
   forcedIds: string[];
   scope: 'module' | 'session';
   cap: number;
+  /**
+   * The evicted panes' holds, snapshotted in the render that DECIDED the eviction.
+   * Not re-read at report time: React runs the evicted pane's unmount cleanup —
+   * which releases its hold — before this component's report effect.
+   */
+  holds: PaneHoldMap;
+}
+
+/**
+ * A pane's entrance fade/slide, replayed each time `play` changes (every switch
+ * TO the pane) WITHOUT remounting `children`. The pane used to key its motion
+ * wrapper on visibility, which unmounted the whole module subtree on every hide
+ * and every show — keep-alive in name only: a cook, a batch chain or any local
+ * state died the moment the user looked elsewhere, eviction or not.
+ */
+function PaneEntrance({ play, duration, children }: { play: number | null; duration: number; children: ReactNode }) {
+  const controls = useAnimationControls();
+  // Layout effect: reset before paint, so a pane shown again never flashes at full
+  // opacity for a frame before its fade starts.
+  useLayoutEffect(() => {
+    if (play === null) return;
+    controls.set({ opacity: 0, y: -4 });
+    void controls.start({ opacity: 1, y: 0, transition: { duration, ease: EASE_OUT } });
+  }, [play, duration, controls]);
+  return (
+    <motion.div initial={play !== null ? { opacity: 0, y: -4 } : false} animate={controls} className="h-full">
+      {children}
+    </motion.div>
+  );
 }
 
 export function ModuleRenderer() {
@@ -71,17 +111,20 @@ export function ModuleRenderer() {
       ? maximizedTabId
       : null;
 
-  // The ONE thing this shell can observe about live work: which CLI sessions are
-  // running, and which module each is attributed to. Subscribed as an order-stable
+  // What this shell can observe about live work: which CLI sessions are running
+  // (and the module each is attributed to), plus the pane holds modules declare
+  // through `usePaneHold` (a cook, a batch chain). Folded into an order-stable
   // STRING (never a fresh Set/array) because the LRU below adjusts state during
   // render — a new identity every render would loop, which this component has
-  // already been bitten by once.
+  // already been bitten by once. `holds` itself is a stable external-store
+  // snapshot (replaced only when a hold changes).
   //
-  // What the probe cannot see is the honest part: a module's own SSE streams,
+  // What the probe cannot see is the honest part: a module's UNDECLARED streams,
   // polls and in-flight fetches are invisible here, so `false` means "nothing
   // observed", not "idle". `lruTouched` treats it as a preference, never a licence
   // (see `ObservedLiveProbe` / `EvictionBasis` in ./helpers).
-  const liveKey = useCLIPanelStore((s) => observedLiveKey(s.sessions));
+  const holds = useSyncExternalStore(subscribePaneHolds, getPaneHolds, getPaneHolds);
+  const liveKey = useCLIPanelStore((s) => observedLiveKey(s.sessions, holds));
   const isModuleLive = useMemo(() => observedLiveProbe(liveKey, 'module'), [liveKey]);
   const isSessionLive = useMemo(() => observedLiveProbe(liveKey, 'session'), [liveKey]);
 
@@ -116,6 +159,7 @@ export function ModuleRenderer() {
         forcedIds: moduleTouch.forced,
         scope: 'module',
         cap: LRU_CAP,
+        holds: pickPaneHolds(holds, moduleTouch.evicted),
       });
     }
   }
@@ -129,6 +173,7 @@ export function ModuleRenderer() {
           forcedIds: touch.basis === 'forced-over-live-work' ? [touch.evicted] : [],
           scope: 'session',
           cap: SESSION_LRU_CAP,
+          holds: {},
         });
       }
     }
@@ -136,6 +181,7 @@ export function ModuleRenderer() {
 
   // Report evictions. Sessions are read at report time via getState() (not
   // subscribed) so the classification costs nothing on the non-evicting path.
+  // Holds are NOT — they come from the decision-time snapshot (see PendingEviction).
   useEffect(() => {
     if (!moduleEviction) return;
     const sessions = useCLIPanelStore.getState().sessions;
@@ -143,7 +189,9 @@ export function ModuleRenderer() {
       const basis = moduleEviction.forcedIds.includes(evictedId)
         ? 'forced-over-live-work'
         : 'no-observed-live-work';
-      reportEviction(describeEviction(evictedId, 'module', moduleEviction.cap, sessions, basis));
+      reportEviction(
+        describeEviction(evictedId, 'module', moduleEviction.cap, sessions, basis, moduleEviction.holds),
+      );
     }
   }, [moduleEviction]);
 
@@ -201,7 +249,9 @@ export function ModuleRenderer() {
   const crossfadeDuration = prefersReduced ? 0 : DURATION.fast;
 
   // Render a single keep-alive module pane: visibility toggled via `display`,
-  // suspended when hidden, crossfaded on entrance, guarded by an error boundary.
+  // suspended when hidden, crossfaded on entrance, guarded by an error boundary,
+  // and told its own id (`PaneIdContext`) so its modules can declare pane holds.
+  // Nothing in this tree may be keyed on visibility — a key change remounts.
   // Shared by both special-category and sub-module panes (resolution differs only
   // in how `Component` and `isVisible` are derived below).
   const renderModulePane = (
@@ -215,19 +265,15 @@ export function ModuleRenderer() {
       style={{ display: isVisible ? 'block' : 'none' }}
     >
       <SuspendContext.Provider value={!isVisible}>
-        <motion.div
-          key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
-          initial={isVisible ? { opacity: 0, y: -4 } : false}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
-          className="h-full"
-        >
-          <ModuleErrorBoundary moduleName={moduleLabel(moduleId)}>
-            <Suspense fallback={<ModuleSkeleton />}>
-              <Component />
-            </Suspense>
-          </ModuleErrorBoundary>
-        </motion.div>
+        <PaneIdContext.Provider value={moduleId}>
+          <PaneEntrance play={isVisible ? switchKey : null} duration={crossfadeDuration}>
+            <ModuleErrorBoundary moduleName={moduleLabel(moduleId)}>
+              <Suspense fallback={<ModuleSkeleton />}>
+                <Component />
+              </Suspense>
+            </ModuleErrorBoundary>
+          </PaneEntrance>
+        </PaneIdContext.Provider>
       </SuspendContext.Provider>
     </div>
   );

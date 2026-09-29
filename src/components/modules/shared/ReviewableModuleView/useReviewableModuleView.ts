@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { usePaneHold } from '@/hooks/usePaneHold';
 import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
@@ -91,11 +92,18 @@ export function useReviewableModuleView({
   //   • item not in the checklist — skipped; the watchdog below re-advances, so
   //     the drain continues rather than stalling
   //   • hook unmounted  — LRU eviction destroys the queue and progress UI, so a
-  //     further tick would dispatch a paid CLI run nobody can observe
+  //     further tick would dispatch a paid CLI run nobody can observe. The queue
+  //     holds its pane (`usePaneHold`, below) so the LRU only does this when
+  //     every other candidate is held too — and then says so in the feed.
   // Deliberately NOT suspended when the module is hidden: a batch run the user
   // started is a paid, multi-minute CLI job and must survive navigation (same
   // reasoning as the forge poll in visual-gen/asset-forge/useForgeStore.ts).
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Held while items are still queued — this covers the inter-item gap, when no
+  // CLI session is running and the shell would otherwise see nothing live here.
+  // The last item's own run is covered by its CLI session.
+  usePaneHold(batchQueue.length > 0, 'Checklist batch running');
 
   const advanceBatch = useCallback(() => {
     const queue = batchQueueRef.current;

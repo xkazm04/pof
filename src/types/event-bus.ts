@@ -149,9 +149,13 @@ export interface NavigationEvents {
     cap: number;
     /** Whether the eviction tore down live work, **as far as the shell can observe**.
      *  `cli-session-running` — a CLI session attributable to the evicted pane was running.
-     *  `none-observed` — no such session; the shell CANNOT see streams/polls/subscriptions
-     *  a module holds internally, so this is "nothing detected", never "nothing lost". */
-    liveWork: 'cli-session-running' | 'none-observed';
+     *  `pane-hold` — the pane had declared in-flight work via `usePaneHold` (see `holdReason`).
+     *  `none-observed` — neither; the shell CANNOT see streams/polls/subscriptions a
+     *  module runs without declaring them, so this is "nothing detected", never "nothing lost". */
+    liveWork: 'cli-session-running' | 'pane-hold' | 'none-observed';
+    /** The evicted pane's declared hold reason(s) ("UE cook running"), present whenever
+     *  it was held when the eviction was decided. */
+    holdReason?: string;
     /** How the victim was chosen — the decision-side twin of `liveWork`.
      *  `unprobed` — the LRU had no liveness input; the tail was popped blind.
      *  `no-observed-live-work` — the least-recently-used pane NOT flagged live was
