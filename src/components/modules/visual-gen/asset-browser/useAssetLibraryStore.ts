@@ -1,10 +1,17 @@
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
+import { isListingUrl } from '@/lib/visual-gen/download-variants';
 import type { AssetSearchResult } from '@/lib/visual-gen/asset-sources';
 import type { LibraryAsset, Collection, LibraryFilter } from '@/types/asset-library';
 
 const LIBRARY_URL = '/api/visual-gen/library';
 const COLLECTIONS_URL = '/api/visual-gen/library/collections';
+
+/** The asset being recorded: a search row, or a picker target built from a library row. */
+export type RecordTarget = Pick<AssetSearchResult, 'id' | 'name' | 'source' | 'category' | 'thumbnailUrl' | 'tags'> & {
+  license: string;
+  downloadUrl?: string;
+};
 
 interface AssetLibraryState {
   assets: LibraryAsset[];
@@ -16,8 +23,12 @@ interface AssetLibraryState {
 
   setFilter: (partial: Partial<LibraryFilter>) => void;
   loadLibrary: () => Promise<void>;
-  /** Persist a freshly-downloaded asset to the library (upsert) and cache it. */
-  recordDownload: (asset: AssetSearchResult) => Promise<void>;
+  /**
+   * Persist an acquired asset to the library (upsert) and cache it. `downloadUrl` is the file
+   * actually acquired (a picked variant's main file); a listing URL is never recorded — it was
+   * what `libraryReference` then cited into prompts as "already downloaded".
+   */
+  recordDownload: (asset: RecordTarget, downloadUrl?: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   removeAsset: (id: string) => Promise<void>;
   createCollection: (name: string) => Promise<Collection | null>;
@@ -64,7 +75,8 @@ export const useAssetLibraryStore = create<AssetLibraryState>((set, get) => ({
     });
   },
 
-  recordDownload: async (asset) => {
+  recordDownload: async (asset, downloadUrl = asset.downloadUrl ?? '') => {
+    if (isListingUrl(downloadUrl)) return;
     const res = await tryApiFetch<LibraryAsset>(LIBRARY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,7 +87,7 @@ export const useAssetLibraryStore = create<AssetLibraryState>((set, get) => ({
         category: asset.category,
         license: asset.license,
         thumbnailUrl: asset.thumbnailUrl,
-        downloadUrl: asset.downloadUrl,
+        downloadUrl,
         tags: asset.tags ?? [],
       }),
     });

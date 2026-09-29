@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Star, Trash2, ExternalLink, FolderPlus, Check, Loader2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Star, Trash2, ExternalLink, FolderPlus, Check, Loader2, Download } from 'lucide-react';
 import type { LibraryAsset, Collection } from '@/types/asset-library';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { useAssetBrowserStore } from '@/components/modules/visual-gen/asset-browser/useAssetBrowserStore';
 import { useAssetLibraryStore } from '@/components/modules/visual-gen/asset-browser/useAssetLibraryStore';
+import { VariantPicker } from '@/components/modules/visual-gen/asset-browser/VariantPicker';
+import type { PickTarget } from '@/components/modules/visual-gen/asset-browser/useAssetBrowserStore';
+import { isListingUrl } from '@/lib/visual-gen/download-variants';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 
 interface LibraryAssetCardProps {
@@ -26,6 +29,15 @@ export function LibraryAssetCard({ asset, collections }: LibraryAssetCardProps) 
   const importing = isImporting === asset.assetId;
 
   const inCollection = (id: string) => asset.collectionIds.includes(id);
+
+  // A row recorded before the picker existed may hold a Poly Haven JSON listing instead of a
+  // file. Linking to it would hand over JSON; offer the picker for that asset instead.
+  const listing = isListingUrl(asset.downloadUrl);
+  const [picking, setPicking] = useState(false);
+  const pickTarget = useMemo<PickTarget>(() => ({
+    id: asset.assetId, name: asset.name, source: asset.source, category: asset.category,
+    license: asset.license, thumbnailUrl: asset.thumbnailUrl, tags: asset.tags,
+  }), [asset.assetId, asset.name, asset.source, asset.category, asset.license, asset.thumbnailUrl, asset.tags]);
 
   return (
     <div className="rounded-lg border border-border bg-surface/50 overflow-hidden group hover:border-[var(--visual-gen)] focus-within:border-[var(--visual-gen)] transition-colors relative">
@@ -53,7 +65,17 @@ export function LibraryAssetCard({ asset, collections }: LibraryAssetCardProps) 
 
         {/* Hover action bar */}
         <div className="absolute inset-x-0 bottom-0 p-1.5 bg-black/60 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-          {asset.downloadUrl && (
+          {listing ? (
+            <button
+              onClick={() => setPicking(true)}
+              aria-label={`Choose a file for ${asset.name}`}
+              aria-haspopup="dialog"
+              title="This row points at a file listing, not a file — choose one"
+              className={`p-1.5 rounded-full bg-[var(--visual-gen)] text-white hover:brightness-110 ${VISUAL_GEN_FOCUS_RING}`}
+            >
+              <Download size={14} />
+            </button>
+          ) : asset.downloadUrl && (
             <a
               href={asset.downloadUrl}
               target="_blank"
@@ -117,6 +139,8 @@ export function LibraryAssetCard({ asset, collections }: LibraryAssetCardProps) 
           </div>
         </>
       )}
+
+      {listing && <VariantPicker target={picking ? pickTarget : null} onClose={() => setPicking(false)} />}
 
       {/* Info */}
       <div className="p-2">
