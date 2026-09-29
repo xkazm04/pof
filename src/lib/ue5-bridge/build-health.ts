@@ -3,8 +3,9 @@
  *
  * Turns the raw `headless_builds` history (durations, error/warning counts,
  * status, target) into actionable insight: success rate, duration trend,
- * slowest targets, recurring error fingerprints (joined with the error-memory
- * DB), and — most importantly — regression alerts that flag when build duration
+ * slowest targets, recurring error fingerprints (derived from the same builds'
+ * stored diagnostics, per lane — see build-error-recurrence.ts), and — most
+ * importantly — regression alerts that flag when build duration
  * or error count spikes versus a rolling baseline, so a slow-creep build
  * problem is caught early.
  *
@@ -14,9 +15,11 @@
  */
 
 import { getDb } from '@/lib/db';
-import { getAllErrors } from '@/lib/error-memory-db';
 import { ensureHeadlessBuildsTable } from '@/lib/ue5-bridge/build-pipeline';
+import { deriveRecurringErrors, type RecurringError } from '@/lib/ue5-bridge/build-error-recurrence';
 import type { BuildStatus } from '@/types/ue5-bridge';
+
+export type { RecurringError } from '@/lib/ue5-bridge/build-error-recurrence';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +34,10 @@ export interface HealthBuild {
   errorCount: number;
   warningCount: number;
   createdAt: string; // ISO timestamp
+  /** 'Editor' | 'Game' | … — half of the lane recurring errors are judged in. */
+  targetType?: string;
+  /** Raw diagnostics_json, only for builds that counted errors (null otherwise). */
+  diagnosticsJson?: string | null;
 }
 
 export interface BuildHealthSummary {
@@ -66,18 +73,6 @@ export interface TargetHealth {
   maxDurationMs: number | null;
   /** Status of the most recent build for this target. */
   lastStatus: BuildStatus;
-}
-
-export interface RecurringError {
-  fingerprint: string;
-  pattern: string;
-  category: string;
-  message: string;
-  occurrences: number;
-  moduleId: string;
-  errorCode: string | null;
-  wasResolved: boolean;
-  lastSeenAt: string;
 }
 
 export interface RegressionAlert {
@@ -310,6 +305,8 @@ interface HealthBuildRow {
   error_count: number;
   warning_count: number;
   created_at: string;
+  target_type: string;
+  diagnostics_json: string | null;
 }
 
 /**
@@ -322,7 +319,8 @@ export function getHealthBuilds(projectPath: string, limit = 200): HealthBuild[]
   const rows = db
     .prepare(
       `SELECT build_id, target_name, configuration, platform, status,
-              duration_ms, error_count, warning_count, created_at
+              duration_ms, error_count, warning_count, created_at, target_type,
+              CASE WHEN error_count > 0 THEN diagnostics_json END AS diagnostics_json
          FROM headless_builds
         WHERE project_path = ?
         ORDER BY created_at DESC
@@ -340,25 +338,8 @@ export function getHealthBuilds(projectPath: string, limit = 200): HealthBuild[]
     errorCount: r.error_count ?? 0,
     warningCount: r.warning_count ?? 0,
     createdAt: r.created_at,
-  }));
-}
-
-/**
- * Most recurring error fingerprints from the error-memory DB — the build
- * pipeline records compile errors here, so this surfaces what keeps breaking
- * builds, ranked by occurrence.
- */
-export function getRecurringBuildErrors(limit = 8): RecurringError[] {
-  return getAllErrors(limit).map((e) => ({
-    fingerprint: e.fingerprint,
-    pattern: e.pattern,
-    category: e.category,
-    message: e.message,
-    occurrences: e.occurrences,
-    moduleId: e.moduleId,
-    errorCode: e.errorCode,
-    wasResolved: e.wasResolved,
-    lastSeenAt: e.lastSeenAt,
+    targetType: r.target_type,
+    diagnosticsJson: r.diagnostics_json,
   }));
 }
 
@@ -375,7 +356,7 @@ export function getBuildHealthReport(
     summary: summarizeBuilds(builds),
     durationTrend: buildDurationTrend(builds),
     slowestTargets: rankTargetsByDuration(builds),
-    recurringErrors: getRecurringBuildErrors(),
+    recurringErrors: deriveRecurringErrors(builds),
     regressions: detectRegressions(builds, opts.regression),
     generatedAt: new Date().toISOString(),
   };

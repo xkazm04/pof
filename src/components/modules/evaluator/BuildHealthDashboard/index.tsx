@@ -184,9 +184,14 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           <div className="flex items-center gap-1.5 mb-3">
             <Bug className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
             <span className="text-xs font-semibold text-text">Recurring Build Errors</span>
-            <span className="ml-auto text-2xs text-text-muted">from error memory</span>
+            <span className="ml-auto text-2xs text-text-muted">from build diagnostics</span>
           </div>
-          {recurringErrors.length === 0 ? (
+          {recurringErrors.length === 0 && summary.totalErrors > 0 ? (
+            <div data-testid="build-health-errors-unparsed" className="text-center text-text-muted text-xs py-6">
+              {summary.totalErrors} build error{summary.totalErrors !== 1 ? 's' : ''} counted, but they carried no
+              parseable diagnostic — open a failed build&apos;s log to see them.
+            </div>
+          ) : recurringErrors.length === 0 ? (
             <div className="text-center text-text-muted text-xs py-6">No recorded build errors. 🎉</div>
           ) : (
             <div className="space-y-1.5">
