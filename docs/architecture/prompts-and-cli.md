@@ -368,6 +368,7 @@ app-authored specs reference, reported separately as `appReferenced`. When live
 source is parsed the spellbook's audit categories are derived from that real
 breakdown (`buildLiveTagAuditCategories`), never the static
 `TAG_AUDIT_CATEGORIES` sample array.
+
 **One tag-rule direction.** A `TagRule` is **ability-owned**: `sourceTag` is the
 ability the rule lives on, `targetTag` the gating tag, and `type` the GAS
 container it lands in (`blocks` → `ActivationBlockedTags`, `requires` →
