@@ -1,13 +1,11 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
-import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts } from '@/lib/pipeline-artifacts-db';
 import { purgeEntity } from '@/lib/catalog/artifact-purge';
 import { artifactUpsertSchema } from '@/lib/catalog/artifact-validation';
-import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
-import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
-import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
-import { readProvenance, resolvePersistedEngine, withProvenance } from '@/lib/provenance';
+import { artifactCommitDeps } from '@/lib/catalog/headless';
+import { commitArtifact } from '@/lib/catalog/artifactCommit';
 
 /** Max issues named in the error string — enough to fix the payload, short enough to render. */
 const MAX_REPORTED_ISSUES = 5;
@@ -61,6 +59,10 @@ export async function GET(req: NextRequest) {
  * the artifact row holds the checker's own truth and judge state lives apart in
  * `judge_verdicts` (bridged only on read). Persisting the bridge here would diverge from the
  * MCP path and skew `summarizeEntity`/rollups, which count straight off `art.status`.
+ *
+ * All of the above lives in ONE door, `commitArtifact` (`@/lib/catalog/artifactCommit`), shared
+ * with the MCP submit and the revision restore — so this write also refuses a step the entity's
+ * canon profile does not have (D18 → 404, nothing written) and syncs the derived lifecycle.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -84,49 +86,20 @@ export async function POST(req: NextRequest) {
         ? (body as { promptVariantId: string }).promptVariantId
         : undefined;
 
-    // Grade the SUBMITTED data, untouched — the provenance stamp is added only to what we
-    // persist, so acceptance can never shift because of it (the additive-key pattern).
-    const { graded, raw } = gradeArtifact(p.catalogId, p.step, p.data, p.entityId);
-    const status = graded ? (raw?.status ?? 'pending') : p.status;
-    const tier = graded ? (raw?.tier ?? 'L0') : p.tier;
-    // An UNGRADED row is a finding, not a quiet pass. The producer's status is preserved
-    // (there is nothing truer to replace it with), but the persisted `reason` now SAYS the
-    // server never verified it — and names why no checker resolved. Silently keeping a
-    // producer's `pass` with no annotation is what re-opens the fabricated-pass hole.
-    const reason = graded
-      ? (raw?.reason ?? (raw ? undefined : 'unverified: acceptance check did not resolve'))
-      : describeUngraded(p.catalogId, p.step, hasRegisteredChecker, p.reason);
-
-    // WHO produced this. A client may declare only an engine it can honestly assert about
-    // itself (`Code`); an unverifiable claim — including one smuggled inside
-    // `data._provenance` — is refused and the row records `unknown` instead, because a
-    // fabricated producer is the same class of hole as a fabricated `pass`. The one
-    // exception is a claim the SERVER already recorded for this exact row: the lab
-    // re-POSTs what `POST /api/one-shot/step` persisted after a live CLI produce, and
-    // sanitising that round trip would destroy real provenance.
-    const attested = readProvenance(
-      listArtifacts(p.catalogId, p.entityId).find((a) => a.step === p.step)?.data as Record<string, unknown> | undefined,
-    )?.engine;
-    const engine = resolvePersistedEngine({
-      declared: p.engine,
-      claimed: readProvenance(p.data)?.engine,
-      attested,
-    });
-
-    return apiSuccess(upsertArtifact({
-      catalogId: p.catalogId,
-      entityId: p.entityId,
-      step: p.step,
-      data: stampPromptVersion(
-        withProvenance(p.data, { engine }),
-        p.promptVersion,
-        promptVariantId,
-      ),
-      ueAssets: p.ueAssets,
-      status,
-      tier,
-      reason,
-    }));
+    // Grade the SUBMITTED data untouched (the stamp is added only to what is persisted), keep
+    // the producer's status only where nothing can grade it — its reason stamped `UNGRADED:` —
+    // and record WHO produced it under the `lab-post` policy (client allow-list; a claim the
+    // server already recorded on this row survives the lab's re-POST round trip).
+    const committed = commitArtifact(
+      {
+        catalogId: p.catalogId, entityId: p.entityId, step: p.step, data: p.data, ueAssets: p.ueAssets,
+        producer: { status: p.status, ...(p.tier ? { tier: p.tier } : {}), ...(p.reason ? { reason: p.reason } : {}) },
+      },
+      { kind: 'lab-post', declaredEngine: p.engine, promptVersion: p.promptVersion, promptVariantId },
+      artifactCommitDeps,
+    );
+    if (!committed.ok) return apiError(committed.error, 404);
+    return apiSuccess(committed.data.artifact);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Artifacts POST failed', 500);
   }

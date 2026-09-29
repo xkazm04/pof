@@ -16,12 +16,13 @@ import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register al
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { seededEntities } from '@/lib/catalog/seed';
-import { stepAppliesTo, stepsForProfile } from '@/lib/catalog/stepScope';
+import { stepsForProfile } from '@/lib/catalog/stepScope';
 import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { deriveEntityLifecycle, type DerivedLifecycle } from '@/lib/catalog/lifecycle';
-import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts } from '@/lib/pipeline-artifacts-db';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
-import { logger } from '@/lib/logger';
+import { commitArtifact, type CommitDeps } from '@/lib/catalog/artifactCommit';
+import type { Provenance } from '@/lib/provenance';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
 import { canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
@@ -288,8 +289,9 @@ function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>
  * that has persisted artifacts — one-shot drafts included). READ-ONLY: it computes,
  * it does not write, so a display read can never mutate state.
  */
-function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
-  const allArts = listArtifacts(catalogId);
+function derivedByEntity(catalogId: string, entityId?: string): Map<string, DerivedLifecycle> {
+  // A registered pipeline's total never reads the rows (`totalStepsFor`): one entity needs only its own.
+  const allArts = entityId && getCatalogPipeline(catalogId) ? listArtifacts(catalogId, entityId) : listArtifacts(catalogId);
   // An entity's total depends on its canon profile (a diablo1-only step is not part of a PoF entity's pipeline).
   const profileOf = new Map(seededEntities(catalogId).map((e) => [e.id, canonProfileOf(e)]));
   const byEntity = new Map<string, typeof allArts>();
@@ -304,7 +306,7 @@ function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
 }
 
 export function deriveCatalogLifecycle(catalogId: string, entityId?: string): EntityLifecycleView[] {
-  const byEntity = derivedByEntity(catalogId);
+  const byEntity = derivedByEntity(catalogId, entityId);
   const emptyDerived = deriveEntityLifecycle([], totalStepsFor(catalogId, []));
   const seeded = seededEntities(catalogId);
   const names = new Map(seeded.map((e) => [e.id, e.name] as const));
@@ -499,13 +501,25 @@ export interface SubmitResult {
   acceptance: { status: string; tier: string; label: string; detail?: string; reason?: string };
 }
 
+/** What the one write door (`@/lib/catalog/artifactCommit`) grades and syncs with. */
+export const artifactCommitDeps: CommitDeps = {
+  grade: gradeArtifact,
+  hasRegisteredChecker,
+  // Only a registered catalog has a derivable lifecycle worth caching.
+  syncLifecycle: (catalogId, entityId) => { if (getCatalogPipeline(catalogId)) syncEntityLifecycle(catalogId, entityId); },
+};
+
+/** `mcp-submit` = `POST /api/catalog/step-submit`; default = trusted in-process code (may `attest`). */
+export type SubmitOptions = { policy: 'mcp-submit' } | { policy?: 'in-process'; attest?: Provenance };
+
 /**
  * Persist a step's produced artifact and return the SERVER-DERIVED acceptance verdict.
  *
- * This is the headless equivalent of the lab's Produce → setLabSync write-through: the
- * orchestrating Claude submits its work (data + UE asset paths), and the step's own
- * Checker decides pass/pending/fail/deferred. L3/L4 deferrals are later upgraded by the
- * gate-drain runner — the submit never claims a runtime/visual pass.
+ * This is the headless equivalent of the lab's Produce → setLabSync write-through, through the
+ * SAME door (`commitArtifact`): the orchestrating Claude submits its work (data + UE asset
+ * paths), the step's own Checker decides pass/pending/fail/deferred, the row is stamped with
+ * who produced it, and the derived lifecycle is synced. L3/L4 deferrals are later upgraded by
+ * the gate-drain runner — the submit never claims a runtime/visual pass.
  */
 export function submitStepArtifact(
   catalogId: string,
@@ -513,38 +527,17 @@ export function submitStepArtifact(
   step: string,
   data: Record<string, unknown>,
   ueAssets: string[],
+  opts: SubmitOptions = {},
 ): SubmitResult {
-  const spec = resolveStep(catalogId, step); // throws CatalogNotFoundError for unknown catalog/step
-  const ctx = serverCheckerContext(catalogId, entityId);
-  // A step scoped to other canon profiles is not part of this entity's pipeline (D18): writing a row
-  // for it would put a step the entity does not have into its lifecycle and /status.
-  if (!stepAppliesTo(spec, ctx.canonProfile)) {
-    throw new CatalogNotFoundError(
-      `Step "${step}" of ${catalogId} applies only to canon profile(s) ${spec.profiles!.join(', ')}; ${entityId} is "${ctx.canonProfile ?? 'pof'}"`,
-    );
-  }
-  const res = safeAccept(spec.accept, data, ctx);
-  const status = res?.status ?? 'pending';
-  const tier = res?.tier ?? 'L0';
-  const reason = res?.reason;
-  const artifact = upsertArtifact({
-    catalogId,
-    entityId,
-    step,
-    data,
-    ueAssets,
-    status,
-    tier,
-    ...(reason ? { reason } : {}),
-  });
-  // The entity's lifecycle is DERIVED from its artifacts, so a write to one of them
-  // is exactly when it can change. Best-effort: the artifact is the primary job and
-  // must never fail because the (re-derivable) lifecycle cache could not be written.
-  try {
-    syncEntityLifecycle(catalogId, entityId);
-  } catch (e) {
-    logger.warn('submitStepArtifact: could not sync derived lifecycle', e);
-  }
+  resolveStep(catalogId, step); // throws CatalogNotFoundError for unknown catalog/step
+  const committed = commitArtifact(
+    { catalogId, entityId, step, data, ueAssets },
+    opts.policy === 'mcp-submit' ? { kind: 'mcp-submit' } : { kind: 'in-process', ...(opts.attest ? { attest: opts.attest } : {}) },
+    artifactCommitDeps,
+  );
+  if (!committed.ok) throw new CatalogNotFoundError(committed.error);
+  const { artifact, raw: res } = committed.data;
+  const { status } = artifact, tier = artifact.tier ?? 'L0', reason = res?.reason;
   // The persisted artifact keeps the checker's own verdict (storage separation is
   // deliberate — judge_verdicts lives apart). The RETURNED acceptance the caller consumes
   // is bridged, so a current-rubric judge FAIL surfaces here instead of a stale pass.

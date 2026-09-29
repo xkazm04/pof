@@ -6,7 +6,9 @@ import { submitStepArtifact, CatalogNotFoundError } from '@/lib/catalog/headless
  * POST /api/catalog/step-submit — the headless "submit your work" endpoint.
  * Body: { catalogId, entityId, step, data, ueAssets? }
  *
- * Persists the produced artifact and returns the SERVER-DERIVED acceptance verdict.
+ * Persists the produced artifact and returns the SERVER-DERIVED acceptance verdict. It goes
+ * through the one write door under the `mcp-submit` policy: a `_provenance` claim in `data` is
+ * sanitised (only `Code` is declarable) and the recipe's current `PROMPT_VERSION` is stamped.
  * The pof-mcp `pof_submit_artifact` tool calls this: Claude does the work, the server
  * grades it via the step's own Checker (Claude never self-grades). L3/L4 deferrals are
  * upgraded later by POST /api/pipeline-artifacts/drain (the `pof_drain_gates` tool).
@@ -28,7 +30,9 @@ export async function POST(req: NextRequest) {
     }
     const ueAssets = Array.isArray(body.ueAssets) ? body.ueAssets.filter((a): a is string => typeof a === 'string') : [];
     return apiSuccess(
-      submitStepArtifact(body.catalogId, body.entityId, body.step, body.data as Record<string, unknown>, ueAssets),
+      submitStepArtifact(body.catalogId, body.entityId, body.step, body.data as Record<string, unknown>, ueAssets, {
+        policy: 'mcp-submit',
+      }),
     );
   } catch (e) {
     if (e instanceof CatalogNotFoundError) return apiError(e.message, 404);
