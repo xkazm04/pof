@@ -11,6 +11,7 @@ import { MemoryBanks } from './schema/MemoryBanks';
 import { FileSizeBreakdown } from './schema/FileSizeBreakdown';
 import { BudgetAlerting } from './schema/BudgetAlerting';
 import { SaveDiffSection } from './schema/SaveDiffViewer';
+import { SaveHeaderAudit } from './schema/SaveHeaderAudit';
 import { IntegrityValidator } from './slots/IntegrityValidator';
 import { MigrationPathGraph } from './versions/MigrationPathGraph';
 import { CloudSyncSection } from './advanced/CloudSyncStatus';
@@ -78,6 +79,9 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
 
       {activeTab === 'schema' && (
         <VisibleSection moduleId={moduleId} sectionId="groups">
+          {/* The project's real save class, audited against the design + canon */}
+          <SaveHeaderAudit moduleId={moduleId} />
+
           {/* Schema tree + Memory banks */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SchemaTree expandedGroups={expandedGroups} toggleGroup={toggleGroup} />
