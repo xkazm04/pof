@@ -239,7 +239,8 @@ the browser or edge runtime).
 | `settings` | Key/value app settings |
 | `feature_matrix` | Per-module/feature implementation status + quality scores. Every row carries `source` (`review` = CLI review import · `verify` = UE5 auto-verify · `fix` = CLI fix PATCH · `seed` · `unknown` for legacy rows) and `last_reviewed_at`, stamped by every write path — the compliance engine reads these as evidence provenance, and a PATCH stamps `last_reviewed_at = now` + `source='fix'` (a dated but weaker-class assertion, since the actor that made the change is the one reporting it). `reviewedAt` on import is validated as ISO-8601 before any write. |
 | `review_snapshots` | Point-in-time module health snapshots for trending. Captured only when a write actually changed rows; an identical-timestamp re-capture updates the row in place; retention bounded to 200/module (module-scoped prune, so a quiet module never loses its only point). `getReviewHistory` returns the RECENT window. |
-| `eval_findings` | Multi-pass deep-eval scan results |
+| `eval_findings` | Module Scan findings. `resolved_at` (nullable, schema 4 — `SCHEMA_VERSION` bumped so existing DBs gain it) is the durable resolution: `PATCH /api/module-scan/import {moduleId, ids, resolved}` stamps or clears it (undo), and unknown ids come back in `missing`. |
+| `module_scans` | One row per Module Scan run, **including a clean one** (`finding_count 0`), written in the same transaction as its findings: `scan_id`, `module_id`, `passes_json` (every pass the scan RAN, from the callback's `passes` staticField — any `EvalPass`, so the 4-pass default incl. ground-truth is accepted), `created_at`. `GET ?view=delta` reconciles the newest scan against the findings still unresolved before it with the pure `reconcileScan` (`src/lib/evaluator/scan-reconcile.ts`): new / persisting / cleared / notRescanned — a pass that did not run clears nothing. |
 | `build_history` | Headless UBT build records |
 | `recent_projects` | Project switcher history |
 | `project_progress` | Full module state (checklist/health/verification/history) per project path |
@@ -556,7 +557,11 @@ e.g. a session stuck `isRunning: true` after a crash blocks all future dispatche
 
 **`scanResults` is memory-only.** It is excluded from `moduleStore`'s `partialize` and rebuilt
 from the database on mount. Do not add it back to `partialize` — it can be large and is always
-authoritative in the DB.
+authoritative in the DB. That includes resolutions: `useScanTab`'s `fetchAndMergeFindings` REPLACES the
+module's findings with the server's (a merge kept a stale active copy over a server-side resolution),
+and every resolve path (row, Mark Selected, Resolve all, a successful batch fix, the ScanDelta
+"Resolve N no longer found") goes through one `PATCH`. A scan this view dispatched shows as
+`unrecorded` — never as an earlier scan's delta — when no scan newer than its dispatch was recorded.
 
 **`deepEvalStore` is the fast baseline cache; durable history lives in SQLite.**
 `src/stores/deepEvalStore.ts` (localStorage `pof-deep-eval`) keeps only the *most recent* deep-eval
