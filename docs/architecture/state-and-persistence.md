@@ -352,6 +352,18 @@ version signal and invalidation path. Known divergence, measured: a step existin
 reports the persisted verdict rather than a client re-grade — 786 of 817 rows identical, all 31
 differences in `items`, the one bespoke catalog the server cannot grade.
 
+**Stored content hash** (2026-09-29, the follow-up above, done): `pipeline_artifacts.content_hash` is a
+stored read model of `data` (`stepContentHash`). `upsertArtifact` stamps it in the same upsert; `ensureTable`
+adds the column to an old-DDL DB and backfills every NULL or foreign-`CONTENT_HASH_SCHEME` row in one
+transaction; the `artifacts_content_hash_invalidate` trigger NULLs the hash when a writer that bypasses the
+door changes `data` without restamping (it compares values, `NEW.data IS NOT OLD.data`, so identical drain /
+verify re-upserts keep the hash; the door restamps a hash the trigger NULLed on a `_provenance`-only
+rewrite). `listArtifactVerdicts` reads verdicts without selecting `data` and re-hashes only NULL /
+foreign-scheme rows (an unparseable blob yields no `contentHash`, never a hash of `{}`); `/summary` and
+`/changes` read through it, wire shapes unchanged. Measured on a 1,679-row DB copy: whole-project summary
+fan-out 212.6 ms -> 8.7 ms, 0 parity mismatches, one-time backfill 265 ms. Rollback:
+`DROP TRIGGER IF EXISTS artifacts_content_hash_invalidate` (the nullable column is inert to old code).
+
 **`GET /api/pipeline-artifacts/changes?catalogId&since`** (2026-08-18) answers "what moved since I was
 last here" from stored rows and archived versions ONLY. `revisionsSince > 0` is *proof* of a content
 change, since a version is archived only when content differed; `0` means the row was written and
