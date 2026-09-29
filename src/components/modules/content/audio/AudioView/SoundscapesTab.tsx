@@ -6,11 +6,13 @@ import { ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 import type { AudioSceneDocument, AudioZone } from '@/types/audio-scene';
 import { useDebouncedCommit } from './useDebouncedCommit';
 import { ZoneSoundscapeField } from './ZoneSoundscapeField';
+import type { SceneBuffer } from './useSceneBuffer';
 
 interface SoundscapesTabProps {
   activeDoc: AudioSceneDocument;
   commitDescription: (description: string) => Promise<void>;
-  commitZones: (zones: AudioZone[]) => Promise<void>;
+  /** The AudioView session's scene buffer: zone soundscapes are ops in it. */
+  scene: SceneBuffer;
   handleGenerateSoundscape: (zone: AudioZone) => void;
   audioCli: ReturnType<typeof useModuleCLI>;
 }
@@ -18,13 +20,16 @@ interface SoundscapesTabProps {
 export function SoundscapesTab({
   activeDoc,
   commitDescription,
-  commitZones,
+  scene,
   handleGenerateSoundscape,
   audioCli,
 }: SoundscapesTabProps) {
   // One write per typing pause, not per keystroke — and the draft outlives a
   // failed write so the user never watches their sentence vanish.
   const description = useDebouncedCommit(activeDoc.description, commitDescription);
+  // Render the scene as the session buffer has it (unsaved painter edits included).
+  const zones = scene.scene?.zones ?? activeDoc.zones;
+  const emitters = scene.scene?.emitters ?? activeDoc.emitters;
 
   return (
     <div className="overflow-y-auto p-5 space-y-5">
@@ -55,11 +60,20 @@ export function SoundscapesTab({
       </div>
 
       {/* Per-zone soundscapes */}
-      {activeDoc.zones.length > 0 ? (
+      {zones.length > 0 ? (
         <div className="space-y-4">
           <h3 className="text-xs font-semibold text-text">Zone Soundscapes</h3>
-          {activeDoc.zones.map((zone) => {
-            const zoneEmitters = activeDoc.emitters.filter((e) => e.zoneId === zone.id);
+          {scene.saveError && (
+            <InlineErrorRetry
+              message={`${scene.saveError} — your change is still here.`}
+              onRetry={scene.retry}
+              onDismiss={scene.dismissError}
+              dismissLabel="Dismiss save error"
+              dense
+            />
+          )}
+          {zones.map((zone) => {
+            const zoneEmitters = emitters.filter((e) => e.zoneId === zone.id);
             return (
               <div key={zone.id} className="p-3 rounded-lg bg-surface-deep border border-border">
                 <div className="flex items-center gap-2 mb-2">
@@ -67,12 +81,7 @@ export function SoundscapesTab({
                   <h4 className="text-xs font-semibold text-text">{zone.name}</h4>
                   <span className="text-2xs text-text-muted">{zone.reverbPreset} · {zone.occlusionMode}</span>
                 </div>
-                <ZoneSoundscapeField
-                  key={zone.id}
-                  zone={zone}
-                  zones={activeDoc.zones}
-                  commitZones={commitZones}
-                />
+                <ZoneSoundscapeField key={zone.id} zone={zone} buffer={scene} />
                 {zoneEmitters.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {zoneEmitters.map((em) => (

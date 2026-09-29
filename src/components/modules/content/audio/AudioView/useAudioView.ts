@@ -1,7 +1,7 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAudioScene } from '@/hooks/useAudioScene';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useChecklistCLI } from '@/hooks/useChecklistCLI';
@@ -13,10 +13,11 @@ import {
   buildSoundscapeNarrativePrompt,
 } from '@/lib/prompts/audio-scene';
 import { buildAudioEventPrompt } from '@/lib/prompts/audio-events';
-import type { AudioZone, SoundEmitter } from '@/types/audio-scene';
+import type { AudioZone } from '@/types/audio-scene';
 import type { AudioEventCatalogConfig } from '@/components/modules/content/audio/AudioEventCatalog';
 import { MODULE_COLORS } from '@/lib/constants';
 import type { TabId } from './types';
+import { useSceneSession } from './useSceneSession';
 
 export function useAudioView() {
   const {
@@ -58,7 +59,24 @@ export function useAudioView() {
     accentColor: MODULE_COLORS.content,
   });
 
+  // ── The open scene's edit session ──
+  // One op buffer for every tab (see useSceneSession): the painter and the
+  // soundscapes write through it, and a scene switch waits for its write.
+
+  const switchTo = useCallback((id: number) => {
+    setActiveDocId(id);
+    setSelectedZoneId(null);
+    setSelectedEmitterId(null);
+  }, [setActiveDocId]);
+
+  const sceneSession = useSceneSession({ activeDoc, commitDoc, switchTo });
+  const { settle, buffer: sceneBuffer } = sceneSession;
+
   // ── Scene CLI session ──
+
+  // The scene a run was dispatched FOR. `onComplete` fires long after dispatch —
+  // the user may be on another scene by then — so it stamps this, not activeDoc.
+  const dispatchedSceneIdRef = useRef<number | null>(null);
 
   const audioCli = useModuleCLI({
     moduleId: 'audio',
@@ -66,9 +84,10 @@ export function useAudioView() {
     label: 'Audio Code Gen',
     accentColor: MODULE_COLORS.content,
     onComplete: (success) => {
-      if (success && activeDoc) {
+      const id = dispatchedSceneIdRef.current;
+      if (success && id !== null) {
         updateDoc({
-          id: activeDoc.id,
+          id,
           lastGeneratedAt: new Date().toISOString(),
         });
       }
@@ -130,50 +149,45 @@ export function useAudioView() {
 
   const handleCreateDoc = useCallback(async () => {
     if (!newDocName.trim()) return;
+    // Creating opens the new scene: send the open scene's buffered ops first.
+    sceneBuffer.flush();
     setIsCreating(true);
     await createDoc({ name: newDocName.trim() });
     setNewDocName('');
     setIsCreating(false);
-  }, [newDocName, createDoc]);
+  }, [newDocName, createDoc, sceneBuffer]);
 
-  // ── Commit helpers ──
-  // These all use the THROWING `commitDoc`: their callers (the painter tab's scene
-  // buffer, the debounced text fields) hold the user's edit locally and must learn
-  // that a write failed so they can keep it and offer a retry. `updateDoc` swallows
-  // failures and is reserved for fire-and-forget bookkeeping (e.g. lastGeneratedAt).
-
-  /**
-   * The painter tab's ONE write — zones and emitters together. The canvas AND the
-   * property panels reach it through one op buffer (`useSceneBuffer`), which
-   * replays its ops onto the newest server copy, so the per-record patch writers
-   * that used to build from `activeDoc` (and revert a buffered drag) are gone.
-   */
-  const commitScene = useCallback(async (next: { zones: AudioZone[]; emitters: SoundEmitter[] }) => {
-    if (!activeDoc) return;
-    await commitDoc({ id: activeDoc.id, zones: next.zones, emitters: next.emitters });
-  }, [activeDoc, commitDoc]);
-
-  const commitZones = useCallback(async (zones: AudioZone[]) => {
-    if (!activeDoc) return;
-    await commitDoc({ id: activeDoc.id, zones });
-  }, [activeDoc, commitDoc]);
+  // ── Generate ──
+  // Prompts are built from the scene as the user SEES it (`settle`: the server
+  // copy with the session's buffered ops, which it also writes now), never from
+  // the round-trip-stale `activeDoc`.
 
   const handleGenerateAll = useCallback(() => {
-    if (!activeDoc) return;
-    const prompt = buildAudioSystemPrompt(activeDoc, ctx);
-    audioCli.sendPrompt(prompt);
-  }, [activeDoc, ctx, audioCli]);
+    const doc = settle();
+    if (!doc) return;
+    dispatchedSceneIdRef.current = doc.id;
+    audioCli.sendPrompt(buildAudioSystemPrompt(doc, ctx));
+  }, [settle, ctx, audioCli]);
 
   const handleGenerateZoneCode = useCallback((zone: AudioZone) => {
-    if (!activeDoc) return;
-    const prompt = buildZoneCodegenPrompt(zone, activeDoc, ctx);
-    audioCli.sendPrompt(prompt);
-  }, [activeDoc, ctx, audioCli]);
+    const doc = settle();
+    if (!doc) return;
+    dispatchedSceneIdRef.current = doc.id;
+    audioCli.sendPrompt(buildZoneCodegenPrompt(zone, doc, ctx));
+  }, [settle, ctx, audioCli]);
 
+  const activeDocId = activeDoc?.id ?? null;
   const handleGenerateSoundscape = useCallback((zone: AudioZone) => {
-    const prompt = buildSoundscapeNarrativePrompt(zone, ctx);
-    audioCli.sendPrompt(prompt);
-  }, [ctx, audioCli]);
+    dispatchedSceneIdRef.current = activeDocId;
+    audioCli.sendPrompt(buildSoundscapeNarrativePrompt(zone, ctx));
+  }, [activeDocId, ctx, audioCli]);
+
+  // ── Doc-level field writes ──
+  // Zones and emitters go through the session buffer above; these are the
+  // scene's own fields, one debounced field each (`useDebouncedCommit`, flushed
+  // on unmount). They use the THROWING `commitDoc` so a field keeps its draft and
+  // offers a retry; `updateDoc` swallows failures and is reserved for
+  // fire-and-forget bookkeeping (lastGeneratedAt).
 
   const commitDescription = useCallback(async (description: string) => {
     if (!activeDoc) return;
@@ -224,8 +238,7 @@ export function useAudioView() {
     rvChecklist,
     AUD_MODULE_ID,
     handleCreateDoc,
-    commitScene,
-    commitZones,
+    sceneSession,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,

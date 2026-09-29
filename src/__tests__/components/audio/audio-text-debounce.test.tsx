@@ -1,8 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import { useMemo } from 'react';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { SoundscapesTab } from '@/components/modules/content/audio/AudioView/SoundscapesTab';
 import { SettingsTab } from '@/components/modules/content/audio/AudioView/SettingsTab';
+import { useSceneBuffer } from '@/components/modules/content/audio/AudioView/useSceneBuffer';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import type { SceneDraft } from '@/lib/audio-scene-ops';
 import type { AudioSceneDocument, AudioZone } from '@/types/audio-scene';
 
 /**
@@ -31,6 +34,25 @@ function doc(over: Partial<AudioSceneDocument> = {}): AudioSceneDocument {
 
 const noopCli = { isRunning: false, sendPrompt: vi.fn() } as unknown as never;
 
+/** SoundscapesTab over a scene buffer, as AudioView's session provides it. */
+function Soundscapes({ activeDoc, commitDescription, commitScene }: {
+  activeDoc: AudioSceneDocument;
+  commitDescription: (d: string) => Promise<void>;
+  commitScene?: (next: SceneDraft) => Promise<void>;
+}) {
+  const base = useMemo(() => ({ zones: activeDoc.zones, emitters: activeDoc.emitters }), [activeDoc]);
+  const scene = useSceneBuffer({ base, sceneId: activeDoc.id, write: commitScene ?? (async () => {}) });
+  return (
+    <SoundscapesTab
+      activeDoc={activeDoc}
+      commitDescription={commitDescription}
+      scene={scene}
+      handleGenerateSoundscape={vi.fn()}
+      audioCli={noopCli}
+    />
+  );
+}
+
 /** Type a word one character at a time, as a user does. */
 function typeInto(el: HTMLElement, text: string) {
   for (let i = 1; i <= text.length; i++) {
@@ -49,13 +71,7 @@ describe('SoundscapesTab — debounced scene description', () => {
   it('writes once per typing pause, not once per keystroke', async () => {
     const commitDescription = vi.fn().mockResolvedValue(undefined);
     render(
-      <SoundscapesTab
-        activeDoc={doc()}
-        commitDescription={commitDescription}
-        commitZones={vi.fn().mockResolvedValue(undefined)}
-        handleGenerateSoundscape={vi.fn()}
-        audioCli={noopCli}
-      />,
+      <Soundscapes activeDoc={doc()} commitDescription={commitDescription} />,
     );
 
     const field = screen.getByLabelText('Scene description');
@@ -71,13 +87,7 @@ describe('SoundscapesTab — debounced scene description', () => {
   it('uses the shared UI_TIMEOUTS delay, not a magic number', async () => {
     const commitDescription = vi.fn().mockResolvedValue(undefined);
     render(
-      <SoundscapesTab
-        activeDoc={doc()}
-        commitDescription={commitDescription}
-        commitZones={vi.fn().mockResolvedValue(undefined)}
-        handleGenerateSoundscape={vi.fn()}
-        audioCli={noopCli}
-      />,
+      <Soundscapes activeDoc={doc()} commitDescription={commitDescription} />,
     );
     fireEvent.change(screen.getByLabelText('Scene description'), { target: { value: 'x' } });
     await act(async () => { vi.advanceTimersByTime(UI_TIMEOUTS.textEditDebounce - 1); });
@@ -91,13 +101,7 @@ describe('SoundscapesTab — debounced scene description', () => {
       .mockRejectedValueOnce(new Error('Scene write rejected by the server'))
       .mockResolvedValue(undefined);
     render(
-      <SoundscapesTab
-        activeDoc={doc()}
-        commitDescription={commitDescription}
-        commitZones={vi.fn().mockResolvedValue(undefined)}
-        handleGenerateSoundscape={vi.fn()}
-        audioCli={noopCli}
-      />,
+      <Soundscapes activeDoc={doc()} commitDescription={commitDescription} />,
     );
 
     const field = screen.getByLabelText('Scene description') as HTMLTextAreaElement;
@@ -113,25 +117,23 @@ describe('SoundscapesTab — debounced scene description', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('per-zone soundscape text debounces into one whole-zone-array write', async () => {
-    const commitZones = vi.fn().mockResolvedValue(undefined);
+  it('per-zone soundscape text debounces into one scene-buffer write', async () => {
+    const commitScene = vi.fn<(next: SceneDraft) => Promise<void>>().mockResolvedValue(undefined);
     render(
-      <SoundscapesTab
+      <Soundscapes
         activeDoc={doc({ zones: [zone(), zone({ id: 'z2', name: 'Hall' })] })}
         commitDescription={vi.fn().mockResolvedValue(undefined)}
-        commitZones={commitZones}
-        handleGenerateSoundscape={vi.fn()}
-        audioCli={noopCli}
+        commitScene={commitScene}
       />,
     );
 
     const field = screen.getByLabelText('Soundscape description for Cavern');
     typeInto(field, 'dripping');
-    expect(commitZones).toHaveBeenCalledTimes(0); // ← was 8
+    expect(commitScene).toHaveBeenCalledTimes(0); // ← was 8
 
     await settle();
-    expect(commitZones).toHaveBeenCalledTimes(1);
-    const zones = commitZones.mock.calls[0][0] as AudioZone[];
+    expect(commitScene).toHaveBeenCalledTimes(1);
+    const zones = commitScene.mock.calls[0][0].zones;
     expect(zones).toHaveLength(2);
     expect(zones[0].soundscapeDescription).toBe('dripping');
     expect(zones[1].soundscapeDescription).toBe('');
