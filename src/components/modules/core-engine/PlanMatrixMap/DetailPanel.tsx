@@ -136,20 +136,25 @@ export function DetailPanel({
         )}
 
         <div className="mt-auto pt-6">
-          {/* Execute */}
+          {/* Execute — gated on readiness, like the plan table's Build this
+              (planDispatch refuses a blocked item as well). */}
           <button
             onClick={() => onExecute(item)}
+            disabled={!item.isReady}
+            title={item.isReady ? undefined : `Waits on: ${item.unmetDeps.map((d) => d.slice(d.indexOf('::') + 2)).join(', ')}`}
             onMouseEnter={(e) => {
+              if (!item.isReady) return;
               e.currentTarget.style.boxShadow = `0 0 30px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_60)}`;
             }}
             onMouseLeave={(e) => {
+              if (!item.isReady) return;
               e.currentTarget.style.boxShadow = `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}`;
             }}
-            className="w-full flex items-center justify-center gap-3 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-4 rounded-xl transition-all"
-            style={{ boxShadow: `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}` }}
+            className="w-full flex items-center justify-center gap-3 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-4 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+            style={{ boxShadow: item.isReady ? `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}` : 'none' }}
           >
             <ArrowRight className="w-5 h-5" />
-            Implement Feature
+            {item.isReady ? 'Implement Feature' : `Blocked by ${item.unmetDeps.length}`}
           </button>
         </div>
       </div>

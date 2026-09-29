@@ -7,10 +7,8 @@ import {
 } from 'lucide-react';
 import { PlanMatrixMap } from '../PlanMatrixMap';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
-import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
-import { planItemToTask } from '@/lib/implementation-planner/plan-dispatch';
-import { getAppOrigin } from '@/lib/constants';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
@@ -36,23 +34,21 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
   const [page, setPage] = useState(0);
   const [showAllModules, setShowAllModules] = useState(!moduleId);
 
-  // CLI for dispatching a plan item as a feature-fix task. `execute` scans the
-  // project, injects context via buildTaskPrompt, and dispatches — the standard
-  // TaskFactory path (no hand-rolled prompt).
-  const { execute } = useModuleCLI({
-    moduleId: 'core-engine' as SubModuleId,
+  // The ONE plan dispatch door: planDispatch gates readiness, the feature-fix
+  // task runs via useModuleCLI.execute, and a confirmed landing invalidates the
+  // shared status cache so this plan re-derives (the item leaves, dependents
+  // turn Ready). Dispatch happens only from the row's explicit Build click.
+  const { dispatch, lastError: dispatchError } = usePlanDispatch({
     sessionKey: 'implementation-plan',
     label: 'Implementation Plan',
-    accentColor: MODULE_COLORS.core,
   });
 
   const moduleIds = useMemo(() => Object.keys(MODULE_FEATURE_DEFINITIONS), []);
 
   const handleExecute = useCallback((item: PlanItem) => {
-    // PHASE-1: single-item dispatch, gated on readiness (all deps implemented).
-    if (!item.isReady) return;
-    void execute(planItemToTask(item, getAppOrigin()));
-  }, [execute]);
+    // PHASE-1: single-item dispatch; the readiness gate lives in planDispatch.
+    dispatch(item);
+  }, [dispatch]);
 
   // Pagination
   const pagedItems = useMemo(() => {
@@ -161,6 +157,9 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
           {/* Error state */}
           {error && (
             <div className="text-center text-red-400 text-xs py-4">{error}</div>
+          )}
+          {dispatchError && (
+            <div role="status" className="text-xs text-amber-400 px-1">{dispatchError}</div>
           )}
 
           {/* Plan list */}

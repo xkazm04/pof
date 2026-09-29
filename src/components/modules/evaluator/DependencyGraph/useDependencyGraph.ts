@@ -5,12 +5,10 @@ import {
   unblockFrontier, previewUnblock, criticalUnblocker, clearedEdgeIds,
 } from '@/lib/topology/unblockFrontier';
 import { generatePlan } from '@/lib/implementation-planner/plan-generator';
-import { planItemToTask } from '@/lib/implementation-planner/plan-dispatch';
-import { getAppOrigin } from '@/lib/constants';
 import { MODULE_COLORS as CHART_MODULE_COLORS } from '@/lib/chart-colors';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useManifest } from '@/hooks/useManifest';
-import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COLORS } from './constants';
 import type { BuildTarget, ModuleNode } from './types';
@@ -88,12 +86,11 @@ export function useDependencyGraph() {
     [previewKey, statusMap],
   );
 
-  // One-click build: resolve the feature's PlanItem and dispatch it as a
-  // feature-fix task through the standard useModuleCLI.execute path (the
-  // ImplementationPlan path) — project context, spend preflight and analytics
-  // come with it; no prompt is built here.
-  const { execute, isRunning: isBuilding } = useModuleCLI({
-    moduleId: 'core-engine' as SubModuleId,
+  // One-click build: resolve the feature's PlanItem and dispatch it through the
+  // ONE plan dispatch door (usePlanDispatch — the ImplementationPlan path):
+  // gated on readiness, feature-fix task, and a confirmed landing refreshes the
+  // shared statuses this graph reads. No prompt is built here.
+  const { dispatch, isRunning: isBuilding } = usePlanDispatch({
     sessionKey: 'dependency-graph-build',
     label: 'Dependencies Build',
     accentColor: CHART_MODULE_COLORS.evaluator,
@@ -101,8 +98,8 @@ export function useDependencyGraph() {
   const buildFeature = useCallback((key: string) => {
     const item = generatePlan(statusMap).items.find((i) => i.key === key);
     if (!item) return;
-    void execute(planItemToTask(item, getAppOrigin()));
-  }, [statusMap, execute]);
+    dispatch(item);
+  }, [statusMap, dispatch]);
 
   // Feature-level details for selected module
   const selectedDetails = useMemo(() => {

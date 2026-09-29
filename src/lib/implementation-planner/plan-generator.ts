@@ -5,6 +5,8 @@ import {
   type DependencyInfo,
   type ResolvedDependency,
 } from '@/lib/feature-definitions';
+import { isFeatureDone } from '@/lib/constellation/layout';
+import type { FeatureStatus } from '@/types/feature-matrix';
 import { computeImpactScores, type ImpactScore } from './impact-scorer';
 import { estimateEffort, type EffortEstimate } from './effort-estimator';
 
@@ -25,8 +27,10 @@ export interface PlanItem {
   effort: EffortEstimate;
   /** Direct dependencies (keys) */
   dependsOn: string[];
-  /** Whether all dependencies are met (implemented or earlier in plan) */
+  /** Whether every dependency is done (`isFeatureDone`: implemented OR improved) */
   isReady: boolean;
+  /** The dependencies that are NOT done yet — [] exactly when `isReady` */
+  unmetDeps: string[];
   /** Current implementation status */
   status: string;
 }
@@ -123,7 +127,13 @@ function topologicalSort(
 
 /**
  * Generate an implementation plan: topologically sorted, impact-prioritized list
- * of all unimplemented features.
+ * of all features that are not done.
+ *
+ * Done rule: `isFeatureDone` (implemented OR improved) — the ONE rule the
+ * constellation, the module topology and `unblockFrontier` use. The plan's own
+ * Build (a feature-fix task) lands as 'improved', so counting only 'implemented'
+ * here would keep a just-built feature in the plan and its dependents blocked.
+ * `implementedKeys` / `implementedCount` therefore mean "done".
  */
 export function generatePlan(
   statusMap: Map<string, string>,
@@ -139,7 +149,7 @@ export function generatePlan(
       const key = `${moduleId}::${feat.featureName}`;
       totalFeatures++;
       const status = statusMap.get(key) ?? 'unknown';
-      if (status === 'implemented') {
+      if (isFeatureDone(status as FeatureStatus)) {
         implementedKeys.add(key);
       }
     }
@@ -172,8 +182,9 @@ export function generatePlan(
     const info = depMap.get(key);
     const deps = (info?.deps ?? []).map((d) => d.key);
 
-    // A feature is "ready" if all its deps are implemented
-    const isReady = deps.every((d) => implementedKeys.has(d));
+    // A feature is "ready" when every dep is done.
+    const unmetDeps = deps.filter((d) => !implementedKeys.has(d));
+    const isReady = unmetDeps.length === 0;
 
     return {
       key,
@@ -186,6 +197,7 @@ export function generatePlan(
       effort: estimateEffort(moduleId as SubModuleId, featureName),
       dependsOn: deps,
       isReady,
+      unmetDeps,
       status: statusMap.get(key) ?? 'unknown',
     };
   });
