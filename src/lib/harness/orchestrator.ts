@@ -568,6 +568,50 @@ export function formatGateCoverageLines(
   });
 }
 
+// ── Fan-out review request (review-at-the-fan-out-point) ─────────────────────
+
+const PERCEPTUAL_GATE_TYPES: ReadonlySet<string> = new Set(['visual', 'ue-visual']);
+
+/**
+ * An area two or more areas depend on directly is a FAN-OUT POINT: whatever it
+ * looks like, every dependent is built on. When one completes and no perceptual
+ * gate PASSED in the report that decided it, its dependents are about to inherit
+ * an unjudged look, and the run-end coverage agenda would surface that only
+ * after all of them were built on top. So the request is due now. Returns the
+ * request, or null when the area has <2 dependents, when no perceptual gate is
+ * configured (nothing in the plan claims a look), or when one passed. A null
+ * report (promoted-with-gaps) counts as no verdict. Pure. It raises the request
+ * only; dependents are NOT held, because a hold on a gate that cannot run is a
+ * required gate by another name.
+ */
+export function fanOutReviewRequest(
+  plan: Pick<GamePlan, 'areas'>,
+  areaId: string,
+  report: Pick<VerificationReport, 'gates'> | null,
+  gates: ReadonlyArray<Pick<VerificationGate, 'name' | 'type'>>,
+): { areaId: string; dependents: string[]; reason: string } | null {
+  const dependents = plan.areas.filter(a => a.dependsOn.includes(areaId)).map(a => a.id);
+  if (dependents.length < 2) return null;
+  const perceptual = gates.filter(g => PERCEPTUAL_GATE_TYPES.has(g.type)).map(g => g.name);
+  if (perceptual.length === 0) return null;
+  const results = (report?.gates ?? []).filter(r => perceptual.includes(r.gate));
+  if (results.some(r => r.passed && !r.unverifiable)) return null;
+  const judgedFail = results.some(r => !r.passed && !r.unverifiable);
+  const reason = judgedFail
+    ? `${perceptual.join('/')} judged it FAIL`
+    : `${perceptual.join('/')} returned no verdict`;
+  return { areaId, dependents, reason };
+}
+
+/** Run-end agenda lines, roots first: one per fan-out point that raised a request. */
+export function formatFanOutAgendaLines(
+  requests: ReadonlyArray<{ areaId: string; dependents: string[]; reason: string }>,
+): string[] {
+  return requests.map(r =>
+    `Review first: ${r.areaId} (${r.reason}) - ${r.dependents.length} dependent area(s) were built on it: `
+    + `${r.dependents.join(', ')}. One fix here reaches all of them; their own items stay on the agenda.`);
+}
+
 /**
  * The cap-hit pause reason. The governor stops LAUNCHES and DRAINS what is in
  * flight rather than killing it (a killed session is spent and unmeasured), so
@@ -771,6 +815,22 @@ export function createHarnessOrchestrator(
   // Per-gate verdict tally for THIS process's segment of the run (memory only,
   // like the in-flight reservation): the run-end coverage agenda reads it.
   const gateTally: Record<string, GateVerdictTally> = {};
+
+  // Fan-out points that completed without a perceptual PASS, in the order they
+  // raised their request: the run-end agenda lists them before the gate lines.
+  const fanOutRequests: Array<{ areaId: string; dependents: string[]; reason: string }> = [];
+
+  function raiseFanOutReview(
+    plan: GamePlan,
+    areaId: string,
+    report: Pick<VerificationReport, 'gates'> | null,
+    gates: ReadonlyArray<Pick<VerificationGate, 'name' | 'type'>>,
+  ): void {
+    const req = fanOutReviewRequest(plan, areaId, report, gates);
+    if (!req) return;
+    fanOutRequests.push(req);
+    emit({ type: 'harness:review-request', areaId, iteration: plan.iteration, dependents: req.dependents, reason: req.reason });
+  }
 
   /** Fallback per-session spend (USD) used when the CLI reports no cost, so the budget
    *  governor keeps advancing toward the cap instead of being silently disabled when the
@@ -1086,6 +1146,7 @@ export function createHarnessOrchestrator(
         }
       }
       emit({ type: 'harness:area-completed', areaId: area.id, iteration: plan.iteration });
+      raiseFanOutReview(plan, area.id, verification, gates);
       return 'completed';
     } else {
       emit({
@@ -1192,6 +1253,7 @@ export function createHarnessOrchestrator(
             type: 'harness:learning',
             learning: `Area ${result.area.id} promoted-with-gaps after ${retries} retries — dependents unblocked, but excluded from the pass-rate numerator (unverified)`,
           });
+          raiseFanOutReview(plan, result.area.id, null, gates);
         }
       }
 
@@ -1474,7 +1536,7 @@ export function createHarnessOrchestrator(
     // preflight skips runtime-determined gates on purpose. Emitted only when a
     // session ran this segment, so a resume that did nothing adds no lines.
     if (Object.keys(gateTally).length > 0) {
-      for (const line of formatGateCoverageLines(gateTally, gates)) {
+      for (const line of [...formatFanOutAgendaLines(fanOutRequests), ...formatGateCoverageLines(gateTally, gates)]) {
         if (!guide.learnings.includes(line)) guide.learnings.push(line);
         emit({ type: 'harness:learning', learning: line });
       }
