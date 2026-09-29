@@ -590,6 +590,18 @@ once on mount; a changed `ownerEpoch` (remembered per tab in sessionStorage) is 
 restart rather than read as "nothing in flight". `reattachJob(id)` re-polls a transport-failed
 job's same provider id for free; `retryJob` still submits a new, paid generation.
 
+**Feature done = `isFeatureDone`; plan dispatch = `usePlanDispatch`.** A feature-matrix status is
+done when `isFeatureDone(status)` (`src/lib/constellation/layout.ts`: implemented OR improved) - the
+one rule `generatePlan`, `unblockFrontier` and `moduleGraph` share, so the planner's `isReady` /
+`unmetDeps` / `implementedCount` agree with the Dependencies tab. The plan's own Build lands as
+`improved` (the feature-fix callback), so a planner counting only `implemented` could never advance.
+Every plan dispatch (plan table, plan map, Dependencies Build) goes through `usePlanDispatch`
+(`src/hooks/usePlanDispatch.ts`), only from an explicit click: `planDispatch(item, origin)`
+(`plan-dispatch.ts`) refuses a not-ready item with `{ reason: 'blocked', unmet }` and creates no
+task; a ready item runs as a feature-fix task via `useModuleCLI.execute`; `onComplete(true,
+'confirmed')` calls `invalidateFeatureData()` so every plan view re-derives from fresh statuses
+(`onSettled(item, landed)` lets a sequencer advance). The other done-rule sites are not migrated yet.
+
 **UI_TIMEOUTS is the single source for all timing constants.** Inline `setTimeout(fn, 3000)` or
 similar literals are a lint target. Import `UI_TIMEOUTS` from `@/lib/constants`.
 
