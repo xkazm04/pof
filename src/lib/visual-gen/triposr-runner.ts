@@ -9,7 +9,8 @@
  * spawn seam so the orchestration is unit-tested without a GPU.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { processFailureReason, readMarker, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
 
 export interface TriposrSpec {
   imagePath: string;
@@ -87,10 +88,7 @@ export interface ParsedTriposr {
 
 /** Parse the script's `POF_TRIPOSR_*` stdout markers. Pure. */
 export function parseTriposrOutput(stdout: string): ParsedTriposr {
-  const get = (k: string): string | undefined => {
-    const m = stdout.match(new RegExp(`^${k}=(.*)$`, 'm'));
-    return m ? m[1].trim() : undefined;
-  };
+  const get = (k: string): string | undefined => readMarker(stdout, k);
   const done = get('POF_TRIPOSR_DONE');
   const error = get('POF_TRIPOSR_ERROR');
   const verts = get('POF_TRIPOSR_VERTS');
@@ -110,7 +108,7 @@ export function parseTriposrOutput(stdout: string): ParsedTriposr {
   };
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
 export interface TriposrDeps {
   run?: RunFn;
@@ -139,13 +137,17 @@ export async function runTriposr(spec: TriposrSpec, deps: TriposrDeps = {}): Pro
 
   const args = buildTriposrArgs(script, spec, root);
   const start = now();
-  const { stdout } = await run(py, args, spec.timeoutMs ?? 300_000);
-  const parsed = parseTriposrOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 300_000;
+  const outcome = await run(py, args, timeoutMs);
+  const parsed = parseTriposrOutput(outcome.stdout);
   const meshPath = parsed.meshPath && fileExists(parsed.meshPath) ? parsed.meshPath : undefined;
 
   return {
     ok: parsed.ok && !!meshPath,
-    error: parsed.error ?? (parsed.ok && !meshPath ? 'mesh file not written despite DONE marker' : undefined),
+    // No marker at all → the process itself says why (timeout, crash, could not start).
+    error: parsed.error ?? (parsed.ok
+      ? (meshPath ? undefined : 'mesh file not written despite DONE marker')
+      : processFailureReason(outcome, { tool: basename(script), timeoutMs })),
     meshPath,
     verts: parsed.verts,
     faces: parsed.faces,
@@ -157,16 +159,5 @@ export async function runTriposr(spec: TriposrSpec, deps: TriposrDeps = {}): Pro
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });

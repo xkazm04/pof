@@ -23,6 +23,7 @@
  */
 import { existsSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
 
 export interface ArdySpec {
   /** Text prompt describing the motion. */
@@ -114,6 +115,9 @@ export interface ParsedArdy {
   error?: string;
 }
 
+/** The parse error for a stdout with no save line and no traceback. */
+const ARDY_NO_SAVE = 'ARDY did not report a saved npz';
+
 /**
  * Parse ARDY's own stdout. Pure.
  *
@@ -136,7 +140,7 @@ export function parseArdyOutput(stdout: string): ParsedArdy {
     ? (stdout.match(/^(\w*(?:Error|Exception).*)$/m)?.[1]?.trim() ?? 'python traceback (see stdout)')
     : npzPath
       ? undefined
-      : 'ARDY did not report a saved npz';
+      : ARDY_NO_SAVE;
 
   return {
     ok: !!npzPath && !trace,
@@ -156,7 +160,7 @@ type RunFn = (
   timeoutMs: number,
   env?: Record<string, string>,
   cwd?: string,
-) => Promise<{ stdout: string; code: number | null }>;
+) => Promise<ProcessOutcome>;
 
 export interface ArdyDeps {
   run?: RunFn;
@@ -269,8 +273,15 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
   // cwd MUST be the checkout. ARDY resolves relative --output against its own cwd, so without
   // this a bare/relative stem writes into whatever directory the CALLER happens to be in —
   // observed 2026-08-19 dropping an `outputs/` folder straight into the PoF repo.
-  const { stdout } = await run(resolved.py, args, spec.timeoutMs ?? 900_000, runEnv, resolved.root);
-  const parsed = parseArdyOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 900_000;
+  const outcome = await run(resolved.py, args, timeoutMs, runEnv, resolved.root);
+  const parsed = parseArdyOutput(outcome.stdout);
+  // "No save line" from a process that did not exit cleanly is really the process's story
+  // (timeout, crash, could not start); a traceback's own Error line still wins.
+  const clean = outcome.code === 0 && !outcome.timedOut && !outcome.spawnError;
+  const parsedError = parsed.error === ARDY_NO_SAVE && !clean
+    ? processFailureReason(outcome, { tool: 'ARDY generate.py', timeoutMs })
+    : parsed.error;
 
   // ARDY prints a path relative to ITS cwd ("outputs\name.npz"). Resolve against the checkout
   // first — checking the caller's cwd first would "find" a same-named stray and report success
@@ -281,7 +292,7 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
 
   return {
     ok: parsed.ok && !!npzPath,
-    error: parsed.error ?? (parsed.ok && !npzPath ? `npz not written despite save line (${reported})` : undefined),
+    error: parsedError ?? (parsed.ok && !npzPath ? `npz not written despite save line (${reported})` : undefined),
     npzPath,
     frames: parsed.frames,
     fps: parsed.fps,
@@ -292,25 +303,5 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs, env, cwd) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    // Type the options explicitly: with an optional `cwd` inferred inline, TS reduces the
-    // spawn overload set to `never`.
-    const opts: import('node:child_process').SpawnOptions = {
-      windowsHide: true,
-      // This project augments ProcessEnv with required keys (NODE_ENV), which a plain
-      // Record<string, string> cannot satisfy; the child only needs the string map.
-      env: (env ?? process.env) as NodeJS.ProcessEnv,
-      cwd,
-    };
-    const child = spawn(cmd, args, opts);
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code: number | null) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs, env, cwd) => runLocalProcess(cmd, args, { timeoutMs, env, cwd });

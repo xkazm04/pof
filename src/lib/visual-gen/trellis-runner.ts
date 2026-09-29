@@ -29,7 +29,8 @@
  * injectable spawn seam, so the orchestration is unit-tested without a GPU.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { processFailureReason, readMarker, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
 
 export interface TrellisSpec {
   imagePath: string;
@@ -108,10 +109,7 @@ export function buildTrellisArgs(script: string, spec: TrellisSpec, root: string
 
 /** Parse the POF_T2_* marker block out of the script's stdout. Pure. */
 export function parseTrellisOutput(stdout: string): Omit<TrellisResult, 'durationMs'> {
-  const get = (k: string): string | undefined => {
-    const m = stdout.match(new RegExp(`^${k}=(.*)$`, 'm'));
-    return m ? m[1].trim() : undefined;
-  };
+  const get = (k: string): string | undefined => readMarker(stdout, k);
   const done = get('POF_T2_DONE');
   const error = get('POF_T2_ERROR');
   const num = (k: string) => { const v = get(k); return v ? Number(v) : undefined; };
@@ -133,7 +131,7 @@ type RunFn = (
   timeoutMs: number,
   /** Extra environment for the child. Optional so existing seams stay call-compatible. */
   envOverlay?: Record<string, string | undefined>,
-) => Promise<{ stdout: string; code: number | null }>;
+) => Promise<ProcessOutcome>;
 
 /**
  * Add `name` to a WSLENV list without duplicating it.
@@ -176,8 +174,9 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
   const script = spec.scriptPath ?? join(process.cwd(), 'scripts', 'visual-gen', 'pof_trellis.py');
   if (!fileExists(script)) return err(`pof_trellis.py not found at ${script}`);
   // Only the non-WSL interpreter is stat-able from here. Inside a distro the venv is not
-  // on a Windows path, so a missing interpreter surfaces as a spawn failure with the
-  // script's own stderr rather than as a preflight error — stated, not silently skipped.
+  // on a Windows path, so a missing interpreter surfaces as a failed run whose own output
+  // tail (wsl.exe's or the shell's) becomes the error via processFailureReason — stated,
+  // not silently skipped.
   if (!distro && !fileExists(py)) return err(`TRELLIS.2 venv python not found at ${py}`);
 
   const args = buildTrellisArgs(script, spec, root, !!distro);
@@ -192,8 +191,10 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
   const start = now();
   // 4B params + a 4096 PBR bake, and the first run also downloads the ~16GB model.
   // Default to a 40-min ceiling — well above Hunyuan's 15.
-  const { stdout } = await run(cmd, argv, spec.timeoutMs ?? 2_400_000, overlay);
-  const parsed = parseTrellisOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 2_400_000;
+  const outcome = await run(cmd, argv, timeoutMs, overlay);
+  const parsed = parseTrellisOutput(outcome.stdout);
+  const tool = distro ? `${basename(script)} (wsl -d ${distro})` : basename(script);
 
   const back = (p?: string) => (p && distro ? fromWslPath(p) : p);
   const meshPath = back(parsed.meshPath);
@@ -201,7 +202,10 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
 
   return {
     ok: parsed.ok && !!confirmed,
-    error: parsed.error ?? (parsed.ok && !confirmed ? 'mesh file not written despite DONE marker' : undefined),
+    // No marker at all → the process itself says why (timeout, crash, could not start).
+    error: parsed.error ?? (parsed.ok
+      ? (confirmed ? undefined : 'mesh file not written despite DONE marker')
+      : processFailureReason(outcome, { tool, timeoutMs })),
     meshPath: confirmed,
     verts: parsed.verts,
     faces: parsed.faces,
@@ -212,19 +216,6 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs, envOverlay) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, {
-      windowsHide: true,
-      ...(envOverlay ? { env: { ...process.env, ...envOverlay } } : {}),
-    });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs, envOverlay) =>
+  runLocalProcess(cmd, args, { timeoutMs, ...(envOverlay ? { env: { ...process.env, ...envOverlay } } : {}) });
