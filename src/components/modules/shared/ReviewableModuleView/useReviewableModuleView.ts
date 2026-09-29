@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { usePaneHold } from '@/hooks/usePaneHold';
+import { useEscapeLayer } from '@/hooks/useHotkey';
 import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
@@ -33,15 +34,9 @@ export function useReviewableModuleView({
   const panelCollapsed = useModuleStore((s) => s.quickActionsPanelCollapsed);
   const setPanelCollapsed = useModuleStore((s) => s.setQuickActionsPanelCollapsed);
 
-  // Close panel on Escape key
-  useEffect(() => {
-    if (panelCollapsed) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPanelCollapsed(true);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [panelCollapsed, setPanelCollapsed]);
+  // Close panel on Escape — as a LIFO layer, so an Escape meant for a layer
+  // opened over it (global search, a drawer) never also flips this PERSISTED flag.
+  useEscapeLayer('quick-actions-panel', !panelCollapsed, () => setPanelCollapsed(true));
 
   // Memoized on the tab IDS, not on the `extraTabs` array identity: a host that
   // rebuilds its tab descriptors every render (most of them do — the render

@@ -11,6 +11,7 @@ import {
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { useModuleActions } from '@/hooks/useModuleActions';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
+import { useEscapeLayer } from '@/hooks/useHotkey';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { ActivityEvent } from '@/stores/activityFeedStore';
@@ -44,15 +45,9 @@ export function ActivityFeedPanel() {
     return () => clearInterval(id);
   }, []);
 
-  // In overlay mode, Escape dismisses the drawer (parity with the search palette / lab drawers).
-  useEffect(() => {
-    if (!isOpen || !overlay) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, overlay, setOpen]);
+  // In overlay mode, Escape dismisses the drawer (parity with the search palette / lab drawers) —
+  // a LIFO layer, so it only closes when it is the topmost open layer.
+  useEscapeLayer('activity-feed', isOpen && overlay, () => setOpen(false));
 
   const unreadCount = useMemo(() => events.filter((e) => !e.dismissed).length, [events]);
   const sections = useMemo(() => buildSections(events), [events]);

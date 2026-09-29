@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { useEscapeLayer } from '@/hooks/useHotkey';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { SidebarL1 } from './SidebarL1';
 import { SidebarL2 } from './SidebarL2';
@@ -33,15 +34,9 @@ export function Sidebar({ overlay = false, open = false, onClose }: SidebarProps
     prevSub.current = activeSubModule;
   }, [activeSubModule, overlay, open, onClose]);
 
-  // Escape closes the drawer (parity with the search palette / lab drawers).
-  useEffect(() => {
-    if (!overlay || !open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose?.();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [overlay, open, onClose]);
+  // Escape closes the drawer (parity with the search palette / lab drawers) —
+  // a LIFO layer, so a palette opened over the drawer takes the Escape first.
+  useEscapeLayer('sidebar-drawer', overlay && open, () => onClose?.());
 
   const rails = (
     <div className="flex h-full">
