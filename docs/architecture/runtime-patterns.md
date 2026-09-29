@@ -279,6 +279,16 @@ What a generated mesh is held to is derived ONCE. `gateRequestFor({ assetClass, 
 - `MeshFinishJob.gradedAs` is projected by `GET /api/visual-gen/mesh-finish/status`, so a finished mesh says what it was held to.
 - Follow-ups that become one call: the viewer's inline derivation (`asset-viewer/assetGrade.ts`) and the class-blind MCP gate (`blender-mcp/mcp-gate.ts`).
 
+## Delivered mesh: the verdict names its remedy
+
+A delivered card answers "fixable locally, or pay again?" instead of leaving it to the operator. `remedyFor({ critique, assetClass, meshPath })` (`src/lib/visual-gen/delivery-remedy.ts`, pure, server-side) projects the two existing decisions (`assessStage`, `planFinishFromCritique`) onto one of three kinds. It never changes a verdict.
+
+- `finish` ($0): basename + `generated/<dir>` of the mesh, `addresses` / `unaddressed`, and the planner's note. This also covers the budget-DEFERRED (`max-then-finish`) character whose `warn` reads as a green Complete.
+- `reroll` (paid; `empty-mesh` / `degenerate-bbox`): a note only, with no button. The one paid path stays `retryJob`, which still runs on `failed` jobs only, and a rejected card is `completed`.
+- `none`: the reason (floater-only, critic unavailable, mesh outside `ASSET_DIRS`). `undefined` when nothing needs a remedy, so a clean card stays quiet.
+- `GET /api/visual-gen/generate/status` projects `remedy` for a `done` job, because the client never receives `findings`. The MCP status path omits it.
+- `useForgeStore.finishJob(id)` runs on an explicit click (`FinishRemedy.tsx`). It POSTs the existing `/api/visual-gen/mesh-finish/remediate` with `{ name, dir, assetClass }`. A `routed: false` answer lands verbatim as `finish.state 'refused'` and starts no poll. A 202 polls `/mesh-finish/status` on the same tracked-poller rail as a generation (Stop-able, 30-min ceiling), ending with `remediation.summary` and a preview of the finished low-poly.
+
 ---
 
 ## Coding conventions
