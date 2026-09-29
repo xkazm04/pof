@@ -202,6 +202,16 @@ Suspension keeps a module mounted; **eviction unmounts it**, and any state livin
 
 The same file's seeding rule: `seedFromScan` / `seedFromBridge` (`StateMachineEditor/seed.ts`) turn the AnimBP scan or the live bridge manifest into editable states, reusing the read-only graph's `layoutStates` / `classifyState`; the editor's provenance strip says whether the canvas is the project's machine or a template. A seed is compared by CONTENT (`seedSignature`) because callers rebuild it each render, and it is adopted only while the canvas is untouched.
 
+## Runs bound to their input (blueprint transpiler)
+
+The Blueprint transpiler (`BlueprintTranspilerView`, and the multiplayer `ReplicationScaffoldPanel`) keeps no results in `useState`. `src/lib/blueprint-transpiler/run-state.ts` is a pure reducer over `{ input: { blueprintJson, existingCpp, moduleName }, runs: { transpile, diff } }`, where each run is `idle | running{key, prev} | done{key, result} | failed{key, error}` and `key` is the fingerprint (FNV-1a + length) of exactly the inputs that action reads (transpile: JSON + target module; diff: JSON + existing C++). `selectRun(state, action)` derives `{ result, running, error, stale, staleBecause }`:
+
+- **stale** is fingerprint inequality against the current input, not a dirty flag (editing the JSON back makes the result fresh again). A transpile whose Blueprint JSON moved hides Write to Project and offers "Blueprint changed - re-transpile"; a stale diff or replication scan says it describes the previous input.
+- **last request wins**: a reply whose key is not the running key is dropped (a module retarget re-transpiles; the old target's late reply cannot land).
+- **errors are per action**: the Transpile and Semantic Diff tabs never show each other's error.
+
+`useBlueprintTranspiler({ projectPath, surface })` is a thin adapter: the state lives in a module-scope `Map` keyed `${projectPath}::${surface}` (the session-draft pattern above) read through `useSyncExternalStore`, so an eviction or remount restores the input and the result, and a reply that lands after an unmount still settles its run. Each action is ONE POST: `/api/blueprint-transpiler` returns the parse (`asset` + `summary`) additively with the `transpile` / `diff` result, and the action reads its input from the store at call time; an identical in-flight run is joined, which is why the view needs no in-flight latch. In-memory by design, like the AnimBP drafts.
+
 ## Canvas edits as named ops, with undo (level flow editor)
 
 The level flow editor has ONE write surface: `onEdit(op, mode)`. Every gesture is a named op from `LevelEditOp` (`src/lib/level-design/level-edit.ts`: `add-room`, `move-room`, `nudge-room`, `update-room`, `delete-room`, `link`, `unlink`, `set-link-gate`, `declare-gate`) and one pure reducer, `applyLevelEdit(doc, op) → Result<{ patch, inverse, marksDocAhead }>`, decides what the op means:
