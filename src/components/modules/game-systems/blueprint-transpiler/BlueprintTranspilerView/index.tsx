@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
@@ -17,61 +17,37 @@ export function BlueprintTranspilerView() {
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
 
-  // The target C++ module. It decides BOTH the `<MODULE>_API` macro baked into
-  // the header and the `Source/<Module>/` directory the file is written to, so
-  // it is owned here and threaded into codegen — the write modal used to hold
-  // it privately, which let the two halves of one decision disagree.
-  const [moduleName, setModuleName] = useState(() => sanitizeModule(projectName));
+  // The session (input, target module, runs) is kept per project, outside the
+  // component, so an LRU eviction does not lose it. The target C++ module decides
+  // BOTH the `<MODULE>_API` macro baked into the header and the `Source/<Module>/`
+  // directory the file is written to, so it is part of the transpile's key.
   const {
     blueprintJson, setBlueprintJson,
     existingCpp, setExistingCpp,
+    moduleName, setModuleName,
     asset, summary,
-    transpileResult, diffResult,
-    isLoading, error,
-    parse, transpile, diff, reset,
-  } = useBlueprintTranspiler();
+    transpileRun, diffRun,
+    transpile, diff, reset,
+  } = useBlueprintTranspiler({ projectPath, surface: 'transpiler', defaultModule: sanitizeModule(projectName) });
 
-  // Synchronous in-flight latch. `isLoading` briefly flips back to false in the
-  // gap between the two awaited steps (parse → transpile/diff), momentarily
-  // re-enabling the disabled buttons; a double-click in that window would fire a
-  // second overlapping run. This ref guards the whole composite action the
-  // instant it starts, independent of any render.
-  const inFlightRef = useRef(false);
-
-  const handleTranspile = useCallback(async () => {
-    if (!blueprintJson.trim() || inFlightRef.current) return;
-    inFlightRef.current = true;
-    try {
-      await parse(blueprintJson);
-      await transpile(blueprintJson, projectName || undefined, moduleName || undefined);
-    } finally {
-      inFlightRef.current = false;
-    }
-  }, [blueprintJson, projectName, moduleName, parse, transpile]);
+  // One request per click. The run is `running` from the synchronous dispatch,
+  // and an identical in-flight run is joined, so no latch is needed.
+  const handleTranspile = useCallback(() => {
+    void transpile(projectName || undefined);
+  }, [transpile, projectName]);
 
   // Retargeting the module invalidates the generated header (its API macro is
-  // module-derived), so the code is regenerated for the new target rather than
-  // left declaring the old module. The write modal's staleness banners then
-  // force a fresh dry-run before anything reaches disk.
+  // module-derived), so the code is regenerated for the new target; the reply
+  // for the old target, if still in flight, is dropped (last request wins). The
+  // write modal's staleness banners force a fresh dry-run before any write.
   const handleModuleChange = useCallback((next: string) => {
     setModuleName(next);
-    if (!transpileResult || !blueprintJson.trim() || inFlightRef.current) return;
-    inFlightRef.current = true;
-    void transpile(blueprintJson, projectName || undefined, next || undefined)
-      .catch(() => { /* surfaced by the hook's `error` state */ })
-      .finally(() => { inFlightRef.current = false; });
-  }, [blueprintJson, projectName, transpile, transpileResult]);
+    if (transpileRun.result) void transpile(projectName || undefined);
+  }, [setModuleName, transpile, transpileRun.result, projectName]);
 
-  const handleDiff = useCallback(async () => {
-    if (!blueprintJson.trim() || !existingCpp.trim() || inFlightRef.current) return;
-    inFlightRef.current = true;
-    try {
-      await parse(blueprintJson);
-      await diff(blueprintJson, existingCpp, projectName || undefined);
-    } finally {
-      inFlightRef.current = false;
-    }
-  }, [blueprintJson, existingCpp, projectName, parse, diff]);
+  const handleDiff = useCallback(() => {
+    void diff(projectName || undefined);
+  }, [diff, projectName]);
 
   const handleLoadSample = useCallback(() => {
     setBlueprintJson(SAMPLE_BLUEPRINT);
@@ -100,7 +76,7 @@ export function BlueprintTranspilerView() {
           );
         })}
         <div className="ml-auto flex items-center gap-2">
-          {(transpileResult || diffResult || asset) && (
+          {(transpileRun.result || diffRun.result || asset) && (
             <button
               onClick={reset}
               className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-text-muted hover:text-text transition-colors"
@@ -120,11 +96,12 @@ export function BlueprintTranspilerView() {
             setBlueprintJson={setBlueprintJson}
             onTranspile={handleTranspile}
             onLoadSample={handleLoadSample}
-            isLoading={isLoading}
-            error={error}
+            isLoading={transpileRun.running}
+            error={transpileRun.error}
             asset={asset}
             summary={summary}
-            result={transpileResult}
+            result={transpileRun.result}
+            stale={transpileRun.staleBecause.includes('blueprintJson')}
             showCode={showCode}
             setShowCode={setShowCode}
             moduleName={moduleName}
@@ -139,9 +116,10 @@ export function BlueprintTranspilerView() {
             setExistingCpp={setExistingCpp}
             onDiff={handleDiff}
             onLoadSample={handleLoadSample}
-            isLoading={isLoading}
-            error={error}
-            result={diffResult}
+            isLoading={diffRun.running}
+            error={diffRun.error}
+            result={diffRun.result}
+            stale={diffRun.stale}
           />
         )}
       </div>

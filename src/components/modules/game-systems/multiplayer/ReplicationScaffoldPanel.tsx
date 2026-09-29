@@ -35,18 +35,18 @@ const SAMPLE_REPLICATED_BP = JSON.stringify({
 
 export function ReplicationScaffoldPanel() {
   const projectName = useProjectStore((s) => s.projectName);
-  const {
-    blueprintJson, setBlueprintJson,
-    transpileResult, isLoading, error,
-    parse, transpile,
-  } = useBlueprintTranspiler();
+  const projectPath = useProjectStore((s) => s.projectPath);
+  // Its own session record (per project), separate from the transpiler view's.
+  const { blueprintJson, setBlueprintJson, transpileRun, transpile } =
+    useBlueprintTranspiler({ projectPath, surface: 'replication' });
+  const { result: transpileResult, running: isLoading, error } = transpileRun;
+  const scanStale = transpileRun.staleBecause.includes('blueprintJson');
   const [copied, setCopied] = useState(false);
 
-  const handleScan = useCallback(async () => {
-    if (!blueprintJson.trim()) return;
-    await parse(blueprintJson);
-    await transpile(blueprintJson, projectName || undefined);
-  }, [blueprintJson, projectName, parse, transpile]);
+  // One request: the transpile carries everything the scan shows.
+  const handleScan = useCallback(() => {
+    void transpile(projectName || undefined);
+  }, [projectName, transpile]);
 
   const replication = transpileResult?.replication ?? null;
   const className = transpileResult?.className ?? null;
@@ -121,6 +121,12 @@ export function ReplicationScaffoldPanel() {
       {error && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-status-red-subtle border border-status-red-strong text-xs text-red-400">
           <XCircle className="w-3.5 h-3.5" /> {error}
+        </div>
+      )}
+
+      {scanStale && replication && (
+        <div data-testid="replication-stale" className="px-3 py-2 rounded-md border border-border text-2xs text-amber-400">
+          The Blueprint JSON changed since this scan - the fields below describe the previous version. Scan again.
         </div>
       )}
 

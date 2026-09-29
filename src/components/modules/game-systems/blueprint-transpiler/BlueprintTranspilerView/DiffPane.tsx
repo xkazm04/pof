@@ -1,9 +1,9 @@
 'use client';
 
 import {
-  Code, GitCompare, XCircle, CheckCircle2, Loader2, Upload,
+  Code, GitCompare, XCircle, CheckCircle2, Loader2, Upload, AlertTriangle,
 } from 'lucide-react';
-import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
+import type { SemanticDiffResult } from '@/types/blueprint';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { OPACITY_20, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 import { ACCENT, CONFLICT_STYLES } from './constants';
@@ -15,7 +15,7 @@ export function DiffPane({
   blueprintJson, setBlueprintJson,
   existingCpp, setExistingCpp,
   onDiff, onLoadSample,
-  isLoading, error, result,
+  isLoading, error, result, stale = false,
 }: {
   blueprintJson: string;
   setBlueprintJson: (v: string) => void;
@@ -25,7 +25,9 @@ export function DiffPane({
   onLoadSample: () => void;
   isLoading: boolean;
   error: string | null;
-  result: ReturnType<typeof useBlueprintTranspiler>['diffResult'];
+  result: SemanticDiffResult | null;
+  /** The Blueprint or the C++ changed since `result` was computed. */
+  stale?: boolean;
 }) {
   return (
     <div className="flex flex-col h-full">
@@ -98,6 +100,12 @@ export function DiffPane({
       {/* Diff results — shares vertical space with inputs via flex-1; grows past 50% on tall viewports */}
       {result && (
         <div className="border-t border-border flex-1 min-h-[200px] overflow-y-auto">
+          {stale && (
+            <div data-testid="diff-stale" className="px-4 py-2 border-b border-border flex items-center gap-2 text-2xs" style={{ color: STATUS_WARNING }}>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              The inputs changed since this diff ran - it describes the previous Blueprint / C++. Run Semantic Diff again.
+            </div>
+          )}
           {/* Summary */}
           <div className="px-4 py-3 border-b border-border bg-surface-deep flex items-center gap-4">
             {(() => {

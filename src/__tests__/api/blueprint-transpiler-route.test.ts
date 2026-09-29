@@ -87,3 +87,25 @@ describe('POST /api/blueprint-transpiler — replication scaffolding', () => {
     expect(result.sourceCode).not.toContain('DOREPLIFETIME');
   });
 });
+
+describe('POST /api/blueprint-transpiler — one request carries its parse', () => {
+  it('transpile returns the parsed asset + summary beside an unchanged result', async () => {
+    const data = (await transpile(REPLICATED_BP)) as TranspileResult & { summary?: unknown; asset?: { className?: string } };
+    expect(typeof data.summary).toBe('string');
+    expect((data.summary as string).length).toBeGreaterThan(0);
+    expect(data.asset?.className).toBe('BP_NetActor');
+    // [guard] the existing fields are untouched by the additive parse.
+    expect(data.className).toBe('ANetActor');
+    expect(data.headerCode).toContain('class');
+    expect(data.replication.hasReplication).toBe(true);
+  });
+
+  it('diff returns the parsed asset + summary beside the diff', async () => {
+    const res = await POST(makePost({ action: 'diff', blueprintJson: REPLICATED_BP, existingCpp: 'class ANetActor {};', projectName: 'PoF' }));
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(typeof body.data.summary).toBe('string');
+    expect(body.data.asset.className).toBe('BP_NetActor');
+    expect(Array.isArray(body.data.changes)).toBe(true);
+  });
+});

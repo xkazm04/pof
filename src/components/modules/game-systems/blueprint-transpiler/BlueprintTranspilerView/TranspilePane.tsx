@@ -2,9 +2,9 @@
 
 import {
   Code, FileCode, ArrowRight, AlertTriangle,
-  XCircle, Loader2, Upload,
+  XCircle, Loader2, Upload, RefreshCw,
 } from 'lucide-react';
-import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
+import type { BlueprintAsset, TranspileResult } from '@/types/blueprint';
 import { describeTranspileFidelity } from '@/lib/blueprint-cpp-codegen';
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
@@ -18,7 +18,7 @@ import { WriteToProjectButton } from './WriteToProjectButton';
 export function TranspilePane({
   blueprintJson, setBlueprintJson,
   onTranspile, onLoadSample,
-  isLoading, error, asset, summary, result,
+  isLoading, error, asset, summary, result, stale = false,
   showCode, setShowCode,
   moduleName, onModuleChange, projectPath,
 }: {
@@ -28,9 +28,11 @@ export function TranspilePane({
   onLoadSample: () => void;
   isLoading: boolean;
   error: string | null;
-  asset: ReturnType<typeof useBlueprintTranspiler>['asset'];
+  asset: BlueprintAsset | null;
   summary: string | null;
-  result: ReturnType<typeof useBlueprintTranspiler>['transpileResult'];
+  result: TranspileResult | null;
+  /** The Blueprint JSON changed since `result` was generated from it. */
+  stale?: boolean;
   showCode: 'header' | 'source';
   setShowCode: (v: 'header' | 'source') => void;
   /** Target C++ module — decides the API macro AND the Source/<Module>/ path. */
@@ -152,14 +154,28 @@ export function TranspilePane({
                 {result.className}.cpp
               </button>
               <div className="ml-auto flex items-center gap-1">
-                <WriteToProjectButton
-                  className={result.className}
-                  header={result.headerCode}
-                  source={result.sourceCode}
-                  projectPath={projectPath}
-                  moduleName={moduleName}
-                  onModuleChange={onModuleChange}
-                />
+                {/* Code generated from a Blueprint that is no longer the input
+                    must not reach the project: offer the re-transpile instead. */}
+                {stale ? (
+                  <button
+                    onClick={onTranspile}
+                    disabled={isLoading || !blueprintJson.trim()}
+                    title="The code below was generated from an earlier version of the Blueprint JSON"
+                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-amber-400 border border-amber-400/40 disabled:opacity-40"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Blueprint changed - re-transpile
+                  </button>
+                ) : (
+                  <WriteToProjectButton
+                    className={result.className}
+                    header={result.headerCode}
+                    source={result.sourceCode}
+                    projectPath={projectPath}
+                    moduleName={moduleName}
+                    onModuleChange={onModuleChange}
+                  />
+                )}
               </div>
             </div>
 
