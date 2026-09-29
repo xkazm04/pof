@@ -80,6 +80,14 @@ export interface GenerationJob {
   remedy?: DeliveryRemedy;
   /** Where the $0 local finish this card offered stands — set only by `finishJob`. */
   finish?: ForgeFinishState;
+  /**
+   * The provider-side task this runner job paid for (cloud Tripo), kept from EVERY status
+   * poll — so a job the server later forgets (a restart 404s it) still holds the handle
+   * `recoverJob` re-collects for free.
+   */
+  providerTaskId?: string;
+  /** The server's word on an errored job: may its paid task still deliver? */
+  recoverable?: boolean;
 }
 
 interface ForgeState {
@@ -134,6 +142,11 @@ interface ForgeState {
    *  the same tracked-poller rail as a generation. Never calls a generation route — the
    *  only paid path stays `retryJob`, which still runs on `failed` jobs only. */
   finishJob: (id: string) => Promise<void>;
+  /** Explicit operator click on a `runnerRecoverable` card: POST the job's EXISTING provider
+   *  task id to /api/visual-gen/generate/recover and poll the returned job on the same
+   *  runner rail. Never calls /api/visual-gen/generate — recovery polls and downloads the
+   *  task it already paid for; only `retryJob` buys a new one. */
+  recoverJob: (id: string) => Promise<void>;
   /** Runner-backed generation: POST to /api/visual-gen/generate, then poll /status.
    *  Serves BOTH modes — image-to-3d (TripoSR / Hunyuan3D / Tripo3D, `imageDataUrl`)
    *  and text-to-3d (Tripo3D, `prompt`). The prompt used to be dropped here, which
@@ -186,6 +199,23 @@ export function mcpReattachable(job: GenerationJob): boolean {
     && !!job.mcpJobId
     && !!mcpProviderOf(job)
     && job.error !== MCP_REMOTE_FAILED_ERROR
+    && !pollingIntervals.has(job.id);
+}
+
+/**
+ * Runner providers whose task lives PROVIDER-side and can be re-collected by id — the forge
+ * mirror of the dispatch entries that carry `recover` (a test pins the two sets equal; the
+ * server table is server-only, so it cannot be imported here).
+ */
+export const RECOVERABLE_RUNNER_PROVIDERS: readonly string[] = ['tripo3d'];
+
+/** A failed runner job whose PAID provider task may still deliver: it holds the task id,
+ *  the server did not report a terminal provider verdict, and nothing is polling it. */
+export function runnerRecoverable(job: GenerationJob): boolean {
+  return job.status === 'failed'
+    && RECOVERABLE_RUNNER_PROVIDERS.includes(job.providerId)
+    && !!job.providerTaskId
+    && job.recoverable !== false
     && !pollingIntervals.has(job.id);
 }
 
@@ -504,6 +534,33 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     trackFinishJob(id, res.data.jobId);
   },
 
+  recoverJob: async (id) => {
+    const job = get().jobs.find((j) => j.id === id);
+    if (!job || !runnerRecoverable(job)) return;
+    const taskId = job.providerTaskId!;
+    // Leave `failed` BEFORE the await, so a second click cannot start a second recovery.
+    get().updateJob(id, { status: 'generating', progress: 0, error: undefined, recoverable: undefined, completedAt: undefined });
+    const res = await tryApiFetch<{ jobId: string; gradedAs?: string }>('/api/visual-gen/generate/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId: job.providerId, taskId, assetClass: job.assetClass }),
+    });
+    if (!get().jobs.some((j) => j.id === id)) return;
+    if (!res.ok) {
+      get().updateJob(id, {
+        status: 'failed',
+        error: `Recover failed: ${res.error} (task ${taskId} was not paid for again)`,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+    get().updateJob(id, {
+      mcpJobId: res.data.jobId,
+      ...(res.data.gradedAs !== undefined ? { gradedAs: res.data.gradedAs } : {}),
+    });
+    trackRunnerJob(id, res.data.jobId);
+  },
+
   submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
     const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass });
 
@@ -534,86 +591,106 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     get().updateJob(localId, { status: 'generating', mcpJobId: jobId, gradedAs, inputGateNote: inputGate?.note });
     if (prompt?.trim()) get().addToHistory(prompt.trim());
 
-    // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
-    // ticks, `stopped` guards every post-await branch). A poll miss is a TRANSPORT
-    // failure — keep retrying — but cap consecutive misses so a persistent status
-    // endpoint outage fails the job cleanly instead of retrying forever.
-    const MAX_CONSECUTIVE_POLL_FAILURES = 3;
-    let pollFailures = 0;
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const pollStartedAt = Date.now();
-    const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
-    const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
-
-    async function tick() {
-      timer = null;
-      if (stopped) return;
-      // Terminal condition 3: wall-clock deadline (see the poller doc block).
-      if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the local runner.`,
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      // The client type IS the route's projection (`ForgeStatusResponse`), so the
-      // honesty signals the server computes cannot be silently dropped here again.
-      const res = await tryApiFetch<ForgeStatusResponse>(
-        `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
-      );
-      if (stopped) return;
-      if (!res.ok) {
-        pollFailures++;
-        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
-          scheduleNext(); // transient transport miss — keep polling
-          return;
-        }
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Status polling failed ${pollFailures} times in a row: ${res.error}`,
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      pollFailures = 0;
-      const {
-        status, meshPath, error, critique, fidelity,
-        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl, remedy,
-      } = res.data;
-      if (status === 'done') {
-        stop();
-        untrackPoller(localId);
-        // `done` is a TRANSPORT outcome. `accepted`/`ungated`/`gateReason` are the
-        // verdict, and all of them ride onto the job so the card can tell apart a mesh
-        // a gate rejected from one nothing ever measured.
-        get().updateJob(localId, {
-          status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
-          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy,
-          // Refreshed from the store's own record; falls back to the 202's sentence
-          // rather than blanking a line the operator has already read.
-          ...(polledGradedAs !== undefined ? { gradedAs: polledGradedAs } : {}),
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      if (status === 'error') {
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, { status: 'failed', error: error ?? 'generation failed', completedAt: Date.now() });
-        return;
-      }
-      scheduleNext();
-    }
-    trackPoller(localId, stop);
-    scheduleNext();
+    trackRunnerJob(localId, jobId);
   },
 }));
+
+/**
+ * The status poll loop for ONE runner job (`/api/visual-gen/generate/status`), bound to one
+ * queue card. Extracted unchanged from `submitLocalJob` so a recovered job (`recoverJob`)
+ * rides the very same rail — same terminal conditions, same operator stop. Every poll keeps
+ * the provider task id, so even a job that then 404s (server restart) stays recoverable.
+ */
+function trackRunnerJob(localId: string, jobId: string): void {
+  const get = useForgeStore.getState;
+  // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
+  // ticks, `stopped` guards every post-await branch). A poll miss is a TRANSPORT
+  // failure — keep retrying — but cap consecutive misses so a persistent status
+  // endpoint outage fails the job cleanly instead of retrying forever.
+  const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+  let pollFailures = 0;
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const pollStartedAt = Date.now();
+  const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
+  const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
+
+  async function tick() {
+    timer = null;
+    if (stopped) return;
+    // Terminal condition 3: wall-clock deadline (see the poller doc block).
+    if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
+      stop();
+      untrackPoller(localId);
+      get().updateJob(localId, {
+        status: 'failed',
+        error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the local runner.`,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+    // The client type IS the route's projection (`ForgeStatusResponse`), so the
+    // honesty signals the server computes cannot be silently dropped here again.
+    const res = await tryApiFetch<ForgeStatusResponse>(
+      `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
+    );
+    if (stopped) return;
+    if (!res.ok) {
+      pollFailures++;
+      if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
+        scheduleNext(); // transient transport miss — keep polling
+        return;
+      }
+      stop();
+      untrackPoller(localId);
+      get().updateJob(localId, {
+        status: 'failed',
+        error: `Status polling failed ${pollFailures} times in a row: ${res.error}`,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+    pollFailures = 0;
+    const {
+      status, meshPath, error, critique, fidelity,
+      accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl, remedy,
+      providerTaskId, recoverable,
+    } = res.data;
+    // Kept from EVERY poll: once Tripo accepts the task the handle is here, so a later
+    // 404 (server restart) or give-up still leaves a card that can recover it for free.
+    if (providerTaskId && get().jobs.find((j) => j.id === localId)?.providerTaskId !== providerTaskId) {
+      get().updateJob(localId, { providerTaskId });
+    }
+    if (status === 'done') {
+      stop();
+      untrackPoller(localId);
+      // `done` is a TRANSPORT outcome. `accepted`/`ungated`/`gateReason` are the
+      // verdict, and all of them ride onto the job so the card can tell apart a mesh
+      // a gate rejected from one nothing ever measured.
+      get().updateJob(localId, {
+        status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
+        critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy,
+        // Refreshed from the store's own record; falls back to the 202's sentence
+        // rather than blanking a line the operator has already read.
+        ...(polledGradedAs !== undefined ? { gradedAs: polledGradedAs } : {}),
+        completedAt: Date.now(),
+      });
+      return;
+    }
+    if (status === 'error') {
+      stop();
+      untrackPoller(localId);
+      // `recoverable` is the server's verdict on the paid task: absent means "no".
+      get().updateJob(localId, {
+        status: 'failed', error: error ?? 'generation failed', recoverable: recoverable === true, completedAt: Date.now(),
+      });
+      return;
+    }
+    scheduleNext();
+  }
+  trackPoller(localId, stop);
+  scheduleNext();
+}
 
 /**
  * The MCP status poll loop for ONE provider job, bound to one local queue entry. Extracted

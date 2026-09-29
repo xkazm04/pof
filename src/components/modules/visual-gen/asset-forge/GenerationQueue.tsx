@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { Clock, CheckCircle, AlertCircle, HelpCircle, Loader2, Trash2, X, Download, RotateCcw, ExternalLink, Link2 } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, HelpCircle, Loader2, Trash2, X, Download, RotateCcw, ExternalLink, Link2, PackageCheck } from 'lucide-react';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from '@/components/layout-lab/steps/shared/GlbPreviewPanel';
 import type { LabTheme } from '@/components/layout-lab/theme';
-import { useForgeStore, mcpReattachable, type GenerationJob } from './useForgeStore';
+import { useForgeStore, mcpReattachable, runnerRecoverable, type GenerationJob } from './useForgeStore';
 import { jobOutcome, meshPreview, type ForgeOutcome } from './forgeJobStatus';
 import { CritiqueBadge } from './CritiqueBadge';
 import { FinishRemedy } from './FinishRemedy';
@@ -81,9 +81,13 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
   const removeJob = useForgeStore((s) => s.removeJob);
   const retryJob = useForgeStore((s) => s.retryJob);
   const reattachJob = useForgeStore((s) => s.reattachJob);
+  const recoverJob = useForgeStore((s) => s.recoverJob);
   // A failed MCP job whose paid provider job may still be alive can be re-polled for
   // free; Retry beside it then says plainly that it pays again.
   const reattachable = mcpReattachable(job);
+  // The runner twin: a failed cloud Tripo job whose paid TASK may still deliver is
+  // re-collected by its provider-side id — which, unlike the MCP ledger, survives a restart.
+  const recoverable = runnerRecoverable(job);
   const outcome = jobOutcome(job);
   const config = OUTCOME_CONFIG[outcome];
   const StatusIcon = config.icon;
@@ -220,8 +224,26 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
         {job.error && (
           <p className="mt-1 text-xs text-red-400">{job.error}</p>
         )}
+        {recoverable && (
+          <p className="mt-1 text-xs text-amber-400" data-testid="job-recover-note">
+            Tripo task {job.providerTaskId} is paid for and may still be running — Recover re-reads that
+            task and downloads its mesh; it never starts a new generation.
+          </p>
+        )}
         {outcome === 'failed' && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
+            {recoverable && (
+              <button
+                onClick={() => void recoverJob(job.id)}
+                data-testid="job-recover"
+                title="Poll the same Tripo task and download its mesh — no new generation is paid for"
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium
+                           border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+              >
+                <PackageCheck size={12} />
+                Recover mesh (free)
+              </button>
+            )}
             {reattachable && (
               <button
                 onClick={() => reattachJob(job.id)}
@@ -240,7 +262,7 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
                          border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
             >
               <RotateCcw size={12} />
-              {reattachable ? 'Retry (new paid generation)' : 'Retry'}
+              {reattachable || recoverable ? 'Retry (new paid generation)' : 'Retry'}
             </button>
           </div>
         )}

@@ -165,7 +165,32 @@ export interface TripoResult {
    * than assumed: the check reads the delivered URL instead of trusting the option.
    */
   formatMismatch?: string;
+  /**
+   * On a failure that still holds `taskId`: whether that PAID task can be recovered by id
+   * (`awaitTripoTask`) instead of bought again. `true` when PoF stopped looking (poll
+   * window spent, unreadable polls, a failed download of a finished task); `false` when
+   * Tripo itself gave a terminal verdict. Absent is read as recoverable when a task id is
+   * held — see `isRecoverableTripoFailure`.
+   */
+  recoverable?: boolean;
   durationMs: number;
+}
+
+/**
+ * Task ids are interpolated into `GET /task/{id}`, so only letters, digits and dashes pass
+ * (Tripo issues UUIDs; nothing here depends on that shape). Pure.
+ */
+export function isTripoTaskId(id: unknown): id is string {
+  return typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9-]{0,127}$/.test(id);
+}
+
+/**
+ * A failed result whose paid task may still deliver: it holds a task id and Tripo did not
+ * report a terminal verdict. Re-rolling such a result buys a SECOND task while the first
+ * one runs; the honest next step is to recover the first by id. Pure.
+ */
+export function isRecoverableTripoFailure(r: TripoResult): boolean {
+  return !r.ok && isTripoTaskId(r.taskId) && r.recoverable !== false;
 }
 
 /** Mesh extension carried by a model URL, lowercased. Query/fragment stripped
@@ -417,23 +442,123 @@ export interface TripoDeps {
   fileExists?: (p: string) => boolean;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Called the moment Tripo accepts a new task — before polling starts — so a caller holds
+   * the paid handle while the job runs, not only once it ends.
+   */
+  onTaskCreated?: (taskId: string) => void;
 }
 
-function terr(message: string, start: number, now: () => number, taskId?: string): TripoResult {
-  return { ok: false, error: message, taskId, durationMs: now() - start };
+/** How long to watch a task. Shared by a fresh run (from `TripoSpec`) and a recovery. */
+export interface TripoPollOptions {
+  /** Override the API key; else env.TRIPO_API_KEY. */
+  apiKey?: string;
+  pollIntervalMs?: number;
+  maxPollMs?: number;
+  /** Hard cap on poll iterations (defaults to maxPollMs/pollIntervalMs). */
+  maxPolls?: number;
+}
+
+function terr(message: string, start: number, now: () => number, taskId?: string, recoverable?: boolean): TripoResult {
+  return { ok: false, error: message, taskId, durationMs: now() - start, ...(recoverable !== undefined ? { recoverable } : {}) };
+}
+
+const MISSING_KEY = 'TRIPO_API_KEY not set (get a free key at https://platform.tripo3d.ai)';
+
+interface PollCtx {
+  http: TripoHttp;
+  auth: Record<string, string>;
+  fileExists: (p: string) => boolean;
+  now: () => number;
+  sleep: (ms: number) => Promise<void>;
+  start: number;
+}
+
+function resolveCtx(deps: TripoDeps): Omit<PollCtx, 'auth' | 'start'> {
+  return {
+    http: deps.http ?? defaultHttp,
+    fileExists: deps.fileExists ?? existsSync,
+    now: deps.now ?? (() => Date.now()),
+    sleep: deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms))),
+  };
+}
+
+/**
+ * Recover an EXISTING Tripo task: poll `GET /task/{id}` to completion and download its
+ * model. It never uploads and never creates a task, so it never pays — this is how a task
+ * PoF stopped watching (the 5-min poll window, a server restart) is collected instead of
+ * bought again. Same result shape as `runTripo`.
+ */
+export async function awaitTripoTask(
+  taskId: string,
+  outputPath: string,
+  deps: TripoDeps & TripoPollOptions = {},
+): Promise<TripoResult> {
+  const ctx = resolveCtx(deps);
+  const start = ctx.now();
+  if (!isTripoTaskId(taskId)) {
+    return terr('invalid Tripo task id (letters, digits and dashes only)', start, ctx.now, undefined, false);
+  }
+  const key = deps.apiKey ?? (deps.env ?? process.env).TRIPO_API_KEY;
+  if (!key) return terr(MISSING_KEY, start, ctx.now, taskId);
+  return pollTripoTask(taskId, outputPath, deps, { ...ctx, auth: { Authorization: `Bearer ${key}` }, start });
+}
+
+/** Poll one task to a terminal state and download its model. Shared by run + recover. */
+async function pollTripoTask(taskId: string, outputPath: string, opts: TripoPollOptions, ctx: PollCtx): Promise<TripoResult> {
+  const { http, auth, fileExists, now, sleep, start } = ctx;
+  const pollInterval = opts.pollIntervalMs ?? 4000;
+  const maxPoll = opts.maxPollMs ?? 300_000;
+  const maxPolls = opts.maxPolls ?? Math.max(1, Math.ceil(maxPoll / pollInterval));
+  let unreadable = 0;
+  let lastUnreadable: string | undefined;
+  for (let i = 0; i < maxPolls; i++) {
+    const s = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth);
+    const ps = parseTaskStatus(s.json);
+    if (ps.state === 'success') {
+      if (!ps.modelUrl) return terr('task succeeded but no model URL in output', start, now, taskId, false);
+      const ok = await http.download(ps.modelUrl, outputPath);
+      // The task finished and is paid for: a fresh poll re-issues the model URL, so a
+      // failed download is recoverable for free.
+      if (!ok || !fileExists(outputPath)) return terr('model download failed', start, now, taskId, true);
+      return {
+        ok: true,
+        meshPath: outputPath,
+        taskId,
+        status: ps.status,
+        modelUrl: ps.modelUrl,
+        renderUrl: ps.renderUrl,
+        formatMismatch: formatMismatchReason(ps.modelUrl, outputPath),
+        durationMs: now() - start,
+      };
+    }
+    if (ps.state === 'failed') return { ...terr(ps.error ?? 'task failed', start, now, taskId, false), status: ps.status };
+    if (ps.state === 'transient') {
+      lastUnreadable = ps.error;
+      unreadable++;
+    }
+    if (i < maxPolls - 1) await sleep(pollInterval);
+  }
+  if (unreadable > 0) {
+    // Say how many reads failed and keep the task id: the job may still be running and
+    // is already paid for, so the caller needs the handle to recover the mesh.
+    return terr(
+      `gave up after ${maxPolls} polls — ${unreadable} unreadable response(s), last: ${lastUnreadable ?? 'unknown'}. The task may still be running; recover it by task id.`,
+      start, now, taskId, true,
+    );
+  }
+  return terr(`timed out after ${maxPolls} polls (~${maxPoll}ms)`, start, now, taskId, true);
 }
 
 /** Run a Tripo cloud generation (text/image → .glb) and return the observed result. */
 export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<TripoResult> {
   const env = deps.env ?? process.env;
-  const fileExists = deps.fileExists ?? existsSync;
-  const now = deps.now ?? (() => Date.now());
-  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const http = deps.http ?? defaultHttp;
+  const ctx = resolveCtx(deps);
+  const { fileExists, now, http } = ctx;
   const start = now();
 
   const key = spec.apiKey ?? env.TRIPO_API_KEY;
-  if (!key) return terr('TRIPO_API_KEY not set (get a free key at https://platform.tripo3d.ai)', start, now);
+  if (!key) return terr(MISSING_KEY, start, now);
   const auth = { Authorization: `Bearer ${key}` };
 
   if (spec.mode === 'text-to-3d' && !spec.prompt?.trim()) return terr('text-to-3d needs a prompt', start, now);
@@ -475,46 +600,9 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
   const pc = parseTaskCreate(created.json);
   if (!pc.ok) return terr(pc.error ?? 'task creation failed', start, now);
   const taskId = pc.taskId!;
-
-  const pollInterval = spec.pollIntervalMs ?? 4000;
-  const maxPoll = spec.maxPollMs ?? 300_000;
-  const maxPolls = spec.maxPolls ?? Math.max(1, Math.ceil(maxPoll / pollInterval));
-  let unreadable = 0;
-  let lastUnreadable: string | undefined;
-  for (let i = 0; i < maxPolls; i++) {
-    const s = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth);
-    const ps = parseTaskStatus(s.json);
-    if (ps.state === 'success') {
-      if (!ps.modelUrl) return terr('task succeeded but no model URL in output', start, now, taskId);
-      const ok = await http.download(ps.modelUrl, spec.outputPath);
-      if (!ok || !fileExists(spec.outputPath)) return terr('model download failed', start, now, taskId);
-      return {
-        ok: true,
-        meshPath: spec.outputPath,
-        taskId,
-        status: ps.status,
-        modelUrl: ps.modelUrl,
-        renderUrl: ps.renderUrl,
-        formatMismatch: formatMismatchReason(ps.modelUrl, spec.outputPath),
-        durationMs: now() - start,
-      };
-    }
-    if (ps.state === 'failed') return terr(ps.error ?? 'task failed', start, now, taskId);
-    if (ps.state === 'transient') {
-      lastUnreadable = ps.error;
-      unreadable++;
-    }
-    if (i < maxPolls - 1) await sleep(pollInterval);
-  }
-  if (unreadable > 0) {
-    // Say how many reads failed and keep the task id: the job may still be running and
-    // is already paid for, so the caller needs the handle to recover the mesh.
-    return terr(
-      `gave up after ${maxPolls} polls — ${unreadable} unreadable response(s), last: ${lastUnreadable ?? 'unknown'}. The task may still be running; recover it by task id.`,
-      start, now, taskId,
-    );
-  }
-  return terr(`timed out after ${maxPolls} polls (~${maxPoll}ms)`, start, now, taskId);
+  // The task is paid for from here on: hand the id out before the first poll.
+  deps.onTaskCreated?.(taskId);
+  return pollTripoTask(taskId, spec.outputPath, spec, { ...ctx, auth, start });
 }
 
 // ── default HTTP seam (not unit-tested; exercised by the live smoke run) ───────
