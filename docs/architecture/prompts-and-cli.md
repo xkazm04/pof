@@ -388,6 +388,27 @@ rules via `effectRuleLinks` (an effect that grants a rule's gating tag drives it
 The same module owns the shared `tagsOverlap` matcher (exact, `X.*` wildcard, GAS
 parent/child).
 
+**Generate preflight.** The spec bar's "Generate GAS effects" click goes through
+`reviewGenerate()` on `useAbilitySpecBinding`, not straight to dispatch.
+`preflightGenerate({ scalars, effects, attributes })` in
+`@/lib/ability/generate-preflight` predicts what the prompt will do to the design:
+`nothing-to-generate` (block: no effects, the run would stop), `damage-override`
+(an authored Health hit differs from the catalog damage pin; Fix sets it to
+`-damage`), `damage-unpinned` (no effect reduces Health, e.g. every template
+damages through `IncomingDamage`; surface-only with `fix: null`, because where the
+pin lands is a design call and auto-adding Health would author double damage),
+`cooldown-override` (an effect "Cooldown" that disagrees with the resolved ability
+cooldown; it is dropped and never becomes a GE Period) and `unknown-attribute`
+(becomes `// TODO: unknown attribute`; Fix adds it to the attribute set). The
+cooldown prediction calls `resolveGenerateCooldown`, which
+`buildGenerateAbilityBundlePrompt` itself uses, so the preview and the prompt share
+one rule. Which Health hit is "primary" is the preflight's own guess (the prompt
+leaves it to the model). A clean spec dispatches on the first click; otherwise the
+inline `GeneratePreflight` panel offers per-finding Fix, "Fix all & generate"
+(`confirmGenerate({ applyFixes: true })` patches the editor through `onHydrate`,
+then dispatches the patched effects) and "Generate anyway". `generateEffects()`
+still dispatches immediately, and the prompt text is unchanged.
+
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.
 
