@@ -20,7 +20,8 @@
  * The index also carries the app's OTHER surfaces (`NAVIGABLE_SURFACES`): before this,
  * nothing in the lab — palette or header — could reach `/experiment` at all. A route hit
  * is a full-page jump, so it says so in its badge and leaves the lab's own nav callbacks
- * untouched.
+ * untouched. Every legacy-shell module has an address too (`MODULE_DESTINATIONS`): a
+ * `module` hit is the same full-page jump, to `/?legacy=1&module=<id>`.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -28,6 +29,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { NAVIGABLE_SURFACES } from '@/lib/shell/surfaces';
+import { MODULE_DESTINATIONS } from '@/lib/shell/shellRoute';
 import { resolveCatalogSteps } from './catalogManifest';
 import { resolveStepJump, toLabEntity } from './entityPipeline';
 import { SearchCombobox, type SearchHit } from './ui/SearchCombobox';
@@ -112,6 +114,12 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
         });
       });
     }
+    for (const m of MODULE_DESTINATIONS) {
+      rows.push({
+        hay: `${m.label} ${m.id}`.toLowerCase(),
+        hit: { key: `m:${m.id}`, label: m.label, detail: m.id, meta: 'Legacy shell', badge: 'module', payload: { kind: 'route', route: m.href } },
+      });
+    }
     return rows;
   }, [entitiesByCatalog, everOpened]);
 
@@ -147,8 +155,8 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
         onDismiss={onClose}
         autoFocus
         idPrefix="lab-search"
-        ariaLabel="Search catalogs, entities, pipeline steps and pages"
-        placeholder="Catalog, entity, step or page — name or id…"
+        ariaLabel="Search catalogs, entities, pipeline steps, pages and modules"
+        placeholder="Catalog, entity, step, page or module — name or id…"
         noun="result"
         emptyUniverse={index.length === 0}
       />

@@ -21,7 +21,7 @@ import { OneShotPanel } from './one-shot/OneShotPanel';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { setupOneShotToastHandler } from './one-shot/toastHandler';
 import { useCanonStore } from './canonStore';
-import { writeShellPref } from '@/lib/ecw/shell-pref';
+import { switchShell } from '@/lib/ecw/shell-pref';
 import { useLabPrefs, type LabView } from './hooks/useLabPrefs';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
@@ -153,13 +153,8 @@ export function LayoutLab() {
   }, [navigateTo, selectView]);
   const workQueue = useLabWorkQueue(catalogId, entityId, openFromMatrix); // Matrix queue: Next opens each stop like a cell
 
-  const switchToLegacy = useCallback(() => {
-    writeShellPref('legacy');
-    const url = new URL(window.location.href);
-    url.searchParams.set('legacy', '1');
-    window.history.pushState({}, '', url);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, []);
+  // Names this entry as the lab (legacy=0) before pushing legacy=1, so Back returns here.
+  const switchToLegacy = useCallback(() => switchShell('legacy'), []);
 
   // `data-lab-entity` publishes the entity the lab's STATE points at (the same id
   // LabSearch resolves step hits against), so "what is rendered" and "what state says"

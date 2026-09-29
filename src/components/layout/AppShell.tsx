@@ -17,6 +17,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useFileWatcher } from '@/hooks/useFileWatcher';
 import { useDynamicTitle } from '@/hooks/useDynamicTitle';
 import { usePofBridge } from '@/hooks/usePofBridge';
+import { useShellRouteSync } from '@/hooks/useShellRouteSync';
 import { GlobalSearchPanel } from './GlobalSearchPanel';
 import { EventBusDevTools } from './EventBusDevTools';
 import { PreflightGuardDialog } from '@/components/cli/PreflightGuardDialog';
@@ -55,6 +56,9 @@ export function AppShell() {
 
   // PoF Bridge plugin auto-connection (connects to UE5 plugin HTTP server)
   usePofBridge();
+
+  // The open module lives in the address (?legacy=1&module=<id>): deep links, Back/Forward
+  useShellRouteSync();
 
   // Warn before closing/refreshing when CLI tasks are actively running
   useEffect(() => {
