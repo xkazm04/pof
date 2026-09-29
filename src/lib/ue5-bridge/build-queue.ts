@@ -135,6 +135,8 @@ class BuildQueue {
         moduleId,
         abortSignal: abortController.signal,
         onProgress: (message, percent) => {
+          // Kept on the item (not only emitted) so GET ?buildId / ?projectPath can show it.
+          item.progress = percent === undefined ? { message } : { message, percent };
           eventBus.emit('build.progress', {
             buildId: item.buildId,
             message,
