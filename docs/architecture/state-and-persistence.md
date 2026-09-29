@@ -166,6 +166,10 @@ drifted content — all local-only work. The storage adapter (`quotaSafeLocalSto
 a refused write (quota) used to escape `set()` and skip the produce write-through; it is now
 recorded in the non-persisted `persistError` and shown as one line in `ProduceLogPanel`.
 
+#### `useLootTuningStore` (`src/components/modules/core-engine/sub_loot/_shared/lootTuningStore.ts`)
+
+The loot module's one tuned enemy->loot roster and its one gold-per-rarity table. It lives in memory only and is never persisted, so a tune is a what-if that writes no catalog row, DB row or UE file. It is module-level rather than component state because `LootTabPanels` mounts each tab under `AnimatePresence` keyed by the tab, and tab-local state would be lost on every tab switch. All state changes go through `dispatch(action)` into the pure `tunerReducer` (`_shared/bindingTuner.ts`: select / setField / setWeight / setGold / goalSeek / undo / reset). Inputs are clamped, the history is capped at 50, and undo on an empty history returns the same state. Every Core-tab loot surface reads this store: the header Enemy Source picker (the 22 bindings in tier optgroups), `BindingTuner`, `EnemyLootBindingSection` (simulated drops plus the C++ export) and `EVCalculator`, whose sell-value inputs write the shared gold table. Goal-seek solves against that same table (`solveWeightsForTargetEV`, then one-point integer refinement if the rounded weights miss the target). `rosterFindings` lints each binding against the peers of its **untuned** tier (`lootTierOf` in `src/lib/loot/economy.ts`, the same rule the catalog seed uses), so a drop-chance edit never moves the binding into a different peer group.
+
 ---
 
 ### 2. ProjectModuleBridge (`src/services/ProjectModuleBridge.ts`)
