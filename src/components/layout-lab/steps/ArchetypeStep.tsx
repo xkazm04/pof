@@ -9,6 +9,8 @@ import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { StepHistoryPanel } from './shared/StepHistoryPanel';
+import { PackageLedgerPanel } from './PackageLedgerPanel';
+import { isPackagingStep } from '@/lib/catalog/acceptance/packagingStep';
 import { selectedCandidate, selectionSource } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
@@ -547,6 +549,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
         </PanelCrashBoundary>
       ) },
       ...(dataGlbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={dataGlbUrl} /> }] : []),
+      // The REAL package beside the hand-typed list: rebuilt manifest, blockers by owing sibling, rebuild.
+      ...(catalogId && isPackagingStep(spec) ? [{ label: 'Package on disk', node: <PackageLedgerPanel t={t} catalogId={catalogId} entityId={entity.id} /> }] : []),
       { label: 'Produce', node: cli((pctx) => dispatchProduce(pctx)) },
     ];
   }
