@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { LabTheme } from './theme';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import { CANON_PROFILES, DEFAULT_CANON_PROFILE, profileOfRule } from '@/lib/catalog/canon/profiles';
 import { TabBar } from '@/components/ui/TabBar';
 import { useCanonStore } from './canonStore';
+import { CanonDriftPanel, driftCount } from './CanonDriftPanel';
 import { Lbl, LabButton, LabInput, LabTextarea } from './steps/controls';
 
 const CATEGORIES: RuleCategory[] = ['game', 'art', 'project'];
@@ -82,9 +83,15 @@ export function CanonView({ t }: { t: LabTheme }) {
   const rules = useCanonStore((s) => s.rules);
   const upsert = useCanonStore((s) => s.upsert);
   const remove = useCanonStore((s) => s.remove);
+  const drift = useCanonStore((s) => s.drift);
+  const loadDrift = useCanonStore((s) => s.loadDrift);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  useEffect(() => { void loadDrift(); }, [loadDrift]);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_CANON_PROFILE);
   const [editingId, setEditingId] = useState<string | null>(null);
   const selectedProfile = CANON_PROFILES[selectedProfileId];
+  const drifted = driftCount(drift?.byProfile[selectedProfileId]);
+  const undoable = (drift?.adopted ?? []).filter((a) => a.profile === selectedProfileId).length;
   const inheritedIds = new Set(selectedProfile.inheritsPof);
   const inheritedRules = selectedProfileId === DEFAULT_CANON_PROFILE
     ? []
@@ -120,12 +127,24 @@ export function CanonView({ t }: { t: LabTheme }) {
         <TabBar
           tabs={PROFILE_TABS}
           activeId={selectedProfileId}
-          onChange={(profileId) => { setSelectedProfileId(profileId); setEditingId(null); }}
+          onChange={(profileId) => { setSelectedProfileId(profileId); setEditingId(null); setReviewOpen(false); }}
           layoutId="canon-profile-tab"
           accent={t.ink}
           ariaLabel="Canon profile"
           className="mb-7"
         />
+
+        {(drifted > 0 || undoable > 0) && (
+          <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: `1px solid ${t.warn}`, borderRadius: t.glass ? 10 : 0, padding: '10px 14px', marginBottom: 16 }}>
+            <span className={t.fontBody} style={{ fontSize: 14, color: t.text, flex: 1, minWidth: 220 }}>
+              {drifted > 0
+                ? `${drifted} laws changed upstream since this DB was seeded; your produce prompts still cite the old text.`
+                : `Canon matches the shipped laws. ${undoable} adopted law(s) can still be undone.`}
+            </span>
+            <LabButton t={t} onClick={() => setReviewOpen((o) => !o)}>{reviewOpen ? 'Hide review' : 'Review drift'}</LabButton>
+          </div>
+        )}
+        {(drifted > 0 || undoable > 0) && reviewOpen && <CanonDriftPanel t={t} profileId={selectedProfileId} />}
 
         {CATEGORIES.map((cat) => {
           const catRules = rules.filter((r) => r.category === cat && profileOfRule(r) === selectedProfileId);
