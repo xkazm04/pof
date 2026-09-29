@@ -12,6 +12,7 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogContractRequirements, catalogCriteriaLines } from '@/lib/catalog/contractPrompt';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { labIdentityOf } from '@/lib/catalog/canon/profiles';
+import { lootWireClause } from '@/lib/loot/enemy-loot-join';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
 
@@ -254,7 +255,7 @@ export const BESTIARY_RECIPE: GenerationRecipe<BestiaryEntry> = {
       step === 'author-python'
         ? `Author the BP_${entity.data.id}Enemy Blueprint subclassing AARPGEnemyCharacter from "${entity.name}"'s spec.`
         : step === 'wire'
-          ? `Wire BP_${entity.data.id}Enemy: grant its abilities (cross-catalog links provide spellbook ids) + bind the loot table (lt-${entity.data.id}) on the placed instance.`
+          ? `Wire BP_${entity.data.id}Enemy: grant its abilities (cross-catalog links provide spellbook ids) + ${lootWireClause(entity.data.id)} on the placed instance.`
           : `Run AVSBestiary_${entity.data.id}Test: spawn → chases + attacks (player Health drops) → drops linked loot on death.`;
     const b = recipeBuilder(ctx, this.catalogId, step, entity)
       .withDomainContext('AARPGEnemyCharacter Blueprint authoring + cross-catalog wiring for the PoF ARPG.')

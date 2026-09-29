@@ -2,7 +2,7 @@ import {
   ARCHETYPES,
   type ArchetypeConfig,
 } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
-import { DEFAULT_ENEMY_LOOT_BINDINGS } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
+import { lootTableIdForArchetype } from '@/lib/loot/enemy-loot-join';
 import { seedSpellbookEntries } from './seed-spellbook';
 import type { BestiaryEntry, CatalogLink } from './types';
 
@@ -23,14 +23,9 @@ function resolveLinks(archetype: ArchetypeConfig): CatalogLink[] {
     const id = SPELLBOOK_BY_NAME.get(abilityName.toLowerCase());
     if (id) links.push({ catalogId: 'spellbook', entityId: id, role: 'ability' });
   }
-  // Loot binding ids are PascalCase ('Brute'); archetype ids are lowercase ('brute').
-  // Case-insensitive lookup, then use the binding's id (PascalCase) to match seed-loot.ts's `lt-${binding.archetypeId}` ids.
-  const lootBinding = DEFAULT_ENEMY_LOOT_BINDINGS.find(
-    (b) => b.archetypeId.toLowerCase() === archetype.id.toLowerCase(),
-  );
-  if (lootBinding) {
-    links.push({ catalogId: 'loot-tables', entityId: `lt-${lootBinding.archetypeId}`, role: 'loot' });
-  }
+  // One normalised join ('melee-grunt' → 'lt-MeleeGrunt'); null when no loot table is bound.
+  const lootTableId = lootTableIdForArchetype(archetype.id);
+  if (lootTableId) links.push({ catalogId: 'loot-tables', entityId: lootTableId, role: 'loot' });
   return links;
 }
 
