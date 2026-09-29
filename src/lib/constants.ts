@@ -113,6 +113,9 @@ export const UI_TIMEOUTS = {
   cliExecutionTimeout: 100 * 60 * 1000,
   /** Default window awaitCallback() waits for a @@CALLBACK block before rejecting (5 min). */
   callbackAwaitTimeout: 5 * 60 * 1000,
+  /** Window batch review gives ONE module's review run to emit its @@CALLBACK (10 min);
+   *  a still-running run is aborted when it elapses (settleExecution, run-settle.ts). */
+  batchReviewTimeout: 10 * 60 * 1000,
   /** A running task whose last heartbeat is older than this is treated as stale /
    *  timed-out (10 min). Shared by the task-registry route and its client. */
   taskTimeout: 10 * 60 * 1000,

@@ -16,7 +16,7 @@ const startExecution = vi.fn<(...args: unknown[]) => string>(() => 'exec-1');
 vi.mock('@/lib/claude-terminal/cli-service', () => ({
   startExecution: (...args: unknown[]) => startExecution(...args),
   // Every review settles immediately — the background loop never sleeps.
-  getExecution: () => ({ status: 'completed' }),
+  getExecution: () => ({ status: 'completed', events: [], listeners: new Set(), process: null }),
   subscribeToExecution: () => () => {},
   abortExecution: () => {},
 }));

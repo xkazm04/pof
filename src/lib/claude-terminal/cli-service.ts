@@ -7,7 +7,7 @@ import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { parseCallbackMarker } from '@/lib/cli-task';
+import { settleExecution } from '@/lib/claude-terminal/run-settle';
 import { extractResultMetrics, type NormalizedUsage } from '@/lib/claude-terminal/result-metrics';
 import { killProcessTree } from '@/lib/process-tree-kill';
 import { resolveAutonomousMcpArgs } from '@/lib/claude-terminal/mcp-config';
@@ -421,7 +421,8 @@ export function startExecution(
         killProcessTree(childProcess);
         execution.status = 'error';
         const timeoutMinutes = UI_TIMEOUTS.cliExecutionTimeout / 60000;
-        emitEvent({ type: 'error', data: { message: `Execution timed out after ${timeoutMinutes} minutes` }, timestamp: Date.now() });
+        // `timedOut` lets the settlement seam (run-settle.ts) name this `timeout`, not a crash.
+        emitEvent({ type: 'error', data: { message: `Execution timed out after ${timeoutMinutes} minutes`, timedOut: true }, timestamp: Date.now() });
       }
     }, UI_TIMEOUTS.cliExecutionTimeout);
 
@@ -475,118 +476,28 @@ export function cleanupExecutions(maxAgeMs: number = 3600000): void {
   }
 }
 
-// ── Callback registry ────────────────────────────────────────────────────────
-// Minimal map of executionId → resolver. Resolved when @@CALLBACK JSON is
-// extracted from the execution's text events (done server-side by the routes
-// that need a structured result back from a CLI run).
-
-const globalForCallbacks = globalThis as unknown as {
-  cliCallbackRegistry: Map<string, (payload: unknown) => void> | undefined;
-};
-
-const callbackRegistry =
-  globalForCallbacks.cliCallbackRegistry ?? new Map<string, (payload: unknown) => void>();
-
-if (!globalForCallbacks.cliCallbackRegistry) {
-  globalForCallbacks.cliCallbackRegistry = callbackRegistry;
-}
-
-/** Register a one-shot callback resolver for an execution.  Internal. */
-function registerCallbackResolver(executionId: string, resolve: (payload: unknown) => void): void {
-  callbackRegistry.set(executionId, resolve);
-}
-
 /**
- * Attempt to extract a parsed @@CALLBACK JSON object from a text event.
+ * Await the parsed @@CALLBACK object from a CLI execution (the one-shot routes).
  *
- * Thin server-side wrapper over the shared {@link parseCallbackMarker} (cli-task) —
- * projects to the parsed-object shape `awaitCallback` resolves on. Returns null
- * when there is no marker, or when the marker body is not valid JSON.
+ * Settles through the one settlement seam ({@link settleExecution}, run-settle.ts):
+ * resolves on the first valid @@CALLBACK...@@END_CALLBACK block, and rejects the
+ * moment the run ends without one (`ended without a callback`), fails, or the window
+ * elapses. On timeout a still-running session is aborted BEFORE rejecting: the wait
+ * ending must not leave a billed Claude session editing files behind it (the caller
+ * offers "Retry", which would join the orphan with a second session). A run that
+ * already exited is never aborted, so no taskkill hits a dead PID. The rejection
+ * message is the seam's, naming the execution.
  */
-function extractCallbackPayload(text: string): unknown | null {
-  return parseCallbackMarker(text)?.data ?? null;
-}
-
-/**
- * Await the @@CALLBACK resolution from a running CLI execution.
- * Resolves when the execution emits a text event containing a valid
- * @@CALLBACK...@@END_CALLBACK block, or rejects on timeout / error.
- */
-export function awaitCallback(
+export async function awaitCallback(
   executionId: string,
   opts: { timeoutMs?: number } = {},
 ): Promise<unknown> {
-  const timeoutMs = opts.timeoutMs ?? UI_TIMEOUTS.callbackAwaitTimeout;
-
-  return new Promise((resolve, reject) => {
-    const execution = activeExecutions.get(executionId);
-    if (!execution) {
-      reject(new Error(`execution ${executionId} not found`));
-      return;
-    }
-
-    // Check already-collected events first (execution may have finished already).
-    for (const ev of execution.events) {
-      if (ev.type === 'text' && typeof ev.data.content === 'string') {
-        const payload = extractCallbackPayload(ev.data.content);
-        if (payload !== null) { resolve(payload); return; }
-      }
-    }
-    if (execution.status !== 'running') {
-      reject(new Error(`execution ${executionId} ended without a callback`));
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      execution.listeners.delete(listener);
-      // Drop the resolver too: nothing is waiting for it any more, and leaving it in the
-      // registry keeps a reference to a settled promise for the life of the process.
-      callbackRegistry.delete(executionId);
-      // ABORT BEFORE REJECTING. The timeout only ever ended the WAIT — the spawned Claude
-      // session kept running, kept editing files and kept billing tokens, with no operator
-      // affordance left that points at it. The caller (`/api/one-shot/step`) then reports a
-      // failure and the Produce panel offers "Retry with same prompt", so the orphan was
-      // about to be joined by a second billed session. Killing the process tree first means
-      // the error the caller sees is the whole truth about what is still running: nothing.
-      const aborted = abortExecution(executionId);
-      reject(new Error(
-        `callback timeout after ${timeoutMs}ms for execution ${executionId}` +
-        `${aborted ? ' (execution aborted)' : ' (no process to abort)'}`,
-      ));
-    }, timeoutMs);
-
-    registerCallbackResolver(executionId, (payload) => {
-      clearTimeout(timer);
-      execution.listeners.delete(listener);
-      resolve(payload);
-    });
-
-    const listener: CLIEventListener = (event) => {
-      if (event.type === 'text' && typeof event.data.content === 'string') {
-        const payload = extractCallbackPayload(event.data.content);
-        if (payload !== null) {
-          const res = callbackRegistry.get(executionId);
-          if (res) { callbackRegistry.delete(executionId); res(payload); }
-        }
-      }
-      if (event.type === 'error') {
-        clearTimeout(timer);
-        execution.listeners.delete(listener);
-        const res = callbackRegistry.get(executionId);
-        if (res) callbackRegistry.delete(executionId);
-        reject(new Error(String(event.data.message ?? 'execution error')));
-      }
-      if (event.type === 'result' && event.data.isError) {
-        clearTimeout(timer);
-        execution.listeners.delete(listener);
-        const res = callbackRegistry.get(executionId);
-        if (res) callbackRegistry.delete(executionId);
-        reject(new Error('CLI execution reported an error result'));
-      }
-    };
-
-    execution.listeners.add(listener);
+  const settled = await settleExecution(executionId, {
+    expect: 'callback',
+    timeoutMs: opts.timeoutMs ?? UI_TIMEOUTS.callbackAwaitTimeout,
   });
+  if (!settled.ok) throw new Error(settled.error.message);
+  return settled.data.callback?.data;
 }
 
 /**
