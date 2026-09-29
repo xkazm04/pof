@@ -8,10 +8,9 @@
  */
 import { runTripo, type TripoSpec, type TripoResult } from './tripo-runner';
 import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
-import { critiqueThresholdsFor, resolveAssetClass } from './polycount-presets';
+import { gateRequestFor, type GateRequest } from './gate-request';
 import { generateUntilAcceptable } from './best-of-n';
 import type { BudgetRequest } from './face-budget';
-import { nominalExtentFor, type SizeRequest } from './world-scale';
 
 /**
  * Hard ceiling on the generations one job may spend, whatever a caller asks for. Every
@@ -67,26 +66,24 @@ type Runner = (spec: TripoSpec) => Promise<TripoResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 
 /**
- * Build the Tier-1 gate deps for a job: the class-aware thresholds AND the face budget
- * the generation was actually requested at. Pure.
+ * The Tier-1 gate request for a job: the class rule from `gateRequestFor` plus the one
+ * fact only this producer owns — the face budget the generation was actually requested
+ * at (Tripo counts quads when `quad` is set, so the unit rides along). Pure.
  *
- * Both were previously lost. `critiqueThresholdsFor` had no production call site at all
- * — every mesh was graded against the class-blind 200k default — and the requested
- * `faceLimit` was passed to Tripo and then dropped, so nothing could tell a mesh that
- * honoured its budget from one that ignored it.
+ * What this store grades is provider output straight off the API — pre-retopo, pre-unwrap,
+ * pre-bake — so the stage is `raw`.
  */
-export function critiqueDepsForSpec(spec: TripoSpec): CritiqueDeps {
-  const thresholds = spec.assetClass ? critiqueThresholdsFor(spec.assetClass) : {};
-  const budget: BudgetRequest | undefined =
+export function tripoGateRequest(spec: TripoSpec): GateRequest {
+  const sentBudget: BudgetRequest | undefined =
     spec.faceLimit !== undefined
       ? { triangleBudget: spec.faceLimit, topology: spec.quad ? 'quads' : 'triangles' }
       : undefined;
-  const targetExtentM = spec.targetExtentM ?? nominalExtentFor(spec.assetClass);
-  const size: SizeRequest | undefined = targetExtentM !== undefined ? { targetExtentM } : undefined;
-  // What this store grades is provider output straight off the API — pre-retopo,
-  // pre-unwrap, pre-bake. Stating it is what lets a failing verdict say whether it is
-  // condemning a defect or an un-finished input (`critique-stage.ts`).
-  return { thresholds, budget, size, stage: 'raw' };
+  return gateRequestFor({ assetClass: spec.assetClass, stage: 'raw', targetExtentM: spec.targetExtentM, sentBudget });
+}
+
+/** The gate deps alone — kept as the stable seam other producers and tests pin. Pure. */
+export function critiqueDepsForSpec(spec: TripoSpec): CritiqueDeps {
+  return tripoGateRequest(spec).deps;
 }
 
 /**
@@ -107,8 +104,9 @@ export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic
   jobs.set(id, job);
 
   const maxAttempts = Math.min(Math.max(1, spec.maxAttempts ?? 1), MAX_GENERATION_ATTEMPTS);
-  const critiqueDeps = critiqueDepsForSpec(spec);
-  job.gradedAs = resolveAssetClass(spec.assetClass).gradedAs;
+  const gate = tripoGateRequest(spec);
+  const critiqueDeps = gate.deps;
+  job.gradedAs = gate.gradedAs;
 
   generateUntilAcceptable<TripoResult>(
     (attempt) => runner({ ...spec, outputPath: attemptPath(spec.outputPath, attempt) }),

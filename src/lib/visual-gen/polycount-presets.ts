@@ -17,8 +17,8 @@
  * head). A simple asset should be requested well under its class ceiling. See the
  * `ai-3d-model-tier-and-budget-shaping` gotcha in `knowledge/ue-gotchas.ts`.
  */
-import type { CritiqueDeps, CritiqueThresholds } from './mesh-critique';
-import { nominalExtentFor, type SizeRequest } from './world-scale';
+import type { CritiqueThresholds } from './mesh-critique';
+import { gateRequestFor, type GateRequest } from './gate-request';
 
 export type AssetClass = 'character' | 'weapon' | 'prop' | 'environment' | 'modular-part';
 
@@ -255,13 +255,8 @@ export function critiqueThresholdsFor(assetClass: string): Partial<CritiqueThres
 export function localCritiqueDeps(
   assetClass: string | undefined,
   targetExtentM?: number,
-): { deps: CritiqueDeps; gradedAs: string } {
-  const resolved = resolveAssetClass(assetClass);
-  const thresholds = resolved.assetClass ? critiqueThresholdsFor(resolved.assetClass) : {};
-  const extent = targetExtentM ?? nominalExtentFor(resolved.assetClass);
-  const size: SizeRequest | undefined = extent !== undefined ? { targetExtentM: extent } : undefined;
-  // These are GENERATORS, so what they hand this gate is pre-retopo output. Declaring the
-  // stage is a statement of fact about the producer, not a guess about the mesh — and it
-  // is what stops a failing verdict reading as a defect when it is an un-finished input.
-  return { deps: { thresholds, size, stage: 'raw' }, gradedAs: resolved.gradedAs };
+): GateRequest {
+  // These are GENERATORS, so what they hand this gate is pre-retopo output — `raw` is a
+  // statement of fact about the producer. They accept no budget input, so none is sent.
+  return gateRequestFor({ assetClass, stage: 'raw', targetExtentM });
 }

@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
       facesCulled: r?.facesCulled,
       cullLimitReason: r?.cullLimitReason,
       durationMs: r?.durationMs,
+      /** What the finished mesh was held to — the class budget, or class-blind and why. */
+      gradedAs: job.gradedAs,
       // Tier-1 geometry gate on the finished low-poly, including whether the delivered
       // mesh honoured `targetFaces` (not merely the class ceiling).
       critique: job.critique

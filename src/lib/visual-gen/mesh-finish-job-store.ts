@@ -18,9 +18,8 @@
  */
 import { runMeshFinish, type MeshFinishSpec, type MeshFinishResult } from './mesh-finish';
 import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
-import { critiqueThresholdsFor } from './polycount-presets';
+import { gateRequestFor, type GateRequest } from './gate-request';
 import type { BudgetRequest } from './face-budget';
-import { nominalExtentFor, type SizeRequest } from './world-scale';
 import { summarizeRemediation, type RemediationOutcome } from './finish-routing';
 
 export interface MeshFinishJob {
@@ -29,6 +28,8 @@ export interface MeshFinishJob {
   spec: MeshFinishSpec;
   /** Asset class the finished mesh is graded as (character/prop/…), when declared. */
   assetClass?: string;
+  /** What the finished mesh was graded against (class budget, or class-blind and why). */
+  gradedAs?: string;
   result?: MeshFinishResult;
   /** Tier-1 geometry gate, auto-run on the finished low-poly (graded at stage `finished`). */
   critique?: CritiqueResult;
@@ -61,18 +62,20 @@ type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
  * budget the delivered mesh is held to. A run with no target skipped retopo entirely —
  * there is then no budget to honour, and none is invented.
  */
-export function critiqueDepsForFinish(spec: MeshFinishSpec, assetClass?: string): CritiqueDeps {
-  const thresholds = assetClass ? critiqueThresholdsFor(assetClass) : {};
-  const budget: BudgetRequest | undefined =
+export function finishGateRequest(spec: MeshFinishSpec, assetClass?: string): GateRequest {
+  const sentBudget: BudgetRequest | undefined =
     spec.targetFaces !== undefined
       ? { triangleBudget: spec.targetFaces, topology: 'triangles' }
       : undefined;
-  const targetExtentM = spec.targetExtentM ?? nominalExtentFor(assetClass);
-  const size: SizeRequest | undefined = targetExtentM !== undefined ? { targetExtentM } : undefined;
   // The output of this store IS the post-finish mesh, so `finished` is a statement of
   // fact about what is being graded — not an inference. It is what stops the finished
   // low-poly inheriting the "pre-finish geometry" caveat that belongs to its input.
-  return { thresholds, budget, size, stage: 'finished' };
+  return gateRequestFor({ assetClass, stage: 'finished', targetExtentM: spec.targetExtentM, sentBudget });
+}
+
+/** The gate deps alone — kept as the stable seam its tests pin. Pure. */
+export function critiqueDepsForFinish(spec: MeshFinishSpec, assetClass?: string): CritiqueDeps {
+  return finishGateRequest(spec, assetClass).deps;
 }
 
 /**
@@ -88,11 +91,13 @@ export function startMeshFinishJob(
   routed?: { before: CritiqueResult; planNote: string },
 ): string {
   const id = `meshfinish-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const gate = finishGateRequest(spec, assetClass);
   const job: MeshFinishJob = {
     id,
     status: 'running',
     spec,
     assetClass,
+    gradedAs: gate.gradedAs,
     startedAt: Date.now(),
     ...(routed ? { beforeCritique: routed.before, planNote: routed.planNote } : {}),
   };
@@ -102,7 +107,7 @@ export function startMeshFinishJob(
       job.result = result;
       if (result.ok && result.meshPath) {
         try {
-          job.critique = await critic(result.meshPath, critiqueDepsForFinish(spec, assetClass));
+          job.critique = await critic(result.meshPath, gate.deps);
         } catch { /* critique is best-effort — never fails the finish itself */ }
       }
       // A routed run always reports before → after, including the case where the finish

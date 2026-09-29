@@ -9,7 +9,8 @@
  */
 import { runTrellis, type TrellisSpec, type TrellisResult } from './trellis-runner';
 import { critiqueMesh, summarizeGate, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
-import { localCritiqueDeps, polycountFor, resolveAssetClass } from './polycount-presets';
+import { polycountFor, resolveAssetClass } from './polycount-presets';
+import { gateRequestFor, type GateRequest } from './gate-request';
 
 /**
  * A TRELLIS.2 job's spec: the runner's spec plus the grading intent for the mesh.
@@ -62,13 +63,13 @@ export function trellisGateDeps(
   assetClass: string | undefined,
   targetExtentM: number | undefined,
   sentFaceLimit: number | undefined,
-): { deps: CritiqueDeps; gradedAs: string } {
-  const base = localCritiqueDeps(assetClass, targetExtentM);
-  if (sentFaceLimit === undefined) return base;
-  return {
-    gradedAs: base.gradedAs,
-    deps: { ...base.deps, budget: { triangleBudget: sentFaceLimit, topology: 'triangles' } },
-  };
+): GateRequest {
+  return gateRequestFor({
+    assetClass,
+    stage: 'raw',
+    targetExtentM,
+    sentBudget: sentFaceLimit !== undefined ? { triangleBudget: sentFaceLimit, topology: 'triangles' } : undefined,
+  });
 }
 
 /** The face limit to hand the generator for a class, unless the caller pinned one. Pure. */
