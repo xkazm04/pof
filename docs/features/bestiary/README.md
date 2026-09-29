@@ -5,7 +5,7 @@
 **Purpose.** Authors a tank-archetype enemy entity in PoF. Per ARPG-LAWS §6 and canon `game-creature-design` / `arpg-monster-rarity` / `arpg-monster-mods`, difficulty comes from rarity + modifiers + telegraphed patterns, never hand-tuned stat inflation: rarity multipliers scale the Normal baseline and each modifier is a buff/aura GE granted at spawn. Realised as an `AARPGEnemyCharacter` BP child with one `DT_AttributeDefaults` stat row — no new C++ per canon `char-config-not-cpp`.
 
 ## Target / starter entity
-- **Brute** (`bestiary-brute`, tank/melee — seeded from `ARCHETYPES`) — a deliberate, telegraphed bruiser: slow move speed, high burst on slams. Abilities and loot links are resolved at seed time (abilities by name → spellbook ids; loot → `lt-Brute`).
+- **Brute** (`bestiary-brute`, tank/melee — seeded from `ARCHETYPES`) — a deliberate, telegraphed bruiser: slow move speed, high burst on slams. Abilities and loot links are resolved at seed time (abilities by name → spellbook ids; loot → `lt-Brute`). Loot resolves through the one enemy → loot-table join `src/lib/loot/enemy-loot-join.ts` (normalised key: non-alphanumerics stripped, lowercased), so hyphenated archetypes link too (`melee-grunt` → `lt-MeleeGrunt`): 14 of 94 archetypes carry a `loot-tables` link (5 before the join), loot-table ids stay PascalCase, and `enemyLootCoverage()` reports the gap (80 archetypes without a table, 8 tables without an archetype). The 9 newly linked entities also get a linked loot-table section in their produce prompts (via `entity.links`), and the `wire` step prompt names the resolved id or states that no loot-tables entry is bound, never a templated `lt-<kebab-id>`.
 
 ## Pipeline steps
 | # | Step | Archetype | Produces (UE assets) | Acceptance |
