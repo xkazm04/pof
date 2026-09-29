@@ -1,16 +1,23 @@
 /**
- * Predictive Balance Simulation Engine
+ * Predictive Balance Simulation — the level x encounter sweep.
  *
- * Client-side Monte Carlo engine that sweeps player levels × enemy compositions
- * to produce survival heatmaps, DPS breakdowns, and sensitivity analysis.
- * Uses the same combat formulas as simulation-engine.ts but optimized for
- * batch parameter sweeps.
+ * Sweeps player levels × enemy compositions to produce survival heatmaps, DPS
+ * breakdowns, and sensitivity analysis. It owns NO fight loop: every heatmap
+ * cell and sensitivity step is one `runCombatSimulation` call into the combat
+ * engine (./simulation-engine), so the numbers on this tab describe the same
+ * fight the Combat Simulator, goal-seek and feedback comparison resolve
+ * (game-production/encounter-balance-simulation#one-kernel).
+ *
+ * The sweep is planned once (`planPredictiveSweep`) and drained two ways:
+ * `runPredictiveBalance` (sync — tests, headless) and
+ * `runPredictiveBalanceAsync` (a cancellable job that yields between AND inside
+ * cells, so the UI thread is never pinned by the engine's cost).
  */
 
-import type { AttributeSet, AttributeKey, CombatAbility, EnemyArchetype, TuningOverrides } from '@/types/combat-simulator';
+import type {
+  AttributeSet, AttributeKey, CombatSimConfig, CombatSummary, EnemyArchetype, GearLoadout, TuningOverrides,
+} from '@/types/combat-simulator';
 import {
-  BASE_PLAYER_ATTRIBUTES,
-  PLAYER_LEVEL_SCALING,
   PLAYER_ABILITIES,
   ENEMY_ARCHETYPE_BY_ID,
   GEAR_LOADOUTS,
@@ -25,27 +32,28 @@ import {
 } from '@/lib/balance/canon-conformance';
 import {
   HARDCODED_ENEMY_SOURCE,
+  runCombatSimulation,
+  runCombatSimulationBatched,
+  buildPlayerAttributes,
+  buildEnemyAttributes,
+  yieldToEventLoop,
   type ArchetypeRegistry,
   type EnemySourceReport,
+  type OverrideCombatScenario,
 } from '@/lib/combat/simulation-engine';
-import { createXorShift32RNG } from '@/lib/seeded-rng';
-import { calculateDamage } from '@/lib/combat/damage';
 import { armourEffectiveHpMultiplier } from '@/lib/combat/canon-kernel';
 
-// ── RNG ─────────────────────────────────────────────────────────────────────
-// Shared xorshift32 helper (see `@/lib/seeded-rng`); each cell/step derives its
-// own stream from a key so results are order-independent.
+// ── Seeds ───────────────────────────────────────────────────────────────────
+// Each cell/step seeds its OWN engine run from a key, so results are
+// order-independent (#per-cell-seed-derivation-for-order-independence).
 
 /** Base seed for the sweep — every cell/step derives a stream from this. */
 const BASE_SEED = 42;
 
 /**
  * Derive a stable 32-bit seed from a key string (FNV-1a style). Each heatmap
- * cell and sensitivity step seeds its OWN rng from its parameters, so a cell's
- * result is reproducible regardless of the order cells are evaluated in.
- * Previously one shared createRNG(42) was threaded through every cell, making
- * each cell consume an order-dependent slice of the stream — so the numbers for
- * a given level-vs-enemy cell changed if the sweep order changed.
+ * cell and sensitivity step seeds its OWN engine run from its parameters, so a
+ * cell's result is reproducible regardless of the order cells are evaluated in.
  */
 function seedFromKey(key: string, base: number): number {
   let h = base | 0;
@@ -55,147 +63,19 @@ function seedFromKey(key: string, base: number): number {
   return (h | 0) || 1;
 }
 
-// ── Attribute builders ─────────────────────────────────────────────────────
-
-function buildPlayerAttrs(level: number, gearId: string, tuning: TuningOverrides): AttributeSet {
-  const attrs = { ...BASE_PLAYER_ATTRIBUTES };
-  for (const [key, perLevel] of Object.entries(PLAYER_LEVEL_SCALING)) {
-    const k = key as AttributeKey;
-    attrs[k] += (perLevel as number) * (level - 1);
-  }
-  const gear = GEAR_LOADOUTS.find(g => g.id === gearId);
-  if (gear) {
-    for (const [key, bonus] of Object.entries(gear.bonuses)) {
-      attrs[key as AttributeKey] += bonus as number;
-    }
-  }
-  attrs.health *= tuning.playerHealthMul;
-  attrs.maxHealth *= tuning.playerHealthMul;
-  // NOTE: playerDamageMul is NOT pre-baked into attackPower here. The shared
-  // calculateDamage applies it per-hit (scaling the whole hit incl. baseDamage),
-  // matching the canonical simulation-engine behavior. Baking it in here used to
-  // double-count it relative to the main engine.
-  attrs.armor *= tuning.playerArmorMul;
-  return attrs;
+/** The engine seed of the heatmap cell (archetype, player level). */
+export function sweepCellSeed(archetypeId: string, playerLevel: number): number {
+  return seedFromKey(`cell|${archetypeId}|${playerLevel}`, BASE_SEED);
 }
 
-function buildEnemyAttrs(archetype: EnemyArchetype, level: number, tuning: TuningOverrides): AttributeSet {
-  const attrs = { ...archetype.baseAttributes };
-  for (const [key, perLevel] of Object.entries(archetype.levelScaling)) {
-    const k = key as AttributeKey;
-    attrs[k] += (perLevel as number) * (level - 1);
-  }
-  attrs.health *= tuning.enemyHealthMul;
-  attrs.maxHealth *= tuning.enemyHealthMul;
-  // enemyDamageMul is applied per-hit by the shared calculateDamage, not baked in here.
-  return attrs;
-}
+/** Longest fight a sweep cell simulates before calling it a draw. */
+const SWEEP_MAX_FIGHT_SEC = 120;
 
-// ── Damage formula ─────────────────────────────────────────────────────────
-// Now delegated to the shared canonical calculateDamage (see ./damage). The
-// previous local `calcDamage` had drifted: it clamped at Math.max(0,…) un-rounded
-// and pre-baked the damage multiplier into attackPower — both reconciled here.
-
-// ── Single fight simulation (lightweight) ──────────────────────────────────
-
-interface QuickFightResult {
-  won: boolean;
-  durationSec: number;
-  damageDealt: number;
-  damageTaken: number;
-  healthRemaining: number;
-}
-
-function simulateFight(
-  playerAttrs: AttributeSet,
-  abilities: CombatAbility[],
-  enemies: { attrs: AttributeSet; ability: CombatAbility; intervalSec: number }[],
-  tuning: TuningOverrides,
-  rng: () => number,
-  maxDuration: number,
-): QuickFightResult {
-  const TICK = 0.1;
-  let playerHP = playerAttrs.health;
-  let playerMana = playerAttrs.mana;
-  const enemyHPs = enemies.map(e => e.attrs.health);
-  let time = 0;
-  let totalDealt = 0;
-  let totalTaken = 0;
-
-  const cooldowns = new Map<string, number>();
-  let invulnUntil = 0;
-
-  while (time < maxDuration) {
-    // Player turn: pick best ability
-    const alive = enemies.map((_, i) => i).filter(i => enemyHPs[i] > 0);
-    if (alive.length === 0) break;
-
-    let bestAbility: CombatAbility | null = null;
-    let bestPriority = -1;
-    for (const ab of abilities) {
-      const cd = cooldowns.get(ab.id) ?? 0;
-      if (cd > time) continue;
-      if (ab.manaCost > playerMana) continue;
-
-      let priority = 0;
-      if (ab.type === 'dodge' && playerHP < playerAttrs.maxHealth * 0.3) priority = 10;
-      else if (ab.type === 'buff') priority = 5;
-      else if (ab.type === 'aoe' && alive.length >= 2) priority = 4;
-      else priority = ab.baseDamage + playerAttrs.attackPower * ab.attackPowerScaling;
-
-      if (priority > bestPriority) { bestPriority = priority; bestAbility = ab; }
-    }
-
-    if (bestAbility) {
-      cooldowns.set(bestAbility.id, time + bestAbility.cooldownSec);
-      playerMana -= bestAbility.manaCost;
-
-      if (bestAbility.appliesInvulnerable) {
-        invulnUntil = time + bestAbility.appliesInvulnerable;
-      }
-
-      if (bestAbility.baseDamage > 0) {
-        const targets = bestAbility.aoeRadius > 0 ? alive : [alive[0]];
-        for (const ti of targets) {
-          const { damage: dmg } = calculateDamage(bestAbility, playerAttrs, enemies[ti].attrs, tuning, rng, true);
-          enemyHPs[ti] -= dmg;
-          totalDealt += dmg;
-        }
-      }
-    }
-
-    // Check enemies alive
-    const stillAlive = enemies.map((_, i) => i).filter(i => enemyHPs[i] > 0);
-    if (stillAlive.length === 0) break;
-
-    // Enemy turns
-    for (const ei of stillAlive) {
-      const enemy = enemies[ei];
-      const attacksPerTick = TICK / enemy.intervalSec;
-      if (rng() < attacksPerTick) {
-        if (time < invulnUntil) continue;
-        const { damage: dmg } = calculateDamage(enemy.ability, enemy.attrs, playerAttrs, tuning, rng, false);
-        playerHP -= dmg;
-        totalTaken += dmg;
-        if (playerHP <= 0) break;
-      }
-    }
-
-    if (playerHP <= 0) break;
-
-    // Mana regen
-    playerMana = Math.min(playerAttrs.maxMana, playerMana + 2 * TICK);
-    time += TICK;
-  }
-
-  return {
-    won: playerHP > 0 && enemies.every((_, i) => enemyHPs[i] <= 0),
-    durationSec: Math.round(time * 10) / 10,
-    damageDealt: totalDealt,
-    damageTaken: totalTaken,
-    healthRemaining: Math.max(0, playerHP),
-  };
-}
+/**
+ * Fights per batch inside one cell of the async job. A 1000-iteration cell can
+ * cost 35–166 ms, so the job yields every batch (and checks its AbortSignal).
+ */
+export const SWEEP_BATCH_SIZE = 200;
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -490,10 +370,28 @@ export function lintCombatCanon(
   return { alerts, checks };
 }
 
-// ── Main simulation runner ─────────────────────────────────────────────────
+// ── The sweep plan ─────────────────────────────────────────────────────────
+
+/** One engine run of the sweep: a heatmap cell or a sensitivity step. */
+export interface SweepUnit {
+  scenario: OverrideCombatScenario;
+  sim: CombatSimConfig;
+}
 
 /**
- * Run the level x encounter sweep.
+ * A planned sweep: the engine runs to make, in report order, and how to fold
+ * their summaries into a `BalanceReport`. Pure — planning runs no fights.
+ */
+export interface SweepPlan {
+  registry: ArchetypeRegistry;
+  units: SweepUnit[];
+  assemble(summaries: readonly CombatSummary[], durationMs: number): BalanceReport;
+}
+
+type EncounterConfig = PredictiveBalanceConfig['enemyConfigs'][number];
+
+/**
+ * Plan the level x encounter sweep (+ sensitivity steps) against `enemies`.
  *
  * `enemies` supplies the archetype registry the sweep resolves `archetypeId`
  * against — build it from real bestiary artifacts with
@@ -502,210 +400,243 @@ export function lintCombatCanon(
  * the hardcoded fixtures, and the report SAYS so rather than implying the
  * numbers describe creatures someone authored.
  */
-export function runPredictiveBalance(
+export function planPredictiveSweep(
   config: PredictiveBalanceConfig,
   enemies?: { registry: ArchetypeRegistry; provenance?: EnemySourceReport },
-): BalanceReport {
-  const start = performance.now();
+): SweepPlan {
   const registry: ArchetypeRegistry = enemies?.registry ?? ENEMY_ARCHETYPE_BY_ID;
   const enemySource: EnemySourceReport = enemies
     ? enemies.provenance ?? HARDCODED_ENEMY_SOURCE
     : HARDCODED_ENEMY_SOURCE;
+  const { tuning } = config;
+  const gear: GearLoadout = GEAR_LOADOUTS.find(g => g.id === config.gearId)
+    ?? { id: config.gearId, name: config.gearId, bonuses: {} };
 
   const levels: number[] = [];
   for (let l = config.levelRange[0]; l <= config.levelRange[1]; l += config.levelStep) {
     levels.push(l);
   }
+  const midLevel = Math.floor((config.levelRange[0] + config.levelRange[1]) / 2);
 
-  const heatmap: HeatmapCell[] = [];
-  const survivalCurves: Record<string, SurvivalCurvePoint[]> = {};
-  const dpsBreakdowns: Record<string, DPSBreakdown[]> = {};
-  const alerts: BalanceReportAlert[] = [];
+  const scenarioFor = (level: number, ec: EncounterConfig, label: string): OverrideCombatScenario => ({
+    name: `Lv.${level} vs ${label}`,
+    playerLevel: level,
+    playerGear: gear,
+    playerAbilities: PLAYER_ABILITIES,
+    enemies: [{ archetypeId: ec.archetypeId, count: ec.count, level: level + ec.levelOffset }],
+  });
+  const simFor = (seed: number): CombatSimConfig => ({
+    iterations: config.iterations, seed, maxFightDurationSec: SWEEP_MAX_FIGHT_SEC,
+  });
 
-  // For each enemy config, sweep across player levels
+  // Heatmap cells: encounter-major, level-minor (the report's order).
+  const encounters: { ec: EncounterConfig; archetype: EnemyArchetype; label: string }[] = [];
   for (const ec of config.enemyConfigs) {
     const archetype = registry.get(ec.archetypeId);
-    if (!archetype) continue;
-
-    const label = `${ec.count}x ${archetype.name}`;
-    const curvePoints: SurvivalCurvePoint[] = [];
-
-    for (const playerLevel of levels) {
-      const playerAttrs = buildPlayerAttrs(playerLevel, config.gearId, config.tuning);
-      const enemyLevel = playerLevel + ec.levelOffset;
-
-      const enemyInstances = Array.from({ length: ec.count }, () => {
-        const attrs = buildEnemyAttrs(archetype, enemyLevel, config.tuning);
-        const ability = archetype.abilities[0];
-        return { attrs, ability, intervalSec: archetype.attackIntervalSec };
-      });
-
-      let wins = 0;
-      let totalTTK = 0;
-      let totalDPS = 0;
-      let totalDealt = 0;
-      const abilityDamage: Record<string, number> = {};
-
-      // Fresh, deterministic stream per cell — keyed by (enemy, level) so this
-      // cell reproduces identically no matter where it falls in the sweep.
-      const cellRng = createXorShift32RNG(seedFromKey(`cell|${ec.archetypeId}|${playerLevel}`, BASE_SEED));
-      for (let i = 0; i < config.iterations; i++) {
-        const result = simulateFight(playerAttrs, PLAYER_ABILITIES, enemyInstances, config.tuning, cellRng, 120);
-        if (result.won) wins++;
-        totalTTK += result.durationSec;
-        totalDealt += result.damageDealt;
-        const dps = result.durationSec > 0 ? result.damageDealt / result.durationSec : 0;
-        totalDPS += dps;
-      }
-
-      const survivalRate = wins / config.iterations;
-      const avgTTK = totalTTK / config.iterations;
-      const avgDPS = totalDPS / config.iterations;
-      // EHP is derived through the canon armour soft-cap (ARPG-LAWS §8), not the
-      // old flat `1 + armour·weight/100`. Armour is soft-capped against hit size,
-      // so EHP is measured against a representative incoming hit for this cell.
-      const refEnemy = enemyInstances[0];
-      const refHit = refEnemy
-        ? refEnemy.ability.baseDamage + refEnemy.attrs.attackPower * refEnemy.ability.attackPowerScaling
-        : 0;
-      const avgEHP = playerAttrs.maxHealth * armourEffectiveHpMultiplier(
-        playerAttrs.armor, refHit, config.tuning.armorEffectivenessWeight,
-      );
-
-      // Biggest single raw hit this encounter can land (no crit, pre-mitigation) —
-      // observation only, for the canon one-shot law. The fight loop is untouched.
-      const biggestHit = refEnemy
-        ? Math.max(
-            0,
-            ...archetype.abilities.map(
-              (ab) => (ab.baseDamage + refEnemy.attrs.attackPower * ab.attackPowerScaling)
-                * config.tuning.enemyDamageMul,
-            ),
-          )
-        : 0;
-
-      heatmap.push({ playerLevel, enemyLabel: label, survivalRate, avgTTK, avgDPS, avgEHP, biggestHit });
-      curvePoints.push({ level: playerLevel, survivalRate, avgTTK, avgDPS });
-
-      // Alerts for specific levels
-      if (playerLevel === config.levelRange[0] + config.levelStep && survivalRate < 0.3) {
-        alerts.push({ severity: 'critical', message: `Lv.${playerLevel} vs ${label}: ${(survivalRate * 100).toFixed(0)}% survival — early game too hard` });
-      }
-      if (survivalRate > 0.98 && playerLevel < 20) {
-        alerts.push({ severity: 'warning', message: `Lv.${playerLevel} vs ${label}: ${(survivalRate * 100).toFixed(0)}% survival — trivially easy` });
-      }
-      if (avgTTK > 60) {
-        alerts.push({ severity: 'info', message: `Lv.${playerLevel} vs ${label}: ${avgTTK.toFixed(1)}s avg fight — consider lowering enemy HP` });
-      }
+    if (archetype) encounters.push({ ec, archetype, label: `${ec.count}x ${archetype.name}` });
+  }
+  const units: SweepUnit[] = [];
+  for (const { ec, label } of encounters) {
+    for (const level of levels) {
+      units.push({ scenario: scenarioFor(level, ec, label), sim: simFor(sweepCellSeed(ec.archetypeId, level)) });
     }
-
-    survivalCurves[label] = curvePoints;
-
-    // DPS breakdown for mid-level
-    const midLevel = Math.floor((config.levelRange[0] + config.levelRange[1]) / 2);
-    const midAttrs = buildPlayerAttrs(midLevel, config.gearId, config.tuning);
-    const dpsItems: DPSBreakdown[] = PLAYER_ABILITIES
-      .filter(ab => ab.baseDamage > 0)
-      .map((ab, i) => {
-        const raw = ab.baseDamage + midAttrs.attackPower * ab.attackPowerScaling;
-        const effectiveDPS = raw / Math.max(ab.cooldownSec, ab.castTimeSec);
-        return { abilityName: ab.name, avgDamage: effectiveDPS, color: ABILITY_COLORS[i % ABILITY_COLORS.length] };
-      })
-      .sort((a, b) => b.avgDamage - a.avgDamage);
-    dpsBreakdowns[label] = dpsItems;
   }
 
-  // Sensitivity analysis
-  const sensitivity: SensitivityCurve[] = [];
-  const sensLevel = Math.floor((config.levelRange[0] + config.levelRange[1]) / 2);
+  // Sensitivity steps: the mid-level player vs the FIRST encounter, one attribute
+  // pinned per step (applied after scaling, through the engine's own override).
   const firstEnemy = config.enemyConfigs[0];
   const sensArchetype = firstEnemy ? registry.get(firstEnemy.archetypeId) : undefined;
+  const sensAttrs: AttributeKey[] = firstEnemy && sensArchetype ? config.sensitivityAttributes : [];
+  const sensBase = buildPlayerAttributes(midLevel, gear.bonuses, tuning);
+  const SENS_STEPS = 12;
+  const sensValues = new Map<AttributeKey, number[]>();
+  for (const attr of sensAttrs) {
+    const baseVal = sensBase[attr];
+    const range = attr === 'critChance' ? { min: 0.01, max: 0.4 } : { min: baseVal * 0.3, max: baseVal * 2.5 };
+    const values: number[] = [];
+    for (let s = 0; s <= SENS_STEPS; s++) {
+      const value = range.min + (range.max - range.min) * (s / SENS_STEPS);
+      values.push(value);
+      const overrides: Partial<AttributeSet> = { [attr]: value };
+      if (attr === 'health') overrides.maxHealth = value;
+      if (attr === 'maxHealth') overrides.health = value;
+      units.push({
+        scenario: {
+          ...scenarioFor(midLevel, firstEnemy, `${firstEnemy.count}x ${sensArchetype!.name}`),
+          playerAttributeOverrides: overrides,
+        },
+        sim: simFor(seedFromKey(`sens|${attr}|${s}`, BASE_SEED)),
+      });
+    }
+    sensValues.set(attr, values);
+  }
 
-  if (sensArchetype && firstEnemy) {
-    for (const attr of config.sensitivityAttributes) {
-      const baseAttrs = buildPlayerAttrs(sensLevel, config.gearId, config.tuning);
-      const baseVal = baseAttrs[attr];
-      const range = attr === 'critChance' ? { min: 0.01, max: 0.4, steps: 12 } : { min: baseVal * 0.3, max: baseVal * 2.5, steps: 12 };
+  const assemble = (summaries: readonly CombatSummary[], durationMs: number): BalanceReport => {
+    // Each unit's engine summary, in plan order: survival, TTK (= the engine's
+    // average fight duration) and DPS read straight from the one kernel.
+    let next = 0;
+    const take = () => {
+      const s = summaries[next++];
+      return { survivalRate: s.survivalRate, avgTTK: s.avgFightDurationSec, avgDPS: s.avgDPS };
+    };
+    const heatmap: HeatmapCell[] = [];
+    const survivalCurves: Record<string, SurvivalCurvePoint[]> = {};
+    const dpsBreakdowns: Record<string, DPSBreakdown[]> = {};
+    const alerts: BalanceReportAlert[] = [];
+    const midAttrs = buildPlayerAttributes(midLevel, gear.bonuses, tuning);
 
+    for (const { ec, archetype, label } of encounters) {
+      const curvePoints: SurvivalCurvePoint[] = [];
+      for (const playerLevel of levels) {
+        const { survivalRate, avgTTK, avgDPS } = take();
+        // Observed from the engine's OWN builders — the rounded attributes the
+        // fight used. EHP goes through the canon armour soft-cap (ARPG-LAWS §8)
+        // against a representative incoming hit for this cell.
+        const playerAttrs = buildPlayerAttributes(playerLevel, gear.bonuses, tuning);
+        const refAttrs = buildEnemyAttributes(archetype, playerLevel + ec.levelOffset, tuning);
+        const refAbility = archetype.abilities[0];
+        const hasRef = ec.count > 0 && refAbility !== undefined;
+        const refHit = hasRef ? refAbility.baseDamage + refAttrs.attackPower * refAbility.attackPowerScaling : 0;
+        const avgEHP = playerAttrs.maxHealth * armourEffectiveHpMultiplier(
+          playerAttrs.armor, refHit, tuning.armorEffectivenessWeight,
+        );
+        // Biggest single raw hit this encounter can land (no crit, pre-mitigation) —
+        // observation only, for the canon one-shot law.
+        const biggestHit = ec.count > 0
+          ? Math.max(0, ...archetype.abilities.map(
+              (ab) => (ab.baseDamage + refAttrs.attackPower * ab.attackPowerScaling) * tuning.enemyDamageMul,
+            ))
+          : 0;
+
+        heatmap.push({ playerLevel, enemyLabel: label, survivalRate, avgTTK, avgDPS, avgEHP, biggestHit });
+        curvePoints.push({ level: playerLevel, survivalRate, avgTTK, avgDPS });
+
+        if (playerLevel === config.levelRange[0] + config.levelStep && survivalRate < 0.3) {
+          alerts.push({ severity: 'critical', message: `Lv.${playerLevel} vs ${label}: ${(survivalRate * 100).toFixed(0)}% survival — early game too hard` });
+        }
+        if (survivalRate > 0.98 && playerLevel < 20) {
+          alerts.push({ severity: 'warning', message: `Lv.${playerLevel} vs ${label}: ${(survivalRate * 100).toFixed(0)}% survival — trivially easy` });
+        }
+        if (avgTTK > 60) {
+          alerts.push({ severity: 'info', message: `Lv.${playerLevel} vs ${label}: ${avgTTK.toFixed(1)}s avg fight — consider lowering enemy HP` });
+        }
+      }
+      survivalCurves[label] = curvePoints;
+
+      // DPS breakdown for mid-level (static per-ability rate, not a fight).
+      dpsBreakdowns[label] = PLAYER_ABILITIES
+        .filter(ab => ab.baseDamage > 0)
+        .map((ab, i) => {
+          const raw = ab.baseDamage + midAttrs.attackPower * ab.attackPowerScaling;
+          const effectiveDPS = raw / Math.max(ab.cooldownSec, ab.castTimeSec);
+          return { abilityName: ab.name, avgDamage: effectiveDPS, color: ABILITY_COLORS[i % ABILITY_COLORS.length] };
+        })
+        .sort((a, b) => b.avgDamage - a.avgDamage);
+    }
+
+    const sensitivity: SensitivityCurve[] = [];
+    for (const attr of sensAttrs) {
       const points: SensitivityPoint[] = [];
       let prevSurvival = 0;
       let diminishingAt: number | null = null;
-
-      for (let s = 0; s <= range.steps; s++) {
-        const value = range.min + (range.max - range.min) * (s / range.steps);
-        const testAttrs = { ...baseAttrs, [attr]: value };
-        if (attr === 'health') testAttrs.maxHealth = value;
-        if (attr === 'maxHealth') testAttrs.health = value;
-
-        const enemies = Array.from({ length: firstEnemy.count }, () => ({
-          attrs: buildEnemyAttrs(sensArchetype, sensLevel + firstEnemy.levelOffset, config.tuning),
-          ability: sensArchetype.abilities[0],
-          intervalSec: sensArchetype.attackIntervalSec,
-        }));
-
-        let wins = 0;
-        let totalTTK = 0;
-        let totalDPS = 0;
-
-        // Per-step deterministic stream — keyed by (attribute, step index).
-        const stepRng = createXorShift32RNG(seedFromKey(`sens|${attr}|${s}`, BASE_SEED));
-        for (let i = 0; i < config.iterations; i++) {
-          const r = simulateFight(testAttrs, PLAYER_ABILITIES, enemies, config.tuning, stepRng, 120);
-          if (r.won) wins++;
-          totalTTK += r.durationSec;
-          totalDPS += r.durationSec > 0 ? r.damageDealt / r.durationSec : 0;
-        }
-
-        const survivalRate = wins / config.iterations;
-        const avgTTK = totalTTK / config.iterations;
-        const avgDPS = totalDPS / config.iterations;
+      for (const [s, value] of (sensValues.get(attr) ?? []).entries()) {
+        const { survivalRate, avgTTK, avgDPS } = take();
         points.push({ value, survivalRate, avgTTK, avgDPS });
-
         // Detect diminishing returns
         if (s > 1 && diminishingAt === null) {
           const delta = survivalRate - prevSurvival;
           const prevDelta = points.length >= 3 ? points[points.length - 2].survivalRate - points[points.length - 3].survivalRate : delta;
-          if (prevDelta > 0.01 && delta < prevDelta * 0.4) {
-            diminishingAt = value;
-          }
+          if (prevDelta > 0.01 && delta < prevDelta * 0.4) diminishingAt = value;
         }
         prevSurvival = survivalRate;
       }
-
       sensitivity.push({ attribute: attr, points, diminishingAt });
     }
-  }
 
-  // Canon conformance: police the COMBAT-facing ARPG-LAWS over this sweep and
-  // surface breaches through the same alert channel, tagged `canon-violation`
-  // with the law id — the idiom the economy sim already uses. Thresholds come
-  // from the canon seed. Laws that cannot be evaluated are recorded as such.
-  const thresholds = readCanonThresholds();
-  const { alerts: canonAlerts, checks: canonChecks } = lintCombatCanon(
-    collectCanonFacets(heatmap, thresholds, config.defenderResists ?? null),
-    thresholds,
-  );
-  alerts.push(...canonAlerts);
+    // Canon conformance: police the COMBAT-facing ARPG-LAWS over this sweep and
+    // surface breaches through the same alert channel, tagged `canon-violation`
+    // with the law id. Thresholds come from the canon seed; laws that cannot be
+    // evaluated are recorded as such.
+    const thresholds = readCanonThresholds();
+    const { alerts: canonAlerts, checks: canonChecks } = lintCombatCanon(
+      collectCanonFacets(heatmap, thresholds, config.defenderResists ?? null),
+      thresholds,
+    );
+    alerts.push(...canonAlerts);
 
-  // Build summary
-  const midCells = heatmap.filter(c => c.playerLevel === Math.floor((config.levelRange[0] + config.levelRange[1]) / 2));
-  const avgSurvival = midCells.length > 0 ? midCells.reduce((s, c) => s + c.survivalRate, 0) / midCells.length : 0;
-  const avgTTK = midCells.length > 0 ? midCells.reduce((s, c) => s + c.avgTTK, 0) / midCells.length : 0;
+    const midCells = heatmap.filter(c => c.playerLevel === midLevel);
+    const avgSurvival = midCells.length > 0 ? midCells.reduce((s, c) => s + c.survivalRate, 0) / midCells.length : 0;
+    const avgTTK = midCells.length > 0 ? midCells.reduce((s, c) => s + c.avgTTK, 0) / midCells.length : 0;
+    const summary = `Player Lv.${config.levelRange[0]}-${config.levelRange[1]} across ${config.enemyConfigs.length} encounter types: ` +
+      `${(avgSurvival * 100).toFixed(0)}% avg mid-level survival, ${avgTTK.toFixed(1)}s avg fight duration. ` +
+      `${alerts.filter(a => a.severity === 'critical').length} critical, ${alerts.filter(a => a.severity === 'warning').length} warnings, ` +
+      `${canonChecks.filter(c => c.status === 'violation').length} canon violation(s).`;
 
-  const summary = `Player Lv.${config.levelRange[0]}-${config.levelRange[1]} across ${config.enemyConfigs.length} encounter types: ` +
-    `${(avgSurvival * 100).toFixed(0)}% avg mid-level survival, ${avgTTK.toFixed(1)}s avg fight duration. ` +
-    `${alerts.filter(a => a.severity === 'critical').length} critical, ${alerts.filter(a => a.severity === 'warning').length} warnings, ` +
-    `${canonChecks.filter(c => c.status === 'violation').length} canon violation(s).`;
-
-  return {
-    summary,
-    heatmap,
-    survivalCurves,
-    dpsBreakdowns,
-    sensitivity,
-    alerts,
-    enemySource,
-    canonChecks,
-    durationMs: Math.round(performance.now() - start),
+    return { summary, heatmap, survivalCurves, dpsBreakdowns, sensitivity, alerts, enemySource, canonChecks, durationMs };
   };
+
+  return { registry, units, assemble };
+}
+
+// ── Runners: one plan, two drains ──────────────────────────────────────────
+
+/** Run the whole sweep synchronously (tests, headless callers). */
+export function runPredictiveBalance(
+  config: PredictiveBalanceConfig,
+  enemies?: { registry: ArchetypeRegistry; provenance?: EnemySourceReport },
+): BalanceReport {
+  const start = performance.now();
+  const plan = planPredictiveSweep(config, enemies);
+  const summaries = plan.units.map(u => runCombatSimulation(u.scenario, config.tuning, u.sim, plan.registry).summary);
+  return plan.assemble(summaries, Math.round(performance.now() - start));
+}
+
+export interface PredictiveSweepJobOptions {
+  /** Aborting resolves the job `{ aborted: true }` at its next yield. */
+  signal?: AbortSignal;
+  /** `(0, total)` before the first cell, then `(k, total)` after each cell. */
+  onProgress?: (done: number, total: number) => void;
+}
+
+/** A job's outcome: the report (same as the sync runner's), or aborted — never partial. */
+export type PredictiveSweepResult = (BalanceReport & { aborted?: undefined }) | { aborted: true };
+
+/**
+ * Run the sweep as a cancellable job. Same plan, same engine runs, same report
+ * as `runPredictiveBalance` — but each cell drains through
+ * `runCombatSimulationBatched` in `SWEEP_BATCH_SIZE` batches, yielding to the
+ * event loop between batches and between cells, with `signal` checked at every
+ * yield. An abort resolves `{ aborted: true }`; no partial report is produced.
+ */
+export async function runPredictiveBalanceAsync(
+  config: PredictiveBalanceConfig,
+  enemies?: { registry: ArchetypeRegistry; provenance?: EnemySourceReport },
+  opts: PredictiveSweepJobOptions = {},
+): Promise<PredictiveSweepResult> {
+  const { signal, onProgress } = opts;
+  const start = performance.now();
+  const plan = planPredictiveSweep(config, enemies);
+  const total = plan.units.length;
+  const summaries: CombatSummary[] = [];
+  onProgress?.(0, total);
+  try {
+    // Hand the caller's frame back before the first fight.
+    await yieldToEventLoop();
+    for (let i = 0; i < total; i++) {
+      if (signal?.aborted) return { aborted: true };
+      const u = plan.units[i];
+      const result = await runCombatSimulationBatched(u.scenario, config.tuning, u.sim, {
+        batchSize: SWEEP_BATCH_SIZE, archetypes: plan.registry, signal,
+      });
+      if (signal?.aborted) return { aborted: true };
+      summaries.push(result.summary);
+      onProgress?.(i + 1, total);
+      if (i + 1 < total) await yieldToEventLoop();
+    }
+  } catch (err) {
+    if (signal?.aborted) return { aborted: true };
+    throw err;
+  }
+  if (signal?.aborted) return { aborted: true };
+  return plan.assemble(summaries, Math.round(performance.now() - start));
 }
