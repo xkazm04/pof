@@ -7,12 +7,20 @@
  *
  * Only items that create concrete classes need entries here.
  * Items that are purely conceptual (e.g., "tune movement feel") are skipped.
+ *
+ * Checklist ids are NOT unique across modules (arpg-inventory and ai-behavior both
+ * define ai-1 / ai-3), so every entry names its owner `moduleId`; look up with
+ * `getExpectationsFor(moduleId, itemId)`. The auto-verify trigger index
+ * (`checklist-verify-index.ts`) is derived from this table.
  */
 
 import type { SemanticExpectation } from './cpp-semantic-parser';
 import { SAVE_GAME_CLASS, saveGamePropertyNames } from '@/lib/save-schema/fields';
+import type { SubModuleId } from '@/types/modules';
 
 export interface ChecklistExpectation {
+  /** The module whose checklist owns this item id (ids repeat across modules). */
+  moduleId: SubModuleId;
   /** Primary class to verify */
   primary: SemanticExpectation;
   /** Additional classes that should also exist for full completion */
@@ -26,6 +34,7 @@ export interface ChecklistExpectation {
 export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
   // ── arpg-character ────────────────────────────────────────────────────────
   'ac-1': {
+    moduleId: 'arpg-character',
     primary: {
       className: 'AARPGCharacterBase',
       baseClass: 'ACharacter',
@@ -48,6 +57,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     ],
   },
   'ac-2': {
+    moduleId: 'arpg-character',
     primary: {
       className: 'AARPGCharacterBase',
       expectedProperties: ['Stamina', 'MaxWalkSpeed', 'bIsSprinting'],
@@ -55,6 +65,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'ac-3': {
+    moduleId: 'arpg-character',
     primary: {
       className: 'AARPGCharacterBase',
       expectedProperties: ['bIsInvulnerable', 'DodgeCooldown'],
@@ -62,6 +73,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'ac-4': {
+    moduleId: 'arpg-character',
     primary: {
       className: 'AARPGGameMode',
       baseClass: 'AGameModeBase',
@@ -80,6 +92,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-animation ────────────────────────────────────────────────────────
   'aa-1': {
+    moduleId: 'arpg-animation',
     primary: {
       className: 'UARPGAnimInstance',
       baseClass: 'UAnimInstance',
@@ -89,6 +102,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'aa-5': {
+    moduleId: 'arpg-animation',
     primary: {
       className: 'UAnimNotify_ComboWindow',
       baseClass: 'UAnimNotify',
@@ -115,6 +129,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-animation automation (PoFEditor module) ───────────────────────
   'aa-commandlet': {
+    moduleId: 'arpg-animation',
     primary: {
       className: 'UAnimAssetCommandlet',
       baseClass: 'UCommandlet',
@@ -125,6 +140,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-gas ──────────────────────────────────────────────────────────────
   'ag-1': {
+    moduleId: 'arpg-gas',
     primary: {
       className: 'AARPGCharacterBase',
       expectedComponents: ['UAbilitySystemComponent'],
@@ -132,6 +148,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'ag-2': {
+    moduleId: 'arpg-gas',
     primary: {
       className: 'UARPGAttributeSet',
       baseClass: 'UAttributeSet',
@@ -140,6 +157,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'ag-4': {
+    moduleId: 'arpg-gas',
     primary: {
       className: 'UARPGGameplayAbility',
       baseClass: 'UGameplayAbility',
@@ -149,6 +167,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-combat ───────────────────────────────────────────────────────────
   'acb-1': {
+    moduleId: 'arpg-combat',
     primary: {
       className: 'UGA_MeleeAttack',
       baseClass: 'UARPGGameplayAbility',
@@ -158,6 +177,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-enemy-ai ─────────────────────────────────────────────────────────
   'ae-1': {
+    moduleId: 'arpg-enemy-ai',
     primary: {
       className: 'AARPGAIController',
       baseClass: 'AAIController',
@@ -166,6 +186,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'ae-2': {
+    moduleId: 'arpg-enemy-ai',
     primary: {
       className: 'AARPGEnemyCharacter',
       baseClass: 'AARPGCharacterBase',
@@ -176,6 +197,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-inventory ────────────────────────────────────────────────────────
   'ai-1': {
+    moduleId: 'arpg-inventory',
     primary: {
       className: 'UARPGItemDefinition',
       baseClass: 'UPrimaryDataAsset',
@@ -184,6 +206,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
     },
   },
   'ai-3': {
+    moduleId: 'arpg-inventory',
     primary: {
       className: 'UARPGInventoryComponent',
       baseClass: 'UActorComponent',
@@ -194,6 +217,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-loot ─────────────────────────────────────────────────────────────
   'al-1': {
+    moduleId: 'arpg-loot',
     primary: {
       className: 'UARPGLootTable',
       baseClass: 'UDataAsset',
@@ -203,6 +227,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 
   // ── arpg-ui ───────────────────────────────────────────────────────────────
   'au-1': {
+    moduleId: 'arpg-ui',
     primary: {
       className: 'UARPGMainHUD',
       expectedProperties: ['HealthBar', 'ManaBar'],
@@ -214,6 +239,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
   // Derived from the one save-field authority — the same set the as-1 prompt asks
   // for and the save-points State Schema declares.
   'as-1': {
+    moduleId: 'arpg-save',
     primary: {
       className: SAVE_GAME_CLASS,
       baseClass: 'USaveGame',
@@ -224,9 +250,21 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
 };
 
 /**
- * Get expectations for a checklist item, if any.
- * Returns null for items that don't have verifiable C++ class expectations.
+ * Get expectations for a checklist item by bare id, if any — ignores the owner.
+ * Prefer `getExpectationsFor(moduleId, itemId)`: a bare id cannot tell
+ * ai-behavior::ai-1 from arpg-inventory::ai-1.
  */
 export function getExpectationsForItem(itemId: string): ChecklistExpectation | null {
   return CHECKLIST_EXPECTATIONS[itemId] ?? null;
+}
+
+/**
+ * Get expectations for one module's checklist item. Null when the id has no entry
+ * or the entry belongs to another module.
+ */
+export function getExpectationsFor(moduleId: string, itemId: string): ChecklistExpectation | null {
+  const entry = Object.prototype.hasOwnProperty.call(CHECKLIST_EXPECTATIONS, itemId)
+    ? CHECKLIST_EXPECTATIONS[itemId]
+    : undefined;
+  return entry && entry.moduleId === moduleId ? entry : null;
 }

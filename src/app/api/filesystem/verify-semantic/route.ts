@@ -4,6 +4,12 @@
  * Reads one or more .h files from the UE5 project and runs semantic
  * verification against checklist expectations. Returns per-item status:
  * 'full', 'partial', 'stub', or 'missing'.
+ *
+ * Items are `{ moduleId, itemId }` — checked against that module's own expectations
+ * (`getExpectationsFor`; ids repeat across modules) and echoed back with the moduleId.
+ * A bare `{ itemId }` still resolves by id alone (legacy). Headers are read one by one:
+ * an unreadable header is skipped and disclosed in `unreadable[]` (path relative to
+ * Source/), never scored and never a 500. Read-only: nothing under the project is written.
  */
 
 import { NextRequest } from 'next/server';
@@ -11,16 +17,18 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { parseHeader, checkExpectations, type SemanticResult } from '@/lib/cpp-semantic-parser';
-import { getExpectationsForItem, type ChecklistExpectation } from '@/lib/checklist-expectations';
+import { getExpectationsFor, getExpectationsForItem } from '@/lib/checklist-expectations';
 import { collectHeaders } from '@/lib/ue-source/collect-headers';
 
 interface VerifyRequest {
   projectPath: string;
-  /** Items to verify — each with itemId and optional specific file path */
-  items: { itemId: string; filePath?: string }[];
+  /** Items to verify — module-scoped { moduleId, itemId }; bare { itemId } is legacy */
+  items: { moduleId?: string; itemId: string; filePath?: string }[];
 }
 
 interface ItemVerification {
+  /** Echoed when the request named it */
+  moduleId?: string;
   itemId: string;
   status: 'full' | 'partial' | 'stub' | 'missing' | 'no-expectations';
   completeness: number;
@@ -40,21 +48,33 @@ export async function POST(request: NextRequest) {
     // Collect all .h files from Source/ for parsing
     const headerFiles = await collectHeaders(sourceDir);
 
-    // Parse all headers once
-    const parsedHeaders = await Promise.all(
-      headerFiles.map(async (fp) => {
-        const content = await fsPromises.readFile(fp, 'utf-8');
-        return parseHeader(content, fp);
+    // Parse all headers once; an unreadable header is disclosed, not fatal
+    const unreadable: string[] = [];
+    const parsedOrNull = await Promise.all(
+      headerFiles.map(async (fp): Promise<HeaderParseResult | null> => {
+        try {
+          const content = await fsPromises.readFile(fp, 'utf-8');
+          return parseHeader(content, fp);
+        } catch {
+          unreadable.push(path.relative(sourceDir, fp).split(path.sep).join('/'));
+          return null;
+        }
       }),
     );
+    const parsedHeaders = parsedOrNull.filter((p): p is HeaderParseResult => p !== null);
+    unreadable.sort();
 
     // Verify each item
     const results: ItemVerification[] = [];
 
-    for (const { itemId } of body.items) {
-      const expectations = getExpectationsForItem(itemId);
+    for (const { moduleId, itemId } of body.items) {
+      const expectations = moduleId
+        ? getExpectationsFor(moduleId, itemId)
+        : getExpectationsForItem(itemId);
+      const echo = moduleId ? { moduleId } : {};
       if (!expectations) {
         results.push({
+          ...echo,
           itemId,
           status: 'no-expectations',
           completeness: 0,
@@ -108,6 +128,7 @@ export async function POST(request: NextRequest) {
       }
 
       results.push({
+        ...echo,
         itemId,
         status,
         completeness: Math.round(avgCompleteness * 100) / 100,
@@ -116,7 +137,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return apiSuccess({ results });
+    return apiSuccess({ results, unreadable });
   } catch (err) {
     return apiError(
       err instanceof Error ? err.message : 'Semantic verification failed',
