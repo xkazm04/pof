@@ -5,10 +5,13 @@ import fs from 'fs';
 import { logger } from '@/lib/logger';
 import { normalizeProjectId } from '@/lib/project-id';
 
-// POF_DB_PATH overrides the SQLite location — used by the pof-mcp integration suite to
-// run against a throwaway DB instead of the user's real ~/.pof/pof.db. Falls back to the
-// default so normal runs are unchanged.
-const DB_PATH = process.env.POF_DB_PATH || path.join(os.homedir(), '.pof', 'pof.db');
+// POF_DB_PATH overrides the SQLite location — used by the vitest containment floor, the
+// Playwright e2e and the pof-mcp integration suite to run against a throwaway DB instead of
+// the user's real ~/.pof/pof.db. Falls back to the default so normal runs are unchanged.
+export function resolveDbPath(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  return env.POF_DB_PATH || path.join(os.homedir(), '.pof', 'pof.db');
+}
+const DB_PATH = resolveDbPath();
 const DB_DIR = path.dirname(DB_PATH);
 
 // Bump when adding a NEW one-off migration probe below. `CREATE TABLE/INDEX IF NOT

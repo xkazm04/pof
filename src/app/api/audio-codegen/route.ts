@@ -1,24 +1,10 @@
 import { NextRequest } from 'next/server';
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getAudioScene } from '@/lib/audio-scene-db';
-import { createAudioAssetDb, listSets } from '@/lib/audio-asset-db';
+import { listSets } from '@/lib/audio-asset-db';
+import { getAudioDb } from '@/lib/audio-db-conn';
 import { listLatestAudioImportsBySet } from '@/lib/audio-import-db';
 import { generateAudioCode, type AudioAssetBindings } from '@/lib/audio-codegen';
-
-const DB_PATH = join(homedir(), '.pof', 'pof.db');
-let _db: Database.Database | null = null;
-function db(): Database.Database {
-  if (_db) return _db;
-  if (!existsSync(join(homedir(), '.pof'))) mkdirSync(join(homedir(), '.pof'), { recursive: true });
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  createAudioAssetDb(_db);
-  return _db;
-}
 
 /**
  * What each generated audio set REALLY is, keyed by the id an emitter binds to.
@@ -33,7 +19,7 @@ function resolveAssetBindings(): AudioAssetBindings {
   try {
     const imports = listLatestAudioImportsBySet();
     const bindings: AudioAssetBindings = {};
-    for (const set of listSets(db())) {
+    for (const set of listSets(getAudioDb())) {
       bindings[set.id] = { setName: set.name, cuePath: imports[set.name]?.cuePath ?? null };
     }
     return bindings;

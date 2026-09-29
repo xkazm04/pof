@@ -1,12 +1,24 @@
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { isAbsolute, join, normalize, relative } from 'node:path';
+import { dirname, isAbsolute, join, normalize, relative } from 'node:path';
+import { resolveDbPath } from '@/lib/db';
 import type { AudioAsset, AudioSet, AudioUsageSummary } from '@/types/audio-asset';
 import type { AudioKind } from '@/lib/audio-gen/types';
 
-export const AUDIO_DIR = join(homedir(), '.pof', 'audio');
+/**
+ * Where clip bytes live: `POF_AUDIO_DIR`, else `audio/` beside the app database.
+ *
+ * Derived from the same resolution `getDb()` uses, so the containment floor that redirects
+ * the DB (`POF_DB_PATH` in vitest, e2e and the pof-mcp suite) redirects the clips with it.
+ * With no override this is `~/.pof/audio` exactly as before; asset rows store paths
+ * RELATIVE to it (`<setId>/<file>`), so no existing row changes meaning.
+ */
+export function resolveAudioDir(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  return env.POF_AUDIO_DIR || join(dirname(resolveDbPath(env)), 'audio');
+}
+
+export const AUDIO_DIR = resolveAudioDir();
 
 /** Informational monthly generation budget the usage meter fills against. */
 export const DEFAULT_AUDIO_MONTHLY_QUOTA = 200;

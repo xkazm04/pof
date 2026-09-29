@@ -2,17 +2,15 @@ import { NextRequest } from 'next/server';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import Database from 'better-sqlite3';
-import { homedir } from 'node:os';
 import { existsSync, mkdirSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { getAudioDb as db } from '@/lib/audio-db-conn';
 import { getAudioProvider } from '@/lib/audio-gen/registry';
 import { computePromptHash } from '@/lib/audio-gen/prompt-hash';
 import {
   AUDIO_DIR,
   DEFAULT_AUDIO_MONTHLY_QUOTA,
   addAsset,
-  createAudioAssetDb,
   deleteAsset,
   deleteSet,
   ensureAudioDir,
@@ -52,17 +50,6 @@ function startOfMonth(): number {
 function monthlyQuota(): number {
   const env = Number(process.env.AUDIO_MONTHLY_QUOTA);
   return Number.isFinite(env) && env > 0 ? env : DEFAULT_AUDIO_MONTHLY_QUOTA;
-}
-
-const DB_PATH = join(homedir(), '.pof', 'pof.db');
-let _db: Database.Database | null = null;
-function db(): Database.Database {
-  if (_db) return _db;
-  if (!existsSync(join(homedir(), '.pof'))) mkdirSync(join(homedir(), '.pof'), { recursive: true });
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  createAudioAssetDb(_db);
-  return _db;
 }
 
 interface PostBody {
