@@ -290,6 +290,42 @@ non-terminal `pending` after a clean Produce — a **Rule 5 violation in the ref
   upstream acceptance, and an upstream failure still **fails** the gate — the derivation was
   restored, not weakened.
 
+**One owner per items label (2026-09-29).** Declared was still not *one grader*. For the 6 shared
+labels (Concept Brief, Economy, Icon 2D Art, Tooltip / Compare, Test Gate, UE Packaging) the lab
+rendered, graded and produced through the **bespoke** spec, while `serverCheckerFor`, `/status`,
+the headless drains and the judges resolve a label **registered-first**. Measured read-only on the
+live DB: 15 of 36 shared-label rows graded differently in the lab (6 Tooltip rows the server passes
+read `pending`; 9 Test Gate rows the server holds `deferred L3` read `pending`), and on
+bespoke-shaped data the lab read HIGHER than the server (the unguarded bespoke Economy checker
+passed the exemplar stub `{power:102,…}` the server holds `pending`). The bespoke Produce also
+replaced a registry-shaped row wholesale with an unstamped Pillars stub, and the bespoke frame had
+no `StepHistoryPanel` to restore from.
+
+- **The owner** — `itemsLabelOwner(label)` (`src/components/layout-lab/itemsLabelOwner.ts`) in the
+  server's order: `registry` when the registered items pipeline declares the label, else `bespoke`
+  when `ITEM_STEP_SPECS` does, else `null`. Labels are untouched (Rule 4b); only the owner of the
+  six shared ones moves.
+- **Render** — `getStepComponent('items', label)` returns `null` for a registry-owned label, so
+  `Baseline` renders it through `ArchetypeStep` with the registered `StepSpec` (live produce,
+  `fixEffectOf` no-op withholding, `stampTemplate`, `StepHistoryPanel`, `PackageLedgerPanel` for UE
+  Packaging). The 7 bespoke-only labels keep their bespoke UIs; the six bespoke components stay in
+  the tree, unrouted (deleting them is a follow-up).
+- **Grade** — `resolveAccept` is registered-first for items, with **no bespoke fallback** for a
+  registry-owned label: the lab may only come down to the server's reading, never up. Parity over
+  all 18 rendered labels (lab status === `serverCheckerFor` status) is pinned in
+  `src/__tests__/components/layout-lab/itemsUnionSteps.test.tsx`.
+- **Produce** — `populateItemDemo` writes each label through its owner (`produceItemStep`): a
+  registry-owned label gets the registered stub through `stampTemplate`, so on a non-exemplar item
+  it grades `pending` (TEMPLATE) instead of `pass` on exemplar content.
+- **Rail** — `catalogManifest('items').stepEntries` tags a shared label `registry` (11 registry,
+  7 bespoke); the 18 labels and their order are unchanged.
+- **Capability loss, stated** — the bespoke Test Gate "Checks" panel (the per-check breakdown
+  derived from sibling verdicts via `deriveGateChecks`, and its `Result={…}` log) is no longer on
+  screen: `Test Gate` now grades through the registered `entityRuntimeDeferred` L3 gate, as the
+  server always did. `deriveGateChecks` stays (pure, tested) for a future registered gate that
+  derives from siblings. The bespoke Icon 2D Art "Produce via Leonardo" frame is replaced by the
+  registered gallery (same Leonardo engine).
+
 **Tables tell the truth (2026-07-29).** 99 of the fleet's 451 declared table columns could never resolve against their own `produce()` output — **28 tables rendered nothing but `— missing`** to every user (factions, cutscenes, dialog-trees, state-graph, screen-flow…). The cause was structural, not typos: the generic `table` view assumed the column keys lived at the TOP level of `data[field]`, while most produce bodies write a **LIST** of row records (`tiers: [{tier, minPoints, …}]`) or a **KEYED GROUP** of them (`layers: { bed: {name, gainDb, …} }`).
 
 - **One resolver** — `src/lib/catalog/tableView.ts` (`resolveTableView`, pure) understands all three shapes (`kv` / `rows` / `absent`+`mismatch`) and reports which declared columns no row carries. A metadata sibling (`wiringContract`, a scalar note) is never turned into a blank row: a nested record becomes a row only if it carries at least one declared column.
