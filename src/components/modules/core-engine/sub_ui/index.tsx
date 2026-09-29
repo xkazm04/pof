@@ -17,6 +17,7 @@ import { AccessibilityTab } from './accessibility/AccessibilityTab';
 import { ArpgHudPreview } from './systems/ArpgHudPreview';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
+import { flowIdForScreenNode, screenNodeForFlow } from '@/components/modules/core-engine/sub_ui/flow/screenWorklist';
 
 const ACCENT = ACCENT_PINK;
 
@@ -26,9 +27,10 @@ interface ScreenFlowMapProps {
 
 export function ScreenFlowMap({ moduleId }: ScreenFlowMapProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
-  const [expandedNode, setExpandedNode] = useState<string | null>(null);
+  // One selection: the expanded screen row and the highlighted flow-graph node
+  // always name the same screen, whichever of the two was clicked.
+  const [selection, setSelection] = useState<{ row: string | null; flow: string | null }>({ row: null, flow: null });
   const [activeTab, setActiveTab] = useState('flow');
-  const [highlightedFlowNode, setHighlightedFlowNode] = useState<string | null>(null);
 
   const tabs: SubTab[] = useMemo(() => [
     { id: 'features', label: 'Features', icon: LayoutGrid },
@@ -40,11 +42,15 @@ export function ScreenFlowMap({ moduleId }: ScreenFlowMapProps) {
   ], []);
 
   const toggleNode = useCallback((id: string) => {
-    setExpandedNode((prev) => (prev === id ? null : id));
+    setSelection((prev) => (prev.row === id
+      ? { row: null, flow: null }
+      : { row: id, flow: flowIdForScreenNode(id) ?? null }));
   }, []);
 
   const toggleFlowNode = useCallback((id: string) => {
-    setHighlightedFlowNode(prev => prev === id ? null : id);
+    setSelection((prev) => (prev.flow === id
+      ? { row: null, flow: null }
+      : { row: screenNodeForFlow(id) ?? null, flow: id }));
   }, []);
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
@@ -73,9 +79,9 @@ export function ScreenFlowMap({ moduleId }: ScreenFlowMapProps) {
             <FlowNodesTab
               featureMap={featureMap}
               defs={defs}
-              expandedNode={expandedNode}
+              expandedNode={selection.row}
               onToggleNode={toggleNode}
-              highlightedFlowNode={highlightedFlowNode}
+              highlightedFlowNode={selection.flow}
               onToggleFlowNode={toggleFlowNode}
             />
             </VisibleSection>

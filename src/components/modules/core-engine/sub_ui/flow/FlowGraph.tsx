@@ -85,7 +85,8 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
               <g key={node.id}
                 onClick={() => onToggleNode(node.id)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleNode(node.id); } }}
-                tabIndex={0} role="button" aria-label={`Select ${node.label} node (${node.group})`}
+                tabIndex={0} role="button" aria-pressed={isHighlighted}
+                aria-label={`Select ${node.label} node (${node.group})`}
                 className="flow-node cursor-pointer">
                 <circle className="focus-ring" cx={x} cy={y} r={(isHighlighted ? 28 : 24) + 5}
                   fill="none" stroke={nodeColor} strokeWidth="2" strokeDasharray="4 3" opacity={0}

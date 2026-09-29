@@ -11,6 +11,8 @@ import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { ScreenNode, InputMode } from '../_shared/data';
 import { INPUT_MODE_COLORS } from '../_shared/data';
+import type { ScreenEntry } from '@/lib/catalog/types';
+import { ScreenLifecycle } from '@/components/modules/core-engine/sub_ui/flow/ScreenLifecycle';
 
 const ACCENT = ACCENT_PINK;
 
@@ -39,11 +41,13 @@ interface ScreenNodeRowProps {
   arrowLabel?: string;
   fromLabel?: string;
   highlightColor?: string | null;
+  /** The screen-flow catalog entity this row drives (undefined: none backs it). */
+  screenEntity?: ScreenEntry;
 }
 
 export function ScreenNodeRow({
   node, featureMap, defs, expandedNode, onToggle,
-  arrowLabel, fromLabel, highlightColor,
+  arrowLabel, fromLabel, highlightColor, screenEntity,
 }: ScreenNodeRowProps) {
   const row = featureMap.get(node.featureName);
   const def = defs.find((d) => d.featureName === node.featureName);
@@ -55,7 +59,7 @@ export function ScreenNodeRow({
 
   useEffect(() => {
     if (isHighlighted && rowRef.current) {
-      rowRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      rowRef.current.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
     }
   }, [isHighlighted]);
 
@@ -111,6 +115,7 @@ export function ScreenNodeRow({
           {isExpanded && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
               <div className="px-4 pb-3 pt-1 border-t border-border/40 space-y-3 bg-surface/30">
+                <ScreenLifecycle entity={screenEntity} />
                 <div className="flex items-center gap-3">
                   <p className="text-xs text-text-muted leading-relaxed flex-1">
                     {def?.description ?? row?.description ?? 'No description'}
