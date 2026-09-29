@@ -1,46 +1,36 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { Play, Activity, TrendingUp } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Play, Activity, TrendingUp, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { OPACITY_20,
-  withOpacity, OPACITY_25,
+  withOpacity, OPACITY_25, STATUS_ERROR,
 } from '@/lib/chart-colors';
 import {
   ACCENT,
-  runPredictiveBalance, DEFAULT_PREDICTIVE_CONFIG,
-  type BalanceReport, type PredictiveBalanceConfig,
+  DEFAULT_PREDICTIVE_CONFIG,
+  type PredictiveBalanceConfig,
 } from './data';
 import { BlueprintPanel, SectionHeader } from './design';
 import { ConfigPanel } from './ConfigPanel';
 import { ResultsPanel } from './ResultsPanel';
 import { EnemySourcePanel } from './EnemySourcePanel';
 import { useBestiaryEnemies } from './useBestiaryEnemies';
+import { usePredictiveSweep } from './usePredictiveSweep';
 
 export function PredictiveBalanceSimulator() {
-  const [report, setReport] = useState<BalanceReport | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
   const [config, setConfig] = useState<PredictiveBalanceConfig>(DEFAULT_PREDICTIVE_CONFIG);
-  const runLock = useRef(false);
   // Enemies come from the REAL bestiary catalog when it holds usable rows, and
   // fall back to the hardcoded fixtures otherwise — the panel says which.
   const enemies = useBestiaryEnemies();
+  // The sweep runs as a cancellable job (one engine run per cell, yielding
+  // between and inside cells) — never one synchronous block on the UI thread.
+  const { report, progress, error, running: isRunning, run, cancel } = usePredictiveSweep();
 
   const runSim = useCallback(() => {
-    if (runLock.current) return;
-    runLock.current = true;
-    setIsRunning(true);
-
-    requestAnimationFrame(() => {
-      const result = runPredictiveBalance(config, {
-        registry: enemies.registry,
-        provenance: enemies.provenance,
-      });
-      setReport(result);
-      setIsRunning(false);
-      runLock.current = false;
-    });
-  }, [config, enemies.registry, enemies.provenance]);
+    if (isRunning) return;
+    run(config, { registry: enemies.registry, provenance: enemies.provenance });
+  }, [isRunning, run, config, enemies.registry, enemies.provenance]);
 
   const levels = useMemo(() => {
     const ls: number[] = [];
@@ -120,6 +110,22 @@ export function PredictiveBalanceSimulator() {
             <div className="text-xs text-text-muted font-mono mt-2">
               Running {config.iterations} iterations x {levels.length} levels x {config.enemyConfigs.length} encounters...
             </div>
+            <div className="text-xs text-text-muted font-mono mt-1" aria-live="polite">
+              {progress ? `cell ${progress.done}/${progress.total}` : 'starting…'}
+            </div>
+            <button
+              type="button"
+              onClick={cancel}
+              className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold border border-border/40 text-text-muted hover:text-text hover:brightness-110"
+            >
+              <X className="w-3 h-3" /> Cancel
+            </button>
+          </div>
+        )}
+
+        {error && !isRunning && (
+          <div className="text-xs font-mono text-center" style={{ color: STATUS_ERROR }}>
+            Simulation failed: {error}
           </div>
         )}
 
