@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { CheckCircle2, XCircle, Loader2, Save, AlertTriangle, RefreshCw } from 'lucide-react';
 import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { Modal } from '@/components/ui/Modal';
@@ -13,6 +13,10 @@ import {
 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
 import { apiMacroFor, headerDeclaresModule } from './helpers';
+import { OverwriteReviewPanel } from './OverwriteReview';
+import {
+  reviewOverwrite, overwriteConfirmGate, lossCount, type MergeTarget,
+} from '@/lib/blueprint-transpiler/overwrite-review';
 
 // ─── Write to Project (dry-run diff → confirm) ──────────────────────────────
 
@@ -146,6 +150,21 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
   // exported from a module it does not live in — a link error, and one nothing
   // in the app used to mention.
   const macroMismatch = header.length > 0 && !headerDeclaresModule(header, moduleName);
+  // What the whole-file overwrite DELETES, by member — not by line. A loss
+  // gates Confirm behind an explicit acknowledgement (reset on every dry run).
+  const [acknowledged, setAcknowledged] = useState(false);
+  const review = useMemo(() => {
+    if (!plan || !snapshot) return null;
+    const h = plan.files.find((f) => f.relPath.endsWith('.h'));
+    const c = plan.files.find((f) => f.relPath.endsWith('.cpp'));
+    if (!h || !c) return null;
+    const target: MergeTarget = {
+      className: snapshot.className, moduleName: snapshot.moduleName,
+      relPaths: { header: h.relPath, source: c.relPath }, header: h.after, source: c.after,
+    };
+    return { target, result: reviewOverwrite(h, c, snapshot.className) };
+  }, [plan, snapshot]);
+  const needsAck = review !== null && overwriteConfirmGate(review.result, acknowledged) === 'needs-ack';
 
   const dryRun = useCallback(async () => {
     // Freeze what this plan is computed against at request time.
@@ -159,12 +178,13 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
       });
       setPlan(data);
       setSnapshot(snap);
+      setAcknowledged(false);
     } catch (e) { setErr(e instanceof Error ? e.message : 'Dry-run failed'); }
     finally { setBusy(false); }
   }, [projectPath, moduleName, className, header, source]);
 
   const confirmWrite = useCallback(async () => {
-    if (!plan || !snapshot) return;
+    if (!plan || !snapshot || needsAck) return;
     setBusy(true); setErr(null);
     try {
       const data = await apiFetch<WriteReceipt>('/api/blueprint-transpiler/write', {
@@ -200,7 +220,7 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
       }
     } catch (e) { setErr(e instanceof Error ? e.message : 'Write failed'); }
     finally { setBusy(false); }
-  }, [projectPath, plan, snapshot]);
+  }, [projectPath, plan, snapshot, needsAck]);
 
   const closeModal = () => { setPlan(null); setSnapshot(null); };
 
@@ -339,6 +359,16 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
               </div>
             )}
 
+            {review && (
+              <OverwriteReviewPanel
+                review={review.result}
+                target={review.target}
+                acknowledged={acknowledged}
+                onAcknowledge={setAcknowledged}
+                onMergeDispatched={closeModal}
+              />
+            )}
+
             <div className="space-y-3">
               {plan.files.map((f) => (
                 <div key={f.path} className="rounded-lg border border-border overflow-hidden">
@@ -366,15 +396,19 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
               <button onClick={closeModal} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
                 Cancel
               </button>
-              {planStale || macroMismatch || notUeProject ? (
-                codeStale || macroMismatch || notUeProject ? (
+              {planStale || macroMismatch || notUeProject || needsAck ? (
+                // A module-only change is fixed by re-running the dry run;
+                // every other blocker (including an unacknowledged loss) disables Confirm.
+                !moduleStale || codeStale || macroMismatch || notUeProject ? (
                   <button
                     disabled
                     title={notUeProject
                       ? 'That directory contains no .uproject — pick a real UE project first'
                       : macroMismatch
                       ? `The header declares a different module than ${moduleName} — re-transpile before confirming`
-                      : 'The transpiled code changed — refresh the diff before confirming'}
+                      : codeStale
+                      ? 'The transpiled code changed — refresh the diff before confirming'
+                      : `This overwrite drops ${review ? lossCount(review.result) : 0} hand-written members — tick the acknowledgement or merge via Claude`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium opacity-40 cursor-not-allowed"
                     style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
                   >
