@@ -20,6 +20,7 @@ import { ok, err } from '@/types/result';
 import type { StatusVerdictRead } from './statusVerdictSource';
 import { EvidenceEntityLedger, EntityVerdict } from './EvidenceEntityLedger';
 import { readProvenance, describeProducer } from '@/lib/provenance';
+import { CalibrationLabelBar } from './CalibrationLabelBar';
 
 const GlbViewer = dynamic(() => import('@/components/layout-lab/steps/shared/GlbViewer').then((m) => m.GlbViewer), {
   ssr: false,
@@ -283,6 +284,7 @@ export function EvidenceModal({
         ) : (
           <ProofPanel data={art.data as Data} label={`${catalogId} · ${step.label} · ${art.entityId}`} />
         )}
+        {art && <CalibrationLabelBar catalogId={catalogId} entityId={art.entityId} step={step.label} data={art.data as Data} />}
       </div>
     </Modal>
   );
