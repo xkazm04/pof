@@ -314,50 +314,38 @@ export interface SmokeAttachment {
 }
 
 /**
- * Attach a post-cook smoke verdict to the most recent successful build for a
- * platform+config, IN SCOPE of the project that cooked it. The smoke-test runs
- * immediately after a cook, so the latest matching success is reliably the build it
- * verified.
+ * Attach a post-cook smoke verdict to the build it verified, NAMED BY ID — the row the
+ * cook stream reported as `recorded {buildId}`. The interactive route
+ * (`/api/packaging/smoke-test`) calls only this: it launched that row's recorded exe,
+ * so no query may re-pick "the newest green row" (two builds recorded in one second
+ * tie, and a nightly run can insert a newer one while the smoke is still observing).
  *
  * `smokeStatus` is the verdict itself, and a `fail` CONDEMNS the build: status flips
  * to `failed` and the note becomes its `errorSummary`. This is the classification the
- * scheduled runner has always made (`smokeFailed ? 'failed' : 'success'`,
- * `scheduled-build-runner.ts:136`); the interactive path had no equivalent, so a build
- * whose exe died in 25 s stayed `status='success'` in history forever. The runner is
- * deliberately unchanged — this converges onto it.
+ * scheduled runner has always made (`smokeFailed ? 'failed' : 'success'`).
  *
  * The note is APPENDED (see {@link appendBuildNote}), so a `[SIZE_BUDGET]` note written
  * moments earlier survives.
  *
  * A condemned build KEEPS its version: the number is burned, not reissued
  * (`version-manager.ts` derives a project's current version from every versioned row,
- * whatever its status), so no recorded row value is ever rewritten here.
+ * whatever its status), so this only appends a note and sets status/error_summary —
+ * no other recorded value is ever rewritten.
  */
-export function attachSmokeResultToLatestBuild(
-  platform: string,
-  config: string,
+export function attachSmokeResultToBuild(
+  id: number,
   note: string,
-  projectId?: string | null,
   smokeStatus?: 'pass' | 'fail',
 ): SmokeAttachment {
   const db = getDb();
-  const normalizedPlatform = normalizePlatformId(platform);
-  const scope = buildScope(projectId, 'platform = ?', 'config = ?', "status = 'success'");
-  const row = db.prepare(
-    `SELECT id, status FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT 1`
-  ).get(...scope.params, normalizedPlatform, config) as { id: number; status: string } | undefined;
-
+  const row = db.prepare('SELECT id, status FROM build_history WHERE id = ?')
+    .get(id) as { id: number; status: string } | undefined;
   if (!row) {
-    const where = normalizeProjectId(projectId)
-      ? `project "${normalizeProjectId(projectId)}" (or the unattributed legacy set)`
-      : 'the unattributed legacy set — no project was named on the request';
     return {
       build: null,
       previousStatus: null,
       statusChanged: false,
-      unrecordedReason:
-        `no successful ${normalizedPlatform}/${config} build is recorded under ${where}, `
-        + 'so this smoke verdict was NOT saved to build history.',
+      unrecordedReason: `build #${id} no longer exists in build history, so this smoke verdict was NOT saved.`,
     };
   }
 
@@ -376,6 +364,42 @@ export function attachSmokeResultToLatestBuild(
     statusChanged: condemned && previousStatus !== 'failed',
     unrecordedReason: null,
   };
+}
+
+/**
+ * Resolve the most recent successful build for a platform+config IN SCOPE of a project
+ * and attach the verdict to it via {@link attachSmokeResultToBuild}. No route calls this
+ * any more — the interactive smoke attaches by the id the cook recorded — so it is NOT a
+ * way to find "the build that was just smoke-tested"; it survives for callers that
+ * genuinely mean "this project's latest green build", and reports a miss by name.
+ */
+export function attachSmokeResultToLatestBuild(
+  platform: string,
+  config: string,
+  note: string,
+  projectId?: string | null,
+  smokeStatus?: 'pass' | 'fail',
+): SmokeAttachment {
+  const normalizedPlatform = normalizePlatformId(platform);
+  const scope = buildScope(projectId, 'platform = ?', 'config = ?', "status = 'success'");
+  const row = getDb().prepare(
+    `SELECT id FROM build_history ${scope.where} ORDER BY created_at DESC LIMIT 1`
+  ).get(...scope.params, normalizedPlatform, config) as { id: number } | undefined;
+
+  if (!row) {
+    const where = normalizeProjectId(projectId)
+      ? `project "${normalizeProjectId(projectId)}" (or the unattributed legacy set)`
+      : 'the unattributed legacy set — no project was named on the request';
+    return {
+      build: null,
+      previousStatus: null,
+      statusChanged: false,
+      unrecordedReason:
+        `no successful ${normalizedPlatform}/${config} build is recorded under ${where}, `
+        + 'so this smoke verdict was NOT saved to build history.',
+    };
+  }
+  return attachSmokeResultToBuild(row.id, note, smokeStatus);
 }
 
 // ---------- Analytics ----------
