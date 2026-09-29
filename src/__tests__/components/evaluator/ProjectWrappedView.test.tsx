@@ -16,6 +16,7 @@ import { ProjectWrappedView } from '@/components/modules/evaluator/ProjectWrappe
 
 const WRAPPED: ProjectWrapped = {
   generatedAt: '2026-06-03T00:00:00.000Z',
+  zone: 'Europe/Prague',
   firstSessionDate: '2025-05-07',
   lastSessionDate: '2026-06-11',
   activeDays: 42,

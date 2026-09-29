@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { aggregateProjectWrapped, type WrappedSessionRow } from '@/lib/project-wrapped';
 
 const NOW = '2026-06-03T00:00:00.000Z';
+/** Every aggregation names its zone — the suite never depends on the machine's TZ. */
+const ZONE = 'Europe/Prague';
 
 /** Build a session row at noon UTC (TZ-robust for date-string derivations). */
 function row(date: string, success: 0 | 1, moduleId: string, ms = 600_000): WrappedSessionRow {
@@ -28,7 +30,7 @@ const FIXTURE: WrappedSessionRow[] = [
 ];
 
 describe('aggregateProjectWrapped — lifetime metrics', () => {
-  const w = aggregateProjectWrapped(FIXTURE, NOW);
+  const w = aggregateProjectWrapped(FIXTURE, NOW, ZONE);
 
   it('stamps the provided generatedAt (no wall-clock read)', () => {
     expect(w.generatedAt).toBe(NOW);
@@ -60,9 +62,8 @@ describe('aggregateProjectWrapped — lifetime metrics', () => {
     expect(w.biggestWeek).not.toBeNull();
     expect(w.biggestWeek!.sessions).toBe(6);
     expect(w.biggestWeek!.successRate).toBeCloseTo(5 / 6, 5);
-    // weekStart is the week's Monday; its serialized value is TZ-sensitive (the shared
-    // getWeekStart mixes local/UTC), so just assert it lands on that week boundary.
-    expect(w.biggestWeek!.weekStart).toMatch(/^2025-05-0[45]$/);
+    // weekStart is the zone-local Monday of the week, exactly (2025-05-05 is a Monday).
+    expect(w.biggestWeek!.weekStart).toBe('2025-05-05');
     expect(w.biggestDay).toEqual({ date: '2025-05-07', sessions: 6 });
   });
 
@@ -78,7 +79,7 @@ describe('aggregateProjectWrapped — lifetime metrics', () => {
 });
 
 describe('aggregateProjectWrapped — milestones & achievements', () => {
-  const w = aggregateProjectWrapped(FIXTURE, NOW);
+  const w = aggregateProjectWrapped(FIXTURE, NOW, ZONE);
 
   it('always leads the timeline with the first session', () => {
     expect(w.milestones[0].type).toBe('first-session');
@@ -122,7 +123,7 @@ describe('aggregateProjectWrapped — achievement tiers', () => {
       // 120 sessions @ 100% success, ~6h total, spread across 12 modules
       many.push(row('2025-05-07', 1, `mod-${i % 12}`, 180_000));
     }
-    const w = aggregateProjectWrapped(many, NOW);
+    const w = aggregateProjectWrapped(many, NOW, ZONE);
     const ids = w.achievements.map((a) => a.id);
     expect(ids).toContain('lifetime-centurion'); // ≥100 sessions
     expect(ids).toContain('lifetime-marksman');  // ≥90% success
@@ -132,7 +133,7 @@ describe('aggregateProjectWrapped — achievement tiers', () => {
 });
 
 describe('aggregateProjectWrapped — empty history', () => {
-  const w = aggregateProjectWrapped([], NOW);
+  const w = aggregateProjectWrapped([], NOW, ZONE);
 
   it('returns a stable zeroed recap with no data', () => {
     expect(w.totalSessions).toBe(0);
@@ -143,5 +144,32 @@ describe('aggregateProjectWrapped — empty history', () => {
     expect(w.achievements).toEqual([]);
     expect(w.monthlyActivity).toEqual([]);
     expect(w.generatedAt).toBe(NOW);
+  });
+});
+
+describe('aggregateProjectWrapped — zone-true day / week / month keys', () => {
+  it('keys the biggest week to the zone-local Monday', () => {
+    // 10:00 Prague (CEST, +2) = 08:00 UTC on Mon 21 .. Sun 27 Sep 2026.
+    const rows = ['21', '22', '23', '24', '25', '26', '27'].map((d) => ({
+      module_id: 'a', success: 1, duration_ms: 1, completed_at: `2026-09-${d}T08:00:00.000Z`,
+    }));
+    const w = aggregateProjectWrapped(rows, NOW, ZONE);
+    expect(w.biggestWeek!.weekStart).toBe('2026-09-21');
+    expect(w.biggestWeek!.sessions).toBe(7);
+  });
+
+  it('files a 1 October 01:00 local session under October', () => {
+    const w = aggregateProjectWrapped(
+      [{ module_id: 'a', success: 1, duration_ms: 1, completed_at: '2026-09-30T23:00:00.000Z' }],
+      NOW,
+      ZONE,
+    );
+    expect(w.firstSessionDate).toBe('2026-10-01');
+    expect(w.monthlyActivity[0].month).toBe('2026-10');
+  });
+
+  it('echoes the zone it was cut in (also when empty)', () => {
+    expect(aggregateProjectWrapped(FIXTURE, NOW, ZONE).zone).toBe(ZONE);
+    expect(aggregateProjectWrapped([], NOW, 'UTC').zone).toBe('UTC');
   });
 });

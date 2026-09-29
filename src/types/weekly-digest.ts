@@ -1,8 +1,10 @@
 export interface WeeklyDigest {
-  /** ISO date string for period start (Monday) */
+  /** Day key (YYYY-MM-DD, in `zone`) of the Monday that starts the period. */
   periodStart: string;
-  /** ISO date string for period end (Sunday) */
+  /** Day key of the following Monday — the EXCLUSIVE end of the half-open week. */
   periodEnd: string;
+  /** IANA zone the week and its daily keys were cut in (see lib/analytics/report-window). */
+  zone: string;
 
   // ── Core metrics ──
   checklistCompleted: number;
