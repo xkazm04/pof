@@ -82,6 +82,8 @@ export const SWEEP_BATCH_SIZE = 200;
 export interface HeatmapCell {
   playerLevel: number;
   enemyLabel: string;
+  /** Index of this cell's encounter in `config.enemyConfigs` (= `BalanceReport.encounters[].index`). */
+  encounterIndex: number;
   survivalRate: number;
   avgTTK: number;
   avgDPS: number;
@@ -158,8 +160,28 @@ export interface CanonCheckStatus {
   reason?: string;
 }
 
+/** One swept encounter: its `config.enemyConfigs` index and its (unique) label. */
+export interface SweepEncounter {
+  index: number;
+  label: string;
+  archetypeId: string;
+}
+
 export interface BalanceReport {
   summary: string;
+  /**
+   * The sweep's own axes. Surfaces render the heatmap from these, never from the
+   * live config (which may have been edited since the run).
+   */
+  levels: number[];
+  /** Encounters that resolved against the registry, in report order. */
+  encounters: SweepEncounter[];
+  /**
+   * The swept level the headline, DPS breakdown and sensitivity steps use: the
+   * level on the grid nearest the middle of `levelRange` (always one of `levels`
+   * when any level was swept).
+   */
+  midLevel: number;
   heatmap: HeatmapCell[];
   survivalCurves: Record<string, SurvivalCurvePoint[]>;
   dpsBreakdowns: Record<string, DPSBreakdown[]>;
@@ -416,7 +438,7 @@ export function planPredictiveSweep(
   for (let l = config.levelRange[0]; l <= config.levelRange[1]; l += config.levelStep) {
     levels.push(l);
   }
-  const midLevel = Math.floor((config.levelRange[0] + config.levelRange[1]) / 2);
+  const midLevel = sweptMidLevel(levels, config.levelRange);
 
   const scenarioFor = (level: number, ec: EncounterConfig, label: string): OverrideCombatScenario => ({
     name: `Lv.${level} vs ${label}`,
@@ -430,11 +452,12 @@ export function planPredictiveSweep(
   });
 
   // Heatmap cells: encounter-major, level-minor (the report's order).
-  const encounters: { ec: EncounterConfig; archetype: EnemyArchetype; label: string }[] = [];
-  for (const ec of config.enemyConfigs) {
+  const encounters: { ec: EncounterConfig; archetype: EnemyArchetype; label: string; index: number }[] = [];
+  for (const [index, ec] of config.enemyConfigs.entries()) {
     const archetype = registry.get(ec.archetypeId);
-    if (archetype) encounters.push({ ec, archetype, label: `${ec.count}x ${archetype.name}` });
+    if (archetype) encounters.push({ ec, archetype, label: `${ec.count}x ${archetype.name}`, index });
   }
+  uniquifyLabels(encounters);
   const units: SweepUnit[] = [];
   for (const { ec, label } of encounters) {
     for (const level of levels) {
@@ -485,7 +508,7 @@ export function planPredictiveSweep(
     const alerts: BalanceReportAlert[] = [];
     const midAttrs = buildPlayerAttributes(midLevel, gear.bonuses, tuning);
 
-    for (const { ec, archetype, label } of encounters) {
+    for (const { ec, archetype, label, index: encounterIndex } of encounters) {
       const curvePoints: SurvivalCurvePoint[] = [];
       for (const playerLevel of levels) {
         const { survivalRate, avgTTK, avgDPS } = take();
@@ -508,7 +531,7 @@ export function planPredictiveSweep(
             ))
           : 0;
 
-        heatmap.push({ playerLevel, enemyLabel: label, survivalRate, avgTTK, avgDPS, avgEHP, biggestHit });
+        heatmap.push({ playerLevel, enemyLabel: label, encounterIndex, survivalRate, avgTTK, avgDPS, avgEHP, biggestHit });
         curvePoints.push({ level: playerLevel, survivalRate, avgTTK, avgDPS });
 
         if (playerLevel === config.levelRange[0] + config.levelStep && survivalRate < 0.3) {
@@ -568,14 +591,41 @@ export function planPredictiveSweep(
     const avgSurvival = midCells.length > 0 ? midCells.reduce((s, c) => s + c.survivalRate, 0) / midCells.length : 0;
     const avgTTK = midCells.length > 0 ? midCells.reduce((s, c) => s + c.avgTTK, 0) / midCells.length : 0;
     const summary = `Player Lv.${config.levelRange[0]}-${config.levelRange[1]} across ${config.enemyConfigs.length} encounter types: ` +
-      `${(avgSurvival * 100).toFixed(0)}% avg mid-level survival, ${avgTTK.toFixed(1)}s avg fight duration. ` +
+      `${(avgSurvival * 100).toFixed(0)}% avg survival at mid-level Lv.${midLevel}, ${avgTTK.toFixed(1)}s avg fight duration. ` +
       `${alerts.filter(a => a.severity === 'critical').length} critical, ${alerts.filter(a => a.severity === 'warning').length} warnings, ` +
       `${canonChecks.filter(c => c.status === 'violation').length} canon violation(s).`;
 
-    return { summary, heatmap, survivalCurves, dpsBreakdowns, sensitivity, alerts, enemySource, canonChecks, durationMs };
+    return {
+      summary,
+      levels: [...levels],
+      encounters: encounters.map(({ index, label, ec }) => ({ index, label, archetypeId: ec.archetypeId })),
+      midLevel,
+      heatmap, survivalCurves, dpsBreakdowns, sensitivity, alerts, enemySource, canonChecks, durationMs,
+    };
   };
 
   return { registry, units, assemble };
+}
+
+/** The swept level nearest the middle of the range (ties → the lower level). */
+function sweptMidLevel(levels: readonly number[], range: readonly [number, number]): number {
+  const middle = Math.floor((range[0] + range[1]) / 2);
+  let best = levels[0] ?? middle;
+  for (const l of levels) if (Math.abs(l - middle) < Math.abs(best - middle)) best = l;
+  return best;
+}
+
+/**
+ * Make encounter labels unique — the label keys curves, breakdowns and alerts.
+ * A collision is told apart by level offset (`(Lv+5)`), then by position (`#2`).
+ */
+function uniquifyLabels(encounters: { ec: EncounterConfig; label: string; index: number }[]): void {
+  const count = (label: string) => encounters.filter(e => e.label === label).length;
+  for (const e of encounters.filter(x => count(x.label) > 1)) {
+    const off = e.ec.levelOffset;
+    e.label = `${e.label} (Lv${off >= 0 ? '+' : ''}${off})`;
+  }
+  for (const e of encounters.filter(x => count(x.label) > 1)) e.label = `${e.label} #${e.index + 1}`;
 }
 
 // ── Runners: one plan, two drains ──────────────────────────────────────────

@@ -5,6 +5,8 @@ import {
   type PredictiveBalanceConfig,
 } from './data';
 import type { ArchetypeRegistry } from '@/lib/combat/simulation-engine';
+import { DEFAULT_TUNING } from '@/lib/combat/definitions';
+import { COMBAT_TUNING_LEVERS } from '@/lib/combat/sweep-tuning';
 
 export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_ID, catalogSourced }: {
   config: PredictiveBalanceConfig;
@@ -15,6 +17,9 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
   catalogSourced?: ReadonlySet<string>;
 }) {
   const archetypes = [...registry.values()];
+  // Levers moved off DEFAULT_TUNING (by a cell solve's Apply) — shown so a run's
+  // tuning is never invisible, with a one-click way back.
+  const activeLevers = COMBAT_TUNING_LEVERS.filter(l => config.tuning[l.lever] !== DEFAULT_TUNING[l.lever]);
   return (
     <div className="space-y-3">
       {/* Parameter grid */}
@@ -79,6 +84,24 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
           </select>
         </div>
       </div>
+
+      {activeLevers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+          <span className="uppercase tracking-[0.15em] text-text-muted">Tuning</span>
+          {activeLevers.map(l => (
+            <span key={l.lever} className="px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text tabular-nums">
+              {l.label} ×{+config.tuning[l.lever].toFixed(3)}
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={() => setConfig(c => ({ ...c, tuning: DEFAULT_TUNING }))}
+            className="px-1.5 py-0.5 rounded border border-border/40 text-text-muted hover:text-text"
+          >
+            Reset tuning
+          </button>
+        </div>
+      )}
 
       {/* Encounter setup */}
       <div className="space-y-1.5">
