@@ -885,13 +885,33 @@ switch: an ingested entity's `provenance.canonProfile` (stamped from its `Refere
 `LabEntity.canonProfile` — set by every constructor through `canonProfileOf` — and
 `buildStepProducePrompt` calls `rulesForProfile` before `canonContextFor`. An unknown profile throws.
 The one-shot DESIGN prompt (a new entity is PoF's) filters to `pof`. `project_rules.profile` stores it
-(additive migration runs before seeding); each profile seeds ONCE under its own marker, so an edit to a
-shipped profile rule does not reach an already-seeded DB (sync is open work). Threshold checkers
+(additive migration runs before seeding); each profile seeds ONCE under its own marker, and a later edit to
+a shipped rule's TEXT is reconciled by **canon drift** (next paragraph). Threshold checkers
 (`acceptance/invariants.ts`, `balance/canon-conformance.ts`) still read PoF's `CANON_SEED` and are NOT
 profile-aware yet — **superseded (W02):** the 8 law-backed invariants are wrapped by
 `canonLawChecker(lawId)` and return `pending` + `UNGRADED:` where the entity's profile (`CheckerContext.canonProfile`)
 has no such law; every step's `accept` is wrapped once at `registerCatalogPipeline` by the SOURCED guard (a seeded
 artifact never grades `pass`). Markers live in `acceptance/markers.ts`.
+
+**Canon drift: provenance-hashed sync with an operator review** (`@/lib/catalog/canon/canonSync.ts`, 2026-09-29).
+Checkers and derivations read the SHIPPED law text; every produce prompt cites the `project_rules` copy. Each row
+records `shipped_hash` (additive, nullable): `canonTextHash` of the shipped text it was last written FROM. Only
+shipped-text writes stamp it (fresh seed, profile offer, restore-defaults, adopt, keep-mine); an operator upsert
+never touches it. The pure `planCanonSync(shipped, rows, offeredIds)` gives each rule one verdict from a closed
+vocabulary: `fresh` (equal; stamped if the stamp is stale) · `follow` (row still equals its recorded offer, shipped
+moved) · `edited` (operator edit, shipped unmoved; no finding) · `conflict` (operator edit AND shipped moved) ·
+`unrecorded` (legacy NULL stamp, differs) · `missing` (shipped, never offered) · `orphaned` (a seed id no longer
+shipped). An offered-then-deleted id gets no verdict (a deleted rule never returns). **Only `follow` and the `fresh`
+stamp are applied automatically** (`ensureTable`, once per process, so the machine-global DB tracks the shipped canon
+of whichever checkout ran last); everything else ASKS: `GET /api/project-rules?view=drift` groups findings by profile
+→ verdict with both texts, and `POST ?action=adopt-shipped | keep-mine | undo-adopt {ids}` (behind
+`requireOperator`) answers them. **Adopt is reversible:** it archives the replaced row (every column, or its
+absence) in `project_rules_adopted` first, and undo-adopt restores it byte-for-byte. keep-mine stamps the current
+shipped hash, so the rule asks again (`conflict`) only when the shipped text moves again. Orphans are only surfaced;
+removal is the explicit Delete. The lab's Canon view banners the active profile's drift and opens
+`CanonDriftPanel` (old vs shipped per rule, per-rule Adopt / Keep mine, bulk "Adopt shipped for all N unrecorded"
+with a count preview before the write, and Undo per adopted rule). The stamp is a `contentHash` of the canon
+fields; changing that hash makes every stamped row read as edited, which only ever asks (never auto-writes).
 
 **A produce prompt names everything its checker grades** (`acceptance/requiredFields.ts`): `fieldsPopulated` keys,
 `minLength` text fields, `minCount` lists and the `wiringContract` STRUCTURE are tagged on the checker, collected
