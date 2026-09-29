@@ -5,6 +5,7 @@ import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { pickLadderIssue, type LadderIssue } from './coachLadder';
 import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
 
 export interface MatrixBlocker { step: string; reason: string }
@@ -18,6 +19,8 @@ export interface MatrixRow {
   stepIndex: (s: string) => number;
   rollup: EntityRollup;
   blockers: MatrixBlocker[];
+  /** What the coaches say is next for this entity (`pickLadderIssue` over its own steps + drift), or null. */
+  issue: LadderIssue | null;
 }
 
 /** Project a server artifact into the local artifact shape so it can seed the shared derivation. */
@@ -60,7 +63,7 @@ export function buildMatrixRows(
     }
     const effective = { ...serverAsLocal, ...(localByEntity[e.id] ?? {}) }; // add-only: local wins
 
-    const { artifacts, displayStatus } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
+    const { artifacts, displayStatus, driftByStep } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
     const statusMap = new Map<string, StepDisplayStatus>(own.map((s, i) => [s, displayStatus(s, i)]));
 
@@ -79,6 +82,8 @@ export function buildMatrixRows(
       stepIndex: (s: string) => own.indexOf(s),
       rollup: summarizeEntity(artifacts, own.length),
       blockers,
+      // The SAME pick both coaches make (one ladder), so the board ranks by what they say is next.
+      issue: pickLadderIssue(own, displayStatus, driftByStep),
     };
   });
 }
