@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  ScanSearch, Play, Loader2, Zap, Trash2, RotateCcw,
+  ScanSearch, Play, Loader2, Zap, RotateCcw,
   CheckCircle, Square, CheckSquare,
 } from 'lucide-react';
 import { EVAL_PASSES, PASS_LABELS } from '@/lib/evaluator/module-eval-prompts';
@@ -12,6 +12,7 @@ import { SEVERITY_CONFIG, PASS_ICONS, ACCENT } from './constants';
 import { useScanTab } from './useScanTab';
 import { FindingRow } from './FindingRow';
 import { ResolvedSection } from './ResolvedSection';
+import { ScanDelta } from './ScanDelta';
 
 interface ScanTabProps {
   moduleId: SubModuleId;
@@ -20,9 +21,11 @@ interface ScanTabProps {
 export function ScanTab({ moduleId }: ScanTabProps) {
   const {
     moduleLabel,
-    findings,
-    clearScanFindings,
-    resolveScanFinding,
+    deltaState,
+    resolveFindings,
+    undoResolve,
+    lastResolved,
+    resolveError,
     selectedPasses,
     togglePass,
     scanCount,
@@ -62,14 +65,15 @@ export function ScanTab({ moduleId }: ScanTabProps) {
             </span>
           )}
         </div>
-        {findings.length > 0 && (
+        {activeFindings.length > 0 && (
           <button
-            onClick={() => clearScanFindings(moduleId)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Clear all findings"
+            onClick={() => { void resolveFindings(activeFindings.map((f) => f.id)); }}
+            disabled={isBatchFixing}
+            className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-text-muted hover:text-green-400 hover:bg-green-500/10 transition-colors disabled:opacity-50"
+            title="Resolve every active finding — kept across reloads, undoable from the scan summary"
           >
-            <Trash2 className="w-3 h-3" />
-            Clear
+            <CheckCircle className="w-3 h-3" />
+            Resolve all
           </button>
         )}
       </div>
@@ -129,6 +133,15 @@ export function ScanTab({ moduleId }: ScanTabProps) {
           )}
         </button>
       </div>
+
+      {/* Re-Scan delta: new / still present / no longer found */}
+      <ScanDelta
+        state={deltaState}
+        onResolve={resolveFindings}
+        lastResolved={lastResolved}
+        onUndo={undoResolve}
+        resolveError={resolveError}
+      />
 
       {/* Summary stats */}
       {activeFindings.length > 0 && (
@@ -227,7 +240,7 @@ export function ScanTab({ moduleId }: ScanTabProps) {
                       finding={finding}
                       isExpanded={expandedFindings.has(finding.id)}
                       onToggle={() => toggleFinding(finding.id)}
-                      onResolve={() => resolveScanFinding(moduleId, finding.id)}
+                      onResolve={() => { void resolveFindings([finding.id]); }}
                       onFix={() => {
                         const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
                         scanCli.sendPrompt(prompt);

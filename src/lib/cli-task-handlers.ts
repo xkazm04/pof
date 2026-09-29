@@ -392,6 +392,9 @@ const moduleScan: TaskPromptHandler = (task, ctx) => {
     method: 'POST',
     staticFields: {
       moduleId: task.moduleId,
+      // The passes this scan RAN, so the server records a clean pass (and can
+      // tell "no longer found" from "not re-scanned") even when it found nothing.
+      passes: st.passes,
     },
     schemaHint: `  "findings": [
     {

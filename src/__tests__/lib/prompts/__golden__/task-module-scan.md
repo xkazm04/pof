@@ -111,6 +111,7 @@ After completing your work, submit the results by outputting a JSON block wrappe
 
 The following fields will be added automatically — do NOT include them:
 - `moduleId`: `"arpg-combat"`
+- `passes`: `["structure","quality"]`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

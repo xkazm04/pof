@@ -17,7 +17,8 @@ const DB_DIR = path.dirname(DB_PATH);
 // rebuilds) are gated behind this so they run once per DB instead of on every
 // cold start. A fresh DB (user_version 0) runs them once against freshly-created
 // tables (all guards no-op) then stamps the version.
-const SCHEMA_VERSION = 3;
+// 4: eval_findings.resolved_at (durable scan-finding resolutions).
+const SCHEMA_VERSION = 4;
 
 let db: Database.Database | null = null;
 
@@ -175,7 +176,10 @@ function bootstrap(conn: Database.Database): void {
       suggested_fix TEXT NOT NULL DEFAULT '',
       effort TEXT NOT NULL DEFAULT 'medium'
         CHECK(effort IN ('trivial', 'small', 'medium', 'large')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- Operator resolution (NULL = open). Declared here for fresh DBs AND added by
+      -- the schema-4 migration below for existing ones.
+      resolved_at TEXT
     )
   `);
 
@@ -187,6 +191,34 @@ function bootstrap(conn: Database.Database): void {
   conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_eval_findings_severity
     ON eval_findings(severity, module_id)
+  `);
+
+  // Migrate (schema 4): durable resolutions. Additive and nullable — readers that
+  // select named columns (gdd-synthesizer, search-index) never see it.
+  if (needsMigrations) {
+    const efCols = conn.prepare("PRAGMA table_info(eval_findings)").all() as { name: string }[];
+    if (!efCols.some((c) => c.name === 'resolved_at')) {
+      conn.exec('ALTER TABLE eval_findings ADD COLUMN resolved_at TEXT');
+    }
+  }
+
+  // Module scan runs — one row per scan, INCLUDING a scan that found nothing, so a
+  // clean re-scan is distinguishable from a lost report. `passes_json` is what the
+  // scan covered; a pass it did not run can never clear a finding. Read/written by
+  // src/app/api/module-scan/import/route.ts.
+  conn.exec(`
+    CREATE TABLE IF NOT EXISTS module_scans (
+      scan_id TEXT PRIMARY KEY,
+      module_id TEXT NOT NULL,
+      passes_json TEXT NOT NULL DEFAULT '[]',
+      finding_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    )
+  `);
+
+  conn.exec(`
+    CREATE INDEX IF NOT EXISTS idx_module_scans_module
+    ON module_scans(module_id, created_at)
   `);
 
   // Build history — records every package/build operation for trending & comparison

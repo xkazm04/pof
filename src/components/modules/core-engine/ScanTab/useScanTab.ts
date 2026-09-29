@@ -9,10 +9,19 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { TaskFactory } from '@/lib/cli-task';
 import { EVAL_PASSES, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
 import type { SubModuleId } from '@/types/modules';
-import type { ScanFinding, ScanSeverity } from '@/types/scan';
+import type { ScanDelta, ScanDeltaState, ScanFinding, ScanSeverity } from '@/types/scan';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
+import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { ACCENT, EMPTY_FINDINGS } from './constants';
+
+/** The store caps a module at 100 findings; the GET is newest-first, so keep the newest. */
+const STORE_FINDINGS_CAP = 100;
+const UNRECORDED_REASON = 'the scan finished but its report was not recorded';
+const FAILED_UNRECORDED_REASON = 'the scan failed before its report was recorded';
+
+interface ScanImportView { findings: ScanFinding[]; delta?: ScanDelta | null }
+interface ResolveResponse { updated: number; missing: string[] }
 
 export function useScanTab(moduleId: SubModuleId) {
   const moduleLabel = MODULE_LABELS[moduleId] ?? moduleId;
@@ -20,6 +29,15 @@ export function useScanTab(moduleId: SubModuleId) {
   const addScanFindings = useModuleStore((s) => s.addScanFindings);
   const clearScanFindings = useModuleStore((s) => s.clearScanFindings);
   const resolveScanFinding = useModuleStore((s) => s.resolveScanFinding);
+
+  // --- Re-Scan delta + durable resolutions ---
+  const [deltaState, setDeltaState] = useState<ScanDeltaState>({ status: 'none' });
+  // When a scan this view dispatched is still waiting for its record: a delta
+  // older than this is an EARLIER scan's result and must not be shown as this one's.
+  const scanDispatchedAtRef = useRef<number | null>(null);
+  const loadErrorRef = useRef<string | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [lastResolved, setLastResolved] = useState<string[] | null>(null);
 
   const [selectedPasses, setSelectedPasses] = useState<Set<EvalPass>>(new Set(EVAL_PASSES));
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
@@ -33,24 +51,82 @@ export function useScanTab(moduleId: SubModuleId) {
   const [activeFixId, setActiveFixId] = useState<string | null>(null);
   const fixTotalRef = useRef(0);
 
-  // Fetch findings from the DB and merge into the Zustand store
-  const fetchAndMergeFindings = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/module-scan/import?moduleId=${encodeURIComponent(moduleId)}`);
-      if (!res.ok) return;
-      const json = await res.json();
-      if (json.success && json.data?.findings?.length > 0) {
-        addScanFindings(moduleId, json.data.findings);
-      }
-    } catch { /* silent */ }
-  }, [moduleId, addScanFindings]);
+  // Load findings + the latest scan's delta from the DB. The DB is the source of
+  // truth for resolutions, so the store is REPLACED, never merged: a merge kept a
+  // stale in-memory copy active over a server-side resolution.
+  const fetchAndMergeFindings = useCallback(async (): Promise<boolean> => {
+    const res = await tryApiFetch<ScanImportView>(
+      `/api/module-scan/import?moduleId=${encodeURIComponent(moduleId)}&view=delta`,
+    );
+    if (!res.ok) {
+      loadErrorRef.current = res.error;
+      logger.warn(`[ScanTab] ${moduleId} could not load scan findings: ${res.error}`);
+      return false;
+    }
+    loadErrorRef.current = null;
+    clearScanFindings(moduleId);
+    if (res.data.findings.length > 0) {
+      addScanFindings(moduleId, res.data.findings.slice(0, STORE_FINDINGS_CAP));
+    }
+    const delta = res.data.delta ?? null;
+    const since = scanDispatchedAtRef.current;
+    if (since === null) {
+      setDeltaState(delta ? { status: 'recorded', delta } : { status: 'none' });
+    } else if (delta && Date.parse(delta.scan.createdAt) >= since) {
+      scanDispatchedAtRef.current = null;
+      setDeltaState({ status: 'recorded', delta });
+    } else {
+      setDeltaState({ status: 'pending' });
+    }
+    return true;
+  }, [moduleId, addScanFindings, clearScanFindings]);
 
   const handleScanComplete = useCallback(async (success: boolean) => {
-    if (!success) return;
-    // Final fetch to pick up any findings from the last poll interval
+    // Final fetch to pick up the scan's record, whatever the outcome.
+    const loaded = await fetchAndMergeFindings();
+    if (success) setScanCount((n) => n + 1);
+    if (scanDispatchedAtRef.current === null) return; // recorded — the delta is shown
+    scanDispatchedAtRef.current = null;
+    const reason = !loaded
+      ? `the scan finished but its record could not be loaded: ${loadErrorRef.current ?? 'unknown error'}`
+      : success ? UNRECORDED_REASON : FAILED_UNRECORDED_REASON;
+    logger.warn(`[ScanTab] ${moduleId} scan unrecorded: ${reason}`);
+    setDeltaState({ status: 'unrecorded', reason });
+  }, [fetchAndMergeFindings, moduleId]);
+
+  /** Resolve findings server-side (ONE request), then reload the DB's truth.
+   *  A failed save is reported, and the reload reverts the optimistic mark. */
+  const setResolved = useCallback(async (ids: string[], resolved: boolean): Promise<string[]> => {
+    if (ids.length === 0) return [];
+    if (resolved) for (const id of ids) resolveScanFinding(moduleId, id);
+    setResolveError(null);
+    const res = await tryApiFetch<ResolveResponse>('/api/module-scan/import', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ moduleId, ids, resolved }),
+    });
+    let saved: string[] = [];
+    if (!res.ok) {
+      setResolveError(`${resolved ? 'Resolution' : 'Undo'} not saved: ${res.error}`);
+    } else {
+      const missing = new Set(res.data.missing ?? []);
+      saved = ids.filter((id) => !missing.has(id));
+      if (missing.size > 0) setResolveError(`${missing.size} finding${missing.size !== 1 ? 's' : ''} not found on the server — not saved`);
+    }
     await fetchAndMergeFindings();
-    setScanCount((n) => n + 1);
-  }, [fetchAndMergeFindings]);
+    return saved;
+  }, [moduleId, resolveScanFinding, fetchAndMergeFindings]);
+
+  const resolveFindings = useCallback(async (ids: string[]) => {
+    const saved = await setResolved(ids, true);
+    setLastResolved(saved.length > 0 ? saved : null);
+  }, [setResolved]);
+
+  const undoResolve = useCallback(async () => {
+    const ids = lastResolved ?? [];
+    setLastResolved(null);
+    await setResolved(ids, false);
+  }, [lastResolved, setResolved]);
 
   const scanCli = useModuleCLI({
     moduleId,
@@ -128,11 +204,11 @@ export function useScanTab(moduleId: SubModuleId) {
   const handleFixComplete = useCallback((success: boolean) => {
     const completedId = activeFixId;
     if (success && completedId) {
-      resolveScanFinding(moduleId, completedId);
+      void resolveFindings([completedId]);
     }
     // Advance to next in queue
     scheduleAdvance();
-  }, [activeFixId, moduleId, resolveScanFinding, scheduleAdvance]);
+  }, [activeFixId, resolveFindings, scheduleAdvance]);
 
   const fixCli = useModuleCLI({
     moduleId,
@@ -163,11 +239,9 @@ export function useScanTab(moduleId: SubModuleId) {
   }, [selectedFindings, findings, moduleLabel, fixCli]);
 
   const markSelectedResolved = useCallback(() => {
-    for (const id of selectedFindings) {
-      resolveScanFinding(moduleId, id);
-    }
+    void resolveFindings(Array.from(selectedFindings));
     setSelectedFindings(new Set());
-  }, [selectedFindings, moduleId, resolveScanFinding]);
+  }, [selectedFindings, resolveFindings]);
 
   // Poll for new findings while the scan is running (every 3s)
   // Pauses when module is suspended (hidden in LRU).
@@ -175,7 +249,7 @@ export function useScanTab(moduleId: SubModuleId) {
   useSuspendableEffect(() => {
     if (scanCli.isRunning) {
       // Start polling
-      pollRef.current = setInterval(fetchAndMergeFindings, 3000);
+      pollRef.current = setInterval(() => { void fetchAndMergeFindings(); }, 3000);
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
@@ -190,7 +264,7 @@ export function useScanTab(moduleId: SubModuleId) {
 
   // Load persisted findings on mount (from previous scans)
   useEffect(() => {
-    fetchAndMergeFindings();
+    void fetchAndMergeFindings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleId]);
 
@@ -206,6 +280,9 @@ export function useScanTab(moduleId: SubModuleId) {
       : undefined;
 
     const task = TaskFactory.moduleScan(moduleId, passes, appOrigin, `${moduleLabel} Scan`, previousFindings);
+    scanDispatchedAtRef.current = Date.now();
+    setDeltaState({ status: 'pending' });
+    setLastResolved(null);
     scanCli.execute(task);
   }, [selectedPasses, findings, moduleId, moduleLabel, scanCli]);
 
@@ -290,8 +367,11 @@ export function useScanTab(moduleId: SubModuleId) {
   return {
     moduleLabel,
     findings,
-    clearScanFindings,
-    resolveScanFinding,
+    deltaState,
+    resolveFindings,
+    undoResolve,
+    lastResolved,
+    resolveError,
     selectedPasses,
     togglePass,
     scanCount,
