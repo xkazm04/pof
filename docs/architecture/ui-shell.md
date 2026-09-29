@@ -38,6 +38,7 @@ rollup strip.
 | `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`, `retryArtifacts`, `refreshArtifacts` — the user-initiated force-refetch that RETURNS the rows; nothing here polls) — one deduped fetch path + LOADING / EMPTY / **ERROR** states for Baseline + Matrix. A failed GET is stored as an explicit `error` (never as a successful empty load) and never auto-retries. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation. **Notifications are coalesced onto a microtask** (the store is still mutated synchronously, so a same-tick `getCachedArtifacts` sees the new truth) — the homepage fans out one fetch per catalog and each key emits at least twice, which used to wake every subscriber ~2N times per paint. All zero-data entries (empty / loading / error) share ONE `arts` array reference, so a consumer memoizing on `arts` pays nothing for the empty→loading flip, which carries no artifact news |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail). Blockers read the checker `reason` carried on each derived artifact (no second `resolveAccept` pass) |
+| `src/components/layout-lab/matrixTriage.ts` · `workQueue.ts` · `MatrixTriageBar.tsx` · `WorkQueueStrip.tsx` | Matrix triage + work queue (see *Matrix triage + work queue* below): rank rows by the coach ladder, filter to a rung / a column's status, and walk the filtered set from the canvas with Next |
 | `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
 | `src/components/layout-lab/canonStore.ts` | Zustand store for project canon rules; seeded from `CANON_SEED`, refreshed from `/api/project-rules` |
 | `src/components/layout-lab/theme.ts` | `LIGHT` (Blueprint) and `DARK` (Studio Dark) `LabTheme` tokens; `LAB_THEMES` array |
@@ -117,7 +118,8 @@ Renders a `100vh` flex column:
   falls back to internal `stepIdx` only when `onSelectStep` is omitted, for direct-render tests),
   prefaced by `<GlobalCoach t={theme} />` (the cross-catalog next-step coach, catalogs view only).
   A matrix cell click runs `openFromMatrix(catalogId, entityId, step)` → `navigateTo(...)` + switch
-  `view` back to `'catalogs'`.
+  `view` back to `'catalogs'`. `Work these N` on the matrix hands a work queue to `useLabWorkQueue` (the shell's
+  one live queue, session state only); while it is active `<WorkQueueStrip>` sits under the coach.
 - **Cross-view navigation**: a one-shot `pendingNavigation` store subscription (`oneShotLabStore`)
   drives navigation from anywhere — used by the One-shot panel and by `GlobalCoach`. The payload
   carries an optional `stepIndex`; LayoutLab feeds `catalogId`/`entityId`/`stepIndex ?? 0` straight
@@ -573,6 +575,22 @@ out-of-range clamp (bounded by the OPEN entity's own list) all read it, so the c
 matrix and search agree about an entity's steps by construction. Pinned by
 `entityPipeline.test.ts`, `globalCoach.profile.test.ts`, `LabSearch.profileStep.test.tsx` and
 `LayoutLab.entityStepClamp.test.tsx`.
+
+### Matrix triage + work queue (`matrixTriage.ts`, `workQueue.ts`)
+
+The Matrix ranks its rows by the ONE coach ladder: `buildMatrixRows` carries `row.issue` =
+`pickLadderIssue(own steps, displayStatus, driftByStep)` — the same pick both coaches make — and
+`rankMatrixRows` sorts by `COACH_PRIORITY_RANK`, then entity id (an immutable unique tiebreaker, so
+store order never leaks through and a refetch cannot reshuffle the board). `MatrixTriageBar` filters
+to one rung (`{kind:'rung'}`, `none` = every own step passes) with per-rung counts over the UNFILTERED
+board; a column header applies `{kind:'column', step, status}` (most urgent status present, click
+again for the next) and never matches a row whose own pipeline lacks the step. The filtered board is
+captioned with its predicate (`2 of 5 · deferred`). `Work these N` builds a `WorkQueue` of stops
+(entity, step by label, that row's OWN index) and `LayoutLab` opens each through `openFromMatrix`.
+`useLabWorkQueue` re-anchors the queue on the lab location during render (`reconcileQueue`): on a
+queued entity the cursor follows it; a tree / search / coach jump anywhere else ends the queue.
+Next/Prev never wrap (Next on the last stop reads Finish). Pinned by `matrixTriage.test.ts`,
+`workQueue.test.ts`, `CatalogMatrix.triage.test.tsx` and `LayoutLab.workQueue.test.tsx`.
 
 ### Concurrency
 
