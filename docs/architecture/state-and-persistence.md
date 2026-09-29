@@ -383,10 +383,15 @@ unit-tested against an in-memory DB (`new Database(':memory:')`), and a thin ser
 
 **`headless_builds`** (queued/running/completed UBT build jobs) follows this same guard pattern but is
 owned by `src/lib/ue5-bridge/build-pipeline.ts` (`ensureHeadlessBuildsTable()`) — the sole reader/writer —
-**not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it (+ joins `error_memory`) to derive the
+**not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it to derive the
 **Build Health & Trends** dashboard (Evaluator → *Build Health* tab, served by
 `/api/ue5-bridge/build-health`): success rate, duration trend, slowest targets, recurring error
-fingerprints, and rolling-baseline regression alerts.
+fingerprints, and rolling-baseline regression alerts. Recurring errors come from the same project-scoped
+rows' own `diagnostics_json` (selected only where `error_count > 0`), fingerprinted by the pure
+`build-error-recurrence.ts` and judged resolved **per lane** (target | target type | configuration |
+platform: still failing while the latest finished, parseable build of any lane it hit carries it) — not
+from `error_memory`, which has no project column and which no build writes without a `moduleId`. When the
+builds counted errors that carried no parseable diagnostic, the card says so instead of an all-clear.
 
 **`cli_spend` + `cli_spend_budget`** (`src/lib/cli-spend-db.ts`, same guard pattern) capture the
 token/cost `result` event every Claude Code CLI run emits — previously parsed but thrown away.
