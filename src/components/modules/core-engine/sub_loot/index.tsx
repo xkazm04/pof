@@ -35,7 +35,6 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('All');
-  const [enemyFilter, setEnemyFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<LootSubtab>('core');
 
   const tabs: SubTab[] = useMemo(() => [
@@ -55,6 +54,8 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
     (name: string) => setExpanded((prev) => (prev === name ? null : name)),
     [],
   );
+
+  const focusTuner = useCallback(() => setActiveTab('core'), []);
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
@@ -80,13 +81,12 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
       {/* ── Active Tab Subtitle ───────────────────────────────────────────── */}
       {subtitle && <p className="text-xs font-mono text-text-muted/70 -mt-1 mb-1 pl-0.5">{subtitle}</p>}
 
-      {/* Rarity + Enemy filters */}
+      {/* Rarity filter + Enemy Source (picks the binding the Core-tab tuner focuses) */}
       <LootFilters
         rarityFilter={rarityFilter}
         setRarityFilter={setRarityFilter}
-        enemyFilter={enemyFilter}
-        setEnemyFilter={setEnemyFilter}
         activeRarityColor={activeRarityColor}
+        onEnemyPicked={focusTuner}
       />
 
       {/* ── Tab Content with Animated Transitions ─────────────────────────── */}

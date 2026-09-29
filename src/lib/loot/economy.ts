@@ -48,6 +48,18 @@ export interface EconomyFinding {
 
 type RarityGold = Record<string, number>;
 
+/** Difficulty tiers a binding's drop chance buckets into (catalog L4 taxonomy + lint peer groups). */
+export const LOOT_TIERS = ['Minion', 'Standard', 'Elite', 'Boss'] as const;
+export type LootTier = (typeof LOOT_TIERS)[number];
+
+/** Bucket a drop chance into a difficulty tier. One rule for the catalog seed and the tier-peer lint. */
+export function lootTierOf(dropChance: number): LootTier {
+  if (dropChance >= 1) return 'Boss';
+  if (dropChance >= 0.5) return 'Elite';
+  if (dropChance >= 0.32) return 'Standard';
+  return 'Minion';
+}
+
 const MIN_PEERS = 2;
 const HIGH_FACTOR = 2.5;
 const LOW_FACTOR = 0.4;

@@ -25,6 +25,7 @@ import { EconomyImpact } from './economy/EconomyImpact';
 import { SmartLoot } from './economy/SmartLoot';
 import { EnemyLootBindingSection } from './core/EnemyLootBinding';
 import { EVCalculator } from './core/EVCalculator';
+import { BindingTuner } from './core/BindingTuner';
 
 const PIPELINE_STEPS = [
   'LootTable', 'WeightedRandom', 'WorldItem', 'Pickup', 'Inventory',
@@ -68,7 +69,8 @@ export function LootTabPanels({
             <WeightDistribution />
             <WorldItemPreview />
 
-            {/* Enemy binding & EV */}
+            {/* Enemy binding tuner, bindings & EV (one tuned roster: useLootTuningStore) */}
+            <BindingTuner />
             <EnemyLootBindingSection />
             <EVCalculator />
 
