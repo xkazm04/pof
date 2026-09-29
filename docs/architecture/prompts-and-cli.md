@@ -491,6 +491,26 @@ go through it, so the wire format can never drift between the two paths. The reg
 The id is any non-whitespace run — `cb-…` from `registerCallback` **or** `step-…`
 from the one-shot routes — so the prefix is intentionally unconstrained.
 
+**One run settlement (server, `run-settle.ts`).** Every server path that spawns a CLI run
+and waits for it — `awaitCallback` (one-shot propose/refine/step), batch review
+(`/api/feature-matrix/batch-review`) and the deep-eval job's executor — settles through
+`settleExecution(executionId, { expect: 'callback' | 'end', timeoutMs?, signal? })`. It never
+rejects: it returns `Result<{ text, callback }, { reason, message }>` with a closed reason
+union `no-callback | timeout | cancelled | exit-nonzero | error-result | spawn-error |
+not-found`. It reads the execution's event backlog and status at subscribe time (a spawn
+that failed synchronously settles `spawn-error` at once), then listens live and on the
+process `close` (a clean exit with no result emits no event), so a run that ended cleanly
+without a marker settles `no-callback` the moment it ends instead of holding the caller for
+the whole window. Only a still-`running` run is aborted — on the caller's timeout or signal
+— so no taskkill hits an exited PID and a `completed` run stays `completed`. `awaitCallback`
+throws the seam's message (`ended without a callback`, `callback timeout … (execution
+aborted)`); batch review writes `mod.error = "<reason>: <message>"` (a callback-less or
+rejected-callback run is `error`, never `completed`) on `UI_TIMEOUTS.batchReviewTimeout`,
+and its abort is an `AbortController` the seam honours; deep eval passes its job signal, so
+a cancel kills every in-flight pass. The runaway guard's error event carries
+`timedOut: true` and reads `timeout`. (Server-side; not the client door
+`cliPanelStore.settleRun`.)
+
 **Full sequence:**
 
 1. **Caller** calls `TaskFactory.<method>()` to create a `CLITask` with `appOrigin`
