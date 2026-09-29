@@ -3,6 +3,7 @@
 import { Plus, Link, Unlink } from 'lucide-react';
 import { TransitionArrow } from './TransitionArrow';
 import { ScreenNodeView } from './ScreenNodeView';
+import type { MenuFlowSeverity } from './menuFlowLint';
 import type { ScreenNode, ScreenTransition } from './types';
 
 interface FlowCanvasProps {
@@ -32,6 +33,8 @@ interface FlowCanvasProps {
   setEditingScreen: (id: string | null) => void;
   completeConnection: (toId: string) => void;
   deleteScreen: (id: string) => void;
+  /** Worst lint severity per screen id. */
+  severityByScreen?: Map<string, MenuFlowSeverity>;
 }
 
 export function FlowCanvas({
@@ -57,6 +60,7 @@ export function FlowCanvas({
   setEditingScreen,
   completeConnection,
   deleteScreen,
+  severityByScreen,
 }: FlowCanvasProps) {
   return (
     <div className="relative w-full bg-black/60 rounded-2xl border border-violet-900/40 overflow-hidden shadow-[inset_0_0_40px_rgba(49,46,129,0.5)] ring-1 ring-white/5 z-10" style={{ height: 420 }}>
@@ -150,6 +154,7 @@ export function FlowCanvas({
               completeConnection={completeConnection}
               startConnection={startConnection}
               deleteScreen={deleteScreen}
+              issueSeverity={severityByScreen?.get(scr.id)}
             />
           ))}
         </g>

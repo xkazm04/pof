@@ -1,11 +1,14 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Link, Send, Loader2 } from 'lucide-react';
-import { STATUS_STALE } from '@/lib/chart-colors';
+import { STATUS_STALE, STATUS_ERROR } from '@/lib/chart-colors';
 import { useMenuFlowDiagram } from './useMenuFlowDiagram';
 import { FlowCanvas } from './FlowCanvas';
 import { ScreenEditor } from './ScreenEditor';
 import { TransitionList } from './TransitionList';
+import { FlowLintPanel } from './FlowLintPanel';
+import { exportBlockers, type MenuFlowSeverity } from './menuFlowLint';
 import type { MenuFlowConfig } from './types';
 
 // ── Re-exports (preserve original public surface) ──
@@ -24,13 +27,26 @@ interface MenuFlowDiagramProps {
 export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramProps) {
   const {
     screens, transitions, selectedId, connectingFrom, editingScreen,
-    setConnectingFrom, setEditingScreen,
+    setSelectedId, setConnectingFrom, setEditingScreen,
     svgRef, pan, isPanning, dragState,
     addScreen, deleteScreen, updateScreen,
-    startConnection, completeConnection, deleteTransition, toggleBidirectional,
+    startConnection, completeConnection, deleteTransition, toggleBidirectional, updateTransition,
+    issues, applyFix,
     handleNodeMouseDown, handleMouseMove, handleMouseUp, handleSvgMouseDown,
     getNodeCenter, selectedScreen, config, getArrowPath,
   } = useMenuFlowDiagram();
+
+  const blocked = exportBlockers(issues);
+  const errorCount = issues.filter((i) => i.severity === 'error').length;
+  const severityByScreen = useMemo(() => {
+    const map = new Map<string, MenuFlowSeverity>();
+    for (const issue of issues) {
+      for (const id of issue.screenIds) {
+        if (map.get(id) !== 'error') map.set(id, issue.severity);
+      }
+    }
+    return map;
+  }, [issues]);
 
   return (
     <div className="space-y-6 bg-[#03030a] p-6 rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] relative w-full overflow-hidden">
@@ -79,6 +95,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         setEditingScreen={setEditingScreen}
         completeConnection={completeConnection}
         deleteScreen={deleteScreen}
+        severityByScreen={severityByScreen}
       />
 
       {/* ── Screen Editor Panel ── */}
@@ -97,14 +114,25 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
           transitions={transitions}
           toggleBidirectional={toggleBidirectional}
           deleteTransition={deleteTransition}
+          updateTransition={updateTransition}
         />
       )}
 
       {/* ── Summary & Generate ── */}
-      <div className="relative z-10 pt-6 mt-2 border-t border-violet-900/40">
+      <div className="relative z-10 pt-6 mt-2 border-t border-violet-900/40 space-y-3">
+        <FlowLintPanel
+          issues={issues}
+          onFix={applyFix}
+          onSelectScreen={(id) => { setSelectedId(id); setEditingScreen(id); }}
+        />
+        {blocked && (
+          <p className="text-xs font-bold uppercase" style={{ color: STATUS_ERROR }} data-testid="menu-flow-export-blocked">
+            Export blocked: {errorCount} {errorCount === 1 ? 'error' : 'errors'} would not compile - fix above
+          </p>
+        )}
         <button
           onClick={() => onGenerate(config)}
-          disabled={isGenerating || screens.length === 0}
+          disabled={isGenerating || screens.length === 0 || blocked}
           className="relative w-full overflow-hidden flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-[11px] font-bold uppercase transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
           style={{
             backgroundColor: 'rgba(167,139,250,0.15)',
