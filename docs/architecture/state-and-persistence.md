@@ -409,6 +409,18 @@ classifies expensive task types (live-editor runs + broad scans + the strict **j
 only under genuine budget pressure — interrupts `useModuleCLI.execute` with the global
 `PreflightGuardDialog` (queued via `preflightStore`).
 
+The budget guard **echoes its enforced windows** (2026-09-29). `getBudgetStatus()` returns
+`periods: { zone: 'UTC', day, month }` (half-open ISO instants) built by `budgetPeriods` in
+`src/lib/cli-spend/budgetPreview.ts` from the same `report-window.ts` day/month keys it sums over, so the
+period the UI shows IS the one `/api/cli-spend`, `judge-run` and `judge-one` enforce (the enforcer
+dictates the zone: UTC, unlike the session ledger's reporting zone). The field is additive; no enforcement
+reads it. The Budget guard uses it, with the dashboard's existing `daily` rollup, for two pure
+derivations that store and send nothing: while editing, `previewDailyLimit` replays the typed daily limit
+over the recorded active days ("exceeded on N of the last M active days; worst …") and `projectPeriod`
+checks the typed monthly limit against this month's pace; in view mode `BudgetPace` shows the month
+projected at the current run rate (refused under one elapsed day), the date it reaches the limit, and
+the local time the UTC daily budget resets.
+
 The **judge fleet** (`scripts/judge-run.ts`, `scripts/judge-one.ts`) reaches the same seam. Those
 harnesses spawn the Claude CLI themselves (Opus/high per draw, one spawn per entity×step×median), so
 until they were metered the Spend tab's total was structurally incomplete after any fleet run and no
