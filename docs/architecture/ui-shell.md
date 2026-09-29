@@ -264,6 +264,23 @@ top door layer — LIFO holds among door layers only), the lab shell's `LabSearc
 / `LabBridgeStrip` / `useBaseline` (page.tsx mounts one shell, so they never meet these), and
 local popovers / dev tools. New shortcuts use the hooks, not another window listener.
 
+### 4e. Tab title + favicon — outcome held until seen (`src/lib/shell/tabAttention.ts`, `src/hooks/useDynamicTitle.ts`)
+
+The browser tab is the operator's ambient signal while minutes-long work runs in another window.
+`tabAttention` is a pure reducer `(prev, signal, visible, now) -> { title, tone, latched }` fed by two
+adapters over consecutive snapshots: `fromCliSessions` (legacy shell, cliPanelStore: per-session
+`isRunning` edge + `lastTaskSuccess` + `lastCallbackStatus`) and `fromLabActivity` (lab shell,
+`activityModel` lanes: `running-here` -> `attention` is `(Failed)` for a failed one-shot lane, else
+`(Needs you)`; -> `idle` is `(Done)`). A failed run is `(Failed)`, never `(Done)`; a run that exited 0
+but whose asked-for `@@CALLBACK` failed or went missing is `(Not landed)` (only when `lastDispatch`'s
+prompt carried callback ids — the `suggestionIntents` rule); one failure among running sessions reads
+`(Running · 1 failed)`. A first snapshot is never an edge. An outcome latches while
+`document.visibilityState` is hidden; the `UI_TIMEOUTS.tabOutcomeLinger` countdown starts only once
+the tab is visible. `useDynamicTitle()` (AppShell) keeps base `POF` and the `(N sessions)` /
+`(Running)` / `(N running)` strings; `useDynamicTitle(summary)` is called by `ActivityChip` (always
+mounted in the lab header) with the document's own title as base, left untouched while nothing runs
+or ends. The favicon (STATUS_* from chart-colors) repaints only when the tone changes.
+
 ### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 
 Three-column CSS grid `260px 320px 1fr`:
