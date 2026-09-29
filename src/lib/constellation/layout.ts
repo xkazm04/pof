@@ -15,6 +15,7 @@
 
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureStatus } from '@/types/feature-matrix';
+import { isFeatureDone } from '@/lib/feature-done';
 import {
   MODULE_FEATURE_DEFINITIONS,
   buildDependencyMap,
@@ -95,10 +96,12 @@ export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** A feature counts as "done" when implemented or improved. */
-export function isFeatureDone(status: FeatureStatus): boolean {
-  return status === 'implemented' || status === 'improved';
-}
+/**
+ * A feature counts as "done" when implemented or improved. The rule lives in
+ * `@/lib/feature-done`; re-exported here (the same function) so the
+ * constellation, planner and topology importers keep their import path.
+ */
+export { isFeatureDone };
 
 // ── Engine ────────────────────────────────────────────────────────────────
 

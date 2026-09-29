@@ -1,4 +1,5 @@
 import type { SubModuleId, PartialModuleMap } from '@/types/modules';
+import { isFeatureDone } from '@/lib/feature-done';
 
 // ─── Module-level prerequisite graph ──────────────────────────────────────────
 // Defines which modules should be completed before starting another.
@@ -988,9 +989,9 @@ export interface ResolvedDependency {
 export interface DependencyInfo {
   /** Direct dependencies for this feature */
   deps: ResolvedDependency[];
-  /** Dependencies that are NOT implemented (status != 'implemented') */
+  /** Dependencies that are NOT done (`!isFeatureDone(status)` - neither implemented nor improved) */
   blockers: ResolvedDependency[];
-  /** True if any upstream dependency is missing/unknown */
+  /** True if any upstream dependency is not done */
   isBlocked: boolean;
 }
 
@@ -1065,10 +1066,8 @@ export function computeBlockers(
 ): Map<string, DependencyInfo> {
   const result = new Map<string, DependencyInfo>();
   for (const [key, info] of depMap) {
-    const blockers = info.deps.filter((d) => {
-      const status = statusMap.get(d.key);
-      return !status || status !== 'implemented';
-    });
+    // One done rule: an 'improved' dep (what the app's own Build lands) is met.
+    const blockers = info.deps.filter((d) => !isFeatureDone(statusMap.get(d.key)));
     result.set(key, {
       ...info,
       blockers,

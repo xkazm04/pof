@@ -19,6 +19,7 @@ import {
   HEURISTIC_MATCH_NOTE,
   type ItemFeatureSource,
 } from '@/lib/feature-definitions';
+import { isFeatureDone } from '@/lib/feature-done';
 import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import {
   summarizeRuns,
@@ -263,10 +264,11 @@ export function computeNBA(
 
     if (featureKeys.length > 0) {
       // Only claim to unblock work while at least one produced feature is still
-      // unimplemented — an item whose features are all done unblocks nothing.
-      const allImplemented = featureKeys.every((k) => statusMap.get(k) === 'implemented');
+      // not done — an item whose features are all done (implemented OR improved,
+      // the one rule in @/lib/feature-done) unblocks nothing.
+      const allDone = featureKeys.every((k) => isFeatureDone(statusMap.get(k)));
 
-      if (dependentCount > 0 && !allImplemented) {
+      if (dependentCount > 0 && !allDone) {
         breakdown.urgency = Math.min(dependentCount * 6, W.urgency);
         const across = featureKeys.length > 1
           ? ` (most-depended-on of ${featureKeys.length} features this item produces)`

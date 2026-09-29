@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
+import { moduleCompletion, projectCompletionPct } from '@/lib/feature-done';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useNavigationStore } from '@/stores/navigationStore';
@@ -47,7 +48,7 @@ export function useCrossModuleFeatureDashboard() {
       const partial = agg?.partial ?? 0;
       const missing = agg?.missing ?? 0;
       const unknown = agg?.unknown ?? total;
-      const pctComplete = total > 0 ? (implemented + improved) / total : 0;
+      const pctComplete = moduleCompletion({ implemented, improved, total });
 
       return {
         moduleId: moduleId as SubModuleId,
@@ -105,7 +106,7 @@ export function useCrossModuleFeatureDashboard() {
     return t;
   }, [cells]);
 
-  const overallPct = totals.total > 0 ? Math.round(((totals.implemented + totals.improved) / totals.total) * 100) : 0;
+  const overallPct = projectCompletionPct(cells);
 
   // Lowest-scoring modules (least % implemented)
   const lowestModules = useMemo(() => {

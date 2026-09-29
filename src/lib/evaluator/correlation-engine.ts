@@ -3,6 +3,7 @@ import type { ModuleAggregate, ReviewSnapshot } from '@/lib/feature-matrix-db';
 import type { AnalyticsDashboard, ModuleStats } from '@/types/session-analytics';
 import type { EvaluatorReport, ModuleScore } from '@/types/evaluator';
 import { MODULE_LABELS } from '@/lib/module-registry';
+import { moduleCompletion } from '@/lib/feature-done';
 
 // ─── Correlation types ───────────────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ export interface ModuleCorrelation {
   label: string;
   // Quality data
   avgQuality: number | null;
+  /** Fraction (0-1) of features done - implemented OR improved (`moduleCompletion`). */
   pctComplete: number;
   totalFeatures: number;
   implemented: number;
@@ -68,7 +70,9 @@ export function correlateModuleData(
 
     const totalFeatures = agg?.total ?? 0;
     const implemented = agg?.implemented ?? 0;
-    const pctComplete = totalFeatures > 0 ? implemented / totalFeatures : 0;
+    // Done = implemented OR improved (the one rule): feeds the Summary health
+    // coverage term and the insight copy.
+    const pctComplete = moduleCompletion({ implemented, improved: agg?.improved ?? 0, total: totalFeatures });
 
     const hasQuality = agg != null && agg.avgQuality != null;
     const hasSession = session != null && session.totalSessions > 0;

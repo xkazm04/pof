@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Check, ChevronRight, FileCode, Loader2, ArrowRight, AlertTriangle, Link2, Zap, Play, Copy, Eye } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { DependencyInfo } from '@/lib/feature-definitions';
+import { isFeatureDone } from '@/lib/feature-done';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { STATUS_ERROR, STATUS_BLOCKER, STATUS_SUCCESS, statusBg, statusBorder } from '@/lib/chart-colors';
@@ -152,7 +153,7 @@ export function FeatureRowItem({
         </span>
 
         {/* Blocked badge */}
-        {isBlocked && feature.status !== 'implemented' && (
+        {isBlocked && !isFeatureDone(feature.status) && (
           <span
             className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
             style={{ backgroundColor: statusBg(STATUS_ERROR), color: STATUS_BLOCKER }}
@@ -250,7 +251,7 @@ export function FeatureRowItem({
                     </span>
                   </div>
                   <MarkdownProse content={feature.nextSteps} className="leading-relaxed pl-[18px] text-text-muted-hover" />
-                  {onFix && feature.status !== 'improved' && !(feature.status === 'implemented' && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
+                  {onFix && feature.status !== 'improved' && !(isFeatureDone(feature.status) && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
