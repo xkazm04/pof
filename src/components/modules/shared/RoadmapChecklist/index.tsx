@@ -11,6 +11,8 @@ import { BulkActionBar } from './BulkActionBar';
 import { CompactChecklist } from './CompactChecklist';
 import { CardsChecklist } from './CardsChecklist';
 import { ChecklistContextMenu } from './ChecklistContextMenu';
+import { DiskCheckPanel } from './DiskCheckPanel';
+import { useDiskCheck } from './useDiskCheck';
 
 export type { RoadmapChecklistProps } from './types';
 
@@ -36,6 +38,8 @@ export function RoadmapChecklist({
     nbaScope, nbaScopedRows, patternLibrary,
     completedCount, progressPercent, criticalCount, importantCount,
   } = useRoadmapChecklist(items, subModuleId);
+  // On demand only: nothing is verified or ticked until a panel button is clicked.
+  const disk = useDiskCheck(subModuleId, items);
 
   return (
     <div className="space-y-4">
@@ -138,6 +142,21 @@ export function RoadmapChecklist({
         </div>
       </div>
 
+      <DiskCheckPanel
+        items={items}
+        verifiableCount={disk.verifiableIds.length}
+        verifiableIds={disk.verifiableIds}
+        verification={verification}
+        state={disk.state}
+        plan={disk.plan}
+        isRunning={isRunning}
+        accentColor={accentColor}
+        onCheck={() => { void disk.run(); }}
+        onApply={disk.apply}
+        onUntick={disk.untick}
+        onRunPrompt={onRunPrompt}
+      />
+
       {/* First-visit hint */}
       {completedCount === 0 && !isRunning && (
         <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface text-2xs text-text-muted leading-relaxed">
@@ -204,6 +223,7 @@ export function RoadmapChecklist({
           expandedNotes={expandedNotes}
           editingNotes={editingNotes}
           onRunPrompt={onRunPrompt}
+          onDiskRecheck={disk.verifiableIds.length > 0 ? () => { void disk.run(); } : undefined}
           toggleItem={toggleItem}
           toggleSelected={toggleSelected}
           setHoveredItemId={setHoveredItemId}
