@@ -180,6 +180,9 @@ export const UI_TIMEOUTS = {
    *  The client waits ceiling + this, and says so when it gives up — it never invents a
    *  budget unrelated to what the server can possibly spend. */
   experimentBudgetMargin: 3 * 60 * 1000,
+  /** How long a tab-title outcome ('(Failed)', '(Done)', ...) lingers once the tab is SEEN.
+   *  A hidden tab holds the outcome indefinitely; this countdown starts on visibility. */
+  tabOutcomeLinger: 4_000,
 } as const;
 
 /**

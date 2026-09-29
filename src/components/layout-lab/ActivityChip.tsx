@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Z_INDEX } from '@/lib/constants';
+import { useDynamicTitle } from '@/hooks/useDynamicTitle';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { LANE_GLYPH, LANE_WORD, type ActivityLane, type LaneState } from './activityModel';
 import { useLabActivity } from './hooks/useLabActivity';
@@ -27,6 +28,9 @@ import { labPanelStyle, type LabTheme } from './theme';
  */
 export function ActivityChip({ t }: { t: LabTheme }) {
   const summary = useLabActivity();
+  // The lab shell's tab title: this chip is always mounted in the header and already holds
+  // the summary, so the tab reports outcomes (failed / needs you / done) from the same read.
+  useDynamicTitle(summary);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement | null>(null);
   const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
