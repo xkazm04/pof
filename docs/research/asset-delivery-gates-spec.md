@@ -230,3 +230,17 @@ cosmetic: **451 components, 59 real parts after the floater rule, 392 specks**, 
 plan would have chosen **convex hulls**, where the assumed plan chose a **BOX**. The basis
 field is reporting a real difference in outcome, not a formality. Installing the TripoSR venv
 is what closes this last gap.
+
+**PREVIEW BEFORE BOOT (2026-09-29, challenge-2026-09-29b).** `UeImportPanel` now offers the forge
+queue's deliveries (`ueImportCandidates.ts`: finished mesh over raw, verdict carried, an `SM_` name
+suggested so a blank name never falls through to the shared `TripoSRMesh`) and asks the read-only
+`POST /api/visual-gen/ue-import/plan` for the plan (same `gateRequestFor` + critic + `planUeImport`
+as the job, the import route's refusals word for word, never the experiment runner) before the
+editor boot is paid. **Each delivery imports into its own folder `/Game/Generated/<name>/`**, and
+the replace verdict is folder-wide: ANY file under `<Content>/Generated/<name>/` is a replace
+(the glTF import writes the mesh AND its materials/textures with `replace_existing`, named from
+the glb, so a mesh-only check would miss a clobbered material); `null` when POF_UE_UPROJECT is
+unset. A replace needs an explicit tick; Send posts exactly the previewed tuple and an edit after
+the preview disables it until a new preview answers. The previewed `assetPath` is the requested
+`<folder>/<name>`; the live run above shows the importer may nest it (`<glb>/StaticMeshes/`),
+and the imported path is still read back by the job.
