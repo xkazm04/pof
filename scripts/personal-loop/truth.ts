@@ -12,7 +12,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
-import { buildSwimlane, sortLanes, getStepFact, isSyntheticEntity, type Swimlane, type StepCell, type StepFact } from '@/lib/status/statusModel';
+import { buildSwimlane, sortLanes, getStepFact, isSyntheticEntity, judgedContentOfRow, type Swimlane, type StepCell, type StepFact } from '@/lib/status/statusModel';
 import { readinessOf, type Readiness } from '@/lib/status/readiness';
 import { craftForCell, type CellCraft } from '@/lib/craft/craftCell';
 import { rowToArtifact, type PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -113,8 +113,10 @@ export function readCell(catalogId: string, step: string, entityId?: string, tru
 
   const lane = buildSwimlane(catalogId, catalogId, [{ label: meta.label, archetype: meta.archetype, engine: meta.engine }], artifacts, verdicts);
   const cell = lane.cells[0];
-  const updated = new Map(artifacts.filter((a) => a.updatedAt).map((a) => [a.entityId, a.updatedAt!]));
-  const cc = craftForCell(catalogId, step, craft, updated);
+  // What each entity holds NOW, by THE row-hash rule /status uses — so a drain's same-content
+  // re-upsert does not read a gauge stale (and recertify does not report it `unmeasured`).
+  const content = new Map(artifacts.map((a) => [a.entityId, judgedContentOfRow(a)]));
+  const cc = craftForCell(catalogId, step, craft, content);
   const fact = getStepFact(catalogId, step);
 
   const latestJudge = groupBy(verdicts, (v) => v.entityId);

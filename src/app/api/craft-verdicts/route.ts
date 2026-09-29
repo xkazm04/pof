@@ -12,7 +12,7 @@ import {
 } from '@/lib/craft/craft-verdicts-db';
 import { buildCraftTrend, craftMovementOf, craftTrendSummary } from '@/lib/craft/craftCell';
 import { LENS_IDS } from '@/lib/craft/lens-map';
-import { listArtifacts } from '@/lib/pipeline-artifacts-db';
+import { currentStepBinding } from '@/lib/judge/stepBinding';
 
 /**
  * GET /api/craft-verdicts[?catalogId=] — the A-axis storage layer (craft gauges).
@@ -20,7 +20,8 @@ import { listArtifacts } from '@/lib/pipeline-artifacts-db';
  * Display + routing only: nothing in acceptance or statusModel's grade derivation reads
  * this route or its table, so a craft verdict can never move an R-grade. Staleness is
  * NOT computed here — the client already holds the current artifacts and projects each
- * verdict through `craftOf` (src/lib/status/craft.ts) with both timestamps.
+ * verdict through `craftOf` (src/lib/status/craft.ts) against the content on record: by
+ * `contentHash` when both sides carry a comparable one, by timestamp otherwise.
  *
  * Each returned verdict carries its `movement` (A-level change across the kept gauge log)
  * when it has been gauged more than once, joined from ONE extra query for the whole
@@ -110,11 +111,13 @@ const craftVerdictSchema = z.object({
 /**
  * POST /api/craft-verdicts — upsert one craft gauge. Like judge-verdicts there is no
  * server-side re-grade (the auditor IS the gauge; `model` + `findings` make it
- * auditable) — but the route stamps the STALENESS ANCHOR: `artifactUpdatedAt` is read
- * from the newest artifact on record for the same (catalog, entity, step), so every
- * producer binds without opting in and a gauge can never silently outlive the content
- * it gauged. A row with no artifact (the `__process__` scorecard) leaves it NULL —
- * staleness unknown, never fabricated.
+ * auditable) — but the route stamps the CONTENT BINDING through the shared step-binding
+ * door (`@/lib/judge/stepBinding`, the same one judge verdicts use): `contentHash` =
+ * `stepContentHash` of the artifact on record for the same (catalog, entity, step), plus its
+ * `artifactUpdatedAt` (the anchor a hash-less reader still needs). Every producer binds
+ * without opting in, and a drain re-upserting identical data no longer reads the gauge stale.
+ * A row with no artifact (the `__process__` scorecard) carries neither — staleness unknown,
+ * never fabricated.
  *
  * The write is METERED into `cli_spend` under the `craft` module (`craftSpendRecord`), so the
  * A-axis campaign's spend is visible beside the R-axis judge fleet's instead of nowhere. An
@@ -136,11 +139,16 @@ export async function POST(req: NextRequest) {
     if (!isProcess && v.lens === 'production-process') {
       return apiError('production-process gauges the catalog, not a step — use the __process__ row', 400);
     }
-    const artifactUpdatedAt = isProcess
-      ? undefined
-      : listArtifacts(v.catalogId, v.entityId).find((a) => a.step === v.step)?.updatedAt;
+    const binding = isProcess ? null : currentStepBinding(v.catalogId, v.entityId, v.step);
     return apiSuccess(
-      upsertCraftVerdict({ ...v, ...(artifactUpdatedAt ? { artifactUpdatedAt } : {}) }, cost),
+      upsertCraftVerdict(
+        {
+          ...v,
+          ...(binding ? { contentHash: binding.contentHash } : {}),
+          ...(binding?.updatedAt ? { artifactUpdatedAt: binding.updatedAt } : {}),
+        },
+        cost,
+      ),
     );
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'craft-verdicts POST failed', 500);

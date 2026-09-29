@@ -28,7 +28,8 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { useStatusArtifacts } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import { buildSwimlane, sortLanes, getStepFact, judgedContentOfRow, type Swimlane, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import {
   readinessOf,
@@ -329,22 +330,21 @@ export function PipelinesView({
       }
       const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
       if (craft && verdicts.craftByCatalog) {
-        // Per-step entity → current artifact updatedAt: the staleness anchor a
-        // craft gauge is projected against (a verdict older than a re-produce
-        // must read as stale, never current).
-        const updatedByStep = new Map<string, Map<string, string>>();
+        // Per-step entity → what the artifact holds NOW (content hash + updatedAt), via
+        // THE row-hash rule the judge path uses (`judgedContentOfRow`). A gauge whose
+        // content was re-produced reads stale; a drain re-upserting identical data does not.
+        const contentByStep = new Map<string, Map<string, JudgedContent>>();
         for (const a of c.rows) {
-          if (!a.updatedAt) continue;
-          const m = updatedByStep.get(a.step) ?? new Map<string, string>();
-          m.set(a.entityId, a.updatedAt);
-          updatedByStep.set(a.step, m);
+          const m = contentByStep.get(a.step) ?? new Map<string, JudgedContent>();
+          m.set(a.entityId, judgedContentOfRow(a));
+          contentByStep.set(a.step, m);
         }
         for (const s of p.steps) {
           const cc = craftForCell(
             c.catalogId,
             s.label,
             verdicts.craftByCatalog.get(c.catalogId) ?? [],
-            updatedByStep.get(s.label) ?? new Map(),
+            contentByStep.get(s.label) ?? new Map(),
           );
           if (cc) craft.set(`${c.catalogId} ${s.label}`, cc);
         }

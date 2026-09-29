@@ -2,6 +2,11 @@
  * The A-axis projection (src/lib/status/craft.ts) — the craft ladder's laws:
  * rung order pinned, precedence (ungauged → stale → at-ceiling → gauged), version
  * invalidation, and the display codes. Pure module, no DB.
+ *
+ * Content binding: a gauge is stale when the CONTENT it read changed (its stamped
+ * `stepContentHash` disagrees with the one on record) — not when the row was merely
+ * rewritten. Hashes here are REAL `stepContentHash` values: a literal like 'v2:abc' is not a
+ * comparable hash and would silently fall back to the timestamp rule.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -15,6 +20,8 @@ import {
   distanceToRoof,
   CRAFT_STATE_GLYPH,
 } from '@/lib/status/craft';
+import { stepContentHash } from '@/lib/judge/contentHash';
+import { craftForCell, cellDistanceToRoof } from '@/lib/craft/craftCell';
 
 describe('craft ladder order', () => {
   it('pins the rung order A0..A4 and rank follows it', () => {
@@ -50,7 +57,7 @@ describe('craftOf precedence', () => {
     const c = craftOf({
       ...base,
       verdict: { aLevel: 'A3', lensVersion: 2, artifactUpdatedAt: '2026-07-01 10:00:00' },
-      artifactUpdatedAt: '2026-07-20 10:00:00',
+      artifact: { updatedAt: '2026-07-20 10:00:00' },
     });
     expect(c.level).toBe('A3');
     expect(c.state).toBe('stale');
@@ -61,7 +68,7 @@ describe('craftOf precedence', () => {
       currentLensVersion: 1,
       ceiling: 'A2',
       verdict: { aLevel: 'A2', lensVersion: 1, artifactUpdatedAt: '2026-07-01 10:00:00' },
-      artifactUpdatedAt: '2026-07-20 10:00:00',
+      artifact: { updatedAt: '2026-07-20 10:00:00' },
     });
     expect(c.state).toBe('stale');
   });
@@ -70,7 +77,7 @@ describe('craftOf precedence', () => {
     const c = craftOf({
       ...base,
       verdict: { aLevel: 'A2', lensVersion: 2 },
-      artifactUpdatedAt: '2026-07-20 10:00:00',
+      artifact: { updatedAt: '2026-07-20 10:00:00' },
     });
     expect(c.state).toBe('gauged');
   });
@@ -85,6 +92,72 @@ describe('craftOf precedence', () => {
     const c = craftOf({ ...base, verdict: { aLevel: 'A2', lensVersion: 2 } });
     expect(c.level).toBe('A2');
     expect(c.state).toBe('gauged');
+  });
+});
+
+describe('craftOf content binding — staleness follows the content, not the write time', () => {
+  const H = stepContentHash({ brief: 'a sword that remembers every wielder' });
+  const H2 = stepContentHash({ brief: 'a sword that forgets every wielder' });
+  const base = { currentLensVersion: 1, ceiling: 'A4' as const };
+
+  it('a same-content re-upsert (drain / static-verify) keeps the gauge current', () => {
+    const c = craftOf({
+      ...base,
+      verdict: { aLevel: 'A3', lensVersion: 1, contentHash: H, artifactUpdatedAt: '2026-09-01 10:00:00' },
+      artifact: { hash: H, updatedAt: '2026-09-02 10:00:00' },
+    });
+    expect(c).toMatchObject({ level: 'A3', state: 'gauged' });
+  });
+
+  it('a hash from another scheme is not comparable — it keeps the timestamp rule', () => {
+    const c = craftOf({
+      ...base,
+      verdict: { aLevel: 'A3', lensVersion: 1, contentHash: 'v2-x-y', artifactUpdatedAt: '2026-09-01 10:00:00' },
+      artifact: { hash: H, updatedAt: '2026-09-02 10:00:00' },
+    });
+    expect(c.state).toBe('stale');
+  });
+
+  it('a re-produce inside the same second is caught by the hash', () => {
+    const c = craftOf({
+      ...base,
+      verdict: { aLevel: 'A3', lensVersion: 1, contentHash: H, artifactUpdatedAt: '2026-09-01 10:00:00' },
+      artifact: { hash: H2, updatedAt: '2026-09-01 10:00:00' },
+    });
+    expect(c).toMatchObject({ level: 'A3', state: 'stale' });
+    expect(c.because).toContain('content changed');
+  });
+
+  it('[guard] a legacy hash-less gauge keeps the timestamp rule', () => {
+    const c = craftOf({
+      ...base,
+      verdict: { aLevel: 'A3', lensVersion: 1, artifactUpdatedAt: '2026-09-01 10:00:00' },
+      artifact: { hash: H, updatedAt: '2026-09-02 10:00:00' },
+    });
+    expect(c.state).toBe('stale');
+  });
+
+  it('[guard] an artifact the reader could not hash falls to the conservative side', () => {
+    const c = craftOf({
+      ...base,
+      verdict: { aLevel: 'A3', lensVersion: 1, contentHash: H, artifactUpdatedAt: '2026-09-01 10:00:00' },
+      artifact: { updatedAt: '2026-09-02 10:00:00' },
+    });
+    expect(c.state).toBe('stale');
+  });
+
+  it('craftForCell binds by content: a re-upserted cell keeps its level and its rollup distance', () => {
+    const cell = craftForCell(
+      'items',
+      'Concept Brief',
+      [{ catalogId: 'items', entityId: 'e1', step: 'Concept Brief', aLevel: 'A2', lensVersion: 1, contentHash: H, artifactUpdatedAt: '2026-09-01 10:00:00' }],
+      new Map([['e1', { hash: H, updatedAt: '2026-09-03 08:00:00' }]]),
+    );
+    expect(cell).toBeTruthy();
+    expect(cell!.craft.state).toBe('gauged');
+    expect(cell!.craft.level).toBe('A2');
+    expect(cellDistanceToRoof(cell!)).toBe(distanceToRoof('A2', cell!.ceiling));
+    expect(cellDistanceToRoof(cell!)).toBeLessThan(distanceToRoof('A0', cell!.ceiling));
   });
 });
 

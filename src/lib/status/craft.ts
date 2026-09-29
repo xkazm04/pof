@@ -18,11 +18,16 @@
  *    (`src/lib/craft/craft-ceilings.json`), and the remaining gap is a capability
  *    ceiling, not missing effort.
  *  - `stale` means the artifact changed after it was gauged: the score grades content
- *    the step no longer holds and must not be trusted or reported as current.
+ *    the step no longer holds and must not be trusted or reported as current. "Changed" is
+ *    decided by CONTENT (`stepContentHash`, the same fingerprint judge verdicts bind to)
+ *    whenever both sides carry a comparable hash; only a hash-less side falls back to the
+ *    row's write time — which errs toward stale, never toward current.
  *  - A verdict scored under an older lens version is A0 UNGAUGED, not its old level —
  *    lenses only change via a version bump, and the bump visibly invalidates dependent
  *    verdicts instead of silently re-meaning them.
  */
+import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
+import { isComparableHash } from '@/lib/judge/contentHash';
 
 /** The ladder, ascending. `A_LADDER` below is the single source of order. */
 export type CraftLevel = 'A0' | 'A1' | 'A2' | 'A3' | 'A4';
@@ -86,6 +91,8 @@ export interface CraftVerdictLite {
   /** The artifact `updatedAt` stamped when the verdict was written (staleness anchor).
    *  Absent on rows written with no artifact on record (e.g. process scorecards). */
   artifactUpdatedAt?: string;
+  /** `stepContentHash` of the content gauged (the content binding). Absent on legacy rows. */
+  contentHash?: string;
 }
 
 export interface CraftInput {
@@ -95,8 +102,35 @@ export interface CraftInput {
   currentLensVersion: number;
   /** The medium's roof (src/lib/craft/craft-ceilings.json). */
   ceiling: CraftLevel;
-  /** The artifact's current `updatedAt`, for staleness. */
-  artifactUpdatedAt?: string;
+  /** What the step holds NOW — its content hash (when the reader can prove one) and its
+   *  `updatedAt`. The same shape judge verdicts are checked against (`judgeBridge`). */
+  artifact?: JudgedContent;
+}
+
+/**
+ * Did the content change since this verdict gauged it? Returns WHY it is stale, or null.
+ *
+ *  - BOTH sides carry a hash of the CURRENT scheme → compare fingerprints. A drain re-upserting
+ *    identical data moves `updated_at` but not the hash (current); a re-produce inside the same
+ *    second moves the hash but not the second-resolution timestamp (stale).
+ *  - Otherwise (a legacy hash-less gauge, a hash from a superseded scheme, or a reader that could
+ *    not prove the artifact's hash) → the timestamp rule, exactly as before: a write after the
+ *    gauge reads stale. Unprovable never elevates a gauge to current.
+ */
+function staleBecause(verdict: CraftVerdictLite, artifact: JudgedContent | undefined): string | null {
+  if (isComparableHash(verdict.contentHash) && isComparableHash(artifact?.hash)) {
+    return verdict.contentHash === artifact?.hash
+      ? null
+      : 'content changed since it was gauged — this level grades content the step no longer holds';
+  }
+  const rewritten =
+    verdict.artifactUpdatedAt != null &&
+    artifact?.updatedAt != null &&
+    artifact.updatedAt > verdict.artifactUpdatedAt;
+  // Said as what it is: a later WRITE, with no content binding able to prove the content held.
+  return rewritten
+    ? 'artifact rewritten since it was gauged and no content binding proves it unchanged — this level may grade content the step no longer holds'
+    : null;
 }
 
 /**
@@ -107,7 +141,7 @@ export interface CraftInput {
  * reached" about content nobody has gauged.
  */
 export function craftOf(input: CraftInput): Craft {
-  const { verdict, currentLensVersion, ceiling, artifactUpdatedAt } = input;
+  const { verdict, currentLensVersion, ceiling, artifact } = input;
   if (!verdict) {
     return { level: 'A0', state: 'gauged', because: 'no craft verdict recorded for this step' };
   }
@@ -118,17 +152,8 @@ export function craftOf(input: CraftInput): Craft {
       because: `gauged under lens v${verdict.lensVersion}; current lens is v${currentLensVersion}`,
     };
   }
-  const stale =
-    verdict.artifactUpdatedAt != null &&
-    artifactUpdatedAt != null &&
-    artifactUpdatedAt > verdict.artifactUpdatedAt;
-  if (stale) {
-    return {
-      level: verdict.aLevel,
-      state: 'stale',
-      because: 'content changed since it was gauged — this level grades content the step no longer holds',
-    };
-  }
+  const stale = staleBecause(verdict, artifact);
+  if (stale) return { level: verdict.aLevel, state: 'stale', because: stale };
   if (craftRank(verdict.aLevel) >= craftRank(ceiling)) {
     return {
       level: verdict.aLevel,
