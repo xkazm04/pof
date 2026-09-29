@@ -2,12 +2,28 @@ import { useState, useCallback } from 'react';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { logger } from '@/lib/logger';
+import { planRouteProbe } from '@/lib/pof-bridge/routes';
+import {
+  probeHttpRoute, probeWsLiveState, type ProbeConfig, type ProbeResult,
+} from '@/lib/bridge-doctor/probes';
 import { SUBSYSTEMS, MAX_LATENCY_SAMPLES } from './constants';
 import type { EndpointDef, EndpointHealth } from './types';
+
+function toHealth(res: ProbeResult): EndpointHealth {
+  const base = { responseMs: res.latencyMs, lastChecked: Date.now() };
+  if (res.ok) return { status: 'healthy', ...base };
+  return {
+    status: res.kind === 'timeout' ? 'timeout' : 'error',
+    kind: res.kind,
+    statusCode: res.httpStatus,
+    ...base,
+  };
+}
 
 export function useBridgeEndpointHealth() {
   const host = useUE5BridgeStore((s) => s.host);
   const rcPort = useUE5BridgeStore((s) => s.httpPort);
+  const wsPort = useUE5BridgeStore((s) => s.wsPort);
   const setHost = useUE5BridgeStore((s) => s.setHost);
   const setRcPort = useUE5BridgeStore((s) => s.setHttpPort);
   const pofPort = usePofBridgeStore((s) => s.pofPort);
@@ -31,42 +47,15 @@ export function useBridgeEndpointHealth() {
     });
   }, []);
 
-  const pingEndpoint = useCallback(async (ep: EndpointDef): Promise<EndpointHealth> => {
-    const baseUrl = `http://${host}:${pofPort}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const start = performance.now();
-
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (pofAuthToken) headers['X-Pof-Auth-Token'] = pofAuthToken;
-
-      const res = await fetch(`${baseUrl}${ep.path}`, {
-        method: ep.method,
-        signal: controller.signal,
-        headers,
-        ...(ep.method === 'POST' ? { body: '{}' } : {}),
-      });
-
-      const ms = Math.round(performance.now() - start);
-      return {
-        status: res.ok ? 'healthy' : 'error',
-        statusCode: res.status,
-        responseMs: ms,
-        lastChecked: Date.now(),
-      };
-    } catch (e) {
-      const ms = Math.round(performance.now() - start);
-      const isTimeout = e instanceof DOMException && e.name === 'AbortError';
-      return {
-        status: isTimeout ? 'timeout' : 'error',
-        responseMs: ms,
-        lastChecked: Date.now(),
-      };
-    } finally {
-      clearTimeout(timer);
-    }
-  }, [host, pofPort, pofAuthToken]);
+  /** Execute the route's declared probe plan — GET-only HTTP or the WS open.
+   *  Mutating / argument-bound routes are never touched (null = not probed). */
+  const pingEndpoint = useCallback(async (ep: EndpointDef): Promise<EndpointHealth | null> => {
+    const plan = planRouteProbe(ep);
+    if (plan.kind === 'not-probed') return null;
+    const cfg: ProbeConfig = { host, pofPort, rcPort, wsPort, authToken: pofAuthToken || undefined };
+    const res = plan.kind === 'ws' ? await probeWsLiveState(cfg) : await probeHttpRoute(plan.path, cfg);
+    return toHealth(res);
+  }, [host, pofPort, rcPort, wsPort, pofAuthToken]);
 
   const pingAll = useCallback(async () => {
     setPinging(true);
@@ -74,12 +63,13 @@ export function useBridgeEndpointHealth() {
 
     for (const subsystem of SUBSYSTEMS) {
       for (const ep of subsystem.endpoints) {
-        let result: EndpointHealth;
+        let result: EndpointHealth | null;
         try {
           result = await pingEndpoint(ep);
         } catch {
-          result = { status: 'error', lastChecked: Date.now() };
+          result = { status: 'error', kind: 'unknown', lastChecked: Date.now() };
         }
+        if (!result) continue;
         results[ep.path] = result;
         // Update progressively
         setHealth((prev) => ({ ...prev, [ep.path]: result }));
@@ -94,7 +84,7 @@ export function useBridgeEndpointHealth() {
     }
 
     setPinging(false);
-    logger.info('[BridgeHealth] Ping complete:', Object.keys(results).length, 'endpoints');
+    logger.info('[BridgeHealth] Ping complete:', Object.keys(results).length, 'probed routes');
   }, [pingEndpoint]);
 
   const isDisconnected = connectionStatus === 'disconnected' || connectionStatus === 'error';

@@ -16,6 +16,7 @@ import { ManifestPreview } from './ManifestPreview';
 import { BlueprintInspector } from './BlueprintInspector';
 import { UE5ConnectionPanel } from './UE5ConnectionPanel';
 import { LiveStateSyncPanel } from './LiveStateSyncPanel';
+import { BridgeEndpointHealth } from './BridgeEndpointHealth';
 import { ProjectNBACard } from '@/components/modules/shared/ProjectNBACard';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
@@ -189,6 +190,16 @@ export function ProjectSetupModule() {
         {hasProject && (
           <div className="mb-6">
             <LiveStateSyncPanel />
+          </div>
+        )}
+
+        {/* Bridge Endpoints — which declared plugin routes this editor build
+            serves. Probes are GET-only through the Bridge Doctor and run only
+            on the Ping All click; routes that change the editor are listed,
+            never called. */}
+        {hasProject && (
+          <div className="mb-6">
+            <BridgeEndpointHealth />
           </div>
         )}
 

@@ -185,6 +185,21 @@ export async function probeRemoteControl(cfg: ProbeConfig): Promise<ProbeResult>
 }
 
 /**
+ * GET-only probe of one PoF Bridge route (the same classifier as the channel
+ * probes: 401/403 -> auth-rejected, 404 -> plugin-disabled, …). Callers pass
+ * a path planned by `planRouteProbe` (`@/lib/pof-bridge/routes`) — never a
+ * mutating route — so a health check can never change the editor.
+ */
+export async function probeHttpRoute(path: string, cfg: ProbeConfig): Promise<ProbeResult> {
+  return httpProbe({
+    channel: 'pof-bridge',
+    url: `http://${cfg.host}:${cfg.pofPort}${path}`,
+    timeoutMs: cfg.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    authToken: cfg.authToken,
+  });
+}
+
+/**
  * Probe the WebSocket live-state channel by attempting a real `ws://` open.
  *
  * Strategy:

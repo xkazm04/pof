@@ -5,7 +5,8 @@ import {
 } from '@/lib/chart-colors';
 import { LatencySparkline } from './LatencySparkline';
 import { METHOD_COLORS } from './constants';
-import { healthDotColor } from './helpers';
+import { planRouteProbe } from '@/lib/pof-bridge/routes';
+import { healthDotColor, notProbedLabel, probeKindLabel } from './helpers';
 import type { EndpointHealth, SubsystemDef } from './types';
 
 interface SubsystemGroupProps {
@@ -65,6 +66,7 @@ export function SubsystemGroup({
         <div id={`beh-group-${subsystem.id}`} role="region" aria-label={subsystem.label} className={`pb-1${subsystem.notIntegrated ? ' opacity-50' : ''}`}>
           {subsystem.endpoints.map((ep) => {
             const h = health[ep.path];
+            const plan = planRouteProbe(ep);
             const dotColor = h ? healthDotColor(h.status) : STATUS_NEUTRAL;
             const samples = latencyHistory[ep.path] ?? [];
             return (
@@ -72,12 +74,14 @@ export function SubsystemGroup({
                 key={ep.path}
                 className="flex items-center gap-2.5 px-4 pl-10 py-1.5 group hover:bg-white/3 transition-colors"
                 data-testid={`bridge-endpoint-${ep.path.replaceAll('/', '-').slice(1)}`}
+                data-probe={plan.kind}
+                data-probe-kind={h?.kind}
               >
                 {/* Health dot */}
                 <span
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   role="img"
-                  aria-label={`Status: ${h?.status ?? 'unknown'}`}
+                  aria-label={`Status: ${h?.status ?? (plan.kind === 'not-probed' ? 'not probed' : 'unknown')}`}
                   style={{
                     backgroundColor: dotColor,
                     boxShadow: h?.status === 'healthy' ? `0 0 6px ${dotColor}` : 'none',
@@ -100,9 +104,21 @@ export function SubsystemGroup({
                   {ep.description}
                 </span>
 
+                {/* Deliberately left alone — calm, never red */}
+                {plan.kind === 'not-probed' && (
+                  <span className="text-2xs text-text-muted italic shrink-0 ml-auto">
+                    {notProbedLabel(plan.reason)}
+                  </span>
+                )}
+
                 {/* Response metrics */}
                 {h && (
                   <span className="flex items-center gap-2 shrink-0 ml-auto">
+                    {h.kind && (
+                      <span className="text-2xs" style={{ color: h.status === 'timeout' ? STATUS_WARNING : STATUS_ERROR }}>
+                        {probeKindLabel(h.kind)}
+                      </span>
+                    )}
                     {h.statusCode && (
                       <span
                         className="text-2xs font-mono px-1 rounded"
