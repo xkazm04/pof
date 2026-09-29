@@ -1,6 +1,6 @@
 import type { AcceptanceResult, JudgeAttribution, VerdictProvenance } from './types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { newestRubricVerdicts, isCurrentRubric } from '@/lib/judge/rubrics';
+import { newestRubricVerdicts, isCurrentRubric, isFutureRubric, rubricOf, RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import { stepContentHash, isComparableHash, hashScheme, CONTENT_HASH_SCHEME } from '@/lib/judge/contentHash';
 
 /**
@@ -86,7 +86,8 @@ function ts(v: string | undefined): number {
  *                   does not condemn, and is reported so the gap is visible.
  *  - `unknown`    — no hash and no way to date it against the content (legacy rows, or a
  *                   caller that supplied no content), OR a hash stamped under a SUPERSEDED
- *                   hashing scheme (see below). It STILL condemns — a recorded fail is
+ *                   hashing scheme (see below), OR a rubric NEWER than this build holds
+ *                   (`isFutureRubric`). It STILL condemns — a recorded fail is
  *                   evidence, and dropping it would be the optimistic lie this whole layer
  *                   exists to prevent — but it is labelled, never passed off as `current`.
  *
@@ -97,6 +98,8 @@ function ts(v: string | undefined): number {
  * would silently retire every standing condemnation the moment the scheme moved.
  */
 export function verdictProvenance(v: JudgeVerdict, content?: JudgedContent): VerdictProvenance {
+  // A rubric this build does not hold: condemns (fail), never elevates (pass) — see rubrics.ts.
+  if (isFutureRubric(v)) return 'unknown';
   if (!isCurrentRubric(v)) return 'superseded';
   if (v.contentHash && !isComparableHash(v.contentHash)) return 'unknown';
   if (v.contentHash && content?.hash) return v.contentHash === content.hash ? 'current' : 'stale';
@@ -113,6 +116,7 @@ export function verdictProvenance(v: JudgeVerdict, content?: JudgedContent): Ver
  * as "nobody ever recorded a binding" when in truth the binding is simply from an older scheme.
  */
 export function unverifiedReason(v: JudgeVerdict): string {
+  if (isFutureRubric(v)) return `it was scored under rubric v${rubricOf(v)}, which is not in force here (v${RUBRIC_VERSION})`;
   return v.contentHash
     ? `its content binding was recorded under hash scheme ${hashScheme(v.contentHash) ?? 'unknown'}, superseded by ${CONTENT_HASH_SCHEME}`
     : 'it records no content binding';

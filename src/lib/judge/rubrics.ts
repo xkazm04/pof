@@ -53,9 +53,21 @@ export function newestRubricVerdicts<T extends RubricStamped>(verdicts: T[]): T[
 }
 
 /** Was this verdict scored under the CURRENT strict rubric? An older one is provisional /
- *  superseded — it never manufactures a strict pass and never condemns. */
+ *  superseded — it never manufactures a strict pass and never condemns. A NEWER one is not
+ *  current either: see {@link isFutureRubric}. */
 export function isCurrentRubric(v: RubricStamped): boolean {
-  return rubricOf(v) >= RUBRIC_VERSION;
+  return rubricOf(v) === RUBRIC_VERSION;
+}
+
+/**
+ * Was this verdict stamped under a rubric this build does not hold (`> RUBRIC_VERSION` — a
+ * branch that bumped the rubric writing into the shared DB)? Selection still keeps it (it is the
+ * newest present), but its strictness cannot be vouched for here: `verdictProvenance` reads it
+ * as `unknown` — a future FAIL still condemns, a future PASS never elevates. The write door
+ * (`@/lib/judge/admission`) refuses such a pass outright.
+ */
+export function isFutureRubric(v: RubricStamped): boolean {
+  return rubricOf(v) > RUBRIC_VERSION;
 }
 
 /** Score bands the whole program agrees on. */

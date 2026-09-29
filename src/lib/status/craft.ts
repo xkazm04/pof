@@ -24,7 +24,9 @@
  *    row's write time — which errs toward stale, never toward current.
  *  - A verdict scored under an older lens version is A0 UNGAUGED, not its old level —
  *    lenses only change via a version bump, and the bump visibly invalidates dependent
- *    verdicts instead of silently re-meaning them.
+ *    verdicts instead of silently re-meaning them. A NEWER version than this build holds is
+ *    A0 too, and so is a level above the medium's roof (not awardable). The write door
+ *    (`src/lib/craft/admission.ts`) refuses both; this is the defence for rows already stored.
  */
 import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 import { isComparableHash } from '@/lib/judge/contentHash';
@@ -136,7 +138,8 @@ function staleBecause(verdict: CraftVerdictLite, artifact: JudgedContent | undef
 /**
  * Project a craft verdict onto the A-axis. Pure.
  *
- * Precedence: ungauged (no/outdated verdict) → stale → at-ceiling → gauged.
+ * Precedence: ungauged (no verdict, or a lens version not in force either way, or a level
+ * above the medium's roof) → stale → at-ceiling → gauged.
  * Stale beats at-ceiling deliberately: a stale `A2^` on a 3D step would read as "roof
  * reached" about content nobody has gauged.
  */
@@ -152,9 +155,27 @@ export function craftOf(input: CraftInput): Craft {
       because: `gauged under lens v${verdict.lensVersion}; current lens is v${currentLensVersion}`,
     };
   }
+  // A version this build does not hold (a branch that bumped the lens, writing into the shared
+  // DB) cannot be read as current — the rubric it scored against is not the one in force.
+  if (verdict.lensVersion > currentLensVersion) {
+    return {
+      level: 'A0',
+      state: 'gauged',
+      because: `gauged under lens v${verdict.lensVersion}, but lens v${verdict.lensVersion} is not in force (v${currentLensVersion})`,
+    };
+  }
+  // Above the roof is NOT awardable (craft-ceilings.json records the market assumption); it
+  // never renders as at-ceiling achievement. Checked before staleness so it cannot show A3~.
+  if (craftRank(verdict.aLevel) > craftRank(ceiling)) {
+    return {
+      level: 'A0',
+      state: 'gauged',
+      because: `${verdict.aLevel} is above this medium's recorded roof ${ceiling} — not awardable`,
+    };
+  }
   const stale = staleBecause(verdict, artifact);
   if (stale) return { level: verdict.aLevel, state: 'stale', because: stale };
-  if (craftRank(verdict.aLevel) >= craftRank(ceiling)) {
+  if (craftRank(verdict.aLevel) === craftRank(ceiling)) {
     return {
       level: verdict.aLevel,
       state: 'at-ceiling',

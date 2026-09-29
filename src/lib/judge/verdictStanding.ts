@@ -38,7 +38,8 @@ export function isStanding(p: VerdictProvenance): boolean {
 /** A verdict's rubric standing in words — `null` when it is the current rubric (nothing to say). */
 export function rubricStanding(v: JudgeVerdict): string | null {
   const r = rubricOf(v);
-  return r >= RUBRIC_VERSION ? null : `rubric v${r}, superseded by v${RUBRIC_VERSION}`;
+  if (r > RUBRIC_VERSION) return `rubric v${r} is not in force here (v${RUBRIC_VERSION}) — it can condemn, never elevate`;
+  return r === RUBRIC_VERSION ? null : `rubric v${r}, superseded by v${RUBRIC_VERSION}`;
 }
 
 /**

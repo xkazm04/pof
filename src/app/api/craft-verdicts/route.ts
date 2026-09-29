@@ -13,6 +13,7 @@ import {
 import { buildCraftTrend, craftMovementOf, craftTrendSummary } from '@/lib/craft/craftCell';
 import { LENS_IDS } from '@/lib/craft/lens-map';
 import { currentStepBinding } from '@/lib/judge/stepBinding';
+import { admitCraftGauge } from '@/lib/craft/admission';
 
 /**
  * GET /api/craft-verdicts[?catalogId=] — the A-axis storage layer (craft gauges).
@@ -98,8 +99,9 @@ const craftVerdictSchema = z.object({
   catalogId: z.string().min(1),
   entityId: z.string().min(1),
   step: z.string().min(1),
-  lens: z.enum(LENS_IDS),
-  lensVersion: z.number().int().min(1),
+  // Server-derived (src/lib/craft/admission.ts): optional assertions — a mismatch is a 400.
+  lens: z.enum(LENS_IDS).optional(),
+  lensVersion: z.number().int().min(1).optional(),
   aLevel: z.enum(['A1', 'A2', 'A3', 'A4']),
   // A1–A3 must explain the gap; a clean A4 may have none.
   findings: z.array(findingSchema),
@@ -123,6 +125,11 @@ const craftVerdictSchema = z.object({
  * A-axis campaign's spend is visible beside the R-axis judge fleet's instead of nowhere. An
  * optional `cost` block carries what the writer knows; omitting it records the gauge as
  * cost-unknown, never as free.
+ *
+ * Before anything is stored the gauge passes the admission door (`@/lib/craft/admission`):
+ * the lens and lensVersion are DERIVED from the audited step fact + `LENS_VERSIONS` (a writer
+ * may omit them; one that names a different lens or version is a 400 naming the expected one),
+ * and a level above the medium's roof (craft-ceilings.json) is a 400 — not awardable.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -133,17 +140,14 @@ export async function POST(req: NextRequest) {
       return apiError('a below-A4 gauge must name at least one finding', 400);
     }
     const isProcess = v.step === PROCESS_STEP || v.entityId === PROCESS_ENTITY;
-    if (isProcess && v.lens !== 'production-process') {
-      return apiError('the __process__ scorecard row must use the production-process lens', 400);
-    }
-    if (!isProcess && v.lens === 'production-process') {
-      return apiError('production-process gauges the catalog, not a step — use the __process__ row', 400);
-    }
+    const admitted = admitCraftGauge(v, { isProcess });
+    if (!admitted.ok) return apiError(admitted.error.join('; '), 400, admitted.error);
     const binding = isProcess ? null : currentStepBinding(v.catalogId, v.entityId, v.step);
     return apiSuccess(
       upsertCraftVerdict(
         {
           ...v,
+          ...admitted.data,
           ...(binding ? { contentHash: binding.contentHash } : {}),
           ...(binding?.updatedAt ? { artifactUpdatedAt: binding.updatedAt } : {}),
         },
