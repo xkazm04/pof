@@ -39,9 +39,25 @@ interface RunState {
   rounds: number; secs: number; outputTokens: number; status: string;
   /** PID of the current round's child — lets `list` notice a run whose host died mid-flight. */
   pid?: number;
+  /**
+   * HEAD of the worktree at creation. The agent's work is read as a diff against THIS, so a commit it made
+   * (despite the brief) is still seen. Absent in state files written before it was recorded; those keep the
+   * old read (staged vs the worktree's own HEAD).
+   */
+  base?: string;
 }
 const loadState = (id: string): RunState => JSON.parse(readFileSync(join(runDir(id), 'state.json'), 'utf8')) as RunState;
 const saveState = (id: string, s: RunState) => writeFileSync(join(runDir(id), 'state.json'), JSON.stringify(s, null, 2));
+
+/**
+ * Stage the worktree's working state and return the args that read ALL of the agent's work: `git diff --cached <base>`
+ * is index-vs-base, so commits and uncommitted edits both count. Bare `--cached` compares with the worktree's own HEAD,
+ * which a commit by the agent moves past its work; that work then read as "nothing to land".
+ */
+function staged(cwd: string, base?: string): string[] {
+  git(cwd, 'add', '-A', '--', '.', ':!node_modules');
+  return base ? ['diff', '--cached', base] : ['diff', '--cached'];
+}
 
 function changes(cwd: string): string[] {
   return git(cwd, 'status', '--porcelain').stdout.split('\n').filter(Boolean);
@@ -72,10 +88,12 @@ async function run(taskPath: string, timeoutMin: number) {
   mkdirSync(dir, { recursive: true });
   const route = routeTask(task.tier, task.hints);
   let cwd = REPO;
+  let base: string | undefined;
   if (task.access === 'write-verified') {
     cwd = wtDir(task.id);
     const add = git(REPO, 'worktree', 'add', '-b', `codex/${task.id}`, cwd, 'HEAD');
     if (add.status !== 0) throw new Error(`worktree add failed: ${add.stderr}`);
+    base = git(cwd, 'rev-parse', 'HEAD').stdout.trim() || undefined;
     const j = spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, 'node_modules'), join(REPO, 'node_modules')], { encoding: 'utf8' });
     if (j.status !== 0) throw new Error(`node_modules junction failed: ${j.stderr || j.stdout}`);
     // The pinned reference clone is a git-EXCLUDED junction in the main tree (/diablo W16), so a fresh worktree lacks it and a
@@ -89,7 +107,7 @@ async function run(taskPath: string, timeoutMin: number) {
   const brief = renderBrief(task);
   writeFileSync(join(dir, 'brief.md'), brief);
   writeFileSync(join(dir, 'schema.json'), JSON.stringify(task.outputSchema ?? CODEX_REPORT_SCHEMA));
-  saveState(task.id, { task, model: route.model, effort: route.effort, cwd, threadId: null, rounds: 1, secs: 0, outputTokens: 0, status: 'running' });
+  saveState(task.id, { task, model: route.model, effort: route.effort, cwd, threadId: null, rounds: 1, secs: 0, outputTokens: 0, status: 'running', base });
   const last = join(dir, 'report-1.json');
   const args = buildCodexExecArgs({
     route, access: task.access, prompt: PROMPT_FROM_STDIN, cwd, lastMessagePath: last,
@@ -158,20 +176,20 @@ async function resumeRound(id: string, instructions: string, timeoutMin: number)
 }
 
 function diff(id: string) {
-  const { cwd } = loadState(id);
-  git(cwd, 'add', '-A', '--', '.', ':!node_modules');
-  process.stdout.write(git(cwd, 'diff', '--cached', '--stat').stdout + '\n' + git(cwd, 'diff', '--cached').stdout);
+  const { cwd, base } = loadState(id);
+  const read = staged(cwd, base);
+  process.stdout.write(git(cwd, ...read, '--stat').stdout + '\n' + git(cwd, ...read).stdout);
 }
 
 function land(id: string) {
-  const { cwd, task } = loadState(id);
-  git(cwd, 'add', '-A', '--', '.', ':!node_modules');
-  const files = git(cwd, 'diff', '--cached', '--name-only').stdout.split('\n').filter(Boolean);
+  const { cwd, task, base } = loadState(id);
+  const read = staged(cwd, base);
+  const files = git(cwd, ...read, '--name-only').stdout.split('\n').filter(Boolean);
   if (!files.length) { console.log('nothing to land'); return; }
   // Refuse to land onto another session's live WIP in the shared tree.
   const busy = git(REPO, 'status', '--porcelain', '--', ...files).stdout.split('\n').filter(Boolean);
   if (busy.length) throw new Error(`main tree has uncommitted changes in files this patch touches — resolve first:\n  ${busy.join('\n  ')}`);
-  const patch = git(cwd, 'diff', '--cached', '--binary').stdout;
+  const patch = git(cwd, ...read, '--binary').stdout;
   const patchPath = join(runDir(id), 'land.patch');
   writeFileSync(patchPath, patch);
   // Working tree ONLY: `--3way` would stage into the SHARED index, where another session's bare
