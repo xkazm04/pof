@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Activity, Wrench, Terminal, LayoutGrid } from 'lucide-react';
 import { OPACITY_10, OPACITY_30,
   withOpacity, OPACITY_90, OPACITY_25, OPACITY_12, OPACITY_5, OPACITY_80, GLOW_MD,
-  ACCENT_EMERALD_DARK,
+  ACCENT_EMERALD_DARK, STATUS_SUBDUED,
 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { SectionHeader, BlueprintPanel } from '../unique-tabs/_design';
@@ -21,39 +20,29 @@ import { StatDashboardSection } from './crashes/StatDashboardSection';
 import { CrashPredictionSection } from './crashes/CrashPredictionSection';
 import { RegressionSection } from './crashes/RegressionSection';
 import {
-  ACCENT, INITIAL_BUDGETS, DEBUG_COMMANDS, OPTIMIZATIONS,
+  ACCENT, DEBUG_COMMANDS, OPTIMIZATIONS,
   EFFORT_COLORS, IMPACT_COLORS, FEATURE_NAMES,
 } from './_shared/data';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
+import { useDebugSnapshot } from '@/components/modules/core-engine/sub_debug/_shared/useDebugSnapshot';
+import { provenanceLabel } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
 
 interface DebugDashboardProps { moduleId: SubModuleId }
 
 export function DebugDashboard({ moduleId }: DebugDashboardProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
-  const [budgets, setBudgets] = useState(INITIAL_BUDGETS);
+  // Every perf panel below is a projection of ONE ProfilingSession (newest capture, or the sample).
+  const { snapshot, provenance } = useDebugSnapshot();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const tabs: SubTab[] = useMemo(() => [
     { id: 'features', label: 'Features', icon: LayoutGrid },
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
   ], []);
-
-  useSuspendableEffect(() => {
-    const id = setInterval(() => {
-      setBudgets(prev => prev.map(b => {
-        const variance = (Math.random() - 0.5) * (b.current * 0.05);
-        let next = b.current + variance;
-        if (next < b.target * 0.1) next = b.target * 0.1;
-        if (next > b.target * 1.5) next = b.target * 1.5;
-        return { ...b, current: next };
-      }));
-    }, 800);
-    return () => clearInterval(id);
-  }, []);
 
   const toggleFeature = useCallback((name: string) => {
     setExpandedFeature(prev => (prev === name ? null : name));
@@ -73,7 +62,8 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             CORE_TELEMETRY.exe
           </span>
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: ACCENT_EMERALD_DARK }} /> LIVE STREAM ACTIVE
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: provenance.kind === 'session' && provenance.source !== 'manual' ? ACCENT_EMERALD_DARK : STATUS_SUBDUED }} />
+            <span>{provenanceLabel(provenance)}</span>
           </span>
         </div>
       </div>
@@ -87,7 +77,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
       <div>
         <SectionHeader label="SYSTEM_RESOURCES" color={ACCENT} icon={Terminal} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-          {budgets.map(g => <CircularGauge key={g.label} {...g} />)}
+          {snapshot.gauges.map(g => <CircularGauge key={g.label} {...g} />)}
         </div>
       </div>
 
@@ -159,15 +149,19 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
       </div>
 
       {/* Section panels */}
-      <SystemHealthMatrix />
-      <FrameTimeWaterfall />
-      <MemorySection />
+      <FrameTimeWaterfall frame={snapshot.frame} />
+      <MemorySection memory={snapshot.memory} />
+      <GCTimelineSection gc={snapshot.gc} />
+      <DrawCallSection drawCalls={snapshot.drawCalls} />
+      <StatDashboardSection stats={snapshot.stats} />
+      <CrashPredictionSection crash={snapshot.crash} recommendations={snapshot.recommendations} />
       <ConsoleSection />
+      {/* Not projected from a profiler session yet — hand-typed illustrations. */}
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted border-t border-border pt-3">
+        Illustrative panels below are not read from any profiler session
+      </div>
+      <SystemHealthMatrix />
       <NetworkSection />
-      <GCTimelineSection />
-      <DrawCallSection />
-      <StatDashboardSection />
-      <CrashPredictionSection />
       <RegressionSection />
       </VisibleSection>}
     </div>

@@ -6,10 +6,11 @@ import { LayoutGrid, ChevronRight } from 'lucide-react';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { Sparkline } from '../system/CircularGauge';
 import { ACCENT } from '../_shared/data';
-import { STAT_GROUPS } from '../_shared/data-perf';
+import type { StatGroup } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
 
 import { withOpacity, OPACITY_37, OPACITY_87 } from '@/lib/chart-colors';
-export function StatDashboardSection() {
+/** The stat groups are projections of the capture summary + frame samples, not typed readings. */
+export function StatDashboardSection({ stats }: { stats: StatGroup[] }) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const toggleGroup = useCallback((group: string) => {
@@ -25,7 +26,7 @@ export function StatDashboardSection() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
       <SectionHeader label="STAT_COMMAND_DASHBOARD" color={ACCENT} icon={LayoutGrid} />
       <div className="space-y-3">
-        {STAT_GROUPS.map((sg) => {
+        {stats.map((sg) => {
           const isCollapsed = collapsedGroups.has(sg.group);
           return (
             <BlueprintPanel key={sg.group} color={ACCENT} className="overflow-hidden">
@@ -47,7 +48,7 @@ export function StatDashboardSection() {
                           <span className="text-xs font-mono uppercase tracking-[0.15em] w-24 text-text-muted">{stat.label}</span>
                           <Sparkline data={stat.sparkline} color={ACCENT} width={60} height={14} />
                           <span className="text-xs font-mono font-bold ml-auto" style={{ color: withOpacity(ACCENT, OPACITY_87) }}>
-                            {stat.value}<span className="text-text-muted text-xs ml-0.5">{stat.unit ?? ''}</span>
+                            {stat.value.toFixed(stat.digits)}<span className="text-text-muted text-xs ml-0.5">{stat.unit ?? ''}</span>
                           </span>
                         </div>
                       ))}
