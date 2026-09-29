@@ -5,6 +5,7 @@ import {
   DEFAULT_IMPORT_CONFIG,
   type ImportConfig,
 } from '@/lib/visual-gen/ue5-import-templates';
+import { buildGlbImportPython, planUeImport } from '@/lib/visual-gen/ue-import-plan';
 
 describe('generateImportScript', () => {
   it('generates valid C++ code for default config', () => {
@@ -38,12 +39,15 @@ describe('generateImportScript', () => {
     expect(output).toContain('/Game/Characters/Hero');
   });
 
-  it('reflects collision setting', () => {
-    const withCollision = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, generateCollision: true });
-    expect(withCollision).toContain('bAutoGenerateCollision = true');
-
-    const noCollision = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, generateCollision: false });
-    expect(noCollision).toContain('bAutoGenerateCollision = false');
+  it('never asks the FBX importer for its one-box collision fallback (the plan decides collision)', () => {
+    // The `generated-mesh-arrives-without-collision` gotcha: bAutoGenerateCollision is a coarse
+    // one-box fallback and NOT a substitute — so no config can switch it on.
+    const decorative = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'fbx', use: 'decorative' });
+    expect(decorative).toContain('bAutoGenerateCollision = false');
+    const blocking = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'fbx', use: 'blocking', components: 3 });
+    expect(blocking).toContain('bAutoGenerateCollision = false');
+    expect(blocking).not.toContain('bAutoGenerateCollision = true');
+    expect(blocking).toMatch(/convex/);
   });
 
   it('reflects material import setting', () => {
@@ -63,9 +67,38 @@ describe('generateImportScript', () => {
     const fbx = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'fbx' });
     expect(fbx).toContain('UFbxFactory');
 
-    const gltf = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'gltf' });
-    expect(gltf).toContain('Interchange');
+    const gltf = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'gltf', use: 'blocking' });
     expect(gltf).not.toContain('UFbxFactory');
+  });
+
+  // ── One import plan (challenge-2026-09-29b) ────────────────────────────────
+  it('case 8: the glb/gltf output IS the ue-import python, built from the same plan', () => {
+    for (const format of ['glb', 'gltf'] as const) {
+      const out = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format, use: 'blocking', components: 3 });
+      expect(out).toContain('unreal.AssetImportTask');
+      expect(out).toContain('set_convex_decomposition_collisions');
+      expect(out).not.toContain('bAutoGenerateCollision');
+      expect(out).not.toContain('UCLASS');
+      // Not a look-alike: byte-for-byte the python the route runs for this plan.
+      const plan = planUeImport({ critique: undefined, use: 'blocking', declaredShells: 3 });
+      expect(plan.collisionBasis).toBe('declared');
+      expect(out.endsWith(buildGlbImportPython(
+        DEFAULT_IMPORT_CONFIG.sourcePath || `<path to ${DEFAULT_IMPORT_CONFIG.assetName}.${format}>`,
+        DEFAULT_IMPORT_CONFIG.contentPath, DEFAULT_IMPORT_CONFIG.assetName, { collision: plan.collision },
+      ))).toBe(true);
+    }
+  });
+
+  it('case 8: a glb with no use picked emits no runnable import — no default is safe', () => {
+    const out = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'glb', use: null });
+    expect(out).not.toContain('import_asset_tasks');
+    expect(out).toMatch(/use/i);
+  });
+
+  it('case 8: an FBX scale of 0.05 prints 0.05f (toFixed(1) printed 0.1f, a 2x error)', () => {
+    const out = generateImportScript({ ...DEFAULT_IMPORT_CONFIG, format: 'fbx', scale: 0.05 });
+    expect(out).toContain('ImportUniformScale = 0.05f');
+    expect(out).not.toContain('0.1f');
   });
 });
 

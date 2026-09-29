@@ -21,14 +21,25 @@
  * only the Tier-1 critic does — so asking the caller would have made every plan a guess
  * wearing a parameter.
  */
-import { critiqueMesh, classifyComponents, type CritiqueResult } from './mesh-critique';
+import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { gateRequestFor } from './gate-request';
+import type { MeshStage } from './critique-stage';
+import { importGlbToUE, type UeImportResult } from './ue-import';
 import {
-  collisionPlan,
-  importGlbToUE,
+  importScaleOf,
+  planUeImport,
   type CollisionPlan,
+  type CollisionPlanBasis,
   type CollisionUse,
-  type UeImportResult,
-} from './ue-import';
+  type ImportScale,
+  type OrientationReport,
+  type ScalePlan,
+} from './ue-import-plan';
+
+// The planner moved into the pure `ue-import-plan.ts` (node-free, so the client Import
+// Automation view can render it). Re-exported so the plan-preview route and every existing
+// importer keep importing these names from here.
+export { collisionPlanFor, type CollisionPlanBasis, type PlanDerivation } from './ue-import-plan';
 
 export interface UeImportJobSpec {
   /** The `.glb` to import — typically a `mesh-finish` output, not raw generator output. */
@@ -43,14 +54,14 @@ export interface UeImportJobSpec {
    */
   components?: number;
   settleMs?: number;
+  /**
+   * What the mesh IS, for the gate request (`gateRequestFor`): resolves the class ceilings,
+   * the nominal size (a character = the 1.8 m Mannequin) and whether it should stand.
+   */
+  assetClass?: string;
+  /** Intended longest extent (m); overrides the class nominal. Absent + no nominal → no scale. */
+  targetExtentM?: number;
 }
-
-/**
- * Where a collision plan's shell count came from. The same convention as
- * `scoreBreakdown`'s `basis`: a plan that states its kind but not its evidence lets an
- * assumed shape read exactly like a measured one.
- */
-export type CollisionPlanBasis = 'measured' | 'declared' | 'assumed' | 'not-needed';
 
 export interface UeImportJob {
   id: string;
@@ -62,6 +73,12 @@ export interface UeImportJob {
   planBasis?: CollisionPlanBasis;
   /** Shells the plan was made from, whatever its basis. Absent when none was available. */
   shells?: number;
+  /** The plan's scale: the gate-derived factor, or why none is derivable. Never a typed 1.0. */
+  scale?: ScalePlan;
+  /** Orientation as the same critique graded it — reported, never applied. */
+  orientation?: OrientationReport;
+  /** One line naming what the mesh was graded against (from `gateRequestFor`). */
+  gradedAs?: string;
   result?: UeImportResult;
   error?: string;
   startedAt: number;
@@ -71,64 +88,28 @@ const g = globalThis as unknown as { pofUeImportJobs?: Map<string, UeImportJob> 
 const jobs = g.pofUeImportJobs ?? new Map<string, UeImportJob>();
 if (!g.pofUeImportJobs) g.pofUeImportJobs = jobs;
 
-export interface PlanDerivation {
-  plan: CollisionPlan;
-  basis: CollisionPlanBasis;
-  shells?: number;
-}
-
-/**
- * Derive a collision plan from what was actually measured about the mesh. Pure.
- *
- * Shell counting uses `classifyComponents`, not the raw `components` number: an assembled
- * character is legitimately multi-shell, and a shattered one carries dozens of two-face
- * specks. Planning hull budgets off the raw count would reason about concavity that is
- * really shrapnel. When the histogram is absent the raw count is still a MEASUREMENT and is
- * used as one — it is only the critic failing to run that drops the basis to `declared` or
- * `assumed`.
- */
-export function collisionPlanFor(
-  critique: CritiqueResult | undefined,
-  use: CollisionUse,
-  declared?: number,
-): PlanDerivation {
-  // A decorative asset gets no collision, so nothing needs measuring and no doubt is
-  // introduced by not having measured.
-  if (use === 'decorative') return { plan: collisionPlan({ use }), basis: 'not-needed' };
-
-  const m = critique?.ok === true ? critique.metrics : undefined;
-  if (m) {
-    const split = classifyComponents(m.componentFaces, m.componentFacesOmitted);
-    const shells = split.measured ? split.parts : m.components;
-    return { plan: collisionPlan({ use, components: shells }), basis: 'measured', shells };
-  }
-
-  if (declared !== undefined) {
-    return { plan: collisionPlan({ use, components: declared }), basis: 'declared', shells: declared };
-  }
-
-  // Nothing measured it and nobody said. A plan is still made — refusing to import over a
-  // missing critic would be worse — but the doubt rides on the plan's own reason line,
-  // because `kind: 'simple'` alone cannot say "and I never looked at the mesh".
-  const plan = collisionPlan({ use });
-  return {
-    plan: {
-      ...plan,
-      reason: `${plan.reason} — ASSUMED: the geometry critic did not run and no shell count was declared, so the mesh was never inspected`,
-    },
-    basis: 'assumed',
-  };
-}
-
-type Critic = (glbPath: string) => Promise<CritiqueResult>;
+type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 type Importer = (
   glbPath: string,
-  opts: { destPath?: string; assetName?: string; settleMs?: number; collision?: CollisionPlan },
+  opts: { destPath?: string; assetName?: string; settleMs?: number; collision?: CollisionPlan; scale?: ImportScale },
 ) => Promise<UeImportResult>;
+
+/**
+ * The stage of the mesh being imported, from where it sits under `generated/`: a mesh-finish
+ * output is `finished`, anything else is generator output (`raw`). Pure.
+ */
+export function importStageFor(glbPath: string): MeshStage {
+  return /(^|[\/])mesh-finish[\/]/i.test(glbPath) ? 'finished' : 'raw';
+}
 
 /**
  * Start an import. `critic`/`importer` are injectable for tests; they default to the real
  * Tier-1 gate and the real editor-driving import.
+ *
+ * The critic runs through `gateRequestFor` — the same gate request every generator's job
+ * store builds — so the size target (class nominal or declared) and the upright expectation
+ * reach it. Without them the scale grade is `unmeasured` at exactly the moment its correction
+ * is meant to be applied.
  *
  * The critic is best-effort ON PURPOSE: a missing trimesh env must not block getting an
  * asset into the project. It costs the plan its evidence, which the job reports, rather
@@ -144,31 +125,48 @@ export function startUeImportJob(
   const job: UeImportJob = { id, status: 'running', spec, startedAt: Date.now() };
   jobs.set(id, job);
 
+  const gate = gateRequestFor({
+    assetClass: spec.assetClass,
+    stage: importStageFor(spec.glbPath),
+    targetExtentM: spec.targetExtentM,
+  });
+  job.gradedAs = gate.gradedAs;
+
   void (async () => {
     let critique: CritiqueResult | undefined;
     try {
-      critique = await critic(spec.glbPath);
+      critique = await critic(spec.glbPath, gate.deps);
     } catch {
       critique = undefined; // an absent critic costs evidence, never the import
     }
     job.critique = critique;
 
-    const { plan, basis, shells } = collisionPlanFor(critique, spec.use, spec.components);
-    job.plan = plan;
-    job.planBasis = basis;
-    job.shells = shells;
+    const plan = planUeImport({
+      critique,
+      use: spec.use,
+      declaredShells: spec.components,
+      assetClass: spec.assetClass,
+      targetExtentM: spec.targetExtentM,
+    });
+    job.plan = plan.collision;
+    job.planBasis = plan.collisionBasis;
+    job.shells = plan.shells;
+    job.scale = plan.scale;
+    job.orientation = plan.orientation;
+    const scale = importScaleOf(plan.scale);
 
     try {
       const result = await importer(spec.glbPath, {
         destPath: spec.destPath,
         assetName: spec.assetName,
         settleMs: spec.settleMs,
-        collision: plan,
+        collision: plan.collision,
+        ...(scale ? { scale } : {}),
       });
       job.result = result;
-      // `importGlbToUE` already refuses to claim collision it did not observe. Carry that
-      // refusal through as a job error instead of letting `status: 'done'` imply an asset
-      // that is in the project AND blocking.
+      // `importGlbToUE` already refuses to claim collision — or a size — it did not observe.
+      // Carry that refusal through as a job error instead of letting `status: 'done'` imply
+      // an asset that is in the project, blocking, and the size it was meant to be.
       job.status = result.ok ? 'done' : 'error';
       if (!result.ok) job.error = result.error ?? 'import failed';
     } catch (e) {

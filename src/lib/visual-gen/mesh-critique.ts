@@ -15,6 +15,7 @@ import {
   type ScaleGrade, type SizeRequest, type OrientationGrade, type OrientationRequest,
 } from './world-scale';
 import { assessStage, type MeshStage } from './critique-stage';
+import { classifyComponents } from './component-split';
 
 export interface MeshMetrics {
   verts: number;
@@ -73,48 +74,11 @@ export function parseCritiqueMetrics(stdout: string): { ok: boolean; metrics?: M
   };
 }
 
-/** Below this share of the total faces a component is a speck, not a body part. */
-export const FLOATER_FACE_SHARE = 0.005;
-/** …and never call something a part on face share alone when it is this tiny. */
-export const FLOATER_MIN_FACES = 8;
+// Parts vs specks lives in the node-free `component-split.ts` so the UE import plan (rendered
+// by a client view) can count shells without reaching this module's node:* imports.
+export { FLOATER_FACE_SHARE, FLOATER_MIN_FACES, classifyComponents, type ComponentSplit } from './component-split';
 /** Separable shells a head needs before expression work is even attempted. */
 export const FACE_RIG_MIN_SHELLS = 4;
-
-export interface ComponentSplit {
-  /** False when the script emitted no histogram — callers must not infer from counts. */
-  measured: boolean;
-  parts: number;
-  floaters: number;
-  floaterFaces: number;
-}
-
-/**
- * Split connected components into real parts and specks.
- *
- * An assembled character is legitimately multi-shell (head, lashes, brows, eye layers,
- * mouth interior, teeth, tongue, body, hands, hair, cape, accessories) — a raw component
- * COUNT cannot tell that apart from a shattered mesh. Face share can.
- */
-export function classifyComponents(componentFaces: number[] | undefined, omitted = 0): ComponentSplit {
-  if (!componentFaces?.length) return { measured: false, parts: 0, floaters: 0, floaterFaces: 0 };
-  const total = componentFaces.reduce((a, b) => a + b, 0);
-  const floor = Math.max(FLOATER_MIN_FACES, total * FLOATER_FACE_SHARE);
-  const floaterList = componentFaces.filter((f) => f < floor);
-
-  // The histogram is capped and sorted largest-first, so anything omitted is no bigger
-  // than the smallest entry we kept. When that entry is already a speck, every omitted
-  // one is too. When it is substantial we cannot tell — so count them as parts, which
-  // pushes toward the harsher verdict. Neither branch can manufacture a pass.
-  const smallestKept = componentFaces[componentFaces.length - 1];
-  const omittedAreSpecks = smallestKept < floor;
-
-  return {
-    measured: true,
-    parts: componentFaces.length - floaterList.length + (omittedAreSpecks ? 0 : omitted),
-    floaters: floaterList.length + (omittedAreSpecks ? omitted : 0),
-    floaterFaces: floaterList.reduce((a, b) => a + b, 0),
-  };
-}
 
 export interface FaceRigReadiness {
   /** `null` when unmeasured — readiness is never claimed from data we do not have. */

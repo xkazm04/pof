@@ -13,6 +13,9 @@ import { getUeImportJob } from '@/lib/visual-gen/ue-import-job-store';
  * the imported asset (`collisionElements`, read back from `body_setup`). An asset whose
  * `body_setup` holds zero elements passes every import check and then falls through the
  * world, so "the collision call ran" is not evidence and is not reported as any.
+ *
+ * Scale follows the same split: `scale` is what the plan ASKED for (the gate-derived factor,
+ * its basis and reason) and `observedExtentCm` is what was READ BACK off the imported bounds.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -45,6 +48,22 @@ export async function GET(req: NextRequest) {
        * report honestly, so it is never allowed to vanish from the payload.
        */
       collisionElements: r?.collisionElements ?? null,
+
+      /**
+       * The SCALE the plan asked for: the gate-derived factor (null when none is derivable),
+       * its basis (measured / no-target / unmeasured) and the reason. `null` before the job
+       * has planned — present as a key, for the same reason as `collision`.
+       */
+      scale: job.scale ? { ...job.scale, factor: job.scale.factor ?? null } : null,
+      /**
+       * Longest extent (cm) READ BACK from the imported mesh's bounds. `null` means nothing
+       * measured it — a failure when a scale was requested, never a silent pass.
+       */
+      observedExtentCm: r?.observedExtentCm ?? null,
+      /** Orientation as graded by the same critique — reported, never applied. */
+      orientation: job.orientation ?? null,
+      /** What the mesh was graded against (class budget, or class-blind and why). */
+      gradedAs: job.gradedAs ?? null,
 
       /** Why the Tier-1 critic could not measure the mesh, when it could not. */
       critiqueUnavailable: job.critique?.unavailable,

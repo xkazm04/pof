@@ -6,148 +6,20 @@
  * Brings a TripoSR .glb into /Game as a Static Mesh so it's usable in the project.
  */
 import { runExperiment, type ExperimentResult, type ExperimentSpec, type RunnerDeps } from '@/lib/ue-experiment/runner';
+import { buildGlbImportPython, scaleReadBackError, type CollisionPlan, type ImportScale } from './ue-import-plan';
 
-/**
- * What the imported mesh is FOR. Collision is a use-decision, not a mesh property: the same
- * geometry wants hulls as a crate and nothing at all as a wall decoration.
- */
-export type CollisionUse = 'blocking' | 'decorative' | 'character';
-
-/**
- * How collision should be built for one imported mesh.
- *
- * `complex` (the render mesh used directly as collision) is deliberately NOT representable.
- * It is forbidden for anything that moves and is a last resort everywhere else; leaving it out
- * of the type means no plan can quietly select it.
- */
-export interface CollisionPlan {
-  kind: 'none' | 'simple' | 'convex';
-  /** Primitive for `simple`. */
-  shape?: 'BOX' | 'SPHERE' | 'CAPSULE' | 'NDOP10_X';
-  /** Hull budget for `convex`. */
-  hullCount?: number;
-  maxHullVerts?: number;
-  /** Why this plan, in one line — a bare enum cannot explain a refusal. */
-  reason: string;
-}
-
-/** Hulls for a multi-part blocking prop. Low on purpose: raise only if the silhouette blocks wrongly. */
-export const DEFAULT_HULL_COUNT = 6;
-export const DEFAULT_MAX_HULL_VERTS = 16;
-
-/**
- * Decide collision for an imported generated mesh. Pure.
- *
- * A generated `.glb` carries no collision of any kind, and glTF has no `UCX_` convention to
- * carry one (that is FBX-importer-only — a `UCX_` object exported into a `.glb` imports as a
- * second VISIBLE mesh). So collision has to be built after import, and something has to decide
- * what shape it takes. See the `generated-mesh-arrives-without-collision` gotcha.
- */
-export function collisionPlan(req: { use: CollisionUse; components?: number }): CollisionPlan {
-  if (req.use === 'decorative') {
-    return {
-      kind: 'none',
-      reason: 'decorative asset — no collision at all; a wrong hull blocks the player worse than nothing does',
-    };
-  }
-  // One shell → one primitive reads correctly and costs nothing. Multiple shells mean the
-  // silhouette has concavities a single box would bridge, which is what hulls are for.
-  if ((req.components ?? 1) <= 1) {
-    return {
-      kind: 'simple',
-      shape: 'BOX',
-      reason: 'single-shell mesh — one box primitive is the cheapest collision that reads correctly',
-    };
-  }
-  return {
-    kind: 'convex',
-    hullCount: DEFAULT_HULL_COUNT,
-    maxHullVerts: DEFAULT_MAX_HULL_VERTS,
-    reason: `${req.components} shells — convex decomposition at ${DEFAULT_HULL_COUNT} hulls; raise the budget only if the silhouette blocks wrongly`,
-  };
-}
-
-/**
- * The python lines that build collision and READ IT BACK. Empty for a `none` plan.
- *
- * ⚠️ UNVERIFIED AGAINST A LIVE EDITOR. The call names come from the documented
- * `EditorStaticMeshLibrary` surface and the emitted source is syntax-checked, but the
- * `body_setup` -> `agg_geom` -> `convex_elems` / `box_elems` / `sphere_elems` / `sphyl_elems`
- * property chain has NOT been introspected on this project's UE build. Per the
- * `python-api-introspect-first` gotcha, the first live run should `dir()` the objects and
- * correct these names rather than assume them — and note that a wrong property name here fails
- * SAFE: the read-back throws or yields 0, and `importGlbToUE` then refuses to claim collision.
- */
-function collisionPython(plan: CollisionPlan | undefined): string[] {
-  if (!plan || plan.kind === 'none') return [];
-  const call =
-    plan.kind === 'simple'
-      ? `unreal.EditorStaticMeshLibrary.add_simple_collisions(mesh, unreal.ScriptingCollisionShapeType.${plan.shape ?? 'BOX'})`
-      : `unreal.EditorStaticMeshLibrary.set_convex_decomposition_collisions(mesh, ${plan.hullCount ?? DEFAULT_HULL_COUNT}, ${plan.maxHullVerts ?? DEFAULT_MAX_HULL_VERTS}, 100000)`;
-  return [
-    'if mesh:',
-    `    ${call}`,
-    // The observation. A collision call that runs and produces nothing is indistinguishable
-    // from one that worked unless the aggregate geometry is counted afterwards.
-    "    bs = mesh.get_editor_property('body_setup')",
-    '    agg = bs.get_editor_property(\'agg_geom\') if bs else None',
-    '    n = (len(agg.get_editor_property(\'convex_elems\')) + len(agg.get_editor_property(\'box_elems\')) + len(agg.get_editor_property(\'sphere_elems\')) + len(agg.get_editor_property(\'sphyl_elems\'))) if agg else 0',
-    "    unreal.log('POF_UE_COLLISION=' + str(n))",
-    // Save EVERYTHING the import produced, not just the mesh. `task.save` is False
-    // whenever a plan is present (the mesh must not persist before collision is applied),
-    // which on the first live run left the glTF's textures and materials in memory only:
-    // one .uasset on disk, referencing assets that would not survive an editor restart.
-    'for p in paths:',
-    '    a = unreal.load_asset(p)',
-    '    if a:',
-    '        unreal.EditorAssetLibrary.save_loaded_asset(a)',
-  ];
-}
-
-/**
- * UE python that imports a .glb via an AssetImportTask and logs the asset path. Pure.
- *
- * With a collision plan the task does NOT save at import time — saving before the collision
- * call would persist the mesh without it — and the asset is saved explicitly afterwards.
- */
-export function buildGlbImportPython(
-  glbPath: string,
-  destPath = '/Game/Generated',
-  assetName = 'TripoSRMesh',
-  opts: { collision?: CollisionPlan } = {},
-): string {
-  const glb = glbPath.replace(/\\/g, '/');
-  const wantsCollision = !!opts.collision && opts.collision.kind !== 'none';
-  return [
-    'task = unreal.AssetImportTask()',
-    `task.filename = '${glb}'`,
-    `task.destination_path = '${destPath}'`,
-    `task.destination_name = '${assetName}'`,
-    'task.automated = True',
-    'task.replace_existing = True',
-    `task.save = ${wantsCollision ? 'False' : 'True'}`,
-    'unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])',
-    'paths = list(task.imported_object_paths)',
-    // A glTF import produces SEVERAL assets — textures and materials among them — and
-    // `imported_object_paths` is not ordered mesh-first. Measured on a live run: paths[0]
-    // was a Texture2D, so the old `load_asset(paths[0])` handed a texture to
-    // add_simple_collisions ("Cannot nativize 'Texture2D' as 'StaticMesh'") and the
-    // reported asset path was a texture. Select by TYPE, before anything uses it.
-    'mesh = None',
-    "mesh_path = ''",
-    'for p in paths:',
-    '    o = unreal.load_asset(p)',
-    '    if isinstance(o, unreal.StaticMesh):',
-    '        mesh = o',
-    '        mesh_path = p',
-    '        break',
-    "unreal.log('POF_UE_IMPORT=' + (mesh_path if mesh_path else (paths[0] if paths else 'NONE')))",
-    // Distinguishes "imported something, but no mesh" from "imported nothing" — the two
-    // have identical import markers and completely different causes.
-    "unreal.log('POF_UE_MESH=' + ('YES' if mesh else 'NO'))",
-    ...collisionPython(opts.collision),
-  ].join('\n');
-}
+// The plan (collision + scale) and the python that applies it are PURE and node-free, and
+// live in `ue-import-plan.ts` so the client Import Automation view can render the exact python
+// this module runs. Re-exported here so every existing importer of these names is unchanged.
+export {
+  collisionPlan,
+  buildGlbImportPython,
+  DEFAULT_HULL_COUNT,
+  DEFAULT_MAX_HULL_VERTS,
+  type CollisionUse,
+  type CollisionPlan,
+  type ImportScale,
+} from './ue-import-plan';
 
 export interface UeImportResult {
   ok: boolean;
@@ -158,6 +30,11 @@ export interface UeImportResult {
    * requested, never a silent pass.
    */
   collisionElements?: number;
+  /**
+   * Longest extent (cm) READ BACK from the imported mesh's bounds, when a scale was applied.
+   * Absent means nothing measured it — a failure when a scale was requested.
+   */
+  observedExtentCm?: number;
   error?: string;
   logs: string[];
 }
@@ -173,12 +50,17 @@ export async function importGlbToUE(
     assetName?: string;
     settleMs?: number;
     collision?: CollisionPlan;
+    /** The plan's derived scale (`importScaleOf`). Absent → nothing applied, nothing checked. */
+    scale?: ImportScale;
     runExperimentFn?: RunExperimentFn;
   } = {},
 ): Promise<UeImportResult> {
   const run = opts.runExperimentFn ?? runExperiment;
   const res = await run({
-    python: buildGlbImportPython(glbPath, opts.destPath, opts.assetName, { collision: opts.collision }),
+    python: buildGlbImportPython(glbPath, opts.destPath, opts.assetName, {
+      collision: opts.collision,
+      ...(opts.scale ? { scale: opts.scale.factor } : {}),
+    }),
     capture: false,
     settleMs: opts.settleMs ?? 180_000, // editor cold-start + import
   });
@@ -206,14 +88,24 @@ export async function importGlbToUE(
         ? `collision was requested (${opts.collision!.kind}) but the mesh reported no body_setup count — nothing observed it, so it is not claimed`
         : `collision was requested (${opts.collision!.kind}) but body_setup holds 0 elements — the mesh would fall through the world`;
 
+  // Scale, the same stance: CLAIMED only from the extent read back off the imported bounds.
+  // A build-scale call that silently did nothing leaves a 100 cm hero beside a 180 cm
+  // Mannequin, so a requested scale that was not observed within tolerance fails the import.
+  const rawExtent = res.markers['POF_UE_EXTENT_CM'];
+  const extent = rawExtent === undefined ? undefined : Number(rawExtent);
+  const observedExtentCm = extent !== undefined && Number.isFinite(extent) ? extent : undefined;
+  const scaleError = opts.scale ? scaleReadBackError(opts.scale, observedExtentCm) : undefined;
+
   return {
-    ok: res.ok && imported && collisionOk,
+    ok: res.ok && imported && collisionOk && !scaleError,
     assetPath: imported ? asset : undefined,
     ...(collisionElements !== undefined && Number.isFinite(collisionElements) ? { collisionElements } : {}),
+    ...(observedExtentCm !== undefined ? { observedExtentCm } : {}),
     error:
       res.error ??
       (asset === 'NONE' ? 'no objects imported (is the glTF/Interchange importer enabled?)' : undefined) ??
-      collisionError,
+      collisionError ??
+      scaleError,
     logs: res.logs,
   };
 }
