@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { useLabPipelineStore, useEntitySteps, setLabSync } from '../labPipelineStore';
-import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
+import { entityStepList } from '../entityPipeline';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogManifest } from '../catalogManifest';
 import { postArtifact, deleteEntityArtifacts } from '../labArtifactClient';
@@ -92,12 +92,12 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const manifest = useMemo(() => (catalogId ? catalogManifest(catalogId) : null), [catalogId]);
   // The generic ArchetypeStep still needs the raw StepSpec (for its `spec` prop).
   const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
-  // Only the steps this ENTITY has (profile-scoped steps, D18) — memoised so consumers keyed on the array stay stable.
+  // Only the steps this ENTITY has (`entityStepList`, D18: the list every lab jump indexes) — memoised for stable consumers.
   const catalogSteps = detail?.steps;
   const entityProfile = entity?.canonProfile;
   const steps = useMemo(
-    () => (catalogSteps ? stepLabelsForProfile(pipeline, catalogSteps, entityProfile) : []),
-    [catalogSteps, pipeline, entityProfile],
+    () => (catalogId && catalogSteps ? entityStepList(catalogId, { canonProfile: entityProfile }, catalogSteps) : []),
+    [catalogId, catalogSteps, entityProfile],
   );
 
   const fields = summarizeEntityData(entity?.data);

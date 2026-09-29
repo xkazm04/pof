@@ -1,10 +1,11 @@
 'use client';
 
-import { labIdentityOf, type LabReference } from '@/lib/catalog/canon/profiles';
+import type { LabReference } from '@/lib/catalog/canon/profiles';
 import { useMemo } from 'react';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { resolveCatalogSteps } from './catalogManifest';
+import { toLabEntity } from './entityPipeline';
 import type { CatalogLink, LifecycleState } from '@/lib/catalog/types';
 
 export interface LabCatalog {
@@ -97,11 +98,7 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
         catalogId, label: section.label, description: section.description ?? '',
         total: all.length,
       },
-      entities: all.map((e) => ({
-        id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,
-        links: e.links,
-        ...labIdentityOf(e as Parameters<typeof labIdentityOf>[0]),
-      })),
+      entities: all.map(toLabEntity),
       steps: resolveCatalogSteps(catalogId),
     };
   }, [catalogId, entitiesByCatalog, draftEntitiesByCatalog]);
