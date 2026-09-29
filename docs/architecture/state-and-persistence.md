@@ -602,6 +602,17 @@ task; a ready item runs as a feature-fix task via `useModuleCLI.execute`; `onCom
 'confirmed')` calls `invalidateFeatureData()` so every plan view re-derives from fresh statuses
 (`onSettled(item, landed)` lets a sequencer advance). The other done-rule sites are not migrated yet.
 
+**Build session = one budgeted run through the same door.** `planBuildSession(statusMap, { budgetMinutes,
+moduleId?, exclude? })` (`src/lib/implementation-planner/build-session.ts`) proposes steps greedily by
+impact per estimated minute among ready features, re-deriving readiness (`isFeatureDone`) after each
+pick so an in-session unlock (`unlockedBy`) is eligible; deselecting (`exclude`) drops a step and all
+that waited on it, and `projected` is recomputed over the hypothetical statuses, never summed.
+`useBuildSession` (ImplementationPlan) takes the page's `usePlanDispatch` door (relayed `onSettled`, so
+still ONE CLI session): nothing dispatches until Start; each emitted step is re-read from the refreshed
+statuses and dispatched only once ready; `advanceBuildSession` advances only on (success, 'confirmed')
+and otherwise stops naming the step and why (also on operator Stop, a step still blocked after
+`UI_TIMEOUTS.callbackSettleMax`, or a run not started within `callbackAwaitTimeout`).
+
 **UI_TIMEOUTS is the single source for all timing constants.** Inline `setTimeout(fn, 3000)` or
 similar literals are a lint target. Import `UI_TIMEOUTS` from `@/lib/constants`.
 
