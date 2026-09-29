@@ -392,7 +392,13 @@ unit-tested against an in-memory DB (`new Database(':memory:')`), and a thin ser
 `UNIQUE(source, assetId)` so re-downloads upsert), `asset_collections`, and `asset_collection_items`
 (many-to-many membership, `ON DELETE CASCADE`). Surfaced as the **Library** tab in `AssetBrowserView`
 (client store `useAssetLibraryStore`, instant search/filter via the pure `library-filter.ts`); every
-`BrowsePanel` download is recorded here instead of vanishing into a one-shot `window.open`.
+`BrowsePanel` download is recorded here instead of vanishing into a one-shot `window.open`. Download opens
+`VariantPicker`: the source's real format x resolution files with sizes (pure `download-variants.ts`;
+ambientCG variants ride on the search row, Poly Haven's come from `GET /api/visual-gen/browse/files`, cached
+per id). `downloadUrl` records the picked variant's main file, never the `api.polyhaven.com/files/<id>` JSON
+listing (`isListingUrl`; `recordDownload` refuses one), since `libraryReference.ts` cites it into prompts as
+already downloaded. Single files go to the browser as a direct download (a 1 GB zip never enters page memory);
+multi-file sets are fetched one file at a time, glTF saved flat via `flattenGltfUris`.
 
 **`headless_builds`** (queued/running/completed UBT build jobs) follows this same guard pattern but is
 owned by `src/lib/ue5-bridge/build-pipeline.ts` (`ensureHeadlessBuildsTable()`) — the sole reader/writer —
