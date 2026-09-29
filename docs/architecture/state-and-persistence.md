@@ -651,7 +651,7 @@ create, no upload) through the same Tier-1 gate and class face budget a fresh jo
 `jobId` on the same status poller.
 
 **Feature done = `isFeatureDone`; plan dispatch = `usePlanDispatch`.** A feature-matrix status is
-done when `isFeatureDone(status)` (`src/lib/constellation/layout.ts`: implemented OR improved) - the
+done when `isFeatureDone(status)` (`src/lib/feature-done.ts`, re-exported unchanged by `src/lib/constellation/layout.ts`: implemented OR improved) - the
 one rule `generatePlan`, `unblockFrontier` and `moduleGraph` share, so the planner's `isReady` /
 `unmetDeps` / `implementedCount` agree with the Dependencies tab. The plan's own Build lands as
 `improved` (the feature-fix callback), so a planner counting only `implemented` could never advance.
@@ -660,7 +660,17 @@ Every plan dispatch (plan table, plan map, Dependencies Build) goes through `use
 (`plan-dispatch.ts`) refuses a not-ready item with `{ reason: 'blocked', unmet }` and creates no
 task; a ready item runs as a feature-fix task via `useModuleCLI.execute`; `onComplete(true,
 'confirmed')` calls `invalidateFeatureData()` so every plan view re-derives from fresh statuses
-(`onSettled(item, landed)` lets a sequencer advance). The other done-rule sites are not migrated yet.
+(`onSettled(item, landed)` lets a sequencer advance). The blocker and roll-up readers go through the
+same module: `computeBlockers` (every blocked badge, so a Built dependency stops blocking), the NBA
+engine's unblock claim, the Feature Matrix blocked chip, the Dependencies detail dot, and
+`moduleCompletion` / `projectCompletionPct` for the Features tab, the Quality tab headline and cells,
+and the Overview correlation `pctComplete` - one completion % across the three tabs. **Grade
+effect:** the Summary health `coverage` term (`pctComplete`) and `dependencyHealth` term (blocked
+count via `computeBlockers` -> `moduleGraph`) now count improved as done, so the gauge rises when a
+Build lands; 'improved' is the Build callback's self-report, not a review. `feature-done-rule.test.ts`
+pins the migrated files (no `=== 'implemented'` done-comparison, rule imported) and the re-export
+identity. Left alone: 14 hand-rolled sites that already agree (implemented || improved) and
+`gdd-synthesizer.ts` (implemented-only, out of that slice).
 
 **Build session = one budgeted run through the same door.** `planBuildSession(statusMap, { budgetMinutes,
 moduleId?, exclude? })` (`src/lib/implementation-planner/build-session.ts`) proposes steps greedily by
