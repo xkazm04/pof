@@ -155,6 +155,17 @@ export interface SemanticDiffResult {
   notCompared: string[];
 }
 
+// ─── Route responses (one request per action) ───────────────────────────────
+
+/** The parse a transpile/diff was computed from, returned with it so no action needs a second request. */
+export interface ParsedBlueprint {
+  asset: BlueprintAsset;
+  summary: string;
+}
+
+export type TranspileResponse = TranspileResult & ParsedBlueprint;
+export type DiffResponse = SemanticDiffResult & ParsedBlueprint;
+
 // ─── Session State ───────────────────────────────────────────────────────────
 
 export type TranspilerTab = 'transpile' | 'diff' | 'history';
