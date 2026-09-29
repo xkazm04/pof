@@ -40,6 +40,11 @@ const NO_BUDGET: BudgetStatus = {
   monthlyPct: null,
   dailyExceeded: false,
   monthlyExceeded: false,
+  periods: {
+    zone: 'UTC',
+    day: { start: '2026-06-08T00:00:00.000Z', end: '2026-06-09T00:00:00.000Z' },
+    month: { start: '2026-06-01T00:00:00.000Z', end: '2026-07-01T00:00:00.000Z' },
+  },
 };
 
 function makeDashboard(): SpendDashboardData {

@@ -76,6 +76,32 @@ describe('cli-spend-db', () => {
     expect(status.dailyPct).toBeCloseTo(150, 1);
   });
 
+  it('echoes the enforced UTC day/month windows on the budget status', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-10T12:00:00.000Z'));
+      expect(getBudgetStatus().periods).toEqual({
+        zone: 'UTC',
+        day: { start: '2026-09-10T00:00:00.000Z', end: '2026-09-11T00:00:00.000Z' },
+        month: { start: '2026-09-01T00:00:00.000Z', end: '2026-10-01T00:00:00.000Z' },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('[guard] enforcement sums are unchanged: month spend counts this UTC month only', () => {
+    setBudgetConfig({ dailyLimitUsd: 1, monthlyLimitUsd: 2 });
+    recordSpend({ moduleId: 'm', taskType: 'checklist', costUsd: 1.5, tokensIn: 1, tokensOut: 1 });
+    // A row from long ago never counts toward today or this month.
+    getDb().prepare(`INSERT INTO cli_spend (cost_usd, recorded_at) VALUES (?, ?)`).run(9, '2001-01-01 00:00:00');
+    const s = getBudgetStatus();
+    expect(s.todaySpendUsd).toBeCloseTo(1.5, 5);
+    expect(s.monthSpendUsd).toBeCloseTo(1.5, 5);
+    expect(s.dailyExceeded).toBe(true);
+    expect(s.monthlyExceeded).toBe(false);
+  });
+
   it('estimates task-type cost from history', () => {
     expect(getTaskTypeEstimate('module-scan')).toBeNull();
     recordSpend({ moduleId: 'm', taskType: 'module-scan', costUsd: 0.4, tokensIn: 1, tokensOut: 1 });

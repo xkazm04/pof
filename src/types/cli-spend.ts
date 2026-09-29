@@ -58,6 +58,22 @@ export interface BudgetConfig {
   monthlyLimitUsd: number | null;
 }
 
+/** A half-open `[start, end)` period as ISO UTC instants. */
+export interface PeriodWindow {
+  start: string;
+  end: string;
+}
+
+/**
+ * The day and month windows the budget guard ENFORCES, echoed with their zone so
+ * the UI can say when a budget resets and project a period without re-deriving it.
+ */
+export interface BudgetPeriods {
+  zone: string;
+  day: PeriodWindow;
+  month: PeriodWindow;
+}
+
 /** Budget config + the live spend-against-budget meter. */
 export interface BudgetStatus {
   config: BudgetConfig;
@@ -71,6 +87,8 @@ export interface BudgetStatus {
   monthlyPct: number | null;
   dailyExceeded: boolean;
   monthlyExceeded: boolean;
+  /** The enforced windows today/month spend were summed over (additive; no reader enforces on it). */
+  periods: BudgetPeriods;
 }
 
 /** The full spend dashboard payload. */

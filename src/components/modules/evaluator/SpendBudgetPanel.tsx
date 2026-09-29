@@ -6,7 +6,10 @@ import { MeterBar } from '@/components/ui/MeterBar';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { formatUsd } from '@/lib/cli-spend/format';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
-import type { BudgetStatus, BudgetConfig } from '@/types/cli-spend';
+import { BudgetEditPreview, BudgetPace } from '@/components/modules/evaluator/SpendBudgetPreview';
+import type { BudgetStatus, BudgetConfig, DailySpend } from '@/types/cli-spend';
+
+const NO_HISTORY: DailySpend[] = [];
 
 /** Threshold color for a budget meter: green < 80% < amber < 100% < red. */
 function budgetColor(pct: number): string {
@@ -17,6 +20,8 @@ function budgetColor(pct: number): string {
 
 interface SpendBudgetPanelProps {
   status: BudgetStatus;
+  /** Recorded daily spend (the dashboard's rollup) — replayed to preview a typed daily limit. */
+  daily?: DailySpend[];
   isSaving: boolean;
   onSave: (config: BudgetConfig) => Promise<void>;
 }
@@ -24,9 +29,10 @@ interface SpendBudgetPanelProps {
 /**
  * Daily + monthly budget meters with an inline editor. Reads the live
  * spend-against-budget status and lets the user set/clear each limit. An empty
- * input clears that limit ("no limit").
+ * input clears that limit ("no limit"). While editing, the typed limits are
+ * previewed against recorded days and this month's pace before they are saved.
  */
-export function SpendBudgetPanel({ status, isSaving, onSave }: SpendBudgetPanelProps) {
+export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving, onSave }: SpendBudgetPanelProps) {
   const [editing, setEditing] = useState(false);
   const [daily, setDaily] = useState(status.config.dailyLimitUsd?.toString() ?? '');
   const [monthly, setMonthly] = useState(status.config.monthlyLimitUsd?.toString() ?? '');
@@ -82,6 +88,7 @@ export function SpendBudgetPanel({ status, isSaving, onSave }: SpendBudgetPanelP
         <div className="grid grid-cols-2 gap-3">
           <LimitInput label="Daily limit (USD)" value={daily} onChange={setDaily} />
           <LimitInput label="Monthly limit (USD)" value={monthly} onChange={setMonthly} />
+          <BudgetEditPreview history={history} status={status} dailyInput={daily} monthlyInput={monthly} />
           <p className="col-span-2 text-2xs text-text-muted">
             Leave a field blank for no limit. When a limit is set, expensive task launches that would
             exceed it prompt a confirmation.
@@ -103,6 +110,7 @@ export function SpendBudgetPanel({ status, isSaving, onSave }: SpendBudgetPanelP
             pct={status.monthlyPct}
             remaining={status.monthlyRemainingUsd}
           />
+          <BudgetPace status={status} />
         </div>
       )}
     </SurfaceCard>
