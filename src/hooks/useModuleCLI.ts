@@ -8,7 +8,6 @@ import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { type CLITask, type CallbackStatus } from '@/lib/cli-task';
 import { composeTaskDispatch, STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
 import type { SkillId } from '@/components/cli/skills';
-import { UI_TIMEOUTS } from '@/lib/constants';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
@@ -76,50 +75,39 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   // recorded with the outcome so A/B attribution can close the loop.
   const lastVariantIdRef = useRef<string>(STATIC_VARIANT_ID);
 
-  // Detect running → stopped transition and fire onComplete with success info.
-  //
-  // Race condition context: CompactTerminal fires onStreamingChange(false) and
-  // onTaskComplete(id, success) synchronously. The first call sets isRunning=false
-  // in the store WITHOUT lastTaskSuccess. The second call sets lastTaskSuccess.
-  // React batches both, but to be safe we read success imperatively from getState()
-  // after a microtask so both store writes are guaranteed settled.
-  const prevRunningRef = useRef(false);
+  // Fire onComplete from the run door's endRun transition (cliPanelStore). endRun
+  // releases isRunning AND records THIS run's outcome in one store write, so the
+  // outcome is read from the very state that carries the edge — never a later
+  // getState() that could still hold the previous run's outcome. (The old 50 ms
+  // setTimeout read raced a callback settle that can take up to callbackSettleMax.)
   const onCompleteRef = useRef(opts.onComplete);
-  const sessionKeyRef = useRef(opts.sessionKey);
   const moduleIdRef = useRef(opts.moduleId);
   useEffect(() => { onCompleteRef.current = opts.onComplete; }, [opts.onComplete]);
-  useEffect(() => { sessionKeyRef.current = opts.sessionKey; }, [opts.sessionKey]);
   useEffect(() => { moduleIdRef.current = opts.moduleId; }, [opts.moduleId]);
 
-  // The key the prevRunning value was observed under. A sessionKey switch
-  // re-subscribes this hook to a DIFFERENT session — comparing the old key's
-  // running=true against the new key's running=false is NOT a completion.
+  // A sessionKey switch re-subscribes to a DIFFERENT session: the old key's
+  // in-flight run is not this key's completion, so drop its analytics context.
   const prevKeyRef = useRef(opts.sessionKey);
+  useEffect(() => {
+    if (prevKeyRef.current === opts.sessionKey) return;
+    prevKeyRef.current = opts.sessionKey;
+    lastPromptRef.current = '';
+    taskStartRef.current = '';
+  }, [opts.sessionKey]);
 
   useEffect(() => {
-    if (prevKeyRef.current !== opts.sessionKey) {
-      // Resync to the new session and skip the transition: firing here would
-      // record a false 'failed' analytics outcome (with the OLD session's
-      // prompt and a bogus duration) and call onComplete for a run that is
-      // still in progress on the previous key.
-      prevKeyRef.current = opts.sessionKey;
-      prevRunningRef.current = isRunning;
-      lastPromptRef.current = '';
-      taskStartRef.current = '';
-      return;
-    }
-    if (prevRunningRef.current && !isRunning) {
-      // Read success imperatively from the settled store state
-      setTimeout(() => {
-        const sessions = useCLIPanelStore.getState().sessions;
-        const entry = Object.values(sessions).find(
-          (sess) => sess.sessionKey === sessionKeyRef.current
-        );
-        const success = entry?.lastTaskSuccess === true;
-        // Additive callback truth for this run (undefined when the host never
-        // reported one — e.g. a non-callback interactive run).
-        const callbackStatus = entry?.lastCallbackStatus ?? undefined;
-
+    const key = opts.sessionKey;
+    return useCLIPanelStore.subscribe((state, prev) => {
+      const entry = Object.values(state.sessions).find((sess) => sess.sessionKey === key);
+      if (!entry || entry.isRunning || !prev.sessions[entry.id]?.isRunning) return;
+      // Captured NOW, from the endRun state itself.
+      const success = entry.lastTaskSuccess === true;
+      // Additive callback truth for this run (undefined when the host never
+      // reported one — e.g. a non-callback interactive run).
+      const callbackStatus = entry.lastCallbackStatus ?? undefined;
+      // Delivered after the store notification completes, so an onComplete that
+      // re-dispatches (batch chains) cannot re-enter the store mid-notification.
+      queueMicrotask(() => {
         // Record session analytics (fire and forget)
         if (lastPromptRef.current && taskStartRef.current) {
           const startTime = new Date(taskStartRef.current).getTime();
@@ -129,7 +117,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
 
           recordSessionOutcome({
             moduleId: moduleIdRef.current,
-            sessionKey: sessionKeyRef.current,
+            sessionKey: key,
             prompt: lastPromptRef.current,
             hadProjectContext,
             success,
@@ -139,11 +127,10 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
           });
         }
 
-        onCompleteRef.current?.(success, callbackStatus ?? undefined);
-      }, UI_TIMEOUTS.raceConditionBuffer);
-    }
-    prevRunningRef.current = isRunning;
-  }, [isRunning, opts.sessionKey]);
+        onCompleteRef.current?.(success, callbackStatus);
+      });
+    });
+  }, [opts.sessionKey]);
 
   const sendPrompt = useCallback(
     (prompt: string, meta?: DispatchMeta) => {

@@ -9,11 +9,15 @@ import {
   GLOW_SM, withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
-import { KEYBOARD_ROWS, KEY_BINDING_MAP, KEY_CONFLICTS } from '../_shared/data';
+import { useResolvedBindings } from '@/stores/characterBlueprintStore';
+import { KEYBOARD_ROWS } from '../_shared/data';
 import { KeyboardKey } from './KeyboardKey';
 import { MouseWidget } from './MouseWidget';
 
 export function KeyboardVisualization() {
+  // Keys, mouse and legend all read the one resolved (persisted) binding state.
+  const resolved = useResolvedBindings();
+  const conflictCount = resolved.conflicts.size;
   // Legend swatches pulse opacity only — not a positional key, so the root
   // MotionConfig would keep looping them for a motion-sensitive user.
   const prefersReduced = useReducedMotion();
@@ -39,7 +43,12 @@ export function KeyboardVisualization() {
                   style={{ paddingLeft: ri === 1 ? 10 : ri === 2 ? 20 : 0 }}
                 >
                   {row.map((kd) => (
-                    <KeyboardKey key={kd.key} kd={kd} />
+                    <KeyboardKey
+                      key={kd.key}
+                      kd={kd}
+                      binding={resolved.keyMap.get(kd.key)}
+                      conflict={resolved.conflicts.get(kd.key)}
+                    />
                   ))}
                 </motion.div>
               ))}
@@ -47,7 +56,7 @@ export function KeyboardVisualization() {
           </div>
         </div>
 
-        <MouseWidget />
+        <MouseWidget resolved={resolved} />
       </div>
 
       {/* ── Legend ───────────────────────────────────────────────────────── */}
@@ -73,7 +82,7 @@ export function KeyboardVisualization() {
           />
           Unbound
         </span>
-        {KEY_CONFLICTS.size > 0 && (
+        {conflictCount > 0 && (
           <span className="flex items-center gap-2 text-xs font-mono text-text-muted">
             <motion.span
               className="w-4 h-4 rounded-md border-2"
@@ -82,7 +91,7 @@ export function KeyboardVisualization() {
               transition={motionSafe({ duration: 1.5, repeat: Infinity }, prefersReduced)}
             />
             <span style={{ color: STATUS_ERROR }}>
-              {KEY_CONFLICTS.size} conflict{KEY_CONFLICTS.size > 1 ? 's' : ''}
+              {conflictCount} conflict{conflictCount > 1 ? 's' : ''}
             </span>
           </span>
         )}
@@ -93,7 +102,7 @@ export function KeyboardVisualization() {
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
           />
-          {KEY_BINDING_MAP.size} bindings active
+          {resolved.keyMap.size} bindings active
         </span>
       </div>
     </BlueprintPanel>

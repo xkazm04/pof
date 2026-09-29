@@ -1,12 +1,19 @@
-import { registerCatalogPipeline } from '../pipeline-registry';
+import { allCatalogPipelines, registerCatalogPipeline } from '../pipeline-registry';
+import { canonLawShapeChecker } from '@/lib/catalog/acceptance/canonLaw';
+import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { graphValid } from '../acceptance/graphCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { graphNodesResolve, graphValid } from '../acceptance/graphCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+
+/** codex-lore-depth: parsed from the law's own text, so editing the law moves the floor. */
+const LORE_DEPTH_CHARS = Number(/at least (\d+) characters/.exec(CANON_SEED.find((r) => r.id === 'codex-lore-depth')?.body ?? '')?.[1] ?? NaN);
+if (!Number.isFinite(LORE_DEPTH_CHARS)) throw new Error('canon rule codex-lore-depth no longer states "at least N characters"');
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -110,7 +117,8 @@ registerCatalogPipeline({
             '(dialog-trees: weathered, precise, suspicious). No magic presented as wondrous.',
         },
       }),
-      accept: minLength('loreBody', 'Lore body ≥ 400 characters', 400),
+      // The floor is PoF style law `codex-lore-depth` — UNGRADED under a profile without it (/diablo W22, D-B9).
+      accept: canonLawShapeChecker('codex-lore-depth', 'Lore body ≥ 400 characters', minLength('loreBody', 'Lore body ≥ 400 characters', LORE_DEPTH_CHARS)),
     },
 
     // ── 3. Cross-References ───────────────────────────────────────────────────
@@ -235,6 +243,7 @@ registerCatalogPipeline({
       },
       accept: allOf(
         graphValid('graph', 'Cross-refs reachable + terminal'),
+        graphNodesResolve('graph', 'Cross-referenced entities exist', () => new Set(allCatalogPipelines().map((p) => p.catalogId))),
         linksResolve(),
         wiringContractSound(),
       ),
@@ -338,8 +347,8 @@ registerCatalogPipeline({
         const s = slug(e.name);
         return {
         data: {
-          spoilerRules: {
-            classifiedTestimonyField: {
+          spoilerRules: [
+            {
               field: 'loreBody — paragraph referencing classified Vael testimony + Order facility origin dispute',
               spoilerTag: `State.Codex.Spoiler.${e.id}.ClassifiedTestimony`,
               gateCondition:
@@ -354,7 +363,7 @@ registerCatalogPipeline({
                 `GE_Codex_Spoiler_${s}_ClassifiedTestimony applies the tag on quest-ember-pact ` +
                 'stage 3 completion (or key-item grant event).',
             },
-            orderFacilityOriginField: {
+            {
               field: 'loreBody — implication that the cascade originated at an Order facility',
               spoilerTag: `State.Codex.Spoiler.${e.id}.ClassifiedTestimony`,
               gateCondition:
@@ -364,32 +373,31 @@ registerCatalogPipeline({
                 `State.Codex.Spoiler.${e.id}.ClassifiedTestimony tag.`,
               ueWiring: 'Same GE as classifiedTestimonyField — single tag gates both paragraphs.',
             },
-            loreBodyBaseNote:
-              'The base lore body (cause contested but Order framing presented, no explicit facility ' +
-              'accusation) is safe to show from the moment the entry is unlocked — it matches what ' +
-              'the player can infer from Vael\'s guarded demeanour in dialog-trees. ' +
-              'Only the classified testimony and the explicit facility-origin implication are spoiler-gated.',
-            wiringContract: {
-              grantedBy:
-                `GE_Codex_Spoiler_${s}_ClassifiedTestimony — applied on quest-ember-pact stage 3 ` +
-                'OR "Vael Field Report" key-item grant event.',
-              activatedBy:
-                'AARPGQuestComponent.OnStageComplete(quest-ember-pact, stage 3) → ' +
-                `ApplyGameplayEffectToSelf(GE_Codex_Spoiler_${s}_ClassifiedTestimony); ` +
-                'OR AARPGItemComponent.OnKeyItemGranted("item-vael-field-report") → same GE.',
-              dependencies: [
-                'quests (quest-ember-pact — stage 3 progression)',
-              ],
-              verification:
-                `L2: GE_Codex_Spoiler_${s}_ClassifiedTestimony compiled; tag registered; ` +
-                'L3: VSCodexUnlockTest — spoiler paragraph absent before stage 3, present after (deferred)',
-            },
+          ],
+          spoilerNote:
+            'The base lore body (cause contested but Order framing presented, no explicit facility ' +
+            'accusation) is safe to show from the moment the entry is unlocked — it matches what ' +
+            'the player can infer from Vael\'s guarded demeanour in dialog-trees. ' +
+            'Only the classified testimony and the explicit facility-origin implication are spoiler-gated.',
+          wiringContract: {
+            grantedBy:
+              `GE_Codex_Spoiler_${s}_ClassifiedTestimony — applied on quest-ember-pact stage 3 ` +
+              'OR "Vael Field Report" key-item grant event.',
+            activatedBy:
+              'AARPGQuestComponent.OnStageComplete(quest-ember-pact, stage 3) → ' +
+              `ApplyGameplayEffectToSelf(GE_Codex_Spoiler_${s}_ClassifiedTestimony); ` +
+              'OR AARPGItemComponent.OnKeyItemGranted("item-vael-field-report") → same GE.',
+            dependencies: [
+              'quests (quest-ember-pact — stage 3 progression)',
+            ],
+            verification:
+              `L2: GE_Codex_Spoiler_${s}_ClassifiedTestimony compiled; tag registered; ` +
+              'L3: VSCodexUnlockTest — spoiler paragraph absent before stage 3, present after (deferred)',
           },
         },
         };
       },
       contract: {
-        field: 'spoilerRules',
         grantedBy: 'one GE_Codex_Spoiler_{slug}_<gate> GameplayEffect for EACH spoiler gate THIS entry declares grants its corresponding spoiler tag',
         activatedBy: 'the quest stage, key item, or other reveal event declared by each spoiler gate applies its named GameplayEffect',
         dependencies: [
@@ -399,11 +407,9 @@ registerCatalogPipeline({
         verification: 'L2: every spoiler GameplayEffect declared for {name} compiles and every spoiler tag is registered; L3: VSCodexUnlockTest — each gated section is hidden before its declared reveal event and visible afterward',
       },
       accept: allOf(
-        fieldsPopulated('spoilerRules', 'spoiler fields + gate conditions defined', [
-          'classifiedTestimonyField',
-          'orderFacilityOriginField',
-        ]),
-        wiringContractSound('spoilerRules'),
+        minCount('spoilerRules', '≥1 spoiler gate defined', 1),
+        entriesHaveFields('spoilerRules', 'every spoiler gate carries field + spoilerTag + gateCondition', ['field', 'spoilerTag', 'gateCondition']),
+        wiringContractSound(),
       ),
     },
 

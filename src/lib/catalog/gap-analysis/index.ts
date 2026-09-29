@@ -1,38 +1,48 @@
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { pluginFor } from './plugins';
 import type { Histogram } from './plugins/types';
+import {
+  SAMPLE_MAX, measureDimensions, readPath, scopeToProfile,
+  type DimensionCoverage, type GapBasis,
+} from './coverage';
 
 export type { Histogram } from './plugins/types';
+export { aggregateByAttr, gapBasisOf, scopeToProfile, unmeasuredDimensions } from './coverage';
+export type { DimensionCoverage, GapBasis } from './coverage';
 
+/**
+ * A catalog's measured state. The coverage fields are optional on the TYPE because a
+ * distribution persisted before they existed (zustand `pof-one-shot-job`) or posted back by
+ * a client may lack them — read the basis through `gapBasisOf` (missing = `none`).
+ * `analyzeCatalog` always fills them (`MeasuredCatalogDistribution`).
+ */
 export interface CatalogDistribution {
   catalogId: string;
   total: number;
   byAttribute: Record<string, Histogram>;
   underrepresented: Array<{ attribute: string; value: string; count: number; expected: number }>;
   sample: StoredCatalogEntity[];
+  /** Canon profile the entities were scoped to; absent = every profile's entities. */
+  profile?: string;
+  /** Per declared dimension: how many of `total` entities carry it. */
+  coverage?: Record<string, DimensionCoverage>;
+  /** Declared dimensions no entity carries — absent, never "balanced". */
+  unmeasured?: string[];
+  /** Dimensions whose values are all unique (an id list, not a distribution). */
+  degenerate?: string[];
+  /** Whether `underrepresented` had any basis to be computed from. */
+  gapBasis?: GapBasis;
 }
 
-/** Read a dot-path value from an entity's `data` payload. */
-function readPath(data: unknown, path: string): unknown {
-  if (data == null || typeof data !== 'object') return undefined;
-  return path.split('.').reduce<unknown>((acc, key) => {
-    if (acc == null || typeof acc !== 'object') return undefined;
-    return (acc as Record<string, unknown>)[key];
-  }, data);
+export type MeasuredCatalogDistribution = CatalogDistribution
+  & Required<Pick<CatalogDistribution, 'coverage' | 'unmeasured' | 'degenerate' | 'gapBasis'>>;
+
+export interface AnalyzeOptions {
+  /** Count only this canon profile's entities (`canonProfileOf`). Omitted = unscoped. */
+  profile?: string;
 }
 
-export function aggregateByAttr(entities: StoredCatalogEntity[], path: string): Histogram {
-  const out: Histogram = {};
-  for (const e of entities) {
-    const v = readPath(e.data, path);
-    if (v === undefined || v === null) continue;
-    const key = typeof v === 'string' ? v : String(v);
-    out[key] = (out[key] ?? 0) + 1;
-  }
-  return out;
-}
-
-function pickStratifiedSample(entities: StoredCatalogEntity[], path: string, max = 5): StoredCatalogEntity[] {
+function pickStratifiedSample(entities: StoredCatalogEntity[], path: string, max = SAMPLE_MAX): StoredCatalogEntity[] {
   const byKey = new Map<string, StoredCatalogEntity[]>();
   for (const e of entities) {
     const v = readPath(e.data, path);
@@ -66,19 +76,22 @@ function inferDimensions(entities: StoredCatalogEntity[]): string[] {
   return [...keys].slice(0, 3);
 }
 
-export function analyzeCatalog(catalogId: string, entities: StoredCatalogEntity[]): CatalogDistribution {
+export function analyzeCatalog(
+  catalogId: string,
+  allEntities: StoredCatalogEntity[],
+  options: AnalyzeOptions = {},
+): MeasuredCatalogDistribution {
+  const entities = options.profile ? scopeToProfile(allEntities, options.profile) : allEntities;
   const plugin = pluginFor(catalogId);
   const dimensions = plugin?.dimensions ?? inferDimensions(entities);
-  const byAttribute: Record<string, Histogram> = {};
-  for (const d of dimensions) {
-    const h = aggregateByAttr(entities, d);
-    if (Object.keys(h).length > 0) byAttribute[d] = h;
-  }
   const expected = plugin?.expectedShare ?? {};
+  const { byAttribute, coverage, unmeasured, degenerate } = measureDimensions(dimensions, entities, expected);
   const underrepresented: CatalogDistribution['underrepresented'] = [];
+  let gapBasis: GapBasis = 'none';
   for (const [attr, h] of Object.entries(byAttribute)) {
     const exp = expected[attr];
     if (!exp) continue;
+    gapBasis = 'expected-share';
     const total = Object.values(h).reduce((a, b) => a + b, 0);
     for (const [val, share] of Object.entries(exp)) {
       const want = share * total;
@@ -94,6 +107,11 @@ export function analyzeCatalog(catalogId: string, entities: StoredCatalogEntity[
     total: entities.length,
     byAttribute,
     underrepresented,
-    sample: pickStratifiedSample(entities, primary, 5),
+    sample: pickStratifiedSample(entities, primary, SAMPLE_MAX),
+    ...(options.profile ? { profile: options.profile } : {}),
+    coverage,
+    unmeasured,
+    degenerate,
+    gapBasis,
   };
 }

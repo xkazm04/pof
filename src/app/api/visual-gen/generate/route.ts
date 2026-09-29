@@ -1,17 +1,6 @@
 import { NextRequest } from 'next/server';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { parseImageDataUrl } from '@/lib/visual-gen/triposr-runner';
-import { startTriposrJob } from '@/lib/visual-gen/triposr-job-store';
-import { startHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
-import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
-import { generationPlanFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
-import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
-import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
-import { TRIPO_VIEW_ORDER, type TripoView } from '@/lib/visual-gen/tripo-runner';
-import { hunyuanModelFor } from '@/lib/visual-gen/hunyuan-models';
+import { runnerDispatchFor, runnerRefusal, type RunnerMode } from '@/lib/visual-gen/runner-dispatch';
 import {
   routePromptShape,
   linearPropRefusal,
@@ -32,14 +21,13 @@ import {
 /**
  * POST /api/visual-gen/generate
  *
- * Image/text-to-3D pipeline. Two routes behind one endpoint:
- *  - LOCAL (open-source, GPU): 'hunyuan3d' (OFFICIAL, ~360K-face) + 'triposr' (MIT
- *    fallback) — image-to-3d only; decode the uploaded image, write it server-side,
- *    start a job.
- *  - CLOUD (Tripo3D REST API): 'tripo3d' — text-to-3d OR image-to-3d, no local VRAM,
- *    PBR-textured output (free tier is non-commercial). Needs env TRIPO_API_KEY.
- * Both start a job (poll GET /api/visual-gen/generate/status?jobId=...). MCP-backed
- * providers (rodin) go through /api/blender-mcp/generate, not here.
+ * Image/text-to-3D pipeline. WHICH providers it can start, and how, is not written here:
+ * it is `RUNNER_DISPATCH` (src/lib/visual-gen/runner-dispatch.ts) — local GPU runners
+ * (hunyuan3d OFFICIAL, triposr MIT fallback, trellis2 textured) and cloud Tripo3D. Every
+ * start returns a job (poll GET /api/visual-gen/generate/status?jobId=...). A provider or
+ * mode the table cannot start is refused with the forge button's own
+ * `providerExecution(...).reason`; MCP-backed providers (rodin) are pointed at
+ * /api/blender-mcp/generate.
  *
  * Before either route, the SHAPE route refuses a subject whose geometry is fully
  * determined by its anchors (rope/cable/chain/wire) and points at
@@ -100,21 +88,6 @@ export async function POST(request: NextRequest) {
     if (topology !== undefined && topology !== 'triangles') {
       return apiError(`unknown topology "${topology}" — expected "triangles" or "quads"`, 400);
     }
-    // The preset budget is authored in TRIANGLES; `providerFaceLimit` converts it to the
-    // number the provider's `face_limit` actually counts (halved for quad topology).
-    const gradedAs = resolveAssetClass(assetClass).gradedAs;
-    // WHERE the budget is enforced is a per-class decision (`generationPlanFor`), not a
-    // constant. A `max-then-finish` class deliberately sends NO `face_limit`: the
-    // generator's own low-poly mode drops the detail the high->low bake exists to
-    // recover, so the budget is enforced by mesh-finish instead. Passing the class budget
-    // here anyway — which this route did for every class — is exactly the request the
-    // `ai-lowpoly-generation-not-final` rule says not to make.
-    const generationPlan = assetClass ? generationPlanFor(assetClass) : undefined;
-    const triangleBudget = generationPlan?.faceLimit;
-    const faceLimit = triangleBudget !== undefined
-      ? providerFaceLimit({ triangleBudget, topology: 'triangles' })
-      : undefined;
-
     if (!mode || !providerId) return apiError('Missing required fields: mode, providerId', 400);
 
     /**
@@ -177,89 +150,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const outFor = (id: string) => {
-      const stamp = Date.now();
-      const outDir = join(process.cwd(), 'generated', id).replace(/\\/g, '/');
-      mkdirSync(outDir, { recursive: true });
-      return { stamp, outputPath: join(outDir, `${stamp}.glb`).replace(/\\/g, '/') };
-    };
-    const imageToFile = (id: string, stamp: number) => {
-      const img = imageDataUrl ? parseImageDataUrl(imageDataUrl) : null;
-      if (!img) return null;
-      const inPath = join(tmpdir(), `pof_${id}_in_${stamp}.${img.ext}`).replace(/\\/g, '/');
-      writeFileSync(inPath, img.buffer);
-      return inPath;
-    };
-
-    if (providerId === 'hunyuan3d' || providerId === 'triposr') {
-      // `multiview-to-3d` lands here too and must be refused rather than silently
-      // downgraded: Hunyuan3D/TripoSR take a single `imagePath`, so accepting the set and
-      // meshing only the front view would report a multiview run that never happened.
-      if (mode !== 'image-to-3d') return apiError(`${providerId} supports image-to-3d only`, 400);
-      if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
-      const { stamp, outputPath } = outFor(providerId);
-      const inPath = imageToFile(providerId, stamp);
-      if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
-
-      // `assetClass` is OPTIONAL and its default is stated, never guessed: absent (or
-      // unrecognised) input grades class-blind and `gradedAs` says so, because promoting
-      // a missing class to a "typical" one would fail an assembled character against a
-      // prop's component budget. Until this arrived, the local stores graded every mesh
-      // against the class-blind 200k ceiling with nothing anywhere admitting it.
-      // Never leave the Hunyuan model unstated either: without this the model was
-      // decided by an argparse default inside pof_hunyuan.py and no mesh was ever
-      // attributable to a tier. `hunyuanModelFor` states the model that has actually
-      // been running — and reports `audited: false`, because unlike Tripo's pin no PoF
-      // arena has ever graded a Hunyuan mesh (`generated/hunyuan3d/` is empty).
-      const jobId = providerId === 'hunyuan3d'
-        ? startHunyuanJob({ imagePath: inPath, outputPath, assetClass, model: hunyuanModelFor(assetClass).model })
-        : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true, assetClass });
-      return apiSuccess({ jobId, provider: providerId, mode, gradedAs: resolveAssetClass(assetClass).gradedAs, inputGate, shapeRoute }, 202);
+    // One table, one refusal vocabulary. A miss (no runner, or a mode the runner cannot
+    // serve — e.g. multiview on the single-image local providers, which would otherwise
+    // mesh only the front view and report a multiview run that never happened) refuses
+    // with the same sentence the forge button shows.
+    const dispatch = runnerDispatchFor(providerId);
+    if (!dispatch || !dispatch.modes.includes(mode as RunnerMode)) {
+      return apiError(runnerRefusal(providerId, mode), 400);
     }
-
-    if (providerId === 'tripo3d') {
-      const { stamp, outputPath } = outFor('tripo3d');
-      // Never leave model_version unset — the character-pipeline arena graded the silent
-      // account default a FAIL. `tripoModelFor` pins the one model it graded PASS, with
-      // the texture quality both recorded pass recipes call for.
-      const pin = tripoModelFor(assetClass);
-      const tripoPin = { modelVersion: pin.modelVersion, textureQuality: pin.textureQuality };
-      if (mode === 'text-to-3d') {
-        if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
-        const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        // No `inputGate` here on purpose: a text-to-3d submit has no input image to gate.
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, generationPlan, shapeRoute }, 202);
-      }
-      if (mode === 'image-to-3d') {
-        if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
-        const inPath = imageToFile('tripo3d', stamp);
-        if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
-        const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, gradedAs, generationPlan, inputGate, shapeRoute }, 202);
-      }
-      if (mode === 'multiview-to-3d') {
-        if (!viewDataUrls?.front) return apiError('multiview-to-3d needs at least a front view (viewDataUrls.front)', 400);
-        const views: Partial<Record<TripoView, { path: string }>> = {};
-        for (const slot of TRIPO_VIEW_ORDER) {
-          const dataUrl = viewDataUrls[slot];
-          if (!dataUrl) continue;
-          const img = parseImageDataUrl(dataUrl);
-          if (!img) return apiError(`${slot} view must be a base64 PNG/JPG/WebP data URL`, 400);
-          // One temp file PER SLOT. Reusing `imageToFile`'s single-stamp name would write
-          // all four views to the same path and mesh the last one four times.
-          const viewPath = join(tmpdir(), `pof_tripo_mv_${slot}_${stamp}.${img.ext}`).replace(/\\/g, '/');
-          writeFileSync(viewPath, img.buffer);
-          views[slot] = { path: viewPath };
-        }
-        const jobId = startTripoJob({ mode: 'multiview-to-3d', views, outputPath, pbr: true, faceLimit, assetClass, maxAttempts, ...tripoPin });
-        // `inputGate` rides along unchanged: the Tier-0 gate above still runs on the
-        // single `imageDataUrl` when one was supplied, and is simply absent otherwise.
-        return apiSuccess({ jobId, provider: 'tripo3d', mode, views: Object.keys(views), gradedAs, generationPlan, inputGate, shapeRoute }, 202);
-      }
-      return apiError('tripo3d supports text-to-3d, image-to-3d and multiview-to-3d', 400);
-    }
-
-    return apiError(`Provider "${providerId}" is not wired for local generation (MCP providers use /api/blender-mcp/generate)`, 400);
+    const started = dispatch.start({
+      mode: mode as RunnerMode, prompt, imageDataUrl, viewDataUrls, assetClass, mcResolution, maxAttempts,
+    });
+    if (!started.ok) return apiError(started.error, 400);
+    // `inputGate` is absent on text-to-3d (nothing to gate) and on multiview without a
+    // single `imageDataUrl`; it rides along unchanged otherwise.
+    return apiSuccess({ jobId: started.data.jobId, provider: providerId, mode, ...started.data.extras, inputGate, shapeRoute }, 202);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Failed to process generation request', 500);
   }

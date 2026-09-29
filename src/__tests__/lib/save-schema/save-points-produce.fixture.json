@@ -1,0 +1,68 @@
+{
+  "capturedAt": "base 70dca0e3 (save-points.ts unchanged since 52d42362)",
+  "stateSchema": {
+    "stateSchema": {
+      "persisted": {
+        "description": "Only discrete world-state mutations that have FIRED and settled (per canon state-graph-fsm-wiring). Never capture running/transient state.",
+        "fields": [
+          "playerLevel: int — current character level (from DT_AttributeDefaults row)",
+          "playerAttributes: FARPGAttributeSnapshot — base Str/Dex/Int/Life/Mana at save time (not in-combat derived values)",
+          "inventoryItems: TArray<FARPGSavedItemEntry> — item id + affixes + socket state (from items catalog)",
+          "walletGold: int — committed Gold balance (UARPGWalletComponent::GetGold at save time)",
+          "walletOrbs: TMap<FName, int> — orb currency counts keyed by currency entity slug",
+          "defeatedEnemyTags: TArray<FGameplayTag> — each State.Enemy.Defeated.<EnemyId> that has fired",
+          "completedQuestStages: TArray<FARPGQuestSaveEntry> — {questId, stageIndex, outcome} for each terminal stage reached",
+          "unlockedZoneIds: TArray<FName> — zone catalog ids the player has entered at least once",
+          "checkpointActorTag: FGameplayTag — the State.Checkpoint.EmberShrine tag marking this checkpoint activated",
+          "repStandings: TMap<FName, int> — faction reputation points keyed by faction catalog id",
+          "passivePoints: int — total passive points spent",
+          "passiveAllocations: TArray<FName> — node ids of allocated passive tree nodes",
+          "activeSaveSlot: int — 0-indexed slot this save occupies (0–2)",
+          "saveTimestamp: FDateTime — wall-clock time of last save"
+        ],
+        "persistenceRule": "Written via UARPGSaveSubsystem::SaveToSlot → UGameplayStatics::SaveGameToSlot(\"PoFSave_<slot>\", 0, SaveObject). Only the fields above are serialized. Everything else is ephemeral."
+      },
+      "ephemeral": {
+        "description": "Discarded on session end; reconstructed from DT_AttributeDefaults + canonical data on load.",
+        "fields": [
+          "currentAIStateTags — blackboard keys + running State.AI.* tags on all actors",
+          "inFlightGASEffects — active GE handles on the player (re-derived from saved attributes on respawn)",
+          "pendingSpawnPool — enemy actors spawned but not yet defeated (re-derived from defeatedEnemyTags)",
+          "navigationMeshCache — rebuilt by NavMesh on load",
+          "physicsSimState — Chaos physics body transforms (reset to blueprint defaults)",
+          "activeLevelStreaming — async-loaded sublevel states (re-streamed on zone restore)",
+          "currentCombatTarget — cleared on session end",
+          "unsettledCurrencyDrops — items mid-air on death that were never picked up"
+        ],
+        "ephemeralRule": "These fields are intentionally ABSENT from UARPGSaveGame. Attempting to serialize them is a bug; the subsystem asserts they are absent."
+      },
+      "schemaVersion": 1,
+      "fieldsNote": "UARPGSaveGame carries a SchemaVersion int. On load, UARPGSaveSubsystem::MigrateSaveGame(SaveGame) applies registered migration lambdas in version order before handing the object to the game. A missing migration for a schema bump = load aborts gracefully.",
+      "wiringContract": {
+        "grantedBy": "UARPGSaveSubsystem::SaveToSlot serializes the player pawn state + world-state tags + inventory + wallet into UARPGSaveGame and calls UGameplayStatics::SaveGameToSlot",
+        "activatedBy": "Ember Shrine interaction (BP_EmberShrine::Interact → AARPGInteractableBase::OnInteracted delegate → subsystem SaveToSlot); Autosave trigger (zone transition / quest stage completion → UARPGSaveSubsystem::TriggerAutoSave)",
+        "dependencies": [
+          "characters (DT_AttributeDefaults for attribute baseline restore)",
+          "quests (FARPGQuestSaveEntry — stage index + outcome per quest)",
+          "factions (repStandings keyed by faction catalog id)",
+          "items (FARPGSavedItemEntry — item id + affix roll + sockets)",
+          "currencies (walletGold + walletOrbs keyed by currency slug)"
+        ],
+        "verification": "L2: UARPGSaveGame declared in Source/PoF/ + schemaVersion field present; L2: UARPGSaveSubsystem::MigrateSaveGame + ValidateSaveGame declared in Source/PoF/; L3: VSSaveLoadTest — save → reload restores persisted fields, ephemeral discarded, in PIE"
+      }
+    }
+  },
+  "versioning": {
+    "versioning": {
+      "currentVersion": 1,
+      "versionField": "UARPGSaveGame::SchemaVersion (int32). Bumped by 1 for every change to the persisted field set (add, remove, or rename a field). Matching CURRENT_SAVE_SCHEMA_VERSION constant in ARPGSaveSubsystem.h.",
+      "migrationPolicy": "Migration chain executed via UARPGSaveSubsystem::MigrateSaveGame(SaveGame). On load: if (saveVersion < currentVersion) run migrations in ascending order. Each lambda receives the raw UARPGSaveGame* and applies exactly one schema transition. Migrations are additive-only in the forward direction (never delete data mid-chain). All migrations must be idempotent (calling twice = same result as calling once).",
+      "upgradeRules": [
+        "v0→v1: initial schema (no migration needed — first shipped version is v1)",
+        "Any new field added to UARPGSaveGame MUST: (a) be optional with a valid default, (b) have a migration lambda that fills the default for saves missing the field, (c) bump SchemaVersion. No exceptions (canon: a missing migration = aborted load)."
+      ],
+      "downgradePolicy": "Downgrades are NOT supported (saveVersion > currentVersion → load aborted with an error screen offering to start a new game or recover from backup slot). The backup slot is always the previous successful save (written before each new save commit).",
+      "deprecationNote": "When a field is no longer needed: (a) keep it as a stub in UARPGSaveGame for one version cycle so existing saves can still deserialize, (b) migration lambda strips it, (c) remove the stub in the following version bump."
+    }
+  }
+}

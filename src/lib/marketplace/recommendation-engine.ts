@@ -6,8 +6,9 @@ import type {
   MarketplaceAsset,
   ScoredAsset,
   RecommendationResponse,
+  UnreviewedModule,
 } from '@/types/marketplace';
-import type { FeatureStatus } from '@/types/feature-matrix';
+import { FEATURE_STATUSES, type FeatureStatus } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { ASSET_CATALOG } from './asset-catalog';
 
@@ -88,7 +89,7 @@ function featureToTags(featureName: string, moduleId: SubModuleId): string[] {
 
 // ── Score an asset against a feature gap ──────────────────────────────────────
 
-function scoreAsset(asset: MarketplaceAsset, gap: FeatureGap): ScoredAsset | null {
+export function scoreAsset(asset: MarketplaceAsset, gap: FeatureGap): ScoredAsset | null {
   let score = 0;
   const reasons: string[] = [];
   const gapTags = featureToTags(gap.featureName, gap.moduleId);
@@ -107,8 +108,9 @@ function scoreAsset(asset: MarketplaceAsset, gap: FeatureGap): ScoredAsset | nul
     reasons.push(`${tagOverlap.length} tag matches: ${tagOverlap.join(', ')}`);
   }
 
-  // GAS compatibility bonus (0-10 points)
-  if (asset.gasCompatible && gap.moduleId.includes('gas') || gap.moduleId.includes('combat')) {
+  // GAS compatibility bonus (0-10 points) — only for a GAS-compatible asset, on a
+  // module that actually uses GAS (gas or combat).
+  if (asset.gasCompatible && (gap.moduleId.includes('gas') || gap.moduleId.includes('combat'))) {
     score += 10;
     reasons.push('GAS compatible');
   }
@@ -172,37 +174,75 @@ const MODULE_LABELS: Record<string, string> = {
   'dialogue-quests': 'Dialogue & Quests',
 };
 
-// ── Build feature gaps from feature matrix status ────────────────────────────
+// ── Partition the feature matrix: gaps vs unreviewed ──────────────────────────
 
-export function buildFeatureGaps(
-  statusMap: Map<string, FeatureStatus>,
+/** Default gap filter: only features a review found missing or partial. An absent or
+ *  'unknown' status is UNMEASURED, not missing — it is reported as unreviewed. */
+export const DEFAULT_GAP_STATUSES: FeatureStatus[] = ['missing', 'partial'];
+
+const KNOWN_STATUSES = new Set<string>(FEATURE_STATUSES);
+
+export interface FeatureMatrixPartition {
+  /** Features whose status passes the gap filter (default missing|partial). */
+  gaps: FeatureGap[];
+  /** Per module, features with no review verdict (absent / unknown) that are not gaps. */
+  unreviewed: UnreviewedModule[];
+}
+
+/**
+ * Split every defined feature three ways: status in `statusFilter` → gap; absent or
+ * 'unknown' (and not filtered in as a gap) → unreviewed; anything else (implemented,
+ * improved) → excluded. An unrecognised status string reads as 'unknown'.
+ */
+export function partitionFeatureMatrix(
+  statusMap: ReadonlyMap<string, string>,
   moduleFilter?: string,
-  statusFilter: FeatureStatus[] = ['missing', 'partial', 'unknown'],
-): FeatureGap[] {
+  statusFilter: readonly FeatureStatus[] = DEFAULT_GAP_STATUSES,
+): FeatureMatrixPartition {
   const gaps: FeatureGap[] = [];
+  const unreviewed: UnreviewedModule[] = [];
 
   for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
     if (moduleFilter && moduleId !== moduleFilter) continue;
+    const defs = features ?? [];
+    const moduleLabel = MODULE_LABELS[moduleId] ?? moduleId;
+    const unreviewedNames: string[] = [];
 
-    for (const feat of features) {
-      const key = `${moduleId}::${feat.featureName}`;
-      const status = statusMap.get(key) ?? 'unknown';
+    for (const feat of defs) {
+      const raw = statusMap.get(`${moduleId}::${feat.featureName}`);
+      const status: FeatureStatus = raw && KNOWN_STATUSES.has(raw) ? (raw as FeatureStatus) : 'unknown';
 
-      if (!statusFilter.includes(status)) continue;
+      if (statusFilter.includes(status)) {
+        gaps.push({
+          moduleId: moduleId as SubModuleId,
+          moduleLabel,
+          featureName: feat.featureName,
+          featureNames: [feat.featureName],
+          status,
+          description: feat.description,
+          diyHours: (MODULE_DIY_HOURS[moduleId] ?? 4) / (defs.length || 1),
+          category: MODULE_CATEGORY_MAP[moduleId] ?? 'other',
+        });
+      } else if (status === 'unknown') {
+        unreviewedNames.push(feat.featureName);
+      }
+    }
 
-      gaps.push({
-        moduleId: moduleId as SubModuleId,
-        moduleLabel: MODULE_LABELS[moduleId] ?? moduleId,
-        featureName: feat.featureName,
-        status,
-        description: feat.description,
-        diyHours: (MODULE_DIY_HOURS[moduleId] ?? 4) / (features.length || 1),
-        category: MODULE_CATEGORY_MAP[moduleId] ?? 'other',
-      });
+    if (unreviewedNames.length > 0) {
+      unreviewed.push({ moduleId: moduleId as SubModuleId, moduleLabel, featureNames: unreviewedNames });
     }
   }
 
-  return gaps;
+  return { gaps, unreviewed };
+}
+
+/** The gap half of {@link partitionFeatureMatrix}. */
+export function buildFeatureGaps(
+  statusMap: ReadonlyMap<string, string>,
+  moduleFilter?: string,
+  statusFilter: readonly FeatureStatus[] = DEFAULT_GAP_STATUSES,
+): FeatureGap[] {
+  return partitionFeatureMatrix(statusMap, moduleFilter, statusFilter).gaps;
 }
 
 // ── Generate recommendations ─────────────────────────────────────────────────
@@ -210,6 +250,7 @@ export function buildFeatureGaps(
 export function generateRecommendations(
   gaps: FeatureGap[],
   catalog: MarketplaceAsset[] = ASSET_CATALOG,
+  unreviewed: UnreviewedModule[] = [],
 ): RecommendationResponse {
   const recommendations: AssetRecommendation[] = [];
   let totalTimeSaved = 0;
@@ -244,11 +285,13 @@ export function generateRecommendations(
       .slice(0, 5);
 
     if (topAssets.length > 0) {
-      // Use the first gap as representative for the group
+      // One group per module: the typed list of its gap features (definition order).
+      const featureNames = moduleGaps.flatMap((g) => g.featureNames);
       const representativeGap: FeatureGap = {
         ...moduleGaps[0],
-        featureName: `${moduleGaps.length} missing features`,
-        description: moduleGaps.map((g) => g.featureName).join(', '),
+        featureName: `${featureNames.length} feature ${featureNames.length === 1 ? 'gap' : 'gaps'}`,
+        featureNames,
+        description: `${featureNames.length} missing or partial in ${moduleGaps[0].moduleLabel}`,
         diyHours: moduleGaps.reduce((sum, g) => sum + g.diyHours, 0),
       };
 
@@ -262,16 +305,14 @@ export function generateRecommendations(
   }
 
   // Sort recommendations by number of gaps addressed
-  recommendations.sort((a, b) => {
-    const aGaps = a.gap.description.split(', ').length;
-    const bGaps = b.gap.description.split(', ').length;
-    return bGaps - aGaps;
-  });
+  recommendations.sort((a, b) => b.gap.featureNames.length - a.gap.featureNames.length);
 
   return {
     recommendations,
     totalGaps: gaps.length,
     totalAssets: catalog.length,
     estimatedTimeSaved: totalTimeSaved,
+    unreviewed,
+    totalUnreviewed: unreviewed.reduce((n, m) => n + m.featureNames.length, 0),
   };
 }

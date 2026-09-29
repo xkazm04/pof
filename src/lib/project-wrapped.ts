@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import { MODULE_LABELS } from './module-registry';
-import { getWeekStart, toISODate } from './weekly-digest';
+import { reportZone, dayKey, mondayOfKey, daysBetweenKeys } from '@/lib/analytics/report-window';
 import type {
   ProjectWrapped,
   WrappedModule,
@@ -22,39 +22,35 @@ const SESSION_MILESTONES = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
 const HOUR_MILESTONES = [1, 5, 10, 25, 50, 100, 250];
 const MODULE_MILESTONES = [3, 5, 10];
 
-// ── Small date helpers ───────────────────────────────────────────────────────
-
-function dateOf(iso: string): string {
-  return iso.slice(0, 10);
-}
-
-/** Whole calendar days from `a` to `b` (both YYYY-MM-DD); negative if b < a. */
-function daysBetween(a: string, b: string): number {
-  const ta = Date.parse(a + 'T00:00:00Z');
-  const tb = Date.parse(b + 'T00:00:00Z');
-  return Math.round((tb - ta) / 86400000);
-}
-
 // ── Pure aggregation ─────────────────────────────────────────────────────────
 
 /**
  * Aggregate the full session history into a lifetime "Wrapped" recap.
  * Pure & DB-free so it can be unit-tested with fixture rows. `nowISO` is the
  * timestamp stamped onto the recap (injected to keep this resume/render safe).
+ * Every day / week / month key is cut in `zone` by the report-window authority (the same
+ * one the Weekly Digest uses) and the recap echoes that zone.
  */
-export function aggregateProjectWrapped(rows: WrappedSessionRow[], nowISO: string): ProjectWrapped {
+export function aggregateProjectWrapped(
+  rows: WrappedSessionRow[],
+  nowISO: string,
+  zone: string = reportZone(),
+): ProjectWrapped {
   const sorted = [...rows].sort((a, b) => a.completed_at.localeCompare(b.completed_at));
 
-  if (sorted.length === 0) return emptyWrapped(nowISO);
+  if (sorted.length === 0) return emptyWrapped(nowISO, zone);
+
+  // One zone-true day key per row, parallel to `sorted` (derived once, reused below).
+  const days = sorted.map((r) => dayKey(r.completed_at, zone));
 
   const totalSessions = sorted.length;
   const successCount = sorted.filter((r) => r.success === 1).length;
   const successRate = successCount / totalSessions;
   const totalTimeMs = sorted.reduce((s, r) => s + (r.duration_ms || 0), 0);
 
-  const firstSessionDate = dateOf(sorted[0].completed_at);
-  const lastSessionDate = dateOf(sorted[sorted.length - 1].completed_at);
-  const spanDays = daysBetween(firstSessionDate, lastSessionDate) + 1;
+  const firstSessionDate = days[0];
+  const lastSessionDate = days[days.length - 1];
+  const spanDays = daysBetweenKeys(firstSessionDate, lastSessionDate) + 1;
 
   // ── Per-module ──
   const moduleMap = new Map<string, { sessions: number; success: number; timeMs: number }>();
@@ -81,10 +77,7 @@ export function aggregateProjectWrapped(rows: WrappedSessionRow[], nowISO: strin
 
   // ── Per-day ──
   const dayMap = new Map<string, number>();
-  for (const r of sorted) {
-    const day = dateOf(r.completed_at);
-    dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
-  }
+  for (const day of days) dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
   const activeDays = dayMap.size;
   let biggestDay: { date: string; sessions: number } | null = null;
   for (const [date, sessions] of dayMap) {
@@ -93,14 +86,14 @@ export function aggregateProjectWrapped(rows: WrappedSessionRow[], nowISO: strin
 
   // ── Per-week ──
   const weekMap = new Map<string, { sessions: number; success: number; timeMs: number }>();
-  for (const r of sorted) {
-    const wk = toISODate(getWeekStart(new Date(r.completed_at)));
+  sorted.forEach((r, i) => {
+    const wk = mondayOfKey(days[i]);
     const e = weekMap.get(wk) ?? { sessions: 0, success: 0, timeMs: 0 };
     e.sessions++;
     if (r.success === 1) e.success++;
     e.timeMs += r.duration_ms || 0;
     weekMap.set(wk, e);
-  }
+  });
   let biggestWeek: WrappedWeek | null = null;
   for (const [weekStart, d] of weekMap) {
     const w: WrappedWeek = {
@@ -119,25 +112,26 @@ export function aggregateProjectWrapped(rows: WrappedSessionRow[], nowISO: strin
   let longestStreak = 0;
   let run = 0;
   let bestStreakEndDate: string | null = null;
-  for (const r of sorted) {
+  sorted.forEach((r, i) => {
     if (r.success === 1) {
       run++;
-      if (run > longestStreak) { longestStreak = run; bestStreakEndDate = dateOf(r.completed_at); }
+      if (run > longestStreak) { longestStreak = run; bestStreakEndDate = days[i]; }
     } else {
       run = 0;
     }
-  }
+  });
 
   const sortedDays = Array.from(dayMap.keys()).sort();
   let longestActiveDayStreak = sortedDays.length > 0 ? 1 : 0;
   let dayRun = longestActiveDayStreak;
   for (let i = 1; i < sortedDays.length; i++) {
-    dayRun = daysBetween(sortedDays[i - 1], sortedDays[i]) === 1 ? dayRun + 1 : 1;
+    dayRun = daysBetweenKeys(sortedDays[i - 1], sortedDays[i]) === 1 ? dayRun + 1 : 1;
     if (dayRun > longestActiveDayStreak) longestActiveDayStreak = dayRun;
   }
 
   return {
     generatedAt: nowISO,
+    zone,
     firstSessionDate,
     lastSessionDate,
     activeDays,
@@ -153,9 +147,9 @@ export function aggregateProjectWrapped(rows: WrappedSessionRow[], nowISO: strin
     longestStreak,
     longestActiveDayStreak,
     biggestDay,
-    milestones: buildMilestones(sorted, { firstSessionDate, biggestWeek, longestStreak, bestStreakEndDate }),
+    milestones: buildMilestones(sorted, days, { firstSessionDate, biggestWeek, longestStreak, bestStreakEndDate }),
     achievements: computeLifetimeAchievements({ totalSessions, successRate, longestStreak, modulesTouched, totalTimeMs, activeDays }),
-    monthlyActivity: buildMonthlyArc(sorted),
+    monthlyActivity: buildMonthlyArc(sorted, days),
   };
 }
 
@@ -163,6 +157,7 @@ export function aggregateProjectWrapped(rows: WrappedSessionRow[], nowISO: strin
 
 function buildMilestones(
   sorted: WrappedSessionRow[],
+  days: string[],
   ctx: {
     firstSessionDate: string;
     biggestWeek: WrappedWeek | null;
@@ -184,7 +179,7 @@ function buildMilestones(
   for (const t of SESSION_MILESTONES) {
     if (sorted.length >= t) {
       ms.push({
-        date: dateOf(sorted[t - 1].completed_at),
+        date: days[t - 1],
         type: 'sessions',
         title: `${t.toLocaleString()} sessions`,
         description: `Reached ${t.toLocaleString()} total sessions`,
@@ -198,14 +193,14 @@ function buildMilestones(
   const timeClaimed = new Set<number>();
   const seenModules = new Set<string>();
   const moduleClaimed = new Set<number>();
-  for (const r of sorted) {
+  sorted.forEach((r, i) => {
     cumMs += r.duration_ms || 0;
     const hrs = cumMs / 3600000;
     for (const t of HOUR_MILESTONES) {
       if (!timeClaimed.has(t) && hrs >= t) {
         timeClaimed.add(t);
         ms.push({
-          date: dateOf(r.completed_at),
+          date: days[i],
           type: 'time',
           title: `${t}h invested`,
           description: `Crossed ${t} hour${t === 1 ? '' : 's'} of build time`,
@@ -219,7 +214,7 @@ function buildMilestones(
         if (seenModules.size === t && !moduleClaimed.has(t)) {
           moduleClaimed.add(t);
           ms.push({
-            date: dateOf(r.completed_at),
+            date: days[i],
             type: 'module',
             title: `${t} modules explored`,
             description: `Worked across ${t} different modules`,
@@ -228,7 +223,7 @@ function buildMilestones(
         }
       }
     }
-  }
+  });
 
   if (ctx.biggestWeek && ctx.biggestWeek.sessions >= 5) {
     ms.push({
@@ -259,20 +254,21 @@ function buildMilestones(
 
 // ── Monthly activity arc (continuous, gap-filled) ────────────────────────────
 
-function buildMonthlyArc(sorted: WrappedSessionRow[]): WrappedMonth[] {
+/** `days` are the rows' zone-true day keys; a month key is the day key's YYYY-MM. */
+function buildMonthlyArc(sorted: WrappedSessionRow[], days: string[]): WrappedMonth[] {
   if (sorted.length === 0) return [];
 
   const map = new Map<string, { sessions: number; success: number }>();
-  for (const r of sorted) {
-    const key = r.completed_at.slice(0, 7); // YYYY-MM
+  sorted.forEach((r, i) => {
+    const key = days[i].slice(0, 7); // YYYY-MM in the recap's zone
     const e = map.get(key) ?? { sessions: 0, success: 0 };
     e.sessions++;
     if (r.success === 1) e.success++;
     map.set(key, e);
-  }
+  });
 
-  const [ly, lmo] = sorted[sorted.length - 1].completed_at.slice(0, 7).split('-').map(Number);
-  let [y, mo] = sorted[0].completed_at.slice(0, 7).split('-').map(Number);
+  const [ly, lmo] = days[days.length - 1].slice(0, 7).split('-').map(Number);
+  let [y, mo] = days[0].slice(0, 7).split('-').map(Number);
   const out: WrappedMonth[] = [];
   let guard = 0;
   while ((y < ly || (y === ly && mo <= lmo)) && guard < 600) {
@@ -324,9 +320,10 @@ function computeLifetimeAchievements(data: {
 
 // ── Empty state ──────────────────────────────────────────────────────────────
 
-function emptyWrapped(nowISO: string): ProjectWrapped {
+function emptyWrapped(nowISO: string, zone: string): ProjectWrapped {
   return {
     generatedAt: nowISO,
+    zone,
     firstSessionDate: null,
     lastSessionDate: null,
     activeDays: 0,
@@ -350,12 +347,12 @@ function emptyWrapped(nowISO: string): ProjectWrapped {
 
 // ── DB-bound entry point ─────────────────────────────────────────────────────
 
-export function generateProjectWrapped(nowISO?: string): ProjectWrapped {
+export function generateProjectWrapped(nowISO?: string, zone: string = reportZone()): ProjectWrapped {
   const db = getDb();
   const rows = db.prepare(`
     SELECT module_id, success, duration_ms, completed_at
     FROM session_analytics
     ORDER BY completed_at ASC
   `).all() as WrappedSessionRow[];
-  return aggregateProjectWrapped(rows, nowISO ?? new Date().toISOString());
+  return aggregateProjectWrapped(rows, nowISO ?? new Date().toISOString(), zone);
 }

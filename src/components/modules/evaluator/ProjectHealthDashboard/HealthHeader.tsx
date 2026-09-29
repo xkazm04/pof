@@ -1,4 +1,4 @@
-import { Play } from 'lucide-react';
+import { ScanSearch } from 'lucide-react';
 import type { EvaluatorReport } from '@/types/evaluator';
 import { STATUS_STALE, statusBg, statusBorder } from '@/lib/chart-colors';
 import { EVAL_ACCENT } from './constants';
@@ -6,22 +6,26 @@ import { RadialScoreGauge } from './RadialScoreGauge';
 
 export function HealthHeader({
   lastScan,
-  isScanning,
+  isLoading,
   scanHistory,
   showHistoryOverlay,
   setShowHistoryOverlay,
+  onRunDeepEval,
 }: {
   lastScan: EvaluatorReport | null;
-  isScanning: boolean;
+  /** The scan history is still loading. */
+  isLoading: boolean;
   scanHistory: EvaluatorReport[];
   showHistoryOverlay: boolean;
   setShowHistoryOverlay: (v: boolean) => void;
+  /** Opens the Deep Eval tab — the producer of every scan scored here. */
+  onRunDeepEval?: () => void;
 }) {
   return (
     <div className="flex items-center gap-5">
       {/* Radial Score Gauge */}
       <div className="flex-shrink-0">
-        <RadialScoreGauge score={lastScan?.overallScore ?? null} isScanning={isScanning} />
+        <RadialScoreGauge score={lastScan?.overallScore ?? null} isScanning={isLoading} />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -34,41 +38,34 @@ export function HealthHeader({
           </p>
         ) : (
           <p className="text-xs text-text-muted mt-0.5">
-            Run a scan to analyze your UE5 project structure, code quality, and systems.
+            Scores come from Deep Eval scans of your UE5 modules; a module never evaluated has no score.
           </p>
         )}
         {lastScan && (
           <p className="text-2xs text-text-muted mt-1">
-            {new Date(lastScan.timestamp).toLocaleString()} · {lastScan.moduleScores.length} modules · {lastScan.recommendations.length} recommendations
+            {new Date(lastScan.timestamp).toLocaleString()} · {lastScan.moduleScores.length} modules scored · {lastScan.recommendations.length} recommendations
           </p>
         )}
       </div>
 
       <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        {/* In-app project scanning has no backing trigger yet (no store action
-            or API produces an EvaluatorReport). Render an honest disabled
-            affordance instead of a live-looking button that swallows clicks. */}
-        <button
-          disabled
-          aria-disabled="true"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium cursor-not-allowed opacity-70"
-          style={{
-            backgroundColor: `${EVAL_ACCENT}0a`,
-            color: EVAL_ACCENT,
-            border: `1px dashed ${EVAL_ACCENT}30`,
-          }}
-          title="Project scanning is not available yet — it requires CLI integration"
-        >
-          <Play className="w-3.5 h-3.5" />
-          Scan Project
-          <span
-            className="ml-1 px-1.5 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide"
-            style={{ backgroundColor: `${EVAL_ACCENT}18`, color: EVAL_ACCENT }}
+        {/* Scans are produced by the Deep Eval tab (persisted to evaluator_results);
+            this dashboard reads that history, so its door is the producer. */}
+        {onRunDeepEval && (
+          <button
+            onClick={onRunDeepEval}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all"
+            style={{
+              backgroundColor: `${EVAL_ACCENT}12`,
+              color: EVAL_ACCENT,
+              border: `1px solid ${EVAL_ACCENT}30`,
+            }}
+            title="Open the Deep Eval tab to scan modules; completed scans appear here"
           >
-            Soon
-          </span>
-        </button>
-        <p className="text-2xs text-text-muted text-right">Requires CLI integration</p>
+            <ScanSearch className="w-3.5 h-3.5" />
+            Run Deep Eval
+          </button>
+        )}
         {scanHistory.length >= 2 && (
           <button
             onClick={() => setShowHistoryOverlay(!showHistoryOverlay)}

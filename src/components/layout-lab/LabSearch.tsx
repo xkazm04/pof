@@ -12,10 +12,10 @@
  * It drives the EXISTING navigation callbacks lifted in `LayoutLab` (`onSelectCatalog` /
  * `onNavigate`) — no parallel navigation state, so last-location persistence keeps working.
  *
- * A step hit needs an entity to open: it uses the currently-open entity when that entity
- * belongs to the hit's catalog, otherwise the catalog's first seeded entity. When a
- * catalog has no entity at all the hit degrades to selecting the catalog (honest — there
- * is nothing to open the step on).
+ * A step hit names its step by LABEL and resolves the index at selection time against the
+ * entity it opens on (`resolveStepJump`): the open entity when its own pipeline has the step,
+ * else the first entity whose pipeline does. A profile-scoped step list (D18) makes a catalog
+ * position mean a different step per entity. No such entity → select the catalog (honest).
  *
  * The index also carries the app's OTHER surfaces (`NAVIGABLE_SURFACES`): before this,
  * nothing in the lab — palette or header — could reach `/experiment` at all. A route hit
@@ -29,13 +29,14 @@ import { useCatalogStore } from '@/stores/catalogStore';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { NAVIGABLE_SURFACES } from '@/lib/shell/surfaces';
 import { resolveCatalogSteps } from './catalogManifest';
+import { resolveStepJump, toLabEntity } from './entityPipeline';
 import { SearchCombobox, type SearchHit } from './ui/SearchCombobox';
 
 /** What selecting a hit does. */
 export type LabSearchTarget =
   | { kind: 'catalog'; catalogId: string }
   | { kind: 'entity'; catalogId: string; entityId: string }
-  | { kind: 'step'; catalogId: string; stepIndex: number }
+  | { kind: 'step'; catalogId: string; step: string }
   /** A different top-level surface — a full-page jump, not an in-lab navigation. */
   | { kind: 'route'; route: string };
 
@@ -106,7 +107,7 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
           hay: `${step} ${catalogId}`.toLowerCase(),
           hit: {
             key: `s:${catalogId}:${step}`, label: step, meta: `${label} · step ${i + 1}`, badge: 'step',
-            payload: { kind: 'step', catalogId, stepIndex: i },
+            payload: { kind: 'step', catalogId, step },
           },
         });
       });
@@ -129,10 +130,10 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
     } else if (t.kind === 'entity') {
       onNavigate(t.catalogId, t.entityId, 0);
     } else {
-      const inCatalog = entitiesByCatalog[t.catalogId] ?? {};
-      const entityId = (currentEntityId && inCatalog[currentEntityId] ? currentEntityId : Object.keys(inCatalog)[0]) ?? null;
-      // No seeded entity → there is nothing to open the step ON; land on the catalog.
-      if (entityId) onNavigate(t.catalogId, entityId, t.stepIndex);
+      const entities = Object.values(entitiesByCatalog[t.catalogId] ?? {}).map(toLabEntity);
+      const jump = resolveStepJump(t.catalogId, t.step, entities, currentEntityId);
+      // No entity whose own pipeline has the step → nothing to open it ON; land on the catalog.
+      if (jump) onNavigate(t.catalogId, jump.entityId, jump.stepIndex);
       else onSelectCatalog(t.catalogId);
     }
     onClose();

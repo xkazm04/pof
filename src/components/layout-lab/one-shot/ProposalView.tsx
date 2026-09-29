@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { LabTheme } from '../theme';
-import type { OneShotProposal } from '@/stores/oneShotJobStore';
+import { useOneShotJobStore, type OneShotProposal } from '@/stores/oneShotJobStore';
+import { planRun, stepRefsFor } from '@/lib/one-shot/runPlan';
+import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
+import { useDispatchPlan } from '../steps/shared/useDispatchPlan';
+import { RunPlanView } from './RunPlanView';
 
 interface Props {
   t: LabTheme;
@@ -13,10 +17,20 @@ interface Props {
 }
 
 /**
- * Proposal name + rationale + JSON data + refine textarea + Run pipeline button.
- * Textarea is disabled when refinementTurns >= 3 and !forceMore.
+ * Proposal name + rationale + JSON data + refine textarea + run plan + Run pipeline button.
+ * Textarea is disabled when refinementTurns >= 3 and !forceMore. The run plan (`planRun`) names
+ * every step's author before the click; the button carries the model-dispatch count.
  */
 export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove }: Props) {
+  const catalogId = useOneShotJobStore((s) => s.catalogId);
+  const overrides = useOneShotJobStore((s) => s.stepModeOverrides);
+  const setStepMode = useOneShotJobStore((s) => s.setStepMode);
+  const steps = useMemo(() => (catalogId ? stepRefsFor(catalogId) : []), [catalogId]);
+  const plan = useMemo(() => planRun(steps, overrides), [steps, overrides]);
+  const models = plan.totals.model;
+  const dispatch = useDispatchPlan(models > 0, ONE_SHOT_STEP_TASK_TYPE);
+  const copy = dispatch ? describeDispatchPlan(dispatch) : null;
+  const costCopy = copy ? `${copy.model} ${copy.cost}` : null;
   const [refineInput, setRefineInput] = useState('');
   const [forceMore, setForceMore] = useState(false);
   const atCap = refinementTurns >= 3;
@@ -102,6 +116,8 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
         </label>
       )}
 
+      <RunPlanView t={t} plan={plan} onSetMode={setStepMode} costCopy={costCopy} />
+
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={handleRefine}
@@ -132,7 +148,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
             fontWeight: 600,
           }}
         >
-          Run pipeline
+          Run pipeline{models > 0 && ` · ${models} model dispatch${models === 1 ? '' : 'es'}`}
         </button>
       </div>
     </div>

@@ -47,6 +47,8 @@ export function provenanceFor(sourceFile: string, sourceRow: string): EntityProv
 
 const NO_RESIST = 'PoF bestiary has no per-element resistance field — `stats` is an untyped {label,value}[] with no damage-type vocabulary';
 const NO_DRAIN = 'on-hit stat-drain has no representation: `status-effects` is a catalog but no archetype→status-effect link `role` exists';
+/** Both loaders parse the same resistance enum list (.reference/devilutionX/Source/tables/monstdat.cpp:396,447). */
+export const MONSTER_RESISTANCE_DECODE = [split(',')] as const;
 
 export const MONSTER_MAP: FieldMap = {
   _monster_id: mapped('id'),
@@ -69,8 +71,8 @@ export const MONSTER_MAP: FieldMap = {
   // values, and "4,1,1,1,1,1" would become [4, 1]. They feed the DERIVED timing (walk/attack ticks, D29 — W09).
   'frames[6]': mapped('data.animFrames'),
   'rate[6]': mapped('data.animRates'),
-  minDunLvl: gap('no spawn depth range; PoF has a single free-text `area: string`'),
-  maxDunLvl: gap('no spawn depth range (see minDunLvl)'),
+  minDunLvl: mapped('data.spawnDepth[min]'),
+  maxDunLvl: mapped('data.spawnDepth[max]'),
   level: mapped('data.stats[Level]'),
   hitPointsMinimum: mapped('data.stats[HP Min]'),
   hitPointsMaximum: mapped('data.stats[HP Max]'),
@@ -97,7 +99,7 @@ export const MONSTER_MAP: FieldMap = {
   armorClass: mapped('data.stats[Armor Class]'),
   monsterClass: mapped('data.category'),
   resistance: gap(NO_RESIST),
-  resistanceHell: gap('no per-difficulty variant of ANY stat — a PoF entity is difficulty-flat, so a game with per-difficulty balance cannot round-trip'),
+  resistanceHell: mapped('data.resistanceHell[]', ...MONSTER_RESISTANCE_DECODE),
   selectionRegion: dropped('mouse-picking hitbox'),
   // 106 blank, 4 `None` (a sentinel, not an entity), 2 `Uniq(<id>)` — a UNIQUE ITEM the
   // monster always drops. Diablo has no per-monster loot table: drops are driven by monster
@@ -117,7 +119,10 @@ export const ITEM_MAP: FieldMap = {
   equipType: mapped('data.equipType'),
   cursorGraphic: dropped('inventory sprite id'),
   itemType: mapped('data.subtype'),
-  uniqueBaseItem: gap('no base-item → unique-item derivation link; PoF `items` entities are flat'),
+  // Shared enum key used by the unique-item loader and runtime base-type match
+  // (.reference/devilutionX/Source/tables/itemdat.cpp:583,647;
+  // .reference/devilutionX/Source/items.cpp:1417-1427).
+  uniqueBaseItem: mapped('data.uniqueBase'),
   name: mapped('name'),
   shortName: dropped('narrow-UI label'),
   // The base type's minimum DROP level (qlvl): the level-driven loot (D7) gates which bases can drop at a monster's level.

@@ -12,23 +12,25 @@ import { AffixSunburst } from '../catalog/AffixSunburst';
 import { ItemScalingChart } from '../economy/ItemScalingChart';
 import { ItemDetailDrawer } from '../catalog/ItemDetailDrawer';
 import { buildBalancePrompt } from '../_shared/balance-prompt';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 import type { ItemData } from '../_shared/data';
 import {
   ACCENT, RARITY_COLORS, SYSTEM_PIPELINE, POWER_BUDGET_AXES,
   IRON_LONGSWORD_RADAR, VOID_DAGGERS_RADAR, AFFIX_PROB_TREE,
-  SCALING_LINES, DUMMY_ITEMS,
-  ALL_ITEM_TYPES,
+  SCALING_LINES, ALL_ITEM_TYPES,
 } from '../_shared/data';
 import { STATUS_SUCCESS, STATUS_ERROR as DELTA_NEG, withOpacity, OVERLAY_WHITE, OPACITY_2, OPACITY_25, OPACITY_8, OPACITY_12 } from '@/lib/chart-colors';
 import { BalanceAdvisorPanel } from './BalanceAdvisorPanel';
 
-/* ── Pre-compute items grouped by type for optgroup dropdown ──────────── */
+/* ── Items grouped by type for the optgroup dropdown ──────────────────── */
 
-const ITEMS_BY_TYPE = ALL_ITEM_TYPES.reduce<Record<string, ItemData[]>>((acc, type) => {
-  const items = DUMMY_ITEMS.filter(i => i.type === type);
-  if (items.length > 0) acc[type] = items;
-  return acc;
-}, {});
+function groupByType(all: ItemData[]): Record<string, ItemData[]> {
+  return ALL_ITEM_TYPES.reduce<Record<string, ItemData[]>>((acc, type) => {
+    const items = all.filter(i => i.type === type);
+    if (items.length > 0) acc[type] = items;
+    return acc;
+  }, {});
+}
 /* ── MechanicsScalingTab ───────────────────────────────────────────────── */
 
 interface MechanicsScalingTabProps {
@@ -41,12 +43,14 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
     moduleId, sessionKey: 'item-balance-advisor', label: 'Balance Advisor', accentColor: ACCENT,
   });
 
-  const items = DUMMY_ITEMS;
+  // Built-in + catalogStore items: the same set the loot filter previews.
+  const items = useInventoryItems();
+  const itemsByType = useMemo(() => groupByType(items), [items]);
   const inspectId = useId();
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const selectedItem = useMemo(
-    () => DUMMY_ITEMS.find(i => i.id === selectedItemId) ?? null,
-    [selectedItemId],
+    () => items.find(i => i.id === selectedItemId) ?? null,
+    [items, selectedItemId],
   );
 
   const handleAnalyzeBalance = useCallback(() => {
@@ -63,7 +67,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
           <select id={inspectId} value={selectedItemId} onChange={e => setSelectedItemId(e.target.value)}
             className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer min-w-[200px]">
             <option value="">-- Select an item --</option>
-            {Object.entries(ITEMS_BY_TYPE).map(([type, items]) => (
+            {Object.entries(itemsByType).map(([type, items]) => (
               <optgroup key={type} label={type}>
                 {items.map(item => (
                   <option key={item.id} value={item.id}>{item.name} ({item.rarity})</option>
@@ -171,7 +175,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
       </BlueprintPanel>
 
       {/* AI Balance Advisor */}
-      <BalanceAdvisorPanel itemsCount={items.length} isRunning={isBalanceRunning} onAnalyze={handleAnalyzeBalance} />
+      <BalanceAdvisorPanel items={items} isRunning={isBalanceRunning} onAnalyze={handleAnalyzeBalance} />
     </motion.div>
   );
 }

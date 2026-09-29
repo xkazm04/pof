@@ -9,6 +9,7 @@ import type {
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_WARNING, ACCENT_PURPLE } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { toast } from 'sonner';
+import { usePromptEvolutionStore } from '@/stores/promptEvolutionStore';
 
 // ── Suggestions Bar ─────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ const SUGGESTION_CONFIG: Record<
   { icon: typeof Sparkles; color: string; label: string; actionLabel: string }
 > = {
   'try-variant':    { icon: Sparkles,     color: ACCENT_EMERALD_DARK,  label: 'Try Variant',     actionLabel: 'Spawn mutation' },
-  'start-ab-test':  { icon: FlaskConical, color: MODULE_COLORS.content, label: 'Start A/B Test', actionLabel: 'Open in Variants' },
+  'start-ab-test':  { icon: FlaskConical, color: MODULE_COLORS.content, label: 'Start A/B Test', actionLabel: 'Open in History' },
   'adopt-winner':   { icon: Trophy,       color: STATUS_WARNING,        label: 'Adopt Winner',    actionLabel: 'Copy best prompt' },
   'cluster-insight':{ icon: Layers,       color: ACCENT_PURPLE,         label: 'Cluster Insight', actionLabel: 'Analyze clusters' },
 };
@@ -75,6 +76,9 @@ function SuggestionCard({
   onNavigateClusters: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const setSelectedChecklistItem = usePromptEvolutionStore((s) => s.setSelectedChecklistItem);
+  const setActiveSubTab = usePromptEvolutionStore((s) => s.setActiveSubTab);
+  const loadVersionHistory = usePromptEvolutionStore((s) => s.loadVersionHistory);
   const cfg = SUGGESTION_CONFIG[suggestion.type];
   const Icon = cfg.icon;
   const confidencePct = Math.round(suggestion.confidence * 100);
@@ -83,7 +87,7 @@ function SuggestionCard({
   const canAct = (() => {
     switch (suggestion.type) {
       case 'try-variant':    return Boolean(suggestion.variantId);
-      case 'start-ab-test':  return Boolean(suggestion.variantId);
+      case 'start-ab-test':  return Boolean(suggestion.checklistItemId);
       case 'adopt-winner':   return Boolean(suggestion.checklistItemId);
       case 'cluster-insight':return true;
     }
@@ -104,8 +108,12 @@ function SuggestionCard({
           return;
         }
         case 'start-ab-test': {
-          onNavigateVariants(suggestion.variantId);
-          toast.info('Pick a partner variant to start the test.');
+          // History holds the lineage, diff, stats and current flag — open it on
+          // the item, where "Challenge current" starts an informed test.
+          if (!suggestion.checklistItemId) return;
+          setSelectedChecklistItem(suggestion.checklistItemId);
+          setActiveSubTab('history');
+          await loadVersionHistory(suggestion.moduleId, suggestion.checklistItemId);
           return;
         }
         case 'adopt-winner': {
@@ -122,7 +130,10 @@ function SuggestionCard({
     } finally {
       setBusy(false);
     }
-  }, [busy, suggestion, onMutate, onCluster, onAdoptWinner, onNavigateVariants, onNavigateClusters]);
+  }, [
+    busy, suggestion, onMutate, onCluster, onAdoptWinner, onNavigateVariants, onNavigateClusters,
+    setSelectedChecklistItem, setActiveSubTab, loadVersionHistory,
+  ]);
 
   return (
     <motion.div

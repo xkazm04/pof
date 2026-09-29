@@ -2,24 +2,37 @@
 
 import { useMemo } from 'react';
 import type { SizeTrendPoint } from '@/lib/packaging/build-history-store';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import type { ComparePair, TrendPointState } from '@/lib/packaging/size-trend-model';
+import { normalizePlatformId } from '@/lib/packaging/build-profiles';
+import { MODULE_COLORS, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import { formatBytes } from '@/lib/format';
 
+/** A trend point, optionally judged by the size-trend model. */
+type ChartPoint = SizeTrendPoint & { state?: TrendPointState; comparePair?: ComparePair | null };
+
 interface SizeTrendChartProps {
-  data: SizeTrendPoint[];
+  data: ChartPoint[];
   height?: number;
   accentColor?: string;
+  title?: string;
+  /** Draws the platform's absolute budget as a dashed line (and keeps it in the y-range). */
+  budgetBytes?: number;
+  /** Called with the (baseline, regressor) pair when a flagged point is activated. */
+  onOpenPair?: (pair: ComparePair) => void;
 }
 
 const PADDING = { top: 20, right: 16, bottom: 28, left: 56 };
 
-export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS.systems }: SizeTrendChartProps) {
+export function SizeTrendChart({
+  data, height = 180, accentColor = MODULE_COLORS.systems, title = 'Package Size Trend', budgetBytes, onOpenPair,
+}: SizeTrendChartProps) {
   const width = 400; // SVG viewBox width, scales responsively
 
-  const { points, yTicks, xLabels, minVal, maxVal, dotPoints } = useMemo(() => {
-    if (data.length === 0) return { points: '', yTicks: [], xLabels: [], minVal: 0, maxVal: 0, dotPoints: [] };
+  const { points, yTicks, xLabels, dotPoints, budgetY } = useMemo(() => {
+    if (data.length === 0) return { points: '', yTicks: [], xLabels: [], dotPoints: [], budgetY: null };
 
-    const sizes = data.map((d) => d.sizeBytes);
+    // The budget joins the y-domain so the line the gate judges against is always visible.
+    const sizes = [...data.map((d) => d.sizeBytes), ...(budgetBytes && budgetBytes > 0 ? [budgetBytes] : [])];
     const min = Math.min(...sizes);
     const max = Math.max(...sizes);
     const range = max - min || 1;
@@ -55,8 +68,12 @@ export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS
       xL.push({ x: p.x, label: `${date.getMonth() + 1}/${date.getDate()}` });
     }
 
-    return { points: polyline, yTicks: yT, xLabels: xL, minVal: min, maxVal: max, dotPoints: pts };
-  }, [data, height]);
+    const bY = budgetBytes && budgetBytes > 0
+      ? PADDING.top + chartH - ((budgetBytes - padded.min) / (padded.max - padded.min)) * chartH
+      : null;
+
+    return { points: polyline, yTicks: yT, xLabels: xL, dotPoints: pts, budgetY: bY };
+  }, [data, height, budgetBytes]);
 
   if (data.length === 0) {
     return (
@@ -66,9 +83,11 @@ export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS
     );
   }
 
-  // Compute delta from first to last
-  const delta = data.length >= 2 ? data[data.length - 1].sizeBytes - data[0].sizeBytes : 0;
-  const deltaPercent = data.length >= 2 && data[0].sizeBytes > 0
+  // Delta from first to last — only meaningful WITHIN one platform. Across interleaved
+  // platforms (a Win64 build followed by an Android one) it read as a huge shrink.
+  const singlePlatform = new Set(data.map((d) => normalizePlatformId(d.platform))).size === 1;
+  const delta = singlePlatform && data.length >= 2 ? data[data.length - 1].sizeBytes - data[0].sizeBytes : 0;
+  const deltaPercent = singlePlatform && data.length >= 2 && data[0].sizeBytes > 0
     ? ((delta / data[0].sizeBytes) * 100).toFixed(1)
     : null;
 
@@ -82,7 +101,7 @@ export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS
     <div className="w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-text">Package Size Trend</span>
+        <span className="text-xs font-medium text-text">{title}</span>
         {deltaPercent !== null && (
           <span className={`text-xs font-mono ${delta > 0 ? 'text-red-400' : delta < 0 ? 'text-green-400' : 'text-text-muted'}`}>
             {delta > 0 ? '+' : ''}{deltaPercent}% ({formatBytes(Math.abs(delta))})
@@ -130,13 +149,45 @@ export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS
           strokeLinejoin="round"
         />
 
-        {/* Data points */}
-        {dotPoints.map((p) => (
-          <g key={p.d.id}>
-            <circle cx={p.x} cy={p.y} r="3" fill={accentColor} />
-            <title>{`${formatBytes(p.d.sizeBytes)}${p.d.version ? ` (v${p.d.version})` : ''}\n${new Date(p.d.createdAt).toLocaleDateString()}`}</title>
+        {/* Budget line */}
+        {budgetY != null && budgetBytes != null && (
+          <g data-testid="size-budget-line">
+            <line x1={PADDING.left} y1={budgetY} x2={width - PADDING.right} y2={budgetY} stroke={STATUS_WARNING} strokeWidth="1" strokeDasharray="4 3" />
+            <text x={width - PADDING.right} y={budgetY - 3} textAnchor="end" fill={STATUS_WARNING} fontSize="9" fontFamily="monospace">
+              budget {formatBytes(budgetBytes)}
+            </text>
           </g>
-        ))}
+        )}
+
+        {/* Data points — a flagged one is red and opens its comparison pair; a point
+            with no baseline is hollow (growth was not evaluated). */}
+        {dotPoints.map((p) => {
+          const tip = `${formatBytes(p.d.sizeBytes)}${p.d.version ? ` (v${p.d.version})` : ''}\n${new Date(p.d.createdAt).toLocaleDateString()}`;
+          const pair = p.d.comparePair;
+          if (p.d.state === 'flagged') {
+            const open = pair && onOpenPair ? () => onOpenPair(pair) : undefined;
+            const label = `Build #${p.d.id} ${formatBytes(p.d.sizeBytes)} flagged${open && pair ? ` — compare with #${pair.left}` : ''}`;
+            return (
+              <g key={p.d.id}>
+                <circle
+                  cx={p.x} cy={p.y} r="4.5" fill={STATUS_ERROR}
+                  role={open ? 'button' : 'img'} aria-label={label} tabIndex={open ? 0 : undefined}
+                  className={open ? 'cursor-pointer' : undefined}
+                  onClick={open}
+                  onKeyDown={open ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } : undefined}
+                />
+                <title>{`${tip}\n${label}`}</title>
+              </g>
+            );
+          }
+          const hollow = p.d.state === 'no-baseline';
+          return (
+            <g key={p.d.id}>
+              <circle cx={p.x} cy={p.y} r="3" fill={hollow ? 'none' : accentColor} stroke={accentColor} strokeWidth={hollow ? 1.5 : 0} />
+              <title>{hollow ? `${tip}\nno baseline in this window — growth not evaluated` : tip}</title>
+            </g>
+          );
+        })}
 
         {/* Y-axis labels */}
         {yTicks.map((t, i) => (

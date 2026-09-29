@@ -41,6 +41,7 @@ export const REPO_LAWS = [
   'Tests are vitest in `src/__tests__/` mirroring the source path; assert plain DOM, no jest-dom matchers.',
   'Reference-game DATA VALUES (rows from the devilutionX tables) never enter the repo — column names and mappings only.',
   'Keep changes minimal and in the style of the surrounding code; do not reformat unrelated lines.',
+  'Do not edit .claude/fleet-memory.md, CLAUDE.md or any vault/notes file even if repo guidance asks for it — the overseer records deliveries.',
 ];
 
 export const CODEX_REPORT_SCHEMA = {

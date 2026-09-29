@@ -2,6 +2,7 @@ import type { GenAssetRef, RawGenCandidate } from '@/lib/catalog/stepSpec';
 import { parseIconFileName } from '@/lib/visual-gen/generated-icons';
 import { genericGalleryCandidates } from './genericGalleryCandidates';
 import { fnv1a } from './hash';
+import { slotRealAssets } from './realAssetSlots';
 
 /**
  * What this slot's art was generated FOR, read from the filename's own structure — art made
@@ -21,7 +22,7 @@ function scopeNote(name: string): string {
  * is this step's asset. `seq` rotates the window so each re-roll surfaces a different
  * slice when the step owns more art than the gallery has slots.
  *
- * HONEST counts: only `min(count, assets.length)` candidates carry a real image — the
+ * HONEST counts (`slotRealAssets`, the one shared rule): only `min(count, assets.length)` candidates carry a real image — the
  * remaining slots come from `genericGalleryCandidates`, the deterministic swatch preview
  * that labels itself as such. A step with ONE generated icon therefore shows one real
  * thumbnail and three honest placeholders, never the same image repeated to fill the
@@ -39,9 +40,9 @@ export function imageGalleryCandidates(
 ): RawGenCandidate[] {
   const n = Math.max(0, count);
   if (assets.length === 0 || n === 0) return genericGalleryCandidates(field, count, direction, seq);
-  const real = Math.min(n, assets.length);
-  const out: RawGenCandidate[] = Array.from({ length: real }, (_, i) => {
-    const asset = assets[(seq + i) % assets.length];
+  // The rest are the honest swatch candidates, keeping each slot's payload index.
+  const swatches = genericGalleryCandidates(field, n, direction, seq);
+  return slotRealAssets(n, assets, seq, (asset, i): RawGenCandidate => {
     // A subtle deterministic swatch sits behind the image (visible while it loads / if 404).
     const hue = fnv1a(`${direction}|${field}|${asset.name}`) % 360;
     return {
@@ -50,8 +51,5 @@ export function imageGalleryCandidates(
       caption: `${asset.name}${scopeNote(asset.name)}`,
       payload: { [field]: i },
     };
-  });
-  // Fill the rest with the honest swatch candidates, keeping each slot's payload index.
-  if (real < n) out.push(...genericGalleryCandidates(field, n, direction, seq).slice(real));
-  return out;
+  }, (i) => swatches[i]);
 }

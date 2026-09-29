@@ -1,11 +1,11 @@
 import { AlertTriangle, Eye, BookOpen, BarChart3, Swords } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
 import type { ImplementationPattern } from '@/types/pattern-library';
-import { TOPOLOGY_ROOMY } from '@/components/modules/evaluator/_shared/moduleTopology';
+import { TOPOLOGY_ROOMY } from '@/lib/topology/moduleGraph';
 
-// ─── Layout constants (shared with DependencyGraph via _shared/moduleTopology) ──
+// ─── Node size of the roomy module topology (placement: @/lib/topology/moduleGraph) ──
 
-export const { colWidth: COL_WIDTH, rowHeight: ROW_HEIGHT, nodeW: NODE_W, nodeH: NODE_H, padX: PAD_X, padY: PAD_Y } = TOPOLOGY_ROOMY;
+export const { nodeW: NODE_W, nodeH: NODE_H } = TOPOLOGY_ROOMY;
 
 // ─── Data layer toggle ─────────────────────────────────────────────────────
 

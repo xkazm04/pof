@@ -29,6 +29,18 @@ export interface VelocityPoint {
   cumulativeCompleted: number;
 }
 
+/**
+ * Provenance of the velocity figures: how many completed items carry a
+ * completion date (and so can be placed in a week), how many do not, and how
+ * many weeks the dated sample spans.
+ */
+export interface VelocitySample {
+  datedCompletions: number;
+  /** Done items with no recorded completion time — counted, never bucketed. */
+  undated: number;
+  weeks: number;
+}
+
 /** Quality trend data point */
 export interface QualityPoint {
   timestamp: string;
@@ -102,8 +114,14 @@ export interface ProjectHealthSummary {
   performanceScore: number | null;
   /** Quality trend direction */
   qualityTrend: 'improving' | 'stable' | 'declining' | 'unknown';
-  /** Average velocity (items per week) */
-  avgVelocity: number;
+  /**
+   * Average velocity (items per week) over the most recent weeks of DATED
+   * completions (`CompletionLedger`), or `null` when no dated completion
+   * exists. Never rendered without `velocitySample` beside it.
+   */
+  avgVelocity: number | null;
+  /** The sample `avgVelocity`, `velocityHistory` and the milestone ETAs rest on. */
+  velocitySample: VelocitySample;
   /** Module health summaries for heatmap */
   moduleHealth: ModuleHealthSummary[];
   /** Velocity data for chart */

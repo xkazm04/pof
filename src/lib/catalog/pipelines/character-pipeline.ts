@@ -98,7 +98,7 @@ registerCatalogPipeline({
       label: '3D Generation',
       engine: 'Tripo',
       view: { kind: 'gallery', field: 'selected', candidates: 3 },
-      // Surface REAL generated .glb meshes when any exist on disk: each candidate carries
+      // Surface REAL .glb meshes generated FOR this step (name re-encodes its identity): each carries
       // payload.glbUrl so the selected mesh renders in the interactive GlbViewer (orbit/
       // zoom) instead of a colored swatch. Empty manifest → honest deterministic swatch
       // fallback (never a fake 3D preview) — and acceptance TELLS THEM APART: a candidate
@@ -109,7 +109,7 @@ registerCatalogPipeline({
       genCandidates: {
         needsAssets: true,
         assetKind: '3d',
-        build: (dir, seq, assets) => meshGalleryCandidates('selected', 3, assets, dir, seq),
+        build: (dir, seq, assets) => meshGalleryCandidates('selected', 3, assets, dir, seq, { catalogId: 'character-pipeline', step: '3D Generation' }),
       },
       produce: () => ({
         data: {

@@ -243,7 +243,7 @@ export function materialShape(field: string, label: string): Checker {
  * `pending` (nothing produced yet), never a false pass.
  */
 export function entriesHaveFields(field: string, label: string, keys: string[]): Checker {
-  return (data) => {
+  return tagRequiredFields((data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : null;
     if (arr == null) return { label, tier: 'L0', status: 'pending', detail: 'not an array', reason: `field "${field}" is not an array of entries` };
     if (arr.length === 0) return { label, tier: 'L0', status: 'pending', detail: '0 entries', reason: `field "${field}" is empty — nothing to check` };
@@ -257,8 +257,16 @@ export function entriesHaveFields(field: string, label: string, keys: string[]):
         return { label, tier: 'L0', status: 'fail', detail: `entry ${i} incomplete`, reason: `field "${field}"[${i}] missing: ${missing.join(', ')}` };
       }
     }
+    // A DECLARED gap ("not in the reference") is not a value — as in fieldsPopulated, it grades pending, never pass
+    // (/diablo W16: eight Skill Checks steps passed with every entry field written as the gap marker).
+    for (let i = 0; i < arr.length; i++) {
+      const gaps = keys.filter((k) => isDeclaredGap((arr[i] as Record<string, unknown>)[k]));
+      if (gaps.length) {
+        return { label, tier: 'L0', status: 'pending', detail: `entry ${i} declares gaps`, reason: `field "${field}"[${i}] missing: ${gaps.join(', ')} (declared gap — "${REFERENCE_GAP}")` };
+      }
+    }
     return { label, tier: 'L0', status: 'pass', detail: `${arr.length} entr${arr.length === 1 ? 'y' : 'ies'} × ${keys.length} field(s)` };
-  };
+  }, { field, shape: `every entry is an object with ${keys.join(', ')}` });
 }
 
 /**

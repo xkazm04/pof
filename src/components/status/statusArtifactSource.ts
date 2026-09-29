@@ -96,12 +96,23 @@ function retry(catalogId: string): void {
  * Subscribe to the shared whole-project read. Safe to call from several tabs/views: the
  * cache dedupes concurrent readers of a key onto one request, and an already-loaded catalog
  * issues nothing at all.
+ *
+ * `scope` narrows the read to the named catalogs, in the order given — the entity-scoped tabs
+ * (Category: one catalog; Item Focus: the focus + its 1-hop neighbours) settle on just what
+ * they grade instead of waiting on all 32. Same cache, same `Result` discipline: a scoped
+ * catalog that fails is `error`, never an empty list.
  */
-export function useStatusArtifacts(): StatusArtifactSource {
+export function useStatusArtifacts(scope?: readonly string[]): StatusArtifactSource {
   const version = useArtifactCacheVersion();
   // The registry is populated by the side-effect import above, so the list is stable for the
   // life of the page — memoized so the derivation below can key on the cache version alone.
-  const catalogIds = useMemo(() => allCatalogPipelines().map((p) => p.catalogId), []);
+  // A scope is keyed by its contents, so a caller passing a fresh-but-equal array each render
+  // does not re-derive.
+  const scopeKey = scope ? scope.join('|') : null;
+  const catalogIds = useMemo(
+    () => (scopeKey === null ? allCatalogPipelines().map((p) => p.catalogId) : scopeKey ? scopeKey.split('|') : []),
+    [scopeKey],
+  );
 
   // `ensureSummary` is a no-op while a key is loading, loaded OR errored, so re-running
   // this on every cache mutation cannot loop and an errored catalog is never auto-retried.

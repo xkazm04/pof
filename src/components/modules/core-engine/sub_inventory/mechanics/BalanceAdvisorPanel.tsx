@@ -1,19 +1,26 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Scale, Loader2 } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
-import {
-  ACCENT, AFFIX_EXAMPLES, ITEM_SETS, RARITY_DIST, SCALING_LINES,
-} from '../_shared/data';
+import { ACCENT, ITEM_SETS, SCALING_LINES, type ItemData } from '../_shared/data';
+import { deriveAffixPool, deriveDpsTable } from '../_shared/balance-evidence';
 import { withOpacity, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_37 } from '@/lib/chart-colors';
 
 interface Props {
-  itemsCount: number;
+  /** The item set the advisor prompt is built from. */
+  items: ItemData[];
   isRunning: boolean;
   onAnalyze: () => void;
 }
 
-export function BalanceAdvisorPanel({ itemsCount, isRunning, onAnalyze }: Props) {
+export function BalanceAdvisorPanel({ items, isRunning, onAnalyze }: Props) {
+  // The tiles count the same derived evidence the prompt quotes.
+  const counts = useMemo(() => {
+    const weapons = items.filter(i => i.type === 'Weapon');
+    const dps = deriveDpsTable(weapons);
+    return { affixes: deriveAffixPool(items).length, dpsParsed: dps.rows.length, dpsUnparsed: dps.unparsed.length };
+  }, [items]);
   return (
     <BlueprintPanel color={ACCENT} className="p-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${withOpacity(ACCENT, OPACITY_37)}, transparent)` }} />
@@ -34,13 +41,13 @@ export function BalanceAdvisorPanel({ itemsCount, isRunning, onAnalyze }: Props)
       </div>
       <div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-2">
         {[
-          { label: 'Items', value: `${itemsCount}`, sub: 'catalog entries' },
-          { label: 'Affixes', value: `${AFFIX_EXAMPLES.length}`, sub: 'pool definitions' },
-          { label: 'Scaling', value: `${SCALING_LINES.length}`, sub: 'stat curves' },
-          { label: 'Sets', value: `${ITEM_SETS.length}`, sub: 'bonus sets' },
-          { label: 'Rarities', value: `${RARITY_DIST.length}`, sub: 'tiers tracked' },
+          { label: 'Items', value: `${items.length}`, unit: 'entries' },
+          { label: 'Affixes', value: `${counts.affixes}`, unit: 'carried' },
+          { label: 'DPS', value: `${counts.dpsParsed}`, unit: `${counts.dpsUnparsed} unparsed` },
+          { label: 'Scaling', value: `${SCALING_LINES.length}`, unit: 'curves' },
+          { label: 'Sets', value: `${ITEM_SETS.length}`, unit: 'bonus sets' },
         ].map((metric, i) => (
-          <GlowStat key={metric.label} label={metric.label} value={metric.value} color={ACCENT} delay={i * 0.05} />
+          <GlowStat key={metric.label} label={metric.label} value={metric.value} unit={metric.unit} color={ACCENT} delay={i * 0.05} />
         ))}
       </div>
     </BlueprintPanel>

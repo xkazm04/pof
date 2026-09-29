@@ -117,6 +117,42 @@ export interface ABTest {
   concludedAt: string | null;
 }
 
+/** Which evidence an A/B reading rests on. */
+export type VerdictBasis = 'judge' | 'self-reported';
+
+/** Named z-test band: strong ≥ 1.96, moderate ≥ 1.65, weak ≥ 1.28, none below. */
+export type VerdictBand = 'strong' | 'moderate' | 'weak' | 'none';
+
+/**
+ * The one reading of "which arm leads, on what evidence" — computed by
+ * `readTestVerdict` (lib/prompt-evolution/verdict.ts) at read time from the
+ * test row and the judge scores, never stored.
+ */
+export interface ABTestVerdict {
+  basis: VerdictBasis;
+  /** Success rate per arm on `basis`, 0–1. */
+  rateA: number;
+  rateB: number;
+  /** Evidence count per arm: runs (self-reported) or verdicts (judge). */
+  trialsA: number;
+  trialsB: number;
+  band: VerdictBand;
+  /** Arm ahead by at least the tie margin; `null` on a tie or no evidence. */
+  leader: 'A' | 'B' | null;
+  tie: boolean;
+  /** Serves each arm still needs before decide-now is accepted. */
+  shortfall: { A: number; B: number };
+  /** Running and both arms at the serve floor — decide-now would be accepted. */
+  canConclude: boolean;
+  /** One line naming the basis and the evidence behind it. */
+  note: string;
+}
+
+/** An A/B test as every server read returns it: the row plus its reading. */
+export interface ABTestView extends ABTest {
+  verdict: ABTestVerdict;
+}
+
 /**
  * What the dispatch path was served for a checklist item: the variant whose text
  * runs, plus the running A/B test arm it counts as a trial for (both `null` when

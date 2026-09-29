@@ -77,6 +77,10 @@ export interface CompactTerminalProps {
   autoStart?: boolean;
   enabledSkills?: SkillId[];
   onStreamingChange?: (streaming: boolean) => void;
+  /** Fired when a prompt is dispatched: the raw prompt and its task type (the host's copy for Retry). */
+  onDispatch?: (dispatch: { prompt: string; taskType?: string }) => void;
+  /** Fired with a run's @@CALLBACK markers whose POST failed (re-POSTable without a new run). */
+  onCallbacksUnresolved?: (markers: { callbackId: string; payload: string }[]) => void;
   /** Whether this terminal is currently visible (not hidden by display:none). Used to restore scroll position. */
   visible?: boolean;
 }

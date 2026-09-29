@@ -1,17 +1,79 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/acceptance/visualBrief';
+import { tagRequiredFields } from '@/lib/catalog/acceptance/requiredFields';
+import type { Checker } from '@/lib/catalog/acceptance/types';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 /** Entity-id stem per this catalog's id convention: 'char-captain-vael' → 'captain-vael'. */
 const idStem = (id: string) => id.replace(/^char-/, '');
+
+const CHARACTER_GATE_TEST_BY_ENTITY: Record<string, string> = {
+  'char-captain-vael': 'PoF.CharacterVael.NPCConfig',
+};
+
+function characterGateTestName(entityId: string, s: string): string {
+  return CHARACTER_GATE_TEST_BY_ENTITY[entityId] ?? `PoF.Character${s}.RoleConfig`;
+}
+
+function characterGateChecks(entityId: string, s: string): string[] {
+  if (entityId === 'char-captain-vael') {
+    return [
+      `NPC spawns in PIE with correct NPCID=${s}`,
+      'QuestGiver role indicator (gold "!") renders via GetRoleColor',
+      'dialogue interaction fires UARPGDialogueComponent::StartDialogue',
+      'quest-ember-pact objective granted on dialogue completion',
+      `FARPGAttributeInitRow values match DT_AttributeDefaults ${s} row`,
+      'off-phy-01 + off-phy-02 abilities granted by UARPGAbilitySystemComponent at BeginPlay',
+    ];
+  }
+  return [
+    `character spawns in PIE with the configured identity ${s}`,
+    'runtime behavior matches this character’s declared role',
+    'declared attribute defaults are applied on spawn',
+    'each declared ability is granted by UARPGAbilitySystemComponent at BeginPlay',
+    'each declared interaction is available; a character with none does not expose an interaction prompt',
+  ];
+}
+
+const characterInteractionsValid: Checker = tagRequiredFields((data) => {
+  const behavior = data.behavior && typeof data.behavior === 'object' && !Array.isArray(data.behavior)
+    ? data.behavior as Record<string, unknown>
+    : {};
+  const interactions = behavior.interactions;
+  const label = 'Declared character interactions are well formed';
+  if (interactions === undefined) {
+    return { label, tier: 'L0', status: 'pass', detail: 'no interactions declared' };
+  }
+  if (!Array.isArray(interactions)) {
+    return { label, tier: 'L0', status: 'fail', detail: 'interactions is not an array', reason: 'field "behavior.interactions" must be an array when declared' };
+  }
+  for (let i = 0; i < interactions.length; i++) {
+    const interaction = interactions[i];
+    if (interaction == null || typeof interaction !== 'object' || Array.isArray(interaction)) {
+      return { label, tier: 'L0', status: 'fail', detail: `interaction ${i} is not an object`, reason: `field "behavior.interactions"[${i}] must be an object carrying type` };
+    }
+    const entry = interaction as Record<string, unknown>;
+    if (typeof entry.type !== 'string' || !entry.type.trim()) {
+      return { label, tier: 'L0', status: 'fail', detail: `interaction ${i} missing type`, reason: `field "behavior.interactions"[${i}] missing: type` };
+    }
+    if (entry.type === 'dialogue' && (typeof entry.dialogueBinding !== 'string' || !entry.dialogueBinding.trim())) {
+      return { label, tier: 'L0', status: 'fail', detail: `dialogue interaction ${i} missing binding`, reason: `field "behavior.interactions"[${i}] missing: dialogueBinding` };
+    }
+  }
+  return { label, tier: 'L0', status: 'pass', detail: `${interactions.length} interaction(s) valid` };
+}, {
+  field: 'behavior.interactions',
+  shape: 'when declared, a JSON array of objects with `type`; an entry whose type is `dialogue` also requires `dialogueBinding`',
+  optional: true,
+});
 
 /**
  * Characters pipeline (catalogId: 'characters').
@@ -199,7 +261,7 @@ registerCatalogPipeline({
     // ── 9. Behavior (NPC) ────────────────────────────────────────────────────
     {
       archetype: 'rules', label: 'Behavior (NPC)',
-      view: { kind: 'table', field: 'behavior', columns: [{ key: 'role' }, { key: 'npcId' }, { key: 'dialogueBinding' }] },
+      view: { kind: 'table', field: 'behavior', columns: [{ key: 'role' }, { key: 'npcId' }, { key: 'interactions' }] },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
         const stem = idStem(e.id);
@@ -208,8 +270,12 @@ registerCatalogPipeline({
             behavior: {
               role: 'QuestGiver',
               npcId: s,
-              // Real seeded dialog-trees entity; this entity's flavor name noted as pending its own seed.
-              dialogueBinding: 'dialog-gatekeeper',
+              interactions: [
+                // Real seeded dialog-trees entity; this entity's flavor name noted as pending its own seed.
+                { type: 'dialogue', dialogueBinding: 'dialog-gatekeeper' },
+                { type: 'quest', questBinding: 'quest-ember-pact' },
+                { type: 'combat', abilityBindings: ['off-phy-01', 'off-phy-02'] },
+              ],
               roleNote:
                 'QuestGiver activates gold "!" indicator via AARPGNPCActor.GetRoleColor/GetRoleDisplayText. ' +
                 '"dialog-gatekeeper" is the resolvable seeded dialog-trees entity; ' +
@@ -253,7 +319,8 @@ registerCatalogPipeline({
         verification: 'L2: AARPGNPCActor compiles and every dialogue, quest, and spellbook id declared by {name} resolves; L3: the character runtime test — interaction starts this character’s dialogue and applies its declared completion effects',
       },
       accept: allOf(
-        fieldsPopulated('behavior', 'Role + npcId + dialogueBinding', ['role', 'npcId', 'dialogueBinding']),
+        fieldsPopulated('behavior', 'Role + npcId', ['role', 'npcId']),
+        characterInteractionsValid,
         linksResolve(),
         wiringContractSound(),
       ),
@@ -276,21 +343,21 @@ registerCatalogPipeline({
       // the same call the fleet already made on 7 identically-shaped Test Gate steps.
       engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
-      produce: (e: LabEntity) => ({
-        data: {
-          checks: [
-            `NPC spawns in PIE with correct NPCID=${slug(e.name)}`,
-            'QuestGiver role indicator (gold "!") renders via GetRoleColor',
-            'dialogue interaction fires UARPGDialogueComponent::StartDialogue',
-            'quest-ember-pact objective granted on dialogue completion',
-            `FARPGAttributeInitRow values match DT_AttributeDefaults ${slug(e.name)} row`,
-            'off-phy-01 + off-phy-02 abilities granted by UARPGAbilitySystemComponent at BeginPlay',
-          ],
-        },
-      }),
-      // FVSCharacterVaelTest — defer with the REGISTERED automation name (dotted path /
-      // substring), not the C++ class name, so the L3 runner resolves it.
-      accept: entityRuntimeDeferred('PoF.CharacterVael.NPCConfig', 'NPC spawns + talks + gives quest in PIE'),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: characterGateChecks(e.id, s),
+            automationName: characterGateTestName(e.id, s),
+          },
+        };
+      },
+      // The artifact's per-entity name wins. The neutral fallback is deliberately unregistered,
+      // so an artifact that declares no name can never borrow Captain Vael's proof.
+      accept: allOf(
+        automationNameDeclared(),
+        entityRuntimeDeferred('PoF.CharacterUnspecified.RoleConfig', 'Character runtime config validates its declared role in UE'),
+      ),
     },
 
     // ── 12. UE Packaging ─────────────────────────────────────────────────────

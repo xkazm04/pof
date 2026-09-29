@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { TaskFactory } from '@/lib/cli-task';
+import { specFromStudioState } from '@/lib/post-process-studio/stack-spec';
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
 import { ACCENT } from './constants';
@@ -31,8 +32,6 @@ export function PostProcessStudioView() {
   const snapshotA = usePostProcessStudioStore((s) => s.snapshotA);
   const snapshotB = usePostProcessStudioStore((s) => s.snapshotB);
   const activeSlot = usePostProcessStudioStore((s) => s.activeSlot);
-  const isGenerating = usePostProcessStudioStore((s) => s.isGenerating);
-  const error = usePostProcessStudioStore((s) => s.error);
   const explainMode = usePostProcessStudioStore((s) => s.explainMode);
 
   const init = usePostProcessStudioStore((s) => s.init);
@@ -47,7 +46,6 @@ export function PostProcessStudioView() {
   const captureSnapshot = usePostProcessStudioStore((s) => s.captureSnapshot);
   const setActiveSlot = usePostProcessStudioStore((s) => s.setActiveSlot);
   const loadSnapshot = usePostProcessStudioStore((s) => s.loadSnapshot);
-  const generateCode = usePostProcessStudioStore((s) => s.generateCode);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -72,17 +70,12 @@ export function PostProcessStudioView() {
     [effects],
   );
 
-  const handleGenerate = useCallback(async () => {
-    const prompt = await generateCode();
-    if (prompt) {
-      execute({
-        type: 'quick-action',
-        moduleId: 'materials',
-        prompt,
-        label: 'Generate PP Volume',
-      });
-    }
-  }, [generateCode, execute]);
+  // The same spec + task the Materials tab dispatches: one builder, on the rail.
+  const handleGenerate = useCallback(() => {
+    const spec = specFromStudioState(usePostProcessStudioStore.getState());
+    if (spec.effects.length === 0) return;
+    void execute(TaskFactory.postProcess('materials', spec, 'Generate PP Volume'));
+  }, [execute]);
 
   const budgetPct = budget ? Math.min((budget.totalCostMs / budget.budgetMs) * 100, 100) : 0;
   const budgetColor = budget
@@ -101,21 +94,12 @@ export function PostProcessStudioView() {
         compareMode={compareMode}
         toggleCompareMode={toggleCompareMode}
         handleGenerate={handleGenerate}
-        isGenerating={isGenerating}
         isRunning={isRunning}
         enabledCount={enabledCount}
         budget={budget}
         budgetPct={budgetPct}
         budgetColor={budgetColor}
       />
-
-      {error && (
-        <div className="px-6 mb-2">
-          <SurfaceCard className="p-3 border-status-red-strong">
-            <p className="text-xs text-red-400">{error}</p>
-          </SurfaceCard>
-        </div>
-      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">

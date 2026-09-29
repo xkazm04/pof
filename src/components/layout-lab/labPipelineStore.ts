@@ -1,8 +1,9 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import { contentDiverges } from './labContentDrift';
+import { labPersistOptions, observeServerRow, type PersistErrorApi } from './labPipelinePersistence';
 import type { CatalogLinkRef } from '@/lib/catalog/acceptance/linkCheckers';
 
 /** The key under `data` holding a generative step's candidate-batch archive
@@ -119,6 +120,9 @@ export type StepOutput = { data?: Record<string, unknown>; ueAssets?: string[]; 
 interface LabPipelineState {
   /** byEntity[entityId][stepName] → artifact. */
   byEntity: Record<string, Record<string, LabStepArtifact>>;
+  /** Why the last localStorage write failed (quota), or null. Never persisted; a failed write no longer
+   *  throws out of `set()`, so this is how it is REPORTED (see `labPipelinePersistence.ts`). */
+  persistError: string | null;
   /** Run a step: persist its produced data + assets and mark it done. */
   produce: (entityId: string, step: string, out?: StepOutput) => void;
   /** Like `produce`, but derives the output from the step's CURRENT persisted data inside the
@@ -272,6 +276,7 @@ export const useLabPipelineStore = create<LabPipelineState>()(
   persist(
     (set) => ({
       byEntity: {},
+      persistError: null,
 
       produce: (entityId, step, out) => {
         const data = { ...(out?.data ?? {}), ...(out?.links ? { links: out.links } : {}) };
@@ -368,7 +373,12 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             // A first sighting is adopted whole, and STAMPED with the server row it came
             // from (`serverSeen`) — that stamp is what later lets `refreshEntity` tell a
             // server-derived step from local-only work when the server drops the row.
-            if (!cur) { merged[step] = { ...artifact, serverSeen: artifact.at }; changed = true; continue; }
+            if (!cur) {
+              merged[step] = { ...artifact, serverSeen: artifact.at };
+              observeServerRow(entityId, step, merged[step], artifact);
+              changed = true;
+              continue;
+            }
             // ADD-ONLY still holds for CONTENT (data/ueAssets are never overwritten here —
             // that stays an explicit `adoptServer`). The server's VERDICT is a different
             // thing: a gate drain resolves L3/L4 server-side, so its status/tier/reason are
@@ -398,6 +408,8 @@ export const useLabPipelineStore = create<LabPipelineState>()(
               merged[step] = next;
               changed = true;
             }
+            // Only a step PROVEN an exact copy of this row may leave durable storage.
+            observeServerRow(entityId, step, merged[step], artifact);
           }
           return changed ? { byEntity: { ...s.byEntity, [entityId]: merged } } : s;
         }),
@@ -445,6 +457,7 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             next[step] = cur.syncError === SERVER_MISSING_REASON ? cur : { ...cur, syncError: SERVER_MISSING_REASON };
             if (next[step] !== cur) changed = true;
           }
+          for (const { step, artifact } of serverSteps) if (next[step]) observeServerRow(entityId, step, next[step], artifact);
 
           return changed ? { byEntity: { ...s.byEntity, [entityId]: next } } : s;
         });
@@ -461,10 +474,13 @@ export const useLabPipelineStore = create<LabPipelineState>()(
             : artifact.data;
           // Stamp the server row this adoption came from, so a later refresh can tell the
           // step apart from local-only work if the server ever drops it.
-          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: { ...artifact, data, serverSeen: artifact.at } } } };
+          const adopted: LabStepArtifact = { ...artifact, data, serverSeen: artifact.at };
+          observeServerRow(entityId, step, adopted, artifact); // a kept local genHistory is NOT a copy
+          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: adopted } } };
         }),
     }),
-    { name: 'pof-lab-pipeline', storage: createJSONStorage(() => localStorage) },
+    // Persists the OUTBOX (not the server mirror) and never throws on a full quota.
+    labPersistOptions<LabPipelineState>((): PersistErrorApi => useLabPipelineStore),
   ),
 );
 

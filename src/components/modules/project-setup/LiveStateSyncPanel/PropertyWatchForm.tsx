@@ -1,13 +1,30 @@
-import { useState, useCallback, type FormEvent } from 'react';
+import { useState, useCallback, useEffect, useRef, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { ACCENT_EMERALD } from '@/lib/chart-colors';
 import type { PropertyWatchRequest } from '@/types/ue5-bridge';
 
 // ── Property watch form ───────────────────────────────────────────────────
 
-export function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest) => void }) {
-  const [objectPath, setObjectPath] = useState('');
+interface PropertyWatchFormProps {
+  onAdd: (req: PropertyWatchRequest) => void;
+  /** Object path to start from — set when the user picked a selected actor. */
+  initialObjectPath?: string;
+  /** Focus Property on mount: the path is known, the property is the next thing to type. */
+  focusProperty?: boolean;
+}
+
+/**
+ * Remount (via `key`) to apply a new `initialObjectPath`: the form owns its
+ * inputs, so a prefill is a fresh form rather than state synced from props.
+ */
+export function PropertyWatchForm({ onAdd, initialObjectPath = '', focusProperty = false }: PropertyWatchFormProps) {
+  const [objectPath, setObjectPath] = useState(initialObjectPath);
   const [propertyName, setPropertyName] = useState('');
+  const propertyRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (focusProperty) propertyRef.current?.focus();
+  }, [focusProperty]);
 
   const hasPath = objectPath.trim().length > 0;
   const hasProperty = propertyName.trim().length > 0;
@@ -53,6 +70,7 @@ export function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest
           <label htmlFor="lss-watch-property" className="text-2xs font-bold text-text-muted uppercase tracking-wider">Property</label>
           <input
             id="lss-watch-property"
+            ref={propertyRef}
             type="text"
             value={propertyName}
             onChange={(e) => setPropertyName(e.target.value)}

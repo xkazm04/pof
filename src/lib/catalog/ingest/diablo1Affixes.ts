@@ -30,6 +30,7 @@ export const AFFIX_MAP: FieldMap = {
 };
 
 const A = 'UARPGAttributeSet.';
+const ITEM = 'UARPGItemDefinition.';
 const RES = [`${A}FireResistance`, `${A}LightningResistance`, `${A}MagicResistance`];
 const ATTRS = [`${A}Strength`, `${A}Dexterity`, `${A}Intelligence`];
 
@@ -75,6 +76,20 @@ export const AFFIX_POWERS: Record<string, PowerTarget> = {
   CHARGES: none('no staff-charge system'),
   NOMANA: none('no "consumes no mana" effect'),
   ABSHALFTRAP: none('no trap-damage reduction'),
+  // Unique-item-only powers. SaveItemPower applies these operations directly to the
+  // base item or its special-effect flags (.reference/devilutionX/Source/items.cpp:736-740,902-974).
+  SETAC: to([`${ITEM}MinArmor`, `${ITEM}MaxArmor`], 'full', 'sets the item armor roll to one fixed value'),
+  SETDAM: to([`${ITEM}MinDamage`, `${ITEM}MaxDamage`], 'full', 'sets the weapon damage range'),
+  SETDUR: to([`${ITEM}MaxDurability`], 'full', 'sets current and maximum durability'),
+  NOMINSTR: to([`${ITEM}RequiredStrength`], 'full', 'sets the item Strength requirement to zero'),
+  ONEHAND: to([`${ITEM}AllowedSlots`], 'full', 'changes the item to a one-handed equipment slot'),
+  AC: to([`${ITEM}MinArmor`, `${ITEM}MaxArmor`], 'approximate', 'AC_CURSE subtracts a roll from base armor; PoF stores an armor range'),
+  ALLRESZERO: to(RES, 'approximate', 'sets every resistance to zero rather than applying an additive modifier'),
+  '3XDAMVDEM': none('no item effect for triple damage against demons'),
+  DRAINLIFE: none('no equipped-item life-drain effect'),
+  RNDSTEALLIFE: none('no random life-leech effect'),
+  RNDARROWVEL: none('no item-level random projectile-velocity effect'),
+  SPELL: none('no Diablo staff-spell and charge payload on a PoF item power'),
 };
 
 /** The target(s) of a power, a CURSE (`X_CURSE`) being its base power reversed; `null` for an unknown power. */

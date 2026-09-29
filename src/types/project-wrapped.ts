@@ -11,7 +11,7 @@ export interface WrappedModule {
   timeMs: number;
 }
 
-/** Aggregated activity for one ISO week (Monday-anchored). */
+/** Aggregated activity for one ISO week (Monday-anchored, in the recap's zone). */
 export interface WrappedWeek {
   /** ISO date string for the Monday that starts the week. */
   weekStart: string;
@@ -53,6 +53,8 @@ export interface WrappedMonth {
 export interface ProjectWrapped {
   /** ISO timestamp the recap was generated (drives the share-image caption). */
   generatedAt: string;
+  /** IANA zone every day / week / month key below was cut in (see lib/analytics/report-window). */
+  zone: string;
   /** ISO date (YYYY-MM-DD) of the first ever session, or null when there's no data. */
   firstSessionDate: string | null;
   /** ISO date (YYYY-MM-DD) of the most recent session, or null when there's no data. */

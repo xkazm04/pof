@@ -1,17 +1,19 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   STATUS_SUCCESS, STATUS_ERROR,
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
 } from '@/lib/chart-colors';
 import { NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
+import { resolveStack } from '@/lib/feel-adjustment-layers';
+import { cameraMetricValues, findBasePreset } from '@/lib/character/inspector-fields';
+import { useCharacterBlueprintStore, useResolvedBindings } from '@/stores/characterBlueprintStore';
 import {
   CLASS_TREE,
-  BLUEPRINT_PROPERTIES,
   SCALING_PROPS,
   HITBOX_ZONES,
   INPUT_BINDINGS,
-  KEY_CONFLICTS,
   COMPARISON_CHARACTERS,
   COMPARISON_STATS,
   ACCENT,
@@ -89,18 +91,21 @@ export function HitboxMetric() {
   );
 }
 
-/** "FOV | Arm | Lag" compact stats */
+/** "FOV | Arm | Lag" compact stats — from the resolved feel stack (what Apply writes). */
 export function CameraMetric() {
-  const fov = BLUEPRINT_PROPERTIES.find((p) => p.name === 'FOV');
-  const arm = BLUEPRINT_PROPERTIES.find((p) => p.name === 'ArmLength');
-  const lag = BLUEPRINT_PROPERTIES.find((p) => p.name === 'LagSpeed');
+  const baseFeelPresetId = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const feelLayers = useCharacterBlueprintStore((s) => s.feelLayers);
+  const { fov, arm, lag } = useMemo(
+    () => cameraMetricValues(resolveStack(findBasePreset(baseFeelPresetId).profile, feelLayers)),
+    [baseFeelPresetId, feelLayers],
+  );
   return (
     <div className="flex items-center gap-1 text-[9px] font-mono tabular-nums">
-      <span style={{ color: ACCENT_ORANGE }}>{fov?.current ?? '—'}</span>
+      <span style={{ color: ACCENT_ORANGE }}>{fov}</span>
       <span className="text-text-muted">|</span>
-      <span style={{ color: ACCENT_CYAN }}>{arm?.current ?? '—'}</span>
+      <span style={{ color: ACCENT_CYAN }}>{arm}</span>
       <span className="text-text-muted">|</span>
-      <span style={{ color: ACCENT_EMERALD }}>{lag?.current ?? '—'}</span>
+      <span style={{ color: ACCENT_EMERALD }}>{lag}</span>
     </div>
   );
 }
@@ -121,12 +126,12 @@ export function BindingsMetric() {
   );
 }
 
-/** "{conflicts}" count — green if 0, red if >0 */
+/** "{conflicts}" count over the resolved (persisted) bindings — green if 0, red if >0 */
 export function KeyboardMetric() {
-  const count = KEY_CONFLICTS.size;
+  const count = useResolvedBindings().conflicts.size;
   const color = count === 0 ? STATUS_SUCCESS : STATUS_ERROR;
   return (
-    <span className="text-[10px] font-mono font-bold" style={{ color }}>
+    <span data-testid="keyboard-metric" className="text-[10px] font-mono font-bold" style={{ color }}>
       {count}<span className="text-text-muted font-normal ml-0.5">{count === 1 ? 'conflict' : 'conflicts'}</span>
     </span>
   );

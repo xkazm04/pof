@@ -4,7 +4,7 @@ import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/da
 import { linksResolve } from '../acceptance/linkCheckers';
 import { sumReconciles } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
@@ -21,6 +21,37 @@ const zoneId = (e: LabEntity) => e.id.replace(/^zone-/, '') || e.id;
 /** Fast-travel node naming convention: "<first word of the zone name> Crossing"
  *  ("Ashen Forest" → "Ashen Crossing"). Per-zone, so two zones cannot share a node. */
 const crossing = (n: string) => `${n.trim().split(/\s+/)[0] || slug(n)} Crossing`;
+
+const ZONE_GATE_TEST_BY_ENTITY: Record<string, string> = {
+  'zone-z-ashen': 'AshenForestSetupTest',
+};
+
+function zoneGateTestName(entityId: string, s: string): string {
+  return ZONE_GATE_TEST_BY_ENTITY[entityId] ?? `PoF.Zone.${s}.Setup`;
+}
+
+function zoneGateChecks(e: LabEntity): string[] {
+  if (e.id === 'zone-z-ashen') {
+    return [
+      'level loads without crash (DirectionalLight + SkyLight + PostProcessVolume present)',
+      `${crossing(e.name)} bonfire fast-travel node present and interactable`,
+      'Brute packs spawn at correct sector positions with monsterLevel=5',
+      'Ravaged Courtyard arena slice triggers on entry, waves complete, loot ilvl=5',
+      'Ambient bed plays on load; music transitions on enemy aggro',
+      'Minimap discovery % updates on fog-of-war clear for first-visit',
+      'AARPGEncounterVolume.areaLevel=5 confirmed at runtime',
+    ];
+  }
+  return [
+    'level loads without crash with its declared environment actors present',
+    'each declared fast-travel node is present and interactable',
+    'encounter packs spawn at their declared positions and level',
+    'each declared arena slice triggers on entry and completes its waves and loot flow',
+    'declared ambient and music transitions react to their configured events',
+    'minimap discovery updates on first-visit fog-of-war clear',
+    'encounter volumes expose this zone’s declared area level at runtime',
+  ];
+}
 
 /**
  * Zone Map pipeline (catalogId: 'zone-map').
@@ -717,21 +748,21 @@ registerCatalogPipeline({
       label: 'Test Gate',
       engine: 'Hand-authored', // produce() returns author-typed constants; every checker re-reads them
       view: { kind: 'checklist', field: 'checks' },
-      produce: (e: LabEntity) => ({
-        data: {
-          checks: [
-            'level loads without crash (DirectionalLight + SkyLight + PostProcessVolume present)',
-            `${crossing(e.name)} bonfire fast-travel node present and interactable`,
-            'Brute packs spawn at correct sector positions with monsterLevel=5',
-            'Ravaged Courtyard arena slice triggers on entry, waves complete, loot ilvl=5',
-            'Ambient bed plays on load; music transitions on enemy aggro',
-            'Minimap discovery % updates on fog-of-war clear for first-visit',
-            'AARPGEncounterVolume.areaLevel=5 confirmed at runtime',
-          ],
-        },
-      }),
-      // Registered automation name (enumerated from UE): the AshenForest zone-setup gate.
-      accept: entityRuntimeDeferred('AshenForestSetupTest', 'AshenForest zone setup test passes in UE'),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: zoneGateChecks(e),
+            automationName: zoneGateTestName(e.id, s),
+          },
+        };
+      },
+      // The artifact's per-entity name wins. The neutral fallback is deliberately unregistered,
+      // so an artifact that declares no name can never borrow the Ashen Forest's proof.
+      accept: allOf(
+        automationNameDeclared(),
+        entityRuntimeDeferred('PoF.Zone.Unspecified.Setup', 'Zone setup test passes in UE for this zone'),
+      ),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

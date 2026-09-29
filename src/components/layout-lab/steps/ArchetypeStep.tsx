@@ -9,6 +9,8 @@ import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { StepHistoryPanel } from './shared/StepHistoryPanel';
+import { PackageLedgerPanel } from './PackageLedgerPanel';
+import { isPackagingStep } from '@/lib/catalog/acceptance/packagingStep';
 import { selectedCandidate, selectionSource } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
@@ -21,6 +23,7 @@ import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { stampTemplate } from '@/lib/catalog/produceTemplate';
 import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, describeProduceOutcome, type OneShotStepResult, type ProduceOutcome } from '../labProduceMode';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -297,6 +300,7 @@ export function noopFixSuggestion(spec: StepSpec, fixDirection?: string): string
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */
 export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
   const produce = useLabPipelineStore((s) => s.produce);
+  const entityArtifacts = useLabPipelineStore((s) => s.byEntity[entity.id]);
   const canonRules = useCanonStore((s) => s.rules);
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
 
@@ -390,6 +394,10 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // Surfaced beside the dispatch button: attached evidence must never ride invisibly into
   // a prompt (the same rule the Style DNA indicator follows).
   const evidence = collectStepEvidence(data);
+  const siblings = useMemo(
+    () => Object.fromEntries(Object.entries(entityArtifacts ?? {}).map(([label, artifact]) => [label, artifact.data])),
+    [entityArtifacts],
+  );
 
   // Exactly the condition `dispatchProduce` tests before taking the live branch — so the
   // switch only appears where flipping it actually changes what the next click does, and
@@ -408,7 +416,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
    */
   const buildPrompt = (dir: string) =>
     buildStepProducePrompt(spec, entity, dir, {
-      catalogId, rules: canonRules, evidence, library: referenced,
+      catalogId, rules: canonRules, evidence, library: referenced, siblings,
+      linkedEntities: Object.values(entitiesByCatalog).flatMap((catalog) => Object.values(catalog)),
       callback: liveEligible && liveMode,
     });
 
@@ -450,7 +459,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       // `✓ Recorded`; `describeProduceOutcome` is the one place that projection lives.
       return describeProduceOutcome(res);
     }
-    produce(entity.id, step, withProduceDirection(spec.produce(entity, dir), pctx));
+    produce(entity.id, step, stampTemplate(catalogId, spec, entity, withProduceDirection(spec.produce(entity, dir), pctx), dir));
   };
 
   // One-click "Produce fix": dispatches the corrective direction through the step's OWN
@@ -540,6 +549,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
         </PanelCrashBoundary>
       ) },
       ...(dataGlbUrl ? [{ label: GLB_PREVIEW_LABEL, node: <GlbPreviewPanel t={t} url={dataGlbUrl} /> }] : []),
+      // The REAL package beside the hand-typed list: rebuilt manifest, blockers by owing sibling, rebuild.
+      ...(catalogId && isPackagingStep(spec) ? [{ label: 'Package on disk', node: <PackageLedgerPanel t={t} catalogId={catalogId} entityId={entity.id} /> }] : []),
       { label: 'Produce', node: cli((pctx) => dispatchProduce(pctx)) },
     ];
   }

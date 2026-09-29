@@ -18,6 +18,7 @@ import {
   type CraftLevel,
   type GaugedCraftLevel,
 } from '@/lib/status/craft';
+import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 
 /**
  * How many gauges are kept per (catalog, entity, step) in the craft history log.
@@ -38,6 +39,8 @@ export interface CraftVerdictView {
   aLevel: GaugedCraftLevel;
   lensVersion: number;
   artifactUpdatedAt?: string;
+  /** The content binding stamped at gauge time (`stepContentHash`); absent on legacy rows. */
+  contentHash?: string;
   /**
    * The A-level movement across this cell's kept gauges, when there are at least two.
    * Attached by `GET /api/craft-verdicts` from the history log in the SAME response, so a
@@ -247,14 +250,16 @@ export interface CellCraft {
  * best case). A step absent from the fleet audit gets no chip at all (`undefined`) —
  * an unaudited step must not claim an A0 it was never measured for.
  *
- * `artifactUpdatedAtByEntity` carries each entity's current artifact `updatedAt` so a
- * verdict written before a re-produce projects as stale.
+ * `contentByEntity` carries what each entity's artifact holds NOW (`JudgedContent`: its
+ * content hash when the reader can prove one, and its `updatedAt`) — build it with
+ * `statusModel.judgedContentOfRow`, THE row-hash rule the judge path uses, so a verdict whose
+ * content was re-produced projects as stale while a same-content re-upsert does not.
  */
 export function craftForCell(
   catalogId: string,
   stepLabel: string,
   verdicts: CraftVerdictView[],
-  artifactUpdatedAtByEntity: ReadonlyMap<string, string>,
+  contentByEntity: ReadonlyMap<string, JudgedContent>,
 ): CellCraft | undefined {
   const fact = factIndex.get(`${catalogId}\u0000${stepLabel}`);
   if (!fact) return undefined;
@@ -278,7 +283,7 @@ export function craftForCell(
       verdict: v,
       currentLensVersion,
       ceiling,
-      artifactUpdatedAt: artifactUpdatedAtByEntity.get(v.entityId),
+      artifact: contentByEntity.get(v.entityId),
     });
     if (
       !worst ||

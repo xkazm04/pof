@@ -4,6 +4,34 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { SkillId } from '../skills';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import type { CallbackStatus } from '@/lib/cli-task';
+
+/**
+ * Run lifecycle of a session. 'running' from dispatch until the stream ends,
+ * 'settling' while the run's callback POST settles (bounded by
+ * UI_TIMEOUTS.callbackSettleMax), 'idle' once endRun recorded the outcome.
+ * isRunning is kept in lockstep: true in 'running' AND 'settling'.
+ */
+export type RunPhase = 'idle' | 'running' | 'settling';
+
+/** The outcome endRun records atomically with the isRunning release. */
+export interface RunOutcome {
+  /** null = the run's outcome was never observed (e.g. recovered after a refresh). */
+  success: boolean | null;
+  callbackStatus?: CallbackStatus | null;
+}
+
+/** What was last sent to a session's terminal — the raw prompt (before skill injection) and its task type. */
+export interface DispatchRecord {
+  prompt: string;
+  taskType?: string;
+}
+
+/** A `@@CALLBACK` marker whose POST failed; its payload is kept so it can be re-POSTed without a new run. */
+export interface PendingCallback {
+  callbackId: string;
+  payload: string;
+}
 
 export interface CLISessionState {
   id: string;
@@ -33,6 +61,14 @@ export interface CLISessionState {
   createdAt: number;
   lastActivityAt: number;
   enabledSkills: SkillId[];
+  /** Transient: sequence number of the current/last run (bumped by beginRun). */
+  runSeq?: number;
+  /** Transient: lifecycle phase of the current run (see RunPhase). */
+  runPhase?: RunPhase;
+  /** Transient (never persisted): the last prompt dispatched to this terminal — what Retry replays. */
+  lastDispatch?: DispatchRecord | null;
+  /** Transient (never persisted): the last run's callback markers whose POST failed. */
+  pendingCallbacks?: PendingCallback[];
 }
 
 interface CLIPanelStoreState {
@@ -51,7 +87,28 @@ interface CLIPanelStoreState {
   maximizeTab: (tabId: string) => void;
   /** Hide the currently maximized terminal back to bottom bar only */
   minimizeTab: () => void;
-  setSessionRunning: (id: string, running: boolean, success?: boolean, callbackStatus?: 'confirmed' | 'failed' | 'missing') => void;
+  /**
+   * The ONE run-lifecycle door. beginRun starts a run: isRunning=true, the previous
+   * run's outcome is cleared, runSeq is bumped and returned (0 if no session).
+   */
+  beginRun: (id: string) => number;
+  /** The run's stream ended; it stays isRunning while its callback settles. Stale seq → no-op. */
+  settleRun: (id: string, seq: number) => void;
+  /**
+   * End run `seq`: isRunning=false AND its outcome in ONE store write, so every
+   * subscriber that sees the edge sees this run's outcome. Stale seq / idle → no-op.
+   */
+  endRun: (id: string, seq: number, outcome: RunOutcome) => void;
+  /** Record the prompt just dispatched to this terminal (in memory only). */
+  recordDispatch: (id: string, dispatch: DispatchRecord) => void;
+  /** Retain the current run's failed callback markers (in memory only). */
+  setPendingCallbacks: (id: string, pending: PendingCallback[]) => void;
+  /**
+   * Record a callback resubmit of run `seq`: `remaining` are the payloads that still
+   * failed. lastCallbackStatus becomes 'confirmed' when none remain, else 'failed'.
+   * No-op when a newer run began or the session is running.
+   */
+  recordCallbackResubmit: (id: string, seq: number, remaining: PendingCallback[]) => void;
   setClaudeSessionId: (id: string, claudeSessionId: string) => void;
   setCurrentExecution: (id: string, executionId: string | null, taskId: string | null) => void;
   /** Record the task type + label of the prompt being dispatched (for spend attribution). */
@@ -65,6 +122,27 @@ interface CLIPanelStoreState {
   findSessionByKey: (sessionKey: string) => string | null;
   /** Remove all sessions (used during project switch to prevent cross-project leakage) */
   clearAllSessions: () => void;
+}
+
+/**
+ * The persisted view of the sessions: the last dispatch's prompt and any retained
+ * callback payloads are run facts for THIS page's lifetime only — prompts can be
+ * large and the callback registry they pair with is in-memory — so they never
+ * reach localStorage.
+ */
+function stripTransientRunFacts(sessions: Record<string, CLISessionState>): Record<string, CLISessionState> {
+  const out: Record<string, CLISessionState> = {};
+  for (const [id, sess] of Object.entries(sessions)) {
+    if (sess.lastDispatch === undefined && sess.pendingCallbacks === undefined) {
+      out[id] = sess;
+      continue;
+    }
+    const persisted = { ...sess };
+    delete persisted.lastDispatch;
+    delete persisted.pendingCallbacks;
+    out[id] = persisted;
+  }
+  return out;
 }
 
 let tabCounter = 0;
@@ -154,25 +232,84 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
 
       minimizeTab: () => set({ maximizedTabId: null }),
 
-      setSessionRunning: (id, running, success, callbackStatus) => {
+      beginRun: (id) => {
+        const session = get().sessions[id];
+        if (!session) return 0;
+        const seq = (session.runSeq ?? 0) + 1;
+        set((state) => ({
+          sessions: {
+            ...state.sessions,
+            [id]: {
+              ...session,
+              isRunning: true,
+              runPhase: 'running',
+              runSeq: seq,
+              // A run START clears the previous run's outcome — nobody may read it as this run's.
+              lastTaskSuccess: null,
+              lastCallbackStatus: null,
+              pendingCallbacks: [],
+              lastActivityAt: Date.now(),
+            },
+          },
+        }));
+        return seq;
+      },
+
+      settleRun: (id, seq) => {
+        const session = get().sessions[id];
+        if (!session || session.runSeq !== seq || session.runPhase !== 'running') return;
+        set((state) => ({
+          sessions: { ...state.sessions, [id]: { ...session, runPhase: 'settling', lastActivityAt: Date.now() } },
+        }));
+      },
+
+      endRun: (id, seq, outcome) => {
+        const session = get().sessions[id];
+        if (!session || (session.runSeq ?? 0) !== seq || !session.isRunning) return;
+        set((state) => ({
+          sessions: {
+            ...state.sessions,
+            [id]: {
+              ...session,
+              isRunning: false,
+              runPhase: 'idle',
+              lastTaskSuccess: outcome.success,
+              lastCallbackStatus: outcome.callbackStatus ?? null,
+              lastActivityAt: Date.now(),
+            },
+          },
+        }));
+      },
+
+      recordDispatch: (id, dispatch) => {
         set((state) => {
           const session = state.sessions[id];
           if (!session) return state;
-          return {
-            sessions: {
-              ...state.sessions,
-              [id]: {
-                ...session,
-                isRunning: running,
-                lastActivityAt: Date.now(),
-                // Record success only when transitioning to stopped
-                ...(running === false && success !== undefined ? { lastTaskSuccess: success } : {}),
-                // Additive callback truth, recorded on the same stopped transition.
-                ...(running === false && callbackStatus !== undefined ? { lastCallbackStatus: callbackStatus } : {}),
-              },
-            },
-          };
+          return { sessions: { ...state.sessions, [id]: { ...session, lastDispatch: dispatch } } };
         });
+      },
+
+      setPendingCallbacks: (id, pending) => {
+        set((state) => {
+          const session = state.sessions[id];
+          if (!session) return state;
+          return { sessions: { ...state.sessions, [id]: { ...session, pendingCallbacks: pending } } };
+        });
+      },
+
+      recordCallbackResubmit: (id, seq, remaining) => {
+        const session = get().sessions[id];
+        if (!session || session.isRunning || (session.runSeq ?? 0) !== seq) return;
+        set((state) => ({
+          sessions: {
+            ...state.sessions,
+            [id]: {
+              ...session,
+              pendingCallbacks: remaining,
+              lastCallbackStatus: remaining.length === 0 ? 'confirmed' : 'failed',
+            },
+          },
+        }));
       },
 
       setClaudeSessionId: (id, claudeSessionId) => {
@@ -297,7 +434,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
       name: 'pof-cli-panel',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        sessions: state.sessions,
+        sessions: stripTransientRunFacts(state.sessions),
         tabOrder: state.tabOrder,
         activeTabId: state.activeTabId,
         maximizedTabId: state.maximizedTabId,
@@ -309,7 +446,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
         if (merged.sessions) {
           const cleaned: Record<string, CLISessionState> = {};
           for (const [id, sess] of Object.entries(merged.sessions)) {
-            cleaned[id] = { ...sess, isRunning: false, lastTaskSuccess: null, currentExecutionId: null, currentTaskId: null };
+            cleaned[id] = { ...sess, isRunning: false, runPhase: 'idle', runSeq: 0, lastTaskSuccess: null, currentExecutionId: null, currentTaskId: null };
           }
           merged.sessions = cleaned;
         }

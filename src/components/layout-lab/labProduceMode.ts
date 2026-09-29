@@ -1,7 +1,6 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import type { ArchetypeId } from '@/lib/catalog/stepSpec';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 
 /**
@@ -24,16 +23,10 @@ import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/
 export const LIVE_PRODUCE_KEY = 'pof-lab-live-produce';
 
 /**
- * Archetypes whose Produce is a TEXT deliverable a CLI session can actually author end to
- * end (a brief's prose, a graph's nodes/edges, a rules body). Generative galleries, UE
- * packaging and balance math are produced by other engines (Leonardo/Tripo, the gate drain,
- * deterministic code), so routing them through a text CLI would overclaim.
+ * Which archetypes a model may author — ONE rule, owned by `@/lib/catalog/cliEligibility` and
+ * re-exported here so the lab's Produce panel and one-shot's run plan can never disagree.
  */
-export const CLI_ELIGIBLE_ARCHETYPES: readonly ArchetypeId[] = ['brief', 'graph', 'rules'];
-
-export function isCliEligible(archetype: ArchetypeId): boolean {
-  return CLI_ELIGIBLE_ARCHETYPES.includes(archetype);
-}
+export { CLI_ELIGIBLE_ARCHETYPES, isCliEligible } from '@/lib/catalog/cliEligibility';
 
 /** Is the live-CLI produce path enabled in this browser? SSR/test-safe (false). */
 export function isLiveProduceEnabled(): boolean {

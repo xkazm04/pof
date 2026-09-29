@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/one-shot/propose/route';
 import { startExecution } from '@/lib/claude-terminal/cli-service';
+import { buildProposalPrompt } from '@/lib/one-shot/design-prompts';
 
 const MOCK_DISTRIBUTION = {
   catalogId: 'items',
@@ -65,5 +66,21 @@ describe('POST /api/one-shot/propose', () => {
     expect(lastCall[4]).toMatchObject({ enableMcp: true });
     // Spend-ledger attribution rides along with every autonomous spawn.
     expect(lastCall[4]?.attribution?.taskType).toBe('one-shot-propose');
+  });
+
+  // catalog-gap-analysis/B: the operator's picked gap reaches the prompt builder.
+  it('passes the picked target through to buildProposalPrompt', async () => {
+    const target = { catalogId: 'items', attribute: 'rarity', value: 'Common', count: 34, expected: 57, deficit: 23 };
+    const res = await POST(makePost({ catalogId: 'items', distribution: MOCK_DISTRIBUTION, target }));
+    expect(res.status).toBe(200);
+    expect(vi.mocked(buildProposalPrompt).mock.calls.at(-1)![3]).toEqual(target);
+  });
+
+  it('refuses a target for another catalog before spawning a CLI run', async () => {
+    const before = vi.mocked(startExecution).mock.calls.length;
+    const target = { catalogId: 'bestiary', attribute: 'role', value: 'healer', count: 4, expected: 8, deficit: 4 };
+    const res = await POST(makePost({ catalogId: 'items', distribution: MOCK_DISTRIBUTION, target }));
+    expect(res.status).toBe(400);
+    expect(vi.mocked(startExecution).mock.calls.length).toBe(before);
   });
 });

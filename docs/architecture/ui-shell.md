@@ -17,11 +17,12 @@ rollup strip.
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
 | `src/components/layout-lab/Baseline/index.tsx` (+ `Baseline/useBaseline.ts`, `constants.ts`, `types.ts`) | 3-column composition screen: tree / pipeline timeline / work canvas. `index.tsx` is layout only; every produce→persist→render hook lives in `useBaseline.ts`. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
 | `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. **Controlled** catalog dropdown (`catalogId` + `onSelectCatalog` write-through — no private `selected` fork). Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`). **Catalog-wide freshness (2026-08-18):** a `Refresh catalog` action composes the existing `refreshArtifacts(catalogId)` with the per-entity `refreshEntity` — one fetch path, one merge rule — and reconciles ONLY entities holding local state (reconciling every server-only entity would copy a whole catalog's produce bodies into the persisted localStorage store: ~0.5 MB for `items` against a ~5 MB quota). It reports what it re-read — adopted / removed / kept, naming local-only steps with `SERVER_MISSING_REASON` — rather than claiming "nothing changed", which it is in no position to assert. **Changed-since digest (2026-08-18):** above the legend, `CatalogChangesDigest` lists steps that moved since your last visit to this board, sourced only from stored rows + archived versions (see `GET /api/pipeline-artifacts/changes`); it states its own blind spots — a truncated history reads "at least N", a first visit reads "no baseline yet", a failed read reads "unknown, not nothing" |
-| `src/components/layout-lab/MatrixBatchDrain.tsx` | Matrix header action — "drain all deferred gates in this catalog" (shown only when ≥1 entity is deferred). **Executor truth (2026-09-04):** the lab sends no `executor`/`allowSpawn`, so `buildExecutors` always builds the BRIDGE executor — the drain runs THROUGH a running UE editor and never boots one. The button therefore discloses that requirement BEFORE the click from `usePofBridgeStore.connectionStatus` (the same read `LabBridgeStrip` uses) without ever disabling itself, the progress/cancel copy names the request rather than a boot, and a run where nothing executed (`ranNothing`: `ran===0` with skipped gates, and no lock/error) renders a first-class "0 gates ran — no UE executor was available" line instead of hiding the cause in a hover `title`. Plus a flips summary (passed/failed/still-deferred/locked) with per-step fail reasons, and an honest Cancel (skips the retry only — the request already sent can't be recalled) |
+| `src/components/layout-lab/MatrixBatchDrain.tsx` | Matrix header action — "drain all deferred gates in this catalog" (shown only when ≥1 entity is deferred). **Executor truth (2026-09-04):** the lab sends no `executor`/`allowSpawn`, so `buildExecutors` always builds the BRIDGE executor — the drain runs THROUGH a running UE editor and never boots one. The button therefore discloses that requirement BEFORE the click from `usePofBridgeStore.connectionStatus` (the same read `LabBridgeStrip` uses) without ever disabling itself, the progress/cancel copy names the request rather than a boot, and a run where nothing executed (`ranNothing`: `ran===0` with skipped gates, and no lock/error) renders a first-class "0 gates ran — no UE executor was available" line instead of hiding the cause in a hover `title`. Plus a flips summary (passed/failed/still-deferred/locked) with per-step fail reasons, and an honest Cancel (skips the retry only — the request already sent can't be recalled). `ranNothing` lives in `entityDrainOutcome.ts` and the captured-frame thumbnails in `DrainFrameLinks.tsx`, both shared with the per-entity coach drain |
 | `src/components/layout-lab/hooks/useBatchDrain.ts` | Batch-drain engine: sends the WHOLE deferred set in ONE request (`drainCatalogGates(catalogId, entityIds)`) — one server-side collection + one grouped runner pass over every gate (through the bridge executor — an already-running editor), not one request per entity. All-or-nothing lease: a 409 refuses the whole batch → retry once, then record every entity locked. Invalidates the whole-catalog cache on completion; cancel only skips the retry |
 | `src/components/layout-lab/batchDrainModel.ts` | Pure batch-drain model: `DrainOutcome` (ok/locked/error) + `summarizeBatchDrain(entities, outcome)` — derives the catalog-wide flips summary from the single aggregate `DrainSummary` (groups per-step results back to their `job.entityId`; locked/error mark the whole set) |
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/LabSearch.tsx` | Lab-wide search overlay (shared `ui/Modal`): finds any catalog, entity, or pipeline step by name/id and jumps via the EXISTING lifted nav callbacks (`selectCatalog` / `navigateTo`) — no parallel nav state. `useLabSearchShortcut()` binds ⌘/Ctrl+K and `/` (ignored while typing) |
+| `src/components/layout-lab/entityPipeline.ts` | The lab's ONE per-entity step door: `toLabEntity` (the single stored→`LabEntity` constructor, wrapping `labIdentityOf` so `canonProfile` / `reference` are never dropped), `entityStepList(catalogId, entity, catalogSteps?)` (`stepScope.stepLabelsForProfile` over the catalog list — the list the rail renders and every `stepIndex` indexes), `resolveStepJump` (a step named by LABEL → the target entity's own index). Read by `useLabDetail`, `useGlobalCoach` / `globalCoachModel`, `useBaseline`, `LabSearch`, and the `LayoutLab` step clamp |
 | `src/components/layout-lab/ui/SearchCombobox.tsx` | The shared type-ahead combobox behind BOTH lab search and `status/EntitySearch` (extracted from the latter): ARIA combobox + `aria-activedescendant`, ↓/↑ (wrapping) · Home/End · Enter · Escape, live-region hit count, stated `maxHits` cap, and "no match" vs "nothing loaded" empty states |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance. **Fix honesty (2026-09-04):** `fixEffectOf` classifies what a one-click "⚡ Produce fix" can achieve (`reroll` / `first-produce` / `live-produce` / `no-op`) and the button is withheld for `no-op` — an already-produced step whose produce body is direction-blind and deterministic, where re-producing writes byte-identical data. The banner then carries `noopFixSuggestion`: what would change it, plus the derived direction as an input rather than an imminent dispatch. See docs/catalog/WIRING-AND-ACCEPTANCE.md |
@@ -33,7 +34,7 @@ rollup strip.
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/produceFrom/fail/clearError/setSyncError/resetEntity/hydrateEntity/adoptServer`; module-level `_labSync` function pointer. `produce`/`produceFrom` call `fail` themselves when a dispatch throws (then re-raise), so a failed produce always leaves an artifact-level `error` — recorded NON-destructively (previously produced content survives). Also `refreshEntity` — the EXPLICIT reconciliation that may adopt server content and drop a step the server no longer has (see "Refresh from server"), and the `serverSeen` provenance stamp that makes that safe |
 | `src/components/layout-lab/ProduceErrorBanner.tsx` | Work-canvas banner for a step's recorded produce failure (`artifact.error`) + Dismiss (`clearError`). No retry button — the Produce panel below owns the prompt and already offers "Retry with same prompt" |
-| `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifactsResult` (`Result` — keeps the failure; what the cache reads), its lossy `fetchArtifacts` wrapper (`[]` on failure, for the read-only /status aggregations), `postArtifact`, `drainGates` (single entity, for the per-entity coach drain), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
+| `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifactsResult` (`Result` — keeps the failure; what the cache reads), its lossy `fetchArtifacts` wrapper (`[]` on failure; NOT for /status — every /status tab reads the shared status evidence read instead: `status/statusArtifactSource.ts` `useStatusArtifacts([scope])`, blob-free summary rows via `labArtifactCache`, plus `status/statusVerdictSource.ts` `useStatusVerdicts`, one deduped judge-verdict read on the `useStepJudgeVerdicts` 60 s cache whose `readAllJudgeVerdicts` keeps the failure and never caches it; a failed read renders UNKNOWN / PARTIAL, never R0 or a verdict-less grade), `postArtifact`, `drainGates` (single entity, for the per-entity coach drain — returns the whole `DrainResponse`: `ok` with the full `DrainSummary`, `locked` carrying the server's 409 refusal reason, or `error`; it used to collapse every failure to `null`), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
 | `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`, `retryArtifacts`, `refreshArtifacts` — the user-initiated force-refetch that RETURNS the rows; nothing here polls) — one deduped fetch path + LOADING / EMPTY / **ERROR** states for Baseline + Matrix. A failed GET is stored as an explicit `error` (never as a successful empty load) and never auto-retries. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation. **Notifications are coalesced onto a microtask** (the store is still mutated synchronously, so a same-tick `getCachedArtifacts` sees the new truth) — the homepage fans out one fetch per catalog and each key emits at least twice, which used to wake every subscriber ~2N times per paint. All zero-data entries (empty / loading / error) share ONE `arts` array reference, so a consumer memoizing on `arts` pays nothing for the empty→loading flip, which carries no artifact news |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail). Blockers read the checker `reason` carried on each derived artifact (no second `resolveAccept` pass) |
@@ -174,14 +175,31 @@ kept, so reopening is instant.
 
 - **Open**: header "Search ⌘K" button, `⌘/Ctrl+K`, or `/` when focus is not in a text field.
 - **Jump**: catalog hit → `onSelectCatalog`; entity hit → `navigateTo(catalog, entity, 0)`;
-  step hit → `navigateTo(catalog, entity, stepIndex)` on the CURRENTLY open entity when it
-  belongs to that catalog, else the catalog's first seeded entity (no entity at all → the hit
-  degrades to selecting the catalog, since there is nothing to open the step on). Every path
-  runs the lifted callbacks, so last-location persistence is unchanged.
+  step hit carries the step LABEL, and `resolveStepJump` picks the entity at selection time —
+  the CURRENTLY open entity when its own pipeline has the step, else the first entity whose
+  pipeline does — then `navigateTo(catalog, entity, <that entity's own index>)` (no entity has the
+  step → the hit degrades to selecting the catalog). Every path runs the lifted callbacks, so
+  last-location persistence is unchanged.
 - **Keyboard**: ↓/↑ (wrapping) · Home/End · Enter opens · Escape clears the query, then closes
   the overlay (the first Escape is `stopPropagation`'d so clearing never also closes the Modal).
 
 Search+jump only — deliberately not a command palette with actions.
+
+### 4c. Legacy-shell Ctrl+K palette — intents (`src/components/layout/GlobalSearchPanel/`)
+
+The legacy shell's `GlobalSearchPanel` (FTS5 hits from `src/lib/search-index.ts`) IS a palette
+with actions. `searchIntents.ts` resolves each hit client-side, from its doc id (`cat-` `mod-`
+`cl-` `qa-` `feat-` `fm-` `ef-` `build-`; the item id is the id minus the known
+`<prefix>-<moduleId>-` head, so hyphenated module ids stay unambiguous) and the registry, into:
+
+- **primary** — always a navigation: a category with no sub-module list lands on its first
+  sub-module, builds land on `packaging`, findings on an unknown module land on `evaluator`.
+- **run** — quick actions (indexed as `checklist`, shown as **Action**) carry their registry
+  prompt verbatim, dispatched through `useModuleActions.sendPromptToModule` (the activity feed's
+  Fix door) **only** on Shift+Enter or the row's Run button — never on Enter, row click, or render.
+- **state** — checklist hits show Done/Open from `moduleStore.checklistProgress`.
+
+`searchIntents.test.ts` ratchets zero dead ends over every doc `rebuildSearchIndex` writes.
 
 ### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 
@@ -326,9 +344,17 @@ WHY a step failed/deferred without a second `resolveAccept` pass.
 
 #### Drain deferred gates (`Baseline/useBaseline.ts` — `runDrain`, `labArtifactClient.ts`)
 
-`runDrain` calls `drainGates(catalogId, entity.id)` → `POST /api/pipeline-artifacts/drain`, then
-`invalidateArtifacts(catalogId, entity.id)` so the refreshed verdicts are re-read through the shared
-cache. The drain trigger lives in `<NextStepCoach>`: it surfaces a
+`runDrain` (extracted into `Baseline/useEntityDrain.ts`) calls `drainGates(catalogId, entity.id)` →
+`POST /api/pipeline-artifacts/drain`, then `invalidateArtifacts(catalogId, entity.id)` so the refreshed
+verdicts are re-read through the shared cache. **The outcome is displayed, never discarded
+(2026-09-28):** the pure `entityDrainOutcome(steps, response)` (built on `summarizeBatchDrain` +
+`ranNothing`, adding each gate's index in THIS entity's step list) yields `ran` (counts, per-gate
+fail/deferral reasons, captured frames), `ran-nothing` (0 ran, N skipped → names the missing UE
+editor on the bridge), `refused` (quotes the server's 409 lease reason) or `error` (a missing
+response is an error, never a throw). The hook keeps it keyed by `${catalogId}/${entityId}` — the
+same key as the draining flag, so it never renders on another entity — and `<EntityDrainResult>`
+renders it under the coach: message, Retry (refused / ran-nothing / error), Dismiss, "Open step" per
+failing gate, and the frames via the shared `<DrainFrameLinks>`. A new run clears the old result. The drain trigger lives in `<NextStepCoach>`: it surfaces a
 "Run N deferred gates" button (as the primary CTA when the next actionable step is itself deferred,
 otherwise inside the disclosure) whenever `rollup.deferred > 0` and an `onDrain` callback is provided.
 
@@ -534,6 +560,20 @@ The `bespoke` flag replaces the `catalogId === 'items'` special-cases that were 
 hooks (`isBespokeCatalog`). The guard `src/__tests__/catalog/catalog-manifest-coverage.test.ts`
 (in `npm run validate`) fails when a graded catalog has steps but no section or no grader.
 
+### One per-entity step list (`entityPipeline.ts`)
+
+A step may be scoped to canon profiles (`StepSpec.profiles`, /diablo D18), so a catalog-wide step
+position means a DIFFERENT step per entity (a diablo1 dialog has no `Skill Checks` / `Camera`; a PoF
+bestiary entity has no `Sprite Render`). The rule: **a lab jump names a step by label; its index is
+resolved against the TARGET entity's own list** (`entityStepList`), never a position in another list.
+The rail (`useBaseline`), the matrix (`buildMatrixRows`), the cross-catalog coach (each entity is
+derived and ladder-picked against its own list, under its own `canonProfile` via `toLabEntity`, so
+`candidate.stepIndex` is what the rail opens), lab search (`resolveStepJump`) and the `LayoutLab`
+out-of-range clamp (bounded by the OPEN entity's own list) all read it, so the coach, the rail, the
+matrix and search agree about an entity's steps by construction. Pinned by
+`entityPipeline.test.ts`, `globalCoach.profile.test.ts`, `LabSearch.profileStep.test.tsx` and
+`LayoutLab.entityStepClamp.test.tsx`.
+
 ### Concurrency
 
 The `layout-lab` tree is edited by many parallel sessions. Re-read `labPipelineStore.ts` and
@@ -593,6 +633,17 @@ If a step's `/api/one-shot/step` call returns `outcome: 'fail'` or throws, the o
 ### Concurrency
 
 A single `_cancelled` flag per `createOrchestrator()` closure guards the run loop. `cancel()` sets `_cancelled = true` and immediately transitions the store to `phase: 'failed'`. The loop checks the flag at the top of each iteration and at the post-loop completion check, so the next step does not start and `markCompleted` is not called. `canStart()` (store-side) blocks a second orchestrator from starting while any run is in-flight.
+
+### Recovery (no phase is a dead end)
+
+`src/lib/one-shot/next-actions.ts` `nextActions(state)` is the pure map from job state to forward actions, rendered by `RunActions.tsx` under every non-idle, non-analyzed phase:
+
+- **In flight** (`analyzing`/`proposing`/`refining`/`awaitingRun`/`running`) → **Cancel**. `cancel()` returns a proposal-half request to its resting phase (analyzing → `idle`, proposing → `analyzed`, refining → `proposing`) and invalidates its ticket in `proposalPhases.ts`, so a late answer rejects with `cancelled` and writes nothing; a running pipeline goes to `failed`/`cancelled` as before.
+- **`failed` with a draft and unrecorded steps** → **Resume**: `resume()` runs only the steps whose label is not yet in `stepResults`, on the SAME `draftEntityId` (no second `addDraft`, no `/api/catalog-entities` POST); `/api/one-shot/step` upserts per (catalog, entity, step), so re-entry is idempotent.
+- **Any recorded `fail`** → **Retry N failed**: `retryFailed()` re-runs just those steps and replaces each outcome in place (`upsertStep`), then recomputes `lastSummary`. An interrupted run stays `failed` (still resumable) while steps remain unrecorded.
+- **`completed`/`failed`** → **Start over**: `reset()` back to the idle picker.
+
+All three run paths share one loop (`runPlan` in `orchestrator.ts`) and emit the unchanged `oneshot.*` payloads. On reload no in-flight phase survives (`restingAfterReload` in the store merge): an unanswered propose/refine rests at the proposal or distribution it had, a `running` or `analyzing` job becomes `failed`/`reload-interrupted` (a run keeps its draft + recorded steps for Resume).
 
 ---
 

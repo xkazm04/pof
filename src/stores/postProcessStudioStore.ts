@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { apiFetch } from '@/lib/api-utils';
 import { DEFAULT_EFFECTS } from '@/lib/post-process-studio/effects';
 import { PRESETS } from '@/lib/post-process-studio/presets';
 import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';
@@ -112,8 +111,6 @@ interface PostProcessStudioState {
 
   // UI
   isLoading: boolean;
-  isGenerating: boolean;
-  error: string | null;
   /** Opt-in plain-language decoder for cryptic UE effect params. */
   explainMode: boolean;
 
@@ -133,9 +130,8 @@ interface PostProcessStudioState {
   captureSnapshot: (slot: ABSlot) => void;
   setActiveSlot: (slot: ABSlot) => void;
   loadSnapshot: (slot: ABSlot) => void;
-
-  // Code gen
-  generateCode: () => Promise<string | null>;
+  // Code gen is not store state: both surfaces dispatch
+  // TaskFactory.postProcess(specFromStudioState(getState())) on the CLITask rail.
 }
 
 export const usePostProcessStudioStore = create<PostProcessStudioState>((set, get) => ({
@@ -151,8 +147,6 @@ export const usePostProcessStudioStore = create<PostProcessStudioState>((set, ge
   activeSlot: 'A',
 
   isLoading: false,
-  isGenerating: false,
-  error: null,
   explainMode: false,
 
   init: () => {
@@ -259,34 +253,5 @@ export const usePostProcessStudioStore = create<PostProcessStudioState>((set, ge
     const effects = cloneEffects(snap.effects);
     const budget = estimateGPUBudget(effects, get().resolution);
     set({ effects, budget, activePresetId: snap.presetId });
-  },
-
-  generateCode: async () => {
-    const { effects, activePresetId } = get();
-    const enabled = effects.filter((e) => e.enabled);
-    if (enabled.length === 0) return null;
-
-    set({ isGenerating: true, error: null });
-    try {
-      const data = await apiFetch<{ prompt: string }>(
-        '/api/post-process-studio',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'generate',
-            effects: enabled,
-            presetName: activePresetId
-              ? get().presets.find((p) => p.id === activePresetId)?.name ?? null
-              : null,
-          }),
-        },
-      );
-      set({ isGenerating: false });
-      return data.prompt;
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err), isGenerating: false });
-      return null;
-    }
   },
 }));

@@ -19,7 +19,8 @@ export interface GenerationProvider {
   /** Whether this provider is backed by Blender MCP integration */
   mcpBacked?: boolean;
   /** Whether a PoF runner can actually execute this provider end-to-end today
-   *  (vs being descriptive metadata only). */
+   *  (vs being descriptive metadata only). DERIVED from membership in
+   *  {@link RUNNER_PROVIDER_IDS} — registry entries never write it literally. */
   runnerBacked?: boolean;
   /** The default image-to-3D provider used across PoF. Exactly one provider should
    *  carry this. */
@@ -50,7 +51,25 @@ export interface GenerationProvider {
  * So: when a new "open-source, MIT" image-to-3D model appears, the question that decides
  * it is not the LICENSE file — it is which encoder/matting weights the pipeline fetches.
  */
-export const GENERATION_PROVIDERS: GenerationProvider[] = [
+
+/**
+ * The providers a PoF runner drives end-to-end — the ONE copy of that vocabulary.
+ *
+ * `runnerBacked` on each registry entry is derived from this tuple, and the server-side
+ * dispatch table (`src/lib/visual-gen/runner-dispatch.ts`) is typed as a Record over it,
+ * so an id added here without a dispatch entry fails `npm run typecheck`. Before, the set
+ * was written four times (these flags, the generate route's if-chain, the status route's
+ * store chain, ASSET_DIRS) and TRELLIS.2 was offered as runnable by the forge and then
+ * refused by the route.
+ */
+export const RUNNER_PROVIDER_IDS = ['hunyuan3d', 'triposr', 'tripo3d', 'trellis2'] as const;
+export type RunnerProviderId = (typeof RUNNER_PROVIDER_IDS)[number];
+
+export function isRunnerProviderId(id: string): id is RunnerProviderId {
+  return (RUNNER_PROVIDER_IDS as readonly string[]).includes(id);
+}
+
+const REGISTRY_ENTRIES: Omit<GenerationProvider, 'runnerBacked'>[] = [
   {
     id: 'triposr',
     name: 'TripoSR',
@@ -59,7 +78,6 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     description: 'Open-source image-to-3D (MIT — the COMMERCIAL-SAFE / fast fallback to the official Hunyuan3D provider). Runs locally on ~6GB VRAM, <1s, ~44K-face meshes. src/lib/visual-gen/triposr-runner.ts drives scripts/visual-gen/pof_triposr.py (set POF_TRIPOSR_ROOT). Lower detail than Hunyuan; use when an MIT license or sub-second speed matters more than geometry quality.',
     vramGb: 6,
     isLocal: true,
-    runnerBacked: true,
   },
   {
     id: 'trellis2',
@@ -75,7 +93,6 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     // so the texture bake is the stage that OOMs first — drop `textureSize` before VRAM.
     vramGb: 24,
     isLocal: true,
-    runnerBacked: true,
   },
   {
     id: 'hunyuan3d',
@@ -85,7 +102,6 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     description: 'OFFICIAL PoF image-to-3D provider. Local Hunyuan3D-2 shape model (Hunyuan3DDiTFlowMatchingPipeline) via src/lib/visual-gen/hunyuan-runner.ts → scripts/visual-gen/pof_hunyuan.py (set POF_HUNYUAN_ROOT; venv = POF_HUNYUAN_VENV or the shared TripoSR venv). ~6GB VRAM, ~31s, ~360K-face high-detail meshes — an ~8x geometry jump over TripoSR. SHAPE ONLY (texturing is a separate custom-rasterizer / Leonardo-PBR step). NON-COMMERCIAL license — TripoSR is the MIT/commercial-safe fallback. Pairs with the Leonardo GPT Image 2 (RENDER_3D) 2D front + the CLIP/geometry/Qwen-VL critique tiers.',
     vramGb: 6,
     isLocal: true,
-    runnerBacked: true,
     official: true,
   },
   {
@@ -103,7 +119,6 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     modes: ['text-to-3d', 'image-to-3d'],
     description: 'Cloud 3D generation (Tripo REST API) — the CLOUD route next to the local open-source route. Runs via src/lib/visual-gen/tripo-runner.ts (upload → create task → poll → download .glb); needs env TRIPO_API_KEY (free tier = 200 credits/mo, 1 concurrent task). Adds TEXT-to-3D (the local Hunyuan/TripoSR route is image-only) and PBR-textured image-to-3D with no local VRAM. FREE-TIER OUTPUT IS NON-COMMERCIAL (CC BY 4.0) — like Hunyuan3D; TripoSR (MIT) stays the commercial-safe fallback.',
     isLocal: false,
-    runnerBacked: true,
   },
   {
     id: 'rodin',
@@ -115,6 +130,11 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     mcpBacked: true,
   },
 ];
+
+export const GENERATION_PROVIDERS: GenerationProvider[] = REGISTRY_ENTRIES.map((p) => ({
+  ...p,
+  runnerBacked: isRunnerProviderId(p.id),
+}));
 
 export function getProviderById(id: string): GenerationProvider | undefined {
   return GENERATION_PROVIDERS.find((p) => p.id === id);
@@ -132,10 +152,11 @@ export interface ProviderExecution {
 
 /**
  * Resolve a provider's execution path for one mode. Pure, and the single source of
- * truth for "can this be submitted?".
+ * truth for "can this be submitted?" — the generate route refuses with this same
+ * `reason`, so the forge button and the server speak one refusal vocabulary.
  *
- * Registry membership is NOT capability. `trellis2` and `meshy` are descriptive
- * entries with no runner behind them, and submitting to one used to enqueue a job
+ * Registry membership is NOT capability. `meshy` is a descriptive entry with no
+ * runner behind it, and submitting to one used to enqueue a job
  * that nothing would ever update — pending forever, no poller, no error, a live
  * elapsed clock for the rest of the session. A provider with no execution path is
  * now refusable with the reason instead of silently swallowing a submit.

@@ -8,6 +8,7 @@ import { allOf } from '../acceptance/combinators';
 import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+import { SAVE_SCHEMA_VERSION, persistedFieldLines, ephemeralFieldLines } from '@/lib/save-schema/fields';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -93,22 +94,7 @@ registerCatalogPipeline({
               description:
                 'Only discrete world-state mutations that have FIRED and settled ' +
                 '(per canon state-graph-fsm-wiring). Never capture running/transient state.',
-              fields: [
-                'playerLevel: int — current character level (from DT_AttributeDefaults row)',
-                'playerAttributes: FARPGAttributeSnapshot — base Str/Dex/Int/Life/Mana at save time (not in-combat derived values)',
-                'inventoryItems: TArray<FARPGSavedItemEntry> — item id + affixes + socket state (from items catalog)',
-                'walletGold: int — committed Gold balance (UARPGWalletComponent::GetGold at save time)',
-                'walletOrbs: TMap<FName, int> — orb currency counts keyed by currency entity slug',
-                'defeatedEnemyTags: TArray<FGameplayTag> — each State.Enemy.Defeated.<EnemyId> that has fired',
-                'completedQuestStages: TArray<FARPGQuestSaveEntry> — {questId, stageIndex, outcome} for each terminal stage reached',
-                'unlockedZoneIds: TArray<FName> — zone catalog ids the player has entered at least once',
-                `checkpointActorTag: FGameplayTag — the State.Checkpoint.${slug(e.name)} tag marking this checkpoint activated`,
-                'repStandings: TMap<FName, int> — faction reputation points keyed by faction catalog id',
-                'passivePoints: int — total passive points spent',
-                'passiveAllocations: TArray<FName> — node ids of allocated passive tree nodes',
-                'activeSaveSlot: int — 0-indexed slot this save occupies (0–2)',
-                'saveTimestamp: FDateTime — wall-clock time of last save',
-              ],
+              fields: persistedFieldLines(slug(e.name)),
               persistenceRule:
                 'Written via UARPGSaveSubsystem::SaveToSlot → ' +
                 'UGameplayStatics::SaveGameToSlot("PoFSave_<slot>", 0, SaveObject). ' +
@@ -117,21 +103,12 @@ registerCatalogPipeline({
             ephemeral: {
               description:
                 'Discarded on session end; reconstructed from DT_AttributeDefaults + canonical data on load.',
-              fields: [
-                'currentAIStateTags — blackboard keys + running State.AI.* tags on all actors',
-                'inFlightGASEffects — active GE handles on the player (re-derived from saved attributes on respawn)',
-                'pendingSpawnPool — enemy actors spawned but not yet defeated (re-derived from defeatedEnemyTags)',
-                'navigationMeshCache — rebuilt by NavMesh on load',
-                'physicsSimState — Chaos physics body transforms (reset to blueprint defaults)',
-                'activeLevelStreaming — async-loaded sublevel states (re-streamed on zone restore)',
-                'currentCombatTarget — cleared on session end',
-                'unsettledCurrencyDrops — items mid-air on death that were never picked up',
-              ],
+              fields: ephemeralFieldLines(),
               ephemeralRule:
                 'These fields are intentionally ABSENT from UARPGSaveGame. ' +
                 'Attempting to serialize them is a bug; the subsystem asserts they are absent.',
             },
-            schemaVersion: 1,
+            schemaVersion: SAVE_SCHEMA_VERSION,
             fieldsNote:
               'UARPGSaveGame carries a SchemaVersion int. ' +
               'On load, UARPGSaveSubsystem::MigrateSaveGame(SaveGame) ' +
@@ -205,7 +182,7 @@ registerCatalogPipeline({
       produce: () => ({
         data: {
           versioning: {
-            currentVersion: 1,
+            currentVersion: SAVE_SCHEMA_VERSION,
             versionField:
               'UARPGSaveGame::SchemaVersion (int32). Bumped by 1 for every change to the ' +
               'persisted field set (add, remove, or rename a field). Matching ' +

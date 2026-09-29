@@ -4,6 +4,7 @@ import { useLevelFlowEditor } from './useLevelFlowEditor';
 import { EditorOverlays } from './EditorOverlays';
 import { ConnectionLines } from './ConnectionLines';
 import { RoomNodeGraphic } from './RoomNodeGraphic';
+import { LinkInspector } from './LinkInspector';
 import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { LevelFlowEditorProps } from './types';
@@ -11,8 +12,10 @@ import type { LevelFlowEditorProps } from './types';
 export type { LevelFlowEditorProps } from './types';
 
 /** Shortcut hints surfaced to screen readers on the room list. */
+const NO_ARC: string[] = [];
+
 const ROOM_LIST_HINT =
-  'Arrow keys move between rooms, Shift plus arrow keys move the selected room, Enter selects, L starts a link, Delete removes a room, Escape cancels.';
+  'Arrow keys move between rooms, Shift plus arrow keys move the selected room, Enter selects, L starts a link, Delete removes a room, Escape cancels, Control plus Z undoes.';
 
 export function LevelFlowEditor(props: LevelFlowEditorProps) {
   const {
@@ -23,6 +26,9 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
     readOnly = false,
     findingsByRoom,
     onSelectRoom,
+    history,
+    onEdit,
+    difficultyArc = NO_ARC,
   } = props;
 
   const {
@@ -38,7 +44,9 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
     dismissBlenderResult,
     armedConnectionId,
     toggleArmConnection,
-    disarmConnection,
+    inspectedConnectionId,
+    openLink,
+    closeLink,
     pendingDeleteRoomId,
     requestDeleteRoom,
     cancelDeleteRoom,
@@ -52,6 +60,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
     handleMouseMove,
     handleMouseUp,
     handleSvgMouseDown,
+    handleCanvasKeyDown,
     getRoomCenter,
     handleBlockoutInBlender,
   } = useLevelFlowEditor(props);
@@ -60,6 +69,8 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
 
   // Roving tabindex: exactly one room node sits in the tab order.
   const tabStopId = rooms.find((r) => r.id === selectedRoomId)?.id ?? rooms[0]?.id ?? null;
+
+  const inspected = connections.find((c) => c.id === inspectedConnectionId);
 
   const pendingRoom = pendingDeleteRoomId ? rooms.find((r) => r.id === pendingDeleteRoomId) : undefined;
   const pendingLinkCount = pendingDeleteRoomId
@@ -88,6 +99,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         connectionsLength={connections.length}
         blenderResult={blenderResult}
         dismissBlenderResult={dismissBlenderResult}
+        history={history}
       />
 
       {/* SVG Canvas */}
@@ -101,11 +113,7 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onKeyDown={(e) => {
-          if (e.key !== 'Escape') return;
-          if (connectingFrom) setConnectingFrom(null);
-          if (armedConnectionId) disarmConnection();
-        }}
+        onKeyDown={handleCanvasKeyDown}
       >
         <defs>
           {/* Blueprint Dot Grid */}
@@ -124,6 +132,11 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
+          {/* One-way door: arrowhead drawn at the link midpoint, pointing from -> to. */}
+          <marker id="link-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="12" markerHeight="12"
+            markerUnits="userSpaceOnUse" orient="auto">
+            <path d="M0,1 L10,5 L0,9 z" fill={accentColor} />
+          </marker>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
 
@@ -135,6 +148,8 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
             accentColor={accentColor}
             readOnly={readOnly}
             armedConnectionId={armedConnectionId}
+            inspectedConnectionId={inspectedConnectionId}
+            openLink={openLink}
             getRoomCenter={getRoomCenter}
             getRoomName={getRoomName}
             toggleArmConnection={toggleArmConnection}
@@ -167,6 +182,19 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         </g>
       </svg>
 
+      {inspected && !readOnly && (
+        <LinkInspector
+          // Remount on every saved change to the link (Apply, undo): the draft
+          // always starts from what the document holds.
+          key={JSON.stringify(inspected)}
+          connection={inspected}
+          graph={{ rooms, connections, difficultyArc }}
+          getRoomName={getRoomName}
+          onEdit={onEdit}
+          onClose={closeLink}
+        />
+      )}
+
       <ConfirmDialog
         open={Boolean(pendingRoom)}
         onClose={cancelDeleteRoom}
@@ -174,8 +202,8 @@ export function LevelFlowEditor(props: LevelFlowEditorProps) {
         title="Delete this room?"
         description={
           pendingLinkCount > 0
-            ? `"${pendingRoom?.name}" and its ${pendingLinkCount} ${pendingLinkCount === 1 ? 'link' : 'links'} will be removed. This can't be undone.`
-            : `"${pendingRoom?.name}" will be removed. This can't be undone.`
+            ? `"${pendingRoom?.name}" and its ${pendingLinkCount} ${pendingLinkCount === 1 ? 'link' : 'links'} will be removed. Undo brings it back (Ctrl+Z).`
+            : `"${pendingRoom?.name}" will be removed. Undo brings it back (Ctrl+Z).`
         }
         confirmLabel="Delete room"
       />

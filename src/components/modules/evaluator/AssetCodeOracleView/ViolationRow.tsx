@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import type { ConsistencyViolation } from '@/lib/asset-code-oracle';
+import { STATUS_IMPROVED, statusBg, statusBorder } from '@/lib/chart-colors';
 import { SEVERITY_CONFIG, TYPE_LABELS } from './constants';
 
 export function FilterChip({
@@ -31,16 +32,19 @@ export function ViolationRow({
   violation: v,
   expanded,
   onToggle,
+  isNew = false,
 }: {
   violation: ConsistencyViolation;
   expanded: boolean;
   onToggle: () => void;
+  /** Not reported by the previous recorded scan. */
+  isNew?: boolean;
 }) {
   const config = SEVERITY_CONFIG[v.severity];
   const SevIcon = config.icon;
 
   return (
-    <div className="rounded-lg border border-border bg-surface-deep overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-deep overflow-hidden" data-violation-id={v.id}>
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-surface-hover transition-colors"
@@ -52,6 +56,15 @@ export function ViolationRow({
         )}
         <SevIcon className="w-3 h-3 flex-shrink-0" style={{ color: config.color }} />
         <span className="text-text font-medium flex-1 truncate">{v.title}</span>
+        {isNew && (
+          <span
+            className="px-1.5 py-0.5 rounded text-2xs font-semibold tracking-wider border"
+            style={{ color: STATUS_IMPROVED, backgroundColor: statusBg(STATUS_IMPROVED), borderColor: statusBorder(STATUS_IMPROVED) }}
+            title="Not reported by the previous scan"
+          >
+            NEW
+          </span>
+        )}
         <Badge variant={config.variant}>{TYPE_LABELS[v.type]}</Badge>
       </button>
 
@@ -73,6 +86,10 @@ export function ViolationRow({
                   </code>
                 </div>
               )}
+              <div className="flex items-center gap-1.5 text-2xs">
+                <span className="text-text-muted">Subject:</span>
+                <code className="font-mono text-text-muted-hover truncate">{v.subject}</code>
+              </div>
               <div className="flex items-center gap-1.5 text-2xs">
                 <span className="text-text-muted">Fix:</span>
                 <span className="text-text-muted-hover">{v.suggestion}</span>

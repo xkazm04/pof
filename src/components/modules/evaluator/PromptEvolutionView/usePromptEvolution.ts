@@ -131,10 +131,10 @@ export function usePromptEvolution() {
       const storeError = usePromptEvolutionStore.getState().error;
       return { ok: false as const, message: storeError ?? 'Could not save the challenger variant.' };
     }
-    const test = await startABTest(selectedModuleId, checklistItemId, baseline.variant.id, challenger.id);
-    if (!test) {
-      const storeError = usePromptEvolutionStore.getState().error;
-      return { ok: false as const, message: storeError ?? 'Challenger saved, but the A/B test could not start.' };
+    const started = await startABTest(selectedModuleId, checklistItemId, baseline.variant.id, challenger.id);
+    // A refusal (409 — a test is already running on this item) is shown inline.
+    if (!started.ok) {
+      return { ok: false as const, message: started.reason || 'Challenger saved, but the A/B test could not start.' };
     }
     toast.success(`Challenger saved — A/B test running on “${item.label}”`);
     return {
@@ -156,7 +156,8 @@ export function usePromptEvolution() {
     if (!selectedModuleId) return;
     const varA = variants.find((v) => v.id === variantAId);
     if (!varA) return;
-    await startABTest(selectedModuleId, varA.checklistItemId, variantAId, variantBId);
+    const started = await startABTest(selectedModuleId, varA.checklistItemId, variantAId, variantBId);
+    if (!started.ok) toast.error(started.reason);
   }, [selectedModuleId, variants, startABTest]);
 
   // Group variants by checklist item

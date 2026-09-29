@@ -10,6 +10,7 @@ export function EmptyState({ vm }: { vm: LevelDesignVM }) {
     spatialCli,
     handleGenerateProcgen,
     procgenCli,
+    procgenSpecStore,
     newDocName,
     setNewDocName,
     handleCreateDoc,
@@ -38,6 +39,7 @@ export function EmptyState({ vm }: { vm: LevelDesignVM }) {
         <ProceduralLevelWizard
           onGenerate={handleGenerateProcgen}
           isGenerating={procgenCli.isRunning}
+          specStore={procgenSpecStore}
         />
 
         {/* Divider */}

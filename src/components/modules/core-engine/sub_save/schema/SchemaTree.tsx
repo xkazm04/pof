@@ -4,6 +4,7 @@ import { useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BlueprintPanel } from '../_shared/design';
 import { SCHEMA_GROUPS, TYPE_COLORS, ACCENT, type FieldType } from '../_shared/data';
+import { SAVE_GAME_CLASS } from '@/lib/save-schema/fields';
 
 import { withOpacity, OPACITY_5, OPACITY_15, OPACITY_80, OPACITY_25, OPACITY_50,
   STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, ACCENT_PURPLE, ACCENT_EMERALD, OVERLAY_WHITE,
@@ -97,7 +98,7 @@ export function SchemaTree({ expandedGroups, toggleGroup }: SchemaTreeProps) {
 
         <div className="relative z-10 pl-6" style={{ color: `${withOpacity(ACCENT, OPACITY_80)}` }} ref={treeRef} role="tree" aria-label="Save data schema tree" onKeyDown={handleTreeKeyDown}>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
-            <span style={{ color: ACCENT_PURPLE }}>struct</span> <span style={{ color: ACCENT_EMERALD }}>USaveDataSchema</span> {'{'}
+            <span style={{ color: ACCENT_PURPLE }}>class</span> <span style={{ color: ACCENT_EMERALD }}>{SAVE_GAME_CLASS}</span> : <span style={{ color: ACCENT_PURPLE }}>public</span> USaveGame {'{'}
           </motion.div>
 
           <div className="pl-4 mt-1 border-l border-border/10">

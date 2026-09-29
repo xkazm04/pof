@@ -4,14 +4,26 @@ import type { ComponentProps } from 'react';
 import { Eye } from 'lucide-react';
 import { ProcgenPreviewCanvas } from '../ProcgenPreviewCanvas';
 import { ALGORITHMS } from './constants';
+import { LayoutRemedies, type LayoutRemedyActions } from './LayoutRemedies';
+import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
 
 interface LivePreviewProps {
   preview: ComponentProps<typeof ProcgenPreviewCanvas>['result'];
   seed: string;
   algDef: (typeof ALGORITHMS)[number];
+  /**
+   * The spec on screen and the wizard's dispatchers. Given, a fragmented
+   * preview offers "Find a fix" (verified reseeds and one-lever changes);
+   * a connected one renders exactly as without them.
+   */
+  spec?: ProcgenSpec;
+  setSeed?: LayoutRemedyActions['setSeed'];
+  updateSize?: LayoutRemedyActions['updateSize'];
+  toggleConstraint?: LayoutRemedyActions['toggleConstraint'];
 }
 
-export function LivePreview({ preview, seed, algDef }: LivePreviewProps) {
+export function LivePreview({ preview, seed, algDef, spec, setSeed, updateSize, toggleConstraint }: LivePreviewProps) {
+  const canRemedy = !!spec && !!setSeed && !!updateSize && !!toggleConstraint && preview.stats.regions > 1;
   return (
     <div className="space-y-3 relative z-10">
       <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
@@ -29,6 +41,9 @@ export function LivePreview({ preview, seed, algDef }: LivePreviewProps) {
         by the CLI, so an identical layout is <strong className="text-violet-200/80">not guaranteed</strong>.
       </p>
       <ProcgenPreviewCanvas result={preview} seedLabel={seed} />
+      {canRemedy && (
+        <LayoutRemedies spec={spec} setSeed={setSeed} updateSize={updateSize} toggleConstraint={toggleConstraint} />
+      )}
     </div>
   );
 }

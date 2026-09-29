@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { Users, Play, RotateCcw } from 'lucide-react';
+import { Users, Play, RotateCcw, Hammer } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SubTabNavigation } from '@/components/modules/core-engine/unique-tabs/_shared';
 import {
@@ -26,7 +26,14 @@ export { SquadConfigErrorBanner } from './SquadConfigErrorBanner';
 
 /* ── Component ────────────────────────────────────────────────────────────── */
 
-export function SquadChoreographyEditor() {
+export interface SquadChoreographyEditorProps {
+  /** Build the authored squad in UE5. Absent = no build button (preview-only editor). */
+  onBuild?: (config: DirectorConfig) => void;
+  /** A build is already running — the button waits for it. */
+  isBuilding?: boolean;
+}
+
+export function SquadChoreographyEditor({ onBuild, isBuilding = false }: SquadChoreographyEditorProps = {}) {
   const [config, setConfig] = useState<DirectorConfig>(DEFAULT_DIRECTOR_CONFIG);
   const [activeTab, setActiveTab] = useState('formation');
   const svgRef = useRef<SVGSVGElement>(null);
@@ -124,6 +131,23 @@ export function SquadChoreographyEditor() {
               <RotateCcw className="w-3.5 h-3.5" />
               Reset
             </button>
+            {onBuild && (
+              <button
+                onClick={() => onBuild(config)}
+                disabled={!!configError || isBuilding}
+                title={configError ? 'Fix the squad configuration to build it' : 'Send this formation to the ai-5 group-coordination checklist task'}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}`,
+                  color: STATUS_SUCCESS,
+                  border: `1px solid ${STATUS_SUCCESS}30`,
+                }}
+                data-testid="squad-build-btn"
+              >
+                <Hammer className="w-3.5 h-3.5" />
+                {isBuilding ? 'Building…' : 'Build this squad in UE5'}
+              </button>
+            )}
           </div>
         </div>
       </SurfaceCard>

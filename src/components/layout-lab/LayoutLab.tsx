@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Moon, Sun } from 'lucide-react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
+import { entityStepList } from './entityPipeline';
 import { usePersistedEntityHydration } from './hooks/usePersistedEntityHydration';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
@@ -62,14 +63,13 @@ export function LayoutLab() {
     if (prefs.lastView) setView(prefs.lastView);
   }
   const detail = useLabDetail(catalogId);
-  // A restored step index can outlive the pipeline it was recorded against — a catalog whose
-  // step list shrank, or a blob hand-edited/carried over from a longer catalog — and an index
-  // past the end renders NO step at all. Clamp to the first step in STATE (the same
-  // adjust-during-render bail-out as the entity reconciliation below), so nothing downstream
-  // reads a phantom position. Deliberately no `setPrefs` here: a render must not write
-  // localStorage, and the stored value is re-clamped on every read anyway — so the bogus
-  // index is never persisted back as if it were the real location.
-  const stepCount = detail?.steps.length ?? 0;
+  // A restored step index can outlive the pipeline it was recorded against (a shrunk step list, a
+  // blob carried over from a longer catalog, a catalog index on a profile-scoped entity) and an
+  // index past the end renders NO step. Clamp against the OPEN entity's own list (`entityStepList`,
+  // what Baseline renders) in STATE (the adjust-during-render bail-out below). Deliberately no
+  // `setPrefs`: a render must not write localStorage, and the stored value is re-clamped on every
+  // read anyway — so the bogus index is never persisted back as if it were the real location.
+  const stepCount = detail ? entityStepList(catalogId, detail.entities.find((e) => e.id === entityId) ?? detail.entities[0], detail.steps).length : 0;
   if (navAdopted && stepIdx > 0 && stepIdx >= stepCount) setStepIdx(0);
   // Reconcile the selected entity in STATE, not just at render. Baseline falls back to
   // `entities[0]` when `entityId` is missing or names an entity that no longer exists —

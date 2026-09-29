@@ -36,7 +36,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleGenerateDungeon,
     handleScatter,
     procgenSpec,
-    setProcgenSpec,
+    procgenSpecStore,
     MODULE_ID,
     rvRefetch,
     rvLastCompletedId,
@@ -47,8 +47,8 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleRvFix,
     handleRvSync,
     rvChecklist,
-    handleUpdateRooms,
-    handleUpdateConnections,
+    handleEdit,
+    editHistory,
     handleRoomUpdate,
     handleGenerateRoomCode,
     handleGenerateAllCode,
@@ -105,8 +105,9 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
             <LevelFlowEditor
               rooms={activeDoc.rooms}
               connections={activeDoc.connections}
-              onUpdateRooms={handleUpdateRooms}
-              onUpdateConnections={handleUpdateConnections}
+              difficultyArc={activeDoc.difficultyArc}
+              onEdit={handleEdit}
+              history={editHistory}
               onSelectRoom={setSelectedRoomId}
               selectedRoomId={selectedRoomId}
               accentColor={MODULE_COLORS.content}
@@ -134,7 +135,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
         <ProceduralLevelWizard
           onGenerate={handleGenerateProcgen}
           isGenerating={procgenCli.isRunning}
-          onSpecChange={setProcgenSpec}
+          specStore={procgenSpecStore}
         />
       )}
 

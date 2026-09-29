@@ -105,7 +105,6 @@ export const INPUT_BINDINGS: InputBinding[] = [
   { action: 'Quick Item 1', defaultKey: 'Q', handler: 'UARPGInventoryComponent::UseQuickItem(0)', featureName: 'Quick Item Slot 1' },
   { action: 'Quick Item 2', defaultKey: 'R', handler: 'UARPGInventoryComponent::UseQuickItem(1)', featureName: 'Quick Item Slot 2' },
   { action: 'Force Focus', defaultKey: 'F', handler: 'UARPGAbilitySystemComponent::ToggleForceFocus', featureName: 'Force Focus Toggle' },
-  { action: 'Primary Attack', defaultKey: 'LMB', handler: 'UARPGCombatComponent::LightAttack', featureName: 'Light Saber Strike' },
   { action: 'Heavy Attack', defaultKey: 'RMB', handler: 'UARPGCombatComponent::HeavyAttack', featureName: 'Heavy Saber Strike' },
 ];
 
@@ -117,53 +116,17 @@ export interface KeyDef {
   widthClass?: string;
 }
 
+/** Every non-mouse key a binding can resolve to must be drawn here (see input-bindings tests). */
 export const KEYBOARD_ROWS: KeyDef[][] = [
+  [{ key: '1' }, { key: '2' }, { key: '3' }, { key: '4' }, { key: '5' }, { key: '6' }, { key: '7' }, { key: '8' }, { key: '9' }, { key: '0' }],
   [{ key: 'Q' }, { key: 'W' }, { key: 'E' }, { key: 'R' }, { key: 'T' }, { key: 'Y' }, { key: 'U' }, { key: 'I' }, { key: 'O' }, { key: 'P' }],
   [{ key: 'A' }, { key: 'S' }, { key: 'D' }, { key: 'F' }, { key: 'G' }, { key: 'H' }, { key: 'J' }, { key: 'K' }, { key: 'L' }],
-  [{ key: 'Z' }, { key: 'X' }, { key: 'C' }, { key: 'V' }, { key: 'B' }, { key: 'N' }, { key: 'M' }],
-  [{ key: 'Shift', label: 'Shift', widthClass: 'w-20' }, { key: 'Space', label: 'Space', widthClass: 'flex-1' }],
+  [{ key: 'Shift', label: 'Shift', widthClass: 'w-14' }, { key: 'Z' }, { key: 'X' }, { key: 'C' }, { key: 'V' }, { key: 'B' }, { key: 'N' }, { key: 'M' }],
+  [{ key: 'Ctrl', label: 'Ctrl', widthClass: 'w-12' }, { key: 'Alt', label: 'Alt', widthClass: 'w-12' }, { key: 'Space', label: 'Space', widthClass: 'flex-1' }],
 ];
 
-function buildKeyBindingMap(): Map<string, InputBinding> {
-  const map = new Map<string, InputBinding>();
-  for (const binding of INPUT_BINDINGS) {
-    const dk = binding.defaultKey;
-    if (dk === 'WASD') {
-      for (const k of ['W', 'A', 'S', 'D']) {
-        map.set(k, binding);
-      }
-    } else if (dk === 'Mouse' || dk === 'LMB' || dk === 'RMB') {
-      // handled separately in mouse widget
-    } else {
-      map.set(dk, binding);
-    }
-  }
-  return map;
-}
-
-export const KEY_BINDING_MAP = buildKeyBindingMap();
-
-/* ── Key conflict detection ───────────────────────────────────────────────── */
-
-function buildKeyConflicts(): Map<string, string[]> {
-  const keyToActions = new Map<string, string[]>();
-  for (const binding of INPUT_BINDINGS) {
-    const dk = binding.defaultKey;
-    const keys = dk === 'WASD' ? ['W', 'A', 'S', 'D'] : [dk];
-    for (const k of keys) {
-      const existing = keyToActions.get(k) ?? [];
-      existing.push(binding.action);
-      keyToActions.set(k, existing);
-    }
-  }
-  const conflicts = new Map<string, string[]>();
-  for (const [key, actions] of keyToActions) {
-    if (actions.length > 1) conflicts.set(key, actions);
-  }
-  return conflicts;
-}
-
-export const KEY_CONFLICTS = buildKeyConflicts();
+/* Physical-key lookups (key map, conflicts) are derived per render from the
+ * persisted overrides by `resolveBindings` in `@/lib/character/input-bindings`. */
 
 /* ── Key frequency map ────────────────────────────────────────────────────── */
 
@@ -479,31 +442,8 @@ export function deviationColor(dev: number): string {
 
 /* ── Blueprint Property Inspector ────────────────────────────────────────── */
 
-export interface BlueprintProperty {
-  name: string;
-  category: string;
-  current: number | string;
-  defaultVal: number | string;
-  isModified: boolean;
-}
-
-export const BLUEPRINT_PROPERTIES: BlueprintProperty[] = [
-  { name: 'MaxWalkSpeed', category: 'Movement', current: 400, defaultVal: 600, isModified: true },
-  { name: 'MaxSprintSpeed', category: 'Movement', current: 780, defaultVal: 600, isModified: true },
-  { name: 'JumpZVelocity', category: 'Movement', current: 520, defaultVal: 420, isModified: true },
-  { name: 'GravityScale', category: 'Movement', current: 1.0, defaultVal: 1.0, isModified: false },
-  { name: 'AirControl', category: 'Movement', current: 0.35, defaultVal: 0.2, isModified: true },
-  { name: 'BaseDamage', category: 'Combat', current: 25, defaultVal: 10, isModified: true },
-  { name: 'CritMultiplier', category: 'Combat', current: 2.0, defaultVal: 1.5, isModified: true },
-  { name: 'AttackSpeed', category: 'Combat', current: 1.2, defaultVal: 1.0, isModified: true },
-  { name: 'BlockReduction', category: 'Combat', current: 0.5, defaultVal: 0.5, isModified: false },
-  { name: 'HitStunDuration', category: 'Combat', current: 0.3, defaultVal: 0.25, isModified: true },
-  { name: 'ArmLength', category: 'Camera', current: 800, defaultVal: 400, isModified: true },
-  { name: 'FOV', category: 'Camera', current: 90, defaultVal: 90, isModified: false },
-  { name: 'LagSpeed', category: 'Camera', current: 10, defaultVal: 15, isModified: true },
-  { name: 'CameraOffset', category: 'Camera', current: '0,60,0', defaultVal: '0,0,0', isModified: true },
-  { name: 'RotationLag', category: 'Camera', current: 8, defaultVal: 10, isModified: true },
-];
+/* Property rows derive from the persisted feel stack: see `inspectorRows` in
+ * `@/lib/character/inspector-fields` (INSPECTOR_FIELDS / INSPECTOR_UNMAPPED). */
 
 export const PROPERTY_CATEGORIES = ['Movement', 'Combat', 'Camera'];
 
@@ -573,7 +513,7 @@ export const CHARACTER_ABILITIES: AbilityMeta[] = [
   { id: 'sprint', action: 'IA_Sprint', name: 'Sprint', category: 'movement', tier: 1, baseDamage: 0, description: 'Hold to sprint',           gameplayTag: 'Ability.Movement.Sprint' },
 
   /* ── Melee ────────────────────────────────────────────────────────────── */
-  { id: 'light_attack', action: 'Primary Attack', name: 'Light Attack', category: 'melee', tier: 1, baseDamage: 20, description: 'Quick saber strike',     gameplayTag: 'Ability.Melee.LightAttack' },
+  { id: 'light_attack', action: 'IA_PrimaryAttack', name: 'Light Attack', category: 'melee', tier: 1, baseDamage: 20, description: 'Quick saber strike',     gameplayTag: 'Ability.Melee.LightAttack' },
   { id: 'heavy_attack', action: 'Heavy Attack',   name: 'Heavy Attack', category: 'melee', tier: 2, baseDamage: 35, description: 'Wind-up saber strike',   gameplayTag: 'Ability.Melee.HeavyAttack' },
 
   /* ── Magical (Force Powers) ───────────────────────────────────────────── */

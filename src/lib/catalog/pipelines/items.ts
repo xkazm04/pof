@@ -8,7 +8,9 @@ import {
   materialShape,
   selected,
   minCount,
+  entriesHaveFields,
 } from '../acceptance/dataCheckers';
+import { fieldsRequiredWhen, whenFieldIs } from '@/lib/catalog/acceptance/conditionalCheckers';
 import { priceRatioWithinBand, sumReconciles } from '../acceptance/invariants';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
@@ -95,40 +97,64 @@ registerCatalogPipeline({
         ],
       },
       produce: (e: LabEntity) => {
+        const entityData = (e.data as Record<string, unknown> | null) ?? {};
+        const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
+        const effectiveValue = <T,>(field: string): T | undefined => effective?.[field]?.value as T | undefined;
         // Derive rarity from entity seed data; default to 'Common' if absent.
-        const entityRarity: string = (e.data as Record<string, unknown> | null)?.rarity as string ?? 'Common';
+        const entityRarity: string = Array.isArray(entityData.powers)
+          ? 'Unique'
+          : entityData.rarity as string ?? 'Common';
         // ilvl and requiredLevel by rarity tier (§1c: requiredLevel within ilvl−5..15).
         // Common (tier-1): ilvl 6, requiredLevel 1 (ilvl−5 = 1, exactly at floor).
         // Rare (mid-range): ilvl 45, requiredLevel 33 (ilvl−12).
         const rarityIlvl: Record<string, number> = { Common: 6, Magic: 20, Rare: 45, Set: 55, Legendary: 70 };
         const rarityReqLvl: Record<string, number> = { Common: 1, Magic: 14, Rare: 33, Set: 43, Legendary: 57 };
-        const ilvl = rarityIlvl[entityRarity] ?? 6;
-        const requiredLevel = rarityReqLvl[entityRarity] ?? 1;
-        return ({
-        data: {
-          baseType: {
-            // Base type shape held constant per ARPG-LAWS §1b.
-            // Rarity, ilvl, and requiredLevel derived from the entity's seeded rarity field.
-            baseType: e.name,
-            slot: 'Weapon',          // aligns ItemData.type+subtype: Weapon/Sword
-            subType: 'Sword',
-            oneHanded: true,
-            rarity: entityRarity,    // derived from entity seed (arpg-item-rarity §1a)
-            ilvl,                    // rarity-gated: Common→6, Magic→20, Rare→45 (§2c)
-            requiredLevel,           // within ilvl−5..15 band (§1c)
-            implicit: {
-              // Sword implicit: +accuracy rating (slot identity)
+        const ilvl = effective ? Number(entityData.dropLevel ?? 1) : rarityIlvl[entityRarity] ?? 6;
+        const requiredLevel = effectiveValue<number>('requiredLevel') ?? rarityReqLvl[entityRarity] ?? 1;
+        const slot = effectiveValue<string>('slot') ?? 'Weapon';
+        const itemType = effectiveValue<string>('itemType') ?? 'Sword';
+        const equipType = effectiveValue<string>('equipType');
+        const armor = effectiveValue<{ min: number; max: number }>('effectiveArmor');
+        const armorSlot = ['Chest', 'Helm', 'OffHand'].includes(slot);
+        const durability = effectiveValue<{ min: number; max: number }>('durability');
+        const requirements = effective ? {
+          strength: effectiveValue<number>('requiredStrength') ?? 0,
+          dexterity: effectiveValue<number>('requiredDexterity') ?? 0,
+          intelligence: effectiveValue<number>('requiredMagic') ?? 0,
+        } : undefined;
+        const implicit = effective
+          ? armor && armorSlot
+            ? { type: 'Armor', minimum: armor.min, maximum: armor.max }
+            : 'none'
+          : {
               id: 'implicit-sword-accuracy',
               slot: 'implicit',
               mod: 'Accuracy',
-              tier: 0,               // implicit = 0 (outside prefix/suffix budget)
+              tier: 0,
               valueMin: 30,
               valueMax: 30,
               rolledValue: 30,
               ilvlReq: 1,
               weight: 0,
               ueGE: 'GE_Implicit_SwordAccuracy',
-            },
+            };
+        return ({
+        data: {
+          baseType: {
+            // Base type shape held constant per ARPG-LAWS §1b.
+            // Rarity, ilvl, and requiredLevel derived from the entity's seeded rarity field.
+            baseType: e.name,
+            slot,
+            subType: itemType,
+            oneHanded: equipType ? equipType === 'One-handed' : true,
+            ...(equipType === 'Two-handed' ? { twoHanded: true } : {}),
+            rarity: entityRarity,    // derived from entity seed (arpg-item-rarity §1a)
+            ilvl,                    // rarity-gated: Common→6, Magic→20, Rare→45 (§2c)
+            requiredLevel,           // within ilvl−5..15 band (§1c)
+            implicit,
+            ...(requirements ? { requirements } : {}),
+            ...(durability ? { durability: durability.min === durability.max ? durability.min : durability } : {}),
+            ...(armor && armorSlot ? { armor: { minimum: armor.min, maximum: armor.max } } : {}),
             sockets: entityRarity === 'Common' ? 1 : 3,  // 1H weapon; Common tier-1 → 1 socket
             socketsNote: 'Gear holds 1–6 sockets; 1H weapons up to 4; links group sockets for skill+supports (ARPG-LAWS §1c).',
             rarityLadder: {
@@ -192,11 +218,25 @@ registerCatalogPipeline({
         ],
       },
       produce: (e: LabEntity) => {
+        const entityData = (e.data as Record<string, unknown> | null) ?? {};
         // Derive entity rarity to annotate the illustrative roll.
-        const entityRarity: string = (e.data as Record<string, unknown> | null)?.rarity as string ?? 'Common';
+        const entityRarity: string = Array.isArray(entityData.powers)
+          ? 'Unique'
+          : entityData.rarity as string ?? 'Common';
+        const rarityMode = entityData.rarityRolled === true ? 'rolled' : 'fixed';
+        const declaredPowers = Array.isArray(entityData.powers)
+          ? (entityData.powers as Record<string, unknown>[]).map((power) => ({
+              power: power.power,
+              min: power.min ?? 0,
+              max: power.max ?? power.min ?? 0,
+            }))
+          : [{ power: 'implicit-sword-accuracy', min: 30, max: 30 }];
         return ({
         data: {
+          powers: declaredPowers,
           affixes: {
+            rarityMode,
+            ...(rarityMode === 'rolled' ? { rarityRolled: true } : { rarity: entityRarity }),
             //
             // ── Affix budget (ARPG-LAWS §2c) ──────────────────────────────────
             // Rare: ≤3 prefix + ≤3 suffix.  Magic: ≤1p + ≤1s.  This item is Rare
@@ -427,11 +467,20 @@ registerCatalogPipeline({
         verification: 'L2: UARPGItemDefinition and every declared affix or implicit GameplayEffect compile in Source/PoF/; L3: VSItemsDefinitionsTest — equipping {name} activates every declared handle and changes exactly the declared attributes',
       },
       accept: allOf(
-        fieldsPopulated('affixes', 'budget / tierTable / illustrativeRareRoll populated', [
-          'budget',
-          'tierTable',
-          'illustrativeRareRoll',
-        ]),
+        fieldsRequiredWhen(
+          'affixes',
+          'Rolled rarity declares budget / tierTable / illustrativeRareRoll',
+          'rarityMode',
+          ['rolled'],
+          ['budget', 'tierTable', 'illustrativeRareRoll'],
+        ),
+        whenFieldIs(
+          'affixes',
+          'rarityMode',
+          ['fixed'],
+          entriesHaveFields('powers', 'Fixed rarity lists power / min / max', ['power', 'min', 'max']),
+          'Fixed rarity declares fixed powers',
+        ),
         wiringContractSound('affixes'),
       ),
     },
@@ -456,6 +505,32 @@ registerCatalogPipeline({
         ],
       },
       produce: (e: LabEntity) => {
+        const entityData = (e.data as Record<string, unknown> | null) ?? {};
+        const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
+        if (effective) {
+          const value = <T,>(field: string): T | undefined => effective[field]?.value as T | undefined;
+          const slot = value<string>('slot') ?? 'Unequippable';
+          const itemClass = value<string>('itemClass') ?? 'Misc';
+          const damage = value<{ min: number; max: number }>('effectiveDamage');
+          const armor = value<{ min: number; max: number }>('effectiveArmor');
+          const armorSlot = ['Chest', 'Helm', 'OffHand'].includes(slot);
+          return {
+            data: {
+              damage: {
+                baseType: e.name,
+                slot,
+                itemClass,
+                implicit: armor && armorSlot
+                  ? { type: 'Armor', minimum: armor.min, maximum: armor.max }
+                  : 'none',
+                ...(armor && armorSlot ? { armor: { minimum: armor.min, maximum: armor.max } } : {}),
+                ...(slot === 'Weapon' && damage
+                  ? { damageType: 'Physical', damageMin: damage.min, damageMax: damage.max }
+                  : {}),
+              },
+            },
+          };
+        }
         // Iron Longsword (item-1) base stat block — a canonical tier-1 1H sword.
         // ARPG-LAWS §1c: baseDPS = ((dmgMin+dmgMax)/2) × APS.
         // Damage range sourced from the entity seed (DUMMY_ITEMS item-1: Damage 12-18).
@@ -482,6 +557,8 @@ registerCatalogPipeline({
             damage: {
               // Weapon base stats (no affixes applied)
               baseType: e.name,
+              slot: 'Weapon',
+              itemClass: 'Weapon',
               damageType: 'Physical',      // matches UE damage-type enum
               damageMin,                   // 12
               damageMax,                   // 18
@@ -516,7 +593,30 @@ registerCatalogPipeline({
       // damage × APS (item-1: 15 × 0.8333 ≈ 12.5; a Legendary lightsaber: 38 × 1.0 ≈ 38).
       // Power-budget belongs to the Economy step (pricePowerRatio), so this step must not
       // pin a fixed 12.5 target that fails every above-tier-1 weapon.
-      accept: dpsConsistent('damage', 'baseDPS', 'Base DPS consistent with avg-damage × APS', 12),
+      accept: allOf(
+        fieldsRequiredWhen(
+          'damage',
+          'Weapon declares its damage range and attack speed',
+          'slot',
+          ['Weapon'],
+          ['damageMin', 'damageMax', 'attackSpeed'],
+        ),
+        whenFieldIs(
+          'damage',
+          'slot',
+          ['Weapon'],
+          dpsConsistent('damage', 'baseDPS', 'Base DPS consistent with avg-damage × APS', 12),
+          'Weapon base DPS is consistent',
+        ),
+        fieldsRequiredWhen(
+          'damage',
+          'Armour slot declares armour implicit',
+          'slot',
+          ['Chest', 'Helm', 'OffHand'],
+          ['armor'],
+        ),
+        fieldsPopulated('damage', 'slot / itemClass / implicit populated', ['slot', 'itemClass', 'implicit']),
+      ),
     },
 
     // ── 5. Economy ────────────────────────────────────────────────────────────

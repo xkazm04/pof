@@ -17,6 +17,7 @@ export function useCalendarRoadmapView() {
   const summary = useProjectHealthStore((s) => s.summary);
   const fetchHealth = useProjectHealthStore((s) => s.fetchHealth);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
+  const completionLedger = useModuleStore((s) => s.checklistCompletedAt);
   const scanHistory = useEvaluatorStore((s) => s.scanHistory);
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
@@ -35,9 +36,9 @@ export function useCalendarRoadmapView() {
   // Fetch project health on mount
   useEffect(() => {
     if (!summary) {
-      fetchHealth(checklistProgress, scanHistory, lastScan);
+      fetchHealth(checklistProgress, scanHistory, lastScan, null, null, completionLedger);
     }
-  }, [summary, fetchHealth, checklistProgress, scanHistory, lastScan]);
+  }, [summary, fetchHealth, checklistProgress, scanHistory, lastScan, completionLedger]);
 
   // Fetch deadlines from API
   useEffect(() => {

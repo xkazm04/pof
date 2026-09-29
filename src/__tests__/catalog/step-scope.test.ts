@@ -22,9 +22,18 @@ describe('stepScope', () => {
 
   it('PoF entities keep exactly the step lists they had — only scoped steps drop out', () => {
     for (const p of allCatalogPipelines()) {
-      const unscoped = p.steps.filter((s) => !s.profiles?.length).map((s) => s.label);
-      expect(stepsForProfile(p).map((s) => s.label)).toEqual(unscoped);
+      // A step scoped TO pof (W16: dialog-trees Skill Checks / Camera exclude diablo1) is still a PoF step.
+      const pofSteps = p.steps.filter((s) => !s.profiles?.length || s.profiles.includes('pof')).map((s) => s.label);
+      expect(stepsForProfile(p).map((s) => s.label)).toEqual(pofSteps);
     }
+  });
+
+  it('a diablo1 conversation has no Skill Checks or Camera — the hero never picks a reply and the view is fixed (W16)', () => {
+    const dialog = allCatalogPipelines().find((p) => p.catalogId === 'dialog-trees')!;
+    const labels = stepsForProfile(dialog, 'diablo1').map((s) => s.label);
+    expect(labels).not.toContain('Skill Checks');
+    expect(labels).not.toContain('Camera');
+    expect(stepsForProfile(dialog, 'pof').map((s) => s.label)).toContain('Skill Checks');
   });
 
   it('a diablo1 bestiary entity has Sprite Render right after 3D & Rig', () => {

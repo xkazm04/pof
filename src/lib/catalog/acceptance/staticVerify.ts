@@ -12,7 +12,7 @@ import type { AcceptanceResult } from './types';
 import type { UeChecker } from './ueStaticCheckers';
 import { resolveUeRoot } from './ueStaticCheckers';
 import { isPackagingStep } from './packagingStep';
-import { worstOf } from './combineVerdicts';
+import { foldContentHold, holdsBackAtDataTier } from './combineVerdicts';
 import { gradeArtifact } from '../headless';
 import { getCatalogPipeline } from '../pipeline-registry';
 // Side-effect: register all pipelines. Without it a cold server grades NOTHING — getCatalogPipeline
@@ -71,12 +71,8 @@ export function aggregateStatic(results: AcceptanceResult[], label: string): Acc
   return { label, tier: 'L2', status: 'pass', detail: `${results.length}/${results.length} UE static checks present` };
 }
 
-/** True when the content checker withholds a pass for a reason in the DATA (not a runtime gate
- *  still to run) — the only content verdicts the static sweep must not paper over. Pure. */
-export function holdsBackAtDataTier(content: AcceptanceResult): boolean {
-  if (content.status === 'pending' || content.status === 'fail') return true;
-  return content.status === 'deferred' && content.tier !== 'L3' && content.tier !== 'L4';
-}
+/** Lives in combineVerdicts (both sweeps fold through it); re-exported for existing importers. */
+export { holdsBackAtDataTier };
 
 export interface StaticVerifyDeps {
   resolveUeRoot: () => string | null;
@@ -123,8 +119,8 @@ export function verifyStaticAll(
     // own checker holds back at the data tiers — pending/fail (the d1 Stat Blocks' declared
     // `moveSpeed` gap) or deferred at L0-L2 (off-arc-fp's unresolved vfx link). A deferral at
     // L3/L4 belongs to a runtime gate the drain resolves, so it leaves the static verdict standing.
-    const content = deps.getContentVerdict?.(a.catalogId, a.entityId, a.step) ?? null;
-    const verdict = content && holdsBackAtDataTier(content) ? worstOf(staticVerdict, content) : staticVerdict;
+    // A content hold outranks a static deferral: author-owed work never reads as env-waiting.
+    const verdict = foldContentHold(staticVerdict, deps.getContentVerdict?.(a.catalogId, a.entityId, a.step) ?? null);
 
     verified++;
     if (verdict.status === 'pass') passed++;
@@ -168,17 +164,21 @@ function defaultUpsertStatus(catalogId: string, entityId: string, step: string, 
   });
 }
 
+/** The step's own content checker re-run RAW (no judge overlay) on the stored data, or null when
+ *  no row / no checker — the content half BOTH L2 sweeps fold in (`foldContentHold`). */
+export function contentVerdictFor(catalogId: string, entityId: string, step: string): AcceptanceResult | null {
+  const art = getArtifact(catalogId, entityId, step);
+  if (!art) return null;
+  const g = gradeArtifact(catalogId, step, art.data, entityId);
+  return g.graded ? g.raw : null;
+}
+
 export const defaultStaticVerifyDeps: StaticVerifyDeps = {
   resolveUeRoot,
   listArtifacts: (filter) => listAllArtifacts(filter),
   getStaticChecks: staticChecksFor,
   upsertStatus: defaultUpsertStatus,
-  getContentVerdict: (catalogId, entityId, step) => {
-    const art = getArtifact(catalogId, entityId, step);
-    if (!art) return null;
-    const g = gradeArtifact(catalogId, step, art.data, entityId);
-    return g.graded ? g.raw : null;
-  },
+  getContentVerdict: contentVerdictFor,
   isPackaging: (catalogId, step) => {
     const spec = getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step);
     return spec ? isPackagingStep(spec) : step === 'UE Packaging';

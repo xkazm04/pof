@@ -14,7 +14,7 @@
  */
 import { auditColumns, type ColumnAudit, type FieldMap } from './fieldMap';
 import { parseTsv, type MalformedRow, type TsvRefusal, type TsvTable } from './tsv';
-import { applyDecode } from './decode';
+import { applyDecode, type DecodedValue, type StringDecodeStep } from './decode';
 import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types';
 
 /**
@@ -46,6 +46,8 @@ export interface TableIngestResult {
    * last one is how an ingest loses balance data nobody notices is gone.
    */
   duplicateKeys: { key: string; rows: number[] }[];
+  /** Present when an enum-backed positional table no longer matches its declared ids. */
+  rowIdMismatch?: { expected: number; actual: number };
   refusal?: TsvRefusal;
 }
 
@@ -53,30 +55,54 @@ export interface TableIngestResult {
 const ROLE_CATALOG: Record<string, string> = {
   loot: 'loot-tables',
   ability: 'spellbook',
+  quest: 'quests',
   'unique-drop': 'items',
+  'base-item': 'items',
+  gossip: 'dialog-trees',
+  'quest-log-line': 'dialog-trees',
+  base: 'bestiary',
+  'talk-line': 'dialog-trees',
 };
 
 const LIST_PATH = /^data\.([A-Za-z0-9_]+)\[\]$/;
 
-const STATS_PATH = /^data\.stats\[(.+)\]$/;
+const STRUCTURED_LIST_PATH = /^data\.([A-Za-z0-9_]+)\[(\d+)\]\.([A-Za-z0-9_]+)$/;
+const LABELLED_PATH = /^data\.([A-Za-z0-9_]+)\[(.+)\]$/;
+const OBJECT_PATH = /^data\.([A-Za-z0-9_]+)\{([A-Za-z0-9_]+)\}$/;
 const LINK_PATH = /^links\[role=(.+)\]$/;
 
 /** Apply one `mapped(...)` destination path to the entity under construction. */
-function applyTo(entity: IngestedEntity, path: string, value: string): void {
+function applyTo(entity: IngestedEntity, path: string, value: DecodedValue): void {
   // A blank cell is "none", not "the empty string" — writing it would manufacture data.
   if (value === '') return;
 
-  if (path === 'id' || path === 'name') { entity[path] = value; return; }
+  if (path === 'id' || path === 'name') { entity[path] = String(value); return; }
 
   if (path === 'tags') {
-    if (!entity.tags.includes(value)) entity.tags.push(value);
+    const tag = String(value);
+    if (!entity.tags.includes(tag)) entity.tags.push(tag);
     return;
   }
 
-  const stat = STATS_PATH.exec(path);
-  if (stat) {
-    const stats = (entity.data.stats ??= []) as { label: string; value: string }[];
-    stats.push({ label: stat[1], value });
+  const structured = STRUCTURED_LIST_PATH.exec(path);
+  if (structured) {
+    const values = (entity.data[structured[1]] ??= []) as Record<string, DecodedValue>[];
+    const index = Number(structured[2]);
+    (values[index] ??= {})[structured[3]] = value;
+    return;
+  }
+
+  const labelled = LABELLED_PATH.exec(path);
+  if (labelled) {
+    const values = (entity.data[labelled[1]] ??= []) as { label: string; value: DecodedValue }[];
+    values.push({ label: labelled[2], value });
+    return;
+  }
+
+  const object = OBJECT_PATH.exec(path);
+  if (object) {
+    const values = (entity.data[object[1]] ??= {}) as Record<string, DecodedValue>;
+    values[object[2]] = value;
     return;
   }
 
@@ -87,19 +113,19 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
     // The referenced entity is named in the SOURCE's vocabulary; resolving it to a real
     // PoF entity id is a later pass that needs both catalogs ingested. Recording the raw
     // reference is honest; inventing an id that resolves nowhere is not.
-    links.push({ catalogId: ROLE_CATALOG[role] ?? 'unknown', entityId: value, role });
+    links.push({ catalogId: ROLE_CATALOG[role] ?? 'unknown', entityId: String(value), role });
     return;
   }
 
   const list = LIST_PATH.exec(path);
   if (list) {
-    const arr = (entity.data[list[1]] ??= []) as string[];
+    const arr = (entity.data[list[1]] ??= []) as DecodedValue[];
     if (!arr.includes(value)) arr.push(value);
     return;
   }
 
   if (path === 'data.abilities') {
-    const abilities = (entity.data.abilities ??= []) as string[];
+    const abilities = (entity.data.abilities ??= []) as DecodedValue[];
     if (!abilities.includes(value)) abilities.push(value);
     return;
   }
@@ -108,8 +134,8 @@ function applyTo(entity: IngestedEntity, path: string, value: string): void {
 
   // A destination the applier does not understand must not vanish: park it where the
   // report can see it rather than dropping the value on the floor.
-  (entity.data.__unapplied ??= {} as Record<string, string>);
-  (entity.data.__unapplied as Record<string, string>)[path] = value;
+  (entity.data.__unapplied ??= {} as Record<string, DecodedValue>);
+  (entity.data.__unapplied as Record<string, DecodedValue>)[path] = value;
 }
 
 export interface IngestTableOptions {
@@ -133,6 +159,14 @@ export interface IngestTableOptions {
    * prefixes and suffixes) both produced `d1-row5`. A declared key is unaffected.
    */
   positionalTag?: string;
+  /** Symbolic ids for an enum-backed table whose source file has no key column. */
+  rowIds?: readonly string[];
+  /** Fixed display name for a record whose source carries no name field. */
+  displayName?: string;
+  /** Prefix added to declared and positional keys in the projected entity id. */
+  keyPrefix?: string;
+  /** Serializable decoder applied to a declared key before duplicate checks and id construction. */
+  keyDecode?: StringDecodeStep[];
 }
 
 /** Pure: text in, entities and report out. No database, no filesystem. */
@@ -151,19 +185,27 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
   const entities: IngestedEntity[] = [];
   let positionalIds = 0;
   const seen = new Map<string, number[]>();
+  const rowIdMismatch = opts.rowIds && opts.rowIds.length !== table.rows.length
+    ? { expected: opts.rowIds.length, actual: table.rows.length }
+    : undefined;
 
   table.rows.forEach((row, index) => {
-    const declared = opts.keyColumn ? row[opts.keyColumn] : '';
-    const positional = !declared;
+    const declaredRaw = opts.keyColumn ? row[opts.keyColumn] : '';
+    const declared = declaredRaw ? (applyDecode(declaredRaw, opts.keyDecode)[0] ?? '') : '';
+    const rowId = opts.rowIds?.[index];
+    const positional = opts.rowIds !== undefined || !declared;
     if (positional) positionalIds++;
-    const key = declared || `${opts.positionalTag ?? ''}row${index}`;
-    const keyLabel = opts.keyColumn && declared ? `${opts.keyColumn}=${declared}` : `row=${index}`;
+    const key = rowId || declared || `${opts.positionalTag ?? ''}row${index}`;
+    const keyLabel = rowId
+      ? `row=${index} (${rowId})`
+      : opts.keyColumn && declared ? `${opts.keyColumn}=${declared}` : `row=${index}`;
     seen.set(key, [...(seen.get(key) ?? []), index]);
 
+    const entityKey = `${opts.keyPrefix ?? ''}${key}`;
     const entity: IngestedEntity = {
-      id: `${opts.idPrefix}-${key}`,
+      id: `${opts.idPrefix}-${entityKey}`,
       catalogId: opts.catalogId,
-      name: key,
+      name: opts.displayName ?? key,
       categoryPath: [],
       tags: [],
       lifecycle: 'planned',
@@ -177,9 +219,16 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
       for (const value of applyDecode(row[column], rule.decode)) applyTo(entity, rule.to, value);
     }
 
+    // Indexed power slots are sparse when an upstream row leaves an earlier slot empty.
+    // The entity contract is an ordered list of actual powers, never JSON holes or value-only slots.
+    if (Array.isArray(entity.data.powers)) {
+      entity.data.powers = (entity.data.powers as ({ power?: string } | undefined)[])
+        .filter((power): power is { power: string } => Boolean(power?.power));
+    }
+
     // The source key stays the identity even when a `name` column overwrote the label —
     // an ingested entity must remain traceable to its row.
-    entity.id = `${opts.idPrefix}-${key}`;
+    entity.id = `${opts.idPrefix}-${entityKey}`;
     entities.push(entity);
   });
 
@@ -193,6 +242,7 @@ export function ingestRecords(table: TsvTable, opts: IngestTableOptions): TableI
     duplicateKeys: [...seen.entries()]
       .filter(([, rows]) => rows.length > 1)
       .map(([key, rows]) => ({ key, rows })),
+    ...(rowIdMismatch ? { rowIdMismatch } : {}),
     refusal: table.refusal,
   };
 }

@@ -14,10 +14,12 @@ import { censusColumn } from '@/lib/catalog/reference/census';
 import { contentHash, stableStringify } from '@/lib/catalog/reference/hash';
 import { dropped, mapped } from '@/lib/catalog/ingest/fieldMap';
 import { dropValues } from '@/lib/catalog/ingest/decode';
+import { QUEST_ROW_IDS } from '@/lib/catalog/ingest/diablo1Dialogue';
 import { Skull } from 'lucide-react';
 
 const spellSpec = DIABLO1.tables.find((t) => t.catalogId === 'spellbook')!;
 const itemSpec = DIABLO1.tables.find((t) => t.catalogId === 'items')!;
+const questSpec = DIABLO1.tables.find((t) => t.file === 'quests/questdat.tsv')!;
 const tsv = (cols: string[], rows: Record<string, string>[]) =>
   [cols.join('\t'), ...rows.map((r) => cols.map((c) => r[c] ?? '').join('\t'))].join('\n');
 const SPELL_COLS = Object.keys(spellSpec.map);
@@ -68,6 +70,22 @@ describe('wrapTable', () => {
       'diablo1:items/itemdat.tsv:IDI_SORC', 'diablo1:items/itemdat.tsv:row1', 'diablo1:items/itemdat.tsv:row2',
     ]);
     expect(r.wrappers[1].keyKind).toBe('positional');
+  });
+
+  it('uses enum row ids without turning positional identity into column identity', () => {
+    const quests = tsv(Object.keys(questSpec.map), QUEST_ROW_IDS.map((id) => ({ qlstr: `Synthetic ${id}` })));
+    const result = wrapTable(DIABLO1, questSpec, quests, 't0');
+    expect(result.wrappers.map((wrapper) => wrapper.entity.id))
+      .toEqual(QUEST_ROW_IDS.map((id) => `d1-${id}`));
+    expect(result.wrappers.every((wrapper) => wrapper.keyKind === 'positional')).toBe(true);
+    expect(result.rowIdMismatch).toBeUndefined();
+  });
+
+  it('reports enum row-count drift without padding or truncating wrappers', () => {
+    const result = wrapTable(DIABLO1, questSpec, tsv(Object.keys(questSpec.map), [{ qlstr: 'Synthetic quest' }]), 't0');
+    expect(result.wrappers).toHaveLength(1);
+    expect(result.wrappers[0].entity.id).toBe('d1-Q_ROCK');
+    expect(result.rowIdMismatch).toEqual({ expected: 24, actual: 1 });
   });
 });
 
@@ -126,6 +144,16 @@ describe('promotion', () => {
     expect(written).toEqual(['d1-Fireball']);
     expect(r.refused).toEqual([{ entityId: 'd1-Firebolt', reason: 'is a code seed' }]);
   });
+
+  it('promotes one of several rows that share a key and reports the rest, never overwriting silently (W16: three TOWN_COW rows)', () => {
+    const ws = wrapTable(DIABLO1, spellSpec, SPELLS, 't0').wrappers;
+    const twin = { ...ws[0], wrapperId: `${ws[0].wrapperId}@row9` };
+    const written: string[] = [];
+    const r = promoteWrappers([ws[0], twin], (rec) => written.push(rec.entityId));
+    expect(written).toEqual([ws[0].entity.id]);
+    expect(r.refused).toHaveLength(1);
+    expect(r.refused[0].reason).toContain('duplicate entity id');
+  });
 });
 
 describe('ingestSourceFromDir', () => {
@@ -164,5 +192,16 @@ describe('ingestSourceFromDir', () => {
     expect(spells.refusal).toMatchObject({ limit: 'maxBytes', observed: oversized.length });
     expect(spells.refusal!.message).toContain('maxBytes');
     expect(s.store.created).toBe(0);
+  });
+
+  it('carries an enum row-count mismatch into the table run summary', () => {
+    const questText = tsv(Object.keys(questSpec.map), [{ qlstr: 'Synthetic quest' }]);
+    const readFile = (p: string) => {
+      if (p.replace(/\\/g, '/').endsWith('quests/questdat.tsv')) return questText;
+      throw new Error('ENOENT');
+    };
+    const summary = ingestSourceFromDir('diablo1', '/data', { db, readFile, now: 't0' });
+    expect(summary.tables.find((table) => table.file === 'quests/questdat.tsv')?.rowIdMismatch)
+      .toEqual({ expected: 24, actual: 1 });
   });
 });

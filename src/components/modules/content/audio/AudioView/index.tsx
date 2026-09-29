@@ -81,16 +81,11 @@ export function AudioView() {
     handleCreateDoc,
     commitScene,
     commitZones,
-    commitEmitters,
-    commitZonePatch,
-    commitEmitterPatch,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,
     commitDescription,
     commitSetting,
-    selectedZone,
-    selectedEmitter,
   } = useAudioView();
 
   // The full-screen spinner is for the FIRST load only. `useCRUD.refetch` raises
@@ -249,16 +244,10 @@ export function AudioView() {
                 <PainterTab
                   activeDoc={activeDoc}
                   commitScene={commitScene}
-                  commitZones={commitZones}
-                  commitEmitters={commitEmitters}
                   setSelectedZoneId={setSelectedZoneId}
                   setSelectedEmitterId={setSelectedEmitterId}
                   selectedZoneId={selectedZoneId}
                   selectedEmitterId={selectedEmitterId}
-                  selectedZone={selectedZone}
-                  selectedEmitter={selectedEmitter}
-                  commitZonePatch={commitZonePatch}
-                  commitEmitterPatch={commitEmitterPatch}
                   handleGenerateZoneCode={handleGenerateZoneCode}
                   handleGenerateSoundscape={handleGenerateSoundscape}
                   audioCli={audioCli}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planItemToTask } from '@/lib/implementation-planner/plan-dispatch';
+import { planItemToTask, planDispatch } from '@/lib/implementation-planner/plan-dispatch';
 import type { PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { buildTaskPrompt } from '@/lib/cli-task';
 import type { ProjectContext } from '@/lib/prompt-context';
@@ -19,6 +19,7 @@ function makeItem(overrides: Partial<PlanItem> = {}): PlanItem {
     effort: { level: 'medium', minutes: 90, reason: 'new system' },
     dependsOn: ['arpg-character::Character foundation'],
     isReady: true,
+    unmetDeps: [],
     status: 'missing',
     ...overrides,
   };
@@ -53,5 +54,28 @@ describe('planItemToTask (Direction: planner-dispatch-bridge)', () => {
     // feature-fix handler renders the improve-task shell + the project context header.
     expect(prompt).toContain('Improve "Hit detection"');
     expect(prompt).toContain('## Project Context');
+  });
+});
+
+describe('planDispatch — the one gated plan dispatch door', () => {
+  it('refuses a blocked item with its unmet prerequisites and builds no task', () => {
+    const blocked = makeItem({
+      isReady: false,
+      dependsOn: ['arpg-character::Character foundation', 'arpg-animation::Anim Notify classes'],
+      unmetDeps: ['arpg-animation::Anim Notify classes'],
+    });
+    const result = planDispatch(blocked, ORIGIN);
+    expect(result).toEqual({
+      ok: false,
+      error: { reason: 'blocked', unmet: ['arpg-animation::Anim Notify classes'] },
+    });
+  });
+
+  it('maps a ready item to exactly the FeatureFixTask planItemToTask returns', () => {
+    const ready = makeItem();
+    const result = planDispatch(ready, ORIGIN);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual(planItemToTask(ready, ORIGIN));
   });
 });

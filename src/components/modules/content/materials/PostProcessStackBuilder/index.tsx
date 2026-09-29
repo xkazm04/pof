@@ -13,18 +13,16 @@ import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stac
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';
+import { specFromStudioState, toCompositorSettings, type PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
 import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
 import { MeterBar } from '@/components/ui/MeterBar';
-import { TARGET_RESOLUTION } from './constants';
 import { EffectRow } from './EffectRow';
-
-// The canonical stack config — single source of truth lives in the prompt builder.
-export type { PostProcessStackConfig } from '@/lib/prompts/post-process';
 
 // ── Component ──
 
 interface PostProcessStackBuilderProps {
-  onGenerate: (config: import('@/lib/prompts/post-process').PostProcessStackConfig) => void;
+  /** Receives the store's stack projected to its one spec (see `toStackSpec`). */
+  onGenerate: (spec: PostProcessStackSpec) => void;
   isGenerating: boolean;
 }
 
@@ -33,6 +31,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
   // both read/write the same store, so the effect set, enable state, ordering
   // and GPU budget can never silently diverge between the two screens.
   const effects = usePostProcessStudioStore((s) => s.effects);
+  const resolution = usePostProcessStudioStore((s) => s.resolution);
   const initStore = usePostProcessStudioStore((s) => s.init);
   const setEffectEnabled = usePostProcessStudioStore((s) => s.setEffectEnabled);
   const moveEffectInStore = usePostProcessStudioStore((s) => s.moveEffect);
@@ -55,10 +54,10 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
 
   const enabledCount = useMemo(() => effects.filter((e) => e.enabled).length, [effects]);
 
-  // GPU budget for the enabled subset — same estimator the studio view uses.
+  // GPU budget at the store's resolution — the same figure the studio view shows.
   const budget = useMemo(
-    () => estimateGPUBudget(effects, TARGET_RESOLUTION),
-    [effects],
+    () => estimateGPUBudget(effects, resolution),
+    [effects, resolution],
   );
   const costById = useMemo(() => {
     const m = new Map<string, number>();
@@ -87,30 +86,19 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
     }
     try {
       setGenerateError(null);
-      onGenerate({ effects });
+      onGenerate(specFromStudioState(usePostProcessStudioStore.getState()));
     } catch (e) {
       logger.warn('Post-process generate dispatch failed', e);
       setGenerateError(e instanceof Error ? e.message : 'Failed to compile volume settings');
     }
-  }, [effects, onGenerate, enabledCount]);
+  }, [onGenerate, enabledCount]);
 
   const handleBlenderPreview = useCallback(async () => {
     setBlenderPreviewing(true);
     setBlenderResult(null);
     try {
-      // Collect enabled effects into compositor settings
-      const enabledIds = new Set(effects.filter((e) => e.enabled).map((e) => e.id));
-      const settings: Parameters<typeof compositorStackScript>[0] = {};
-      if (enabledIds.has('bloom')) {
-        settings.bloom = { intensity: 0.675, threshold: -1.0, radius: 4.0 };
-      }
-      if (enabledIds.has('color-grading')) {
-        settings.colorGrading = { saturation: 1.0, whiteBalance: 6500 };
-      }
-      if (enabledIds.has('vignette')) {
-        settings.vignette = { intensity: 0.4 };
-      }
-      const code = compositorStackScript(settings);
+      // The tuned stack, not the defaults: read the live slider/preset values.
+      const code = compositorStackScript(toCompositorSettings(effects));
       const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

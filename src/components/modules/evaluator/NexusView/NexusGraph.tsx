@@ -4,11 +4,10 @@ import type { Dispatch, SetStateAction } from 'react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_20,
 } from '@/lib/chart-colors';
-import type { SubModuleId } from '@/types/modules';
+import { zoomViewBox } from '@/lib/topology/moduleGraph';
 import { NODE_W, NODE_H } from './constants';
 import type { LayerId } from './constants';
 import type { NexusNode, NexusEdge } from './types';
-import { getNodeCenter } from './helpers';
 
 export function NexusGraph({
   edges,
@@ -33,12 +32,15 @@ export function NexusGraph({
   svgWidth: number;
   svgHeight: number;
 }) {
+  // Zoom narrows the viewBox (as DependencyGraph does) rather than CSS-scaling the
+  // <svg>, which cropped the graph inside this overflow-hidden frame. Edge
+  // endpoints come from the nodes' own centres.
+  const byId = new Map(nodes.map((n) => [n.moduleId as string, n]));
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden relative">
       <svg
         width="100%"
-        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+        viewBox={zoomViewBox(svgWidth, svgHeight, zoom)}
       >
         <defs>
           <marker id="nexus-arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
@@ -60,17 +62,18 @@ export function NexusGraph({
 
         {/* Edges */}
         {edges.map((edge) => {
-          const fromCenter = getNodeCenter(edge.from as SubModuleId);
-          const toCenter = getNodeCenter(edge.to as SubModuleId);
-          const dx = toCenter.x - fromCenter.x;
-          const dy = toCenter.y - fromCenter.y;
+          const fromNode = byId.get(edge.from);
+          const toNode = byId.get(edge.to);
+          if (!fromNode || !toNode) return null;
+          const dx = toNode.cx - fromNode.cx;
+          const dy = toNode.cy - fromNode.cy;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const ux = dx / dist;
           const uy = dy / dist;
-          const x1 = fromCenter.x + ux * (NODE_W / 2 + 4);
-          const y1 = fromCenter.y + uy * (NODE_H / 2 + 4);
-          const x2 = toCenter.x - ux * (NODE_W / 2 + 10);
-          const y2 = toCenter.y - uy * (NODE_H / 2 + 10);
+          const x1 = fromNode.cx + ux * (NODE_W / 2 + 4);
+          const y1 = fromNode.cy + uy * (NODE_H / 2 + 4);
+          const x2 = toNode.cx - ux * (NODE_W / 2 + 10);
+          const y2 = toNode.cy - uy * (NODE_H / 2 + 10);
           const mx = (x1 + x2) / 2;
           const my = (y1 + y2) / 2;
           const perpX = -uy * 20;
@@ -80,9 +83,7 @@ export function NexusGraph({
 
           // Layer 3: show avg duration on edge when sessions layer active
           const showSessionAnnotation = activeLayers.has('sessions') && isHighlighted;
-          const fromNode = nodes.find((n) => n.moduleId === edge.from);
-          const toNode = nodes.find((n) => n.moduleId === edge.to);
-          const avgMs = ((fromNode?.avgDurationMs ?? 0) + (toNode?.avgDurationMs ?? 0)) / 2;
+          const avgMs = (fromNode.avgDurationMs + toNode.avgDurationMs) / 2;
 
           return (
             <g key={`${edge.from}->${edge.to}`}>

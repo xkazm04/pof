@@ -35,6 +35,7 @@ import { buildAudioSystemPrompt } from '@/lib/prompts/audio-scene';
 import { buildAudioEventPrompt } from '@/lib/prompts/audio-events';
 import { buildMenuFlowPrompt } from '@/lib/prompts/menu-flow';
 import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
+import { toStackSpec, type PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
 import { buildStyleTransferPrompt } from '@/lib/prompts/style-transfer';
 import { buildGenerateTestsPrompt } from '@/lib/prompts/ai-testing';
 
@@ -229,6 +230,17 @@ const PP_EFFECT: PPStudioEffect = {
   ],
 };
 
+/**
+ * Shared with the `post-process` TASK golden: the rail task must compose the
+ * builder's output byte-for-byte. A disabled effect pins the omission line and
+ * the preset name pins the preset note.
+ */
+export const GOLDEN_PP_SPEC: PostProcessStackSpec = toStackSpec(
+  [PP_EFFECT, { ...PP_EFFECT, id: 'motion-blur', name: 'Motion Blur', enabled: false, priority: 1 }],
+  '1080p',
+  'Fantasy Bloom',
+);
+
 const STYLE_TRANSFER: StyleTransferConfig = {
   imageDataUrl: null,
   referenceDescription: 'Weathered bronze temple door with verdigris in the recesses.',
@@ -308,7 +320,7 @@ export const STANDALONE_BUILDERS: StandaloneBuilderCase[] = [
   { name: 'audio-scene', module: 'audio', build: (ctx) => buildAudioSystemPrompt(AUDIO_DOC, ctx) },
   { name: 'audio-events', module: 'audio', build: (ctx) => buildAudioEventPrompt(AUDIO_EVENTS, ctx) },
   { name: 'menu-flow', module: 'ui-hud', build: (ctx) => buildMenuFlowPrompt(MENU_FLOW, ctx) },
-  { name: 'post-process', module: 'materials', build: (ctx) => buildPostProcessPrompt({ effects: [PP_EFFECT] }, ctx) },
+  { name: 'post-process', module: 'materials', build: (ctx) => buildPostProcessPrompt(GOLDEN_PP_SPEC, ctx) },
   { name: 'style-transfer', module: 'materials', build: (ctx) => buildStyleTransferPrompt(STYLE_TRANSFER, ctx) },
   { name: 'ai-testing', module: 'ai-behavior', build: (ctx) => buildGenerateTestsPrompt(TEST_SUITE, ctx) },
 ];

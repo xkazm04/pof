@@ -11,6 +11,7 @@
  */
 import type { CritiqueResult, MeshMetrics, Scorecard } from '@/lib/visual-gen/mesh-critique';
 import { ASSET_DIRS, assetUrl } from '@/lib/visual-gen/generated-assets';
+import type { DeliveryRemedy } from '@/lib/visual-gen/delivery-remedy';
 
 /**
  * The critique metrics the UI actually reads. `componentFaces` (up to 4096
@@ -66,8 +67,25 @@ export interface ForgeStatusResponse {
    * show it at submit time instead of the caller assuming a default.
    */
   gradedAs?: string;
+  /**
+   * The delivery's next step, projected server-side from the findings `projectCritique`
+   * drops: a $0 local finish, a PAID reroll (stated, never a new button), or none with the
+   * reason. Absent when there is nothing to remedy. The MCP status path omits it.
+   */
+  remedy?: DeliveryRemedy;
   error?: string;
 }
+
+/**
+ * Where a card's $0 finish run stands (`useForgeStore.finishJob`). `refused` is the
+ * remediate route's own `routed: false` answer — its reason is shown verbatim, because
+ * the route re-grades the input itself and may decline what the projected remedy offered.
+ */
+export type ForgeFinishState =
+  | { state: 'running'; note?: string }
+  | { state: 'done'; summary: string; improved: boolean; meshPath?: string }
+  | { state: 'refused'; reason: string }
+  | { state: 'failed'; error: string };
 
 /**
  * The verdict fields a status route projects alongside the transport `status`. Shared so

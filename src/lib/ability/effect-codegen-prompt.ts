@@ -32,6 +32,21 @@ function describeRule(r: TagRule): string {
   return `- ${r.type} "${r.targetTag}" → ${RULE_TARGET[r.type]}`;
 }
 
+/** The catalog entity scalars a generate run treats as authoritative. */
+export type GenerateScalars = { manaCost?: number; cooldown?: number; damage?: number };
+
+/**
+ * The authoritative ability cooldown a generate run writes into the Cooldown GE:
+ * the catalog scalar when provided, else the largest effect-level "Cooldown" the
+ * editor authored. Previously this was accepted and dropped ('// TODO: cooldown
+ * GE') while the same value leaked into the effects as a Period. Exported so the
+ * Generate preflight (`@/lib/ability/generate-preflight`) predicts with the SAME
+ * rule the prompt uses. Pure.
+ */
+export function resolveGenerateCooldown(effects: EditorEffect[], scalars?: GenerateScalars): number {
+  return scalars?.cooldown ?? Math.max(0, ...effects.map((e) => e.cooldownSec));
+}
+
 /**
  * Build the authoring contract for the "Generate C++" bundle dispatch (B3a + B3b).
  * Pure. Instructs Claude to write, additively into the UE project: (A) one buildable
@@ -44,7 +59,7 @@ export function buildGenerateAbilityBundlePrompt(
   ability: AbilityRef,
   effects: EditorEffect[],
   tagRules: TagRule[],
-  scalars?: { manaCost?: number; cooldown?: number; damage?: number },
+  scalars?: GenerateScalars,
 ): string {
   const effectList = effects.length
     ? effects.map(describeEffect).join('\n')
@@ -53,11 +68,7 @@ export function buildGenerateAbilityBundlePrompt(
   const manaNote = scalars?.manaCost != null
     ? `Set \`AbilityManaCost = ${scalars.manaCost}\`.`
     : 'No mana cost provided — leave a `// TODO: mana cost` comment.';
-  // The authoritative ability cooldown: the catalog scalar when provided, else
-  // the largest effect-level "Cooldown" the editor authored. Previously this
-  // was accepted and dropped ('// TODO: cooldown GE') while the same value
-  // leaked into the effects as a Period.
-  const cooldownSec = scalars?.cooldown ?? Math.max(0, ...effects.map((e) => e.cooldownSec));
+  const cooldownSec = resolveGenerateCooldown(effects, scalars);
   const cooldownNote = cooldownSec > 0
     ? `Create a Cooldown GE \`UGE_Gen_<AbilityName>_Cooldown\` (HasDuration, \`DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(${cooldownSec}f))\`, granting the ability's cooldown tag) in \`Effects/Generated/\` and set it as the ability's \`CooldownGameplayEffectClass\`. Do NOT set \`Period\` on any damaging GE for this.`
     : 'No cooldown provided — leave a `// TODO: cooldown GE` comment.';

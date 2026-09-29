@@ -12,6 +12,9 @@ export const UNGRADED_MARKER = 'UNGRADED';
 /** The row was SEEDED from a reference source, not produced; never graded `pass` (/diablo D3). */
 export const SOURCED_MARKER = 'SOURCED';
 
+/** The row is a data-blind stub body written for a non-exemplar entity — the exemplar's template. */
+export const TEMPLATE_MARKER = 'TEMPLATE';
+
 /**
  * The exact value a producer writes where a replicated game's reference does not state a field
  * (the REFERENCE VALUES prompt section asks for it). A checker must read it as UNPOPULATED — measured

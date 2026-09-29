@@ -6,7 +6,9 @@
  * pool) come from the class tables, never from this file.
  */
 import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
-import { timingLaw } from './behaviourScale';
+import { castTiming } from '@/lib/catalog/reference/combatMath';
+import { damage } from '@/lib/catalog/reference/spellMath';
+import { SPELL_SPECS, spellSpec } from '@/lib/catalog/reference/spellSpecs';
 
 const need = (id: string, re: RegExp): RegExpExecArray => {
   const body = DIABLO1_CANON.find((r) => r.id === id)?.body;
@@ -16,8 +18,10 @@ const need = (id: string, re: RegExp): RegExpExecArray => {
   return m;
 };
 
-/** Spells whose damage law exists. Charged Bolt and Lightning are multi-missile — not modelled yet. */
-export const SPELL_LAW_IDS: Record<string, string> = { Firebolt: 'd1-spell-firebolt-law' };
+/** Every vanilla spell has one engine-derived canon law, indexed by its source SpellID name. */
+export const SPELL_LAW_IDS: Record<string, string> = Object.fromEntries(
+  SPELL_SPECS.map((spec) => [spec.spell, spec.lawId]),
+);
 /** Every spell: to-hit, cast timing, mana — shared by all spells, one rule. */
 export const CAST_LAW_ID = 'd1-spell-cast-law';
 
@@ -33,16 +37,21 @@ export interface FireboltLaw {
 
 export function fireboltLaw(): FireboltLaw {
   const id = SPELL_LAW_IDS.Firebolt;
-  const dmg = need(id, /deals Magic \/ (\d+) \+ spell level \+ (\d+) plus 0-(\d+) damage/);
-  const res = need(id, /resistant monster takes (\d+)\/(\d+) of it/);
-  const hit = need(CAST_LAW_ID, /- (\d+) x monster level - distance\)%, clamped to (\d+)-(\d+)/);
-  const tpf = need(CAST_LAW_ID, /at (\d+) tick per frame/);
-  const noRegen = /Mana does not regenerate over time/.test(DIABLO1_CANON.find((r) => r.id === CAST_LAW_ID)?.body ?? '');
+  const spec = spellSpec('Firebolt');
+  if (!spec || spec.damage.kind === 'none') throw new Error(`${id} has no structured damage formula`);
+  const min = /trunc\(M\/(\d+)\)\+S\+(\d+)/.exec(spec.damage.min);
+  const max = /trunc\(M\/\d+\)\+S\+(\d+)/.exec(spec.damage.max);
+  if (!min || !max) throw new Error(`${id} structured formulas no longer have the Firebolt shape`);
+  const hit = need(CAST_LAW_ID, /magic-to-hit-(\d+)\*monster level,(\d+),(\d+)\)/);
+  const castBody = DIABLO1_CANON.find((r) => r.id === CAST_LAW_ID)?.body ?? '';
+  const oneTick = /uses one tick per class casting frame/.test(castBody);
+  const noRegen = /no cooldown or passive mana regeneration/.test(castBody);
+  if (!oneTick) throw new Error(`${CAST_LAW_ID} no longer states one tick per casting frame`);
   return {
-    magicDivisor: Number(dmg[1]), constant: Number(dmg[2]), spread: Number(dmg[3]),
-    resistedFraction: Number(res[1]) / Number(res[2]),
+    magicDivisor: Number(min[1]), constant: Number(min[2]), spread: Number(max[1]) - Number(min[2]),
+    resistedFraction: /resistance quarters damage/.test(need(id, /resistance quarters damage/)[0]) ? 0.25 : NaN,
     toHit: { monsterLevelCoef: Number(hit[1]), min: Number(hit[2]), max: Number(hit[3]) },
-    ticksPerFrame: Number(tpf[1]),
+    ticksPerFrame: 1,
     regenerates: !noRegen,
   };
 }
@@ -98,17 +107,20 @@ export function fireboltAt(caster: ReferenceCaster, spellLevel: number, tableMan
   const law = fireboltLaw();
   if (law.regenerates) throw new Error('d1-spell-cast-law no longer says mana does not regenerate, and states no rate — refusing to guess one');
   if (spellLevel !== 1) throw new Error(`the law states Firebolt's mana cost at spell level 1 only (asked for ${spellLevel}) — refusing to extrapolate`);
-  const tps = timingLaw().ticksPerSecond;
-  const minimum = Math.floor(caster.magic / law.magicDivisor) + spellLevel + law.constant;
-  const maximum = minimum + law.spread;
+  const timing = castTiming({ cast: { frames: caster.castingFrames, actionFrame: caster.castingActionFrame } });
+  const evaluated = damage('Firebolt', { spellLevel, characterLevel: caster.level, magic: caster.magic });
+  const minimum = evaluated.min;
+  const maximum = evaluated.max;
   return {
-    damage: { minimum, maximum, mean: (minimum + maximum) / 2 },
-    castTime: (caster.castingFrames * law.ticksPerFrame) / tps,
-    releaseTime: (caster.castingActionFrame * law.ticksPerFrame) / tps,
+    damage: { minimum, maximum, mean: evaluated.mean },
+    castTime: timing.seconds,
+    releaseTime: timing.releaseSeconds,
     manaCost: tableManaCost,
     manaRegenPerSec: 0,
     castsPerPool: Math.floor(caster.maxMana / tableManaCost),
-    toHit: (monsterLevel, distance) =>
-      Math.min(law.toHit.max, Math.max(law.toHit.min, caster.magicToHit - law.toHit.monsterLevelCoef * monsterLevel - distance)) / 100,
+    toHit: (monsterLevel, distance) => {
+      void distance; // Kept for the W13 API; corrected law fixes ordinary spell-missile distance at zero.
+      return Math.min(law.toHit.max, Math.max(law.toHit.min, caster.magicToHit - law.toHit.monsterLevelCoef * monsterLevel)) / 100;
+    },
   };
 }

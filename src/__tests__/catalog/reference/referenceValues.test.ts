@@ -4,9 +4,10 @@ import { describe, it, expect } from 'vitest';
 import '@/lib/catalog/pipelines/registry.generated';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
-import { entityValuesBlock, referenceValuesBlock } from '@/lib/catalog/referenceValues';
+import { REFERENCE_MAX_CHARS, entityValuesBlock, referenceValuesBlock } from '@/lib/catalog/referenceValues';
 import { labIdentityOf } from '@/lib/catalog/canon/profiles';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { MONSTER_DERIVE } from '@/lib/catalog/reference/derive';
 
 const spec = getCatalogPipeline('bestiary')!.steps.find((s) => s.label === 'Stat Block')!;
 const data = { stats: [{ label: 'HP Min', value: '4' }, { label: 'HP Max', value: '7' }, { label: 'Armor Class', value: '5' }], category: 'Undead', sourced: { x: 1 } };
@@ -27,9 +28,24 @@ describe('referenceValuesBlock', () => {
     expect(referenceValuesBlock(authored)).toBe('');
   });
 
-  it('is bounded', () => {
-    const big = { ...ingested, data: { blob: 'x'.repeat(5000) } };
-    expect(referenceValuesBlock(big).length).toBeLessThan(2600);
+  it('carries a whole conversation-sized reference record (W16: 12 KB town talk was cut at 2000)', () => {
+    const talk = { ...ingested, data: { gossip: Array.from({ length: 11 }, (_, i) => ({ line: `L${i}`, text: 'y'.repeat(600) })), topics: [{ line: 'T0', text: 'z'.repeat(900) }] } };
+    const b = referenceValuesBlock(talk);
+    expect(b).toContain('L10');
+    expect(b).toContain('T0');
+    expect(b).not.toContain('truncated');
+  });
+
+  it('is bounded, and names every key it had to leave out', () => {
+    const big = { ...ingested, data: { first: 'x'.repeat(REFERENCE_MAX_CHARS - 100), second: 'x'.repeat(5000), third: 'q' } };
+    const b = referenceValuesBlock(big);
+    expect(b.length).toBeLessThan(REFERENCE_MAX_CHARS + 1200);
+    expect(b).toMatch(/NOT shown: second, third/);
+  });
+
+  it('keeps an authored entity bounded at the smaller design-record budget', () => {
+    const big = { id: 'a', name: 'A', lifecycle: 'planned' as const, data: { blob: 'x'.repeat(5000) } };
+    expect(entityValuesBlock(big).length).toBeLessThan(2600);
   });
 });
 
@@ -37,6 +53,19 @@ describe('reach at the chokepoint', () => {
   it('an ingested entity’s Stat Block prompt carries its real stats', () => {
     const p = buildStepProducePrompt(spec, ingested, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
     expect(p).toContain('HP Max: 7');
+  });
+
+  it('an unmodelled routine’s animation-only walking speed reaches its Stat Block prompt', () => {
+    const derived = MONSTER_DERIVE.derive({
+      id: 'd1-MT_FALLEN', tags: ['Fallen'],
+      data: { animFrames: '10,20,12,6,16,0', animRates: '3,2,1,1,1,1', attackActionFrame: '8', intelligence: '1' },
+    });
+    const fallen = { ...ingested, id: 'd1-MT_FALLEN', name: 'Fallen', data: { ...data, derived } };
+    const p = buildStepProducePrompt(spec, fallen, undefined, { catalogId: 'bestiary', rules: CANON_SEED });
+    expect(p).toContain('"locomotion":');
+    expect(p).toContain('"tilesPerSecondWhileWalking":');
+    expect(p).toContain('only the while-walking upper bound is known');
+    expect(p).toContain('"attackKinds":["melee","heal"]');
   });
 
   it('an authored entity’s prompt carries its values as ENTITY VALUES — consistent, not reproduced (W03, D11)', () => {

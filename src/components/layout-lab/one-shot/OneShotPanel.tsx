@@ -5,11 +5,13 @@ import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { createOrchestrator } from '@/lib/one-shot/orchestrator';
 import type { LabTheme } from '../theme';
-import { DistributionView, type DistributionBucket } from './DistributionView';
+import { AnalyzedView, DistributionDimensions, TargetLine } from './AnalyzedView';
 import { ProposalView } from './ProposalView';
 import { RunLogView } from './RunLogView';
 import { CatalogPickerForm } from './CatalogPickerForm';
-import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
+import { RunActions } from './RunActions';
+import type { NextAction } from '@/lib/one-shot/next-actions';
+import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 
 // One module-level orchestrator — shared across renders.
 const orchestrator = createOrchestrator();
@@ -18,25 +20,11 @@ interface Props {
   t: LabTheme;
 }
 
-function distributionToBuckets(d: CatalogDistribution): { buckets: DistributionBucket[]; total: number } {
-  const firstKey = Object.keys(d.byAttribute)[0];
-  if (!firstKey) return { buckets: [], total: d.total };
-  const histogram = d.byAttribute[firstKey];
-  const underrepSet = new Set(
-    d.underrepresented.filter((u) => u.attribute === firstKey).map((u) => u.value),
-  );
-  const buckets: DistributionBucket[] = Object.entries(histogram).map(([label, count]) => ({
-    label,
-    count,
-    underRep: underrepSet.has(label),
-  }));
-  return { buckets, total: d.total };
-}
-
 /**
- * Right-rail panel driven by useOneShotLabStore.panelOpen.
- * Phase routing: idle → catalog picker; analyzing/proposing/refining → DistributionView + ProposalView;
- * running/completed/failed → RunLogView.
+ * Right-rail panel driven by useOneShotLabStore.panelOpen. Gap-first phase routing:
+ * idle → ranked gaps + catalog select; analyzed → every dimension, gaps clickable (nothing spent);
+ * proposing/refining → target + distribution + ProposalView; running/completed/failed → RunLogView.
+ * Every non-idle phase ends in RunActions (cancel / resume / retry failed / start over).
  */
 export function OneShotPanel({ t }: Props) {
   const panelOpen = useOneShotLabStore((s) => s.panelOpen);
@@ -49,9 +37,9 @@ export function OneShotPanel({ t }: Props) {
   const stepResults = useOneShotJobStore((s) => s.stepResults);
   const lastSummary = useOneShotJobStore((s) => s.lastSummary);
   const distribution = useOneShotJobStore((s) => s.distribution);
+  const target = useOneShotJobStore((s) => s.target);
 
   const [catalogInput, setCatalogInput] = useState('items');
-  const [hintInput, setHintInput] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   if (!panelOpen) return null;
@@ -75,39 +63,32 @@ export function OneShotPanel({ t }: Props) {
     overflow: 'hidden',
   };
 
-  const handleStart = async () => {
+  // Each action reports its own failure; the orchestrator already returned the store to rest.
+  const guarded = (fn: () => Promise<unknown>) => async () => {
     setError(null);
-    try {
-      await orchestrator.start(catalogInput.trim() || 'items', hintInput.trim() || undefined);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+    try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
+  const handleAnalyze = guarded(() => orchestrator.analyze(catalogInput));
+  // A ranked gap from idle names its catalog: measure it, then propose aimed at that gap.
+  const handlePickGap = (g: GapTarget, hint?: string) => guarded(async () => {
+    if (useOneShotJobStore.getState().phase !== 'analyzed' || catalogId !== g.catalogId) await orchestrator.analyze(g.catalogId);
+    await orchestrator.proposeFor(g, hint);
+  })();
+  const handlePropose = (hint?: string) => guarded(() => orchestrator.proposeFor(null, hint))();
 
-  const handleRefine = async (input: string, forceMore: boolean) => {
+  const handleRefine = (input: string, forceMore: boolean) => guarded(() => orchestrator.refine(input, forceMore))();
+  const handleApprove = guarded(() => orchestrator.approveAndRun());
+  const handleAction = (a: NextAction) => {
     setError(null);
-    try {
-      await orchestrator.refine(input, forceMore);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const handleApprove = async () => {
-    setError(null);
-    try {
-      await orchestrator.approveAndRun();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+    if (a === 'startOver') useOneShotJobStore.getState().reset();
+    else if (a === 'cancel') orchestrator.cancel();
+    else if (a === 'resume' || a === 'retryFailed') void guarded(() => orchestrator[a]())();
   };
 
   const isIdle = phase === 'idle';
   const isAnalyzing = phase === 'analyzing' || phase === 'proposing' || phase === 'refining' || phase === 'awaitingRun';
   const isRunning = phase === 'running' || phase === 'completed' || phase === 'failed';
   const showDistribution = phase === 'proposing' || phase === 'refining' || phase === 'awaitingRun';
-
-  const distData = distribution ? distributionToBuckets(distribution) : null;
 
   return (
     <>
@@ -152,10 +133,19 @@ export function OneShotPanel({ t }: Props) {
           <CatalogPickerForm
             t={t}
             catalogInput={catalogInput}
-            hintInput={hintInput}
             onCatalogChange={setCatalogInput}
-            onHintChange={setHintInput}
-            onStart={() => { void handleStart(); }}
+            onStart={() => { void handleAnalyze(); }}
+            onPickGap={(g) => { void handlePickGap(g); }}
+          />
+        )}
+
+        {phase === 'analyzed' && distribution && (
+          <AnalyzedView
+            t={t}
+            distribution={distribution}
+            onPick={(g, hint) => { void handlePickGap(g, hint); }}
+            onPropose={(hint) => { void handlePropose(hint); }}
+            onBack={() => useOneShotJobStore.getState().reset()}
           />
         )}
 
@@ -167,15 +157,10 @@ export function OneShotPanel({ t }: Props) {
               </div>
             )}
 
-            {showDistribution && (
+            {showDistribution && <TargetLine t={t} target={target} />}
+            {showDistribution && distribution && (
               <div style={{ marginBottom: 16 }}>
-                {distData && distData.buckets.length > 0 ? (
-                  <DistributionView t={t} buckets={distData.buckets} total={distData.total} />
-                ) : (
-                  <div className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
-                    No distribution data yet
-                  </div>
-                )}
+                <DistributionDimensions t={t} distribution={distribution} />
               </div>
             )}
 
@@ -205,6 +190,7 @@ export function OneShotPanel({ t }: Props) {
             summary={lastSummary}
           />
         )}
+        {!isIdle && phase !== 'analyzed' && <RunActions t={t} onAction={handleAction} />}
       </div>
       </div>
     </>

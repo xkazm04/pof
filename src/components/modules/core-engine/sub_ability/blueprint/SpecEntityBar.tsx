@@ -8,6 +8,7 @@ import {
 } from '@/lib/chart-colors';
 import { SPELLBOOK_ABILITIES } from '../_shared/data';
 import { CodegenStatusLine } from '../_shared/CodegenStatusLine';
+import { GeneratePreflight } from './GeneratePreflight';
 import { ACCENT } from './data';
 import type { SpecBinding } from './useAbilitySpecBinding';
 
@@ -19,9 +20,14 @@ interface Props {
  * Toolbar that binds the GAS Blueprint Editor to a spellbook entity's
  * EnrichedAbilitySpec: pick the ability, Draft a spec (CLI), Generate GAS
  * effects in UE (CLI), or Save the current effects/tagRules to the DB.
+ * Generate first runs the preflight: a clean spec dispatches at once, otherwise
+ * the run waits behind an inline list of what it would override or TODO.
  */
 export function SpecEntityBar({ binding }: Props) {
-  const { entityId, setEntityId, hydrating, saveState, error, save, draftSpec, generateEffects, isRunning, codegen } = binding;
+  const {
+    entityId, setEntityId, hydrating, saveState, error, save, draftSpec, isRunning, codegen,
+    reviewGenerate, preflight, confirmGenerate, dismissPreflight, applyFix,
+  } = binding;
 
   const btnBase = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 
@@ -55,11 +61,11 @@ export function SpecEntityBar({ binding }: Props) {
             <Sparkles className="w-3.5 h-3.5" /> Draft spec
           </button>
           <button
-            onClick={generateEffects}
+            onClick={reviewGenerate}
             disabled={isRunning}
             className={btnBase}
             style={{ backgroundColor: withOpacity(ACCENT_CYAN, OPACITY_10), color: ACCENT_CYAN, border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_20)}` }}
-            title="Generate buildable UGameplayEffect C++ from the current effects/tag rules"
+            title="Check what the run will override, then generate buildable UGameplayEffect C++ from the current effects/tag rules"
           >
             <Wand2 className="w-3.5 h-3.5" /> Generate GAS effects
           </button>
@@ -76,6 +82,10 @@ export function SpecEntityBar({ binding }: Props) {
           </button>
         </div>
       </div>
+
+      {preflight && !isRunning && (
+        <GeneratePreflight preflight={preflight} onFix={applyFix} onConfirm={confirmGenerate} onDismiss={dismissPreflight} />
+      )}
 
       {/* Status line — honest hydration / save / dispatch feedback. */}
       <div className="mt-1.5 flex items-center gap-2 text-2xs font-mono min-h-[16px]">

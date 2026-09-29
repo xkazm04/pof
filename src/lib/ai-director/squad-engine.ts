@@ -10,53 +10,61 @@ import type {
 import { type Result, ok, err } from '@/types/result';
 import { computeFlankAngle, distance, ringPoint, forwardVector } from '@/lib/ai-director/eqs-geometry';
 import { createXorShift32RNG } from '@/lib/seeded-rng';
+import { eqsComponent, type EQSComponentId } from '@/lib/ai-director/eqs-catalog';
 
 // ── Role Definitions ─────────────────────────────────────────────────────────
+// Generators and tests are references into the EQS catalog (`eqs-catalog.ts`),
+// with a usage note; the composed pipeline below is derived from them.
 
 export const ROLE_DEFINITIONS: Record<SquadRole, SquadRoleDefinition> = {
   aggressor: {
     role: 'aggressor',
     label: 'Aggressor',
     description: 'Frontal engagement — draws attention while flankers reposition',
-    generators: ['AttackPositions'],
-    tests: ['FlankAngle (prefer front)', 'PathExists'],
+    generators: [{ component: 'gen-attack-positions' }],
+    tests: [{ component: 'test-flank-angle', note: 'prefer front' }, { component: 'test-path-exists' }],
     engagementRange: [150, 250],
+    preferredFlankAngle: 10,
     priority: 3,
   },
   flanker: {
     role: 'flanker',
     label: 'Flanker',
     description: 'Side/rear attack — maximizes flank angle for bonus damage',
-    generators: ['AttackPositions'],
-    tests: ['FlankAngle (prefer behind)', 'AllySeparation', 'PathExists'],
+    generators: [{ component: 'gen-attack-positions' }],
+    tests: [{ component: 'test-flank-angle', note: 'prefer behind' }, { component: 'test-ally-separation' }, { component: 'test-path-exists' }],
     engagementRange: [200, 350],
+    preferredFlankAngle: 135,
     priority: 2,
   },
   support: {
     role: 'support',
     label: 'Support',
     description: 'Ranged backline — maintains distance, avoids ally overlap',
-    generators: ['AttackPositions (outer ring)'],
-    tests: ['Distance (prefer far)', 'LineOfSight', 'PathExists'],
+    generators: [{ component: 'gen-attack-positions', note: 'outer ring' }],
+    tests: [{ component: 'test-distance', note: 'prefer far' }, { component: 'test-line-of-sight' }, { component: 'test-path-exists' }],
     engagementRange: [400, 700],
+    preferredFlankAngle: 90,
     priority: 1,
   },
   tank: {
     role: 'tank',
     label: 'Tank',
     description: 'Close-range absorber — stays between target and allies',
-    generators: ['AttackPositions (inner ring)'],
-    tests: ['FlankAngle (prefer front)', 'Distance (prefer close)', 'PathExists'],
+    generators: [{ component: 'gen-attack-positions', note: 'inner ring' }],
+    tests: [{ component: 'test-flank-angle', note: 'prefer front' }, { component: 'test-distance', note: 'prefer close' }, { component: 'test-path-exists' }],
     engagementRange: [100, 200],
+    preferredFlankAngle: 0,
     priority: 4,
   },
   ambusher: {
     role: 'ambusher',
     label: 'Ambusher',
     description: 'Hidden position — waits behind cover for opportunistic strike',
-    generators: ['CoverPositions'],
-    tests: ['LineOfSight (prefer occluded)', 'FlankAngle (prefer behind)', 'PathExists'],
+    generators: [{ component: 'gen-cover-positions' }],
+    tests: [{ component: 'test-line-of-sight', note: 'prefer occluded' }, { component: 'test-flank-angle', note: 'prefer behind' }, { component: 'test-path-exists' }],
     engagementRange: [250, 500],
+    preferredFlankAngle: 160,
     priority: 1,
   },
 };
@@ -247,17 +255,6 @@ export function validateDirectorConfig(
 // pure geometry helpers in `./eqs-geometry` — the single source of truth that
 // mirrors the C++ UEnvQueryTest_FlankAngle.
 
-/** Preferred flank angle per role. */
-function preferredFlankAngle(role: SquadRole): number {
-  switch (role) {
-    case 'aggressor': return 10;   // Front
-    case 'tank': return 0;         // Dead center front
-    case 'flanker': return 135;    // Side-to-behind
-    case 'ambusher': return 160;   // Behind
-    case 'support': return 90;     // Side
-  }
-}
-
 // ── Position Allocation Engine ───────────────────────────────────────────────
 
 /**
@@ -304,7 +301,7 @@ function allocatePosition(
 
     // ── Score 1: Flank angle preference ──
     const flankDeg = computeFlankAngle(fwdX, fwdY, px, py);
-    const preferred = preferredFlankAngle(role);
+    const preferred = roleDef.preferredFlankAngle;
     const flankScore = 1 - Math.abs(flankDeg - preferred) / 180;
 
     // ── Score 2: Ally separation ──
@@ -346,59 +343,82 @@ function allocatePosition(
 
 // ── Composed EQS Pipeline ────────────────────────────────────────────────────
 
+/**
+ * Components the TS allocator actually models: the ring generator, the flank /
+ * separation / range (Distance) scores, the target + ally contexts and the
+ * priority loop. Cover generation, LOS traces and nav reachability need level
+ * geometry and a navmesh, so they only run in UE5 — flagged `simulated: false`.
+ */
+const SIMULATED_COMPONENTS: ReadonlySet<EQSComponentId> = new Set<EQSComponentId>([
+  'ctx-target-actor', 'ctx-squad-allies', 'gen-attack-positions',
+  'test-flank-angle', 'test-ally-separation', 'test-distance', 'squad-director',
+]);
+
+/** Squad-wide steps the director adds for every member, whatever the roles declare. */
+const SQUAD_WIDE: ReadonlySet<EQSComponentId> = new Set<EQSComponentId>([
+  'ctx-target-actor', 'ctx-squad-allies', 'test-ally-separation', 'squad-director',
+]);
+
+/**
+ * Roles present in the formation, in the order the engine allocates them:
+ * priority descending, ties in declaration order (the member sort is stable).
+ */
+export function rolesByPriority(formation: SquadFormation): SquadRole[] {
+  return [...new Set(formation.roles.filter((r) => r.count > 0).map((r) => r.role))]
+    .sort((a, b) => ROLE_DEFINITIONS[b].priority - ROLE_DEFINITIONS[a].priority);
+}
+
+function composedStep(id: EQSComponentId, description: string): ComposedEQSStep {
+  const c = eqsComponent(id);
+  return {
+    componentId: id,
+    label: c.label,
+    cppClass: c.cppClass,
+    kind: c.kind,
+    description,
+    ...(c.cost ? { cost: c.cost } : {}),
+    simulated: SIMULATED_COMPONENTS.has(id),
+  };
+}
+
+/**
+ * Derive the squad's composed pipeline from the roles it allocates: the shared
+ * contexts, each generator/test some present role declares (in allocation order,
+ * annotated with who uses it and how), the squad-wide separation test, the nav
+ * filter last, then the director and the result.
+ */
 function buildComposedPipeline(formation: SquadFormation): ComposedEQSStep[] {
-  const uniqueRoles = [...new Set(formation.roles.map(r => r.role))];
-  const steps: ComposedEQSStep[] = [
-    {
-      label: 'TargetActor',
-      cppClass: 'UEnvQueryContext_TargetActor',
-      kind: 'context',
-      description: 'Resolve target actor from blackboard for all squad queries',
-    },
-    {
-      label: 'SquadContext',
-      cppClass: 'UEnvQueryContext_SquadAllies',
-      kind: 'context',
-      description: 'Resolve positions of all squad allies for separation scoring',
-    },
-    {
-      label: 'AttackPositions',
-      cppClass: 'UEnvQueryGenerator_AttackPositions',
-      kind: 'generator',
-      description: `Generate ring candidates per role (${uniqueRoles.join(', ')})`,
-    },
-    {
-      label: 'FlankAngle',
-      cppClass: 'UEnvQueryTest_FlankAngle',
-      kind: 'test-score',
-      description: 'Score by angle from target forward — preferred angle varies per role',
-    },
-    {
-      label: 'AllySeparation',
-      cppClass: 'UEnvQueryTest_AllySeparation',
-      kind: 'test-score',
-      description: 'Score by minimum distance to already-allocated ally positions',
-    },
-    {
-      label: 'PathExists',
-      cppClass: 'UEnvQueryTest_PathExists',
-      kind: 'test-filter',
-      description: 'Filter unreachable positions via synchronous nav path query',
-    },
-    {
-      label: 'Director Allocate',
-      cppClass: 'UARPGSquadDirector',
-      kind: 'director',
-      description: `Sequentially allocate positions by priority: ${uniqueRoles.join(' → ')}`,
-    },
+  const roles = rolesByPriority(formation);
+  const usage = new Map<EQSComponentId, string[]>();
+  for (const role of roles) {
+    const def = ROLE_DEFINITIONS[role];
+    for (const ref of [...def.generators, ...def.tests]) {
+      const users = usage.get(ref.component) ?? [];
+      users.push(ref.note ? `${def.label} (${ref.note})` : def.label);
+      usage.set(ref.component, users);
+    }
+  }
+  const declared = (kind: ComposedEQSStep['kind']) =>
+    [...usage.keys()]
+      .filter((id) => !SQUAD_WIDE.has(id) && eqsComponent(id).kind === kind)
+      .map((id) => composedStep(id, `${eqsComponent(id).summary} — used by ${usage.get(id)!.join(', ')}`));
+
+  return [
+    composedStep('ctx-target-actor', 'Resolve target actor from blackboard for all squad queries'),
+    composedStep('ctx-squad-allies', 'Resolve positions of all squad allies for separation scoring'),
+    ...declared('generator'),
+    ...declared('test-score'),
+    composedStep('test-ally-separation', 'Score by minimum distance to already-allocated ally positions — applied to every member'),
+    ...declared('test-filter'),
+    composedStep('squad-director', `Sequentially allocate positions by priority: ${roles.join(' → ')}`),
     {
       label: 'Formation',
       cppClass: '',
       kind: 'result',
       description: `${formation.size} members positioned in ${formation.name} formation`,
+      simulated: true,
     },
   ];
-  return steps;
 }
 
 // ── Main Simulation ──────────────────────────────────────────────────────────

@@ -37,13 +37,14 @@ describe('fireboltAt', () => {
   const n = fireboltAt(caster, 1, 5);
   it('computes damage, cast timing (20 ticks/s), and casts per pool', () => {
     expect(n.damage).toEqual({ minimum: 4, maximum: 13, mean: 8.5 }); // 20/8 → 2, + 1 + 1
-    expect(n.castTime).toBeCloseTo(0.5);
+    expect(n.castTime).toBeCloseTo(0.45);
     expect(n.releaseTime).toBeCloseTo(0.3);
     expect(n.manaRegenPerSec).toBe(0);
     expect(n.castsPerPool).toBe(4); // 21 / 5
   });
   it('clamps to-hit', () => {
     expect(n.toHit(1, 0)).toBeCloseTo(0.68);
+    expect(n.toHit(1, 99)).toBeCloseTo(0.68); // Ordinary spell missiles leave _midist at zero.
     expect(n.toHit(60, 0)).toBeCloseTo(0.05);
   });
   it('refuses a spell level the law does not state a cost for', () => {
@@ -60,9 +61,9 @@ describe('seedSpellSteps — Balance', () => {
   const other = row({ id: 'TestNova', name: 'Test Nova', manaCost: '5', flags: 'Lightning' });
 
   it('seeds Balance only for a spell with a law, and only with a named caster', () => {
-    expect(seedSpellSteps(bolt).map((s) => s.step)).toEqual(['Effect Logic']);
-    expect(seedSpellSteps(other, caster).map((s) => s.step)).toEqual(['Effect Logic']);
-    expect(seedSpellSteps(bolt, caster).map((s) => s.step)).toEqual(['Effect Logic', 'Balance']);
+    expect(seedSpellSteps(bolt).map((s) => s.step)).toEqual(['Effect Logic', 'Applies Status']);
+    expect(seedSpellSteps(other, caster).map((s) => s.step)).toEqual(['Effect Logic', 'Applies Status']);
+    expect(seedSpellSteps(bolt, caster).map((s) => s.step)).toEqual(['Effect Logic', 'Balance', 'Applies Status']);
   });
 
   it('fills Effect Logic\'s baseDamage from the law only when it can', () => {
@@ -72,10 +73,15 @@ describe('seedSpellSteps — Balance', () => {
 
   it('writes a cast-limited hit rate the real Balance step reconciles', () => {
     const seed = seedSpellSteps(bolt, caster)[1];
-    expect(seed.data.balance).toMatchObject({ baseDamage: 8.5, castTime: 0.5, limiter: 'castTime', hitDPS: 17, manaRegenPerSec: 0 });
+    expect(seed.data.balance).toMatchObject({ baseDamage: 8.5, castTime: 0.45, limiter: 'castTime', hitDPS: 18.889, manaRegenPerSec: 0 });
+    const balance = seed.data.balance as Record<string, unknown>;
+    balance.kind = 'damage';
+    balance.components = ['hitDPS'];
+    balance.normalizedPower = balance.hitDPS;
+    balance.tierTarget = balance.hitDPS;
     const step = getCatalogPipeline('spellbook')!.steps.find((s) => s.label === 'Balance')!;
     const results = allOfMembers(step.accept!)!.map((c) => c(seed.data));
     expect(results.find((r) => r.label.startsWith('hitDPS'))?.status).toBe('pass');
-    expect(results.find((r) => r.label.startsWith('sustainedDPS'))?.status).toBe('pass');
+    expect(results.find((r) => r.label.startsWith('Normalized power'))?.status).toBe('pass');
   });
 });

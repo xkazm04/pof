@@ -62,3 +62,59 @@ describe('cliPanelStore.createSession cap guard', () => {
     expect(sessions.map((s) => s.id)).not.toContain(returned);
   });
 });
+
+// ── One run-lifecycle door (scan-sweep --challenge cli-terminal-shell/A) ──────
+// A run begins with beginRun(id) -> seq and ends with ONE atomic endRun(id, seq,
+// outcome). A run START clears the previous run's outcome; a stale seq is ignored.
+describe('cliPanelStore run door (beginRun / endRun)', () => {
+  function freshSession(): string {
+    return useCLIPanelStore.getState().createSession({ sessionKey: 'k', moduleId: 'arpg-combat' });
+  }
+
+  it('beginRun after a confirmed run clears the previous outcome and bumps runSeq by 1', () => {
+    const id = freshSession();
+    const s = useCLIPanelStore.getState();
+    const seq1 = s.beginRun(id);
+    s.endRun(id, seq1, { success: true, callbackStatus: 'confirmed' });
+    const before = useCLIPanelStore.getState().sessions[id];
+    expect(before.lastTaskSuccess).toBe(true);
+    expect(before.lastCallbackStatus).toBe('confirmed');
+
+    const seq2 = useCLIPanelStore.getState().beginRun(id);
+    const after = useCLIPanelStore.getState().sessions[id];
+    expect(after.isRunning).toBe(true);
+    expect(after.lastTaskSuccess).toBeNull();
+    expect(after.lastCallbackStatus).toBeNull();
+    expect(after.runSeq).toBe((before.runSeq ?? 0) + 1);
+    expect(seq2).toBe(seq1 + 1);
+  });
+
+  it('endRun flips isRunning false in ONE notification that already carries the outcome', () => {
+    const id = freshSession();
+    const seq = useCLIPanelStore.getState().beginRun(id);
+    const seen: Array<{ isRunning: boolean; success: boolean | null; cb: unknown }> = [];
+    const unsub = useCLIPanelStore.subscribe((st) => {
+      const sess = st.sessions[id];
+      seen.push({ isRunning: sess.isRunning, success: sess.lastTaskSuccess, cb: sess.lastCallbackStatus });
+    });
+    useCLIPanelStore.getState().endRun(id, seq, { success: false, callbackStatus: 'failed' });
+    unsub();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toEqual({ isRunning: false, success: false, cb: 'failed' });
+  });
+
+  it('endRun with a stale seq while the next run is running is a no-op', () => {
+    const id = freshSession();
+    const staleSeq = useCLIPanelStore.getState().beginRun(id);
+    useCLIPanelStore.getState().endRun(id, staleSeq, { success: false, callbackStatus: 'failed' });
+    useCLIPanelStore.getState().beginRun(id); // run staleSeq + 1 is now running
+    const snapshot = useCLIPanelStore.getState().sessions[id];
+
+    useCLIPanelStore.getState().endRun(id, staleSeq, { success: true, callbackStatus: 'confirmed' });
+    const sess = useCLIPanelStore.getState().sessions[id];
+    expect(sess).toBe(snapshot); // untouched
+    expect(sess.isRunning).toBe(true);
+    expect(sess.lastTaskSuccess).toBeNull();
+    expect(sess.lastCallbackStatus).toBeNull();
+  });
+});

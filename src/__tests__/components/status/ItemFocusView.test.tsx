@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { ItemFocusView } from '@/components/status/ItemFocusView';
 import { useCatalogStore } from '@/stores/catalogStore';
+import { _resetArtifactCache } from '@/components/layout-lab/labArtifactCache';
+import { invalidateJudgeVerdicts } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
+import { toStepSummary } from '@/components/layout-lab/stepSummary';
 import type { CatalogEntityBase } from '@/lib/catalog/types';
+import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 vi.mock('next/font/google', () => {
   const f = () => ({ className: 'font-mock' });
@@ -11,21 +15,26 @@ vi.mock('next/font/google', () => {
 
 // Per-catalog artifacts: the sword produced Economy but NOT 3D-Mesh; the loot table
 // produced its one step.
-vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  fetchArtifacts: vi.fn((catalogId: string) => {
-    const byCatalog: Record<string, unknown[]> = {
-      items: [{ catalogId: 'items', entityId: 'sword', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L0' }],
-      'loot-tables': [{ catalogId: 'loot-tables', entityId: 'lt1', step: 'Drop-Rates', data: {}, ueAssets: [], status: 'pass', tier: 'L0' }],
-      'icon-sets': [],
-    };
-    return Promise.resolve(byCatalog[catalogId] ?? []);
-  }),
-}));
+const BY_CATALOG: Record<string, PipelineArtifact[]> = {
+  items: [{ catalogId: 'items', entityId: 'sword', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L0' }],
+  'loot-tables': [{ catalogId: 'loot-tables', entityId: 'lt1', step: 'Drop-Rates', data: {}, ueAssets: [], status: 'pass', tier: 'L0' }],
+  'icon-sets': [],
+};
 
-vi.mock('@/lib/api-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/api-utils')>();
-  return { ...actual, tryApiFetch: vi.fn().mockResolvedValue({ ok: true, data: [] }) };
-});
+/** The server, at the wire. `failing` names catalogs whose artifact read answers a 500. */
+let urls: string[] = [];
+let failing = new Set<string>();
+let verdictsOk = true;
+function answer(url: string): unknown {
+  if (url.startsWith('/api/judge-verdicts')) {
+    return verdictsOk ? { success: true, data: [] } : { success: false, error: 'HTTP 500' };
+  }
+  const catalogId = new URLSearchParams(url.split('?')[1] ?? '').get('catalogId') ?? '';
+  if (failing.has(catalogId)) return { success: false, error: 'HTTP 500' };
+  const rows = BY_CATALOG[catalogId] ?? [];
+  if (url.startsWith('/api/pipeline-artifacts/summary')) return { success: true, data: rows.map(toStepSummary) };
+  return { success: true, data: rows };
+}
 
 // Fixed tiny pipelines so cells are deterministic (keep registerCatalogPipeline intact).
 vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
@@ -50,6 +59,15 @@ function ent(catalogId: string, id: string, name: string, links: CatalogEntityBa
 }
 
 beforeEach(() => {
+  urls = [];
+  failing = new Set();
+  verdictsOk = true;
+  _resetArtifactCache();
+  invalidateJudgeVerdicts();
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    urls.push(String(url));
+    return { ok: true, status: 200, json: async () => answer(String(url)) };
+  }));
   useCatalogStore.setState({
     entitiesByCatalog: {
       items: { sword: ent('items', 'sword', 'Vael Blade', [{ catalogId: 'icon-sets', entityId: 'icon1', role: 'icon' }]) },
@@ -59,7 +77,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe('ItemFocusView', () => {
   it('renders the focus entity, its reverse dependent, and its forward binding', async () => {
@@ -91,6 +112,33 @@ describe('ItemFocusView', () => {
     expect(lootBtn).toBeTruthy();
     fireEvent.click(lootBtn!);
     expect(onFocus).toHaveBeenCalledWith('loot-tables', 'lt1');
+  });
+
+  it('renders a linked catalog whose read failed as UNKNOWN, never 0% / unwired', async () => {
+    failing = new Set(['icon-sets']);
+    const { container } = render(<ItemFocusView focus={{ catalogId: 'items', entityId: 'sword' }} onFocus={vi.fn()} />);
+    const row = await waitFor(() => {
+      const r = container.querySelector('[data-testid="unknown-node-icon-sets-icon1"]');
+      expect(r).toBeTruthy();
+      return r!;
+    });
+    expect(row.textContent).toContain('UNKNOWN');
+    expect(row.textContent).toContain('HTTP 500');
+    expect(row.textContent).not.toMatch(/\d+%/);
+    // The focus still grades from its own rows.
+    const cells = Array.from(container.querySelectorAll('[role="img"]'));
+    expect(cells.some((c) => (c.getAttribute('aria-label') ?? '').startsWith('Economy'))).toBe(true);
+    // Only blob-free reads were paid for.
+    expect(urls.filter((u) => u.startsWith('/api/pipeline-artifacts?'))).toEqual([]);
+  });
+
+  it('says PARTIAL when judge verdicts did not load', async () => {
+    verdictsOk = false;
+    const { container } = render(<ItemFocusView focus={{ catalogId: 'items', entityId: 'sword' }} onFocus={vi.fn()} />);
+    await waitFor(() => {
+      const n = [...container.querySelectorAll('[role="status"]')].find((el) => (el.textContent ?? '').includes('PARTIAL'));
+      expect(n?.textContent).toContain('judge verdicts did not load');
+    });
   });
 
   it('shows the empty prompt when no entity is focused', () => {

@@ -100,6 +100,17 @@ describe('items pipeline', () => {
     expect(typeof afWiring.activatedBy).toBe('string');
     expect(Array.isArray(afWiring.dependencies)).toBe(true);
     expect(typeof afWiring.verification).toBe('string');
+    const fixedUniqueAffixes = {
+      ...affixesOut.data,
+      powers: [{ power: 'SYNTH_POWER', min: 2, max: 4 }],
+      affixes: { ...af, rarityMode: 'fixed' },
+    };
+    expect(affixes.accept(fixedUniqueAffixes).status).toBe('pass');
+    const rolledWithoutBudget = {
+      ...affixesOut.data,
+      affixes: { ...af, rarityMode: 'rolled', budget: undefined },
+    };
+    expect(affixes.accept(rolledWithoutBudget).status).toBe('fail');
 
     // ── Damage / Implicit: baseDPS within ±30% of 12.5 (ARPG-LAWS §1c) ────────
     // item-1: APS derived from Speed 1.2s → 0.8333; baseDPS = 15 × 0.8333 ≈ 12.5
@@ -124,6 +135,15 @@ describe('items pipeline', () => {
     const expectedDPS = ((dMin + dMax) / 2) * aps;
     const recordedDPS = dmgOut.data!.baseDPS as number;
     expect(Math.abs(recordedDPS - expectedDPS)).toBeLessThan(0.01);
+    expect(dmg.accept({
+      damage: { slot: 'Ring', itemClass: 'Misc', implicit: 'none' },
+    }).status).toBe('pass');
+    expect(dmg.accept({
+      damage: {
+        slot: 'Weapon', itemClass: 'Weapon', implicit: 'none', damageMin: 3, attackSpeed: 1,
+      },
+      baseDPS: 3,
+    }).status).toBe('fail');
 
     // ── Economy: price/power ratio in 0.8–1.2× band ───────────────────────────
     const economy = p!.steps.find((s) => s.label === 'Economy')!;

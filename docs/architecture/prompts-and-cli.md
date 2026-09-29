@@ -21,6 +21,8 @@ calls in strings.
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
 | `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
+| `src/lib/prompt-evolution/challenge.ts` | `planChallenge()` — pure preflight for "test version X against the current one": incumbent (active, else seeded root) = arm A, diff summary, per-arm judge evidence (unjudged = `null`), blocks (`already-current`, `identical-prompt`, `test-running`, `no-incumbent`, `unknown-version`) |
+| `src/lib/prompt-evolution/verdict.ts` | THE A/B verdict seam — `readFitness()` / `readTestVerdict()` (basis, rates, band, tie, per-arm shortfall, `canConclude`) and `decideWinner()` (the one crowning rule) |
 | `src/lib/prompt-evolution/judge-fitness.ts` | `stampPromptVersion()` / `computeVersionFitness()` — joins judge verdicts to the quality-pack version that produced the artifact |
 | `src/lib/prompts/quality/index.ts` | Quality pack + `PROMPT_VERSION` (hand-bumped) + `packFingerprint()` drift detector |
 | `src/components/cli/skills.ts` | 12 `SkillPack` records; `buildSkillsPrompt()` / `resolveSkillsFromPatterns()` |
@@ -210,12 +212,33 @@ entity id. `MaterialsView` dispatches it via `useModuleCLI.execute`, never
 to `builder-material-configurator.md`) and
 `__tests__/lib/prompt-evolution/material-configurator-rail.test.ts`.
 
-**Remaining gap: 9 standalone builders still dispatch through raw `sendPrompt`**
-and stay invisible to prompt evolution — `material-patterns`, `post-process`,
+Phase 2 converted **post-process** the same way: `TaskFactory.postProcess(spec)`,
+a verbatim `post-process` handler and `postProcessVariantKey(spec)`. The config
+is the stack's one spec — `toStackSpec(effects, resolution)` in
+`lib/post-process-studio/stack-spec.ts` (live param values, estimator ms at the
+chosen resolution, budget, disabled ids) — so `buildPostProcessPrompt(spec)` is
+the only post-process builder and prints the GPU budget. Both the Recipe Studio
+and the Materials Post-Process tab dispatch it via `useModuleCLI.execute`; the
+old server-side builder (`POST /api/post-process-studio`) is retired (400, GET
+presets stays). Pinned by `task-post-process.md` (byte-identical to
+`builder-post-process.md`) and `prompt-evolution/post-process-rail.test.ts`.
+
+**Remaining gap: 8 standalone builders still dispatch through raw `sendPrompt`**
+and stay invisible to prompt evolution — `material-patterns`,
 `style-transfer` (`MaterialsView`), `audio-scene`, `audio-events`
 (`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `level-design`
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
 (`AIBehaviorView`). Converting each is the same three-part move as above.
+
+**Asset-Code Oracle remedies start on the rail (remedy -> rescan -> key diff).**
+`src/lib/asset-oracle/oracleRemedy.ts` plans only the task body for the two
+violation types a CLI can fix without a delete (`naming-mismatch`: editor rename
+that leaves redirectors; `missing-asset`: the BP subclass). `useAssetCodeOracle`
+dispatches it as ONE `ask-claude` CLITask via `useModuleCLI.execute` (session
+`asset-oracle-remedy`), so the handler composes the header. Its `onComplete`
+re-runs the oracle, and `oracleDiff` compares the stable violation ids
+(`<type>:<subject>`, recorded per scan as `violationKeys` in `marketplaceStore`)
+to show whether each targeted key resolved.
 
 **Checklist runs are scored by the judge fleet, not by their own report
 (phase 1).** A checklist callback POSTs `{ completed }` to
@@ -235,14 +258,30 @@ byte-identical to before, so it costs the judge fleet nothing.
 
 `computeVariantFitness` already joins artifacts to verdicts by
 `(catalogId, entityId, step)`, so a `checklist-runs` verdict resolves a checklist
-variant's fitness with no change. `ab-testing.readFitness(test, judged)` is the
-new seam: it uses judged pass rates when BOTH arms clear
+variant's fitness with no change. `verdict.readFitness(test, judged)` (re-exported
+from `ab-testing`) is the seam: it uses judged pass rates when BOTH arms clear
 `MIN_JUDGED_VERDICTS_PER_VARIANT`, otherwise falls back to the self-reported
 completions and SAYS which basis it used (`FitnessReading.basis` + `.note`).
 `pickVariant` exploits on that reading and `evaluateTestWithBasis` runs the same
 proportion z-test over it; `engine.judgeScoresByVariant()` supplies the scores and
 returns `undefined` (never throws) when nothing has been judged, which is what
-makes the fall back automatic. **Not yet done:** `step-facts.json` has no
+makes the fall back automatic.
+
+**One verdict reading.** `lib/prompt-evolution/verdict.ts` is the only place an
+arm's rate, the 0.05 tie margin (`TIE_MARGIN`), the z-test band
+(`strong|moderate|weak|none`), the decide-now shortfall and the basis are
+computed. `decideWinner(test, reading)` is the single crowning rule (a gap of at
+least the margin wins on results; closer is a tie broken by the lower average
+duration) and both `evaluateTestWithBasis` (auto) and `forceConclude(test, judged)`
+(decide-now) crown through it — so pressing decide-now on judged evidence cannot
+overturn what the judges found, and a tie never falls to slot A by position.
+`readTestVerdict(test, judged)` → `ABTestVerdict` is computed at READ time, never
+stored: `get-tests` / `record-trial` / `conclude-test` return `ABTestView` (the row +
+`verdict`), `explainTestVerdict(test, labelA, labelB, verdict)` words it (no mirrored
+constant), and `ABTestCard` shows the basis, gates decide-now on
+`verdict.canConclude` and names the per-arm shortfall. A refused conclude (409) is
+returned by the store as `{ ok: false, reason }` and shown on the card — it never
+writes `store.error`, which would hide every panel of the view. **Not yet done:** `step-facts.json` has no
 `checklist-runs` rows, so the judge fleet does not yet enumerate the catalog.
 
 Deliberate **exemptions** are recorded in that same rail: `project-setup/prompts.ts`
@@ -330,8 +369,59 @@ source is parsed the spellbook's audit categories are derived from that real
 breakdown (`buildLiveTagAuditCategories`), never the static
 `TAG_AUDIT_CATEGORIES` sample array.
 
+**One tag-rule direction.** A `TagRule` is **ability-owned**: `sourceTag` is the
+ability the rule lives on, `targetTag` the gating tag, and `type` the GAS
+container it lands in (`blocks` → `ActivationBlockedTags`, `requires` →
+`ActivationRequiredTags`, `cancels` → `CancelAbilitiesWithTag`) — what GAS
+stores on the ability, and what `deriveDefaultSpec`, forge adoption, the
+draft-spec callback schema and `buildGenerateAbilityBundlePrompt` (which reads
+only `targetTag`) all speak. The GAS Blueprint editor's archetype templates are
+written as kit-wide patterns ("`State.Dead` blocks `Ability.*`"), so
+`bindRulesToAbility(rules, abilityTag)` in `@/lib/ability/tag-rules` is the one
+boundary where they enter a spec: template apply flips a pattern that targets the
+bound ability, drops (with a named reason, counted on the template badge) one that
+targets another ability or is a state→state effect-level rule, and passes an
+ability-owned rule through unchanged (idempotent). The Tag Rules panel reads rows
+as "<ability> blocked by <gating tag>", Add Rule creates an ability-owned rule,
+Unmatched is judged on the gating tag only, and the wiring graph links effects to
+rules via `effectRuleLinks` (an effect that grants a rule's gating tag drives it).
+The same module owns the shared `tagsOverlap` matcher (exact, `X.*` wildcard, GAS
+parent/child).
+
+**Generate preflight.** The spec bar's "Generate GAS effects" click goes through
+`reviewGenerate()` on `useAbilitySpecBinding`, not straight to dispatch.
+`preflightGenerate({ scalars, effects, attributes })` in
+`@/lib/ability/generate-preflight` predicts what the prompt will do to the design:
+`nothing-to-generate` (block: no effects, the run would stop), `damage-override`
+(an authored Health hit differs from the catalog damage pin; Fix sets it to
+`-damage`), `damage-unpinned` (no effect reduces Health, e.g. every template
+damages through `IncomingDamage`; surface-only with `fix: null`, because where the
+pin lands is a design call and auto-adding Health would author double damage),
+`cooldown-override` (an effect "Cooldown" that disagrees with the resolved ability
+cooldown; it is dropped and never becomes a GE Period) and `unknown-attribute`
+(becomes `// TODO: unknown attribute`; Fix adds it to the attribute set). The
+cooldown prediction calls `resolveGenerateCooldown`, which
+`buildGenerateAbilityBundlePrompt` itself uses, so the preview and the prompt share
+one rule. Which Health hit is "primary" is the preflight's own guess (the prompt
+leaves it to the model). A clean spec dispatches on the first click; otherwise the
+inline `GeneratePreflight` panel offers per-finding Fix, "Fix all & generate"
+(`confirmGenerate({ applyFixes: true })` patches the editor through `onHydrate`,
+then dispatches the patched effects) and "Generate anyway". `generateEffects()`
+still dispatches immediately, and the prompt text is unchanged.
+
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.
+
+**Batch feature review is scoped.** `POST /api/feature-matrix/batch-review` (body typed as
+`BatchReviewStartRequest` in `src/types/batch-review.ts`) runs `featureReview` tasks one
+module at a time; an optional `moduleIds` subset limits the batch (validated by
+`resolveBatchModules` in `src/lib/evaluator/stale-review-plan.ts` — an unknown id is a 400
+naming it, nothing starts), omitted = every module with definitions. The one client is
+`useBatchReview` (poll / start / abort / clear, `onSettled` once per running -> finished):
+the Scanner tab's `BatchReviewPanel` starts all modules, the Quality tab's
+`AggregateQualityDashboard` starts only its stale set (`selectStaleModuleIds`) or one
+selected module, badges each heatmap cell from `cellReviewState`, and refetches its
+roll-up when the batch settles.
 
 #### `buildTaskPrompt(task, ctx)` (`cli-task.ts:384`)
 
@@ -478,9 +568,10 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
 **Callback truth (additive completion status).** The run's completion signal carries a
 `callbackStatus` — `confirmed` (every marker's POST succeeded), `failed` (a marker was
 emitted but its POST was rejected), or `missing` (no marker at all). It is resolved inside
-the existing `callbackSettleMax` race, so it **never blocks or delays** the `isRunning`
-release — it is purely additive truth. It flows `useTaskQueue.onTaskComplete(id, success,
-{ callbackStatus })` → `cliPanelStore.setSessionRunning(…, callbackStatus)` (stored as
+the existing `callbackSettleMax` race, so the `isRunning` release is **bounded, never
+indefinite** — the session stays running (`runPhase: 'settling'`) only until the race ends.
+It flows `useTaskQueue.onTaskComplete(id, success, { callbackStatus })` → `bindSessionRun`
+→ `cliPanelStore.endRun(id, seq, { success, callbackStatus })` (stored as
 `lastCallbackStatus`) → `useModuleCLI.onComplete(success, callbackStatus)`. `useChecklistCLI`
 flips a checklist item to done **only on `confirmed`**; a completed-but-unconfirmed run
 (missing/failed callback → the `/api/checklist/complete` POST never landed) leaves the item
@@ -492,7 +583,42 @@ stream `onerror`, abort, and the stuck-task poller — share one `completedRef` 
 run completes exactly once. The `result` path latches synchronously on arrival (before its
 bounded callback-settle race), and the poller re-checks the latch after its async
 `getTaskStatus`, closing the narrow window in which it could otherwise double-fire
-`onTaskComplete`.
+`onTaskComplete`. Every one of those paths then ends through ONE `finishRun(success,
+{ callbackStatus })`, which releases `dispatchingRef`, records the registry completion and
+fires `onTaskComplete` — no terminal path can skip one of them (the stuck-poller paths used
+to leave `dispatchingRef` set and silently drop every later dispatch).
+
+**One run-lifecycle door.** A run's session state is written ONLY through the sequenced
+door in `cliPanelStore`: `beginRun(id) → seq` (isRunning=true, clears the previous run's
+`lastTaskSuccess`/`lastCallbackStatus`, bumps `runSeq`), `settleRun(id, seq)` (stream
+ended → `runPhase: 'settling'`, still isRunning), and `endRun(id, seq, outcome)`
+(isRunning=false AND the outcome in one store write; a stale `seq` is a no-op).
+`InlineTerminal` wires the terminal through `bindSessionRun(sessionId)`
+(`store/sessionRun.ts`): `onTaskStart` (fired synchronously by `useTaskQueue` for queued AND
+interactive runs) begins, `onStreamingChange(false)` settles, `onTaskComplete` ends. So every
+consumer of the isRunning edge — `useModuleCLI`, `event-bus-bridge` (`cli.task.completed`),
+the SidebarL2 badge — reads THIS run's outcome, and module buttons stay disabled through the
+settle window instead of re-enabling while the terminal would still drop the dispatch.
+
+**Post-run bar acts on run facts (resubmit path).** `SuggestedActions` renders
+`generateSuggestions(session)` from `suggestionIntents.ts` — pure, keyed on the session's
+`lastTaskType`, `lastTaskSuccess`, `lastCallbackStatus`, `moduleId`, `lastDispatch` and
+`pendingCallbacks` (never the `sessionKey` spelling, never a sentinel prompt). Actions are
+typed: `redispatch` (Retry replays the exact last raw prompt + task type; `resume: false` on
+the `pof-cli-prompt` event asks for a fresh Claude session), `resume` ("Collect missing
+result": a success whose prompt carried `@@CALLBACK:<id>` but reported `missing` asks the
+same session for exactly those ids — no "next item" is offered), `resubmit-callback`, and
+`navigate` (the owning module's overview). `useTaskQueue` reports `onDispatch({ prompt,
+taskType })` from `submitPrompt` and `onCallbacksUnresolved(markers)` from the result path
+(the markers whose POST failed, dropped if a newer run began); `InlineTerminal` stores them
+via `recordDispatch` / `setPendingCallbacks`. **Resubmit:** `resubmitPendingCallbacks(id)`
+re-POSTs each retained payload through `resolveCallback` (the registry keeps an entry until
+its POST succeeds) — no new run, no tokens — then `recordCallbackResubmit(id, seq, remaining)`
+sets `lastCallbackStatus` to `confirmed` (none remain) or `failed` (the rest kept). A payload
+the server rejected on validation fails identically; it recovers transport/transient
+failures. `lastDispatch`/`pendingCallbacks` are in-memory only (stripped by `partialize`,
+`pendingCallbacks` cleared by `beginRun`). `useChecklistCLI` is not re-signalled by a
+resubmit; its own `retryUnconfirmed()` stays.
 
 ---
 
@@ -521,10 +647,13 @@ const { execute, sendPrompt, isRunning } = useModuleCLI({
 3. Calls `dispatchPromptWhenReady(tabId, prompt)` — waits for the terminal's
    readiness handshake rather than a fixed delay.
 
-Running-state transitions are detected via `prevRunningRef` + `isRunning` diff.
-On `running → stopped`, a `setTimeout` with `UI_TIMEOUTS.raceConditionBuffer` reads
-`lastTaskSuccess` from the settled store, records analytics via `recordSessionOutcome`,
-and fires `onComplete(success)`. (`useModuleCLI.ts:70`)
+Completion is detected by a `useCLIPanelStore.subscribe` listener on the session's
+`endRun` transition (isRunning true → false). The outcome (`lastTaskSuccess`,
+`lastCallbackStatus`) is captured from that same state — the run door writes both in one
+update — then analytics (`recordSessionOutcome`) and `onComplete(success, callbackStatus)` are
+delivered in a microtask, so a re-dispatching `onComplete` never re-enters the store
+mid-notification. (There is no timed read: the old 50 ms `raceConditionBuffer` read raced a
+callback settle of up to `callbackSettleMax` and returned the previous run's outcome.)
 
 ---
 
@@ -551,14 +680,23 @@ handler puts into the callback's `staticFields`. The loop has three legs:
    a failure is logged and never blocks marking the item complete. The response reports
    `trialRecorded` so the loop is observable.
 3. **Conclude** — `evaluateTest` may auto-conclude once the z-test/volume gate opens.
-   The manual "decide now" path (`concludeTest` → `forceConclude`) returns
-   `Result<ABTest, string>` and **refuses below `MIN_TRIALS_PER_VARIANT` (3) trials per
+   The manual "decide now" path (`concludeTest` → `forceConclude(test, judged)`) returns
+   `Result<ABTestView, string>`, crowns on the same reading and tie rule as auto-conclude, and **refuses below `MIN_TRIALS_PER_VARIANT` (3) trials per
    arm**, naming the shortfall; the API surfaces that as a 409 so the UI can say why
    nothing was decided. Previously it crowned slot A at zero trials (`rateA >= rateB`
    with both rates 0) — a coin flip dressed as evidence.
 
 Adopting a winner / restoring a version flips the `active` flag, which changes what leg 1
 serves once no test is running.
+
+**One running test per item.** `engine.startABTest` returns `Result<ABTest, string>` and
+refuses — naming the running test — while another test is still `running` on the same
+(module, item); `start-ab-test` answers **409** with that reason. The reason: leg 1 serves
+from the NEWEST running test (`running[running.length - 1]`) while leg 2 books to the
+FIRST running test the served variant is an arm of (`getABTestsForItem` is `created_at ASC`),
+so two concurrent tests sharing a baseline were served by one and counted on the other,
+and the older test's challenger was never served again. Conclude (or let auto-conclude
+finish) before starting the next test on the item.
 
 **Leg 0 — fuel (baseline auto-seeding).** On a fresh DB there are no variants at all, so
 leg 1 returned `null` forever and the rail never fired. The REAL dispatch path
@@ -607,7 +745,19 @@ excluded because they belong to no experiment.
 `OptimizerPanel` now offers "save as challenger variant": pick the checklist item, and
 `usePromptEvolution.handleSaveChallenger` seeds the baseline from the registry prompt
 (idempotent), saves the optimized text via `createVariant`, and starts the A/B test between
-them — so leg 1 begins serving both arms on the next dispatches.
+them — so leg 1 begins serving both arms on the next dispatches. A 409 (a test is already
+running) comes back inline as the save result: the store's `startABTest` returns
+`StartOutcome` (`{ ok, test } | { ok: false, reason }`) and never writes `store.error`.
+
+**Challenge the current version from History.** Each non-current node in
+`PromptVersionTimeline` offers *Challenge current*, which opens `ChallengePreflight`:
+`planChallenge` (see the file map) over the loaded history, `store.abTests` and
+`store.variantFitness` (`loadVariantFitness()` → `get-variant-fitness`, the first client
+reader of that route) — diff incumbent → challenger (`PromptDiffView`), the mutation class,
+each arm's trial stats and judge score or *unjudged*, or the blocker with a link to the
+running test. *Start A/B test* calls `store.startChallenge(challengerId)`, which always
+puts the current version in arm A. The `start-ab-test` suggestion opens History on its
+item (via `store.selectedChecklistItemId`) instead of asking the user to pick a partner.
 
 ---
 
@@ -731,7 +881,13 @@ Before this, 102 of 114 key-graded steps hid at least one graded key from the pr
 section (`referenceValues.ts`) with its source row (REPRODUCE); since W03 (D11) an AUTHORED entity gets the same
 section as `# ENTITY VALUES` (`entityValuesBlock` — stay CONSISTENT, state any change), so every entity's own design
 data reaches its produce prompts. `labIdentityOf` gives every `LabEntity` constructor its canon profile and reference
-in one place. Profile-dependent keys (D14): a canon profile declares its damage-element set
+in one place. **Linked references (2026-09-27, /diablo B33):** beside the sibling steps, a produce prompt also carries
+the reference data of entities LINKED to this one in other catalogs (`src/lib/catalog/reference/linkedReferences.ts`:
+incoming root links plus outgoing links to depth 2 — e.g. a character → its dialog tree's behaviour ledger → the quests
+its handlers reference), under a "Linked reference … ground truth" heading, capped at 16,000 characters with an
+explicit truncation marker. Threaded through `stepPrompt.ts`, `headless.ts`, the one-shot step route and the lab data
+path so lab, headless and preview prompts stay identical. Why: a character producer that never saw the NPC's quests
+and services DENIED them when told not to invent (27 % contradicted claims, W65). Profile-dependent keys (D14): a canon profile declares its damage-element set
 (`canon/elements.ts`: pof fire/ice/lightning/chaos, diablo1 magic/fire/lightning); `resistancesPopulated` grades
 `<element>Res` for the entity's profile and `requiredFieldsOf(checker, canonProfile)` names those keys in the prompt.
 

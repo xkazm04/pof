@@ -11,18 +11,19 @@ import { useCLIPanelStore } from './cliPanelStore';
 export function useCLIRecovery(): void {
   const hasRecovered = useRef(false);
   const sessions = useCLIPanelStore((s) => s.sessions);
-  const setSessionRunning = useCLIPanelStore((s) => s.setSessionRunning);
+  const endRun = useCLIPanelStore((s) => s.endRun);
 
   useEffect(() => {
     if (hasRecovered.current) return;
     hasRecovered.current = true;
 
     // Mark any sessions that claim to be running as not running
-    // (since the actual CLI process wouldn't survive a page refresh)
+    // (since the actual CLI process wouldn't survive a page refresh). The outcome
+    // was never observed, so it is recorded as unknown (null), not as a failure.
     for (const [id, session] of Object.entries(sessions)) {
       if (session.isRunning) {
-        setSessionRunning(id, false);
+        endRun(id, session.runSeq ?? 0, { success: null });
       }
     }
-  }, [sessions, setSessionRunning]);
+  }, [sessions, endRun]);
 }

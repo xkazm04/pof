@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL, OPACITY_10 } from '@/lib/chart-colors';
+import { describeVelocitySample } from '@/lib/roadmap/completion-ledger';
 import type { HolisticHealthViewProps } from './types';
 import { useHolisticHealthView } from './useHolisticHealthView';
 import { SubTab } from './SubTab';
@@ -173,8 +174,12 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
                 </div>
                 <div>
                   <p className="text-2xs text-text-muted">Avg Velocity</p>
-                  <p className="text-lg font-bold text-text">{summary.avgVelocity}</p>
+                  <p className="text-lg font-bold text-text">{summary.avgVelocity ?? '—'}</p>
                   <p className="text-2xs text-text-muted">items/week</p>
+                  {/* A rate never travels without its sample (dated completions, weeks, undated). */}
+                  <p className="text-2xs text-text-muted" data-testid="velocity-provenance">
+                    {describeVelocitySample(summary.velocitySample)}
+                  </p>
                 </div>
               </div>
             </SurfaceCard>

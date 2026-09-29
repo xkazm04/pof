@@ -42,7 +42,15 @@ export function selectForPromotion(wrappers: ReferenceWrapper[], sel: PromoteSel
 
 export function promoteWrappers(wrappers: ReferenceWrapper[], upsert: EntityUpsert, guard?: PromotionGuard): PromoteReport {
   const report: PromoteReport = { promoted: [], refused: [] };
+  const seen = new Set<string>();
   for (const w of wrappers) {
+    // Rows that share a source key (Diablo's three TOWN_COW towners) project to one entity id; upserting each would let the
+    // last row silently overwrite the others (/diablo W16). The first is promoted, the rest are refused and reported.
+    if (seen.has(`${w.catalogId}:${w.entity.id}`)) {
+      report.refused.push({ entityId: w.entity.id, reason: `duplicate entity id in this promotion (${w.wrapperId}) — its source rows share a key; the first row was promoted` });
+      continue;
+    }
+    seen.add(`${w.catalogId}:${w.entity.id}`);
     const unsafe = jsonUnsafeKeys(w.entity);
     if (unsafe.length) {
       report.refused.push({ entityId: w.entity.id, reason: 'payload would not survive JSON persistence', unsafeKeys: unsafe });

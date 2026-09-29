@@ -27,6 +27,11 @@ describe('cooldownOrResourceGate', () => {
     expect(gate({ effect: { cooldown: REFERENCE_GAP, manaCost: 6 } }).status).toBe('pending');
     expect(gate({ effect: { cooldown: -1, manaCost: 6 } }).status).toBe('pending');
   });
+  it('passes a free ability that only its cast animation limits, and holds one with no cast time (W20: Diablo class skills)', () => {
+    expect(gate({ effect: { gatedBy: 'cast-time', castTime: 0.75 } }).status).toBe('pass');
+    expect(gate({ effect: { gatedBy: 'cast-time' } }).status).toBe('pending');
+    expect(gate({ effect: { gatedBy: 'cast-time', castTime: 0.75, cooldown: 3 } }).detail).toMatch(/cooldown 3/);
+  });
   it('tells the producer both ways', () => {
     const shape = requiredFieldsOf(gate).find((r) => r.field === 'effect')?.shape ?? '';
     expect(shape).toMatch(/gatedBy/);

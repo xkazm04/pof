@@ -10,6 +10,7 @@ import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { ensureSummary, getCachedArtifacts, getCachedSummary, useArtifactCacheVersion } from '../labArtifactCache';
 import { resolveCatalogSteps } from '../catalogManifest';
+import { toLabEntity } from '../entityPipeline';
 import {
   buildCatalogCandidates,
   buildCatalogCandidatesFromSummary,
@@ -88,9 +89,7 @@ interface CatalogCacheEntry {
 const catalogCandidateCache = new Map<string, CatalogCacheEntry>();
 
 /** Test-only: forget every memoized catalog derivation. */
-export function _resetGlobalCoachCache(): void {
-  catalogCandidateCache.clear();
-}
+export function _resetGlobalCoachCache(): void { catalogCandidateCache.clear(); }
 
 /** Shallow reference comparison of two dependency lists. */
 function sameDeps(a: unknown[] | undefined, b: unknown[]): boolean {
@@ -181,7 +180,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
         continue;
       }
 
-      const entities = Object.values(entMap).map((e) => ({ id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data }));
+      const entities = Object.values(entMap).map(toLabEntity);
       const shared = {
         catalogId: section.catalogId,
         catalogLabel: section.label,

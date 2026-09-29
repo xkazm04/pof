@@ -4,6 +4,7 @@ import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, RATING_EMPTY, qualityAccentColor,
+  statusBg, statusBorder,
 } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
@@ -15,9 +16,11 @@ interface ModuleDetailPanelProps {
   selected: CellData | null | undefined;
   historyMap: Record<string, ReviewSnapshot[]>;
   onReviewModule?: (moduleId: SubModuleId) => void;
+  /** A review is starting or a batch is running — one batch at a time. */
+  reviewDisabled?: boolean;
 }
 
-export function ModuleDetailPanel({ selected, historyMap, onReviewModule }: ModuleDetailPanelProps) {
+export function ModuleDetailPanel({ selected, historyMap, onReviewModule, reviewDisabled = false }: ModuleDetailPanelProps) {
   return (
     <AnimatePresence>
       {selected && (
@@ -50,7 +53,9 @@ export function ModuleDetailPanel({ selected, historyMap, onReviewModule }: Modu
               {onReviewModule && (
                 <button
                   onClick={() => onReviewModule(selected.moduleId)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 hover:bg-[#ef4444]/20"
+                  disabled={reviewDisabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:brightness-125 disabled:opacity-50"
+                  style={{ color: STATUS_ERROR, backgroundColor: statusBg(STATUS_ERROR), border: `1px solid ${statusBorder(STATUS_ERROR)}` }}
                 >
                   <RefreshCw className="w-3 h-3" />
                   Review Module

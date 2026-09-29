@@ -6,6 +6,7 @@ import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import type { StepSummary } from './stepSummary';
 import type { LabEntity } from './useLabCatalogData';
+import { entityStepList } from './entityPipeline';
 import type { LabStepArtifact } from './labPipelineStore';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
@@ -127,11 +128,9 @@ export function buildCatalogCandidates(cin: CoachCatalogInput, verdicts: JudgeVe
       for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
     }
     const effective = { ...serverAsLocal, ...(cin.localByEntity[e.id] ?? {}) }; // add-only: local wins
-    const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, cin.steps, effective, serverArts, {}, verdicts);
-    const candidate = assembleCandidate(
-      cin.catalogId, cin.catalogLabel, e, cin.steps,
-      displayStatus, driftByStep, (step) => artifactByStep.get(step)?.reason,
-    );
+    const own = entityStepList(cin.catalogId, e, cin.steps); // THIS entity's steps: stepIndex indexes the rail's list
+    const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, own, effective, serverArts, {}, verdicts);
+    const candidate = assembleCandidate(cin.catalogId, cin.catalogLabel, e, own, displayStatus, driftByStep, (step) => artifactByStep.get(step)?.reason);
     if (candidate) candidates.push(candidate);
   }
   return candidates;
@@ -329,13 +328,9 @@ export function groupSummaryByEntity(rows: StepSummary[]): Map<string, Map<strin
 export function buildCatalogCandidatesFromSummary(cin: CoachSummaryInput, verdicts: JudgeVerdict[] = []): CoachCandidate[] {
   const candidates: CoachCandidate[] = [];
   for (const e of cin.entities) {
-    const derived = deriveEntityFromSummary(
-      cin.catalogId, e.id, cin.steps, cin.localByEntity[e.id], cin.summaryByEntity.get(e.id), verdicts, e.canonProfile,
-    );
-    const candidate = assembleCandidate(
-      cin.catalogId, cin.catalogLabel, e, cin.steps,
-      derived.displayStatus, derived.driftByStep, derived.reasonForStep,
-    );
+    const own = entityStepList(cin.catalogId, e, cin.steps); // THIS entity's steps (as the full path above)
+    const derived = deriveEntityFromSummary(cin.catalogId, e.id, own, cin.localByEntity[e.id], cin.summaryByEntity.get(e.id), verdicts, e.canonProfile);
+    const candidate = assembleCandidate(cin.catalogId, cin.catalogLabel, e, own, derived.displayStatus, derived.driftByStep, derived.reasonForStep);
     if (candidate) candidates.push(candidate);
   }
   return candidates;

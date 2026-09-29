@@ -9,19 +9,15 @@ import {
 } from '@/lib/chart-colors';
 import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import { NeonBar } from '../_shared/design';
-import {
-  type INPUT_BINDINGS, KEY_FREQUENCY_MAP, heatColor,
-} from '../_shared/data';
-import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
-
-type Binding = (typeof INPUT_BINDINGS)[number];
+import { expandKey, type ResolvedBinding } from '@/lib/character/input-bindings';
+import { KEY_FREQUENCY_MAP, heatColor } from '../_shared/data';
+import type { FeatureStatus } from '@/types/feature-matrix';
 
 interface Props {
-  binding: Binding;
+  /** Resolved row: `key` is the effective key, `overridden` marks a rebind. */
+  binding: ResolvedBinding;
   index: number;
-  isOverridden: boolean;
   isRebinding: boolean;
-  displayKey: string;
   conflicts: Map<string, string[]>;
   status: FeatureStatus;
   onStartRebind: (action: string) => void;
@@ -29,7 +25,7 @@ interface Props {
 
 /** One row in the InputBindingsTable: action / key (rebindable) / handler / frequency / status. */
 export function InputBindingsRow({
-  binding, index, isOverridden, isRebinding, displayKey, conflicts, status, onStartRebind,
+  binding, index, isRebinding, conflicts, status, onStartRebind,
 }: Props) {
   // Both pulses below are opacity-only, which the root MotionConfig deliberately
   // keeps animating — so they opt out of the endless loop explicitly.
@@ -37,8 +33,7 @@ export function InputBindingsRow({
   const sc = STATUS_COLORS[status];
   const freq = KEY_FREQUENCY_MAP.get(binding.defaultKey) ?? 0;
   const freqColor = heatColor(freq);
-  const keys = displayKey === 'WASD' ? ['W', 'A', 'S', 'D'] : [displayKey];
-  const rowConflict = keys.some((k) => conflicts.has(k));
+  const rowConflict = expandKey(binding.key).some((k) => conflicts.has(k));
 
   return (
     <motion.tr
@@ -69,13 +64,13 @@ export function InputBindingsRow({
             </motion.span>
           ) : (
             <span className="flex items-center gap-1.5">
-              {isOverridden && (
+              {binding.overridden && (
                 <span
                   className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
                   style={{ backgroundColor: ACCENT_ORANGE, boxShadow: `${GLOW_SM} ${ACCENT_ORANGE}` }}
                 />
               )}
-              {displayKey}
+              {binding.key}
             </span>
           )}
         </button>

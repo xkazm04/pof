@@ -1,42 +1,23 @@
 import { getDb } from './db';
 import { MODULE_LABELS, ALL_CHECKLIST_TOTAL } from './module-registry';
 import type { WeeklyDigest, Achievement } from '@/types/weekly-digest';
-
-// ── Date helpers ─────────────────────────────────────────────────────────────
-
-/** Get Monday 00:00 of the given date's week. */
-export function getWeekStart(d: Date): Date {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday = 1
-  date.setDate(date.getDate() + diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-export function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+import { reportZone, weekWindow, previousWeek, dayKey } from '@/lib/analytics/report-window';
 
 // ── Main aggregation ─────────────────────────────────────────────────────────
 
-export function generateWeeklyDigest(referenceDate?: Date): WeeklyDigest {
+/**
+ * Aggregate the zone-local Monday-first week containing `referenceDate`. Week edges and
+ * daily bucket keys both come from the report-window authority, so the bars always sum to
+ * the Sessions card; the result echoes the zone it was cut in.
+ */
+export function generateWeeklyDigest(referenceDate?: Date, zone: string = reportZone()): WeeklyDigest {
   const db = getDb();
 
-  const now = referenceDate ?? new Date();
-  const weekStart = getWeekStart(now);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-
-  const prevWeekStart = new Date(weekStart);
-  prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-
-  const periodStartStr = toISODate(weekStart);
-  const periodEndStr = toISODate(weekEnd);
-  const prevStartStr = toISODate(prevWeekStart);
-  const weekStartISO = weekStart.toISOString();
-  const weekEndISO = weekEnd.toISOString();
-  const prevStartISO = prevWeekStart.toISOString();
+  const win = weekWindow(referenceDate ?? new Date(), zone);
+  const prev = previousWeek(win);
+  const weekStartISO = win.start;
+  const weekEndISO = win.end;
+  const prevStartISO = prev.start;
 
   // ── Current week sessions ──
   const thisWeekRows = db.prepare(`
@@ -87,13 +68,9 @@ export function generateWeeklyDigest(referenceDate?: Date): WeeklyDigest {
 
   // ── Daily breakdown ──
   const dailyMap = new Map<string, { total: number; success: number }>();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    dailyMap.set(toISODate(d), { total: 0, success: 0 });
-  }
+  for (const key of win.dayKeys) dailyMap.set(key, { total: 0, success: 0 });
   for (const row of thisWeekRows) {
-    const day = row.completed_at.slice(0, 10);
+    const day = dayKey(row.completed_at, zone);
     const entry = dailyMap.get(day);
     if (entry) {
       entry.total++;
@@ -161,8 +138,9 @@ export function generateWeeklyDigest(referenceDate?: Date): WeeklyDigest {
   });
 
   return {
-    periodStart: periodStartStr,
-    periodEnd: periodEndStr,
+    periodStart: win.startKey,
+    periodEnd: win.endKey,
+    zone,
     checklistCompleted: 0, // enriched client-side
     checklistTotal,
     checklistDelta: 0, // enriched client-side

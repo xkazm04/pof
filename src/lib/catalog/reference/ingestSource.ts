@@ -9,12 +9,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
-import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
+import { auditColumns, type FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import type { TsvRefusal } from '@/lib/catalog/ingest/tsv';
 import { resolveLinks, type LinkReport } from './links';
 import { getReferenceSource } from './sources';
 import { wrapTable, type ReferenceWrapper, type TableWrapResult } from './wrapper';
 import { recordRun, upsertWrappers, type StoreReport } from './wrappers-db';
+import { getTechnique } from '@/lib/catalog/reference/techniques';
 
 export interface TableRunSummary {
   file: string;
@@ -29,6 +30,7 @@ export interface TableRunSummary {
   malformed: number;
   positionalIds: number;
   duplicateKeys: number;
+  rowIdMismatch?: { expected: number; actual: number };
   /** Mapped columns holding sentinel-looking values their mapping does NOT drop — decode them or explain. */
   sentinelColumns: { column: string; values: string[] }[];
   mappingVersion: string;
@@ -39,9 +41,21 @@ export interface IngestRunSummary {
   sourceId: string;
   dataRoot: string;
   tables: TableRunSummary[];
+  manifests: ManifestRunSummary[];
   links: LinkReport;
   store: StoreReport;
   runId: number;
+}
+
+export interface ManifestRunSummary {
+  file: string;
+  status: 'checked' | 'missing' | 'refused';
+  unclassified: string[];
+  declaredButAbsent: string[];
+  malformed: number;
+  /** Manifest keys whose corresponding data table is not registered on the source. */
+  unregisteredKeys: string[];
+  refusal?: TsvRefusal;
 }
 
 export interface IngestDeps {
@@ -72,6 +86,7 @@ function summarizeTable(r: TableWrapResult, map: FieldMap): TableRunSummary {
     coverage: r.audit.coverage, mapped: r.audit.mapped.length, gaps: r.audit.gap.length,
     unclassified: r.audit.unclassified, declaredButAbsent: r.audit.declaredButAbsent,
     malformed: r.malformed.length, positionalIds: r.positionalIds, duplicateKeys: r.duplicateKeys.length,
+    ...(r.rowIdMismatch ? { rowIdMismatch: r.rowIdMismatch } : {}),
     sentinelColumns: r.census
       .filter((c) => mappedCols.has(c.column))
       .map((c) => ({ column: c.column, open: c.sentinels.filter((s) => !droppedBy(map, c.column).has(s.value)) }))
@@ -85,6 +100,7 @@ export function ingestSourceFromDir(sourceId: string, dataRoot: string, deps: In
   const source = getReferenceSource(sourceId);
   const read = deps.readFile ?? ((p: string) => readFileSync(p, 'utf8'));
   const tables: TableRunSummary[] = [];
+  const manifests: ManifestRunSummary[] = [];
   let all: ReferenceWrapper[] = [];
 
   for (const spec of source.tables) {
@@ -105,9 +121,41 @@ export function ingestSourceFromDir(sourceId: string, dataRoot: string, deps: In
     all = all.concat(result.wrappers);
   }
 
+  for (const spec of source.manifests ?? []) {
+    let text: string;
+    try {
+      text = read(join(dataRoot, spec.file));
+    } catch {
+      manifests.push({
+        file: spec.file, status: 'missing', unclassified: [], declaredButAbsent: [],
+        malformed: 0, unregisteredKeys: [],
+      });
+      continue;
+    }
+    const table = getTechnique(spec.technique).read(text);
+    if (table.refusal) {
+      manifests.push({
+        file: spec.file, status: 'refused', unclassified: [], declaredButAbsent: [],
+        malformed: 0, unregisteredKeys: [], refusal: table.refusal,
+      });
+      continue;
+    }
+    const audit = auditColumns(table.columns, spec.map);
+    const registered = new Set(source.tables.map((tableSpec) => tableSpec.file));
+    const unregisteredKeys = table.rows
+      .map((row) => row[spec.keyColumn]?.trim())
+      .filter((key): key is string => Boolean(key))
+      .filter((key) => !registered.has(spec.registeredFilePattern.replace('{key}', key)));
+    manifests.push({
+      file: spec.file, status: 'checked', unclassified: audit.unclassified,
+      declaredButAbsent: audit.declaredButAbsent, malformed: table.malformed.length,
+      unregisteredKeys: [...new Set(unregisteredKeys)],
+    });
+  }
+
   const { wrappers, report: links } = resolveLinks(all, source.idPrefix);
   const store = upsertWrappers(deps.db, wrappers);
-  const summary = { sourceId, dataRoot, tables, links, store };
+  const summary = { sourceId, dataRoot, tables, manifests, links, store };
   const runId = recordRun(deps.db, sourceId, summary);
   return { ...summary, runId };
 }

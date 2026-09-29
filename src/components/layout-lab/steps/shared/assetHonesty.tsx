@@ -3,6 +3,7 @@
 import type { GenAssetRef } from '@/lib/catalog/stepSpec';
 import type { LabTheme } from '../../theme';
 import type { GenCandidate } from './genHistory';
+import { slotRealAssets } from './realAssetSlots';
 
 /**
  * The two honesty affordances every bespoke Items preview panel owes the operator, in the
@@ -47,7 +48,7 @@ export function GeneratedAssetCaption({ t, selected, placeholder = SEED_PREVIEW_
  * every payload byte-identical, so this cannot change what a checker reads off the
  * projected artifact.
  *
- * HONEST counts, exactly as the generic path: only as many slots as there are real files
+ * HONEST counts, the same `slotRealAssets` rule as the generic path: only as many slots as there are real files
  * carry an `imageUrl` — one generated icon means ONE real thumbnail and the rest honest
  * deterministic swatches, never the same image repeated to fill the grid. An empty
  * manifest returns the batch untouched (same reference). Pure.
@@ -58,14 +59,12 @@ export function withGeneratedImages(
   seq: number,
 ): Omit<GenCandidate, 'id'>[] {
   if (assets.length === 0) return batch;
-  const real = Math.min(batch.length, assets.length);
-  return batch.map((c, i) => {
-    if (i >= real) return c;
-    const asset = assets[(seq + i) % assets.length];
+  return slotRealAssets(batch.length, assets, seq, (asset, i) => {
+    const c = batch[i];
     // Keep the generator's own caption (e.g. "4200 tris") and name the file beside it —
     // the caption is what the gallery and the Selected panel quote as evidence.
     return { ...c, imageUrl: asset.url, caption: c.caption ? `${c.caption} · ${asset.name}` : asset.name };
-  });
+  }, (i) => batch[i]);
 }
 
 /** An asset PATH is a TARGET the drain writes — never evidence that a file exists. */

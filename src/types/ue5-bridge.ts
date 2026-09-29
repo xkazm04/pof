@@ -167,9 +167,61 @@ export interface PropertyWatchUpdate {
   objectPath: string;
   propertyName: string;
   value: unknown;
-  /** Previous value before this update — used for conflict detection. */
+  /**
+   * Previous value before this update, as UE reports it. Informational only:
+   * conflict detection is the write ledger's three-way compare (base / written
+   * / read-back, see `SyncWrite`), which a two-point compare cannot express.
+   */
   previousValue?: unknown;
   timestamp?: number;
+}
+
+/**
+ * Closed outcome vocabulary for one write on the live channel. The plugin
+ * sends no ack for `set.property`, so socket delivery plus the watch read-back
+ * is all the truth there is:
+ *  - `dropped`    the frame never left (socket not OPEN)
+ *  - `unobserved` sent; no read-back on this exact key since the write
+ *  - `pending`    read-back still equals the base (UE has not applied it yet)
+ *  - `confirmed`  read-back equals the written value (converged - NOT a conflict)
+ *  - `diverged`   read-back is neither base nor written - the only conflict
+ */
+export type SyncWriteOutcome = 'dropped' | 'unobserved' | 'pending' | 'confirmed' | 'diverged';
+
+/** One entry of the WS client's write ledger, keyed `objectPath::propertyName`. */
+export interface SyncWrite {
+  key: string;
+  objectPath: string;
+  propertyName: string;
+  /** Watched value on this exact key when the write was made (when `baseKnown`). */
+  base: unknown;
+  /** False when no watch on this key had reported a value at write time. */
+  baseKnown: boolean;
+  written: unknown;
+  /** Whether the frame actually went out on an OPEN socket. */
+  sent: boolean;
+  /** Client-side arrival sequence of the write (never a UE timestamp). */
+  seq: number;
+  outcome: SyncWriteOutcome;
+  /** The read-back that settled `outcome`, once one arrived. */
+  inbound?: unknown;
+}
+
+/** A diverged write: all three points of the compare, as typed values. */
+export interface SyncConflict {
+  key: string;
+  objectPath: string;
+  propertyName: string;
+  base: unknown;
+  written: unknown;
+  inbound: unknown;
+}
+
+/** What `setProperty` on the live channel reports back to its caller. */
+export interface WriteReceipt {
+  key: string;
+  sent: boolean;
+  seq: number;
 }
 
 /** Aggregated live editor state used by the hook/store bridge. */
@@ -177,6 +229,8 @@ export interface LiveEditorState {
   wsStatus: WSConnectionStatus;
   snapshot: UE5EditorSnapshot | null;
   propertyWatches: Map<string, PropertyWatchUpdate>;
+  /** Write ledger keyed `objectPath::propertyName` (see `@/lib/ue5-bridge/sync-ledger`). */
+  writes: Map<string, SyncWrite>;
   lastSnapshotTime: number | null;
   frameRate: number;
 }

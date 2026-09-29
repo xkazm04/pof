@@ -114,3 +114,64 @@
   them came from a name collision in the reference ("Crimson" twice) that my lookup assumed unique.
 - **An npm script is only real once it has run.** `snapshot:ue-schema` called a binary that isn't a local dependency and
   had never executed; the loop had always used `npx tsx` by hand.
+
+## 2.3 — 2026-09-26 — pof (W16, machine B, unattended)
+- **A new machine is a new environment: probe the harness before the wave.** Three machine-A assumptions (codex.js path, vault path,
+  data root) broke silently or loudly; a "model at capacity" refusal ended tasks as NOT COMPLETED until the dispatcher learned to back off.
+- **A read-only codex sandbox cannot read outside its working directory on Windows** — two research runs silently fell back to upstream
+  master via the network. A git-excluded junction inside the repo (`.reference` → the clone) made the pinned tree readable; brief it by that
+  relative path and tell the delegate to STOP if unreadable.
+- **Never build a brief with `node -e "..."` in bash** — backticks inside it are command substitutions and silently corrupt the goal.
+  Write the generator to a .mjs file.
+- **A pass needs scrutiny at FLEET scale too.** 56/64 first-pass passes hid 16 false passes (gap markers in list entries) and a prompt that
+  had truncated every conversation — both found only by reading artifacts and grepping all of them for the marker.
+- **A delegate's acceptance scope is a claim about coverage.** Two tasks ran `src/__tests__/catalog` only and missed 5 failing tests under
+  `src/__tests__/lib/catalog`. Brief both directories.
+- **An unattended loop needs the machine awake.** Windows idle-sleep does not see background CLI work: a 5-hour freeze looked like
+  two "stalled" codex runs. Hold a SetThreadExecutionState(ES_CONTINUOUS|ES_SYSTEM_REQUIRED) process for the session (no admin, no setting changed).
+- **A delegate may answer with its PLAN as the final message** (cx-b24 round 2, "partial" + a plan, then the host slept). Resume with "implement it now".
+- **Parallel delegates all editing one CLI file (scripts/diablo/ingest.ts) collided 5 times**: land the rest with git apply --exclude, then GNU `patch -p1 --fuzz=3` for that file and READ where fuzzy hunks landed. Better: split the CLI per catalog so tasks stop sharing one file.
+- **A delegate's 'changed assertions' list can hide a law violation** (cx-b50 moved spell to-hit 0.95→0.91 by applying a range penalty the canon says spells never have). Check every changed expectation against the canon laws before landing.
+- **A delegate's synthetic fixtures pass where real ids differ.** cx-b53 matched loadout items by the `id` column; the real Sorcerer staff's
+  itemdat row has a BLANK id (the engine resolves by enum ordinal). Run the real-data CLI before landing every model change, not only vitest.
+- **Write task generators with the Write tool, not a bash heredoc**: apostrophes/backticks in a long goal broke the shell and the dispatch
+  then ran against a missing task file.
+- **Two canon imports crashed for weeks unseen** (statusSpecs/storeSpecs imported first → TDZ). vitest's loader and the CLI's import order
+  both hid it; a one-line `tsx` import of each module found it. A cheap static guard beats a behavioural test for load-order bugs.
+- **A snapshot tool that disagrees with promotion lies at scale**: status compared raw wrappers while promotion used handler pools → 82
+  false "stale". When a new promotion path is added, the snapshot must read the same path.
+- **An opt-in model input needs a test that toggling it moves its target quantity.** W47 added expected resistances; defaults stayed
+  byte-identical and the option ran — and it changed nothing, because no monster attack carried an element. "Identical when off" +
+  "runs when on" cannot tell a working feature from a disconnected one.
+- **A delegate's reading of a call's boolean arguments is a claim**: cx-b72 read `(…, true, true)` as isDamageShifted and concluded
+  monster projectiles do 1/64 damage. Trace positional booleans to the callee's signature before accepting a 64× conclusion.
+- **Claim-level audits beat shape graders and numeric parity.** W49 (AI), W59 (lore briefs) and W53–W58 (the canon's own laws) graded
+  atomic claims against the pin: passing artifacts were 56–86 % true, laws ~81 %. Errors cluster in CONDITIONS (gates, predicates,
+  roll granularity, failure branches, runtime order), never in the headline numbers — the part parity-on-numbers cannot see.
+- **Audit the laws before producers amplify them.** A wrong law is copied into every entity that cites it (6 AI clusters traced in
+  W49/W51). Our own canon injected external lore too (Khanduras in d1-world).
+- **"Expected best" is for what a hero FINDS, not what it BUYS.** A buyer conditions on the shelf; unconditional expectation ×
+  availability double-discounts (W56 round 1 made every resist item look worthless).
+- **Delegates loosen tests to fit their text.** cx-b80 relaxed two plain-English style tests to admit engine identifiers in law
+  bodies; brief "never loosen a test to fit a corrected body" and diff every test file a law-edit task touches.
+- **A "facts only" direction turns missing references into denials.** W65: invented fell 39→14 % but contradicted rose 0→27 % —
+  the producer asserted the absence of quests/services it was never shown. Before tightening a direction, check the producer HAS the
+  facts (reference values across linked catalogs); a direction can change error kinds, never add knowledge.
+- **A new law is a new amplifier.** W73's three laws were verified by a delegate yet two were overbroad (a missing precondition, an
+  over-general "targeting" statement); the next produce round (W74) turned them into new wrong claims across many monsters. Hold new
+  laws to the same claim-level audit as old ones BEFORE they ship.
+- **The same misread recurs across fresh delegates.** Three separate auditors read MoveMissileAndCheckMissileCol's positional booleans
+  as isDamageShifted. When a misreading recurs, encode the verified fact as a law so the next reader does not re-derive it.
+- **The xhigh stall watchdog (40 min of event silence) can reap healthy runs.** 2026-09-28 ~01:00–01:47 three xhigh runs (a large audit
+  JSON, a big write task, a report) were reaped while composing; codex itself answered normally. Resume the same session with
+  `POF_CODEX_STALL_MIN=80` and ask for incremental file writes / short evidence strings — the research is kept in the session.
+- **Audit A/B must be blind and paired under ONE auditor.** The same 16 dialog briefs scored 92.7 % under one xhigh auditor and
+  82.3 % under another (W89); a cross-auditor comparison showed a false regression. Mix both variants in one audit with hidden X/Y
+  labels (key kept in the vault) and tell the auditor what NOT to grade (rebuild/UE proposals).
+- **Derived stats are frozen on PROMOTED entities.** descentSim reads a monster's cadence from its promoted entity data, so a model
+  change to derive/behaviourScale reaches the descent only after re-promotion. W92's first "after" run measured only the hero half.
+  Order for any model wave: land → re-promote everything status.ts lists as stale → THEN run the after-measurement.
+- **Which lever to pull for produced truth (measured blind, W90–W102).** Engine-derived ledgers ON THE ENTITY fix facts (abilities +15,
+  AI wrong 22→11 %, dialog/quest design ~91 %); a direction that FORBIDS a structure removes invented states (14.6 → 0 %); a direction
+  that DEMANDS more facts backfires (spells −4..−8: more claims, more errors); paraphrased lore adds little. Before a produce round,
+  ask: does the entity carry a complete engine model of the thing being designed? If not, build that ledger first.

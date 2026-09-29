@@ -438,6 +438,12 @@ export interface CritiqueDeps {
    * whether it is condemning a defect or an un-finished input (see `critique-stage.ts`).
    */
   stage?: MeshStage;
+  /**
+   * Whether the subject should stand (see `expectsUprightFor`). Supplying it is what lets a
+   * lying character draw the `orientation-lying` WARN; absent, orientation stays `unmeasured`.
+   * Build it with `gateRequestFor` (`gate-request.ts`) rather than by hand.
+   */
+  orientation?: OrientationRequest;
 }
 
 /**
@@ -465,7 +471,7 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
     ok: true,
     metrics: parsed.metrics,
     ...(deps.stage ? { stage: deps.stage } : {}),
-    ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size),
+    ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size, deps.orientation),
   };
 }
 

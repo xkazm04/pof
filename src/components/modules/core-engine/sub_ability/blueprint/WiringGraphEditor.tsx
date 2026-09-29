@@ -13,6 +13,7 @@ import {
 import type { AttrCategory, EditorAttribute, EditorEffect, TagRule } from '@/lib/gas-codegen';
 import type { AttrRelationship, PinKind, GASGraphNode, GraphWire } from './types';
 import { CAT_COLORS, NODE_W_GRAPH, NODE_H_GRAPH, PIN_R } from './data';
+import { effectRuleLinks, ruleSentence } from '@/lib/ability/tag-rules';
 import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 
 export function WiringGraphEditor({
@@ -56,11 +57,14 @@ export function WiringGraphEditor({
     }
     let tagY = 30;
     for (const rule of tagRules) {
-      nodeList.push({ id: `tag-${rule.id}`, label: `${rule.sourceTag} ${rule.type} ${rule.targetTag}`, type: 'tag-rule', x: 460, y: tagY, color: rule.type === 'blocks' ? STATUS_ERROR : rule.type === 'cancels' ? ACCENT_ORANGE : STATUS_SUCCESS, pins: [{ id: `${rule.id}-in`, kind: 'tag-in', label: '', side: 'left' }] });
+      nodeList.push({ id: `tag-${rule.id}`, label: ruleSentence(rule), type: 'tag-rule', x: 460, y: tagY, color: rule.type === 'blocks' ? STATUS_ERROR : rule.type === 'cancels' ? ACCENT_ORANGE : STATUS_SUCCESS, pins: [{ id: `${rule.id}-in`, kind: 'tag-in', label: '', side: 'left' }] });
       tagY += NODE_H_GRAPH + 10;
     }
     for (const eff of effects) { for (let i = 0; i < eff.modifiers.length; i++) { const mod = eff.modifiers[i]; const sourceAttr = filteredAttrs.find(a => a.name === mod.attribute); if (sourceAttr) wireList.push({ id: `w-attr-eff-${sourceAttr.id}-${eff.id}-${i}`, fromNode: `attr-${sourceAttr.id}`, fromPin: `${sourceAttr.id}-out`, toNode: `eff-${eff.id}`, toPin: `${eff.id}-in-${i}`, color: eff.color, animated: true }); } }
-    for (const eff of effects) { if (eff.grantedTags.length === 0) continue; for (const grantedTag of eff.grantedTags) { for (const rule of tagRules) { const ruleBase = rule.sourceTag.replace('.*', ''); if (grantedTag.startsWith(ruleBase)) wireList.push({ id: `w-eff-tag-${eff.id}-${rule.id}`, fromNode: `eff-${eff.id}`, fromPin: `${eff.id}-out-tags`, toNode: `tag-${rule.id}`, toPin: `${rule.id}-in`, color: rule.type === 'blocks' ? STATUS_ERROR : rule.type === 'cancels' ? ACCENT_ORANGE : STATUS_SUCCESS, animated: false }); } } }
+    // Effect -> rule: an effect drives a rule when it grants the rule's GATING tag
+    // (canonical ability-owned rules — see @/lib/ability/tag-rules).
+    const rulesById = new Map(tagRules.map(r => [r.id, r]));
+    for (const { effectId, ruleId } of effectRuleLinks(effects, tagRules)) { const rule = rulesById.get(ruleId); if (!rule) continue; wireList.push({ id: `w-eff-tag-${effectId}-${ruleId}`, fromNode: `eff-${effectId}`, fromPin: `${effectId}-out-tags`, toNode: `tag-${ruleId}`, toPin: `${ruleId}-in`, color: rule.type === 'blocks' ? STATUS_ERROR : rule.type === 'cancels' ? ACCENT_ORANGE : STATUS_SUCCESS, animated: false }); }
     for (const rel of relationships) { const srcNode = nodeList.find(n => n.id === `attr-${rel.sourceId}`); const tgtNode = nodeList.find(n => n.id === `attr-${rel.targetId}`); if (srcNode && tgtNode) wireList.push({ id: `w-rel-${rel.id}`, fromNode: srcNode.id, fromPin: `${rel.sourceId}-out`, toNode: tgtNode.id, toPin: `${rel.targetId}-out`, color: rel.type === 'scale' ? ACCENT_VIOLET : rel.type === 'clamp' ? STATUS_WARNING : STATUS_SUCCESS, animated: rel.type === 'regen' }); }
     return { nodes: nodeList, wires: wireList };
   }, [attributes, effects, tagRules, relationships]);

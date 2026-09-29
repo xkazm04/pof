@@ -10,39 +10,35 @@ import {
 } from '@/lib/chart-colors';
 import { useCollectionEditor } from '@/hooks/useCollectionEditor';
 import type { TagRule, EditorEffect, GASLoadoutSlot } from '@/lib/gas-codegen';
-import type { TagValidation } from './types';
+import { RULE_VERB, ruleGatingTag, ruleSentence, tagsOverlap } from '@/lib/ability/tag-rules';
+
+const UNMATCHED_TITLE = 'Unmatched: no effect or loadout grants this gating tag';
 
 function tagMatchesKnown(tag: string, knownTags: Set<string>): boolean {
   if (!tag || tag.endsWith('.')) return false;
-  if (knownTags.has(tag)) return true;
-  if (tag.endsWith('.*')) {
-    const prefix = tag.slice(0, -1);
-    for (const known of knownTags) { if (known.startsWith(prefix)) return true; }
-  }
-  for (const known of knownTags) {
-    if (known.endsWith('.*')) { const prefix = known.slice(0, -1); if (tag.startsWith(prefix)) return true; }
-  }
+  for (const known of knownTags) { if (tagsOverlap(tag, known)) return true; }
   return false;
 }
 
-function tagsOverlap(a: string, b: string): boolean {
-  if (a === b) return true;
-  if (a.endsWith('.*') && b.startsWith(a.slice(0, -1))) return true;
-  if (b.endsWith('.*') && a.startsWith(b.slice(0, -1))) return true;
-  return false;
-}
-
+/**
+ * Edits the bound ability's own activation rules, in the canonical ability-owned
+ * direction (@/lib/ability/tag-rules): every row is "<ability> blocked by /
+ * requires / cancels <gating tag>". Only the gating tag is editable and only it
+ * is judged Unmatched — the ability tag is the rule's owner, not a tag an effect
+ * is expected to grant.
+ */
 export function TagRulesEditor({
-  rules, onChange, effects, loadout,
+  abilityTag, rules, onChange, effects, loadout,
 }: {
+  abilityTag: string;
   rules: TagRule[];
   onChange: (rules: TagRule[]) => void;
   effects: EditorEffect[];
   loadout: GASLoadoutSlot[];
 }) {
   const ruleFactory = useCallback((): TagRule => ({
-    id: `tr-${Date.now()}`, sourceTag: 'State.', targetTag: 'Ability.', type: 'blocks',
-  }), []);
+    id: `tr-${Date.now()}`, sourceTag: abilityTag, targetTag: 'State.', type: 'blocks',
+  }), [abilityTag]);
 
   const { add: addRule, remove: removeRule, update: updateRule } = useCollectionEditor(rules, onChange, ruleFactory);
 
@@ -55,18 +51,18 @@ export function TagRulesEditor({
     return tags;
   }, [effects, loadout]);
 
-  const validations = useMemo((): Map<string, TagValidation> => {
-    const map = new Map<string, TagValidation>();
+  const validations = useMemo(() => {
+    const map = new Map<string, { gateUnmatched: boolean; conflict: string | null }>();
     for (const rule of rules) {
-      const srcUnmatched = rule.sourceTag.length > 0 && !rule.sourceTag.endsWith('.') && !tagMatchesKnown(rule.sourceTag, knownTags);
-      const tgtUnmatched = rule.targetTag.length > 0 && !rule.targetTag.endsWith('.') && !tagMatchesKnown(rule.targetTag, knownTags);
+      const gate = ruleGatingTag(rule);
+      const gateUnmatched = gate.length > 0 && !gate.endsWith('.') && !tagMatchesKnown(gate, knownTags);
       let conflict: string | null = null;
       if (rule.type === 'blocks' || rule.type === 'requires') {
         const oppositeType = rule.type === 'blocks' ? 'requires' : 'blocks';
-        const contradicting = rules.find(other => other.id !== rule.id && other.type === oppositeType && tagsOverlap(other.sourceTag, rule.sourceTag) && tagsOverlap(other.targetTag, rule.targetTag));
-        if (contradicting) conflict = `Conflicts with "${contradicting.sourceTag} ${contradicting.type} ${contradicting.targetTag}"`;
+        const contradicting = rules.find(other => other.id !== rule.id && other.type === oppositeType && tagsOverlap(other.sourceTag, rule.sourceTag) && tagsOverlap(ruleGatingTag(other), gate));
+        if (contradicting) conflict = `Conflicts with "${ruleSentence(contradicting)}"`;
       }
-      map.set(rule.id, { srcUnmatched, tgtUnmatched, conflict });
+      map.set(rule.id, { gateUnmatched, conflict });
     }
     return map;
   }, [rules, knownTags]);
@@ -81,15 +77,13 @@ export function TagRulesEditor({
             const v = validations.get(rule.id);
             return (
               <g key={rule.id}>
-                <rect x={4} y={y} width={110} height={18} rx={3} fill={`${withOpacity(color, OPACITY_10)}`} stroke={v?.srcUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : `${withOpacity(color, OPACITY_25)}`} strokeWidth={v?.srcUnmatched ? 1.2 : 0.8} />
-                <text x={59} y={y + 12} fill={color} fontSize={8} fontFamily="monospace" textAnchor="middle">{rule.sourceTag}</text>
-                {v?.srcUnmatched && <circle cx={4} cy={y} r={3.5} fill={STATUS_WARNING}><title>Unmatched: no effect or loadout uses this tag</title></circle>}
-                <line x1={118} y1={y + 9} x2={168} y2={y + 9} stroke={color} strokeWidth={1.5} strokeDasharray={rule.type === 'cancels' ? '4 2' : undefined} />
-                <text x={143} y={y + 6} fill={color} fontSize={7} fontFamily="monospace" textAnchor="middle" fontWeight="bold">{rule.type}</text>
-                <rect x={172} y={y} width={110} height={18} rx={3} fill={withOpacity(OVERLAY_WHITE, OPACITY_3)} stroke={v?.tgtUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : withOpacity(OVERLAY_WHITE, OPACITY_10)} strokeWidth={v?.tgtUnmatched ? 1.2 : 0.8} />
-                <text x={227} y={y + 12} fill={withOpacity(OVERLAY_WHITE, OPACITY_60)} fontSize={8} fontFamily="monospace" textAnchor="middle">{rule.targetTag}</text>
-                {v?.tgtUnmatched && <circle cx={282} cy={y} r={3.5} fill={STATUS_WARNING}><title>Unmatched: no effect or loadout uses this tag</title></circle>}
-                {v?.conflict && (<g><rect x={290} y={y + 2} width={80} height={14} rx={3} fill={`${withOpacity(STATUS_ERROR, OPACITY_12)}`} stroke={`${withOpacity(STATUS_ERROR, OPACITY_37)}`} strokeWidth={0.8} /><text x={330} y={y + 12} fill={STATUS_ERROR} fontSize={6.5} fontFamily="monospace" textAnchor="middle" fontWeight="bold">CONFLICT</text><title>{v.conflict}</title></g>)}
+                <rect x={4} y={y} width={110} height={18} rx={3} fill={`${withOpacity(color, OPACITY_10)}`} stroke={`${withOpacity(color, OPACITY_25)}`} strokeWidth={0.8} />
+                <text x={59} y={y + 12} fill={color} fontSize={8} fontFamily="monospace" textAnchor="middle">{abilityTag}</text>
+                <line x1={118} y1={y + 9} x2={138} y2={y + 9} stroke={color} strokeWidth={1.5} strokeDasharray={rule.type === 'cancels' ? '4 2' : undefined} />
+                <rect x={142} y={y} width={146} height={18} rx={3} fill={withOpacity(OVERLAY_WHITE, OPACITY_3)} stroke={v?.gateUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : withOpacity(OVERLAY_WHITE, OPACITY_10)} strokeWidth={v?.gateUnmatched ? 1.2 : 0.8} />
+                <text x={215} y={y + 12} fill={withOpacity(OVERLAY_WHITE, OPACITY_60)} fontSize={8} fontFamily="monospace" textAnchor="middle">{ruleSentence(rule)}</text>
+                {v?.gateUnmatched && <circle cx={288} cy={y} r={3.5} fill={STATUS_WARNING}><title>{UNMATCHED_TITLE}</title></circle>}
+                {v?.conflict && (<g><rect x={292} y={y + 2} width={80} height={14} rx={3} fill={`${withOpacity(STATUS_ERROR, OPACITY_12)}`} stroke={`${withOpacity(STATUS_ERROR, OPACITY_37)}`} strokeWidth={0.8} /><text x={332} y={y + 12} fill={STATUS_ERROR} fontSize={6.5} fontFamily="monospace" textAnchor="middle" fontWeight="bold">CONFLICT</text><title>{v.conflict}</title></g>)}
               </g>
             );
           })}
@@ -101,19 +95,16 @@ export function TagRulesEditor({
           const v = validations.get(rule.id);
           return (
             <div key={rule.id} className="flex items-center gap-1.5 text-2xs font-mono">
-              <div className="relative">
-                <input value={rule.sourceTag} onChange={(e) => updateRule(rule.id, { sourceTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.srcUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : undefined }} />
-                {v?.srcUnmatched && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} title="Unmatched: no effect or loadout uses this tag" />}
-              </div>
+              <span className="w-32 truncate text-text-muted" title={abilityTag}>{abilityTag}</span>
               <select value={rule.type} onChange={(e) => updateRule(rule.id, { type: e.target.value as TagRule['type'] })} className="bg-surface-deep border border-border/30 rounded px-1 py-0.5 focus:outline-none" style={{ color }}>
-                <option value="blocks">blocks</option><option value="cancels">cancels</option><option value="requires">requires</option>
+                {(Object.keys(RULE_VERB) as TagRule['type'][]).map((t) => <option key={t} value={t}>{RULE_VERB[t]}</option>)}
               </select>
               <div className="relative">
-                <input value={rule.targetTag} onChange={(e) => updateRule(rule.id, { targetTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.tgtUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : undefined }} />
-                {v?.tgtUnmatched && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} title="Unmatched: no effect or loadout uses this tag" />}
+                <input value={rule.targetTag} aria-label="Gating tag" onChange={(e) => updateRule(rule.id, { targetTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.gateUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : undefined }} />
+                {v?.gateUnmatched && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} title={UNMATCHED_TITLE} />}
               </div>
               {v?.conflict && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_12)}`, color: STATUS_ERROR, border: `1px solid ${withOpacity(STATUS_ERROR, OPACITY_25)}` }} title={v.conflict}>CONFLICT</span>}
-              <button onClick={() => removeRule(rule.id)} className="text-text-muted hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>
+              <button onClick={() => removeRule(rule.id)} aria-label="Remove rule" className="text-text-muted hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>
             </div>
           );
         })}

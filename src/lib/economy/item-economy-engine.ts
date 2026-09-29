@@ -92,8 +92,14 @@ export interface LevelBracketStats {
   rarityDistribution: Record<ItemRarity, number>;
   /** Percentage of affixes by stat key */
   affixSaturation: Record<string, number>;
-  /** Average number of gear upgrades (equip swaps) at this level */
+  /** Average CUMULATIVE gear upgrades (equip swaps since Lv1) held by agents at this level */
   avgUpgrades: number;
+  /** Distinct agents sampled at this level — 0 means the bracket is UNMEASURED, not zero */
+  agents: number;
+  /** Agents whose final level is >= this level (the population behind rarity/affix shares) */
+  agentsReached: number;
+  /** Gear upgrades made while at this level, per sampled agent (a per-level rate) */
+  upgradesPerAgent: number;
   /** Average gold held */
   avgGold: number;
   /** Average hours played to reach this level */
@@ -224,6 +230,8 @@ interface AgentState {
   totalUpgrades: number;
   hoursPlayed: number;
   itemsSeen: number;
+  /** Last level this agent was sampled at (a new level counts it once in that bracket) */
+  sampledLevel: number;
   affixCounts: Record<string, number>;
   rarityCounts: Record<ItemRarity, number>;
 }
@@ -250,6 +258,7 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
     totalUpgrades: 0,
     hoursPlayed: 0,
     itemsSeen: 0,
+    sampledLevel: 0,
     affixCounts: {},
     rarityCounts: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 },
   }));
@@ -264,13 +273,14 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
     rarityCounts: Record<ItemRarity, number>;
     gearReplacements: number;
     totalItems: number;
+    agents: number;
   }> = new Map();
 
   for (let lvl = 1; lvl <= config.maxLevel; lvl++) {
     brackets.set(lvl, {
       powers: [], upgrades: [], golds: [], hours: [],
       affixCounts: {}, rarityCounts: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 },
-      gearReplacements: 0, totalItems: 0,
+      gearReplacements: 0, totalItems: 0, agents: 0,
     });
   }
 
@@ -326,6 +336,7 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
       // Record bracket data
       const b = brackets.get(agent.level);
       if (b) {
+        if (agent.sampledLevel !== agent.level) { b.agents++; agent.sampledLevel = agent.level; }
         b.powers.push(agent.equippedPower);
         b.upgrades.push(agent.totalUpgrades);
         b.golds.push(agent.gold);
@@ -358,7 +369,8 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
         level: lvl, avgItemPower: 0, minItemPower: 0, maxItemPower: 0,
         rarityDistribution: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 },
         affixSaturation: {}, avgUpgrades: 0, avgGold: 0, avgHoursToReach: 0,
-        gearReplacementCount: 0,
+        gearReplacementCount: 0, agents: 0,
+        agentsReached: agentsAtOrAbove.get(lvl)!.length, upgradesPerAgent: 0,
       });
       continue;
     }
@@ -416,6 +428,9 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
       rarityDistribution: rarityDist,
       affixSaturation: affixSat,
       avgUpgrades: Math.round(avg(b.upgrades) * 10) / 10,
+      agents: b.agents,
+      agentsReached: agentsAtLevel.length,
+      upgradesPerAgent: Math.round((b.gearReplacements / b.agents) * 100) / 100,
       avgGold: Math.round(avg(b.golds)),
       avgHoursToReach: Math.round(avg(b.hours) * 10) / 10,
       gearReplacementCount: b.gearReplacements,
@@ -502,13 +517,15 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
     });
   }
 
-  // Check gear replacement cadence (too fast or too slow)
+  // Check gear replacement cadence — a PER-LEVEL rate (upgrades made at this level per
+  // sampled agent), not avgUpgrades, which is cumulative and so could never trip late.
+  // The cap level is excluded: agents stop at it, so it only ever samples the ding hour.
   for (const b of bracketResults) {
-    if (b.level >= 3 && b.avgUpgrades < 0.5 && b.avgItemPower > 0) {
+    if (b.level >= 3 && b.level < config.maxLevel && b.agents > 0 && b.upgradesPerAgent < 0.5) {
       alerts.push({
         severity: 'info', type: 'low-upgrade-cadence',
         message: `Few gear upgrades at level ${b.level} — players may feel stuck`,
-        level: b.level, metric: 'avgUpgrades', value: b.avgUpgrades, threshold: 0.5,
+        level: b.level, metric: 'upgradesPerAgent', value: b.upgradesPerAgent, threshold: 0.5,
       });
     }
   }

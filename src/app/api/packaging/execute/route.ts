@@ -1,8 +1,9 @@
 import { cookExecutor, type CookEvent } from '@/lib/packaging/cook-executor';
 import { getProfile } from '@/lib/packaging/build-profiles-db';
-import { insertBuild, lastGreenBaseline, updateBuildNotes } from '@/lib/packaging/build-history-store';
-import { evaluateBuildSize, describeSizeBaseline } from '@/lib/packaging/size-budgets';
+import { insertBuild, lastGreenBaseline } from '@/lib/packaging/build-history-store';
+import { evaluateBuildSize } from '@/lib/packaging/size-budgets';
 import { autoIncrementOnSuccess } from '@/lib/packaging/version-manager';
+import { finalizeCook, type FinalizeDeps } from '@/lib/packaging/finalize-build';
 import { apiError } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 
@@ -65,88 +66,41 @@ export async function POST(req: Request): Promise<Response> {
       } finally {
         if (lastEvent && (lastEvent.type === 'done' || lastEvent.type === 'error')) {
           try {
-            if (lastEvent.type === 'done') {
-              // Same size-budget / regression gate the scheduled runner applies,
-              // evaluated against the last green build for this platform. Capture
-              // the baseline BEFORE inserting this build (as the scheduled runner
-              // does) — otherwise the just-recorded green row becomes its own
-              // baseline and the gate would always self-compare to 0% growth.
-              // Skip the lookup when the cook produced no measurable size.
-              // Scoped to THIS project: the baseline used to be the newest green build
-              // of any project, which fabricates a growth regression (or masks a real
-              // one behind a larger foreign build).
-              const baseline = lastEvent.sizeBytes && lastEvent.sizeBytes > 0
-                ? lastGreenBaseline(profile.platform, projectPath)
-                : null;
-              const lastGreen = baseline?.sizeBytes ?? null;
-              // VERSION SEMANTICS: bump-per-green-cook. `version` was stamped ONLY by
-              // the manual Record form (`history/route.ts`), so every build this route
-              // and the scheduled runner produced was `version: null` while the Version
-              // card showed a counter no build had ever been produced at. This converges
-              // on the one existing writer's rule — `autoIncrementOnSuccess()` — so the
-              // current version is the version of the last green cook, not a free-
-              // floating number.
-              const version = autoIncrementOnSuccess();
-              const rec = insertBuild({
-                projectId: projectPath,
-                platform: profile.platform,
-                config: profile.config,
-                status: 'success',
-                sizeBytes: lastEvent.sizeBytes,
-                durationMs: lastEvent.durationMs,
-                outputPath: lastEvent.exePath,
-                cookTimeMs: lastEvent.durationMs,
-                version,
-              });
+            // One finalizer for the interactive and nightly cooks (`finalize-build.ts`):
+            // baseline captured before the insert and scoped to this project, growth
+            // judged against the baseline RECORD, and bump-per-green-cook versioning.
+            const ev = lastEvent;
+            const done = ev.type === 'done';
+            const fin = finalizeCook(
+              ev.type === 'done'
+                ? { kind: 'done', exePath: ev.exePath, durationMs: ev.durationMs, sizeBytes: ev.sizeBytes }
+                : { kind: 'error', status: ev.status, message: ev.message, durationMs: Date.now() - startedAt },
+              { projectPath, platform: profile.platform, config: profile.config },
+              finalizeDeps(),
+            );
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({
+                type: 'recorded',
+                buildId: fin.buildId,
+                version: fin.version,
+                versionRule: done ? 'bump-per-green-cook' : 'no version — only a green cook carries one',
+              })}\n\n`),
+            );
+            if (fin.baselineNote != null) {
+              // State the reference on EVERY measured cook, pass or fail. Without this,
+              // a first-ever build (no baseline) and a build that genuinely did not
+              // grow are the same silence.
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({
-                  type: 'recorded',
-                  buildId: rec.id,
-                  version,
-                  versionRule: 'bump-per-green-cook',
+                  type: 'size-baseline',
+                  baseline: fin.baseline,
+                  note: fin.baselineNote,
                 })}\n\n`),
               );
-              // A passing build records exactly as before; a regression gets the
-              // note recorded and surfaces a final SSE event for the UI.
-              const regression = lastEvent.sizeBytes && lastEvent.sizeBytes > 0
-                ? evaluateBuildSize(profile.platform, lastEvent.sizeBytes, lastGreen, undefined, baseline)
-                : null;
-              if (lastEvent.sizeBytes && lastEvent.sizeBytes > 0) {
-                // State the reference on EVERY measured cook, pass or fail. Without
-                // this, a first-ever build (no baseline) and a build that genuinely
-                // did not grow are the same silence.
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({
-                    type: 'size-baseline',
-                    baseline,
-                    note: describeSizeBaseline(baseline),
-                  })}\n\n`),
-                );
-              }
-              if (regression) {
-                updateBuildNotes(rec.id, regression.note);
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: 'size-regression', note: regression.note })}\n\n`),
-                );
-              }
-            } else {
-              const rec = insertBuild({
-                projectId: projectPath,
-                platform: profile.platform,
-                config: profile.config,
-                // 'cancelled' (user abort / client gone) must not pollute the
-                // failure stats — BuildRecord has carried the status all along.
-                status: lastEvent.status,
-                durationMs: Date.now() - startedAt,
-                errorSummary: lastEvent.message,
-              });
+            }
+            if (fin.regression) {
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({
-                  type: 'recorded',
-                  buildId: rec.id,
-                  version: null,
-                  versionRule: 'no version — only a green cook carries one',
-                })}\n\n`),
+                encoder.encode(`data: ${JSON.stringify({ type: 'size-regression', note: fin.regression.note })}\n\n`),
               );
             }
           } catch (persistErr) {
@@ -181,4 +135,19 @@ export async function POST(req: Request): Promise<Response> {
       'X-Accel-Buffering': 'no',
     },
   });
+}
+
+/**
+ * Real store wiring for {@link finalizeCook}. Each dep is a thunk so a store export is
+ * only touched when the finalizer actually needs it (an unmeasured cook never reads
+ * the baseline).
+ */
+function finalizeDeps(): FinalizeDeps {
+  return {
+    lastGreenBaseline: (platform, projectId) => lastGreenBaseline(platform, projectId),
+    evaluateBuildSize: (platform, sizeBytes, lastGreen, baseline) =>
+      evaluateBuildSize(platform, sizeBytes, lastGreen, undefined, baseline),
+    nextVersion: (projectId) => autoIncrementOnSuccess(projectId),
+    insertBuild: (input) => insertBuild(input),
+  };
 }

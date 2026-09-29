@@ -84,7 +84,7 @@ describe('resolveItemFocus', () => {
   it('grades the focus entity by ITS OWN artifacts (realization, not aggregate)', () => {
     const ctx = makeWorld();
     const focus = resolveItemFocus('items', 'vael-blade', ctx)!.focus;
-    const cells = focus.swimlane.cells;
+    const cells = focus.swimlane!.cells;
     const economy = cells.find((c) => c.label === 'Economy')!;
     const mesh = cells.find((c) => c.label === '3D-Mesh')!;
     // RE-BASELINED 2026-08-20 (wave 26, Lot NB): `trusted` -> `ungated`, and the old comment
@@ -103,11 +103,11 @@ describe('resolveItemFocus', () => {
     const result = resolveItemFocus('items', 'vael-blade', ctx)!;
     expect(result.forward).toHaveLength(1);
     expect(result.forward[0]).toMatchObject({ catalogId: 'icon-sets', entityId: 'icon-sword', role: 'icon' });
-    expect(result.forward[0].swimlane.cells).toHaveLength(1);
+    expect(result.forward[0].swimlane!.cells).toHaveLength(1);
     expect(result.reverse).toHaveLength(1);
     expect(result.reverse[0]).toMatchObject({ catalogId: 'loot-tables', entityId: 'lt-brute', role: 'loot' });
     // the loot table's own realization is visible (Drop-Rates produced)
-    expect(result.reverse[0].swimlane.cells[0].grade).toBe('trusted');
+    expect(result.reverse[0].swimlane!.cells[0].grade).toBe('trusted');
   });
 
   it('marks a dangling forward link target as missing but still renders it', () => {
@@ -130,7 +130,7 @@ describe('resolveItemFocus', () => {
     const ctx = makeWorld();
     const result = resolveItemFocus('items', 'vael-blade', ctx)!;
     // sanity: the reverse node's swimlane readyPct is a number
-    expect(typeof result.reverse[0].swimlane.readyPct).toBe('number');
+    expect(typeof result.reverse[0].swimlane!.readyPct).toBe('number');
   });
 
   it('dedupes and drops self-references', () => {
@@ -182,14 +182,14 @@ describe('buildCategoryNodes — the weakest-first category overview', () => {
     const { entitiesByCatalog, ctx } = categoryCtx();
     const nodes = buildCategoryNodes('items', entitiesByCatalog, ctx);
     expect(nodes.map((n) => n.name)).toEqual(['Apple Dagger', 'Zephyr Edge', 'Mid Blade']);
-    expect(nodes.map((n) => n.swimlane.readyPct)).toEqual([0, 0, 50]);
+    expect(nodes.map((n) => n.swimlane!.readyPct)).toEqual([0, 0, 50]);
   });
 
   it('each row is the entity-scoped realization (Mid Blade produced Economy, not 3D-Mesh)', () => {
     const { entitiesByCatalog, ctx } = categoryCtx();
     const mid = buildCategoryNodes('items', entitiesByCatalog, ctx).find((n) => n.entityId === 'strong')!;
-    const economy = mid.swimlane.cells.find((c) => c.label === 'Economy')!;
-    const mesh = mid.swimlane.cells.find((c) => c.label === '3D-Mesh')!;
+    const economy = mid.swimlane!.cells.find((c) => c.label === 'Economy')!;
+    const mesh = mid.swimlane!.cells.find((c) => c.label === '3D-Mesh')!;
     expect(economy.grade).toBe('verified');
     expect(mesh.grade).toBe('unwired');
   });

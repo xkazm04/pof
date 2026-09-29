@@ -42,13 +42,20 @@ export interface RecordCommit<T> {
 }
 
 /** `{ [key]: value }` as a real `Partial<T>` — no cast, so the key/value pair stays checked. */
-function patchOf<T, K extends keyof T>(key: K, value: T[K]): Partial<T> {
+export function patchOf<T, K extends keyof T>(key: K, value: T[K]): Partial<T> {
   const patch: Partial<T> = {};
   patch[key] = value;
   return patch;
 }
 
-const applyPatch = <T,>(base: T, patch: Partial<T>): T => ({ ...base, ...patch });
+/**
+ * Commit sink for a panel whose writes go through a shared scene buffer instead
+ * (its `record` prop). The hook must still be called — rules of hooks — but this
+ * buffer is never staged, so nothing ever reaches it.
+ */
+export const NO_COMMIT = (): void => undefined;
+
+const applyPatch =<T,>(base: T, patch: Partial<T>): T => ({ ...base, ...patch });
 const foldPatch = <T,>(prev: Partial<T> | null, next: Partial<T>): Partial<T> =>
   (prev ? { ...prev, ...next } : next);
 

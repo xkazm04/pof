@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { buildProduceLog, summarizeProduceLog, type ProduceLogEntry, type ProduceLogOutcome } from './produceLog';
-import type { LabStepArtifact } from './labPipelineStore';
+import { useLabPipelineStore, type LabStepArtifact } from './labPipelineStore';
 import type { LabTheme } from './theme';
 
 /** Glyph + word per outcome (colourblind-safe: never hue alone — WCAG 1.4.1). */
@@ -41,11 +41,17 @@ export function ProduceLogPanel({ t, steps, byStep, onJump }: {
   const [open, setOpen] = useState(false);
   const log = buildProduceLog(steps, byStep);
   const sum = summarizeProduceLog(log);
+  // A refused localStorage write no longer throws out of the store (it would have cut off the
+  // server write-through); it is reported here instead, even when this entity's log is empty.
+  const persistError = useLabPipelineStore((s) => s.persistError);
+  const persistLine = persistError ? <PersistErrorLine t={t} reason={persistError} /> : null;
 
-  if (!sum.total) return null; // nothing has run — an empty log is noise, not information
+  // nothing has run — an empty log is noise, not information
+  if (!sum.total) return persistLine && <div style={{ padding: '0 18px 10px' }}>{persistLine}</div>;
 
   return (
     <div data-testid="produce-log" data-attention={sum.needsAttention} style={{ padding: '0 18px 10px' }}>
+      {persistLine}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -78,6 +84,15 @@ export function ProduceLogPanel({ t, steps, byStep, onJump }: {
           {log.map((e) => <LogRow key={`${e.step}:${e.at}`} t={t} e={e} onJump={onJump} />)}
         </ul>
       )}
+    </div>
+  );
+}
+
+function PersistErrorLine({ t, reason }: { t: LabTheme; reason: string }) {
+  return (
+    <div data-testid="produce-log-persist-error" role="status" style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 13, color: t.warn, lineHeight: 1.45 }}>
+      <StatusTag level="warn" word="NOT SAVED LOCALLY" />
+      <span>{reason}</span>
     </div>
   );
 }

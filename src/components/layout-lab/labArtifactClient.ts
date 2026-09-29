@@ -8,6 +8,7 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { DrainSummary } from '@/lib/test-gate-runner/types';
 import type { DrainOutcome } from './batchDrainModel';
+import type { DrainResponse } from './entityDrainOutcome';
 import type { StepSummary } from './stepSummary';
 
 export interface ArtifactUpsertBody {
@@ -125,16 +126,38 @@ export async function fetchDrainLease(): Promise<DrainLeaseState | null> {
   return r.ok ? r.data : null;
 }
 
-export interface DrainSummaryLite { ran: number; passed: number; failed: number; skipped: number }
+/**
+ * POST the drain route and keep EVERY outcome: the full {@link DrainSummary} on success, the
+ * server's own refusal reason on a 409 (the lease names the scope already in flight), and the
+ * error reason otherwise. Never throws.
+ */
+async function postDrain(body: Record<string, unknown>): Promise<DrainResponse> {
+  try {
+    const res = await fetch('/api/pipeline-artifacts/drain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 409) {
+      // A refusal body that cannot be read is still a refusal — never an error.
+      const refusal = (await Promise.resolve().then(() => res.json()).catch(() => null)) as { error?: unknown } | null;
+      return typeof refusal?.error === 'string' ? { kind: 'locked', reason: refusal.error } : { kind: 'locked' };
+    }
+    const json = (await res.json()) as ApiResponse<DrainSummary>;
+    if (!json.success) return { kind: 'error', reason: json.error };
+    return { kind: 'ok', summary: json.data };
+  } catch (e) {
+    return { kind: 'error', reason: e instanceof Error ? e.message : 'Network error' };
+  }
+}
 
-/** Operator-triggered: run this entity's deferred L3/L4 gates through the live-UE runner. */
-export async function drainGates(catalogId: string, entityId: string): Promise<DrainSummaryLite | null> {
-  const r = await tryApiFetch<DrainSummaryLite>('/api/pipeline-artifacts/drain', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ catalogId, entityId }),
-  });
-  return r.ok ? r.data : null;
+/**
+ * Operator-triggered: run this entity's deferred L3/L4 gates through the live-UE runner. Returns
+ * the whole outcome (ok / locked-with-reason / error) — it used to collapse every failure to
+ * `null` and was typed as four counts, so the coach could show nothing of what happened.
+ */
+export async function drainGates(catalogId: string, entityId: string): Promise<DrainResponse> {
+  return postDrain({ catalogId, entityId });
 }
 
 /**
@@ -152,17 +175,8 @@ export async function drainGates(catalogId: string, entityId: string): Promise<D
  * so the caller sends the full list in a single POST.
  */
 export async function drainCatalogGates(catalogId: string, entityIds: string[]): Promise<DrainOutcome> {
-  try {
-    const res = await fetch('/api/pipeline-artifacts/drain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ catalogId, entityIds }),
-    });
-    if (res.status === 409) return { kind: 'locked' };
-    const json = (await res.json()) as ApiResponse<DrainSummary>;
-    if (!json.success) return { kind: 'error', reason: json.error };
-    return { kind: 'ok', summary: json.data };
-  } catch (e) {
-    return { kind: 'error', reason: e instanceof Error ? e.message : 'Network error' };
-  }
+  const outcome = await postDrain({ catalogId, entityIds });
+  // The batch path records a refusal per entity and points at the runner chip; its outcome
+  // shape stays exactly `{ kind: 'locked' }`.
+  return outcome.kind === 'locked' ? { kind: 'locked' } : outcome;
 }

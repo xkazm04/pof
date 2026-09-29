@@ -3,6 +3,10 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD,
   STATUS_INFO, STATUS_SUBDUED, ACCENT_VIOLET, ACCENT_PINK, STATUS_BLOCKER,
 } from '@/lib/chart-colors';
+import {
+  SAVE_PERSISTED_FIELDS, SAVE_VERSION_FIELD, SAVE_SCHEMA_VERSION, saveFieldNote,
+  type SaveFieldGroup,
+} from '@/lib/save-schema/fields';
 
 /* ── Accent ──────────────────────────────────────────────────────────────── */
 export const ACCENT = ACCENT_CYAN;
@@ -13,40 +17,33 @@ export type FieldType = 'int' | 'float' | 'string' | 'bool' | 'array' | 'object'
 export interface SchemaField { name: string; type: FieldType; source: string; details?: string }
 export interface SchemaGroup { id: string; label: string; color: string; fields: SchemaField[] }
 
-export const SCHEMA_GROUPS: SchemaGroup[] = [
-  {
-    id: 'character', label: 'SYS.CHAR_STATE', color: ACCENT_CYAN, fields: [
-      { name: 'Level', type: 'int', source: 'arpg-progression', details: 'uint32 [0-100]' },
-      { name: 'XP', type: 'int', source: 'arpg-progression', details: 'uint64 absolute' },
-      { name: 'Position', type: 'object', source: 'arpg-character', details: 'FVector {X,Y,Z}' },
-      { name: 'Attributes', type: 'object', source: 'arpg-gas', details: 'FGameplayAttributeData' },
-      { name: 'ForceAlignment', type: 'float', source: 'arpg-character', details: 'float [-100..100] Light/Dark' },
-      { name: 'LightsaberCrystalColor', type: 'string', source: 'arpg-inventory', details: 'FName crystal color ID' },
-    ]
-  },
-  {
-    id: 'inventory', label: 'SYS.INV_BLOB', color: MODULE_COLORS.content, fields: [
-      { name: 'ItemInstances', type: 'array', source: 'arpg-inventory', details: 'TArray<FItemData>' },
-      { name: 'EquippedItems', type: 'object', source: 'arpg-inventory', details: 'TMap<ESlot, FItem>' },
-    ]
-  },
-  {
-    id: 'progression', label: 'SYS.PROG_TREES', color: STATUS_SUCCESS, fields: [
-      { name: 'UnlockedAbilities', type: 'array', source: 'arpg-gas', details: 'TArray<FName>' },
-      { name: 'SpentPoints', type: 'int', source: 'arpg-progression', details: 'uint32 sum' },
-      { name: 'ForcePoints', type: 'int', source: 'arpg-gas', details: 'uint32 [0-500]' },
-      { name: 'ForcePowersLearned', type: 'array', source: 'arpg-gas', details: 'TArray<FGameplayTag>' },
-    ]
-  },
-  {
-    id: 'world', label: 'SYS.WORLD_STATE', color: MODULE_COLORS.systems, fields: [
-      { name: 'VisitedZones', type: 'array', source: 'arpg-world', details: 'TSet<FName>' },
-      { name: 'CompletedEncounters', type: 'array', source: 'arpg-world', details: 'Bitmask/TArray' },
-      { name: 'LightsideChoices', type: 'int', source: 'arpg-world', details: 'uint16 count' },
-      { name: 'DarksideChoices', type: 'int', source: 'arpg-world', details: 'uint16 count' },
-    ]
-  },
+/** Tree-view type bucket for a UE declaration type. */
+function fieldTypeOf(ueType: string): FieldType {
+  if (ueType === 'int32') return 'int';
+  if (ueType.startsWith('TArray<')) return 'array';
+  if (ueType === 'FName' || ueType === 'FGameplayTag') return 'string';
+  return 'object';
+}
+
+const GROUP_META: { id: SaveFieldGroup; label: string; color: string; source: string }[] = [
+  { id: 'character', label: 'SYS.CHAR_STATE', color: ACCENT_CYAN, source: 'arpg-character' },
+  { id: 'inventory', label: 'SYS.INV_BLOB', color: MODULE_COLORS.content, source: 'arpg-inventory' },
+  { id: 'world', label: 'SYS.WORLD_STATE', color: MODULE_COLORS.systems, source: 'arpg-world' },
+  { id: 'meta', label: 'SYS.SAVE_META', color: STATUS_SUCCESS, source: 'arpg-save' },
 ];
+
+/** Every UPROPERTY UARPGSaveGame declares, from the one save-field authority (@/lib/save-schema/fields). */
+const SAVE_GAME_FIELDS = [
+  { ueName: SAVE_VERSION_FIELD.ueName, ueType: SAVE_VERSION_FIELD.ueType, group: SAVE_VERSION_FIELD.group, note: SAVE_VERSION_FIELD.note },
+  ...SAVE_PERSISTED_FIELDS.map((f) => ({ ueName: f.ueName, ueType: f.ueType, group: f.group, note: saveFieldNote(f) })),
+];
+
+export const SCHEMA_GROUPS: SchemaGroup[] = GROUP_META.map(({ id, label, color, source }) => ({
+  id, label, color,
+  fields: SAVE_GAME_FIELDS.filter((f) => f.group === id).map((f) => ({
+    name: f.ueName, type: fieldTypeOf(f.ueType), source, details: `${f.ueType} — ${f.note}`,
+  })),
+}));
 
 export const TYPE_COLORS: Record<FieldType, string> = {
   int: STATUS_INFO, float: ACCENT_EMERALD, string: MODULE_COLORS.content,
@@ -80,48 +77,17 @@ export interface SchemaVersion {
   changes: SchemaVersionChange[];
 }
 
+/**
+ * The honest history: the save-points Versioning step ships v1 as the initial
+ * schema (v0→v1, no migration). A SAVE_SCHEMA_VERSION bump adds an entry here
+ * alongside its UARPGSaveSubsystem::MigrateSaveGame migration.
+ */
 export const SCHEMA_VERSIONS: SchemaVersion[] = [
   {
-    version: 'v1.0.0', label: 'V1.0', date: '2025-06-01', dateShort: '2025-06',
-    author: 'Core Team', summary: 'Initial schema implementation',
-    isCurrent: false, breaking: false,
-    changes: [
-      { type: 'added', field: 'Level', detail: 'uint32 character level [0-100]' },
-      { type: 'added', field: 'XP', detail: 'uint64 absolute experience points' },
-      { type: 'added', field: 'Position', detail: 'FVector world position' },
-      { type: 'added', field: 'ItemInstances', detail: 'Raw binary inventory blob' },
-    ]
-  },
-  {
-    version: 'v1.1.0', label: 'V1.1', date: '2025-08-12', dateShort: '2025-08',
-    author: 'Inventory Team', summary: 'Added EquippedItems serialization',
-    isCurrent: false, breaking: false,
-    changes: [
-      { type: 'added', field: 'EquippedItems', detail: 'TMap<ESlot, FItem> for loadout persistence' },
-      { type: 'added', field: 'Attributes', detail: 'FGameplayAttributeData serialization' },
-      { type: 'modified', field: 'ItemInstances', detail: 'Raw bytes -> TArray<FItemData> structured' },
-    ]
-  },
-  {
-    version: 'v1.2.5', label: 'V1.2', date: '2025-10-03', dateShort: '2025-10',
-    author: 'Save Systems', summary: 'Added Abilities & Encounter flags',
-    isCurrent: false, breaking: false,
-    changes: [
-      { type: 'added', field: 'UnlockedAbilities', detail: 'TArray<FName> for ability tracking' },
-      { type: 'added', field: 'SpentPoints', detail: 'uint32 sum of allocated skill points' },
-      { type: 'added', field: 'VisitedZones', detail: 'TSet<FName> zone discovery tracking' },
-      { type: 'removed', field: 'LegacySkillTree', detail: 'Replaced by GAS ability system' },
-    ]
-  },
-  {
-    version: 'v2.0.0', label: 'V2.0', date: '2026-01-15', dateShort: '2026-01',
-    author: 'Engine Team', summary: 'Double-precision positions & encounter tracking',
-    isCurrent: true, breaking: true,
-    changes: [
-      { type: 'modified', field: 'Position', detail: 'FVector -> FVector3d (double precision)' },
-      { type: 'added', field: 'CompletedEncounters', detail: 'Bitmask array for encounter tracking' },
-      { type: 'added', field: 'Checksum', detail: 'CRC32 integrity verification field' },
-    ]
+    version: `v${SAVE_SCHEMA_VERSION}.0.0`, label: `V${SAVE_SCHEMA_VERSION}.0`, date: 'first shipped', dateShort: 'v0→v1',
+    author: 'save-points State Schema', summary: 'Initial schema (no migration needed)',
+    isCurrent: true, breaking: false,
+    changes: SAVE_GAME_FIELDS.map((f) => ({ type: 'added' as const, field: f.ueName, detail: `${f.ueType} — ${f.note}` })),
   },
 ];
 

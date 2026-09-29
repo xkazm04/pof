@@ -14,6 +14,16 @@
 import type { PlanItem } from './plan-generator';
 import { getModuleLabel } from './plan-generator';
 import { TaskFactory, type FeatureFixTask } from '@/lib/cli-task';
+import { ok, err, type Result } from '@/types/result';
+
+/** Why a plan item cannot be dispatched: prerequisites that are not done yet. */
+export interface PlanDispatchBlocked {
+  reason: 'blocked';
+  /** The item's dependencies that are not done (`PlanItem.unmetDeps`). */
+  unmet: string[];
+}
+
+export type PlanDispatchResult = Result<FeatureFixTask, PlanDispatchBlocked>;
 
 /**
  * The dependency note carried into the dispatch prompt: the item's already-met
@@ -27,11 +37,9 @@ function dependencyNote(item: PlanItem): string {
 }
 
 /**
- * Map a plan item to a `feature-fix` CLITask via `TaskFactory`.
- *
- * PHASE-1: single-item dispatch. Callers gate on `item.isReady` before dispatch —
- * this mapping does not itself enforce readiness (it is a pure transform), but the
- * plan view only offers the affordance on ready items.
+ * Map a plan item to a `feature-fix` CLITask via `TaskFactory` — the pure
+ * mapping. It does not gate on readiness; dispatch sites go through
+ * {@link planDispatch} (via `usePlanDispatch`), which does.
  */
 export function planItemToTask(item: PlanItem, appOrigin: string): FeatureFixTask {
   const nextSteps =
@@ -52,4 +60,14 @@ export function planItemToTask(item: PlanItem, appOrigin: string): FeatureFixTas
     `Implement: ${getModuleLabel(item.moduleId)} / ${item.featureName}`,
     appOrigin,
   );
+}
+
+/**
+ * The ONE gated plan dispatch door: a ready item maps to its feature-fix task;
+ * a blocked item is refused with the prerequisites it still waits on, and no
+ * task is created. Readiness lives here, not in each caller.
+ */
+export function planDispatch(item: PlanItem, appOrigin: string): PlanDispatchResult {
+  if (!item.isReady) return err({ reason: 'blocked', unmet: [...item.unmetDeps] });
+  return ok(planItemToTask(item, appOrigin));
 }

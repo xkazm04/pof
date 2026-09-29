@@ -8,12 +8,15 @@
  * design-canon-as-executable-law — one statement per law; edit the prose and the seed moves with it;
  * if the number cannot be found, fail loudly rather than fall back to a remembered value).
  */
-import { DIABLO1_CANON } from '@/lib/catalog/canon/profiles/diablo1';
 import { SOURCED_FIELD, type SourcedStamp } from '@/lib/catalog/acceptance/sourced';
 import { REFERENCE_GAP } from '@/lib/catalog/acceptance/markers';
 import type { ReferenceWrapper } from './wrapper';
 import { resistanceKey } from '@/lib/catalog/canon/elements';
 import { CAST_LAW_ID, SPELL_LAW_IDS, fireboltAt, type ReferenceCaster } from './spellLaw';
+import { castTiming } from '@/lib/catalog/reference/combatMath';
+import { damage } from '@/lib/catalog/reference/spellMath';
+import { spellSpec } from '@/lib/catalog/reference/spellSpecs';
+import { SPELL_STATUS_ENTITY_IDS } from '@/lib/catalog/reference/statusSpecs';
 
 export interface StepSeed {
   catalogId: string;
@@ -24,28 +27,8 @@ export interface StepSeed {
   gaps: string[];
 }
 
-/** Diablo I's monster resistance law, read from `d1-resistance-law`'s own text. */
-export function resistanceLaw(): { normal: number; resist: number; immune: number } {
-  const body = DIABLO1_CANON.find((r) => r.id === 'd1-resistance-law')?.body;
-  if (!body) throw new Error('canon rule d1-resistance-law is missing — the resistance seed has no law to read');
-  const m = /normal \((\d+)%\), resistant \((\d+)%\) or immune \((\d+)%\)/.exec(body);
-  if (!m) throw new Error('d1-resistance-law no longer states "normal (N%), resistant (N%) or immune (N%)" — refusing to guess');
-  return { normal: Number(m[1]), resist: Number(m[2]), immune: Number(m[3]) };
-}
-
-/** Diablo I's element set, from the diablo1 profile's vocabulary (D14) — upper-cased like the monstdat flags. */
-const ELEMENTS = ['MAGIC', 'FIRE', 'LIGHTNING'] as const;
-
-/** Per-element reduction from a monstdat `resistance` flag list (`IMMUNE_MAGIC,RESIST_FIRE`). */
-export function resistanceByElement(flags: string): Record<(typeof ELEMENTS)[number], number> {
-  const law = resistanceLaw();
-  const set = new Set(flags.split(',').map((f) => f.trim()).filter(Boolean));
-  const out = {} as Record<(typeof ELEMENTS)[number], number>;
-  for (const el of ELEMENTS) {
-    out[el] = set.has(`IMMUNE_${el}`) ? law.immune : set.has(`RESIST_${el}`) ? law.resist : law.normal;
-  }
-  return out;
-}
+export { resistanceByElement, resistanceLaw } from '@/lib/catalog/reference/resistanceLaw';
+import { ELEMENTS, resistanceByElement } from '@/lib/catalog/reference/resistanceLaw';
 
 function stamp(w: ReferenceWrapper, columns: string[]): SourcedStamp {
   const p = w.entity.provenance;
@@ -180,62 +163,144 @@ export function seedSpellSteps(w: ReferenceWrapper, caster?: ReferenceCaster): S
   const element = traits.find((t) => (ELEMENTS as readonly string[]).includes(t.toUpperCase()));
   const manaCost = num(r.manaCost);
   if (manaCost == null) return [];
-  // The damage is ENGINE CODE (W13, D33): known only for a spell with a law, and only for a named caster.
-  const n = caster && r.id in SPELL_LAW_IDS ? fireboltAt(caster, 1, manaCost) : null;
-  const seeds: StepSeed[] = [{
-    catalogId: 'spellbook', entityId: w.entity.id, step: 'Effect Logic',
-    data: {
-      effect: {
+  const spec = spellSpec(r.id);
+  const hasDamage = spec?.damage.kind === 'direct' || spec?.damage.kind === 'per-tick';
+  let evaluated: ReturnType<typeof damage> | null = null;
+  let evaluationGap: string | null = null;
+  if (caster && hasDamage) {
+    try {
+      evaluated = damage(r.id, { spellLevel: 1, characterLevel: caster.level, magic: caster.magic });
+    } catch (error) {
+      evaluationGap = error instanceof Error ? error.message : String(error);
+    }
+  }
+  const legacyFirebolt = caster && r.id === 'Firebolt' ? fireboltAt(caster, 1, manaCost) : null;
+  const casting = caster
+    ? castTiming({ cast: { frames: caster.castingFrames, actionFrame: caster.castingActionFrame } })
+    : undefined;
+  const meanDamage = legacyFirebolt?.damage.mean ?? evaluated?.mean ?? null;
+  const damageType = spec ? (spec.element === 'none' ? null : spec.element[0].toUpperCase() + spec.element.slice(1)) : element;
+  // A zero-cost row is a free class skill: only its cast animation limits it (W20, D-B8). Its cast time needs the named
+  // reference caster's casting frames (d1-timing-law ticks); without a caster the cast time is a gap, never invented.
+  const free = manaCost === 0;
+  const gate = free
+    ? { gatedBy: 'cast-time', castTime: casting ? Number(casting.seconds.toFixed(3)) : REFERENCE_GAP }
+    : { gatedBy: 'resource' };
+  const effect = spec
+    ? {
+        abilityId: r.id,
+        activation: 'active cast from the reference spell row',
+        kind: spec.effectKind,
+        manaCost,
+        ...gate,
+        ...(hasDamage ? {
+          damageType,
+          baseDamage: meanDamage ?? REFERENCE_GAP,
+          critChancePct: REFERENCE_GAP,
+          critMulti: REFERENCE_GAP,
+          onHitIgnite: REFERENCE_GAP,
+        } : {}),
+      }
+    : {
+        abilityId: r.id,
+        activation: 'active cast from the reference spell row',
+        kind: 'unclassified',
         damageType: element ?? REFERENCE_GAP,
         manaCost,
-        // D4 (W12): a resource gates casting — declared, never an invented cooldown.
-        gatedBy: 'resource',
-        baseDamage: n ? n.damage.mean : REFERENCE_GAP,
+        ...gate,
+        baseDamage: REFERENCE_GAP,
         critChancePct: REFERENCE_GAP,
         critMulti: REFERENCE_GAP,
         onHitIgnite: REFERENCE_GAP,
-      },
-      [SOURCED_FIELD]: stamp(w, ['flags', 'manaCost']),
+      };
+  const effects = spec
+    ? [{
+        kind: hasDamage ? 'damage' : spec.effectKind,
+        target: spec.delivery,
+        value: hasDamage ? (meanDamage ?? REFERENCE_GAP) : spec.durationTicks,
+        ...(hasDamage && damageType ? { damageType } : {}),
+      }]
+    : [{ kind: 'unclassified', target: 'not in the reference', value: REFERENCE_GAP }];
+  const seeds: StepSeed[] = [{
+    catalogId: 'spellbook', entityId: w.entity.id, step: 'Effect Logic',
+    data: {
+      effect,
+      effects,
+      [SOURCED_FIELD]: stamp(w, ['flags', 'manaCost', ...(spec ? [`(law ${spec.lawId})`] : [])]),
     },
     gaps: [
-      n
-        ? `baseDamage: the mean of ${n.damage.minimum}-${n.damage.maximum} (Diablo hit points) for ${caster!.basis} — the law's roll, not one value`
-        : 'baseDamage: a Diablo spell\'s damage is ENGINE CODE (misdat has no damage column) — no engine-derived law for this spell yet, or no reference caster named',
-      'critChancePct / critMulti: spells do not crit in Diablo I',
-      'onHitIgnite: Diablo I has no ignite — fire damage has no burning follow-up',
-      ...(element ? [] : ['damageType: the spell carries no element trait (a utility spell)']),
+      ...(hasDamage
+        ? [meanDamage != null
+            ? `baseDamage: mean ${evaluated?.min ?? legacyFirebolt!.damage.minimum}-${evaluated?.max ?? legacyFirebolt!.damage.maximum} HP for ${caster!.basis}; one collision/tick, not total cast damage`
+            : `baseDamage: ENGINE CODE needs a named reference caster${evaluationGap ? ` and ${evaluationGap}` : ''}`,
+          'critChancePct / critMulti: spells do not crit in Diablo I',
+          'onHitIgnite: Diablo I has no ignite follow-up']
+        : spec ? [] : ['damageType/baseDamage: no structured engine law for this row']),
+      ...(spec || element ? [] : ['damageType: the spell carries no element trait']),
+      'wiringContract: the reference engine does not define PoF grants, input bindings, dependencies, or verification',
+      ...(manaCost > 0 || caster ? [] : ['castTime: a free skill cast time needs a named reference caster (--root)']),
     ],
   }];
-  // Balance (W13, D33): only for a spell whose engine-derived law exists, and only with a named reference caster.
-  if (n && caster) {
-    const hitDPS = Number((n.damage.mean / n.castTime).toFixed(3));
+  // Balance is conditional on damage; utility effects deliberately carry no damage fields.
+  if (hasDamage && caster) {
+    const castTime = casting!.seconds;
+    const releaseTime = casting!.releaseSeconds;
+    const hitDPS = meanDamage == null ? REFERENCE_GAP : Number((meanDamage / castTime).toFixed(3));
     seeds.push({
       catalogId: 'spellbook', entityId: w.entity.id, step: 'Balance',
       data: {
         balance: {
-          baseDamage: n.damage.mean,
-          damageRange: { minimum: n.damage.minimum, maximum: n.damage.maximum },
-          castTime: n.castTime,
-          releaseTime: n.releaseTime,
+          kind: 'damage',
+          baseDamage: meanDamage ?? REFERENCE_GAP,
+          damageRange: evaluated ? { minimum: evaluated.min, maximum: evaluated.max } : REFERENCE_GAP,
+          castTime,
+          releaseTime,
           manaCost,
-          manaRegenPerSec: n.manaRegenPerSec,
+          manaRegenPerSec: 0,
           limiter: 'castTime',
           hitDPS,
           igniteDPS: 0,
           sustainedDPS: hitDPS,
-          castsPerPool: n.castsPerPool,
+          components: ['hitDPS'],
+          normalizedPower: hitDPS,
+          castsPerPool: manaCost > 0 ? Math.floor(caster.maxMana / manaCost) : REFERENCE_GAP,
           tierTarget: REFERENCE_GAP,
           units: { baseDamage: 'Diablo hit points', castTime: 's', manaCost: 'Diablo mana' },
-          basis: `${caster.basis}; spell level 1; laws ${SPELL_LAW_IDS[r.id]} + ${CAST_LAW_ID} + d1-timing-law`,
+          basis: `${caster.basis}; spell level 1; one collision/tick; laws ${SPELL_LAW_IDS[r.id]} + ${CAST_LAW_ID} + d1-timing-law`,
         },
         [SOURCED_FIELD]: stamp(w, ['manaCost', `(laws ${SPELL_LAW_IDS[r.id]}, ${CAST_LAW_ID})`, '(class tables: attributes, animations)']),
       },
       gaps: [
         'tierTarget: the tier-100 power line is PoF design; a 1996 spell has no place on it until converted (D23 anchors, in UE)',
-        `toHit: rolled per target (${Math.round(n.toHit(1, 0) * 100)}% against a level-1 monster beside the caster) — not part of hitDPS`,
+        'toHit and multi-hit geometry: rolled per collision and not part of hitDPS',
         'sustain: Diablo I has no mana regeneration — the pool (castsPerPool) and potions sustain casting, not a rate',
+        ...(evaluationGap ? [`baseDamage: ${evaluationGap}`] : []),
       ],
     });
   }
+  const statusEntityId = SPELL_STATUS_ENTITY_IDS[r.id];
+  const statusLink = statusEntityId
+    ? { catalogId: 'status-effects', entityId: statusEntityId, role: 'applies' }
+    : null;
+  seeds.push({
+    catalogId: 'spellbook', entityId: w.entity.id, step: 'Applies Status',
+    data: {
+      appliedStatus: statusLink ? {
+        statusId: `status-effects::${statusEntityId}`,
+        role: 'applies',
+        trigger: `${r.id} creates or activates the engine-owned state described by ${statusEntityId}-law.`,
+        reason: `${statusEntityId}-law`,
+        links: [statusLink],
+      } : {
+        statusId: 'none',
+        role: 'does-not-apply',
+        trigger: 'The cast creates no cataloged actor status; any missile, damage, healing, item, or world operation owns its own lifetime.',
+        reason: 'd1-status-overview-law',
+      },
+      links: statusLink ? [statusLink] : [],
+      [SOURCED_FIELD]: stamp(w, [statusLink ? `(law ${statusEntityId}-law)` : '(law d1-status-overview-law)']),
+    },
+    gaps: [],
+  });
   return seeds;
 }

@@ -1,155 +1,138 @@
 /* eslint-disable no-console -- CLI harness; stdout is its interface. */
-/**
- * Ingest a reference source into the wrapper store, and optionally promote a selection into
- * `catalog_entities` (source 'ingest') so the lab and the pipelines can see it.
- *
- *   npx tsx scripts/diablo/ingest.ts --root <devilutionX>/assets/txtdata
- *   npx tsx scripts/diablo/ingest.ts --root <…> --promote bestiary --limit 5
- *   npx tsx scripts/diablo/ingest.ts --root <…> --promote items --ids d1-IDI_WARRIOR,d1-IDI_ROGUE
- *   npx tsx scripts/diablo/ingest.ts --root <…> --json        # machine-readable summary
- *   npx tsx scripts/diablo/ingest.ts --demote bestiary --ids d1-MT_NZOMBIE   # un-promote (re-do a wave)
- *   npx tsx scripts/diablo/ingest.ts --seed-steps bestiary --ids d1-MT_NZOMBIE   # SOURCED step artifacts (graded by the server)
- *
- * Writes the LOCAL PoF database (~/.pof/pof.db, or POF_DB_PATH). Never the repo.
- */
-import { getDb } from '../../src/lib/db';
-import { deleteEntity, listEntities, upsertEntity } from '../../src/lib/catalog-db';
-import { ingestSourceFromDir } from '../../src/lib/catalog/reference/ingestSource';
-import { listWrappers } from '../../src/lib/catalog/reference/wrappers-db';
-import { codeSeededEntities } from '../../src/lib/catalog/seed';
-import { promoteWrappers, selectForPromotion } from '../../src/lib/catalog/reference/promote';
-import { affixFamilies, seedAffixSteps } from '../../src/lib/catalog/reference/affixFamilies';
-import type { ReferenceWrapper } from '../../src/lib/catalog/reference/wrapper';
-import { seedBestiarySteps, seedItemSteps, seedSpellSteps } from '../../src/lib/catalog/reference/stepSeeds';
-import { submitStepArtifact } from '../../src/lib/catalog/headless';
-import { seededEntities } from '../../src/lib/catalog/seed';
-import '../../src/lib/catalog/pipelines/registry.generated';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { parseTsv } from '../../src/lib/catalog/ingest/tsv';
-import { referenceCaster, type ReferenceCaster } from '../../src/lib/catalog/reference/spellLaw';
-
-function arg(name: string): string | undefined {
-  const i = process.argv.indexOf(`--${name}`);
-  return i >= 0 ? process.argv[i + 1] : undefined;
-}
+/** Ingest Diablo reference tables, optionally promoting entities or seeding step artifacts. */
+import { deleteEntity, listEntities, upsertEntity } from '@/lib/catalog-db';
+import { codeSeededEntities } from '@/lib/catalog/seed';
+import { getDb } from '@/lib/db';
+import { ingestSourceFromDir } from '@/lib/catalog/reference/ingestSource';
+import { promoteWrappers, selectForPromotion } from '@/lib/catalog/reference/promote';
+import { unresolvedQuestTalk } from '@/lib/catalog/reference/questTalk';
+import type { ReferenceWrapper } from '@/lib/catalog/reference/wrapper';
+import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
+import '@/lib/catalog/pipelines/registry.generated';
+import { arg, promotionOptions, requestedIds } from './catalogs/args';
+import { catalogHandlers, type CatalogReport, type SeedContext } from './catalogs';
+import { emitSeeds, seedGeneric } from './catalogs/seed';
 
 const sourceId = arg('source') ?? 'diablo1';
+const print = (line: string): void => console.log(line);
 
-// Un-promote: remove INGESTED rows from catalog_entities (the wrappers stay — they are the
-// record; promotion is only what the lab and pipelines see). Refuses anything not
-// source 'ingest', so it can never delete an authored entity.
 const demoteCatalog = arg('demote');
 if (demoteCatalog) {
-  const ids = arg('ids')?.split(',').map((x) => x.trim()).filter(Boolean);
-  const rows = listEntities(demoteCatalog).filter((r) => r.source === 'ingest' && (!ids || ids.includes(r.entityId)));
-  const skipped = (ids ?? []).filter((id) => !rows.some((r) => r.entityId === id));
-  const removed = rows.map((r) => ({ id: r.entityId, n: deleteEntity(demoteCatalog, r.entityId) }));
-  console.log(`demoted ${removed.filter((r) => r.n > 0).length} from ${demoteCatalog}: ${removed.map((r) => r.id).join(', ') || '(none)'}`);
+  const ids = requestedIds();
+  const rows = listEntities(demoteCatalog).filter(
+    (row) => row.source === 'ingest' && (!ids || ids.includes(row.entityId)),
+  );
+  const skipped = (ids ?? []).filter((id) => !rows.some((row) => row.entityId === id));
+  const removed = rows.map((row) => ({ id: row.entityId, n: deleteEntity(demoteCatalog, row.entityId) }));
+  console.log(`demoted ${removed.filter((row) => row.n > 0).length} from ${demoteCatalog}: ${removed.map((row) => row.id).join(', ') || '(none)'}`);
   if (skipped.length) console.log(`   not demoted (absent or not source 'ingest'): ${skipped.join(', ')}`);
   console.log('   their pipeline artifacts are NOT removed — purge with DELETE /api/pipeline-artifacts if the wave is re-done from scratch.');
   process.exit(0);
 }
 
-// Seed step artifacts from the reference (D3: graded by the SERVER through the same door as any
-// submission, never pass). Requires the entities to be promoted first — a step belongs to an entity.
 const seedCatalog = arg('seed-steps');
 if (seedCatalog) {
-  const ids = arg('ids')?.split(',').map((x) => x.trim()).filter(Boolean);
-  const promoted = new Set(listEntities(seedCatalog).filter((r) => r.source === 'ingest').map((r) => r.entityId));
-  // Affix families are promoted aggregates (W11): seed from the family entity itself.
-  if (seedCatalog === 'affixes') {
-    for (const e of seededEntities('affixes').filter((x) => x.id.startsWith('d1-affix-') && (!ids || ids.includes(x.id)))) {
-      for (const seed of seedAffixSteps(e as unknown as ReferenceWrapper['entity'])) {
-        const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
-        console.log(`${seed.entityId} · ${seed.step}: ${r.acceptance?.status ?? '?'}${r.acceptance?.reason ? ` — ${r.acceptance.reason.slice(0, 150)}` : ''}`);
-        for (const g of seed.gaps) console.log(`    gap: ${g}`);
-      }
-    }
-    process.exit(0);
+  const db = getDb();
+  const ids = requestedIds();
+  const promoted = new Set(
+    listEntities(seedCatalog).filter((row) => row.source === 'ingest').map((row) => row.entityId),
+  );
+  const ctx: SeedContext = {
+    db,
+    sourceId,
+    ids,
+    promoted,
+    root: arg('root'),
+    emit: emitSeeds,
+    generic: (wrappers, caster) => seedGeneric(ctx, wrappers, caster),
+    print,
+  };
+  const handler = catalogHandlers.get(seedCatalog);
+  if (handler?.seed) handler.seed(ctx);
+  else {
+    const wrappers = listWrappers(db, { sourceId, catalogId: seedCatalog })
+      .filter((wrapper) => !ids || ids.includes(wrapper.entity.id));
+    seedGeneric(ctx, wrappers);
   }
-  // Spell Balance (W13, D33) needs a named reference caster, read from the class tables under --root (values never
-  // enter the repo). Without --root the spell seeds stop at Effect Logic.
-  let caster: ReferenceCaster | undefined;
-  const seedRoot = arg('root');
-  if (seedCatalog === 'spellbook' && seedRoot) {
-    const cls = arg('class') ?? 'sorcerer';
-    const kv = (rel: string, k: string, v: string) => {
-      const t = parseTsv(readFileSync(join(seedRoot, rel), 'utf8'));
-      if (t.refusal) throw new Error(`${rel}: ${t.refusal.message}`);
-      return Object.fromEntries(t.rows.map((r) => [r[k], r[v]]));
-    };
-    const className = kv('classes/classdat.tsv', 'folderName', 'className')[cls] ?? cls;
-    caster = referenceCaster({
-      className,
-      attributes: kv(`classes/${cls}/attributes.tsv`, 'Attribute', 'Value'),
-      animations: kv(`classes/${cls}/animations.tsv`, 'Variable', 'Value'),
-    });
-    console.log(`reference caster: ${caster.basis} — Magic ${caster.magic}, to-hit ${caster.magicToHit}, cast ${caster.castingFrames} frames (release ${caster.castingActionFrame}), mana ${caster.maxMana}`);
-  }
-  const wrappers = listWrappers(getDb(), { sourceId, catalogId: seedCatalog }).filter((w) => !ids || ids.includes(w.entity.id));
-  for (const w of wrappers) {
-    if (!promoted.has(w.entity.id)) { console.log(`SKIP ${w.entity.id}: not promoted (promote it first)`); continue; }
-    for (const seed of [...seedBestiarySteps(w), ...seedItemSteps(w), ...seedSpellSteps(w, caster)]) {
-      const r = submitStepArtifact(seed.catalogId, seed.entityId, seed.step, seed.data, []);
-      const a = r.acceptance;
-      console.log(`${seed.entityId} · ${seed.step}: ${a?.status ?? '?'}${a?.reason ? ` — ${a.reason.slice(0, 150)}` : ''}`);
-      for (const g of seed.gaps) console.log(`    gap: ${g}`);
-    }
+  process.exit(0);
+}
+
+function promotePool(catalogId: string, pool: ReferenceWrapper[]) {
+  const picked = selectForPromotion(pool, promotionOptions(catalogId));
+  return promoteWrappers(picked, upsertEntity, (targetCatalog, entityId) => {
+    const seed = codeSeededEntities(targetCatalog).find((entity) => entity.id === entityId);
+    return seed ? `id is already the code seed "${seed.name}" in ${targetCatalog} — the seed always wins` : null;
+  });
+}
+
+const promoteCatalog = arg('promote');
+const promoteHandler = promoteCatalog ? catalogHandlers.get(promoteCatalog) : undefined;
+if (promoteCatalog && promoteHandler?.standalonePromotion) {
+  const pool = promoteHandler.pool?.(getDb(), sourceId, []) ?? [];
+  const promotion = promotePool(promoteCatalog, pool);
+  if (process.argv.includes('--json')) console.log(JSON.stringify({ promotion }, null, 2));
+  else {
+    console.log(`promoted ${promotion.promoted.length} → catalog_entities (source ingest): ${promotion.promoted.join(', ') || '(none)'}`);
+    for (const refusal of promotion.refused) console.log(`   REFUSED ${refusal.entityId}: ${refusal.reason}${refusal.unsafeKeys ? ` (${refusal.unsafeKeys.join(', ')})` : ''}`);
   }
   process.exit(0);
 }
 
 const root = arg('root');
 if (!root) {
-  console.error('usage: ingest.ts --root <data root> [--source diablo1] [--promote <catalogId> [--limit N] [--ids a,b]] [--json]');
+  console.error('usage: ingest.ts --root <data root> [--source diablo1] [--promote <catalogId> [--limit N] [--ids a,b]] [--json]; vendors and status-effects promotion need no --root');
   process.exit(2);
 }
 
 const db = getDb();
 const summary = ingestSourceFromDir(sourceId, root, { db });
-
 let promotion: ReturnType<typeof promoteWrappers> | null = null;
-const promoteCatalog = arg('promote');
+let report: CatalogReport = {};
 if (promoteCatalog) {
-  const limit = arg('limit');
-  const ids = arg('ids')?.split(',').map((s) => s.trim()).filter(Boolean);
-  // Affixes promote as FAMILIES (W11): a Diablo row is one tier, PoF's entity is the family — aggregated pseudo-wrappers.
-  const pool = promoteCatalog === 'affixes'
-    ? affixFamilies(listWrappers(db, { sourceId, catalogId: 'affixes' })) as unknown as ReferenceWrapper[]
-    : listWrappers(db, { sourceId, catalogId: promoteCatalog });
-  const picked = selectForPromotion(pool, {
-    catalogId: promoteCatalog, entityIds: ids, limit: limit ? Number(limit) : undefined,
-  });
-  // Same door as the hand-made path: a code seed's id is refused, never overwritten.
-  promotion = promoteWrappers(picked, upsertEntity, (catalogId, entityId) => {
-    const seed = codeSeededEntities(catalogId).find((e) => e.id === entityId);
-    return seed ? `id is already the code seed "${seed.name}" in ${catalogId} — the seed always wins` : null;
-  });
+  const allWrappers = listWrappers(db, { sourceId });
+  const pool = promoteHandler?.pool?.(db, sourceId, allWrappers)
+    ?? allWrappers.filter((wrapper) => wrapper.catalogId === promoteCatalog);
+  promotion = promotePool(promoteCatalog, pool);
+  report = promoteHandler?.report?.() ?? {};
+  for (const line of report.beforeSummary ?? []) console.log(line);
 }
 
+const dialogueReport = report.dialogueReport ?? null;
+const monsterTalkReport = report.monsterTalkReport ?? null;
+const uniqueItemReport = report.uniqueItemReport ?? null;
 if (process.argv.includes('--json')) {
-  console.log(JSON.stringify({ summary, promotion }, null, 2));
+  console.log(JSON.stringify({ summary, promotion, dialogueReport, monsterTalkReport, uniqueItemReport }, null, 2));
   process.exit(0);
 }
 
-const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
 console.log(`\n=== INGEST ${sourceId} (run #${summary.runId}) from ${root} ===\n`);
-for (const t of summary.tables) {
-  if (t.status === 'missing') { console.log(`MISSING  ${t.file} → ${t.catalogId}`); continue; }
-  if (t.status === 'refused') { console.log(`REFUSED  ${t.file} → ${t.catalogId}: ${t.refusal?.message ?? 'no reason recorded'}`); continue; }
-  console.log(`${t.catalogId.padEnd(12)} ${String(t.rows).padStart(4)} rows  coverage ${pct(t.coverage).padStart(6)}  gaps ${t.gaps}  positional ${t.positionalIds}  dupes ${t.duplicateKeys}  malformed ${t.malformed}  map ${t.mappingVersion}`);
-  if (t.unclassified.length) console.log(`   UNCLASSIFIED (defect): ${t.unclassified.join(', ')}`);
-  if (t.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT: ${t.declaredButAbsent.join(', ')}`);
-  for (const s of t.sentinelColumns) console.log(`   sentinel in mapped column ${s.column}: ${s.values.join(', ')} — is it decoded?`);
+for (const table of summary.tables) {
+  if (table.status === 'missing') { console.log(`MISSING  ${table.file} → ${table.catalogId}`); continue; }
+  if (table.status === 'refused') { console.log(`REFUSED  ${table.file} → ${table.catalogId}: ${table.refusal?.message ?? 'no reason recorded'}`); continue; }
+  console.log(`${table.catalogId.padEnd(12)} ${String(table.rows).padStart(4)} rows  coverage ${pct(table.coverage).padStart(6)}  gaps ${table.gaps}  positional ${table.positionalIds}  dupes ${table.duplicateKeys}  malformed ${table.malformed}  map ${table.mappingVersion}`);
+  if (table.unclassified.length) console.log(`   UNCLASSIFIED (defect): ${table.unclassified.join(', ')}`);
+  if (table.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT: ${table.declaredButAbsent.join(', ')}`);
+  for (const sentinel of table.sentinelColumns) console.log(`   sentinel in mapped column ${sentinel.column}: ${sentinel.values.join(', ')} — is it decoded?`);
+  if (table.rowIdMismatch) console.log(`   ROW-ID MISMATCH (the engine enum moved): expected ${table.rowIdMismatch.expected} rows, file has ${table.rowIdMismatch.actual}`);
+}
+for (const manifest of summary.manifests) {
+  if (manifest.status === 'missing') { console.log(`MISSING  ${manifest.file} (manifest)`); continue; }
+  if (manifest.status === 'refused') { console.log(`REFUSED  ${manifest.file} (manifest): ${manifest.refusal?.message ?? 'no reason recorded'}`); continue; }
+  if (manifest.unclassified.length) console.log(`   UNCLASSIFIED manifest columns in ${manifest.file}: ${manifest.unclassified.join(', ')}`);
+  if (manifest.declaredButAbsent.length) console.log(`   UPSTREAM DRIFT manifest columns in ${manifest.file}: ${manifest.declaredButAbsent.join(', ')}`);
+  if (manifest.unregisteredKeys.length) console.log(`   UPSTREAM DRIFT unregistered keys in ${manifest.file}: ${manifest.unregisteredKeys.join(', ')}`);
 }
 console.log(`\nlinks: ${summary.links.resolved} resolved, ${summary.links.unresolved.length} unresolved`);
 const byRef = new Map<string, number>();
-for (const u of summary.links.unresolved) byRef.set(`${u.role}→${u.catalogId}:${u.ref}`, (byRef.get(`${u.role}→${u.catalogId}:${u.ref}`) ?? 0) + 1);
-for (const [k, n] of [...byRef].slice(0, 12)) console.log(`   unresolved ${k} ×${n}`);
-const s = summary.store;
-console.log(`store: created ${s.created} · rawChanged ${s.rawChanged} · reprojected ${s.reprojected} · unchanged ${s.unchanged}`);
+for (const item of summary.links.unresolved) byRef.set(`${item.role}→${item.catalogId}:${item.ref}`, (byRef.get(`${item.role}→${item.catalogId}:${item.ref}`) ?? 0) + 1);
+for (const [key, count] of [...byRef].slice(0, 12)) console.log(`   unresolved ${key} ×${count}`);
+const questTalkMissing = unresolvedQuestTalk(listWrappers(db, { sourceId }));
+console.log(`quest talk: ${questTalkMissing.length} line id(s) with no wrapped line${questTalkMissing.length ? `: ${questTalkMissing.slice(0, 12).join(', ')}` : ''}`);
+const store = summary.store;
+console.log(`store: created ${store.created} · rawChanged ${store.rawChanged} · reprojected ${store.reprojected} · unchanged ${store.unchanged}`);
 if (promotion) {
   console.log(`\npromoted ${promotion.promoted.length} → catalog_entities (source ingest): ${promotion.promoted.slice(0, 10).join(', ')}${promotion.promoted.length > 10 ? ' …' : ''}`);
-  for (const r of promotion.refused) console.log(`   REFUSED ${r.entityId}: ${r.reason}${r.unsafeKeys ? ` (${r.unsafeKeys.join(', ')})` : ''}`);
+  for (const refusal of promotion.refused) console.log(`   REFUSED ${refusal.entityId}: ${refusal.reason}${refusal.unsafeKeys ? ` (${refusal.unsafeKeys.join(', ')})` : ''}`);
 }
+for (const line of report.afterSummary ?? []) console.log(line);

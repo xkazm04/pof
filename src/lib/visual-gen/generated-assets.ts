@@ -1,5 +1,7 @@
 /** Pure helpers for the /3d studio's generated-asset gallery + serving route. */
 
+import { iconSlug, slugOfIconFile } from '@/lib/visual-gen/generated-icons';
+
 export interface GeneratedAsset {
   name: string;
   sizeBytes: number;
@@ -96,6 +98,27 @@ export function attemptOf(name: string): number | undefined {
   if (!m) return undefined;
   const n = Number(m[1]);
   return Number.isFinite(n) && n > 1 ? n : undefined;
+}
+
+/**
+ * The artifact identity a mesh filename encodes — the icon library's rule
+ * (`slugOfIconFile`), so 2D and 3D share ONE identity, re-encoded and never split. A retry
+ * attempt (`_aN`, per {@link attemptOf}) is the same artifact as its first attempt, so the
+ * suffix is dropped before the slug is taken. Pure.
+ */
+export function meshSlug(name: string): string {
+  const base = attemptOf(name) !== undefined ? name.replace(/_a\d+(\.(?:glb|gltf))$/i, '$1') : name;
+  return slugOfIconFile(base);
+}
+
+/**
+ * Was this mesh generated FOR the per-step artifact `(catalogId, step)`? Exact re-encoded
+ * match via `iconSlug`, the rule the generators name files with (`iconFileBase`). An
+ * entity-scoped name (`catalog__entity__step`) never matches the step, so one entity's
+ * mesh cannot answer for every entity — the same precedence as `iconsForStep`. Pure.
+ */
+export function meshMatches(slug: string, catalogId: string, step: string): boolean {
+  return slug === iconSlug(catalogId, step);
 }
 
 export interface AssetDirListing {

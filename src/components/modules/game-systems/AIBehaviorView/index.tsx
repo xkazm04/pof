@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   FlaskConical,
+  Crosshair,
 } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule , getModuleChecklist } from '@/lib/module-registry';
@@ -21,6 +22,15 @@ import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView'
 import { SYSTEMS_ACCENT } from './constants';
 import { SandboxTab } from './SandboxTab';
 import type { ActionError } from './SandboxTab';
+import { EqsSquadTab } from './EqsSquadTab';
+
+/** EQS & squad design tools (squad editor, attack ring, patrol, EQS pipelines/inventory). */
+const EQS_SQUAD_TAB: ExtraTab = {
+  id: 'eqs-squad',
+  label: 'EQS & Squad Tactics',
+  icon: Crosshair,
+  render: () => <EqsSquadTab />,
+};
 
 export function AIBehaviorView() {
   const mod = SUB_MODULE_MAP['ai-behavior'];
@@ -268,7 +278,7 @@ export function AIBehaviorView() {
       accentColor={cat.accentColor}
       checklist={getModuleChecklist('ai-behavior')}
       quickActions={mod.quickActions}
-      extraTabs={[sandboxTab]}
+      extraTabs={[sandboxTab, EQS_SQUAD_TAB]}
     />
   );
 }

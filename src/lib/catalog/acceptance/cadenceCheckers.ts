@@ -21,16 +21,23 @@ function num(v: unknown): number | null {
  * so a FORGOTTEN cooldown still reads as missing (a silent omission would otherwise grade as a resource gate).
  */
 export function cooldownOrResourceGate(field: string, label: string): Checker {
-  const shape = `"${field}.cooldown" is the ability's cooldown in seconds (> 0) — or, for an ability that a resource and not a timer limits (no cooldown), omit it and write "${field}.gatedBy: \\"resource\\"" beside a manaCost > 0`;
+  const shape = `"${field}.cooldown" is the ability's cooldown in seconds (> 0) — or, for an ability that a resource and not a timer limits (no cooldown), omit it and write "${field}.gatedBy: \\"resource\\"" beside a manaCost > 0 — or, for a free ability only its cast animation limits, "${field}.gatedBy: \\"cast-time\\"" beside a castTime > 0 (s)`;
   return tagRequiredFields((data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
     const cooldown = num(obj.cooldown);
     const manaCost = num(obj.manaCost);
     const gated = obj.gatedBy === 'resource';
+    // A free ability limited only by its cast animation (Diablo's class skills: Repair, Recharge, Disarm — /diablo W20, D-B8).
+    const castGated = obj.gatedBy === 'cast-time';
+    const castTime = num(obj.castTime);
     const noCooldown = obj.cooldown == null || cooldown === 0;
     let result: Pick<AcceptanceResult, 'status' | 'detail' | 'reason'>;
     if (cooldown != null && cooldown > 0) {
       result = { status: 'pass', detail: `cooldown ${cooldown} s` };
+    } else if (castGated && noCooldown && castTime != null && castTime > 0) {
+      result = { status: 'pass', detail: `cast-time-gated: ${castTime} s per use, no cooldown, no cost` };
+    } else if (castGated && noCooldown) {
+      result = { status: 'pending', detail: 'cast-time gate without a cast time', reason: `field "${field}": gatedBy "cast-time" needs castTime > 0 — ${shape}` };
     } else if (gated && noCooldown && manaCost != null && manaCost > 0) {
       result = { status: 'pass', detail: `resource-gated: ${manaCost} mana per cast, no cooldown` };
     } else if (gated && noCooldown) {

@@ -1,8 +1,9 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { Info, ArrowRight } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { OPACITY_10, OPACITY_15 } from '@/lib/chart-colors';
 import { TEXT_SCALE } from '@/lib/typography-scale';
+import { runtimeTestOrder, testOrderDiffers } from '@/lib/ai-director/eqs-catalog';
 import type { ComposedEQSStep, DirectorResult } from '@/types/squad-tactics';
 import { ACCENT, STEP_KIND_COLORS } from './constants';
 
@@ -21,6 +22,14 @@ const KIND_LABELS: Record<ComposedEQSStep['kind'], string> = {
 export function PipelineView({ result }: { result: DirectorResult }) {
   const headingId = useId();
   const steps = result.composedPipeline;
+  const hasUnsimulated = steps.some((s) => !s.simulated);
+  // Only shown when the listed order is not the order UE5 runs the tests in
+  // (it sorts them by declared cost) — same rule as the EQS pipeline diagram.
+  const runtimeOrder = useMemo(() => (
+    testOrderDiffers(steps)
+      ? runtimeTestOrder(steps).map((s) => `${s.label} (${s.cost ?? 'Low'})`).join(' → ')
+      : null
+  ), [steps]);
 
   return (
     <SurfaceCard
@@ -41,6 +50,10 @@ export function PipelineView({ result }: { result: DirectorResult }) {
         <p className={`${TEXT_SCALE.body} text-text-muted`}>
           The AI Director composes individual EQS queries into a coordinated squad pipeline.
           Unlike isolated queries, each member&apos;s allocation considers ally positions.
+          {hasUnsimulated && (
+            <> Steps marked <strong>UE5 only</strong> need level geometry or a navmesh, so the
+            in-app allocator does not model them.</>
+          )}
         </p>
       </div>
 
@@ -110,8 +123,22 @@ export function PipelineView({ result }: { result: DirectorResult }) {
                       <span className={`${TEXT_SCALE.body} font-bold text-text min-w-0 break-words`}>
                         {step.label}
                       </span>
+                      {step.cost && (
+                        <span className={`${TEXT_SCALE.meta} font-mono text-text-muted ml-auto shrink-0`}>
+                          {step.cost} cost
+                        </span>
+                      )}
+                      {!step.simulated && (
+                        <span
+                          className={`${TEXT_SCALE.meta} font-medium px-1.5 py-0.5 rounded border border-border text-text-muted shrink-0 ${step.cost ? '' : 'ml-auto'}`}
+                          title="Not simulated here: the in-app allocator has no level geometry or navmesh"
+                          data-testid="squad-step-unsimulated"
+                        >
+                          UE5 only
+                        </span>
+                      )}
                       <span
-                        className={`${TEXT_SCALE.meta} font-medium px-1.5 py-0.5 rounded ml-auto shrink-0`}
+                        className={`${TEXT_SCALE.meta} font-medium px-1.5 py-0.5 rounded shrink-0 ${step.cost || !step.simulated ? '' : 'ml-auto'}`}
                         style={{ color, backgroundColor: `${color}${OPACITY_15}` }}
                       >
                         {KIND_LABELS[step.kind]}
@@ -138,6 +165,15 @@ export function PipelineView({ result }: { result: DirectorResult }) {
               );
             })}
           </ol>
+
+          {runtimeOrder && (
+            <p
+              className={`mx-3 mb-2 ${TEXT_SCALE.body} text-text-muted`}
+              data-testid="squad-pipeline-runtime-order"
+            >
+              UE5 runs these tests cheapest-first: <span className="font-mono">{runtimeOrder}</span>
+            </p>
+          )}
 
           {/* Key insight */}
           <div className="mx-3 mb-3">
