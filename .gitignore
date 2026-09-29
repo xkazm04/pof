@@ -126,4 +126,5 @@ docs/index.bleve/
 /.claude/rules/ai-registry-access.md
 /.claude/rules/ai-registry-game-production.md
 /.claude/rules/ai-registry-software-engineering.md
+/.ai/skill-runs.local.jsonl
 # END ai-registry linked skills
