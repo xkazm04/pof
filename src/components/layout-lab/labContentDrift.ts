@@ -23,7 +23,15 @@ import { stepContentHash } from '@/lib/judge/contentHash';
  * not reported as a change.
  */
 export function labContentHash(data: Record<string, unknown> | undefined, ueAssets: string[] | undefined): string {
-  return `${stepContentHash(data)}|${JSON.stringify([...(ueAssets ?? [])].sort())}`;
+  return driftHashOf(stepContentHash(data), ueAssets);
+}
+
+/**
+ * {@link labContentHash} from an ALREADY-COMPUTED `stepContentHash` — the blob-free summary path
+ * reads that hash from the stored column. One rule: `labContentHash` itself goes through here.
+ */
+export function driftHashOf(contentHash: string, ueAssets: string[] | undefined): string {
+  return `${contentHash}|${JSON.stringify([...(ueAssets ?? [])].sort())}`;
 }
 
 /** True when the two sides hold genuinely different content (see {@link labContentHash}). */

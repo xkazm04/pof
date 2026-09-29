@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db';
+import { CONTENT_HASH_SCHEME, isComparableHash, stepContentHash } from '@/lib/judge/contentHash';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 // Type-only import (erased at runtime), so the runner→db dependency stays one-way.
 import type { DrainFilter } from '@/lib/test-gate-runner/drain';
@@ -41,6 +42,11 @@ export interface PipelineArtifact extends ArtifactVerdictRow {
   ueAssets: string[];
 }
 
+/** A {@link listArtifactVerdicts} row: the verdict, the stored content binding and the (small) UE asset list — never `data`. */
+export interface ArtifactVerdictRead extends ArtifactVerdictRow {
+  ueAssets: string[];
+}
+
 /**
  * How many superseded versions of one step are kept. Bounded on purpose: the history is a
  * safety net for "that re-produce made it worse", not an archive — and one row can hold a
@@ -64,6 +70,9 @@ function ensureTable() {
       tier TEXT,
       reason TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- stepContentHash(data), stamped by upsertArtifact (see ensureContentHash). Last, where
+      -- the ALTER on an existing DB puts it.
+      content_hash TEXT,
       PRIMARY KEY (catalog_id, entity_id, step)
     );
 
@@ -111,7 +120,62 @@ function ensureTable() {
     CREATE INDEX IF NOT EXISTS idx_artifacts_deferred_queue
       ON pipeline_artifacts (status, catalog_id, entity_id, step);
   `);
+  ensureContentHash();
   tableEnsured = true;
+}
+
+/**
+ * `content_hash` — a stored READ MODEL of `data`, so verdict-only readers never fetch a blob.
+ *
+ * Measured on a copy of the real DB (1,679 rows, 5.18 MB of `data`): the whole-project summary
+ * fan-out re-read and re-hashed every blob on every call (187 ms); with the stored column it is
+ * a lean SELECT (~15 ms). A stored derived value is only safe with all three of:
+ *  - recomputation: `stepContentHash(data)`, re-run below for every row whose hash is NULL or was
+ *    computed under another `CONTENT_HASH_SCHEME` (the prefix classifies it), in ONE transaction —
+ *    so an old-DDL DB and a scheme bump both converge on their own;
+ *  - propagation: synchronous, in the door's own upsert ({@link upsertArtifact});
+ *  - a bypass guard: a writer that changes `data` WITHOUT restamping (an older checkout on the
+ *    shared DB) fires `artifacts_content_hash_invalidate`, which NULLs the hash, and the reader
+ *    re-derives just those rows. It compares VALUES (`NEW.data IS NOT OLD.data`): SQLite fires an
+ *    `UPDATE OF data` trigger whenever `data` is in the SET list, and every drain / verify pass
+ *    re-upserts identical data — a trigger that NULLed on those would quietly bring back the blob read.
+ * Additive and reversible: the column is nullable, no existing column is rewritten, and old code
+ * ignores both (rollback: `DROP TRIGGER IF EXISTS artifacts_content_hash_invalidate`).
+ */
+function ensureContentHash(): void {
+  const db = getDb();
+  const cols = db.prepare('PRAGMA table_info(pipeline_artifacts)').all() as { name: string }[];
+  if (!cols.some((c) => c.name === 'content_hash')) db.exec('ALTER TABLE pipeline_artifacts ADD COLUMN content_hash TEXT');
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS artifacts_content_hash_invalidate
+    AFTER UPDATE OF data ON pipeline_artifacts
+    FOR EACH ROW WHEN NEW.data IS NOT OLD.data AND NEW.content_hash IS OLD.content_hash
+    BEGIN
+      UPDATE pipeline_artifacts SET content_hash = NULL
+      WHERE catalog_id = NEW.catalog_id AND entity_id = NEW.entity_id AND step = NEW.step;
+    END;
+  `);
+  const stale = db.prepare(`SELECT catalog_id, entity_id, step, data FROM pipeline_artifacts
+    WHERE content_hash IS NULL OR substr(content_hash, 1, ?) <> ?`)
+    .all(CONTENT_HASH_SCHEME.length + 1, `${CONTENT_HASH_SCHEME}-`) as Record<string, string>[];
+  if (stale.length === 0) return;
+  const stamp = db.prepare(`UPDATE pipeline_artifacts SET content_hash = ?
+    WHERE catalog_id = ? AND entity_id = ? AND step = ?`);
+  db.transaction(() => {
+    for (const r of stale) {
+      const hash = hashOfBlob(r.data);
+      if (hash) stamp.run(hash, r.catalog_id, r.entity_id, r.step);
+    }
+  })();
+}
+
+/** `stepContentHash` of a stored `data` text, or undefined when the text is not JSON (never a hash of `{}`). */
+function hashOfBlob(text: string | null | undefined): string | undefined {
+  try {
+    return stepContentHash(JSON.parse(text || '{}'));
+  } catch {
+    return undefined;
+  }
 }
 
 export interface ArtifactRevision extends PipelineArtifact {
@@ -205,6 +269,40 @@ export function listArtifacts(catalogId: string, entityId?: string): PipelineArt
   return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
 }
 
+/**
+ * The same rows as {@link listArtifacts}, verdict-shaped: NO `data` is selected or parsed. The
+ * content binding comes from the stored `content_hash`; only a row whose hash is missing or of
+ * another scheme (a bypass write, a scheme bump) has its blob fetched and hashed, and a blob that
+ * is not JSON yields a row WITHOUT `contentHash` — "cannot prove a binding", never a fabricated one.
+ * One read transaction, so a row's hash and verdict come from the same snapshot.
+ */
+export function listArtifactVerdicts(catalogId: string, entityId?: string): ArtifactVerdictRead[] {
+  ensureTable();
+  const db = getDb();
+  const where = entityId ? 'catalog_id = ? AND entity_id = ?' : 'catalog_id = ?';
+  const args = entityId ? [catalogId, entityId] : [catalogId];
+  const lean = db.prepare(`SELECT catalog_id, entity_id, step, ue_assets, status, tier, reason, updated_at, content_hash
+    FROM pipeline_artifacts WHERE ${where}`);
+  const blob = db.prepare('SELECT data FROM pipeline_artifacts WHERE catalog_id = ? AND entity_id = ? AND step = ?').pluck();
+  return db.transaction(() => (lean.all(...args) as Record<string, unknown>[]).map((row) => {
+    const stored = row.content_hash as string | null;
+    const hash = isComparableHash(stored ?? undefined)
+      ? (stored as string)
+      : hashOfBlob(blob.get(row.catalog_id, row.entity_id, row.step) as string | undefined);
+    return {
+      catalogId: row.catalog_id as string,
+      entityId: row.entity_id as string,
+      step: row.step as string,
+      ueAssets: JSON.parse((row.ue_assets as string) || '[]'),
+      status: row.status as AcceptanceStatus,
+      ...(row.tier ? { tier: row.tier as AcceptanceTier } : {}),
+      ...(row.reason ? { reason: row.reason as string } : {}),
+      ...(row.updated_at ? { updatedAt: row.updated_at as string } : {}),
+      ...(hash ? { contentHash: hash } : {}),
+    };
+  }))();
+}
+
 /** Single artifact by its primary key, or null. */
 export function getArtifact(catalogId: string, entityId: string, step: string): PipelineArtifact | null {
   ensureTable();
@@ -265,16 +363,29 @@ export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
   const prev = getArtifact(a.catalogId, a.entityId, a.step);
   if (prev && contentChanged(prev, a)) archive(prev);
 
-  getDb().prepare(`
-    INSERT INTO pipeline_artifacts (catalog_id, entity_id, step, data, ue_assets, status, tier, reason, updated_at)
-    VALUES (@catalog_id, @entity_id, @step, @data, @ue_assets, @status, @tier, @reason, datetime('now'))
-    ON CONFLICT(catalog_id, entity_id, step) DO UPDATE SET
-      data=@data, ue_assets=@ue_assets, status=@status, tier=@tier, reason=@reason, updated_at=datetime('now')
-  `).run({
+  // The content hash is stamped HERE, in the same statement as the data it names (see
+  // ensureContentHash). When the data text changed but its hash did not (a `_provenance`-only
+  // rewrite), the invalidation trigger cannot tell the door from a bypass writer and NULLs it —
+  // so the door restamps a NULLed hash inside the same transaction.
+  const db = getDb();
+  const params = {
     catalog_id: a.catalogId, entity_id: a.entityId, step: a.step,
     data: JSON.stringify(a.data), ue_assets: JSON.stringify(a.ueAssets),
     status: a.status, tier: a.tier ?? null, reason: a.reason ?? null,
-  });
+    content_hash: stepContentHash(a.data),
+  };
+  db.transaction(() => {
+    db.prepare(`
+      INSERT INTO pipeline_artifacts (catalog_id, entity_id, step, data, ue_assets, status, tier, reason, updated_at, content_hash)
+      VALUES (@catalog_id, @entity_id, @step, @data, @ue_assets, @status, @tier, @reason, datetime('now'), @content_hash)
+      ON CONFLICT(catalog_id, entity_id, step) DO UPDATE SET
+        data=@data, ue_assets=@ue_assets, status=@status, tier=@tier, reason=@reason, updated_at=datetime('now'),
+        content_hash=@content_hash
+    `).run(params);
+    db.prepare(`UPDATE pipeline_artifacts SET content_hash = @content_hash
+      WHERE catalog_id = @catalog_id AND entity_id = @entity_id AND step = @step AND content_hash IS NULL`)
+      .run({ catalog_id: params.catalog_id, entity_id: params.entity_id, step: params.step, content_hash: params.content_hash });
+  })();
   // Return the PERSISTED row (not the input) so DB-defaulted columns round-trip — most
   // importantly `updated_at`, which callers surface as "last written". Falling back to the
   // input keeps the contract total even in the (unreachable) case the read misses.
