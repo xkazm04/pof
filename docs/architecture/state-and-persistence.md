@@ -590,6 +590,19 @@ once on mount; a changed `ownerEpoch` (remembered per tab in sessionStorage) is 
 restart rather than read as "nothing in flight". `reattachJob(id)` re-polls a transport-failed
 job's same provider id for free; `retryJob` still submits a new, paid generation.
 
+**A paid cloud Tripo task is recovered by its provider-side id, never re-bought.** Unlike the
+MCP ledger, the handle needs no server memory: `tripo-job-store` records `providerTaskId` through
+`runTripo`'s `onTaskCreated` hook the moment Tripo accepts the task, and `GET
+/api/visual-gen/generate/status` projects it (plus `recoverable`) on every poll, so the forge job
+keeps it even when a restart later 404s the job. An attempt whose task is still live (poll window
+spent, unreadable polls - `isRecoverableTripoFailure`, not a Tripo `failed` verdict) stops the
+best-of-N loop and errors `recoverable` instead of buying another task. `recoverJob(id)` (a click on
+a `runnerRecoverable` card) POSTs `/api/visual-gen/generate/recover` `{ providerId, taskId,
+assetClass }`; the dispatch entry's `recover` (tripo3d only - `RECOVERABLE_RUNNER_PROVIDERS` mirrors
+it) starts `startTripoRecoveryJob`, which runs `awaitTripoTask` (GET `/task/{id}` + download, no
+create, no upload) through the same Tier-1 gate and class face budget a fresh job gets, and 202s a
+`jobId` on the same status poller.
+
 **Feature done = `isFeatureDone`; plan dispatch = `usePlanDispatch`.** A feature-matrix status is
 done when `isFeatureDone(status)` (`src/lib/constellation/layout.ts`: implemented OR improved) - the
 one rule `generatePlan`, `unblockFrontier` and `moduleGraph` share, so the planner's `isReady` /
