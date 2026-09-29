@@ -1,8 +1,5 @@
 import type { PillItem } from '@/components/ui/InteractivePill';
-import {
-  HUD_CONTEXTS,
-  WIDGET_PLACEMENTS,
-} from '../_shared/data';
+import { HUD_CONTEXTS } from '../_shared/data';
 import type { WidgetPlacement } from '../_shared/data';
 
 export type { HudContext, WidgetPlacement } from '../_shared/data';
@@ -20,17 +17,7 @@ export const VIEWPORT_ASPECT = 16 / 9;
 
 /* ── Helpers ───────────────────────────────────────────────────────────────── */
 
-/** Collect all widget IDs that appear in *any* context (visible or hidden) */
-function allContextWidgets(): Set<string> {
-  const s = new Set<string>();
-  for (const ctx of HUD_CONTEXTS) {
-    for (const w of ctx.visible) s.add(w);
-    for (const w of ctx.hidden) s.add(w);
-  }
-  return s;
-}
-
-/** Build a quick-lookup: widget ID → Set of context indices where it's visible */
+/** Widget id → context indices where it is visible (HUD_CONTEXTS carries registry ids, so keys match placement ids) */
 function buildVisibilityMap(): Map<string, Set<number>> {
   const m = new Map<string, Set<number>>();
   HUD_CONTEXTS.forEach((ctx, ci) => {
@@ -42,7 +29,6 @@ function buildVisibilityMap(): Map<string, Set<number>> {
   return m;
 }
 
-export const ALL_WIDGETS = allContextWidgets();
 export const VISIBILITY_MAP = buildVisibilityMap();
 
 export const CONTEXT_PILLS: PillItem[] = HUD_CONTEXTS.map(c => ({
