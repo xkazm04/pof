@@ -12,7 +12,9 @@ rollup strip.
 | File | Role |
 |------|------|
 | `src/app/page.tsx` | Root page; `useSyncExternalStore(popstate, readShellPref)` switches between `NewHome` and `AppShell` |
-| `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
+| `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` / `switchShell(to)` — a URL that names its shell (`?legacy=1` / `?legacy=0`) wins, else `localStorage['pof.shell']` |
+| `src/lib/shell/shellRoute.ts` | The root page's ONE address codec (pure): `parseShellRoute(search, stored)` → `{ shell, moduleId }` (module validated against `SUB_MODULE_IDS` + the 3 special categories), `moduleHref(id)`, `shellUrl(href, shell, moduleId?)`, and the derived `MODULE_DESTINATIONS` (40 rows, registry labels) |
+| `src/hooks/useShellRouteSync.ts` | Mounted in `AppShell`: keeps the legacy shell's open module and the address (`?legacy=1&module=<id>`) in step — deep link in, one history entry per module move, popstate re-applies |
 | `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
 | `src/components/layout-lab/Baseline/index.tsx` (+ `Baseline/useBaseline.ts`, `constants.ts`, `types.ts`) | 3-column composition screen: tree / pipeline timeline / work canvas. `index.tsx` is layout only; every produce→persist→render hook lives in `useBaseline.ts`. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
@@ -65,6 +67,25 @@ pushes the query param, and fires a synthetic `popstate` event so the store re-r
 full navigation. The reverse trip is symmetric: the legacy `TopBar`'s **"Blueprint"** button
 (`NewShellButton`) calls `writeShellPref('ecw')`, deletes the `legacy` param, and fires `popstate`
 to swap back to the lab.
+
+**Addresses + Back.** Both switches now go through `switchShell(to)`: it first `replaceState`s the
+CURRENT entry to name the shell it shows (`?legacy=0` in the lab; `?legacy=1&module=<id>` in the
+legacy shell), then stores the preference, pushes the target entry and fires `popstate`. Because an
+entry that names its shell beats the stored value in `parseShellRoute`, Back after a flip lands on
+the shell that entry was — before, the lab entry carried no flag, the stored `'legacy'` won, and
+Back was dead. A plain `/` still resolves by the stored preference (then `'ecw'`).
+
+Inside the legacy shell `useShellRouteSync` treats the address as the location's public face (the
+store stays the source of truth): on arrival a validated `module` param is applied through
+`navigateToModule` (the one navigate door; an unknown id is dropped and the persisted location
+stands), and the entry is `replaceState`d to name the visible module — arriving never pushes. A
+module-to-module move pushes ONE entry. `popstate` re-applies the entry's module, and a location
+that came FROM the address is never pushed back (the push is skipped whenever the address already
+names the visible module), so Back/Forward cannot grow or truncate history. The location rides in
+the URL, not `history.state`: Next's app-router patches `pushState`/`replaceState` to copy its own
+`__NA` internals into plain calls, and a framework replace would erase anything state-held. The
+destinations are derived from `SUB_MODULE_IDS`, so they vanish with the legacy shell
+(`docs/catalog/LEGACY-SALVAGE.md`).
 
 ### 2. Bridge + project gate — `NewHome` (`src/components/layout-lab/NewHome.tsx`)
 
@@ -182,6 +203,9 @@ kept, so reopening is instant.
   pipeline does — then `navigateTo(catalog, entity, <that entity's own index>)` (no entity has the
   step → the hit degrades to selecting the catalog). Every path runs the lifted callbacks, so
   last-location persistence is unchanged.
+- **Pages + modules**: `NAVIGABLE_SURFACES` rows (badge `page`) and one row per legacy-shell
+  module from `MODULE_DESTINATIONS` (badge `module`) both reuse the `route` hit kind — a
+  full-page jump (`window.location.href`), e.g. `packag` → `/?legacy=1&module=packaging`.
 - **Keyboard**: ↓/↑ (wrapping) · Home/End · Enter opens · Escape clears the query, then closes
   the overlay (the first Escape is `stopPropagation`'d so clearing never also closes the Modal).
 
