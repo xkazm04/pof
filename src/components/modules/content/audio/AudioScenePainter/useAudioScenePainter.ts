@@ -7,14 +7,10 @@ import {
   viewportRectInContent, unionBounds, minimapProjection, minimapToContent, panToCenter,
 } from '@/lib/audio-scene-viewport';
 import { useElementSize } from '@/hooks/useElementSize';
-import { useEntityCommitBuffer } from '@/hooks/useEntityCommitBuffer';
+import { resolveMembership } from '@/lib/audio-scene-ops';
+import { useSceneBuffer } from '@/components/modules/content/audio/AudioView/useSceneBuffer';
 import { MINIMAP_W, MINIMAP_H, ZONE_COLORS } from './constants';
-import { findContainingZone } from './helpers';
 import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
-
-/** The painter's "patch" IS the whole scene — a staged frame replaces the last. */
-const applyScene = (_base: SceneDraft, patch: SceneDraft): SceneDraft => patch;
-const foldScene = (_prev: SceneDraft | null, next: SceneDraft): SceneDraft => next;
 
 export function useAudioScenePainter({
   zones,
@@ -22,6 +18,7 @@ export function useAudioScenePainter({
   onUpdateZones,
   onUpdateEmitters,
   onCommit,
+  buffer: sharedBuffer,
   onSelectZone,
   onSelectEmitter,
   selectedZoneId,
@@ -43,14 +40,19 @@ export function useAudioScenePainter({
   // ── Optimistic commit buffer ──
   // A drag/resize used to call `onUpdateZones` on EVERY mousemove: one PUT + one
   // full refetch per event, and the refetch's `isLoading` unmounted this whole
-  // subtree mid-gesture. Now a gesture only ever stages into the shared buffer
-  // (pure local state, zero network) and commits ONCE on mouseup.
+  // subtree mid-gesture. Now a gesture only ever stages named ops (`SceneOp`) into
+  // the scene buffer (pure local state, zero network) and commits ONCE on mouseup.
   //
-  // The staged scene is the render source of truth while set; it is cleared only
-  // when a commit SUCCEEDS, so the props (which arrive a round-trip later) never
-  // make the canvas snap back. When a commit FAILS the buffer is deliberately
-  // retained — the user's gesture outlives the network — and `commitError` offers
-  // a retry. All of that lives in `useEntityCommitBuffer`.
+  // The buffer holds OPS, not a scene snapshot: the canvas renders the server
+  // scene with the ops replayed, and a write replays them onto the newest server
+  // copy, so a change that lands while a gesture is buffered (a panel field, a
+  // failed commit awaiting Retry) is kept, never hidden or overwritten. The ops
+  // are cleared only when a commit SUCCEEDS; a FAILED commit keeps them and
+  // `commitError` offers a retry. Emitter membership is re-derived by the reducer
+  // after every geometry op (`lib/audio-scene-ops.ts`), not written here.
+  //
+  // With a shared `buffer` prop the property panels write through the same ops;
+  // without one the painter builds its own over the write callbacks.
   /** True once a pointer gesture has actually moved something. */
   const gestureDirty = useRef(false);
 
@@ -65,29 +67,24 @@ export function useAudioScenePainter({
     // comparison is against the server props, so a retry after a failed commit
     // may re-send both halves — correct, just not minimal.
     const writes: Array<void | Promise<unknown>> = [];
-    if (next.zones !== base.zones) writes.push(onUpdateZones(next.zones));
-    if (next.emitters !== base.emitters) writes.push(onUpdateEmitters(next.emitters));
+    if (next.zones !== base.zones) writes.push(onUpdateZones?.(next.zones));
+    if (next.emitters !== base.emitters) writes.push(onUpdateEmitters?.(next.emitters));
     await Promise.all(writes);
   }, [onCommit, onUpdateZones, onUpdateEmitters]);
 
+  const ownBuffer = useSceneBuffer({ base: serverScene, write: writeScene });
   const {
-    doc: paintedScene,
+    scene: paintedScene,
     isDirty: hasUncommittedEdits,
     isSaving: isCommitting,
     saveError: commitError,
-    stage: setDraftScene,
+    stage: stageOps,
     commit: runCommit,
     retry: retryCommit,
     /** Hides the banner. The buffer is kept — dismissing is not discarding. */
     dismissError: dismissCommitError,
     peek,
-  } = useEntityCommitBuffer<SceneDraft, SceneDraft>({
-    base: serverScene,
-    apply: applyScene,
-    fold: foldScene,
-    commit: writeScene,
-    errorMessage: 'Could not save the scene change.',
-  });
+  } = sharedBuffer ?? ownBuffer;
 
   const sceneZones = paintedScene?.zones ?? zones;
   const sceneEmitters = paintedScene?.emitters ?? emitters;
@@ -151,9 +148,10 @@ export function useAudioScenePainter({
         pitchMax: 1.1,
         spawnChance: 1.0,
         cooldownSeconds: 0,
-        zoneId: findContainingZone(pt.x, pt.y, base.zones),
+        // Derived: the reducer re-derives it on every later geometry op too.
+        zoneId: resolveMembership(pt.x, pt.y, base.zones),
       };
-      runCommit({ zones: base.zones, emitters: [...base.emitters, newEmitter] });
+      runCommit([{ kind: 'addEmitter', emitter: newEmitter }]);
       onSelectEmitter(id);
       onSelectZone(null);
       setPaintMode('select');
@@ -180,14 +178,8 @@ export function useAudioScenePainter({
       const dy = pt.y - resizeState.startY;
       const newW = Math.max(40, resizeState.origW + dx);
       const newH = Math.max(40, resizeState.origH + dy);
-      const base = baseScene();
       gestureDirty.current = true;
-      setDraftScene({
-        zones: base.zones.map((z) =>
-          z.id === resizeState.zoneId ? { ...z, width: newW, height: newH } : z
-        ),
-        emitters: base.emitters,
-      });
+      stageOps([{ kind: 'resizeZone', id: resizeState.zoneId, width: newW, height: newH }]);
       return;
     }
 
@@ -202,25 +194,15 @@ export function useAudioScenePainter({
 
     if (dragState) {
       const pt = getSVGPoint(e);
-      const base = baseScene();
       gestureDirty.current = true;
-      if (dragState.type === 'zone') {
-        setDraftScene({
-          zones: base.zones.map((z) =>
-            z.id === dragState.id ? { ...z, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY } : z
-          ),
-          emitters: base.emitters,
-        });
-      } else {
-        setDraftScene({
-          zones: base.zones,
-          emitters: base.emitters.map((em) =>
-            em.id === dragState.id ? { ...em, x: pt.x - dragState.offsetX, y: pt.y - dragState.offsetY } : em
-          ),
-        });
-      }
+      const x = pt.x - dragState.offsetX;
+      const y = pt.y - dragState.offsetY;
+      // Consecutive frames of one drag fold into ONE op (`foldSceneOps`).
+      stageOps([dragState.type === 'zone'
+        ? { kind: 'moveZone', id: dragState.id, x, y }
+        : { kind: 'moveEmitter', id: dragState.id, x, y }]);
     }
-  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, baseScene, setDraftScene]);
+  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, stageOps]);
 
   const handleMouseUp = useCallback(() => {
     if (drawState) {
@@ -251,7 +233,7 @@ export function useAudioScenePainter({
           priority: 5,
           color: Object.values(ZONE_COLORS)[base.zones.length % Object.values(ZONE_COLORS).length],
         };
-        runCommit({ zones: [...base.zones, newZone], emitters: base.emitters });
+        runCommit([{ kind: 'addZone', zone: newZone }]);
         onSelectZone(id);
         onSelectEmitter(null);
       }
@@ -265,7 +247,7 @@ export function useAudioScenePainter({
     // The single write for the whole drag/resize — and only if something moved.
     if (gestureDirty.current) {
       gestureDirty.current = false;
-      // No argument: commit exactly what the gesture staged.
+      // No argument: commit exactly the ops the gesture staged.
       runCommit();
     }
 
@@ -307,23 +289,16 @@ export function useAudioScenePainter({
   }, [getSVGPoint, sceneZones]);
 
   const deleteZone = useCallback((zoneId: string) => {
-    const base = baseScene();
-    // One commit for both halves — removing the zone also unlinks its emitters.
-    runCommit({
-      zones: base.zones.filter((z) => z.id !== zoneId),
-      emitters: base.emitters.map((em) => (em.zoneId === zoneId ? { ...em, zoneId: null } : em)),
-    });
+    // One commit for both halves — the reducer re-derives the orphaned emitters'
+    // zones (another containing zone, else null) in the same write.
+    runCommit([{ kind: 'deleteZone', id: zoneId }]);
     if (selectedZoneId === zoneId) onSelectZone(null);
-  }, [baseScene, runCommit, selectedZoneId, onSelectZone]);
+  }, [runCommit, selectedZoneId, onSelectZone]);
 
   const deleteEmitter = useCallback((emitterId: string) => {
-    const base = baseScene();
-    runCommit({
-      zones: base.zones,
-      emitters: base.emitters.filter((em) => em.id !== emitterId),
-    });
+    runCommit([{ kind: 'deleteEmitter', id: emitterId }]);
     if (selectedEmitterId === emitterId) onSelectEmitter(null);
-  }, [baseScene, runCommit, selectedEmitterId, onSelectEmitter]);
+  }, [runCommit, selectedEmitterId, onSelectEmitter]);
 
   // ── Zoom / pan viewport controls ──
   // The painter applies `view` as a `translate … scale` transform on the inner

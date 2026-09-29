@@ -8,31 +8,42 @@ import type { AudioZone } from '@/types/audio-scene';
 import { REVERB_PRESETS, OCCLUSION_MODES } from './constants';
 import { Field, SliderField, ActionButton } from './controls';
 import { SaveErrorBanner } from './SaveErrorBanner';
-import { useRecordCommit } from './useRecordCommit';
+import { useRecordCommit, NO_COMMIT, type RecordCommit } from './useRecordCommit';
 
-interface ZonePropertyPanelProps {
+type ZonePropertyPanelProps = {
   zone: AudioZone;
-  /**
-   * Persist ONE patch of this zone. Rejects when the server refused it — the
-   * panel keeps the edit and shows a retry. Mount this panel with
-   * `key={zone.id}` so a pending edit is flushed when the selection changes.
-   */
-  onCommit: (patch: Partial<AudioZone>) => void | Promise<unknown>;
   onGenerateCode: (zone: AudioZone) => void;
   onGenerateSoundscape: (zone: AudioZone) => void;
   accentColor: string;
   isGenerating: boolean;
-}
+} & (
+  | {
+      /**
+       * Persist ONE patch of this zone. Rejects when the server refused it — the
+       * panel keeps the edit and shows a retry. Mount this panel with
+       * `key={zone.id}` so a pending edit is flushed when the selection changes.
+       */
+      onCommit: (patch: Partial<AudioZone>) => void | Promise<unknown>;
+      record?: undefined;
+    }
+  | {
+      /** A record inside a shared scene buffer (`useSceneZone`): render and write through it. */
+      record: RecordCommit<AudioZone>;
+      onCommit?: undefined;
+    }
+);
 
 export function ZonePropertyPanel({
   zone,
   onCommit,
+  record,
   onGenerateCode,
   onGenerateSoundscape,
   accentColor,
   isGenerating,
 }: ZonePropertyPanelProps) {
-  const buf = useRecordCommit(zone, onCommit);
+  const own = useRecordCommit(zone, onCommit ?? NO_COMMIT);
+  const buf = record ?? own;
   const v = buf.value;
 
   return (
