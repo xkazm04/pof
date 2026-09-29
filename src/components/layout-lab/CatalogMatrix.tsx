@@ -1,7 +1,7 @@
 'use client';
 
 import '@/lib/catalog/pipelines/registry.generated';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { useCachedArtifacts, retryArtifacts } from './labArtifactCache';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
@@ -9,6 +9,10 @@ import { useLabPipelineStore } from './labPipelineStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
 import { buildMatrixRows } from './matrixRows';
+import { rankMatrixRows, filterMatrixRows, tallyRungs, nextColumnPredicate, type TriagePredicate } from './matrixTriage';
+import { buildWorkQueue, type WorkQueue } from './workQueue';
+import { MatrixTriageBar } from './MatrixTriageBar';
+import { useMatrixCellStyle, cellGlyphOf as glyphOf, cellWordOf as wordOf } from './matrixCellStyle';
 import { useCatalogJudgeVerdicts } from './hooks/useStepJudgeVerdicts';
 import { MatrixBatchDrain } from './MatrixBatchDrain';
 import { RefreshCatalogFromServer } from './RefreshCatalogFromServer';
@@ -17,7 +21,6 @@ import { useBatchDrain } from './hooks/useBatchDrain';
 import { useCatalogRefresh } from './hooks/useCatalogRefresh';
 import { useCatalogChanges } from './hooks/useCatalogChanges';
 import { MatrixSkeleton } from './MatrixSkeleton';
-import { STATUS_GLYPH, STATUS_WORD, statusColor, UNPRODUCED_GLYPH, UNPRODUCED_WORD, type LabDisplayStatus } from './statusLanguage';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { LabTheme } from './theme';
 import type { LabGroup } from './useLabCatalogData';
@@ -31,6 +34,8 @@ interface Props {
   /** Write-through: the dropdown selects a catalog by updating LayoutLab's single-source catalogId. */
   onSelectCatalog: (id: string) => void;
   onOpenStep: (catalogId: string, entityId: string, stepIdx: number) => void;
+  /** Open the filtered board as a work queue (LayoutLab owns it and opens its first stop). */
+  onOpenQueue?: (queue: WorkQueue) => void;
 }
 
 /**
@@ -40,8 +45,10 @@ interface Props {
  * `buildMatrixRows`), so the matrix and the rail can never disagree about a step. A
  * per-entity strip shows "X of N steps complete" and flags blockers (failed gates).
  * Click any cell to jump straight to that entity's step; pick a catalog from the selector.
+ * Rows are ranked by the coach ladder and can be filtered to a rung or a column's status, and
+ * the filtered set opens as a work queue (`matrixTriage.ts` / `workQueue.ts`).
  */
-export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenStep }: Props) {
+export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenStep, onOpenQueue }: Props) {
   // Controlled by LayoutLab's single-source catalogId — the dropdown writes through
   // `onSelectCatalog` instead of forking a private `selected`, so switching catalog here
   // and then opening the Catalogs tab lands on the SAME catalog (no stale fork).
@@ -84,6 +91,15 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
     [catalogId, detail?.entities, byEntity, localByEntity, steps, verdicts],
   );
 
+  // Triage: the board is ranked by the coach ladder then entity id (never storage order) and a
+  // predicate (rung chip / column header) filters it. Keyed by catalog, so a switch clears it.
+  const [triage, setTriage] = useState<{ catalogId: string; p: TriagePredicate | null }>({ catalogId, p: null });
+  const predicate = triage.catalogId === catalogId ? triage.p : null;
+  const setPredicate = (p: TriagePredicate | null) => setTriage({ catalogId, p });
+  const tally = useMemo(() => tallyRungs(rows), [rows]);
+  const shown = useMemo(() => filterMatrixRows(rankMatrixRows(rows), predicate), [rows, predicate]);
+  const queue = useMemo(() => (predicate ? buildWorkQueue(shown, predicate, catalogId) : null), [shown, predicate, catalogId]);
+
   const completeCount = rows.filter((r) => r.rollup.configComplete).length;
   const blockedCount = rows.filter((r) => r.blockers.length > 0).length;
 
@@ -116,48 +132,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
     return (id: string) => names.get(id);
   }, [detail?.entities]);
 
-  // Memoize cell styles per status (only ~5 distinct statuses) instead of
-  // allocating a fresh CSSProperties object for every cell on every render — the
-  // grid is entities × steps cells, so this was O(rows·cols) object churn.
-  // Built EAGERLY, not lazily: the old version populated a Map from inside the
-  // returned closure, i.e. it mutated a captured local while child cells rendered.
-  // There are only five statuses, so building all of them up front costs nothing
-  // and keeps render a pure lookup.
-  const cellStyleFor = useMemo(() => {
-    const styleOf = (status: LabDisplayStatus): React.CSSProperties => {
-      const filled = status === 'pass' || status === 'fail';
-      // `unproduced` is the faintest cell: a dotted line border, dimmed — a distinct,
-      // colorblind-safe "nothing produced here yet" cue vs pending's solid hollow ring.
-      const unproduced = status === 'unproduced';
-      const borderWidthStyle = status === 'deferred' ? '2px dashed' : unproduced ? '1px dotted' : '1px solid';
-      const style: React.CSSProperties = {
-        width: 30, height: 30, padding: 0, cursor: 'pointer',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: filled ? statusColor(status, t) : 'transparent',
-        border: `${borderWidthStyle} ${filled ? statusColor(status, t) : status === 'pending' || unproduced ? t.line : statusColor(status, t)}`,
-        color: filled ? t.onAccent : status === 'pending' || unproduced ? t.muted : statusColor(status, t),
-        opacity: unproduced ? 0.55 : 1,
-        fontSize: 14, fontWeight: 700, lineHeight: 1, borderRadius: t.glass ? 5 : 0,
-        transition: 'background-color 160ms ease-out, border-color 160ms ease-out',
-      };
-      return style;
-    };
-    // A Record (not a Map) so this is EXHAUSTIVE by type: adding a member to
-    // LabDisplayStatus is a compile error until it is listed here, so the eager
-    // cache can never silently miss a status and fall through to undefined.
-    const cache: Record<LabDisplayStatus, React.CSSProperties> = {
-      pass: styleOf('pass'),
-      fail: styleOf('fail'),
-      pending: styleOf('pending'),
-      deferred: styleOf('deferred'),
-      unproduced: styleOf('unproduced'),
-    };
-    return (status: LabDisplayStatus): React.CSSProperties => cache[status];
-  }, [t]);
-
-  // Glyph + spoken word for a display status (STATUS_* only knows the 4 server statuses).
-  const glyphOf = (s: LabDisplayStatus) => (s === 'unproduced' ? UNPRODUCED_GLYPH : STATUS_GLYPH[s]);
-  const wordOf = (s: LabDisplayStatus) => (s === 'unproduced' ? UNPRODUCED_WORD : STATUS_WORD[s]);
+  const cellStyleFor = useMatrixCellStyle(t); // one style per status (matrixCellStyle.ts)
 
   const th = useMemo<React.CSSProperties>(() => ({
     position: 'sticky', top: 0, zIndex: 2, background: t.bg,
@@ -221,6 +196,9 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
         ))}
       </div>
 
+      <MatrixTriageBar t={t} tally={tally} total={rows.length} shown={shown.length} predicate={predicate} onPredicate={setPredicate}
+        queueSize={queue?.items.length ?? 0} onWork={onOpenQueue && queue ? () => onOpenQueue(queue) : undefined} />
+
       {/* ── The grid ── */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 28px 28px' }} aria-busy={showSkeleton || undefined}>
         {error ? (
@@ -242,13 +220,24 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
             <thead>
               <tr>
                 <th style={{ ...th, ...stickyLeft, zIndex: 3 }}>Entity · progress</th>
-                {steps.map((s, i) => (
-                  <th key={s} style={th} title={s}>{pad2(i + 1)}</th>
-                ))}
+                {steps.map((s, i) => {
+                  // A column header applies a column predicate: its most urgent status, then the next.
+                  const colStatus = predicate?.kind === 'column' && predicate.step === s ? predicate.status : null;
+                  const on = colStatus !== null;
+                  return (
+                    <th key={s} style={th} title={`${s} — click to filter by this step's status`}>
+                      <button onClick={() => setPredicate(nextColumnPredicate(rows, s, predicate))} data-testid={`matrix-col-${i}`}
+                        aria-pressed={on} aria-label={`${s}: filter by status${on ? ` (showing ${colStatus})` : ''}`}
+                        style={{ font: 'inherit', padding: '0 2px', cursor: 'pointer', border: 'none', color: on ? t.inkDeep : 'inherit', background: on ? t.accentBg : 'transparent' }}>
+                        {pad2(i + 1)}
+                      </button>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {shown.map((r) => (
                 <tr key={r.id} data-draining={drainState.activeEntityIds.has(r.id) || undefined}>
                   <td style={drainState.activeEntityIds.has(r.id) ? { ...nameTd, borderLeft: `3px solid ${t.warn}` } : nameTd}>
                     <button onClick={() => onOpenStep(catalogId, r.id, 0)} className={t.fontBody}
