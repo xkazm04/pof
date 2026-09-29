@@ -214,6 +214,17 @@ The level flow editor has ONE write surface: `onEdit(op, mode)`. Every gesture i
 
 To add a canvas op, extend `LevelEditOp` and `applyLevelEdit` (plus a `gestureKey` and `describeLevelEdit` line). It then gets one-commit persistence and undo for free. Do not add another whole-array setter to `LevelFlowEditorProps`.
 
+## One scene edit buffer, rebased ops (audio scene painter)
+
+The audio painter tab has ONE optimistic edit buffer for the canvas AND the property panels: `useSceneBuffer` (`AudioView/useSceneBuffer.ts`, over `useEntityCommitBuffer`), mounted by `PainterTab` and written through `useAudioView`'s one throwing `commitScene` (`{ zones, emitters }` via `commitDoc`). Its buffered patch is a LIST of named ops, `SceneOp` (`src/lib/audio-scene-ops.ts`: `addZone`, `moveZone`, `resizeZone`, `deleteZone`, `patchZone`, `addEmitter`, `moveEmitter`, `deleteEmitter`, `patchEmitter`), never a scene snapshot:
+
+- **Rebased, not snapshotted.** The canvas renders `applySceneOps(server, ops)`, and every write replays the same list onto the NEWEST server copy. A write that lands while ops are buffered (a panel field, a failed gesture awaiting Retry) is kept, never hidden or overwritten. Ops are idempotent against a server that already has them (`addZone` of an existing id is skipped), because a buffer re-sends its whole list after a failure or an overlapping commit.
+- **Derived membership.** `emitter.zoneId` is recomputed by the reducer after every geometry op with `resolveMembership(x, y, zones)`: the highest-priority containing zone, array order breaking ties (UE AudioVolume semantics). No gesture writes it. `deleteZone` re-derives the orphans (another containing zone, else `null`).
+- **Rules live in the reducer.** The pitch range (`pitchMin <= pitchMax`, the moved end pushes the other) is applied by `patchEmitter`, so both panels and any future caller get it.
+- **Cadence** is `useEntityCommitBuffer`'s: drag frames `stage` (consecutive moves of one target fold into one op, `foldSceneOps`), text and slider frames `stageDebounced`, mouseup / chip clicks `commit`. Panels get a scene-backed `RecordCommit` (`useSceneZone` / `useSceneEmitter`) via their `record` prop, so a slider drag redraws the canvas on the same frame with zero writes. The buffer has one failure surface: the painter's banner and its Retry.
+
+`AudioScenePainter` takes EITHER a shared `buffer` OR the write callbacks (`onCommit` / `onUpdateZones` / `onUpdateEmitters`), in which case it builds its own `useSceneBuffer`. The panels take EITHER `record` OR `onCommit`. To add a scene edit, add a `SceneOp` and its `applySceneOps` case. Do not add another per-record writer that builds from `activeDoc`: that is the lost update this replaced.
+
 ---
 
 ## Packaging pre-flight: a verdict states its own coverage
