@@ -6,7 +6,7 @@ import type { CookEvent, CookPhase } from '@/lib/packaging/cook-executor';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { ZERO_COUNTS, PIN_THRESHOLD_PX } from './constants';
 import { classifyCookLogLine, appendCookLog, lineFacets, formatCookTimestamp } from './helpers';
-import type { CookLogLine, CookLogFilter, CookLogCounts, CookProgressProps } from './types';
+import type { CookLogLine, CookLogFilter, CookLogCounts, CookProgressProps, CookCompletion, CookRecordEvent } from './types';
 
 /** The pane-hold reason the Activity Feed shows if the shell tears a cook down. */
 export const COOK_HOLD_REASON = 'UE cook running';
@@ -14,11 +14,12 @@ export const COOK_HOLD_REASON = 'UE cook running';
 /**
  * THE cook's pane-hold rule — the one place its hold is released. The cook holds
  * its keep-alive pane (`usePaneHold`) from the moment a request starts until the
- * cook SETTLES, and today it settles when `result` is set: a `done` or `error`
- * event, a stream that ends without one, or an HTTP failure. Unmounting the pane
- * aborts the stream (and, server side, the UAT process tree), so the LRU must not
- * choose this pane while the rule says held. Move the settle point here, nowhere
- * else.
+ * cook SETTLES, and it settles when `result` is set. The single settle point is
+ * AFTER the build is recorded: the `recorded` (or `record-error`) event that
+ * follows `done`/`error`, a stream that ends first, or an HTTP failure. A bare
+ * `done` does not settle — the server has yet to write the build row, and evicting
+ * the pane then would abort the stream (and, server side, the UAT process tree)
+ * before the row and its id exist. Move the settle point here, nowhere else.
  */
 export function cookHoldsPane(
   request: CookProgressProps['request'],
@@ -36,7 +37,7 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
   // just to recount. Identical to scanning `logs` from scratch each tick.
   const [counts, setCounts] = useState<CookLogCounts>(ZERO_COUNTS);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
-  const [result, setResult] = useState<{ status: 'success' | 'failed'; exePath?: string; error?: string } | null>(null);
+  const [result, setResult] = useState<CookCompletion | null>(null);
   const [filter, setFilter] = useState<CookLogFilter>('all');
   // Stay pinned to the newest line, but release tailing the moment the user
   // scrolls up so they can read in peace (classic `tail -f` console behavior).
@@ -86,12 +87,20 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
       let currentPhase: CookPhase | null = null;
       // The response status was committed at 200 before the first byte, so once
       // the stream is open the transport can no longer report the outcome. The
-      // `done`/`error` event is the only channel left, and its ABSENCE is the
+      // `done`/`error` (then `recorded`) events are the only channel left, and their ABSENCE is the
       // failure: every log line can be well formed and complete while the
       // sequence is short. Without this flag a stream that just stops leaves the
       // cook with no verdict at all, which the UI renders as "still running"
       // forever.
       let settled = false;
+      // The `done`/`error` outcome, held until the server says whether it RECORDED
+      // the build (`recorded {buildId}` / `record-error`). The cook settles once, there.
+      let pending: CookCompletion | null = null;
+      const settle = (final: CookCompletion) => {
+        settled = true;
+        setResult(final);
+        onComplete?.(final);
+      };
       try {
         const res = await fetch('/api/packaging/execute', {
           method: 'POST',
@@ -100,9 +109,7 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) {
-          const final = { status: 'failed' as const, error: `HTTP ${res.status}` };
-          setResult(final);
-          onComplete?.(final);
+          settle({ status: 'failed', error: `HTTP ${res.status}` });
           return;
         }
         const reader = res.body.getReader();
@@ -117,8 +124,9 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
           for (const part of parts) {
             const data = part.replace(/^data:\s?/, '').trim();
             if (!data) continue;
-            let ev: CookEvent;
-            try { ev = JSON.parse(data) as CookEvent; } catch { continue; }
+            let ev: CookEvent | CookRecordEvent;
+            try { ev = JSON.parse(data) as CookEvent | CookRecordEvent; } catch { continue; }
+            if (settled) continue;
             if (ev.type === 'phase') { currentPhase = ev.phase; setPhase(ev.phase); }
             else if (ev.type === 'progress') setPercent(ev.percent);
             else if (ev.type === 'log') {
@@ -150,31 +158,24 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
               setLogs(next);
               setCounts(nextCounts);
             } else if (ev.type === 'done') {
-              const final = { status: 'success' as const, exePath: ev.exePath };
-              settled = true;
-              setResult(final);
-              onComplete?.(final);
+              pending = { status: 'success', exePath: ev.exePath };
             } else if (ev.type === 'error') {
-              const final = { status: 'failed' as const, error: ev.message };
-              settled = true;
-              setResult(final);
-              onComplete?.(final);
+              pending = { status: 'failed', error: ev.message };
+            } else if (ev.type === 'recorded' && pending) {
+              settle({ ...pending, buildId: ev.buildId });
+            } else if (ev.type === 'record-error' && pending) {
+              settle({ ...pending, recordError: ev.message });
             }
           }
         }
         if (!settled && !ctrl.signal.aborted) {
-          const final = {
-            status: 'failed' as const,
-            error: 'Cook stream ended without a result — the build may still be running.',
-          };
-          setResult(final);
-          onComplete?.(final);
+          settle(pending
+            ? { ...pending, recordError: 'The cook stream ended before the build was recorded.' }
+            : { status: 'failed', error: 'Cook stream ended without a result — the build may still be running.' });
         }
       } catch (err) {
-        if (ctrl.signal.aborted) return;
-        const final = { status: 'failed' as const, error: err instanceof Error ? err.message : String(err) };
-        setResult(final);
-        onComplete?.(final);
+        if (ctrl.signal.aborted || settled) return;
+        settle({ status: 'failed', error: err instanceof Error ? err.message : String(err) });
       }
     })();
 

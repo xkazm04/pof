@@ -1,8 +1,27 @@
 import type { CookPhase } from '@/lib/packaging/cook-executor';
 
+/**
+ * How a cook SETTLED — delivered once, after the server recorded (or failed to record)
+ * the build row, never on the bare `done`/`error` event.
+ */
+export interface CookCompletion {
+  status: 'success' | 'failed';
+  exePath?: string;
+  error?: string;
+  /** The build_history row the server recorded for this cook (the `recorded` event). */
+  buildId?: number;
+  /** Why no row was recorded: a `record-error` event, or a stream that ended first. */
+  recordError?: string;
+}
+
+/** The two events the execute route emits AFTER the terminal one (not in `CookEvent`). */
+export type CookRecordEvent =
+  | { type: 'recorded'; buildId: number; version?: string | null }
+  | { type: 'record-error'; message: string; note?: string };
+
 export interface CookProgressProps {
   request: { profileId: string; projectPath: string; projectName: string; ueVersion: string } | null;
-  onComplete?: (result: { status: 'success' | 'failed'; exePath?: string; error?: string }) => void;
+  onComplete?: (result: CookCompletion) => void;
 }
 
 export type CookLogSeverity = 'error' | 'warning' | 'info';

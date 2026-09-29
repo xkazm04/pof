@@ -12,6 +12,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { generateUATCommand } from '@/lib/packaging/uat-command-generator';
 import { PlatformProfileCard } from '../PlatformProfileCard';
 import { CookProgress } from '../CookProgress';
+import type { CookCompletion } from '@/components/modules/game-systems/CookProgress/types';
 import { PreflightPanel, type PreflightStatusSummary } from '../PreflightPanel';
 import { SmokeTest, type SmokeTestRequest } from '../SmokeTest';
 import { NightlyBuildScheduler } from '../NightlyBuildScheduler';
@@ -71,8 +72,11 @@ export function BuildConfigSelector() {
     [profiles],
   );
 
-  // After a successful Win64 cook, auto-run the runnable-exe smoke-test.
+  // After a successful Win64 cook, auto-run the runnable-exe smoke-test — against the
+  // build row the cook RECORDED, by id. No recorded row means nothing to smoke or
+  // condemn, and the panel says so instead of guessing a build.
   const [smokeRequest, setSmokeRequest] = useState<SmokeTestRequest | null>(null);
+  const [smokeSkipped, setSmokeSkipped] = useState<string | null>(null);
 
   // Fetch profiles
   const fetchProfiles = useCallback(async () => {
@@ -146,27 +150,27 @@ export function BuildConfigSelector() {
     setCookRequest({ profileId: profile.id, projectPath, projectName, ueVersion });
   }, [cookRequest, gateBlock, projectPath, projectName, ueVersion]);
 
-  const handleCookComplete = useCallback((result: { status: 'success' | 'failed'; exePath?: string }) => {
+  const handleCookComplete = useCallback((result: CookCompletion) => {
     const profileId = cookRequest?.profileId;
     setCookRequest(null);
     if (result.status !== 'success') return;
     fetchProfiles();
 
-    // Kick off the post-cook smoke-test for runnable (Win64) builds.
+    // Kick off the post-cook smoke-test for runnable (Win64) builds, naming the
+    // recorded build: the server launches, watches and condemns exactly that row.
     const profile = profiles.find((p) => p.id === profileId);
-    if (result.exePath && profile && profile.platform === 'Win64') {
-      setSmokeRequest({
-        exePath: result.exePath,
-        projectName,
-        platform: profile.platform,
-        config: profile.config,
-        // The project MUST travel: without it the server chooses the build to record
-        // the verdict against with an unscoped query, and it lands on whichever
-        // unattributed legacy row is newest rather than on the build just cooked.
-        projectPath,
-      });
+    if (!profile || profile.platform !== 'Win64') return;
+    if (result.buildId != null) {
+      setSmokeSkipped(null);
+      setSmokeRequest({ buildId: result.buildId });
+    } else {
+      setSmokeRequest(null);
+      setSmokeSkipped(
+        `the cook finished but its build was not recorded (${result.recordError ?? 'no build id'}), `
+        + 'so there is no build to smoke-test or condemn.',
+      );
     }
-  }, [cookRequest, profiles, projectName, projectPath, fetchProfiles]);
+  }, [cookRequest, profiles, fetchProfiles]);
 
   // New profile
   const handleNewProfile = useCallback((platform: PlatformId) => {
@@ -286,7 +290,7 @@ export function BuildConfigSelector() {
       <CookProgress request={cookRequest} onComplete={handleCookComplete} />
 
       {/* Post-cook runnable-exe smoke-test */}
-      <SmokeTest key={smokeRequest?.exePath ?? 'idle'} request={smokeRequest} />
+      <SmokeTest key={smokeRequest?.buildId ?? 'idle'} request={smokeRequest} skippedReason={smokeSkipped} />
 
       {/* Unattended nightly builds (preflight → cook → smoke → size-budget, skip-if-unchanged) */}
       <NightlyBuildScheduler profiles={profiles} />

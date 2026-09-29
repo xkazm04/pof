@@ -4,7 +4,7 @@ import { SmokeTest } from '@/components/modules/game-systems/SmokeTest';
 
 afterEach(cleanup);
 
-const REQUEST = { exePath: 'C:\\out\\PoF.exe', projectName: 'PoF', platform: 'Win64', config: 'Shipping' };
+const REQUEST = { buildId: 42 };
 
 function mockSmoke(result: Record<string, unknown>) {
   const body = { success: true, data: { result, recordedToBuildId: null } };
@@ -41,5 +41,16 @@ describe('SmokeTest — accessibility', () => {
     const result = await screen.findByTestId('pof-smoke-test-result');
     expect(result.getAttribute('data-status')).toBe('fail');
     expect(result.textContent).toContain('did not survive');
+  });
+});
+
+describe('SmokeTest — a skipped run says why', () => {
+  it('renders the skip reason and never calls the smoke route', async () => {
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    render(<SmokeTest request={null} skippedReason="the cook was not recorded (SQLITE_BUSY)" />);
+    const skipped = await screen.findByTestId('pof-smoke-test-skipped');
+    expect(skipped.textContent).toContain('SQLITE_BUSY');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

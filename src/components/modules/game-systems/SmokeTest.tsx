@@ -6,17 +6,13 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, STATUS_WARNING } from '@/lib/chart-colors';
 import type { SmokeTestResult } from '@/lib/packaging/smoke-test';
 
+/**
+ * The ONE identity a smoke run takes: the build_history row the cook recorded. The
+ * server reads the exe, platform and config from that row and condemns that row, so
+ * nothing the browser holds can point the launch or the verdict elsewhere.
+ */
 export interface SmokeTestRequest {
-  exePath: string;
-  projectName: string;
-  platform: string;
-  config: string;
-  /**
-   * The project that cooked this build. Without it the server picks the build to
-   * record against with an UNSCOPED query and the verdict lands on whichever
-   * unattributed legacy row is newest.
-   */
-  projectPath?: string;
+  buildId: number;
 }
 
 /** The final smoke verdict, as the server recorded it. */
@@ -33,6 +29,8 @@ interface SmokeTestResponse {
 
 interface SmokeTestProps {
   request: SmokeTestRequest | null;
+  /** Why no smoke run started for the last cook (e.g. its build was never recorded). */
+  skippedReason?: string | null;
   onComplete?: (result: SmokeTestResult) => void;
 }
 
@@ -41,7 +39,7 @@ const OBSERVE_LABEL_MS = 25;
 // Parent gives this component a `key` tied to the request, so each new cook
 // remounts it fresh — letting `running` initialize from the request without a
 // synchronous state reset inside the effect.
-export function SmokeTest({ request, onComplete }: SmokeTestProps) {
+export function SmokeTest({ request, skippedReason, onComplete }: SmokeTestProps) {
   const [running, setRunning] = useState<boolean>(!!request);
   const [result, setResult] = useState<SmokeTestResult | null>(null);
   const [verdict, setVerdict] = useState<SmokeTestResponse | null>(null);
@@ -73,12 +71,12 @@ export function SmokeTest({ request, onComplete }: SmokeTestProps) {
     return () => { cancelled = true; };
   }, [request]);
 
-  if (!request && !result && !error && !running) return null;
+  if (!request && !result && !error && !running && !skippedReason) return null;
 
   return (
     <div
       data-testid="pof-smoke-test"
-      data-status={result?.status ?? (running ? 'running' : 'idle')}
+      data-status={result?.status ?? (running ? 'running' : skippedReason ? 'skipped' : 'idle')}
       role="status"
       aria-live="polite"
       className="rounded border border-border bg-surface p-3 text-xs space-y-1.5"
@@ -87,6 +85,17 @@ export function SmokeTest({ request, onComplete }: SmokeTestProps) {
         <Rocket className="w-4 h-4" style={{ color: STATUS_INFO }} aria-hidden="true" />
         <span className="font-semibold text-text">Runnable .exe smoke-test</span>
       </div>
+
+      {skippedReason && !request && (
+        <div
+          data-testid="pof-smoke-test-skipped"
+          className="flex items-start gap-2 font-mono"
+          style={{ color: STATUS_WARNING }}
+        >
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+          <span>Not run — {skippedReason}</span>
+        </div>
+      )}
 
       {running && (
         <div className="flex items-center gap-2 text-text-muted font-mono">
