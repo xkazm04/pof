@@ -404,6 +404,15 @@ listing (`isListingUrl`; `recordDownload` refuses one), since `libraryReference.
 already downloaded. Single files go to the browser as a direct download (a 1 GB zip never enters page memory);
 multi-file sets are fetched one file at a time, glTF saved flat via `flattenGltfUris`.
 
+**Audio persistence uses the same door** (`src/lib/audio-db-conn.ts`, 2026-09-30): `getAudioDb()` is
+`getDb()` plus a one-time guard for `audio_sets` / `audio_assets` / `audio_gen_usage` (`createAudioAssetDb`)
+and `audio_import_runs`; `audio-import-db.ts`, `api/audio-gen` and `api/audio-codegen` call it instead of
+the three private `new Database(~/.pof/pof.db)` blocks they used to carry, which walked past `POF_DB_PATH`
+and leaked every audio test fixture into the operator's DB. Clip bytes follow the DB: `resolveAudioDir(env)`
+= `POF_AUDIO_DIR` else `audio/` beside `resolveDbPath(env)` (exported from `db.ts`), i.e. `~/.pof/audio` in
+production and a temp dir under the vitest floor; asset rows keep paths relative to it. Ratchet:
+`db-containment.test.ts` pins `src/lib/db.ts` as the ONLY non-test `new Database(` site.
+
 **`headless_builds`** (queued/running/completed UBT build jobs) follows this same guard pattern but is
 owned by `src/lib/ue5-bridge/build-pipeline.ts` (`ensureHeadlessBuildsTable()`) — the sole reader/writer —
 **not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it to derive the
