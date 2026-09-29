@@ -494,6 +494,32 @@ export function getBuildHistory(projectPath: string, limit = 20): BuildResult[] 
   }));
 }
 
+/**
+ * The request that produced a recorded build — what `rebuild` re-enqueues so the
+ * identical lane (target, type, configuration, platform, engine) runs again.
+ * `additionalArgs` are not persisted, so a rebuild runs without them. Null when
+ * no build was recorded under that id.
+ */
+export function getBuildRequestById(buildId: string): BuildRequest | null {
+  ensureHeadlessBuildsTable();
+  const row = getDb().prepare(
+    `SELECT project_path, target_name, ue_version, platform, configuration, target_type
+     FROM headless_builds WHERE build_id = ?`,
+  ).get(buildId) as Pick<
+    HeadlessBuildRow,
+    'project_path' | 'target_name' | 'ue_version' | 'platform' | 'configuration' | 'target_type'
+  > | undefined;
+  if (!row) return null;
+  return {
+    projectPath: row.project_path,
+    targetName: row.target_name,
+    targetType: row.target_type as BuildRequest['targetType'],
+    configuration: row.configuration as BuildRequest['configuration'],
+    platform: row.platform as BuildRequest['platform'],
+    ueVersion: row.ue_version,
+  };
+}
+
 function safeParseDiagnostics(json: string): BuildResult['diagnostics'] {
   try {
     return JSON.parse(json);

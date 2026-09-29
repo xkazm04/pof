@@ -1,14 +1,16 @@
 /**
  * API Route: /api/ue5-bridge/build
  *
- * POST — Start a build (action: 'start') or abort one (action: 'abort').
+ * POST — Start a build (action: 'start'), re-run a recorded one with its identical
+ *        request (action: 'rebuild', buildId), or abort one (action: 'abort').
  * GET  — Query build status by buildId, or list queue + history.
  */
 
 import { type NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { buildQueue } from '@/lib/ue5-bridge/build-queue';
-import { getBuildHistory } from '@/lib/ue5-bridge/build-pipeline';
+import { getBuildHistory, getBuildRequestById } from '@/lib/ue5-bridge/build-pipeline';
+import { validateBuildTarget } from '@/lib/ue5-bridge/build-run';
 import type { BuildRequest, BuildConfiguration, BuildTargetPlatform, BuildTargetType } from '@/types/ue5-bridge';
 
 // ── POST Handler ─────────────────────────────────────────────────────────────
@@ -30,7 +32,12 @@ interface AbortAction {
   buildId: string;
 }
 
-type BuildAction = StartAction | AbortAction | { action: string };
+interface RebuildAction {
+  action: 'rebuild';
+  buildId: string;
+}
+
+type BuildAction = StartAction | AbortAction | RebuildAction | { action: string };
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,12 +62,8 @@ export async function POST(req: NextRequest) {
         // the `.uproject` path, and projectPath becomes the spawn cwd. Reject non-identifier
         // target names and path-traversal so a crafted value can't climb out of the project
         // directory or smuggle extra build args (defense-in-depth alongside shell:false).
-        if (!/^[A-Za-z0-9_]+$/.test(targetName)) {
-          return apiError('targetName must be alphanumeric/underscore only', 400);
-        }
-        if (projectPath.includes('..')) {
-          return apiError('projectPath must not contain ".."', 400);
-        }
+        const refusal = validateBuildTarget(targetName, projectPath);
+        if (refusal) return apiError(refusal, 400);
 
         const startBody = body as StartAction;
         const request: BuildRequest = {
@@ -75,6 +78,24 @@ export async function POST(req: NextRequest) {
 
         const buildId = buildQueue.enqueue(request, startBody.moduleId);
         return apiSuccess({ buildId });
+      }
+
+      // ── Re-run a recorded build with its identical request ───────
+      case 'rebuild': {
+        const { buildId } = body as RebuildAction;
+        if (!buildId || typeof buildId !== 'string') {
+          return apiError('buildId is required', 400);
+        }
+
+        const request = getBuildRequestById(buildId);
+        if (!request) {
+          return apiError(`Build ${buildId} not found in build history — nothing to rebuild`, 404);
+        }
+        // The stored values reach the spawn again: same trust boundary as 'start'.
+        const refusal = validateBuildTarget(request.targetName, request.projectPath);
+        if (refusal) return apiError(`Build ${buildId} cannot be rebuilt: ${refusal}`, 400);
+
+        return apiSuccess({ buildId: buildQueue.enqueue(request) });
       }
 
       // ── Abort a running or queued build ──────────────────────────
