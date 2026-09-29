@@ -324,6 +324,15 @@ The Build Health tab (`evaluator/BuildHealthDashboard`) starts the headless buil
 - `BuildQueueItem.progress` (additive, optional) holds the running item's latest `onProgress` line, so a status read shows it. The `build.progress` event still fires.
 - `POST /api/ue5-bridge/build {action:'rebuild', buildId}` re-enqueues the recorded request (`getBuildRequestById` in `build-pipeline.ts`: target, type, configuration, platform, engine; `additionalArgs` are not stored). An unknown id returns 404. The lookup stays out of the route because pof-mcp's project-scope guard lists this route as `scoped: false`. Each regression alert's "Rebuild to confirm" uses it, so the lane's next point confirms or clears the alert.
 
+## Combat sweeps: one kernel, run as a job
+
+The Simulator tab's Predictive Balance sweep (`src/lib/combat/predictive-balance.ts`) owns no fight loop. Every heatmap cell and sensitivity step is one `runCombatSimulation` call into `src/lib/combat/simulation-engine.ts`, so its survival / TTK (`summary.avgFightDurationSec`) / DPS numbers describe the same fight the Combat Simulator, goal-seek and feedback comparison resolve. EHP and the canon one-shot facet are read from the engine's own exported `buildPlayerAttributes` / `buildEnemyAttributes`. A sensitivity step pins one player attribute through `OverrideCombatScenario.playerAttributeOverrides`, which is applied after scaling. Each cell keeps its own seed (`sweepCellSeed(archetypeId, level)`, `sens|attr|step`), so results do not depend on order.
+
+- `planPredictiveSweep(config, enemies?)` is pure: it returns `{ registry, units: { scenario, sim }[], assemble(summaries, durationMs) }`, with units in report order. It runs no fights.
+- `runPredictiveBalance` (sync, for tests and headless callers) and `runPredictiveBalanceAsync(config, enemies?, { signal, onProgress })` (the job) drain the same plan, and the job's report deep-equals the sync one apart from `durationMs`. The job calls `onProgress(0, total)` before its first cell and then `(k, total)` after each cell. Each cell goes through `runCombatSimulationBatched` in batches of `SWEEP_BATCH_SIZE` (200). It yields between batches and between cells and checks the signal at every yield. An abort resolves `{ aborted: true }` and never produces a partial report. `runCombatSimulationBatched` accepts `signal` for any caller. `yieldToEventLoop` uses `setImmediate` in Node and a `MessageChannel` task in the browser, because a nested `setTimeout(0)` is clamped to 4 ms per yield.
+- `usePredictiveSweep()` (`sub_character/simulator/predictive/`) binds the job to a component. It returns `{ report, running, progress, error, run, cancel }`. A new `run` aborts the one in flight (last request wins), `cancel` keeps the previous report, and unmount aborts. It holds the shell pane while running (`usePaneHold`), so the keep-alive LRU does not evict and cancel it. The panel shows "cell k/N" and a Cancel button.
+- New sweep features (solve and goal-seek over the sweep) drive this job or its plan. They do not add a second fight loop or a synchronous sweep on the UI thread.
+
 ---
 
 ## Coding conventions
