@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   ListOrdered, RefreshCw,
   Target, Map, List,
@@ -16,6 +16,8 @@ import { PAGE_SIZE } from './constants';
 import { FilterBar } from './FilterBar';
 import { PlanItemRow } from './PlanItemRow';
 import { SummaryCards } from './SummaryCards';
+import { BuildSessionPanel } from './BuildSessionPanel';
+import { useBuildSession, type PlanSettled } from './useBuildSession';
 
 // ---------- Main component ----------
 
@@ -37,16 +39,26 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
   // The ONE plan dispatch door: planDispatch gates readiness, the feature-fix
   // task runs via useModuleCLI.execute, and a confirmed landing invalidates the
   // shared status cache so this plan re-derives (the item leaves, dependents
-  // turn Ready). Dispatch happens only from the row's explicit Build click.
-  const { dispatch, lastError: dispatchError } = usePlanDispatch({
+  // turn Ready). Dispatch happens only from the row's explicit Build click or
+  // the Build session's explicit Start.
+  // The session needs the door's dispatch and the door needs the session's
+  // onSettled: relay through a ref so the page keeps ONE door (one CLI session).
+  const settleRef = useRef<PlanSettled | null>(null);
+  const onSettled = useCallback<PlanSettled>((item, landed, status) => settleRef.current?.(item, landed, status), []);
+  const { dispatch, isRunning, lastError: dispatchError } = usePlanDispatch({
     sessionKey: 'implementation-plan',
     label: 'Implementation Plan',
+    onSettled,
   });
+  const session = useBuildSession({ dispatch, isRunning, moduleId: showAllModules ? undefined : moduleId });
+  useEffect(() => { settleRef.current = session.onSettled; }, [session.onSettled]);
+  const [sessionOpen, setSessionOpen] = useState(false);
 
   const moduleIds = useMemo(() => Object.keys(MODULE_FEATURE_DEFINITIONS), []);
 
   const handleExecute = useCallback((item: PlanItem) => {
-    // PHASE-1: single-item dispatch; the readiness gate lives in planDispatch.
+    // Single-item dispatch; the readiness gate lives in planDispatch. Multi-item
+    // runs are the Build session's (one step at a time through this same door).
     dispatch(item);
   }, [dispatch]);
 
@@ -141,7 +153,11 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
 
       {/* Table view content below */}
       {viewMode === 'table' && plan && (
-        <SummaryCards plan={plan} progress={progress} readyCount={readyCount} />
+        <SummaryCards plan={plan} progress={progress} readyCount={readyCount} onPlanSession={() => setSessionOpen(true)} />
+      )}
+
+      {viewMode === 'table' && (sessionOpen || session.run.phase === 'running') && (
+        <BuildSessionPanel session={session} onClose={() => setSessionOpen(false)} />
       )}
 
       {viewMode === 'table' && (
