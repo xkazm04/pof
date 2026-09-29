@@ -303,6 +303,15 @@ The PoF Bridge plugin's routes are declared ONCE: `POF_ROUTES` (`src/lib/pof-bri
 - `planRouteProbe(route)` (pure) derives whether a health check may touch a route: `http-get {path}` (with a cheaper `probePath`, e.g. `/pof/manifest?checksum-only=true`), `ws`, or `not-probed` (`mutates` / `needs-argument`). A probe is side-effect-free by construction. A POST of `{}` to `/pof/compile/live` or `/pof/snapshot/capture` IS the real request, so mutating routes are listed and never called.
 - The Bridge Endpoints monitor (`project-setup/BridgeEndpointHealth`, mounted in Project Setup) derives its rows from the table. It executes the plan through the Bridge Doctor: `probeHttpRoute` (the Doctor's GET-only `httpProbe`) on `pofPort`, and `probeWsLiveState` on `wsPort` for `/pof/live`. A failed row carries the Doctor's `ProbeFailureKind`, where a 404 reads as "route not in this plugin build". Not-probed rows render calm and sit outside the healthy/probed counts. Probing runs only on the Ping All click.
 
+## Headless UE builds: dispatched from Build Health
+
+The Build Health tab (`evaluator/BuildHealthDashboard`) starts the headless builds it charts; before, only the `pof_ue_build` MCP tool could fill `headless_builds`.
+
+- `src/lib/ue5-bridge/build-run.ts` (pure, client-safe): `defaultBuildRequest(project)` returns `Result` with the `start` body (the project's Editor target, Development, Win64) and refuses, before any request, a value the route would reject. The route's `start` and `rebuild` share its `validateBuildTarget`. `buildRunReducer` follows ONE run: idle, dispatching, queued, running (percent and `[N/M]` line), settled (then the report refetches once). A run in neither the queue nor the history for `MAX_MISSED_POLLS` (20) polls goes `lost` with a reason, never a silent spinner.
+- `useBuildRun` dispatches only on a click (`buildNow` / `rebuild` / `abort`). Mounting, polling and the settle refetch never POST. It polls `GET /api/ue5-bridge/build?projectPath` (queue plus history) every `UI_TIMEOUTS.pollInterval` while a run is in flight, and pauses while the module is suspended. It does not poll `?buildId`, because a finished build leaves the queue and 404s there.
+- `BuildQueueItem.progress` (additive, optional) holds the running item's latest `onProgress` line, so a status read shows it. The `build.progress` event still fires.
+- `POST /api/ue5-bridge/build {action:'rebuild', buildId}` re-enqueues the recorded request (`getBuildRequestById` in `build-pipeline.ts`: target, type, configuration, platform, engine; `additionalArgs` are not stored). An unknown id returns 404. The lookup stays out of the route because pof-mcp's project-scope guard lists this route as `scoped: false`. Each regression alert's "Rebuild to confirm" uses it, so the lane's next point confirms or clears the alert.
+
 ---
 
 ## Coding conventions
