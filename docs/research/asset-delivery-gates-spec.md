@@ -49,6 +49,37 @@ into every `ue-python` prompt, and the execution shipped in the follow-up:
 **Reconsider trigger:** when a generated asset is next imported to UE for a gameplay purpose
 (anything the player collides with, as opposed to a gallery render).
 
+**BUILT (2026-09-29, challenge-2026-09-29b) — one import plan: scale derived once, applied, read back.**
+`world-scale.ts` computed `importUniformScale` and the Studio / Asset Viewer displayed it, while
+nothing applied it: the import job called the critic with the path alone (scale grade always
+`unmeasured` at the import), and Import Automation typed `scale: 1.0` + `bAutoGenerateCollision`
+by hand — a second theory of the boundary.
+
+- `visual-gen/ue-import-plan.ts` is the ONE authority, pure and node-free:
+  `planUeImport({ critique, use, declaredShells?, assetClass?, targetExtentM? })` →
+  `{ collision, collisionBasis, shells, scale: { derivable, factor?, basis: measured | no-target | unmeasured, targetExtentCm?, reason }, orientation }`.
+  A missing target or measurement is `derivable: false`, **never a factor of 1**. Orientation is
+  reported from the same critique (`suggestedRotation`) but not applied — no import-time rotation
+  call is verified. `collisionPlanFor`, `collisionPlan` and `buildGlbImportPython` live here and
+  stay re-exported from `ue-import-job-store.ts` / `ue-import.ts`; `classifyComponents` moved to the
+  node-free `component-split.ts` (re-exported by `mesh-critique.ts`). A vitest walk of static
+  imports pins that the plan and `ue5-import-templates.ts` reach no `node:*`, runner or critic.
+- The import job critiques through `gateRequestFor({ assetClass, stage, targetExtentM })` (stage:
+  a `mesh-finish/` path is `finished`, else `raw`) — the fifth gate consumer, no fifth copy.
+  The route accepts optional `assetClass` / `targetExtentM`.
+- The python applies the factor as LOD0 `build_scale3d` **before** collision (hulls are built on
+  the scaled mesh), keeps `task.save = False`, logs `POF_UE_EXTENT_CM` from `get_bounds()`, then
+  saves every imported asset. Without a scale the emitted python is byte-identical to before.
+- `importGlbToUE` claims a size only from that read-back (within `SCALE_TOLERANCE` of the target);
+  no marker → `scale requested but no extent observed`, import refused. The status route reports
+  `scale` (asked) and `observedExtentCm` (seen) as separate facts, `null` until known.
+- Import Automation's glTF/GLB output IS that python, from the same plan; FBX keeps its C++ class
+  with `bAutoGenerateCollision = false` and a full-precision `ImportUniformScale`.
+
+Limit: `StaticMeshEditorSubsystem.get/set_lod_build_settings` + `build_scale3d` are the documented
+surface, not introspected live — a wrong name fails safe (no extent marker, import refused).
+Live proof still owed: one editor import of a `character` glb reporting `POF_UE_EXTENT_CM` ≈ 180.
+
 ---
 
 ## 2. A rig quality gate (nothing grades a rig today)
