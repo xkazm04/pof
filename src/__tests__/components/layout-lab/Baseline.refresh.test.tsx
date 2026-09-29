@@ -113,9 +113,12 @@ describe('Baseline — refresh from server', () => {
   it('surfaces CONTENT divergence for a step whose verdict is unchanged', async () => {
     // A produced step the server holds with the SAME `pass`, but different data — no
     // status comparison can see this, so the drift banner must be content-aware. Both
-    // payloads satisfy the real Items Economy checker, so the verdicts genuinely agree.
-    const tuned = { power: 102, target: 100, cost: 143 };
-    fetchArtifactsResult.mockResolvedValue({ ok: true, data: [row('Economy', { ...tuned, rarity: 'Rare' }, '2026-07-20T00:00:00Z')] });
+    // payloads satisfy the real Items Economy checker, so the verdicts genuinely agree. Economy is
+    // registry-owned (itemsLabelOwner, 2026-09-29), so both are REGISTRY-shaped economy records.
+    const breakdown = { dpsPower: 10, implicitAccuracyPower: 1.8, affixPower: 0 };
+    const tuned = { pricePowerRatio: 1.02, economy: { baseValue: 12, powerScore: 11.8, powerBreakdown: breakdown } };
+    const server = { ...tuned, economy: { ...tuned.economy, baseValue: 13 } };
+    fetchArtifactsResult.mockResolvedValue({ ok: true, data: [row('Economy', server, '2026-07-20T00:00:00Z')] });
     useLabPipelineStore.setState({ byEntity: { 'item-1': {
       Economy: { done: true, data: tuned, ueAssets: [], at: '2026-07-25T00:00:00Z', status: 'pass', tier: 'L0' },
     } } });

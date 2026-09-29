@@ -4,6 +4,8 @@ vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return
 
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getStepComponent } from '@/components/layout-lab/steps';
+import { ArchetypeStep } from '@/components/layout-lab/steps/ArchetypeStep';
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { ITEM_STEP_SPECS } from '@/components/layout-lab/steps/itemsSteps';
 import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
 import { clearJudgeVerdictCache } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
@@ -66,8 +68,11 @@ describe('bespoke Items gallery steps grade the generated asset, not an integer'
       { swatch: SWATCH, payload: { selected: 0 } },
       { swatch: SWATCH, payload: { selected: 1 } },
     ]));
-    const Step = getStepComponent('items', 'Icon 2D Art')!;
-    render(<Step t={t} entity={entity} step="Icon 2D Art" />);
+    // Registry-owned since 2026-09-29 (itemsLabelOwner): the screen renders ArchetypeStep with the
+    // REGISTERED spec — the one the server grades — and it must defer on a swatch just the same.
+    expect(getStepComponent('items', 'Icon 2D Art')).toBeNull();
+    const spec = getCatalogPipeline('items')!.steps.find((s) => s.label === 'Icon 2D Art')!;
+    render(<ArchetypeStep t={t} entity={entity} step="Icon 2D Art" spec={spec} catalogId="items" />);
     expect(bannerStatus()).toBe('deferred');
   });
 

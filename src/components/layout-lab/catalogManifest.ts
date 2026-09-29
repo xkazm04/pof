@@ -36,9 +36,8 @@ const BESPOKE_CATALOGS = new Set<string>(['items']);
  * they are not interchangeable — they answer different questions:
  *
  *  • ON-SCREEN (`ITEM_STEP_SPECS`, {@link ITEMS_ON_SCREEN_STEPS}) — the 13 fine-grained
- *    steps a human actually walks and grades in `/layout`. Routed by `BESPOKE_CATALOGS`
- *    and graded by `resolveAccept`. This is the reference implementation of the bespoke
- *    step UI (Rules 1–4) and is the ONLY items spec any user sees.
+ *    labels. Since 2026-09-29 it OWNS only the 7 the registry does not declare
+ *    (`itemsLabelOwner`); the 6 shared ones render, grade and produce through the registry.
  *  • REGISTRY (`src/lib/catalog/pipelines/items.ts`, {@link ITEMS_REGISTRY_STEPS}) — the
  *    11 coarse steps that carry the ARPG canon payloads (affix tier tables, GE wiring
  *    contracts, DT_Items packaging manifest). This is what `/status`, the headless
@@ -80,11 +79,11 @@ export const ITEMS_SPEC_DUALITY = {
     'labels key persisted artifacts, judge verdicts, step facts and the headless drains. Merging ' +
     'either side orphans recorded data, so both are declared and guarded instead. The lab renders ' +
     'the ordered UNION of the two — bespoke first, then the registry-only labels — each tagged ' +
-    'with the spec that declared it, so neither spec can hide produced, graded rows the way the ' +
-    'registry-only 5 were hidden (31 of 90 persisted items rows) until 2026-08-19.',
+    'with the spec that OWNS it (registered wins the 6 shared labels, the server order, since ' +
+    '2026-09-29), so neither spec can hide produced rows or grade one row two ways.',
 } as const;
 
-/** The 13 step labels the lab actually RENDERS and grades for `items` (bespoke). */
+/** The 13 `ITEM_STEP_SPECS` labels (7 bespoke-owned + 6 registry-owned shared, `itemsLabelOwner`). */
 export const ITEMS_ON_SCREEN_STEPS: readonly string[] = ITEM_STEP_NAMES;
 
 /** The 11 step labels the registered `StepSpec` pipeline exposes to /status + headless. */
@@ -165,12 +164,11 @@ export interface CatalogManifest {
 function bespokeStepEntries(catalogId: string): ManifestStep[] {
   const bespokeLabels = labPipelineSteps(catalogId);
   const seen = new Set(bespokeLabels);
-  const registryTail = (getCatalogPipeline(catalogId)?.steps ?? [])
-    .map((s) => s.label)
-    .filter((label) => !seen.has(label));
+  const registryLabels = (getCatalogPipeline(catalogId)?.steps ?? []).map((s) => s.label);
+  const registered = new Set(registryLabels); // a shared label is registry-OWNED (itemsLabelOwner)
   return [
-    ...bespokeLabels.map((label): ManifestStep => ({ label, source: 'bespoke' })),
-    ...registryTail.map((label): ManifestStep => ({ label, source: 'registry' })),
+    ...bespokeLabels.map((label): ManifestStep => ({ label, source: registered.has(label) ? 'registry' : 'bespoke' })),
+    ...registryLabels.filter((l) => !seen.has(l)).map((label): ManifestStep => ({ label, source: 'registry' })),
   ];
 }
 

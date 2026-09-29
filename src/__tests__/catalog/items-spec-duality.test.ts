@@ -96,9 +96,11 @@ describe('Items spec duality — declared, not implied', () => {
       expect(m.steps, `items step "${label}" is declared but never rendered`).toContain(label);
       expect(hasStepGrader('items', label), `items step "${label}" is rendered but ungraded`).toBe(true);
     }
-    // …tagged, not merged: the reader can still tell the two specs apart.
+    // …tagged, not merged: the reader can still tell the two specs apart. A shared label is
+    // tagged by its OWNER — the registry, the server's order (2026-09-29).
     expect(m.mixedStepSources).toBe(true);
-    expect(m.stepEntries.filter((e) => e.source === 'registry').map((e) => e.label)).toEqual(registryOnly);
+    expect(m.stepEntries.filter((e) => e.source === 'registry').map((e) => e.label))
+      .toEqual([...itemsSharedSteps(), ...registryOnly]);
   });
 
   it('gives EVERY items step in either spec an audited StepFact (no PROVENANCE: UNAUDITED)', () => {

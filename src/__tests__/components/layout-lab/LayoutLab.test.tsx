@@ -39,48 +39,50 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0); // moved title-block stat
   });
 
-  it('opens directly on the Concept Brief step (Acceptance gate + Produce panel)', () => {
+  // The six labels BOTH items specs declare (Concept Brief, Economy, Icon 2D Art, Tooltip /
+  // Compare, Test Gate, UE Packaging) are REGISTRY-owned since 2026-09-29 (itemsLabelOwner): they
+  // render through ArchetypeStep with the registered StepSpec — the spec the server grades.
+  it('opens directly on the Concept Brief step (registered Acceptance gate + Produce panel)', () => {
     render(<LayoutLab />);
     // stepIdx defaults to 0 → Concept Brief renders without a click
-    expect(screen.getByText(/at least 300 characters/)).toBeTruthy();
-    expect(screen.getByText('Current brief')).toBeTruthy();   // a View panel label
-    expect(screen.getByText('Produce')).toBeTruthy();          // the Produce panel label
-    expect(screen.getByText(/Produce brief/)).toBeTruthy();
+    expect(screen.getAllByText(/Brief ≥ 300 characters/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Produce').length).toBeGreaterThan(0); // the Produce panel label
+    expect(screen.getByText(/Produce Concept Brief/)).toBeTruthy();
   });
 
-  it('Economy step renders charts + power-score acceptance', () => {
+  it('Economy step renders the registered economy record and its canon-band acceptance', () => {
     render(<LayoutLab />);
     const pipeline = screen.getByRole('list', { name: /pipeline/i });
     fireEvent.click(within(pipeline).getByRole('button', { name: /Economy/ }));
-    expect(screen.getByText(/Stat budget vs tier/)).toBeTruthy();
-    expect(screen.getByText(/Tune within budget/)).toBeTruthy();
-    expect(screen.getByText(/Power within ±10%/)).toBeTruthy();
+    expect(screen.getByText(/Produce Economy/)).toBeTruthy();
+    expect(screen.getAllByText(/0.8–1.2× band/).length).toBeGreaterThan(0);
   });
 
-  it('the full Items pipeline is prototyped (later steps render their step UI)', () => {
+  it('the full Items pipeline is built (later steps render their step UI)', () => {
     render(<LayoutLab />);
     const pipeline = screen.getByRole('list', { name: /pipeline/i });
-    // a late step has a real V/P/A component, not the placeholder
+    // a late bespoke-owned step keeps its own V/P/A component, not the placeholder…
+    fireEvent.click(within(pipeline).getByRole('button', { name: /Inventory UI Integration/ }));
+    expect(screen.getByTestId('inventory-grid-provenance')).toBeTruthy();
+    // …and the registry-owned late steps render the registered spec through ArchetypeStep.
     fireEvent.click(within(pipeline).getByRole('button', { name: /Test Gate/ }));
-    expect(screen.getByText(/Run functional test/)).toBeTruthy();
-    expect(screen.getByText(/All gate checks pass/)).toBeTruthy();
+    expect(screen.getByText(/Produce Test Gate/)).toBeTruthy();
     fireEvent.click(within(pipeline).getByRole('button', { name: /UE Packaging/ }));
-    expect(screen.getByText('Asset manifest')).toBeTruthy();
+    expect(screen.getByText('Package on disk')).toBeTruthy();
   });
 
   it('a step Produce persists real data and derives Acceptance from it', () => {
     render(<LayoutLab />);
-    // Concept Brief is the default step; before Produce its gate is pending.
-    expect(screen.getByText('0 / 300 chars')).toBeTruthy();
-    expect(screen.getByText('No brief yet — run Produce to generate one.')).toBeTruthy();
+    const gate = () => screen.getByTestId('acceptance-banner').getAttribute('data-status');
+    // Concept Brief is the default step; before Produce its gate is not passing.
+    expect(gate()).not.toBe('pass');
     // run the step's CLI produce → data is persisted, gate flips to PASS, View shows the brief.
-    fireEvent.click(screen.getByText(/Produce brief/));
-    expect(screen.queryByText('No brief yet — run Produce to generate one.')).toBeNull();
-    expect(screen.getByText(/mid-tier martial weapon/)).toBeTruthy();
-    expect(screen.getAllByText('PASS').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText(/Produce Concept Brief/));
+    expect(screen.getAllByText(/is an equippable item in PoF/).length).toBeGreaterThan(0);
+    expect(gate()).toBe('pass');
   });
 
-  it('"Populate demo" drives one item through all 13 BESPOKE steps with real persisted data', async () => {
+  it('"Populate demo" drives one item through all 13 ON-SCREEN spec labels with real persisted data', async () => {
     // Reset now deletes the SERVER artifacts too (add-only hydration would otherwise
     // re-adopt them), so the round-trip has to resolve for the reset to land.
     vi.stubGlobal('fetch', vi.fn().mockImplementation((_url: string, init?: RequestInit) => Promise.resolve({
@@ -90,7 +92,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
       json: async () => ({ success: true, data: init?.method === 'DELETE' ? { deleted: 13 } : [] }),
     })));
     render(<LayoutLab />);
-    fireEvent.click(screen.getByText('Populate demo')); // runs every BESPOKE Items step for Iron Longsword (item-1)
+    fireEvent.click(screen.getByText('Populate demo')); // runs every ITEM_STEP_NAMES label for Iron Longsword (item-1), each through its owner's produce
     // Pipeline progress is derived from the store, not faked — and the denominator is the
     // full rendered UNION (13 bespoke + 5 registry-only labels, see ITEMS_SPEC_DUALITY).
     // "Populate demo" only drives the 13 bespoke specs, so 13/18 is the honest reading: the
@@ -100,9 +102,9 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     const pipeline = screen.getByRole('list', { name: /pipeline/i });
     fireEvent.click(within(pipeline).getByRole('button', { name: /Attributes/ }));
     expect(screen.getByText('34 hp')).toBeTruthy();
-    // persisted UE asset paths render in the Packaging manifest (slug = IronLongsword).
+    // UE Packaging is registry-owned: the registered package manifest renders (slug = IronLongsword).
     fireEvent.click(within(pipeline).getByRole('button', { name: /UE Packaging/ }));
-    expect(screen.getByText('T_IronLongsword_Icon')).toBeTruthy();
+    expect(screen.getAllByText(/DA_IronLongsword/).length).toBeGreaterThan(0);
     // resetting clears the persisted state back to pending — after confirming, because
     // it is destructive on both sides (local store + persisted server artifacts).
     fireEvent.click(screen.getByTestId('entity-reset'));

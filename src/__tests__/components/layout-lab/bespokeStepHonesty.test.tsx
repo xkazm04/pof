@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
 import { getStepComponent } from '@/components/layout-lab/steps';
+import { itemsLabelOwner } from '@/components/layout-lab/itemsLabelOwner';
 import { ITEM_STEP_NAMES, ITEM_STEP_SPECS } from '@/components/layout-lab/steps/itemsSteps';
 import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
 import { clearJudgeVerdictCache } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
@@ -78,10 +79,13 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-  it('every one of the 13 bespoke steps renders a provenance strip and a raw-artifact disclosure', () => {
-    expect(ITEM_STEP_NAMES).toHaveLength(13);
+  // Since 2026-09-29 the 6 labels BOTH items specs declare are registry-owned (itemsLabelOwner) and
+  // render through ArchetypeStep, which carries these rails itself; the 7 bespoke-owned remain here.
+  it('every one of the 7 bespoke-OWNED steps renders a provenance strip and a raw-artifact disclosure', () => {
+    const owned = ITEM_STEP_NAMES.filter((s) => itemsLabelOwner(s) === 'bespoke');
+    expect(owned).toHaveLength(7);
     seedAll();
-    for (const step of ITEM_STEP_NAMES) {
+    for (const step of owned) {
       const Step = getStepComponent('items', step);
       expect(Step, `no component registered for ${step}`).toBeTruthy();
       if (!Step) continue;
@@ -103,13 +107,13 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
 
   it('a matching-class judge FAIL down-grades a bespoke STATIC step banner', async () => {
     vi.stubGlobal('fetch', verdictFetch([{
-      catalogId: 'items', entityId: entity.id, step: 'Concept Brief', judge: 'llm-panel', verdict: 'fail',
-      score: 38, findings: 'generic filler prose', model: 'sonnet', rubricVersion: RUBRIC_VERSION,
+      catalogId: 'items', entityId: entity.id, step: 'Attributes', judge: 'llm-panel', verdict: 'fail',
+      score: 38, findings: 'generic filler stats', model: 'sonnet', rubricVersion: RUBRIC_VERSION,
     }]));
     seedAll();
-    const Step = getStepComponent('items', 'Concept Brief')!;
-    render(<Step t={t} entity={entity} step="Concept Brief" />);
-    // The shape checker alone reads pass (>= 300 chars)…
+    const Step = getStepComponent('items', 'Attributes')!;
+    render(<Step t={t} entity={entity} step="Attributes" />);
+    // The shape checker alone reads pass (every attribute key populated)…
     expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
     // …and the persisted judge verdict now reaches the bespoke banner too.
     await waitFor(() => {
@@ -119,15 +123,15 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
 
   it('a matching-class judge FAIL down-grades a bespoke GENERATIVE step banner', async () => {
     vi.stubGlobal('fetch', verdictFetch([{
-      catalogId: 'items', entityId: entity.id, step: 'Icon 2D Art', judge: 'vlm', verdict: 'fail',
-      score: 44, findings: 'silhouette unreadable at 64px', model: 'qwen-vl', rubricVersion: RUBRIC_VERSION,
+      catalogId: 'items', entityId: entity.id, step: '3D Generation', judge: 'vlm', verdict: 'fail',
+      score: 44, findings: 'silhouette unreadable at LOD0', model: 'qwen-vl', rubricVersion: RUBRIC_VERSION,
     }]));
     // The step must own a REAL generated image for the checker to pass — a swatch-only
     // history defers, and `bridgeJudgeVerdict` deliberately down-grades only a shape-PASS.
     seedAll();
-    reseed('Icon 2D Art', withRealArt({ selected: 0 }));
-    const Step = getStepComponent('items', 'Icon 2D Art')!;
-    render(<Step t={t} entity={entity} step="Icon 2D Art" />);
+    reseed('3D Generation', withRealArt({ tris: 4200, cap: 6000 }));
+    const Step = getStepComponent('items', '3D Generation')!;
+    render(<Step t={t} entity={entity} step="3D Generation" />);
     expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
     await waitFor(() => {
       expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('fail');
@@ -135,34 +139,22 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
   });
 
   it('a WRONG-class judge verdict never speaks for a bespoke step', async () => {
-    // 'Concept Brief' is audited as llm-panel; a vlm verdict must not down-grade it.
+    // 'Attributes' is audited as llm-panel; a vlm verdict must not down-grade it.
     vi.stubGlobal('fetch', verdictFetch([{
-      catalogId: 'items', entityId: entity.id, step: 'Concept Brief', judge: 'vlm', verdict: 'fail',
+      catalogId: 'items', entityId: entity.id, step: 'Attributes', judge: 'vlm', verdict: 'fail',
       score: 12, findings: 'wrong class', model: 'qwen-vl', rubricVersion: RUBRIC_VERSION,
     }]));
     seedAll();
-    const Step = getStepComponent('items', 'Concept Brief')!;
-    render(<Step t={t} entity={entity} step="Concept Brief" />);
+    const Step = getStepComponent('items', 'Attributes')!;
+    render(<Step t={t} entity={entity} step="Attributes" />);
     await waitFor(() => expect(screen.getByTestId('provenance-strip')).toBeTruthy());
     expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('pass');
   });
 
-  it('a bespoke step grades through the unified context — the Test Gate reads real siblings', () => {
-    // Every sibling produced → the derived gate reads them. The three generative upstreams own
-    // no generated asset from a produce stub, so they defer, and a gate blocked only by
-    // deferred upstreams defers too (nothing failed; nothing local can make it pass).
-    seedAll();
-    const Step = getStepComponent('items', 'Test Gate')!;
-    const { unmount } = render(<Step t={t} entity={entity} step="Test Gate" />);
-    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('deferred');
-    unmount();
-
-    // Break one upstream step (Animations loses its clips) → the gate must fail.
-    const state = useLabPipelineStore.getState().byEntity[entity.id];
-    useLabPipelineStore.setState({
-      byEntity: { [entity.id]: { ...state, Animations: { ...state.Animations, data: { clips: [] } } } },
-    });
-    render(<Step t={t} entity={entity} step="Test Gate" />);
-    expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('fail');
+  // The bespoke Test Gate (derived 'Checks' panel over sibling verdicts) was retired from the
+  // screen on 2026-09-29: 'Test Gate' is registry-owned and grades through the registered
+  // entityRuntimeDeferred L3 gate, as the server always did (see itemsUnionSteps.test.tsx).
+  it('Test Gate is registry-owned — no bespoke component renders it', () => {
+    expect(getStepComponent('items', 'Test Gate')).toBeNull();
   });
 });

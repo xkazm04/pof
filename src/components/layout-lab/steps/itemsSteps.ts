@@ -7,6 +7,7 @@ import {
 import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact';
 import { readHistory } from './shared/genHistory';
 import { useCatalogStore } from '@/stores/catalogStore';
+import { produceItemStep } from '@/components/layout-lab/itemsLabelOwner'; // call-time only (import cycle is benign)
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext, SiblingVerdict } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
@@ -658,12 +659,10 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
 /** Ordered step names (matches the registry + pipeline). */
 export const ITEM_STEP_NAMES = Object.keys(ITEM_STEP_SPECS);
 
-/** Run every Items step for one entity — the worked "fully populated item" example.
- *  Steps that already have an artifact are SKIPPED: produce() is a
- *  whole-artifact replace, the generative steps keep their entire kept batch
- *  history inside data.genHistory, and the write-through sink persists the
- *  replacement to the server (hydrateEntity is add-only, so a wiped history
- *  is unrecoverable). Demo data must only fill gaps, never overwrite work. */
+/** Run every Items step for one entity through its OWNER's produce door (`produceItemStep`: a
+ *  registry-owned label writes the registered, template-stamped stub — never the Pillars
+ *  exemplar body graded pass on another item). Steps that already have an artifact are SKIPPED:
+ *  produce() is a whole-artifact replace synced to the server; demo data only fills gaps. */
 export function populateItemDemo(
   entity: LabEntity,
   produce: (entityId: string, step: string, out?: StepOutput) => void,
@@ -671,6 +670,6 @@ export function populateItemDemo(
 ) {
   for (const step of ITEM_STEP_NAMES) {
     if (hasArtifact?.(entity.id, step)) continue;
-    produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity));
+    produce(entity.id, step, produceItemStep(entity, step) ?? ITEM_STEP_SPECS[step].produce(entity));
   }
 }
