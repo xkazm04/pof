@@ -289,6 +289,13 @@ A delivered card answers "fixable locally, or pay again?" instead of leaving it 
 - `GET /api/visual-gen/generate/status` projects `remedy` for a `done` job, because the client never receives `findings`. The MCP status path omits it.
 - `useForgeStore.finishJob(id)` runs on an explicit click (`FinishRemedy.tsx`). It POSTs the existing `/api/visual-gen/mesh-finish/remediate` with `{ name, dir, assetClass }`. A `routed: false` answer lands verbatim as `finish.state 'refused'` and starts no poll. A 202 polls `/mesh-finish/status` on the same tracked-poller rail as a generation (Stop-able, 30-min ceiling), ending with `remediation.summary` and a preview of the finished low-poly.
 
+## PoF plugin routes: one declared table, GET-only probes
+
+The PoF Bridge plugin's routes are declared ONCE: `POF_ROUTES` (`src/lib/pof-bridge/routes.ts`) lists each route's subsystem, method, path and `effect` (`read` | `mutates` | `ws`). A drift guard (`src/__tests__/lib/pof-bridge/routes.test.ts`) fails when a `/pof/...` literal in `PofBridgeClient`, `run-python.ts` or a `proxyToPofBridge(...)` handler is not declared, so a new plugin route cannot land in one copy only.
+
+- `planRouteProbe(route)` (pure) derives whether a health check may touch a route: `http-get {path}` (with a cheaper `probePath`, e.g. `/pof/manifest?checksum-only=true`), `ws`, or `not-probed` (`mutates` / `needs-argument`). A probe is side-effect-free by construction. A POST of `{}` to `/pof/compile/live` or `/pof/snapshot/capture` IS the real request, so mutating routes are listed and never called.
+- The Bridge Endpoints monitor (`project-setup/BridgeEndpointHealth`, mounted in Project Setup) derives its rows from the table. It executes the plan through the Bridge Doctor: `probeHttpRoute` (the Doctor's GET-only `httpProbe`) on `pofPort`, and `probeWsLiveState` on `wsPort` for `/pof/live`. A failed row carries the Doctor's `ProbeFailureKind`, where a 404 reads as "route not in this plugin build". Not-probed rows render calm and sit outside the healthy/probed counts. Probing runs only on the Ping All click.
+
 ---
 
 ## Coding conventions
