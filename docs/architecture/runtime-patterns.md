@@ -225,6 +225,8 @@ The audio painter tab has ONE optimistic edit buffer for the canvas AND the prop
 
 `AudioScenePainter` takes EITHER a shared `buffer` OR the write callbacks (`onCommit` / `onUpdateZones` / `onUpdateEmitters`), in which case it builds its own `useSceneBuffer`. The panels take EITHER `record` OR `onCommit`. To add a scene edit, add a `SceneOp` and its `applySceneOps` case. Do not add another per-record writer that builds from `activeDoc`: that is the lost update this replaced.
 
+**Listen mode (audition).** The painter's LISTEN tool places a listener puck (component state, never persisted) and `AuditionReadout` plays the scene through the project's real clips. The pure half is `auditionMix(scene, listener, library)` (`src/lib/audio-scene-audition.ts`): per emitter a gain, lowpass, pan and clip URL, or a named not-heard reason (`unbound`, `no-clips`, `set-missing`, `out-of-range`). It reads the reverb and occlusion rows from `src/lib/audio-scene-acoustics.ts`, the same tables `audio-codegen.ts` ships to UE (one authority per quantity: do not re-declare them). The live half is `useSceneAudition` (Web Audio). It creates nothing until an explicit Play. A listener move only glides existing node params. The only network call is a GET of `/api/audio-asset` (never the billed `POST /api/audio-gen`). `stop()`, unmount, leaving the tool AND the keep-alive LRU hiding the module (`useSuspendableEffect` cleanup) all close the context, and showing the module again stays silent until Play.
+
 ---
 
 ## Packaging pre-flight: a verdict states its own coverage
