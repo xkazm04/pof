@@ -227,6 +227,43 @@ with actions. `searchIntents.ts` resolves each hit client-side, from its doc id 
 
 `searchIntents.test.ts` ratchets zero dead ends over every doc `rebuildSearchIndex` writes.
 
+### 4d. Keyboard door — one owner per chord, LIFO Escape, hidden panes inert (`src/lib/hotkeys/hotkeyRegistry.ts`, `src/hooks/useHotkey.ts`)
+
+The legacy shell's shortcuts go through ONE window keydown listener owned by `hotkeyRegistry`
+(pure of React; attached only while something is registered), not one listener per component:
+
+- **Chords** (`mod+k`, `ctrl+b`, `ctrl+1`; `mod` = Ctrl or Meta; listed modifiers are required,
+  unlisted ones unchecked; the key is compared to `KeyboardEvent.key`) have ONE owner per keypress:
+  the innermost active scope (`module:<id>` beats `shell`), last-registered within a scope. Two
+  owners of one chord in one scope is misuse: `collisions()` reports it and `logger.warn` fires
+  once (last wins). The door `preventDefault`s only what it handles. `allowInInput` defaults to
+  false; every migrated chord passes `true`, because the raw listeners it replaced never checked focus.
+- **Escape is a LIFO layer stack** (`pushLayer(id, close)`): one Escape pops and closes only the
+  top layer, so Escape over the search palette no longer also collapses the persisted
+  quick-actions panel or the drawer under it.
+- **Exclusive capture** (`captureNext`): capture phase + `stopPropagation`, one-shot, releasable
+  (the `InputBindingsTable` rebind).
+- **Hooks** — `useHotkey(chords, handler, opts)`, `useEscapeLayer(id, active, close)`,
+  `useCaptureNext(active, handler)` — register only while `SuspendContext` is false, so a pane
+  hidden in the keep-alive LRU is keyboard-inert: the `!isVisible` that sets `display:none` is the
+  condition that unregisters its keys (a half-finished rebind in a hidden pane releases its
+  capture). Scope defaults to `module:<PaneIdContext>` inside a pane and `shell` outside one.
+  Handlers are read through a ref, so a new handler identity never re-registers or re-orders a layer.
+
+Adopters: `useKeyboardShortcuts` (Ctrl+B / Ctrl+J / Ctrl+1–5, shell), `useGlobalSearchPanel`
+(`mod+k` shell + `global-search` layer), `SpellbookSearch` (`mod+k` in `module:arpg-ability` +
+`spellbook-search` layer), `useReviewableModuleView` (`quick-actions-panel` layer), `Sidebar`
+(`sidebar-drawer`), `ActivityFeedPanel` (`activity-feed`), `InputBindingsTable` (capture).
+Parity is pinned by `src/__tests__/hooks/hotkeyCallersParity.test.tsx`.
+
+Behaviour to know: **Ctrl+K inside the ability module opens the Spellbook palette only — global
+search no longer opens there** (one owner per chord); it opens global search again as soon as
+that pane is hidden. Still raw (13 listeners, deliberately untouched): `TopBar/useTopBar.ts` (the
+legacy-shell project dropdown's Escape is a `document` listener, so it still co-closes with the
+top door layer — LIFO holds among door layers only), the lab shell's `LabSearch` / `ActivityChip`
+/ `LabBridgeStrip` / `useBaseline` (page.tsx mounts one shell, so they never meet these), and
+local popovers / dev tools. New shortcuts use the hooks, not another window listener.
+
 ### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 
 Three-column CSS grid `260px 320px 1fr`:
