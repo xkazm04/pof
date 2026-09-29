@@ -368,6 +368,24 @@ app-authored specs reference, reported separately as `appReferenced`. When live
 source is parsed the spellbook's audit categories are derived from that real
 breakdown (`buildLiveTagAuditCategories`), never the static
 `TAG_AUDIT_CATEGORIES` sample array.
+**One tag-rule direction.** A `TagRule` is **ability-owned**: `sourceTag` is the
+ability the rule lives on, `targetTag` the gating tag, and `type` the GAS
+container it lands in (`blocks` → `ActivationBlockedTags`, `requires` →
+`ActivationRequiredTags`, `cancels` → `CancelAbilitiesWithTag`) — what GAS
+stores on the ability, and what `deriveDefaultSpec`, forge adoption, the
+draft-spec callback schema and `buildGenerateAbilityBundlePrompt` (which reads
+only `targetTag`) all speak. The GAS Blueprint editor's archetype templates are
+written as kit-wide patterns ("`State.Dead` blocks `Ability.*`"), so
+`bindRulesToAbility(rules, abilityTag)` in `@/lib/ability/tag-rules` is the one
+boundary where they enter a spec: template apply flips a pattern that targets the
+bound ability, drops (with a named reason, counted on the template badge) one that
+targets another ability or is a state→state effect-level rule, and passes an
+ability-owned rule through unchanged (idempotent). The Tag Rules panel reads rows
+as "<ability> blocked by <gating tag>", Add Rule creates an ability-owned rule,
+Unmatched is judged on the gating tag only, and the wiring graph links effects to
+rules via `effectRuleLinks` (an effect that grants a rule's gating tag drives it).
+The same module owns the shared `tagsOverlap` matcher (exact, `X.*` wildcard, GAS
+parent/child).
 
 Tasks whose `prompt` is empty (e.g. `featureReview`, `moduleScan`) rely entirely on
 `buildTaskPrompt` to assemble all content from the extended fields.
