@@ -13,7 +13,8 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
 import type { AttrRelationship, EditorState } from './types';
 import type { EditorPanel } from './data';
-import { ACCENT, SEED_ATTRIBUTES, SEED_RELATIONSHIPS, SEED_EFFECTS, SEED_TAG_RULES, SEED_LOADOUT, PANEL_BREADCRUMBS } from './data';
+import { ACCENT, SEED_ATTRIBUTES, SEED_RELATIONSHIPS, SEED_EFFECTS, SEED_TAG_RULES, SEED_LOADOUT, PANEL_BREADCRUMBS, SEED_ABILITY_TAG } from './data';
+import { bindRulesToAbility, type DroppedRule } from '@/lib/ability/tag-rules';
 import { generateAttributeSetHeader, generateTagsHeader, generateEffectsCode } from './codegen';
 import { GAS_TEMPLATES, type GASTemplate } from './templates';
 import { WiringGraphEditor } from './WiringGraphEditor';
@@ -47,6 +48,7 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
   const [loadout, setLoadout] = useState<GASLoadoutSlot[]>(SEED_LOADOUT);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [activeTemplateName, setActiveTemplateName] = useState<string | null>(null);
+  const [templateDropped, setTemplateDropped] = useState<DroppedRule[]>([]);
   const [prevCode, setPrevCode] = useState<Record<string, string | null>>({ attrs: null, tags: null, effects: null });
   const [activePanel, setActivePanelRaw] = useState<EditorPanel>('wiring');
   const [codeTab, setCodeTab] = useState<'attrs' | 'tags' | 'effects'>('attrs');
@@ -85,18 +87,24 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
   }), [attributes, tagRules, loadout, effects, specBinding.ability]);
 
   const snapshotCode = useCallback(() => { setPrevCode({ ...generatedCode }); }, [generatedCode]);
+  // Every rule in the editor is the bound ability's own (ability-owned) rule.
+  const abilityTag = specBinding.ability?.tag ?? SEED_ABILITY_TAG;
 
   const loadTemplate = useCallback((tpl: GASTemplate) => {
     setAttributes(tpl.attributes as EditorAttribute[]);
     setRelationships(tpl.relationships as AttrRelationship[]);
     setEffects(tpl.effects as EditorEffect[]);
-    setTagRules(tpl.tagRules as TagRule[]);
+    // Templates are archetype patterns ("State.Dead blocks Ability.*"): bind them
+    // onto the selected ability; rules for other abilities / effect-level rules drop.
+    const bound = bindRulesToAbility(tpl.tagRules, abilityTag);
+    setTagRules(bound.rules);
+    setTemplateDropped(bound.dropped);
     setLoadout(tpl.loadout as GASLoadoutSlot[]);
     setActiveTemplateName(tpl.name);
     setShowTemplatePicker(false);
     setActivePanelRaw('wiring');
     setBreadcrumbDetail(null);
-  }, []);
+  }, [abilityTag]);
 
   const stats = useMemo(() => ({
     attrs: attributes.length, rels: relationships.length, effects: effects.length,
@@ -118,7 +126,7 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
             <div className="text-xs font-bold uppercase tracking-widest text-text flex items-center gap-2">
               <Code className="w-4 h-4" style={{ color: ACCENT }} /> GAS Blueprint Editor
               <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}`, color: ACCENT_CYAN, border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_20)}` }}>INTERACTIVE</span>
-              {activeTemplateName && <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_10)}`, color: ACCENT_EMERALD, border: `1px solid ${withOpacity(ACCENT_EMERALD, OPACITY_20)}` }}>{activeTemplateName}</span>}
+              {activeTemplateName && <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_10)}`, color: ACCENT_EMERALD, border: `1px solid ${withOpacity(ACCENT_EMERALD, OPACITY_20)}` }}>{activeTemplateName}{templateDropped.length > 0 && <span title={templateDropped.map((d) => `${d.ruleId}: ${d.reason}`).join(', ')}> · {templateDropped.length} rules not for this ability</span>}</span>}
             </div>
             <div className="text-2xs text-text-muted mt-0.5">Visual editor for Gameplay Ability System — generates GAS C++ into the UE project (agent-confirmed)</div>
           </div>
@@ -179,7 +187,7 @@ export function GASBlueprintEditor({ moduleId = 'arpg-gas' }: { moduleId?: SubMo
             {activePanel === 'wiring' && (<><SectionHeader icon={Cable} label="Visual Wiring Graph" color={ACCENT_EMERALD} /><p className="text-2xs text-text-muted mt-1 mb-2">Node-based view of the GAS data pipeline — attributes feed into effects, which grant tags that trigger blocking/cancellation rules.</p><WiringGraphEditor attributes={attributes} effects={effects} tagRules={tagRules} relationships={relationships} onSelectItem={setBreadcrumbDetail} /></>)}
             {activePanel === 'relationships' && (<><SectionHeader icon={Swords} label="Attribute Relationship Web" color={ACCENT_VIOLET} /><p className="text-2xs text-text-muted mt-1 mb-2">Drag from one attribute node to another to create scaling/clamping dependencies. Click an edge line to remove it.</p><RelationshipWebEditor attributes={attributes} relationships={relationships} onChange={setRelationships} /></>)}
             {activePanel === 'effects' && (<><SectionHeader icon={Zap} label="Effect Lifecycle Timeline" color={STATUS_ERROR} /><p className="text-2xs text-text-muted mt-1 mb-2">Place GameplayEffect blocks on a timeline. Click to select and edit duration, modifiers, and granted tags.</p><EffectTimelineEditor effects={effects} onChange={setEffects} onSelectItem={setBreadcrumbDetail} /></>)}
-            {activePanel === 'tags' && (<><SectionHeader icon={Tag} label="Tag Dependency Rules" color={STATUS_WARNING} /><p className="text-2xs text-text-muted mt-1 mb-2">Define blocking, cancellation, and requirement rules between gameplay tags. Supports wildcard patterns (e.g. Ability.*).</p><TagRulesEditor rules={tagRules} onChange={setTagRules} effects={effects} loadout={loadout} /></>)}
+            {activePanel === 'tags' && (<><SectionHeader icon={Tag} label="Tag Dependency Rules" color={STATUS_WARNING} /><p className="text-2xs text-text-muted mt-1 mb-2">Activation rules owned by the bound ability: which gameplay tags block it, are required for it, or are cancelled by it (ActivationBlockedTags / ActivationRequiredTags / CancelAbilitiesWithTag).</p><TagRulesEditor abilityTag={abilityTag} rules={tagRules} onChange={setTagRules} effects={effects} loadout={loadout} /></>)}
             {activePanel === 'loadout' && (<><SectionHeader icon={Shield} label="Loadout Hotbar" color={ACCENT_VIOLET} /><p className="text-2xs text-text-muted mt-1 mb-2">Configure ability loadout slots with names and cooldown tags. Add/remove slots to match your hotbar design.</p><LoadoutEditor loadout={loadout} onChange={setLoadout} /></>)}
             {activePanel === 'simulate' && (<><SectionHeader icon={FlaskConical} label="Live Simulation Sandbox" color={STATUS_SUCCESS} /><p className="text-2xs text-text-muted mt-1 mb-2">Queue effects at specific times and watch attribute values change in real-time.</p><SimulationSandbox attributes={attributes} effects={effects} relationships={relationships} accent={ACCENT} /></>)}
             {activePanel === 'codegen' && (<><SectionHeader icon={Code} label="Generated C++ Code" color={ACCENT_CYAN} /><p className="text-2xs text-text-muted mt-1 mb-2">Preview of the C++ the generator would write from your visual design — rendered here, not read from disk. Toggle diff mode to see what changed since last visit. What actually exists in the UE project is listed below.</p>

@@ -103,12 +103,17 @@ export const SEED_EFFECTS: EditorEffect[] = [
   { id: 'e5', name: 'GE_Stun', duration: 'duration', durationSec: 2, cooldownSec: 0, color: MODULE_COLORS.content, modifiers: [], grantedTags: ['State.Stunned'] },
 ];
 
+/** The default bound ability (useAbilitySpecBinding's DEFAULT_ENTITY_ID, off-fire-01). */
+export const SEED_ABILITY_TAG = 'Ability.Fire.Fireball';
+
+/**
+ * Canonical (ability-owned, see @/lib/ability/tag-rules): source = the ability,
+ * target = the gating tag — "Fireball is blocked by State.Dead".
+ */
 export const SEED_TAG_RULES: TagRule[] = [
-  { id: 't1', sourceTag: 'State.Dead', targetTag: 'Ability.*', type: 'blocks' },
-  { id: 't2', sourceTag: 'State.Stunned', targetTag: 'Ability.*', type: 'blocks' },
-  { id: 't3', sourceTag: 'State.Invulnerable', targetTag: 'Damage.*', type: 'blocks' },
-  { id: 't4', sourceTag: 'State.Attacking', targetTag: 'Ability.Melee.*', type: 'blocks' },
-  { id: 't5', sourceTag: 'Cooldown.Fireball', targetTag: 'Ability.Fireball', type: 'blocks' },
+  { id: 't1', sourceTag: SEED_ABILITY_TAG, targetTag: 'State.Dead', type: 'blocks' },
+  { id: 't2', sourceTag: SEED_ABILITY_TAG, targetTag: 'State.Stunned', type: 'blocks' },
+  { id: 't3', sourceTag: SEED_ABILITY_TAG, targetTag: 'State.Silenced', type: 'blocks' },
 ];
 
 export const SEED_LOADOUT: GASLoadoutSlot[] = [
