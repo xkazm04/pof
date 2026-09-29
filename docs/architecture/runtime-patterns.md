@@ -158,6 +158,10 @@ The victim is the least-recently-used entry with **no observed live work** — `
 
 The evicted entry's DOM subtree unmounts and cleans up. All mounted-but-hidden modules have `display: none` applied via `style`.
 
+**Pane holds (`src/hooks/usePaneHold.ts`).** A module declares in-flight work the shell cannot otherwise see with `usePaneHold(active, reason)`; `renderModulePane` provides `PaneIdContext` beside `SuspendContext`, so no module knows its pane id, and outside a shell pane (the lab, previews, tests) the hook is a no-op. Holds live in a tiny external store (`{ paneId -> reasons }`, one entry per holder, released by the holder's effect cleanup, so an unmounted pane can never leave one behind); `ModuleRenderer` subscribes to it with `useSyncExternalStore` and folds it into `observedLiveKey(sessions, holds)` as `m:` positive evidence, exactly like a running CLI session. A hold only changes WHICH pane is evicted - `lruTouched` still evicts exactly one per overflow past the cap. A forced eviction over held work reports `liveWork: 'pane-hold'` plus `holdReason`, and the Activity Feed names it (`Module torn down: Packaging - UE cook running`). The holds are **snapshotted into the pending eviction in the render that decides it** (`pickPaneHolds`): React runs the evicted pane's unmount cleanup, which releases its hold, before the report effect, so a report-time read would never see it. Adopters: the interactive cook (`useCookProgress`, rule `cookHoldsPane` - held until the cook settles), the ScanTab batch fix and the ReviewableModuleView checklist batch (held across the inter-item gap when no CLI session runs).
+
+**Keep-alive means mounted.** Nothing inside a pane may be keyed on visibility: the pane's entrance fade (`PaneEntrance`) replays through animation controls, because a visibility-keyed wrapper remounted the whole module subtree on every hide and show (it did until 2026-09-29, so a cook died on the first navigation away).
+
 ### SuspendContext (`src/hooks/useSuspend.ts:17`)
 
 ```ts
