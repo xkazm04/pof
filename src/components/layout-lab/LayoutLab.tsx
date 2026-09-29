@@ -9,6 +9,7 @@ import { usePersistedEntityHydration } from './hooks/usePersistedEntityHydration
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
+import { WorkQueueStrip, useLabWorkQueue } from './WorkQueueStrip';
 import { GlobalCoach } from './GlobalCoach';
 import { LabSearch, useLabSearchShortcut } from './LabSearch';
 import { LabRouteLinks } from './LabRouteLinks';
@@ -150,6 +151,7 @@ export function LayoutLab() {
     navigateTo(cid, eid, step);
     selectView('catalogs');
   }, [navigateTo, selectView]);
+  const workQueue = useLabWorkQueue(catalogId, entityId, openFromMatrix); // Matrix queue: Next opens each stop like a cell
 
   const switchToLegacy = useCallback(() => {
     writeShellPref('legacy');
@@ -227,7 +229,7 @@ export function LayoutLab() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Lab-level cross-catalog coach — only over the composition (Baseline) view;
             the Matrix and Canon carry their own catalog-wide summaries. */}
-        {view === 'catalogs' && <GlobalCoach t={theme} />}
+        {view === 'catalogs' && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={view}
             initial={reduce ? false : { opacity: 0, y: 6 }}
@@ -236,7 +238,7 @@ export function LayoutLab() {
             transition={{ duration: reduce ? 0 : 0.18, ease: 'easeOut' }}
             style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {view === 'canon' ? <CanonView t={theme} />
-              : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onSelectCatalog={selectCatalog} onOpenStep={openFromMatrix} />
+              : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onSelectCatalog={selectCatalog} onOpenStep={openFromMatrix} onOpenQueue={workQueue.open} />
               : <Baseline theme={theme} groups={groups} detail={detail}
                   onSelectCatalog={selectCatalog}
                   entityId={entityId}
