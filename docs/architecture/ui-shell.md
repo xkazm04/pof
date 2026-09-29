@@ -22,6 +22,7 @@ rollup strip.
 | `src/components/layout-lab/batchDrainModel.ts` | Pure batch-drain model: `DrainOutcome` (ok/locked/error) + `summarizeBatchDrain(entities, outcome)` — derives the catalog-wide flips summary from the single aggregate `DrainSummary` (groups per-step results back to their `job.entityId`; locked/error mark the whole set) |
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/LabSearch.tsx` | Lab-wide search overlay (shared `ui/Modal`): finds any catalog, entity, or pipeline step by name/id and jumps via the EXISTING lifted nav callbacks (`selectCatalog` / `navigateTo`) — no parallel nav state. `useLabSearchShortcut()` binds ⌘/Ctrl+K and `/` (ignored while typing) |
+| `src/components/layout-lab/entityPipeline.ts` | The lab's ONE per-entity step door: `toLabEntity` (the single stored→`LabEntity` constructor, wrapping `labIdentityOf` so `canonProfile` / `reference` are never dropped), `entityStepList(catalogId, entity, catalogSteps?)` (`stepScope.stepLabelsForProfile` over the catalog list — the list the rail renders and every `stepIndex` indexes), `resolveStepJump` (a step named by LABEL → the target entity's own index). Read by `useLabDetail`, `useGlobalCoach` / `globalCoachModel`, `useBaseline`, `LabSearch`, and the `LayoutLab` step clamp |
 | `src/components/layout-lab/ui/SearchCombobox.tsx` | The shared type-ahead combobox behind BOTH lab search and `status/EntitySearch` (extracted from the latter): ARIA combobox + `aria-activedescendant`, ↓/↑ (wrapping) · Home/End · Enter · Escape, live-region hit count, stated `maxHits` cap, and "no match" vs "nothing loaded" empty states |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance. **Fix honesty (2026-09-04):** `fixEffectOf` classifies what a one-click "⚡ Produce fix" can achieve (`reroll` / `first-produce` / `live-produce` / `no-op`) and the button is withheld for `no-op` — an already-produced step whose produce body is direction-blind and deterministic, where re-producing writes byte-identical data. The banner then carries `noopFixSuggestion`: what would change it, plus the derived direction as an input rather than an imminent dispatch. See docs/catalog/WIRING-AND-ACCEPTANCE.md |
@@ -174,10 +175,11 @@ kept, so reopening is instant.
 
 - **Open**: header "Search ⌘K" button, `⌘/Ctrl+K`, or `/` when focus is not in a text field.
 - **Jump**: catalog hit → `onSelectCatalog`; entity hit → `navigateTo(catalog, entity, 0)`;
-  step hit → `navigateTo(catalog, entity, stepIndex)` on the CURRENTLY open entity when it
-  belongs to that catalog, else the catalog's first seeded entity (no entity at all → the hit
-  degrades to selecting the catalog, since there is nothing to open the step on). Every path
-  runs the lifted callbacks, so last-location persistence is unchanged.
+  step hit carries the step LABEL, and `resolveStepJump` picks the entity at selection time —
+  the CURRENTLY open entity when its own pipeline has the step, else the first entity whose
+  pipeline does — then `navigateTo(catalog, entity, <that entity's own index>)` (no entity has the
+  step → the hit degrades to selecting the catalog). Every path runs the lifted callbacks, so
+  last-location persistence is unchanged.
 - **Keyboard**: ↓/↑ (wrapping) · Home/End · Enter opens · Escape clears the query, then closes
   the overlay (the first Escape is `stopPropagation`'d so clearing never also closes the Modal).
 
@@ -557,6 +559,20 @@ ungraded). `useBaseline`, `CatalogMatrix`, and `useLabCatalogData` all resolve t
 The `bespoke` flag replaces the `catalogId === 'items'` special-cases that were scattered across those
 hooks (`isBespokeCatalog`). The guard `src/__tests__/catalog/catalog-manifest-coverage.test.ts`
 (in `npm run validate`) fails when a graded catalog has steps but no section or no grader.
+
+### One per-entity step list (`entityPipeline.ts`)
+
+A step may be scoped to canon profiles (`StepSpec.profiles`, /diablo D18), so a catalog-wide step
+position means a DIFFERENT step per entity (a diablo1 dialog has no `Skill Checks` / `Camera`; a PoF
+bestiary entity has no `Sprite Render`). The rule: **a lab jump names a step by label; its index is
+resolved against the TARGET entity's own list** (`entityStepList`), never a position in another list.
+The rail (`useBaseline`), the matrix (`buildMatrixRows`), the cross-catalog coach (each entity is
+derived and ladder-picked against its own list, under its own `canonProfile` via `toLabEntity`, so
+`candidate.stepIndex` is what the rail opens), lab search (`resolveStepJump`) and the `LayoutLab`
+out-of-range clamp (bounded by the OPEN entity's own list) all read it, so the coach, the rail, the
+matrix and search agree about an entity's steps by construction. Pinned by
+`entityPipeline.test.ts`, `globalCoach.profile.test.ts`, `LabSearch.profileStep.test.tsx` and
+`LayoutLab.entityStepClamp.test.tsx`.
 
 ### Concurrency
 
