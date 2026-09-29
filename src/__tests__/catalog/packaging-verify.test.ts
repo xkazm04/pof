@@ -177,3 +177,34 @@ describe('combinePackagingVerdict — one writer, both halves', () => {
     expect(upserts[0].status).toBe('fail');
   });
 });
+
+describe('verifyPackagingAll — the content checker holds a packaging row too', () => {
+  const sweep = (row: string, content: AcceptanceResult) => {
+    const upsertStatus = vi.fn();
+    const s = verifyPackagingAll({}, {
+      listArtifacts: () => [{ catalogId: 'items', entityId: 'rusted-blade', step: 'UE Packaging', status: row }],
+      isPackaging: () => true,
+      getSiblings: () => [],
+      build: () => manifest({ files: [file] }),
+      upsertStatus,
+      getStaticVerdict: () => null,
+      getContentVerdict: () => content,
+    });
+    return { s, upsertStatus, written: upsertStatus.mock.calls[0]?.[3] as AcceptanceResult | undefined };
+  };
+
+  it('a TEMPLATE hold is not overwritten by a staged file: stays pending, marker leading, nothing written', () => {
+    const { s, upsertStatus } = sweep('pending', {
+      label: 'UE Packaging', tier: 'L0', status: 'pending', detail: 'stub',
+      reason: 'TEMPLATE: items-exemplar template, not produced for this entity — re-produce it',
+    });
+    expect(s.results[0].to).toBe('pending');
+    expect(s.results[0].reason?.startsWith('TEMPLATE:')).toBe(true);
+    expect(upsertStatus).not.toHaveBeenCalled();
+  });
+
+  it('a failing content checker outranks a package pass', () => {
+    const { written } = sweep('pass', { label: 'UE Packaging', tier: 'L1', status: 'fail', detail: 'contract', reason: 'wiringContract.grantedBy is a placeholder' });
+    expect(written?.status).toBe('fail');
+  });
+});

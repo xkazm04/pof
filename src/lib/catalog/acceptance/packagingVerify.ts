@@ -8,8 +8,9 @@
  * with reasons; nothing packageable → deferred "declarations only". Same drain shape as
  * staticVerify (its L2 sibling); operator-triggered via
  * /api/pipeline-artifacts/verify-packaging. The package half can defer, never fail; the step's
- * own `staticChecks` are folded in (the static sweep delegates packaging steps here), and only
- * that half can fail.
+ * own `staticChecks` are folded in (the static sweep delegates packaging steps here), and so is its
+ * content checker's data-tier hold (`foldContentHold`) — a TEMPLATE/SOURCED/failing row is never
+ * stored `pass` over its own checker.
  */
 import type { AcceptanceResult } from './types';
 import type { SiblingArtifact } from '../packaging/collect';
@@ -21,8 +22,9 @@ import { allCatalogPipelines, getCatalogPipeline } from '../pipeline-registry';
 import '@/lib/catalog/pipelines/registry.generated';
 import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { isPackagingStep } from './packagingStep';
-import { staticVerdictFor } from './staticVerify';
-import { worstOf } from './combineVerdicts';
+import { staticVerdictFor, contentVerdictFor } from './staticVerify';
+import { foldContentHold } from './combineVerdicts';
+import { aggregatePackaging, combinePackagingVerdict, siblingsForPackaging } from './packagingGrade';
 
 export interface PackagingVerifyFilter {
   catalogId?: string;
@@ -58,63 +60,7 @@ export function packagingCoverage(pipeline: {
   return reason ? { kind: 'exempt', reason } : { kind: 'none' };
 }
 
-/** Grade a rebuilt manifest into the step's L2 verdict. Pure.
- *  Files and declarations are graded together (Tier 2 rung A): a step passes only when
- *  every referenced output exists on disk AND every checked `/Game/...` declaration is
- *  realized as a `.uasset`/`.umap` under the UE root. Unchecked declarations (no UE
- *  root) fall back to the Tier 1 files-only verdict, saying so. Never 'fail'. */
-export function aggregatePackaging(manifest: PackageManifest, label: string): AcceptanceResult {
-  const staged = manifest.files.length;
-  const decls = manifest.ueDeclarations;
-  const checked = decls.filter((d) => d.realized !== null);
-  const realized = checked.filter((d) => d.realized === true);
-  const unrealized = checked.filter((d) => d.realized === false);
-  const declDetail =
-    checked.length > 0
-      ? `${realized.length}/${checked.length} UE declarations realized on disk`
-      : decls.length > 0
-        ? `${decls.length} UE declarations unchecked (no UE root resolved)`
-        : '';
-
-  const reasons: string[] = [];
-  if (manifest.missing.length > 0) {
-    reasons.push(...manifest.missing.map((m) => `${m.path} (${m.sourceStep}: ${m.reason})`));
-  }
-  if (unrealized.length > 0) {
-    const head = unrealized.slice(0, 6).map((d) => d.path).join(', ');
-    reasons.push(`${unrealized.length} UE declaration(s) not realized in Content/: ${head}${unrealized.length > 6 ? ', …' : ''}`);
-  }
-
-  if (reasons.length > 0) {
-    return {
-      label, tier: 'L2', status: 'deferred',
-      detail: [`${staged}/${staged + manifest.missing.length} referenced outputs present on disk`, declDetail].filter(Boolean).join('; '),
-      reason: reasons.join('; '),
-    };
-  }
-
-  const hasSubstance = staged > 0 || realized.length > 0;
-  if (hasSubstance) {
-    return {
-      label, tier: 'L2', status: 'pass',
-      detail: [staged > 0 ? `${staged} real files staged + hashed in the package manifest` : '', declDetail].filter(Boolean).join('; '),
-    };
-  }
-
-  return {
-    label, tier: 'L2', status: 'deferred',
-    detail: 'package is empty — no sibling step has produced a file yet',
-    reason:
-      `no packageable file outputs among sibling artifacts; ` +
-      `${decls.length} UE asset declaration(s) listed — those are realized/verified by the L3 gates`,
-  };
-}
-
-/** A packaging step's ONE verdict: its package's disk truth AND its declared static checks,
- *  the worse of the two, naming both halves. Pure. Null static = the step declares none. */
-export function combinePackagingVerdict(pkg: AcceptanceResult, stat: AcceptanceResult | null): AcceptanceResult {
-  return worstOf(pkg, stat);
-}
+export { aggregatePackaging, combinePackagingVerdict, siblingsForPackaging };
 
 export interface PackagingVerifyRow {
   catalogId: string;
@@ -131,7 +77,7 @@ export interface PackagingVerifySummary {
   verified: number;
   passed: number;
   deferred: number;
-  /** Only the folded-in static half can fail (a check that errored, not an absent symbol). */
+  /** Only a folded-in half can fail: a static check that errored, or the content checker. */
   failed: number;
   skipped: number;
   changed: number;
@@ -156,6 +102,8 @@ export interface PackagingVerifyDeps {
    *  Folded into the packaging verdict because the static sweep leaves packaging steps to this
    *  one — a single writer per status. Optional so a hand-built dep set needs no change. */
   getStaticVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
+  /** The step's own content checker, re-run raw on the stored data. Optional; absent → no content fold. */
+  getContentVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
 }
 
 /** Rebuild + grade every persisted packaging artifact. `apply: false` = dry-run preview.
@@ -173,15 +121,15 @@ export function verifyPackagingAll(
     if (!deps.isPackaging(a.catalogId, a.step)) { skipped++; continue; }
     const siblings = deps.getSiblings(a.catalogId, a.entityId, a.step);
     const manifest = deps.build(a.catalogId, a.entityId, siblings);
-    const verdict = combinePackagingVerdict(
-      aggregatePackaging(manifest, a.step),
-      deps.getStaticVerdict?.(a.catalogId, a.entityId, a.step) ?? null,
+    const verdict = foldContentHold(
+      combinePackagingVerdict(aggregatePackaging(manifest, a.step), deps.getStaticVerdict?.(a.catalogId, a.entityId, a.step) ?? null),
+      deps.getContentVerdict?.(a.catalogId, a.entityId, a.step) ?? null,
     );
 
     verified++;
     if (verdict.status === 'pass') passed++;
     else if (verdict.status === 'fail') failed++;
-    else deferred++;
+    else if (verdict.status === 'deferred') deferred++;
 
     const moved = verdict.status !== a.status;
     if (moved && apply) { deps.upsertStatus(a.catalogId, a.entityId, a.step, verdict); changed++; }
@@ -216,21 +164,6 @@ function defaultListExemptions(filter: PackagingVerifyFilter): PackagingExemptio
     );
 }
 
-/** Sibling view for the package build: every OTHER artifact contributes data + declarations;
- *  the packaging artifact itself contributes ONLY its `ueAssets` — that declared list is
- *  the step's own claim (the thing Tier 2 verifies), while its data (the hand-typed asset
- *  name list) must never feed the file collector. Pure. */
-export function siblingsForPackaging(
-  artifacts: { step: string; data: Record<string, unknown>; ueAssets: string[] }[],
-  packagingStep: string,
-): SiblingArtifact[] {
-  return artifacts.map((a) =>
-    a.step === packagingStep
-      ? { step: a.step, data: {}, ueAssets: a.ueAssets }
-      : { step: a.step, data: a.data, ueAssets: a.ueAssets },
-  );
-}
-
 function defaultGetSiblings(catalogId: string, entityId: string, packagingStep: string): SiblingArtifact[] {
   return siblingsForPackaging(listAllArtifacts({ catalogId, entityId }), packagingStep);
 }
@@ -256,5 +189,6 @@ export function defaultPackagingVerifyDeps(fsDeps: PackagingFsDeps = defaultPack
     build: (catalogId, entityId, siblings) => buildPackage(catalogId, entityId, siblings, fsDeps),
     upsertStatus: defaultUpsertStatus,
     getStaticVerdict: staticVerdictFor,
+    getContentVerdict: contentVerdictFor,
   };
 }

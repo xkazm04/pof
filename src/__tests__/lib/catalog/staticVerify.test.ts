@@ -123,6 +123,39 @@ describe('verifyStaticAll — a symbol in UE never lifts incomplete content', ()
   });
 });
 
+describe('verifyStaticAll — a content hold never reads as a static deferral', () => {
+  const sweep = (row: string, stat: AcceptanceResult, content: AcceptanceResult) => {
+    const upsertStatus = vi.fn();
+    const s = verifyStaticAll({}, {
+      resolveUeRoot: () => null,
+      listArtifacts: () => [{ catalogId: 'bestiary', entityId: 'd1-MT_COUNSLR', step: 'Stat Block', status: row }],
+      getStaticChecks: () => [() => stat],
+      upsertStatus,
+      getContentVerdict: () => content,
+    });
+    return { s, upsertStatus, written: upsertStatus.mock.calls[0]?.[3] as AcceptanceResult | undefined };
+  };
+  const absent: AcceptanceResult = { label: 'FARPGMonsterRow', tier: 'L2', status: 'deferred', detail: 'absent', reason: 'FARPGMonsterRow not found in UE Source' };
+
+  it('content declared-gap pending + static deferred → stays pending, nothing written', () => {
+    const { s, upsertStatus } = sweep('pending', absent,
+      { label: 'Stat Block', tier: 'L0', status: 'pending', detail: 'checker', reason: 'field "stats" missing: moveSpeed (declared gap: moveSpeed — "not in the reference")' });
+    expect(s.results[0]).toMatchObject({ from: 'pending', to: 'pending', changed: false });
+    expect(s.results[0].reason?.startsWith('field "stats" missing')).toBe(true);
+    expect(upsertStatus).not.toHaveBeenCalled();
+  });
+
+  it('[guard] content pass + static deferred → the static verdict stands (deferred@L2 written)', () => {
+    const { written } = sweep('pending', absent, { label: 'Stat Block', tier: 'L1', status: 'pass', detail: 'ok' });
+    expect(written).toMatchObject({ status: 'deferred', tier: 'L2' });
+  });
+
+  it('[guard] content deferred@L3 (runtime gate) + static pass → pass (drained passes survive)', () => {
+    const { written } = sweep('deferred', pass('FARPGMonsterRow'), { label: 'Stat Block', tier: 'L3', status: 'deferred', detail: 'awaits drain' });
+    expect(written?.status).toBe('pass');
+  });
+});
+
 describe('holdsBackAtDataTier', () => {
   const at = (status: AcceptanceResult['status'], tier: AcceptanceResult['tier']): AcceptanceResult =>
     ({ label: 'S', tier, status, detail: 'd' });
