@@ -10,6 +10,19 @@ export type { Histogram } from './plugins/types';
 export { aggregateByAttr, gapBasisOf, scopeToProfile, unmeasuredDimensions } from './coverage';
 export type { DimensionCoverage, GapBasis } from './coverage';
 
+/** A bucket is under-represented below this fraction of its expected count. */
+export const UNDERREP_RATIO = 0.6;
+
+/**
+ * THE under-represented rule: `got` entities against `share` of a dimension's `total` carriers.
+ * `analyzeCatalog` lists gaps with it and `proposalLanding` re-applies it at got+1 / total+1 to
+ * say whether a proposal closes one, so the two can never disagree (not the rounded `expected`).
+ */
+export function isUnderrepresented(got: number, share: number, total: number): boolean {
+  const want = share * total;
+  return got < want * UNDERREP_RATIO && want >= 1;
+}
+
 /**
  * A catalog's measured state. The coverage fields are optional on the TYPE because a
  * distribution persisted before they existed (zustand `pof-one-shot-job`) or posted back by
@@ -94,10 +107,9 @@ export function analyzeCatalog(
     gapBasis = 'expected-share';
     const total = Object.values(h).reduce((a, b) => a + b, 0);
     for (const [val, share] of Object.entries(exp)) {
-      const want = share * total;
       const got = h[val] ?? 0;
-      if (got < want * 0.6 && want >= 1) {
-        underrepresented.push({ attribute: attr, value: val, count: got, expected: Math.round(want) });
+      if (isUnderrepresented(got, share, total)) {
+        underrepresented.push({ attribute: attr, value: val, count: got, expected: Math.round(share * total) });
       }
     }
   }

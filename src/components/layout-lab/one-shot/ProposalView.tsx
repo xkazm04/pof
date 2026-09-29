@@ -7,6 +7,8 @@ import { planRun, stepRefsFor } from '@/lib/one-shot/runPlan';
 import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { useDispatchPlan } from '../steps/shared/useDispatchPlan';
 import { RunPlanView } from './RunPlanView';
+import { ProposalLanding } from './ProposalLanding';
+import { proposalLanding, refineToTargetDirection } from '@/lib/catalog/gap-analysis/landing';
 
 interface Props {
   t: LabTheme;
@@ -17,14 +19,23 @@ interface Props {
 }
 
 /**
- * Proposal name + rationale + JSON data + refine textarea + run plan + Run pipeline button.
- * Textarea is disabled when refinementTurns >= 3 and !forceMore. The run plan (`planRun`) names
- * every step's author before the click; the button carries the model-dispatch count.
+ * Proposal name + rationale + where it lands + JSON data + refine textarea + run plan + Run
+ * pipeline button. Textarea is disabled when refinementTurns >= 3 and !forceMore. The landing
+ * (`proposalLanding`) places the proposal on the analyzed distribution and judges it against the
+ * target; off target offers a one-click corrective refine and marks the Run button — never blocks.
+ * The run plan (`planRun`) names every step's author; the button carries the model-dispatch count.
  */
 export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove }: Props) {
   const catalogId = useOneShotJobStore((s) => s.catalogId);
   const overrides = useOneShotJobStore((s) => s.stepModeOverrides);
   const setStepMode = useOneShotJobStore((s) => s.setStepMode);
+  const distribution = useOneShotJobStore((s) => s.distribution);
+  const target = useOneShotJobStore((s) => s.target);
+  const landing = useMemo(
+    () => (distribution ? proposalLanding(distribution, proposal.data, target) : null),
+    [distribution, proposal.data, target],
+  );
+  const toTarget = landing ? refineToTargetDirection(landing) : null;
   const steps = useMemo(() => (catalogId ? stepRefsFor(catalogId) : []), [catalogId]);
   const plan = useMemo(() => planRun(steps, overrides), [steps, overrides]);
   const models = plan.totals.model;
@@ -59,6 +70,15 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
         <div style={{ fontSize: 16, fontWeight: 700, color: t.inkDeep, marginBottom: 6 }}>{proposal.name}</div>
         <div style={{ fontSize: 14, color: t.text, lineHeight: 1.5 }}>{proposal.rationale}</div>
       </div>
+
+      {landing && (
+        <ProposalLanding
+          t={t}
+          landing={landing}
+          refineDisabled={refineDisabled}
+          onRefineToTarget={toTarget ? () => onRefine(toTarget, forceMore) : undefined}
+        />
+      )}
 
       {/* JSON data */}
       <details style={{ marginBottom: 12 }}>
@@ -148,7 +168,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
             fontWeight: 600,
           }}
         >
-          Run pipeline{models > 0 && ` · ${models} model dispatch${models === 1 ? '' : 'es'}`}
+          Run pipeline{models > 0 && ` · ${models} model dispatch${models === 1 ? '' : 'es'}`}{toTarget && ' · off target'}
         </button>
       </div>
     </div>

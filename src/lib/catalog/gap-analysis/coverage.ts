@@ -35,12 +35,20 @@ export function readPath(data: unknown, path: string): unknown {
   }, data);
 }
 
+/**
+ * The histogram key of a dimension value (`String(v)`), or `null` for null/undefined — a value
+ * counted in no bucket. `aggregateByAttr` and `proposalLanding` key through this one rule.
+ */
+export function bucketKeyOf(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  return typeof v === 'string' ? v : String(v);
+}
+
 export function aggregateByAttr(entities: StoredCatalogEntity[], path: string): Histogram {
   const out: Histogram = {};
   for (const e of entities) {
-    const v = readPath(e.data, path);
-    if (v === undefined || v === null) continue;
-    const key = typeof v === 'string' ? v : String(v);
+    const key = bucketKeyOf(readPath(e.data, path));
+    if (key === null) continue;
     out[key] = (out[key] ?? 0) + 1;
   }
   return out;
