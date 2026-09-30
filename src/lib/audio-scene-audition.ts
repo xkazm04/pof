@@ -1,6 +1,6 @@
 import type { ReverbPreset } from '@/types/audio-scene';
 import { resolveMembership, zoneContains, type SceneDraft } from '@/lib/audio-scene-ops';
-import { REVERB_PARAMS, OCCLUSION_VALUES } from '@/lib/audio-scene-acoustics';
+import { OCCLUSION_VALUES, resolveZoneReverb } from '@/lib/audio-scene-acoustics';
 
 /**
  * The painter's LISTEN mode, pure half: what a listener standing at a point
@@ -15,8 +15,8 @@ import { REVERB_PARAMS, OCCLUSION_VALUES } from '@/lib/audio-scene-acoustics';
  *   - occlusion: an emitter inside a zone the listener is NOT inside takes that
  *     zone's occlusion row (volume AND cutoff), from the codegen's own table.
  *   - reverb: the listener's highest-priority containing zone
- *     (`resolveMembership`), its preset row from the codegen's table; a `custom`
- *     zone auditions its own decay/wet sliders.
+ *     (`resolveMembership`), resolved by `resolveZoneReverb` — the same call the
+ *     UE codegen makes (a table preset is its row; `custom` is its sliders).
  */
 
 /** One generated clip of a set, as the library read returns it. */
@@ -40,7 +40,7 @@ export interface AuditionReverb {
   preset: ReverbPreset;
   decayTime: number;
   wetDry: number;
-  /** `custom`: the zone's own sliders; codegen ships the table's custom row instead. */
+  /** `custom`: the zone's own sliders — the same values the UE codegen ships for it. */
   fromZoneSliders: boolean;
 }
 
@@ -99,11 +99,13 @@ export function auditionMix(scene: SceneDraft, listener: ListenerPoint, library:
 
   const activeZone = resolveMembership(listener.x, listener.y, scene.zones);
   const zone = activeZone ? zoneById.get(activeZone) : undefined;
-  const preset: ReverbPreset = zone?.reverbPreset ?? 'none';
-  const fromZoneSliders = preset === 'custom' && !!zone;
-  const reverb: AuditionReverb = fromZoneSliders && zone
-    ? { preset, decayTime: zone.reverbDecayTime, wetDry: zone.reverbWetDry, fromZoneSliders }
-    : { preset, decayTime: REVERB_PARAMS[preset].decayTime, wetDry: REVERB_PARAMS[preset].wetDry, fromZoneSliders };
+  const resolved = resolveZoneReverb(zone);
+  const reverb: AuditionReverb = {
+    preset: zone?.reverbPreset ?? 'none',
+    decayTime: resolved.decayTime,
+    wetDry: resolved.wetDry,
+    fromZoneSliders: resolved.fromZoneSliders,
+  };
 
   return { heard, notHeard, activeZone, reverb };
 }
