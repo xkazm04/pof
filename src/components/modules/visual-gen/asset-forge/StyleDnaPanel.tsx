@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ChevronDown, ChevronRight, Dna, ImagePlus, Loader2, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Dna, ImagePlus, Loader2, Pencil, X } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { formatBytes, formatDuration } from '@/lib/format';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
-import { STYLE_DNA_REACH, type StyleDna } from '@/lib/visual-gen/style-dna';
+import { STYLE_DNA_REACH } from '@/lib/visual-gen/style-dna';
 import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
 import { useForgeStore } from './useForgeStore';
+import { DnaStrip, StyleDnaEditor } from '@/components/modules/visual-gen/asset-forge/StyleDnaEditor';
 
 /** Hard caps on the mood-board intake, exported so the test asserts the SAME numbers the UI states. */
 export const MAX_BOARD_IMAGES = 6;
@@ -23,37 +24,6 @@ export const MAX_BOARD_IMAGE_BYTES = 5 * 1024 * 1024;
  */
 type RetryTarget = { kind: 'load' } | { kind: 'distill' } | { kind: 'activate'; id: string };
 
-const DNA_ROWS: Array<{ key: keyof StyleDna; label: string }> = [
-  { key: 'palette', label: 'Palette' },
-  { key: 'materials', label: 'Materials' },
-  { key: 'mood', label: 'Mood' },
-  { key: 'render', label: 'Render' },
-  { key: 'motifs', label: 'Motifs' },
-];
-
-/** The DNA strip — the active profile's style genome as labeled chip clusters. */
-function DnaStrip({ dna }: { dna: StyleDna }) {
-  return (
-    <div className="space-y-1.5" data-testid="dna-strip">
-      {DNA_ROWS.filter((r) => dna[r.key].length > 0).map((row) => (
-        <div key={row.key} className="flex items-baseline gap-2">
-          <span className="w-16 shrink-0 text-2xs uppercase tracking-wide text-text-muted">{row.label}</span>
-          <div className="flex flex-wrap gap-1">
-            {dna[row.key].map((item) => (
-              <span
-                key={item}
-                className="px-2 py-0.5 rounded-full text-2xs border border-[var(--visual-gen)]/40 bg-[var(--visual-gen)]/10 text-text"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /**
  * Project style — distill a mood board once into a Style DNA profile, then apply it
  * to every generation prompt. The forge-side face of /api/visual-gen/style-dna.
@@ -66,6 +36,8 @@ export function StyleDnaPanel() {
 
   const [profiles, setProfiles] = useState<StyleDnaProfile[]>([]);
   const [expanded, setExpanded] = useState(false);
+  /** Editing the active profile's chips — saved only as a COPY (fork), never in place. */
+  const [editing, setEditing] = useState(false);
   const [board, setBoard] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [distilling, setDistilling] = useState(false);
@@ -237,6 +209,13 @@ export function StyleDnaPanel() {
     setProfiles((p) => p.map((x) => ({ ...x, active: x.id === id })));
   };
 
+  /** A fork is a new profile that is now active; the parent stays under "Use “name”". */
+  const onForked = (profile: StyleDnaProfile) => {
+    setEditing(false);
+    setActiveProfile(profile);
+    setProfiles((p) => [profile, ...p.map((x) => ({ ...x, active: false }))]);
+  };
+
   /** Re-run exactly the action that failed. */
   const retry = () => {
     const target = error?.target;
@@ -314,7 +293,20 @@ export function StyleDnaPanel() {
             </div>
           )}
 
-          {activeStyleDna && <DnaStrip dna={activeStyleDna.dna} />}
+          {activeStyleDna && (editing ? (
+            <StyleDnaEditor key={activeStyleDna.id} profile={activeStyleDna} onSaved={onForked} onCancel={() => setEditing(false)} />
+          ) : (
+            <div className="space-y-1.5">
+              <DnaStrip dna={activeStyleDna.dna} />
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs border border-border text-text-muted hover:text-text hover:border-text-muted transition-colors"
+              >
+                <Pencil size={10} /> Edit style
+              </button>
+            </div>
+          ))}
 
           {/* Reach, stated. The toggle is opt-in style injection into ONE path; saying which
               is the difference between a promise and a claim. */}
