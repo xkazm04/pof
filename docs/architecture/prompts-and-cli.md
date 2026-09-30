@@ -951,7 +951,7 @@ identical wherever a step is driven:
 | Seam | File | What it injects |
 |------|------|-----------------|
 | generic lab step (~330) | `ArchetypeStep.buildPrompt` | that step's own contract + criteria |
-| headless / pof-mcp step | `catalog/headless.ts` `buildStepRecipe` | same block, same canon scope |
+| headless / pof-mcp step | `catalog/headless.ts` `buildStepRecipe` | same block, same canon scope. The recipe's `example` is the body's output stamped by `stampTemplate` like any stub write, so a non-exemplar entity's data-blind example carries `data.template` and grades `pending` with a `TEMPLATE:` `exampleReason` (never handed over as passing data); `settle` and submit's `next: { settle, entityStep }` name the act that settles a verdict (`catalog/stepSettlement.ts` `settlementOf`: resubmit / fill-gap / produce / produce-live / drain / settle route / none for UNGRADED) and the lab coach ladder's next step (`pickLadderIssue` over persisted verdicts) |
 | four-phase generation recipe | `catalog/recipe.ts` `recipeBuilder` | the **whole catalog's** contract-bearing steps as a `## Wiring Requirements` table + `## Success Criteria` (a `GenerationRecipe` phase has no defined mapping onto a named pipeline step, so all are injected) |
 
 It is **injection only** — nothing re-derives, re-validates or grades a contract, so no
