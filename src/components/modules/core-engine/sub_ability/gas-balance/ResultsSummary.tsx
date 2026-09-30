@@ -14,7 +14,7 @@ import {
 import { survivalTone } from '@/lib/balance/encounter-bands';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { HistogramChart } from './HistogramChart';
-import { BalanceHealthReport } from './BalanceHealthReport';
+import { BalanceHealthReport, type ApplyFix, type AppliedFix } from './BalanceHealthReport';
 import { buildHistogram } from './simulation';
 import { armorMitigation, effectiveHpVsHit } from '@/lib/ability/damage-formula';
 import type { SimResults, SimScenario } from './data';
@@ -36,7 +36,9 @@ function StatBadge({ label, value, color, unit, icon: Icon }: {
   );
 }
 
-export function ResultsSummary({ results, scenario }: { results: SimResults; scenario: SimScenario }) {
+export function ResultsSummary({ results, scenario, onApplyFix, applied }: {
+  results: SimResults; scenario: SimScenario; onApplyFix?: ApplyFix; applied?: AppliedFix | null;
+}) {
   const ttkHist = useMemo(() => buildHistogram(results.iterations.map(it => it.ttk), 25), [results.iterations]);
   const dpsHist = useMemo(() => buildHistogram(results.iterations.map(it => it.ttk > 0 ? it.totalDamage / it.ttk : 0), 25), [results.iterations]);
 
@@ -70,7 +72,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
   return (
     <div className="space-y-4">
       {/* Plain-language health report — surfaced first for non-technical readers */}
-      <BalanceHealthReport results={results} scenario={scenario} />
+      <BalanceHealthReport results={results} scenario={scenario} onApply={onApplyFix} applied={applied} />
 
       {/* Summary Stats */}
       <BlueprintPanel color={ACCENT} className="p-3">

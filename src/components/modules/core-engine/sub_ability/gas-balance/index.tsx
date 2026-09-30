@@ -16,6 +16,7 @@ import { runIteration, finalizeSimulation, referenceIncomingHit, GAS_SIM_DEFAULT
 import { armorMitigation } from '@/lib/ability/damage-formula';
 import { createRNG } from '@/lib/seeded-rng';
 import type { SimScenario, SimResults, SimIterationResult } from './data';
+import type { AppliedFix } from './BalanceHealthReport';
 import { ACCENT, SCENARIO_PRESETS } from './data';
 import { TEXT_SCALE } from '@/lib/typography-scale';
 
@@ -28,12 +29,14 @@ export function GASBalanceSimulator() {
   const [simProgress, setSimProgress] = useState<{ current: number; total: number } | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string>('trash-pack');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [applied, setApplied] = useState<AppliedFix | null>(null);
   const runIdRef = useRef(0);
 
   const handleImport = useCallback((imported: SimScenario) => {
     setScenario(imported);
     setSelectedPreset('');
     setResults(null);
+    setApplied(null);
     setShowImportModal(false);
   }, []);
 
@@ -47,9 +50,10 @@ export function GASBalanceSimulator() {
     });
     setSelectedPreset(presetId);
     setResults(null);
+    setApplied(null);
   }, []);
 
-  const runSim = useCallback(() => {
+  const runSimFor = useCallback((scenario: SimScenario) => {
     setIsRunning(true);
     const runId = ++runIdRef.current;
     const total = scenario.iterations;
@@ -89,7 +93,22 @@ export function GASBalanceSimulator() {
     };
 
     requestAnimationFrame(processChunk);
-  }, [scenario]);
+  }, []);
+
+  const runSim = useCallback(() => {
+    setApplied(null);
+    runSimFor(scenario);
+  }, [runSimFor, scenario]);
+
+  // A solved fix from the health report: swap the scenario in and re-run it, keeping
+  // the run it was solved on so the next report shows before → after.
+  const applyFix = useCallback((next: SimScenario, label: string) => {
+    if (results) setApplied({ label, results, scenario });
+    setScenario(next);
+    setSelectedPreset('');
+    setResults(null);
+    runSimFor(next);
+  }, [results, scenario, runSimFor]);
 
   // Canon armour is soft-capped against hit size, so the preview mitigation is
   // quoted against the average raw hit the scenario's enemies actually land.
@@ -154,7 +173,7 @@ export function GASBalanceSimulator() {
         <div className="space-y-4">
           {results ? (
             <>
-              <ResultsSummary results={results} scenario={scenario} />
+              <ResultsSummary results={results} scenario={scenario} onApplyFix={applyFix} applied={applied} />
               <ResultsAnalysis scenario={scenario} />
             </>
           ) : (

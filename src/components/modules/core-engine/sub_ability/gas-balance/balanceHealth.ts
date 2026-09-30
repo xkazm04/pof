@@ -8,7 +8,7 @@
 import { ARMOUR_HIT_COEFF } from '@/lib/combat/canon-kernel';
 import {
   difficultyBand, bandSeverity, fightLengthBand, fightLengthSeverity,
-  SURVIVAL_TARGET, TTK_TARGET_SEC, SURVIVAL_BAND_CUTS, FIGHT_LENGTH_CUTS,
+  SURVIVAL_TARGET, TTK_TARGET_SEC, SURVIVAL_BAND_CUTS,
   type ReportBand,
 } from '@/lib/balance/encounter-bands';
 import type { SimResults, SimScenario } from './data';
@@ -89,8 +89,7 @@ function assessSurvival(results: SimResults, _scenario: SimScenario): { score: n
   const anchor = { label: 'Survival', value: pct(s) };
 
   switch (band) {
-    case 'brutal': {
-      const boost = Math.min(60, Math.round((SURVIVAL_TARGET - s) * 100));
+    case 'brutal':
       return {
         score,
         finding: {
@@ -98,13 +97,11 @@ function assessSurvival(results: SimResults, _scenario: SimScenario): { score: n
           severity,
           title: 'Players die almost every fight',
           narrative: `Players survive only ${pct(s)} of these encounters — ${bandName(band)}. As-is, this fight will feel unfair and turn players away from the area.`,
-          suggestion: `Try +${boost}% player health, or cut enemy damage by ~${Math.round(boost / 2)}%.`,
+          suggestion: `Raise player health or damage, or cut enemy damage — Solve measures the amount that reaches ${pct(SURVIVAL_TARGET)} survival.`,
           anchor,
         },
       };
-    }
-    case 'tough': {
-      const boost = Math.max(10, Math.round((SURVIVAL_TARGET - s) * 80));
+    case 'tough':
       return {
         score,
         finding: {
@@ -112,11 +109,10 @@ function assessSurvival(results: SimResults, _scenario: SimScenario): { score: n
           severity,
           title: 'This fight is too punishing',
           narrative: `Players die ${pct(1 - s)} of the time here — ${bandName(band)}, below the ${pct(SURVIVAL_TARGET)} target. Most players will get stuck and complain.`,
-          suggestion: `Try +${boost}% player health below this level, or +${Math.round(boost / 1.5)}% armor.`,
+          suggestion: `Raise player health or damage, or cut enemy damage — Solve measures the amount that reaches ${pct(SURVIVAL_TARGET)} survival.`,
           anchor,
         },
       };
-    }
     case 'easy':
       return {
         score,
@@ -125,7 +121,7 @@ function assessSurvival(results: SimResults, _scenario: SimScenario): { score: n
           severity,
           title: 'This fight is a pushover',
           narrative: `Players win ${pct(s)} of the time — ${bandName(band)} — and barely break a sweat. Trivial encounters waste the player's time and dilute the rest of the content.`,
-          suggestion: `Try +20% enemy health, or add one more enemy to the pack.`,
+          suggestion: `Raise enemy health or damage (Solve measures the amount that brings survival to ${pct(SURVIVAL_TARGET)}), or add one more enemy to the pack.`,
           anchor,
         },
       };
@@ -159,7 +155,7 @@ function assessDuration(results: SimResults): { score: number; finding: HealthFi
         severity,
         title: 'Fights end before they start',
         narrative: `An average encounter wraps up in ${t.toFixed(1)} seconds. There's no time for the player to use abilities or feel like they fought anything.`,
-        suggestion: 'Try +40% enemy health to give combat room to breathe.',
+        suggestion: `Raise enemy health to give combat room to breathe — Solve measures the amount that reaches ~${TTK_TARGET_SEC}s fights.`,
         anchor: { label: 'Avg fight', value: `${t.toFixed(1)}s` },
       },
     };
@@ -172,7 +168,7 @@ function assessDuration(results: SimResults): { score: number; finding: HealthFi
         severity,
         title: 'Fights drag on too long',
         narrative: `An average encounter takes ${t.toFixed(0)} seconds — long enough that players will skip the area or pull aggro and run. Sustained tension turns into boredom.`,
-        suggestion: `Try -${Math.min(50, Math.round((1 - FIGHT_LENGTH_CUTS.long / t) * 100))}% enemy health, or +25% player damage.`,
+        suggestion: `Cut enemy health or raise player damage — Solve measures the amount that brings fights back to ~${TTK_TARGET_SEC}s.`,
         anchor: { label: 'Avg fight', value: `${t.toFixed(0)}s` },
       },
     };
@@ -185,7 +181,7 @@ function assessDuration(results: SimResults): { score: number; finding: HealthFi
         severity,
         title: 'Fights run a bit long',
         narrative: `An average encounter takes ${t.toFixed(0)} seconds. Fine for a mini-boss; too slow for routine combat.`,
-        suggestion: 'Try -20% enemy health for trash packs at this level.',
+        suggestion: `Cut enemy health or raise player damage — Solve measures the amount that brings fights back to ~${TTK_TARGET_SEC}s.`,
         anchor: { label: 'Avg fight', value: `${t.toFixed(0)}s` },
       },
     };
@@ -344,6 +340,11 @@ export function defenceScore(mitigation: number): number {
   return curveScore(mitigation, TARGET_MIT, MIT_TOLERANCE);
 }
 
+/** The armor rating the defence finding recommends: the target ratio × the reference hit, to the nearest 5. */
+export function targetArmorFor(refHit: number): number {
+  return roundTo(ARMOUR_HIT_RATIO_BANDS.target * refHit, 5);
+}
+
 /** "+20% effective health" / "×3 effective health" phrasing for a ratio. */
 function ehpPhrase(ratio: number): string {
   const mult = ehpMultiplierAtRatio(ratio);
@@ -379,7 +380,7 @@ function assessDefense(results: SimResults): { score: number | null; finding: He
   const hit = Math.round(refHit);
   const ratioText = `${ratio.toFixed(ratio < 10 ? 2 : 1)}× the ${hit}-damage reference hit`;
   const anchor = { label: `Armor blocks (vs ${hit} hit)`, value: pct(mit) };
-  const targetArmor = roundTo(ARMOUR_HIT_RATIO_BANDS.target * refHit, 5);
+  const targetArmor = targetArmorFor(refHit);
 
   if (band === 'weak') {
     return {

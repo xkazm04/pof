@@ -191,7 +191,10 @@ const COMBATANT_STAT_KEYS: (keyof CombatantStats)[] = [
  *  - count = 1e9      => `Array.from({ length: count })` allocates a billion entries (OOM)
  * The min on attackSpeed and the max on count/iterations are the load-bearing guards.
  */
-const STAT_BOUNDS: Record<Exclude<keyof CombatantStats, 'name'>, { min: number; max: number }> = {
+export type NumericStatKey = Exclude<keyof CombatantStats, 'name'>;
+
+/** Also the envelope a solved fix (`balanceFixes.applyFix`) clamps to, so an applied scenario always re-imports. */
+export const STAT_BOUNDS: Record<NumericStatKey, { min: number; max: number }> = {
   level:          { min: 1,    max: 1000 },
   maxHealth:      { min: 1,    max: 10_000_000 },
   maxMana:        { min: 0,    max: 10_000_000 },
@@ -217,7 +220,7 @@ function isValidCombatantStats(obj: unknown): obj is CombatantStats {
     if (key === 'name') continue;
     const v = o[key];
     if (typeof v !== 'number' || !isFinite(v)) return false;
-    const b = STAT_BOUNDS[key as Exclude<keyof CombatantStats, 'name'>];
+    const b = STAT_BOUNDS[key as NumericStatKey];
     if (v < b.min || v > b.max) return false;
   }
   return true;
