@@ -41,7 +41,7 @@ const panelId = (key: ViewTab) => `loc-panel-${key}`;
 
 export function LocalizationPipelineView() {
   const {
-    config, scanResult, strings, hazards, entries, reviewRequired, progress,
+    config, scanResult, scanProvenance, strings, hazards, entries, reviewRequired, progress,
     expansionIssues, qaFindings, qaByLocale, replacements, stringTables,
     isLoading, error,
     viewTab, setViewTab,
@@ -130,6 +130,15 @@ export function LocalizationPipelineView() {
         </div>
       )}
 
+      {/* Provenance — what the scan actually read, so demo data is never mistaken for a scan. */}
+      {scanResult && scanProvenance && (
+        <p className={`${TEXT_SCALE.body} text-text-muted`} data-testid="loc-scan-provenance">
+          {scanProvenance.kind === 'fixture'
+            ? 'Demo corpus — no UE project configured, so these strings are sample data, not your code.'
+            : `Scanned ${scanProvenance.filesScanned} file${scanProvenance.filesScanned === 1 ? '' : 's'} under ${scanProvenance.root}/Source (read-only)${scanProvenance.truncated ? ' — stopped at the file/size cap' : ''}.`}
+        </p>
+      )}
+
       {/* Sub-tab navigation */}
       {scanResult && (
         <div
@@ -160,8 +169,9 @@ export function LocalizationPipelineView() {
             <Globe aria-hidden="true" className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-40" />
             <p className="text-sm text-text-muted mb-1">No scan results yet</p>
             <p className={`${TEXT_SCALE.body} text-text-muted`}>
-              Click &quot;Run Full Pipeline&quot; to scan your generated code for hardcoded strings,
-              detect localization hazards, and generate translations.
+              Click &quot;Run Full Pipeline&quot; to scan your UE project&apos;s Source/ (read-only) for hardcoded
+              strings, detect localization hazards, and generate translations. With no project configured it
+              runs on a labelled demo corpus.
             </p>
           </div>
         </SurfaceCard>

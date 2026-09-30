@@ -189,20 +189,3 @@ export const QA_CHECKS: Record<
 export function qaBlocksShip(severity: TranslationQASeverity): boolean {
   return severity === 'critical' || severity === 'warning';
 }
-
-/* ---- Sample code patterns for scanning --------------------------- */
-
-export const HARDCODED_PATTERNS = [
-  /FText::FromString\(\s*TEXT\(\s*"([^"]+)"\s*\)\s*\)/,
-  /FText::FromString\(\s*"([^"]+)"\s*\)/,
-  /SetText\(\s*FText::FromString\(\s*"([^"]+)"\s*\)\s*\)/,
-  /->SetText\(\s*FText::FromString\(\s*"([^"]+)"\s*\)\s*\)/,
-  /FString\(\s*TEXT\(\s*"([^"]+)"\s*\)\s*\)/,
-  /UE_LOG\([^,]+,\s*[^,]+,\s*TEXT\(\s*"([^"]+)"\s*\)\s*\)/,
-];
-
-export const LOCALIZED_PATTERNS = [
-  /NSLOCTEXT\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/,
-  /LOCTEXT\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/,
-  /FText::FromStringTable\(/,
-];

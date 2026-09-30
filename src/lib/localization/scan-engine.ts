@@ -11,10 +11,11 @@ import type {
   StringLocation,
   HazardType,
   HazardSeverity,
+  RawStringUnit,
 } from '@/types/localization-pipeline';
 import { CONTEXT_NAMESPACES, LOW_CONFIDENCE } from './definitions';
 import { hashString } from './hash';
-import { getSampleStrings, type SampleString } from './fixtures';
+import { getSampleStrings } from './fixtures';
 
 /* ------------------------------------------------------------------ */
 /*  Context Detection                                                  */
@@ -89,10 +90,11 @@ function generateLocKey(text: string, context: StringContext): string {
 /*  Hazard Detection                                                   */
 /* ------------------------------------------------------------------ */
 
+/** Rules read a unit's real source line (`snippet`) and its resolved context — never a fixture record. */
 interface HazardRule {
   type: HazardType;
   severity: HazardSeverity;
-  detect: (s: SampleString) => { match: boolean; evidence: string; suggestion: string } | null;
+  detect: (s: RawStringUnit, context: StringContext) => { match: boolean; evidence: string; suggestion: string } | null;
 }
 
 const HAZARD_RULES: HazardRule[] = [
@@ -100,10 +102,10 @@ const HAZARD_RULES: HazardRule[] = [
     type: 'text_concatenation',
     severity: 'critical',
     detect: (s) => {
-      if (s.codeTemplate.includes('+') && (s.codeTemplate.includes('FString') || s.codeTemplate.includes('TEXT('))) {
+      if (s.snippet.includes('+') && (s.snippet.includes('FString') || s.snippet.includes('TEXT('))) {
         return {
           match: true,
-          evidence: s.codeTemplate.replace('{0}', s.text),
+          evidence: s.snippet,
           suggestion: `Use FText::Format with ordered arguments instead of string concatenation. Example: FText::Format(LOCTEXT("Key", "{0} over {1}"), Amount, Duration)`,
         };
       }
@@ -113,11 +115,11 @@ const HAZARD_RULES: HazardRule[] = [
   {
     type: 'text_expansion',
     severity: 'warning',
-    detect: (s) => {
-      if (s.text.length > 20 && (s.contextHint === 'ui_button' || s.contextHint === 'ui_label' || s.contextHint === 'stat_label')) {
+    detect: (s, context) => {
+      if (s.text.length > 20 && (context === 'ui_button' || context === 'ui_label' || context === 'stat_label')) {
         return {
           match: true,
-          evidence: `"${s.text}" (${s.text.length} chars) in ${s.contextHint} context — German translation could be ~${Math.ceil(s.text.length * 1.35)} chars`,
+          evidence: `"${s.text}" (${s.text.length} chars) in ${context} context — German translation could be ~${Math.ceil(s.text.length * 1.35)} chars`,
           suggestion: `Ensure the UI widget for this text has flexible width or text wrapping enabled. Consider shorter source text.`,
         };
       }
@@ -172,8 +174,8 @@ const HAZARD_RULES: HazardRule[] = [
   {
     type: 'hardcoded_layout',
     severity: 'info',
-    detect: (s) => {
-      if (s.text.length > 40 && s.contextHint === 'item_tooltip') {
+    detect: (s, context) => {
+      if (s.text.length > 40 && context === 'item_tooltip') {
         return {
           match: true,
           evidence: `Long tooltip "${s.text.slice(0, 50)}..." may overflow in fixed-width tooltip widget`,
@@ -186,52 +188,87 @@ const HAZARD_RULES: HazardRule[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+/*  Demo corpus as units                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The demo corpus adapted to the scanner's one input shape. Each sample sits on its own
+ * line of its demo file, in corpus order, so its location is a position in the (labelled)
+ * demo corpus rather than a number derived from a hash.
+ */
+export function fixtureUnits(): RawStringUnit[] {
+  const nextLine: Record<string, number> = {};
+  return getSampleStrings().map((sample) => {
+    const snippet = sample.codeTemplate.replace('{0}', sample.text);
+    const quote = snippet.indexOf('"');
+    nextLine[sample.fileHint] = (nextLine[sample.fileHint] ?? 0) + 1;
+    return {
+      text: sample.text,
+      usage: sample.usage,
+      filePath: sample.fileHint,
+      line: nextLine[sample.fileHint],
+      column: quote + 1,
+      snippet,
+      identifierHint: snippet.slice(0, Math.max(quote, 0)).trim(),
+      declaredContext: sample.contextHint,
+    };
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Scan Function                                                 */
 /* ------------------------------------------------------------------ */
 
+/** Scan the demo corpus (no UE project configured). */
 export function scanForLocalizableStrings(moduleFilter?: string[]): ScanResult {
+  return scanFromUnits(fixtureUnits(), moduleFilter);
+}
+
+/** Classify, context-tag and hazard-check extracted units; locations are the units' own. */
+export function scanFromUnits(units: RawStringUnit[], moduleFilter?: string[]): ScanResult {
   const strings: LocalizableString[] = [];
   const hazards: LocalizationHazard[] = [];
   const moduleBreakdown: Record<string, { total: number; hardcoded: number; localized: number }> = {};
+  const seenIds = new Set<string>();
 
   let hardcodedCount = 0;
   let ftextFromStringCount = 0;
   let alreadyLocalizedCount = 0;
 
-  const sampleStrings = getSampleStrings();
-  const filteredSamples = moduleFilter
-    ? sampleStrings.filter((s) => {
-        const mod = detectModule(s.fileHint);
+  const filteredUnits = moduleFilter
+    ? units.filter((u) => {
+        const mod = detectModule(u.filePath);
         return moduleFilter.includes(mod) || mod === 'unknown';
       })
-    : sampleStrings;
+    : units;
 
-  for (const sample of filteredSamples) {
-    const mod = detectModule(sample.fileHint);
+  for (const unit of filteredUnits) {
+    const mod = detectModule(unit.filePath);
     if (!moduleBreakdown[mod]) {
       moduleBreakdown[mod] = { total: 0, hardcoded: 0, localized: 0 };
     }
     moduleBreakdown[mod].total++;
 
-    const { context, confidence } = detectContext(sample.codeTemplate, sample.fileHint);
-    const finalContext = confidence > 0.5 ? context : sample.contextHint;
+    const { context, confidence } = detectContext(unit.snippet, `${unit.identifierHint} ${unit.filePath}`);
+    const finalContext = confidence > 0.5 ? context : unit.declaredContext ?? context;
     const namespace = CONTEXT_NAMESPACES[finalContext];
-    const locKey = generateLocKey(sample.text, finalContext);
-    const id = `str_${hashString(sample.text + sample.fileHint).toString(36)}`;
+    const locKey = unit.key ?? generateLocKey(unit.text, finalContext);
+    let id = `str_${hashString(unit.text + unit.filePath).toString(36)}`;
+    if (seenIds.has(id)) id = `${id}_${unit.line}_${unit.column}`;
+    seenIds.add(id);
 
-    const lineNum = 10 + Math.floor(hashString(sample.text) % 200);
     const location: StringLocation = {
-      filePath: sample.fileHint,
-      lineNumber: lineNum,
-      columnStart: 4,
-      columnEnd: 4 + sample.codeTemplate.length,
-      codeSnippet: sample.codeTemplate.replace('{0}', sample.text),
+      filePath: unit.filePath,
+      lineNumber: unit.line,
+      columnStart: unit.column,
+      columnEnd: unit.column + unit.text.length + 2,
+      codeSnippet: unit.snippet,
     };
 
-    if (sample.usage === 'nsloctext' || sample.usage === 'loctext') {
+    if (unit.usage === 'nsloctext' || unit.usage === 'loctext') {
       alreadyLocalizedCount++;
       moduleBreakdown[mod].localized++;
-    } else if (sample.usage === 'hardcoded') {
+    } else if (unit.usage === 'hardcoded') {
       hardcodedCount++;
       moduleBreakdown[mod].hardcoded++;
     } else {
@@ -241,9 +278,9 @@ export function scanForLocalizableStrings(moduleFilter?: string[]): ScanResult {
 
     strings.push({
       id,
-      sourceText: sample.text,
+      sourceText: unit.text,
       context: finalContext,
-      currentUsage: sample.usage,
+      currentUsage: unit.usage,
       locNamespace: namespace,
       locKey,
       locations: [location],
@@ -251,25 +288,24 @@ export function scanForLocalizableStrings(moduleFilter?: string[]): ScanResult {
       detectionConfidence: Math.max(confidence, LOW_CONFIDENCE),
     });
 
-    // Check hazards
     for (const rule of HAZARD_RULES) {
-      const result = rule.detect(sample);
+      const result = rule.detect(unit, finalContext);
       if (result) {
         hazards.push({
-          id: `haz_${hashString(result.evidence).toString(36)}`,
+          id: `haz_${hashString(`${result.evidence}@${unit.filePath}:${unit.line}`).toString(36)}`,
           type: rule.type,
           severity: rule.severity,
           description: result.evidence,
           evidence: result.evidence,
           location,
           suggestion: result.suggestion,
-          fixPrompt: `Fix the ${rule.type.replace(/_/g, ' ')} issue in ${sample.fileHint}:${lineNum} — ${result.suggestion}`,
+          fixPrompt: `Fix the ${rule.type.replace(/_/g, ' ')} issue in ${unit.filePath}:${unit.line} — ${result.suggestion}`,
         });
       }
     }
   }
 
-  const filesSet = new Set(filteredSamples.map((s) => s.fileHint));
+  const filesSet = new Set(filteredUnits.map((u) => u.filePath));
 
   return {
     totalFilesScanned: filesSet.size,

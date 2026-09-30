@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocalizationPipelineStore } from '@/stores/localizationPipelineStore';
+import { useProjectStore } from '@/stores/projectStore';
 import type { StringContext } from '@/types/localization-pipeline';
 import { LOW_CONFIDENCE } from '@/lib/localization/definitions';
 import type { ViewTab, StringPreset, TranslationPreset } from './types';
@@ -7,6 +8,8 @@ import type { ViewTab, StringPreset, TranslationPreset } from './types';
 export function useLocalizationPipelineView() {
   const config = useLocalizationPipelineStore((s) => s.config);
   const scanResult = useLocalizationPipelineStore((s) => s.scanResult);
+  const scanProvenance = useLocalizationPipelineStore((s) => s.scanProvenance);
+  const projectPath = useProjectStore((s) => s.projectPath);
   const strings = useLocalizationPipelineStore((s) => s.strings);
   const hazards = useLocalizationPipelineStore((s) => s.hazards);
   const entries = useLocalizationPipelineStore((s) => s.entries);
@@ -33,9 +36,10 @@ export function useLocalizationPipelineView() {
     fetchDefaults();
   }, [fetchDefaults]);
 
+  // The configured UE project's Source/ is scanned; with none configured the route answers the demo corpus.
   const handleRunPipeline = useCallback(async () => {
-    await runFullPipeline();
-  }, [runFullPipeline]);
+    await runFullPipeline(undefined, projectPath || undefined);
+  }, [runFullPipeline, projectPath]);
 
   // Hazard string IDs for preset filtering
   const criticalHazardStringIds = useMemo(() => {
@@ -144,7 +148,7 @@ export function useLocalizationPipelineView() {
     : 0;
 
   return {
-    config, scanResult, strings, hazards, entries, reviewRequired, progress,
+    config, scanResult, scanProvenance, strings, hazards, entries, reviewRequired, progress,
     expansionIssues, qaFindings, qaByLocale, replacements, stringTables,
     isLoading, error,
     viewTab, setViewTab,

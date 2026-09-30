@@ -13,6 +13,7 @@ import type {
   TranslationQAResult,
   TranslationQAFinding,
   LocaleQAStatus,
+  ScanProvenance,
 } from '@/types/localization-pipeline';
 
 /* ---- Stable empty constants (Zustand selector safety) ------------ */
@@ -30,6 +31,14 @@ const EMPTY_MODULE_BREAKDOWN: Record<string, { total: number; hardcoded: number;
 const EMPTY_QA_FINDINGS: TranslationQAFinding[] = [];
 const EMPTY_QA_BY_LOCALE: Record<string, LocaleQAStatus> = {};
 
+/**
+ * The POST body every action sends. `projectPath` (the configured UE project) makes the
+ * route scan `<projectPath>/Source` read-only; without it the route answers the demo corpus.
+ */
+function requestBody(action: string, config: LocalizationConfig, projectPath?: string): string {
+  return JSON.stringify(projectPath ? { action, config, projectPath } : { action, config });
+}
+
 /* ---- State interface --------------------------------------------- */
 
 interface LocalizationPipelineState {
@@ -39,6 +48,8 @@ interface LocalizationPipelineState {
 
   // Scan results
   scanResult: ScanResult | null;
+  /** What the last scan read: the project's Source/ or the labelled demo corpus. */
+  scanProvenance: ScanProvenance | null;
   strings: LocalizableString[];
   hazards: LocalizationHazard[];
   moduleBreakdown: Record<string, { total: number; hardcoded: number; localized: number }>;
@@ -65,9 +76,9 @@ interface LocalizationPipelineState {
 
   // Actions
   fetchDefaults: () => Promise<void>;
-  runScan: (config?: LocalizationConfig) => Promise<ScanResult | null>;
-  runTranslation: (config?: LocalizationConfig) => Promise<TranslationResult | null>;
-  runFullPipeline: (config?: LocalizationConfig) => Promise<void>;
+  runScan: (config?: LocalizationConfig, projectPath?: string) => Promise<ScanResult | null>;
+  runTranslation: (config?: LocalizationConfig, projectPath?: string) => Promise<TranslationResult | null>;
+  runFullPipeline: (config?: LocalizationConfig, projectPath?: string) => Promise<void>;
   updateConfig: (partial: Partial<LocalizationConfig>) => void;
 }
 
@@ -80,6 +91,7 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
 
   // Scan
   scanResult: null,
+  scanProvenance: null,
   strings: EMPTY_STRINGS,
   hazards: EMPTY_HAZARDS,
   moduleBreakdown: EMPTY_MODULE_BREAKDOWN,
@@ -123,19 +135,20 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
   },
 
   /* ---- Run scan -------------------------------------------------- */
-  runScan: async (configOverride) => {
+  runScan: async (configOverride, projectPath) => {
     const config = configOverride ?? get().config;
     if (!config) return null;
 
     set({ isLoading: true, error: null });
     try {
-      const result = await apiFetch<ScanResult>('/api/localization-pipeline', {
+      const { provenance, ...result } = await apiFetch<ScanResult & { provenance: ScanProvenance }>('/api/localization-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'scan', config }),
+        body: requestBody('scan', config, projectPath),
       });
       set({
         scanResult: result,
+        scanProvenance: provenance,
         strings: result.strings,
         hazards: result.hazards,
         moduleBreakdown: result.moduleBreakdown,
@@ -149,7 +162,7 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
   },
 
   /* ---- Run translation ------------------------------------------- */
-  runTranslation: async (configOverride) => {
+  runTranslation: async (configOverride, projectPath) => {
     const config = configOverride ?? get().config;
     if (!config) return null;
 
@@ -162,7 +175,7 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
       }>('/api/localization-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'translate', config }),
+        body: requestBody('translate', config, projectPath),
       });
       set({
         translationResult: data.translation,
@@ -183,7 +196,7 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
   },
 
   /* ---- Run full pipeline ----------------------------------------- */
-  runFullPipeline: async (configOverride) => {
+  runFullPipeline: async (configOverride, projectPath) => {
     const config = configOverride ?? get().config;
     if (!config) return;
 
@@ -191,6 +204,7 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
     try {
       const data = await apiFetch<{
         scan: ScanResult;
+        provenance: ScanProvenance;
         replacements: LOCTEXTReplacementSuggestion[];
         tables: StringTable[];
         translation: TranslationResult;
@@ -199,10 +213,11 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
       }>('/api/localization-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'full-pipeline', config }),
+        body: requestBody('full-pipeline', config, projectPath),
       });
       set({
         scanResult: data.scan,
+        scanProvenance: data.provenance,
         strings: data.scan.strings,
         hazards: data.scan.hazards,
         moduleBreakdown: data.scan.moduleBreakdown,
