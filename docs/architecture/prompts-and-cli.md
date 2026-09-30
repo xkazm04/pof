@@ -230,6 +230,28 @@ and stay invisible to prompt evolution — `material-patterns`,
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
 (`AIBehaviorView`). Converting each is the same three-part move as above.
 
+**The audio builders share one UE runtime contract (`src/lib/audio-runtime-contract.ts`).**
+The deterministic codegen (`audio-codegen.ts`) and the `audio-scene` (system, zone,
+soundscape) and `audio-events` builders all write into `Source/<Module>/Audio/`, and
+they once asked for three pool-owning `UGameInstanceSubsystem`s under different names.
+`AUDIO_RUNTIME` now names each class once, with the names and headers codegen already
+emits (`UAudioSceneManager`, `UAudioReverbPresets`, `UAudioZoneAttenuation`,
+`ASceneAudioVolume`, `ASceneEmitterSpawner`, `UProceduralAmbientManager`), plus the one
+CLI-authored class, `UAudioEventRouter`. Codegen does not import the contract;
+`__tests__/lib/audio-runtime-contract.test.ts` parses codegen output against it as the
+drift guard, and asserts that the five generators together request exactly one
+subsystem. Every builder embeds `runtimeContractBlock(scene, module)`. That block says
+`UAudioSceneManager` is the only audio subsystem and owns the pool size and voice
+limit. It marks the codegen headers as do-not-edit, so PlayEvent, the pool, the
+priority queue, concurrency and cooldowns go in `UAudioEventRouter`: a `UObject`
+(not a subsystem) whose Outer is the manager and which reads
+`GetSoundPoolSize()` / `GetMaxConcurrentSounds()`. The zone prompt configures an
+`ASceneAudioVolume` entry, and the soundscape prompt adds a `UProceduralAmbientManager`
+layer. `buildAudioEventPrompt(config, ctx, scene?)` takes the settled scene's budget
+from `useAudioView`. It prints `eventBudget` (declared voices vs the scene limit), for
+example "21 declared voices exceed the scene limit of 16 ... priority decides which
+voice is stolen".
+
 **Asset-Code Oracle remedies start on the rail (remedy -> rescan -> key diff).**
 `src/lib/asset-oracle/oracleRemedy.ts` plans only the task body for the two
 violation types a CLI can fix without a delete (`naming-mismatch`: editor rename
