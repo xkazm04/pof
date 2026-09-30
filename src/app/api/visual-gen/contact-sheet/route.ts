@@ -6,6 +6,8 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { GENERATED_IMAGE_DIR, generateTwoDImage } from '@/lib/visual-gen/image-providers';
 import { DEFAULT_SHEET_PX, type ContactSheetSpec } from '@/lib/visual-gen/contact-sheet';
 import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slice';
+import { styleClause, styleRequestOf } from '@/lib/visual-gen/style-apply';
+import { getDb } from '@/lib/db';
 
 /**
  * One generation -> a whole SET of per-entity icons.
@@ -91,6 +93,8 @@ export async function POST(request: NextRequest) {
       cast?: { entityId?: string; brief?: string }[];
       providerId?: string;
       size?: string;
+      applyStyleDna?: boolean;
+      canonProfile?: string;
     };
 
     const catalogId = typeof body?.catalogId === 'string' ? body.catalogId : '';
@@ -103,11 +107,15 @@ export async function POST(request: NextRequest) {
       return apiError('every cast member needs an entityId and a brief — a blank brief buys a random cell', 400);
     }
 
+    // Style DNA (optional, via the one canon-aware resolver): with `applyStyleDna` the resolved
+    // style — the canon's own for a canon entity, never the project's — IS the sheet's medium.
+    // Absent the flag (or withheld) the medium is exactly what it was: `style` or the default.
+    const dna = styleClause(getDb, styleRequestOf(body));
     const spec: ContactSheetSpec = {
       cols: Number(body?.cols) || 4,
       rows: Number(body?.rows) || 4,
       cellSubject: body?.cellSubject ?? 'game entity icon',
-      style: body?.style ?? 'painterly dark-fantasy ARPG art',
+      style: dna.clause ?? body?.style ?? 'painterly dark-fantasy ARPG art',
       background: body?.background ?? 'subtle deep charcoal atmospheric background',
       accent: typeof body?.accent === 'string' ? body.accent : undefined,
       cast: cast.map((c) => ({ id: c.entityId!, brief: c.brief! })),
@@ -151,7 +159,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return apiError(result.error, result.refused ? 400 : 502);
     }
-    return apiSuccess(result);
+    return apiSuccess({ ...result, ...dna.outcome });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Failed to process contact sheet request', 500);
   }
