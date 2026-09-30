@@ -11,6 +11,26 @@ import {
 } from './useMaterialStore';
 import { StyledSlider } from '@/components/ui/StyledSlider';
 import { MaterialPresetList } from './MaterialPresetList';
+import { DeriveMapsButton } from './DeriveMapsButton';
+import { derivedSpecForSlot } from '@/lib/visual-gen/derived-maps';
+
+/**
+ * A derived slot says so: "derived" (a real derivation) or "heuristic" (a
+ * documented guess). An uploaded or generated map carries no chip.
+ */
+function ProvenanceChip({ channel }: { channel: TextureChannel }) {
+  const provenance = useMaterialStore((s) => s.textureProvenance[channel]);
+  if (!provenance || provenance === 'authored') return null;
+  return (
+    <span
+      data-testid={`texture-provenance-${channel}`}
+      title={derivedSpecForSlot(channel)?.method}
+      className="ml-1.5 px-1 rounded border border-border text-2xs text-text-muted"
+    >
+      {provenance}
+    </span>
+  );
+}
 
 function Slider({
   label,
@@ -100,6 +120,7 @@ function TextureSlot({
       </motion.label>
       <div className="flex-1 min-w-0">
         <span className="text-xs text-text">{label}</span>
+        <ProvenanceChip channel={channel} />
       </div>
       {textureUrl && (
         <button
@@ -208,6 +229,7 @@ export function PBREditor() {
           <TextureSlot label="Metallic" channel="metallic" textureUrl={metallicTexture} />
           <TextureSlot label="Roughness" channel="roughness" textureUrl={roughnessTexture} />
           <TextureSlot label="AO" channel="ao" textureUrl={aoTexture} />
+          <DeriveMapsButton />
         </div>
       </div>
 
