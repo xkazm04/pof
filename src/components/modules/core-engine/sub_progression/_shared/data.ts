@@ -8,6 +8,7 @@ import {
 } from '@/lib/chart-colors';
 import type { ChartSeries, RadarDataPoint } from '@/types/unique-tab-improvements';
 import { clamp } from './chartMath';
+import { DR_CONFIGS, drAttributesFrom } from './diminishingReturns';
 
 export const ACCENT = STATUS_WARNING;
 
@@ -173,36 +174,11 @@ export const ENEMY_DIFFICULTY = [15, 30, 55, 100, 160, 240, 330, 420, 520, 650, 
 
 /* -- 8.7 Diminishing Returns Data ----------------------------------------- */
 
-export interface DRAttribute {
-  name: string;
-  color: string;
-  softCap: number;
-  curve: { points: number; marginalValue: number }[];
-}
+// One DR dataset: the visualizer's attributes are derived from the same configs
+// the C++ generator exports (see ./diminishingReturns.ts).
+export type { DRAttribute } from './diminishingReturns';
 
-export const DR_ATTRIBUTES: DRAttribute[] = [
-  {
-    name: 'Strength', color: STATUS_ERROR, softCap: 60,
-    curve: Array.from({ length: 10 }, (_, i) => ({
-      points: (i + 1) * 10,
-      marginalValue: i < 6 ? 10 - i * 0.5 : Math.max(10 - i * 1.5, 1),
-    })),
-  },
-  {
-    name: 'Dexterity', color: ACCENT_EMERALD, softCap: 50,
-    curve: Array.from({ length: 10 }, (_, i) => ({
-      points: (i + 1) * 10,
-      marginalValue: i < 5 ? 12 - i * 0.8 : Math.max(12 - i * 2, 0.5),
-    })),
-  },
-  {
-    name: 'Intelligence', color: ACCENT_CYAN, softCap: 70,
-    curve: Array.from({ length: 10 }, (_, i) => ({
-      points: (i + 1) * 10,
-      marginalValue: i < 7 ? 8 - i * 0.3 : Math.max(8 - i * 1.2, 0.8),
-    })),
-  },
-];
+export const DR_ATTRIBUTES = drAttributesFrom(DR_CONFIGS);
 
 /* -- Comparison levels for delta summary ---------------------------------- */
 

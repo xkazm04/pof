@@ -7,18 +7,29 @@ import { OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colo
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { NormalizedLineChart } from '../../unique-tabs/_shared';
 import { ACCENT, DR_ATTRIBUTES, type DRAttribute } from '../_shared/data';
+import { drAttributesFrom, type DRConfig } from '@/components/modules/core-engine/sub_progression/_shared/diminishingReturns';
 import { safeDivide, hasPlottableSpread } from '../_shared/chartMath';
 import { ChartEmptyState } from '../_shared/ChartEmptyState';
 
 interface DiminishingReturnsVisualizerProps {
   /** Override the diminishing-returns dataset (defaults to the shipped attributes). */
   attributes?: DRAttribute[];
+  /** Live DR configs (the generator's edits); derived through the kernel and wins over `attributes`. */
+  configs?: DRConfig[];
 }
 
+/** Per-point values span 0.001 (crit chance) to 10 (damage); keep small ones legible. */
+const fmtMarginal = (v: number) => (Math.abs(v) >= 1 ? v.toFixed(1) : v.toPrecision(2));
+
 export function DiminishingReturnsVisualizer({
-  attributes = DR_ATTRIBUTES,
+  attributes: attributesProp = DR_ATTRIBUTES,
+  configs,
 }: DiminishingReturnsVisualizerProps) {
   const [selectedDRAttr, setSelectedDRAttr] = useState(0);
+  const attributes = useMemo(
+    () => (configs ? drAttributesFrom(configs) : attributesProp),
+    [configs, attributesProp],
+  );
 
   const attr = attributes[selectedDRAttr] ?? attributes[0];
   const marginals = attr?.curve.map(c => c.marginalValue) ?? [];
@@ -78,7 +89,7 @@ export function DiminishingReturnsVisualizer({
         <NormalizedLineChart
           height="h-[200px]"
           showGrid={false}
-          yLabels={[maxMarginal.toFixed(1), (maxMarginal / 2).toFixed(1), '0']}
+          yLabels={[fmtMarginal(maxMarginal), fmtMarginal(maxMarginal / 2), '0']}
           xLabels={['10 pts', '50 pts', '100 pts']}
           overlay={
             <div className="absolute top-2 right-4 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border" style={{ color: attr.color, borderColor: `${attr.color}${OPACITY_20}`, backgroundColor: `${attr.color}${OPACITY_10}` }}>
@@ -113,7 +124,7 @@ export function DiminishingReturnsVisualizer({
 
           {geometry.points.map((p, i) => (
             <circle key={i} cx={p.x} cy={p.y} r="3" fill={attr.color} vectorEffect="non-scaling-stroke">
-              <title>{p.points} points: +{p.marginalValue.toFixed(1)} value per point</title>
+              <title>{p.points} points: +{fmtMarginal(p.marginalValue)} value per point</title>
             </circle>
           ))}
         </NormalizedLineChart>

@@ -8,21 +8,33 @@ import {
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, CopyButton, NormalizedLineChart } from '../../../unique-tabs/_shared';
-import { ACCENT, DR_ATTRIBUTES } from '../../_shared/data';
-import { DRConfig, DR_CONFIGS } from './constants';
+import { ACCENT } from '../../_shared/data';
+import {
+  drEffectiveBonus, DR_CURVE_TABLE_NAME, type DRConfig,
+} from '@/components/modules/core-engine/sub_progression/_shared/diminishingReturns';
 import { generateCurveTableCSV, generateGEHeader, generateGESource, generateDataTableJSON } from './helpers';
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
 
-export function DRCodeGenerator() {
+type EditableField = 'softCap' | 'baseValuePerPoint' | 'postCapMultiplier';
+
+interface DRCodeGeneratorProps {
+  /** The Analysis tab's DR configs (shared with the visualizer). */
+  configs: DRConfig[];
+  onConfigsChange: (next: DRConfig[]) => void;
+}
+
+export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeGeneratorProps) {
   const [codeGenTab, setCodeGenTab] = useState<'header' | 'source' | 'csv' | 'datatable'>('header');
-  const [drConfigs, setDRConfigs] = useState<DRConfig[]>(DR_CONFIGS);
+
+  const setField = (idx: number, field: EditableField, value: number) =>
+    onConfigsChange(drConfigs.map((c, i) => (i === idx ? { ...c, [field]: value } : c)));
 
   const generatedCode = useMemo(() => {
     switch (codeGenTab) {
       case 'header': return generateGEHeader(drConfigs);
       case 'source': return generateGESource(drConfigs);
-      case 'csv': return drConfigs.map(c => `// ${c.curveTableName}\n${generateCurveTableCSV(c)}`).join('\n\n');
+      case 'csv': return generateCurveTableCSV(drConfigs);
       case 'datatable': return generateDataTableJSON(drConfigs);
     }
   }, [codeGenTab, drConfigs]);
@@ -36,8 +48,7 @@ export function DRCodeGenerator() {
       {/* Config editors per attribute */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2.5 mb-3">
         {drConfigs.map((config, idx) => {
-          const drAttr = DR_ATTRIBUTES.find(a => a.name === config.attribute);
-          const color = drAttr?.color ?? ACCENT;
+          const color = config.color;
           return (
             <div key={config.attribute} className="p-3 rounded-lg border" style={{ borderColor: `${color}${OPACITY_20}`, backgroundColor: `${color}${OPACITY_10}` }}>
               <div className="flex items-center gap-2 mb-2">
@@ -50,7 +61,7 @@ export function DRCodeGenerator() {
                   <input
                     type="number" min={10} max={100} step={5}
                     value={config.softCap}
-                    onChange={e => setDRConfigs(prev => prev.map((c, i) => i === idx ? { ...c, softCap: Number(e.target.value) } : c))}
+                    onChange={e => setField(idx, 'softCap', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
                   />
                 </div>
@@ -59,7 +70,7 @@ export function DRCodeGenerator() {
                   <input
                     type="number" min={0.001} max={100} step={0.5}
                     value={config.baseValuePerPoint}
-                    onChange={e => setDRConfigs(prev => prev.map((c, i) => i === idx ? { ...c, baseValuePerPoint: Number(e.target.value) } : c))}
+                    onChange={e => setField(idx, 'baseValuePerPoint', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
                   />
                 </div>
@@ -68,7 +79,7 @@ export function DRCodeGenerator() {
                   <input
                     type="number" min={0.05} max={1} step={0.05}
                     value={config.postCapMultiplier}
-                    onChange={e => setDRConfigs(prev => prev.map((c, i) => i === idx ? { ...c, postCapMultiplier: Number(e.target.value) } : c))}
+                    onChange={e => setField(idx, 'postCapMultiplier', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
                   />
                 </div>
@@ -80,14 +91,7 @@ export function DRCodeGenerator() {
                 {(() => {
                   const pts = config.softCap + 20;
                   const linear = pts * config.baseValuePerPoint;
-                  const preCap = config.softCap * config.baseValuePerPoint;
-                  let postCap = 0;
-                  const maxOver = 100 - config.softCap;
-                  for (let i = 1; i <= 20; i++) {
-                    const t = i / maxOver;
-                    postCap += config.baseValuePerPoint * (1.0 - (1.0 - config.postCapMultiplier) * t);
-                  }
-                  const effective = preCap + postCap;
+                  const effective = drEffectiveBonus(config, pts);
                   const savings = ((1 - effective / linear) * 100).toFixed(0);
                   return (
                     <div className="flex items-center gap-2 text-2xs font-mono">
@@ -108,7 +112,7 @@ export function DRCodeGenerator() {
         {([
           { id: 'header' as const, label: 'GE_AttributeScaling.h' },
           { id: 'source' as const, label: 'GE_AttributeScaling.cpp' },
-          { id: 'csv' as const, label: 'Curve Tables (.csv)' },
+          { id: 'csv' as const, label: 'Curve Table (.csv)' },
           { id: 'datatable' as const, label: 'Data Table (.json)' },
         ]).map(tab => (
           <button
@@ -135,7 +139,7 @@ export function DRCodeGenerator() {
           <span className="text-2xs font-mono text-text-muted">
             {codeGenTab === 'header' ? 'AbilitySystem/Effects/GE_AttributeScaling.h' :
              codeGenTab === 'source' ? 'AbilitySystem/Effects/GE_AttributeScaling.cpp' :
-             codeGenTab === 'csv' ? 'Data/CurveTables/*.csv' :
+             codeGenTab === 'csv' ? `Data/CurveTables/${DR_CURVE_TABLE_NAME}.csv` :
              'Data/DT_DiminishingReturns.json'}
           </span>
         </div>
@@ -155,8 +159,7 @@ export function DRCodeGenerator() {
           overlay={
             <div className="absolute top-2 right-3 flex flex-col gap-1">
               {drConfigs.map(config => {
-                const drAttr = DR_ATTRIBUTES.find(a => a.name === config.attribute);
-                const color = drAttr?.color ?? ACCENT;
+                const color = config.color;
                 return (
                   <div key={config.attribute} className="flex items-center gap-1.5 text-2xs font-mono">
                     <div className="w-3 h-0.5 rounded" style={{ backgroundColor: color }} />
@@ -172,8 +175,7 @@ export function DRCodeGenerator() {
           }
         >
           {drConfigs.map((config) => {
-            const drAttr = DR_ATTRIBUTES.find(a => a.name === config.attribute);
-            const color = drAttr?.color ?? ACCENT;
+            const color = config.color;
             const maxLinear = 100 * config.baseValuePerPoint;
             const points: string[] = [];
             const linearPoints: string[] = [];
@@ -182,19 +184,7 @@ export function DRCodeGenerator() {
               const linearVal = pts * config.baseValuePerPoint;
               linearPoints.push(`${x},${100 - (linearVal / maxLinear) * 90}`);
 
-              let effective: number;
-              if (pts <= config.softCap) {
-                effective = pts * config.baseValuePerPoint;
-              } else {
-                const preCap = config.softCap * config.baseValuePerPoint;
-                let postCap = 0;
-                const maxOver = 100 - config.softCap;
-                for (let i = 1; i <= pts - config.softCap; i++) {
-                  const t = i / maxOver;
-                  postCap += config.baseValuePerPoint * (1.0 - (1.0 - config.postCapMultiplier) * t);
-                }
-                effective = preCap + postCap;
-              }
+              const effective = drEffectiveBonus(config, pts);
               points.push(`${x},${100 - (effective / maxLinear) * 90}`);
             }
             return (
@@ -228,7 +218,8 @@ export function DRCodeGenerator() {
           <div className="text-2xs font-mono leading-relaxed" style={{ color: withOpacity(STATUS_WARNING, OPACITY_80) }}>
             <span className="font-bold" style={{ color: STATUS_WARNING }}>UE5 Integration:</span> The generated GE replaces flat{' '}
             <span style={{ color: ACCENT_CYAN_LIGHT }}>AttackPowerPerStrength = 2.0f</span> in ARPGPlayerCharacter.
-            Import the CSV as UCurveTable assets and reference them in the GE&apos;s FDiminishingReturnsConfig.
+            Import the CSV as the one UCurveTable <span style={{ color: ACCENT_CYAN_LIGHT }}>{DR_CURVE_TABLE_NAME}</span> (a row per attribute)
+            and the JSON as the FDiminishingReturnsConfig Data Table whose rows reference it.
             Call <span style={{ color: ACCENT_CYAN_LIGHT }}>GetEffectiveBonus(AllocatedPoints)</span> from UI to preview values.
           </div>
         </div>

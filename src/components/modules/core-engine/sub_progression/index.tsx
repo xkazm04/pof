@@ -29,6 +29,7 @@ import { EncounterTTKSimulator } from './_internals/EncounterTTKSimulator';
 import { PrestigePreview } from './_internals/PrestigePreview';
 import { XpTableGenerator } from './_internals/XpTableGenerator';
 import { DRCodeGenerator } from './_internals/DRCodeGenerator';
+import { DR_CONFIGS, type DRConfig } from '@/components/modules/core-engine/sub_progression/_shared/diminishingReturns';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 
@@ -60,6 +61,9 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
   const [compareMode, setCompareMode] = useState(false);
   const [snapshotBaseXp, setSnapshotBaseXp] = useState(100);
   const [snapshotCurveExp, setSnapshotCurveExp] = useState(1.5);
+
+  /* Analysis tab: one DR config set feeds the visualizer and the C++ generator */
+  const [drConfigs, setDRConfigs] = useState<DRConfig[]>(DR_CONFIGS);
 
   const chartData = useMemo(() => generateChartData(baseXp, curveExp), [baseXp, curveExp]);
   const maxXp = chartData[chartData.length - 1]?.xp ?? 10000;
@@ -177,9 +181,9 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
       {activeTab === 'analysis' && (
         <VisibleSection moduleId={moduleId} sectionId="danger-zones">
           <PowerCurveDangerZones />
-          <DiminishingReturnsVisualizer />
+          <DiminishingReturnsVisualizer configs={drConfigs} />
           <EncounterTTKSimulator />
-          <DRCodeGenerator />
+          <DRCodeGenerator configs={drConfigs} onConfigsChange={setDRConfigs} />
         </VisibleSection>
       )}
     </div>
