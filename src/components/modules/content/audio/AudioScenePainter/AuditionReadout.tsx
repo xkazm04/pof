@@ -68,7 +68,7 @@ export function AuditionReadout({ zones, emitters, listener, onSelectEmitter, ac
           <p className="text-text-muted">
             {zone ? zone.name : 'No zone'} · reverb {mix.reverb.preset} {mix.reverb.decayTime.toFixed(1)}s /{' '}
             {Math.round(mix.reverb.wetDry * 100)}% wet
-            {mix.reverb.fromZoneSliders && ' (zone sliders; UE codegen ships the table custom row)'}
+            {mix.reverb.fromZoneSliders && ' (zone sliders; UE codegen ships them as the volume\'s CustomReverb)'}
           </p>
           <ul className="space-y-0.5">
             {emitters.filter((em) => mix.heard[em.id]).map((em) => {
