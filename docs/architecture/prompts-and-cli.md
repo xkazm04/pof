@@ -195,6 +195,21 @@ both (with a golden per surface):
   composition at all; its successor, the Feature Map's `useSectionScaffold`,
   dispatches `TaskFactory.quickAction` (prompt text unchanged, full header +
   domain + knowledge gained).
+- *Feel vs UE (drift-only apply)* — `ai-feel`'s full-stack apply prompt names 34
+  UPROPERTYs blind. `UEDriftPanel` (AI Feel tab) instead reads what the project
+  declares through the read-only `POST /api/ue5-source/character-feel` (validation
+  as `/api/ue5-source/parse`, module from the .uproject, <= 64 `.h/.cpp` under
+  `Source/<Module>` matching Character|Dodge|Camera) and the pure
+  `src/lib/character/feel-ue-sync.ts`: `FEEL_UE_BINDINGS` (feel field -> ordered UE
+  aliases, e.g. MaxSprintSpeed|SprintSpeed), `parseFeelDefaults` (numeric literals
+  only; a runtime assignment is a *runtime writer* - listed, never a value, and it
+  makes a field `unparsed` only when no literal exists; disagreeing literals are
+  `ambiguous`), `diffAgainstUE` (in-sync / drift / absent / unparsed / ambiguous,
+  one row per bound field), `buildDriftApplyPrompt` (drift rows name the identifier
+  and file:line to edit; absent rows are reported, never created; null = in sync)
+  and `buildAdoptLayer` (reserved `ue-adopted` set layer). The prompt goes out as an
+  `ask-claude` task on the panel's explicit click only, and the panel re-reads UE
+  after the run.
 
 **Two composition engines, and the migration off the second one.** Knowledge
 routing closed the *content* gap, but a standalone builder dispatched by a raw
