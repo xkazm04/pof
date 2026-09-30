@@ -5,6 +5,9 @@ import type {
 } from './data';
 import { rollAbilityHit, rawScaledHit, armorMitigation, effectiveHpVsHit } from '@/lib/ability/damage-formula';
 import { createRNG } from '@/lib/seeded-rng';
+import {
+  difficultyBand, bandSeverity, fightLengthBand, fightLengthSeverity, isFlaggedSeverity,
+} from '@/lib/balance/encounter-bands';
 
 /**
  * Default seed for the GAS Monte-Carlo. Runs used to draw from raw `Math.random()`,
@@ -268,12 +271,25 @@ export function runLevelSweep(scenario: SimScenario, config: LevelSweepConfig): 
   return points;
 }
 
+/**
+ * A level is a breakpoint exactly when the Balance Health report would flag its
+ * survival or fight-length finding (warning/critical) — both read the shared
+ * encounter-band law, so the sweep and the report never disagree about a fight.
+ * One breakpoint per level; its reason names every flagged band.
+ */
 export function detectBreakpoints(points: LevelSweepPoint[]): { level: number; reason: string }[] {
   const breakpoints: { level: number; reason: string }[] = [];
   for (const p of points) {
-    if (p.survivalRate < 0.1) breakpoints.push({ level: p.level, reason: 'Near-death (<10% survival)' });
-    else if (p.survivalRate > 0.99 && p.ttk < 1.0) breakpoints.push({ level: p.level, reason: 'Trivial (>99% survival, <1s TTK)' });
-    else if (p.ttk > 60) breakpoints.push({ level: p.level, reason: 'Stall (>60s TTK)' });
+    const reasons: string[] = [];
+    const band = difficultyBand(p.survivalRate);
+    if (isFlaggedSeverity(bandSeverity(band))) {
+      reasons.push(`${band[0].toUpperCase()}${band.slice(1)} band (${Math.round(p.survivalRate * 100)}% survival)`);
+    }
+    const length = fightLengthBand(p.ttk);
+    if (isFlaggedSeverity(fightLengthSeverity(length))) {
+      reasons.push(`${length[0].toUpperCase()}${length.slice(1)} fight (${p.ttk.toFixed(1)}s TTK)`);
+    }
+    if (reasons.length > 0) breakpoints.push({ level: p.level, reason: reasons.join(', ') });
   }
   return breakpoints;
 }

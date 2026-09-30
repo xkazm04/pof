@@ -11,6 +11,7 @@ import {
   MODULE_COLORS, OPACITY_15,
   withOpacity, OPACITY_10,
 } from '@/lib/chart-colors';
+import { survivalTone } from '@/lib/balance/encounter-bands';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { HistogramChart } from './HistogramChart';
 import { BalanceHealthReport } from './BalanceHealthReport';
@@ -78,7 +79,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
           <StatBadge label="Mean TTK" value={results.ttkStats.mean.toFixed(1)} unit="s" color={ACCENT_CYAN} icon={Target} />
           <StatBadge label="Mean DPS" value={results.dpsStats.mean.toFixed(0)} color={ACCENT_ORANGE} icon={Swords} />
           <StatBadge label="Crit Rate" value={`${(results.critRate * 100).toFixed(1)}%`} color={STATUS_WARNING} icon={Crosshair} />
-          <StatBadge label="Survival" value={`${(results.survivalRate * 100).toFixed(0)}%`} color={results.survivalRate > 0.5 ? STATUS_SUCCESS : STATUS_ERROR} icon={Heart} />
+          <StatBadge label="Survival" value={`${(results.survivalRate * 100).toFixed(0)}%`} color={survivalTone(results.survivalRate)} icon={Heart} />
           <StatBadge label="EHP" value={results.effectiveHp.toFixed(0)} color={ACCENT_EMERALD} icon={Shield} />
           <StatBadge label={`Armor Mit. vs hit ${results.armorRefHit.toFixed(0)}`} value={`${(results.armorMitigation * 100).toFixed(1)}%`} color={MODULE_COLORS.core} icon={Shield} />
         </div>
