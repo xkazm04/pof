@@ -2,6 +2,14 @@ import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 import { eventCueLine } from '@/lib/audio-event-sound';
+import {
+  AUDIO_RUNTIME,
+  declaredVoices,
+  eventBudget,
+  eventBudgetLine,
+  runtimeContractBlock,
+  type AudioSceneBudget,
+} from '@/lib/audio-runtime-contract';
 import type {
   AudioEventCatalogConfig,
   AudioEvent,
@@ -15,14 +23,28 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   music: 'Music',
 };
 
-export function buildAudioEventPrompt(config: AudioEventCatalogConfig, ctx: ProjectContext): string {
+/**
+ * @param scene The open scene's budget (pool size, voice limit). The event code
+ *   runs on UAudioSceneManager's budget; without a scene the prompt says the
+ *   numbers are read at runtime from the manager's getters.
+ */
+export function buildAudioEventPrompt(
+  config: AudioEventCatalogConfig,
+  ctx: ProjectContext,
+  scene?: AudioSceneBudget | null,
+): string {
   const moduleName = getModuleName(ctx.projectName);
+  const mgr = AUDIO_RUNTIME.manager.className;
+  const router = AUDIO_RUNTIME.eventRouter.className;
+  const budgetLine = scene
+    ? eventBudgetLine(eventBudget(config.events, scene))
+    : `The catalog declares ${declaredVoices(config.events)} voices; compare them at runtime against ${mgr}::GetMaxConcurrentSounds(), and let priority decide which voice is stolen when the limit binds.`;
   const header = buildProjectContextHeader(ctx, {
     ...moduleKnowledge('audio'),
     extraRules: [
       GENERATE_ALL_DIRECTLY,
       'Use MetaSounds for DSP where applicable (UE5 best practice).',
-      'The audio manager must integrate with the existing GameplayAbilitySystem for combat event binding.',
+      'The event router must integrate with the existing GameplayAbilitySystem for combat event binding.',
     ],
   });
 
@@ -77,12 +99,15 @@ ${categoryBlocks}
 - **Spatial distribution**: ${spatial3d} 3D spatial events, ${spatial2d} 2D stereo events
 - **Priority distribution**: ${Object.entries(priorities).map(([p, n]) => `${p}: ${n}`).join(', ')}
 - **Unique triggers**: ${uniqueTriggers.length} (${uniqueTriggers.join(', ')})
+- **Voice budget**: ${budgetLine}
+
+${runtimeContractBlock(scene, moduleName)}
 
 ### Required Files (all under Source/${moduleName}/Audio/)
 
 1. **EAudioEventCategory** enum
    - Values: ${Array.from(byCategory.keys()).map((c) => CATEGORY_LABELS[c]).join(', ')}
-   - Used to route events to the correct subsystem
+   - Used to route events to the correct category volume
 
 2. **EAudioEventPriority** enum
    - Values: Low, Normal, High, Critical
@@ -98,12 +123,12 @@ ${categoryBlocks}
    - TArray<FAudioEventDefinition> Events — the catalog table
    - Lookup helpers: FindByName(), FindByTrigger(), GetEventsByCategory()
 
-5. **UAudioEventManager** (UGameInstanceSubsystem)
-   - Central audio manager with:
+5. **${router}** (UObject, not a subsystem; ${AUDIO_RUNTIME.eventRouter.header}) — event playback on ${mgr}'s budget:
+   - Created once with the ${mgr} as its Outer, reached through a static Get(const UObject* WorldContextObject) that resolves the subsystem; never edit ${AUDIO_RUNTIME.manager.header} to hold it
      a. **Sound Pool**: Pre-allocated pool of UAudioComponent instances
-        - Pool size configurable via data asset
+        - Pool size = ${mgr}::GetSoundPoolSize()${scene ? ` (${scene.soundPoolSize} for this scene)` : ''}
         - Acquire/Release pattern with automatic return on completion
-     b. **Priority Queue**: When pool is exhausted, steal from lowest-priority active sound
+     b. **Priority Queue**: At most ${mgr}::GetMaxConcurrentSounds()${scene ? ` (${scene.maxConcurrentSounds})` : ''} voices; when the limit binds, steal from the lowest-priority active sound
      c. **Concurrency Limiter**: Per-event max instances (from catalog), oldest-steal on overflow
      d. **Cooldown Tracker**: Per-event cooldown timers preventing rapid re-triggers
      e. **Category Volumes**: SFX, Ambient, Music, UI volume multipliers (saved to settings)
@@ -133,14 +158,14 @@ ${categoryBlocks}
      - Combat impacts: randomized pitch/volume, surface-material variation
      - Footsteps: surface detection → MetaSounds material selector
      - Ambient: procedural wind/rain generators using MetaSounds oscillators
-   - MetaSounds parameters driven by UAudioEventManager at runtime
+   - MetaSounds parameters driven by ${router} at runtime
 
 ### Event Binding Architecture
 \`\`\`
 Game Event (GAS/Interaction/UI)
   → UAudioEventListenerComponent detects trigger
     → Looks up FAudioEventDefinition in catalog
-      → UAudioEventManager.PlayEvent()
+      → ${router}::Get(this)->PlayEvent()   (budget: ${mgr})
         → Priority check → Concurrency check → Cooldown check
           → Acquire pooled UAudioComponent
             → Apply spatial settings (2D/3D)

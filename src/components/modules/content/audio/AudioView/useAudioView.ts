@@ -103,10 +103,13 @@ export function useAudioView() {
     accentColor: MODULE_COLORS.content,
   });
 
+  // The event code runs on the open scene's budget (UAudioSceneManager's pool and
+  // voice limit), read from the scene as the user sees it (`settle`).
   const handleGenerateEvents = useCallback((config: AudioEventCatalogConfig) => {
-    const prompt = buildAudioEventPrompt(config, { projectName, projectPath, ueVersion });
-    eventCli.sendPrompt(prompt);
-  }, [eventCli, projectName, projectPath, ueVersion]);
+    const doc = settle();
+    const scene = doc ? { soundPoolSize: doc.soundPoolSize, maxConcurrentSounds: doc.maxConcurrentSounds } : null;
+    eventCli.sendPrompt(buildAudioEventPrompt(config, ctx, scene));
+  }, [eventCli, ctx, settle]);
 
   // ── Review/Checklist CLI sessions (shared harness) ──
 
