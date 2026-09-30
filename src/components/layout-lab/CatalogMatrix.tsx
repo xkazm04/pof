@@ -66,8 +66,10 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   // Three states, not one: LOADING (skeleton) · EMPTY (grid of unproduced cells) ·
   // ERROR (the GET failed — the grid would show every cell as "never produced", which
   // is a lie, so the error takes the surface and names its reason).
-  const { arts, loading, error } = useCachedArtifacts(catalogId);
-  const showSkeleton = loading && arts.length === 0;
+  // Before the first fetch resolves (including the very first paint, before the cache's
+  // fetch effect has run) nothing is known: skeleton, never a grid of "not produced".
+  const { arts, loaded, error } = useCachedArtifacts(catalogId);
+  const showSkeleton = !loaded && !error && arts.length === 0;
 
   const byEntity = useMemo(() => {
     const m = new Map<string, Map<string, PipelineArtifact>>();
