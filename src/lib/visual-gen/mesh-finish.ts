@@ -15,22 +15,17 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { bakeSizeForExtent } from './texel-density';
+import { blenderNotFound, fixedBlenderCandidates, locateBlender, type BlenderSeams } from './blender-locate';
 
 /** Above this face count an auto-unwrap explodes into unusable island counts
  *  (and routinely hangs/crashes the unwrapper) — the high-poly is never the
  *  thing you unwrap. */
 export const UNWRAP_FACE_CEILING = 200_000;
 
-/** Known Blender installs, probed in order when nothing is configured.
- *  Mirrors `/api/visual-gen/blender/detect`. */
-export const BLENDER_CANDIDATES = [
-  'C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe',
-  'C:\\Program Files\\Blender Foundation\\Blender 4.1\\blender.exe',
-  'C:\\Program Files\\Blender Foundation\\Blender 4.0\\blender.exe',
-  '/usr/bin/blender',
-  '/usr/local/bin/blender',
-  '/Applications/Blender.app/Contents/MacOS/Blender',
-];
+/** The fixed (non-versioned) install paths for this platform, derived from the one
+ *  locator (`blender-locate.ts`). Versioned installs (`Blender X.Y`) come from the
+ *  directory listing there, never from a hand-written list. */
+export const BLENDER_CANDIDATES = fixedBlenderCandidates(process.platform);
 
 export type MirrorAxis = 'x' | 'y' | 'z';
 export type BakeMap = 'normal' | 'ao' | 'diffuse' | 'roughness' | 'metallic';
@@ -340,15 +335,15 @@ export interface MeshFinishResult {
   durationMs: number;
 }
 
-/** Resolve the Blender executable. Pure (filesystem via the `exists` seam). */
+/** Resolve the Blender executable through the one locator (`locateBlender`): explicit,
+ *  POF_BLENDER, installed versions newest-first, fixed paths, PATH. Pure over its seams. */
 export function resolveBlenderPath(
   explicit: string | undefined,
   env: Record<string, string | undefined>,
   exists: (p: string) => boolean,
+  seams: BlenderSeams = {},
 ): string | null {
-  if (explicit) return explicit;
-  if (env.POF_BLENDER) return env.POF_BLENDER;
-  return BLENDER_CANDIDATES.find(exists) ?? null;
+  return locateBlender({ ...seams, explicit, env, exists }).path;
 }
 
 export interface UnwrapPlan {
@@ -577,7 +572,7 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
 
 type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
 
-export interface MeshFinishDeps {
+export interface MeshFinishDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
   now?: () => number;
@@ -598,8 +593,9 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
   const plan = unwrapPlan(spec.unwrap, spec.targetFaces);
   const bakes = bakePlan(spec.bake);
   const bakeSkipped = bakes.skipped.length ? bakes.skipped : undefined;
-  const blender = resolveBlenderPath(spec.blenderPath, env, fileExists);
-  if (!blender) return err('Blender not found — set POF_BLENDER to the blender executable', plan.reason);
+  const located = locateBlender({ ...deps, explicit: spec.blenderPath, env, exists: fileExists });
+  const blender = located.path;
+  if (!blender) return err(blenderNotFound(located.probed), plan.reason);
   if (!fileExists(spec.highPolyPath)) return err(`input mesh not found at ${spec.highPolyPath}`, plan.reason);
 
   const script = spec.scriptPath ?? join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_finish.py');

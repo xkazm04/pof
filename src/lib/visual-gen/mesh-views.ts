@@ -21,7 +21,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveBlenderPath } from './mesh-finish';
+import { blenderNotFound, locateBlender, type BlenderSeams } from './blender-locate';
 
 /** Yaws rendered by default — enough that no side of a prop goes unseen. */
 export const DEFAULT_VIEWS = 6;
@@ -164,7 +164,7 @@ export interface MeshViewsResult {
 
 type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
 
-export interface MeshViewsDeps {
+export interface MeshViewsDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
   now?: () => number;
@@ -192,10 +192,9 @@ export async function runMeshViews(spec: MeshViewsSpec, deps: MeshViewsDeps = {}
   const run = deps.run ?? defaultRun;
   const plan = viewsPlan(spec.views);
 
-  const blender = resolveBlenderPath(spec.blenderPath, env, fileExists);
-  if (!blender) {
-    return { ok: false, error: 'Blender not found — set POF_BLENDER to the blender executable', views: [] };
-  }
+  const located = locateBlender({ ...deps, explicit: spec.blenderPath, env, exists: fileExists });
+  const blender = located.path;
+  if (!blender) return { ok: false, error: blenderNotFound(located.probed), views: [] };
   if (!fileExists(spec.meshPath)) {
     return { ok: false, error: `mesh not found at ${spec.meshPath}`, views: [] };
   }

@@ -33,7 +33,8 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { BLENDER_CANDIDATES, resolveBlenderPath } from './mesh-finish';
+import { BLENDER_CANDIDATES } from './mesh-finish';
+import { blenderNotFound, locateBlender, type BlenderSeams } from './blender-locate';
 
 /**
  * Components holding less than this share of the total faces are specks, not props.
@@ -171,7 +172,7 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
 
 type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
 
-export interface MeshSplitDeps {
+export interface MeshSplitDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
   now?: () => number;
@@ -189,8 +190,9 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
   const now = deps.now ?? (() => Date.now());
   const run = deps.run ?? defaultRun;
 
-  const blender = resolveBlenderPath(spec.blenderPath, env, fileExists);
-  if (!blender) return err('Blender not found — set POF_BLENDER to the blender executable');
+  const located = locateBlender({ ...deps, explicit: spec.blenderPath, env, exists: fileExists });
+  const blender = located.path;
+  if (!blender) return err(blenderNotFound(located.probed));
   if (!fileExists(spec.inputPath)) return err(`input mesh not found at ${spec.inputPath}`);
 
   const script = spec.scriptPath ?? join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_split.py');
