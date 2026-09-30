@@ -15,7 +15,7 @@
  */
 
 import { getDb } from '@/lib/db';
-import { ensureHeadlessBuildsTable } from '@/lib/ue5-bridge/build-pipeline';
+import { ensureHeadlessBuildsTable, TERMINAL_BUILD_SQL } from '@/lib/ue5-bridge/build-pipeline';
 import { deriveRecurringErrors, type RecurringError } from '@/lib/ue5-bridge/build-error-recurrence';
 import type { BuildStatus } from '@/types/ue5-bridge';
 
@@ -312,6 +312,9 @@ interface HealthBuildRow {
 /**
  * Fetch recent headless builds for a project as normalized {@link HealthBuild}
  * records, most-recent first (the analytics functions re-sort as needed).
+ * Only builds that ran and settled count: rows still queued/running (the build
+ * ledger writes them before the spawn) and a build aborted while queued
+ * (aborted with no duration) are not results.
  */
 export function getHealthBuilds(projectPath: string, limit = 200): HealthBuild[] {
   ensureHeadlessBuildsTable();
@@ -323,6 +326,8 @@ export function getHealthBuilds(projectPath: string, limit = 200): HealthBuild[]
               CASE WHEN error_count > 0 THEN diagnostics_json END AS diagnostics_json
          FROM headless_builds
         WHERE project_path = ?
+          AND ${TERMINAL_BUILD_SQL}
+          AND NOT (status = 'aborted' AND duration_ms IS NULL)
         ORDER BY created_at DESC
         LIMIT ?`,
     )

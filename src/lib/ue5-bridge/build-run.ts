@@ -4,21 +4,22 @@
  * `defaultBuildRequest` turns the active project into the POST /api/ue5-bridge/build
  * `start` body (the project's Editor target, Development, Win64), refusing — before
  * any request — a value the route would reject. `buildRunReducer` follows ONE run
- * from dispatch to its persisted result by reading the `?projectPath` poll (queue +
- * history): a finished build leaves the queue (so `?buildId` 404s) and appears in
- * history. A run that is in neither for MAX_MISSED_POLLS polls goes `lost` with a
- * reason — never a silent spinner.
+ * from dispatch to its persisted result by reading `GET ?buildId` (the server answers
+ * every stage from the live queue item or the build's `headless_builds` row, see
+ * build-status.ts). A run whose status is unreadable for MAX_MISSED_POLLS polls
+ * goes `lost` with a reason — never a silent spinner.
  *
  * Client-safe (no Node imports); the route shares `validateBuildTarget` with it.
  */
 
 import { ok, err, type Result } from '@/types/result';
+import { isTerminalBuildStatus, type BuildStatusView } from '@/lib/ue5-bridge/build-status';
 import type { BuildStatus, BuildRequest } from '@/types/ue5-bridge';
 
 /** UE target names are interpolated into the target and the `.uproject` path. */
 export const BUILD_TARGET_NAME_RE = /^[A-Za-z0-9_]+$/;
 
-/** Polls a run may go unseen (in neither queue nor history) before it is `lost`. */
+/** Polls a run's status may be unreadable (e.g. 404: no record) before it is `lost`. */
 export const MAX_MISSED_POLLS = 20;
 
 /**
@@ -61,17 +62,12 @@ export function editorTargetLabel(targetName: string): string {
 
 // ── Run state machine ────────────────────────────────────────────────────────
 
-export interface BuildPollResponse {
-  queue: Array<{ buildId: string; status: BuildStatus; progress?: { message?: string; percent?: number } }>;
-  history?: Array<{ buildId: string; status: BuildStatus; errorCount: number }>;
-}
-
 export type BuildRunState =
   | { phase: 'idle' }
   | { phase: 'dispatching' }
   | { phase: 'queued'; buildId: string; missedPolls: number }
   | { phase: 'running'; buildId: string; missedPolls: number; percent?: number; message?: string }
-  | { phase: 'settled'; buildId: string; status: BuildStatus; errorCount: number; refetchReport: boolean }
+  | { phase: 'settled'; buildId: string; status: BuildStatus; errorCount: number; refetchReport: boolean; reason?: string }
   | { phase: 'lost'; buildId: string; reason: string }
   | { phase: 'rejected'; reason: string };
 
@@ -79,7 +75,7 @@ export type BuildRunEvent =
   | { type: 'dispatch' }
   | { type: 'started'; buildId: string }
   | { type: 'rejected'; reason: string }
-  | { type: 'poll'; response: BuildPollResponse }
+  | { type: 'status'; status: Pick<BuildStatusView, 'buildId' | 'status'> & Partial<BuildStatusView> }
   | { type: 'pollFailed'; reason: string }
   | { type: 'refetched' };
 
@@ -99,8 +95,7 @@ function missed(
   return {
     phase: 'lost',
     buildId: s.buildId,
-    reason: `${s.buildId} ${why} for ${MAX_MISSED_POLLS} polls — the server may have restarted mid-build; `
-      + 'Refresh to see whether it was recorded.',
+    reason: `${s.buildId} ${why} for ${MAX_MISSED_POLLS} polls — the server has no readable record of this build.`,
   };
 }
 
@@ -116,21 +111,23 @@ export function buildRunReducer(s: BuildRunState, e: BuildRunEvent): BuildRunSta
       return s.phase === 'settled' ? { ...s, refetchReport: false } : s;
     case 'pollFailed':
       return s.phase === 'queued' || s.phase === 'running' ? missed(s, `status unreadable (${e.reason})`) : s;
-    case 'poll': {
+    case 'status': {
       if (s.phase !== 'queued' && s.phase !== 'running') return s;
-      const item = e.response.queue.find((q) => q.buildId === s.buildId);
-      if (item?.status === 'running') {
+      const v = e.status;
+      if (v.buildId !== s.buildId) return missed(s, `status answered for another build (${v.buildId})`);
+      if (isTerminalBuildStatus(v.status)) {
         return {
-          phase: 'running', buildId: s.buildId, missedPolls: 0,
-          percent: item.progress?.percent, message: item.progress?.message,
+          phase: 'settled', buildId: s.buildId, status: v.status, errorCount: v.errorCount ?? 0, refetchReport: true,
+          ...(v.reason ? { reason: v.reason } : {}),
         };
       }
-      if (item) return { phase: 'queued', buildId: s.buildId, missedPolls: 0 };
-      const done = e.response.history?.find((h) => h.buildId === s.buildId);
-      if (done) {
-        return { phase: 'settled', buildId: s.buildId, status: done.status, errorCount: done.errorCount, refetchReport: true };
+      if (v.status === 'running') {
+        return {
+          phase: 'running', buildId: s.buildId, missedPolls: 0,
+          percent: v.progress?.percent, message: v.progress?.message,
+        };
       }
-      return missed(s, 'was in neither the queue nor the build history');
+      return { phase: 'queued', buildId: s.buildId, missedPolls: 0 };
     }
   }
 }

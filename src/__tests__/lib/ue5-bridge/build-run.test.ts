@@ -1,8 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 
+// The build ledger (headless_builds) is real, on an in-memory DB.
+vi.mock('@/lib/db', async () => {
+  const Database = (await import('better-sqlite3')).default;
+  const db = new Database(':memory:');
+  return { getDb: () => db };
+});
+
 // The queue's executor is the UBT spawn — mocked so a progress line can be driven by hand.
 const { executeBuildMock } = vi.hoisted(() => ({ executeBuildMock: vi.fn() }));
-vi.mock('@/lib/ue5-bridge/build-pipeline', () => ({
+vi.mock('@/lib/ue5-bridge/build-pipeline', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ue5-bridge/build-pipeline')>()),
   executeBuild: executeBuildMock,
   generateBuildId: () => 'build-q-1',
 }));
@@ -78,25 +86,42 @@ describe('buildRunReducer (case 6)', () => {
     let s: BuildRunState = buildRunReducer(BUILD_RUN_IDLE, { type: 'started', buildId: id });
     expect(s.phase).toBe('queued');
 
-    s = buildRunReducer(s, { type: 'poll', response: { queue: [{ buildId: id, status: 'running', progress: { percent: 26 } }] } });
+    s = buildRunReducer(s, { type: 'status', status: { buildId: id, status: 'running', progress: { message: '[1/4] A', percent: 26 } } });
     expect(s).toMatchObject({ phase: 'running', buildId: id, percent: 26 });
 
-    s = buildRunReducer(s, {
-      type: 'poll',
-      response: { queue: [], history: [{ buildId: id, status: 'failed', errorCount: 4 }] },
-    });
+    s = buildRunReducer(s, { type: 'status', status: { buildId: id, status: 'failed', errorCount: 4 } });
     expect(s).toMatchObject({ phase: 'settled', buildId: id, status: 'failed', errorCount: 4, refetchReport: true });
   });
 
-  it(`goes 'lost' with a reason after ${20} polls that never see the id — never a silent spinner`, () => {
+  it(`goes 'lost' with a reason after ${20} unreadable polls — never a silent spinner`, () => {
     expect(MAX_MISSED_POLLS).toBe(20);
     let s: BuildRunState = buildRunReducer(BUILD_RUN_IDLE, { type: 'started', buildId: id });
     for (let i = 0; i < 19; i++) {
-      s = buildRunReducer(s, { type: 'poll', response: { queue: [], history: [] } });
+      s = buildRunReducer(s, { type: 'pollFailed', reason: `Build ${id} not found` });
     }
     expect(s.phase).toBe('queued');
-    s = buildRunReducer(s, { type: 'poll', response: { queue: [{ buildId: 'other', status: 'running' }], history: [] } });
+    s = buildRunReducer(s, { type: 'pollFailed', reason: `Build ${id} not found` });
     expect(s.phase).toBe('lost');
-    if (s.phase === 'lost') expect(s.reason.length).toBeGreaterThan(10);
+    if (s.phase === 'lost') expect(s.reason).toContain('not found');
+  });
+});
+
+describe('buildRunReducer follows by id (ue5-build-bridge/A case 8)', () => {
+  it('a by-id failed status settles the run with a report refetch', () => {
+    const s = buildRunReducer(
+      { phase: 'running', buildId: 'b1', missedPolls: 0 },
+      { type: 'status', status: { buildId: 'b1', status: 'failed', errorCount: 4 } },
+    );
+    expect(s).toEqual({ phase: 'settled', buildId: 'b1', status: 'failed', errorCount: 4, refetchReport: true });
+  });
+
+  it("an interrupted build settles failed and carries the server's reason", () => {
+    const s = buildRunReducer(
+      { phase: 'queued', buildId: 'b1', missedPolls: 3 },
+      { type: 'status', status: { buildId: 'b1', status: 'failed', interrupted: true, reason: 'b1 is no longer queued' } },
+    );
+    expect(s).toEqual({
+      phase: 'settled', buildId: 'b1', status: 'failed', errorCount: 0, refetchReport: true, reason: 'b1 is no longer queued',
+    });
   });
 });

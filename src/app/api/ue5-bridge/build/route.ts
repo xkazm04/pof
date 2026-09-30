@@ -3,13 +3,16 @@
  *
  * POST — Start a build (action: 'start'), re-run a recorded one with its identical
  *        request (action: 'rebuild', buildId), or abort one (action: 'abort').
- * GET  — Query build status by buildId, or list queue + history.
+ * GET  — Query build status by buildId (every stage, queued to settled: the live queue
+ *        item or the build's headless_builds row, via resolveBuildStatus; never the log),
+ *        or list queue + history.
  */
 
 import { type NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { buildQueue } from '@/lib/ue5-bridge/build-queue';
-import { getBuildHistory, getBuildRequestById } from '@/lib/ue5-bridge/build-pipeline';
+import { getBuildHistory, getBuildRequestById, getBuildStatusRow } from '@/lib/ue5-bridge/build-pipeline';
+import { resolveBuildStatus } from '@/lib/ue5-bridge/build-status';
 import { validateBuildTarget } from '@/lib/ue5-bridge/build-run';
 import type { BuildRequest, BuildConfiguration, BuildTargetPlatform, BuildTargetType } from '@/types/ue5-bridge';
 
@@ -76,6 +79,7 @@ export async function POST(req: NextRequest) {
           additionalArgs: startBody.additionalArgs,
         };
 
+        // enqueue records the build before it can spawn; an unrecordable build throws (500 below).
         const buildId = buildQueue.enqueue(request, startBody.moduleId);
         return apiSuccess({ buildId });
       }
@@ -129,9 +133,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const buildId = searchParams.get('buildId');
 
-    // Single build status lookup
+    // Single build status lookup: live item wins, else the recorded row (404 only when never recorded)
     if (buildId) {
-      const status = buildQueue.getStatus(buildId);
+      const status = resolveBuildStatus({
+        live: buildQueue.getStatus(buildId),
+        row: getBuildStatusRow(buildId),
+        now: Date.now(),
+      });
       if (!status) {
         return apiError(`Build ${buildId} not found`, 404);
       }

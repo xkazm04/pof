@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { BuildRequest, BuildResult, BuildOptions, BuildStatus } from '@/types/ue5-bridge';
 import type { SubModuleId } from '@/types/modules';
+import { TERMINAL_BUILD_STATUSES, type BuildStatusRow } from '@/lib/ue5-bridge/build-status';
 
 // ── DB Schema ────────────────────────────────────────────────────────────────
 
@@ -448,6 +449,71 @@ export function saveBuildToDb(result: BuildResult, request: BuildRequest): void 
   );
 }
 
+// ── Build ledger: the row precedes the spawn ─────────────────────────────────
+
+/**
+ * SQL predicate for a settled build. History and health read only these, so a
+ * row recorded at enqueue ('queued') or at spawn ('running') never counts as a
+ * result.
+ */
+export const TERMINAL_BUILD_SQL = `status IN (${TERMINAL_BUILD_STATUSES.map((s) => `'${s}'`).join(', ')})`;
+
+/**
+ * Record a build at enqueue, before anything spawns. Throws when the row cannot
+ * be written: the queue then refuses the build rather than run it unaccounted.
+ * `started_at` holds the enqueue time until the build starts.
+ */
+export function recordQueuedBuild(buildId: string, request: BuildRequest, queuedAt: string): void {
+  ensureHeadlessBuildsTable();
+  getDb().prepare(`
+    INSERT INTO headless_builds
+      (build_id, project_path, target_name, ue_version, platform, configuration, target_type, status, started_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)
+  `).run(
+    buildId, request.projectPath, request.targetName, request.ueVersion,
+    request.platform, request.configuration, request.targetType, queuedAt,
+  );
+}
+
+/** Flip a recorded build to 'running' just before its spawn. */
+export function markBuildRunning(buildId: string, startedAt: string): void {
+  ensureHeadlessBuildsTable();
+  getDb().prepare(
+    "UPDATE headless_builds SET status = 'running', started_at = ? WHERE build_id = ?",
+  ).run(startedAt, buildId);
+}
+
+/**
+ * Settle a build's row from its result summary when nothing terminal was written
+ * yet (executeBuild's own save failed, or it threw). A row that already holds a
+ * result is left alone. `duration_ms` stays null for a build that never ran, which
+ * keeps a queued abort out of the health rates.
+ */
+export function settleBuildRow(
+  buildId: string,
+  summary: { status: BuildStatus; completedAt: string; durationMs: number | null; exitCode: number | null; errorCount: number; warningCount: number },
+): void {
+  ensureHeadlessBuildsTable();
+  getDb().prepare(`
+    UPDATE headless_builds
+       SET status = ?, completed_at = ?, duration_ms = ?, exit_code = ?, error_count = ?, warning_count = ?
+     WHERE build_id = ? AND status IN ('queued', 'running')
+  `).run(
+    summary.status, summary.completedAt, summary.durationMs, summary.exitCode,
+    summary.errorCount, summary.warningCount, buildId,
+  );
+}
+
+/** The status columns of one build: bounded, never the log or diagnostics. Null when unrecorded. */
+export function getBuildStatusRow(buildId: string): BuildStatusRow | null {
+  ensureHeadlessBuildsTable();
+  const row = getDb().prepare(`
+    SELECT build_id, status, started_at, completed_at, duration_ms, exit_code, error_count, warning_count
+      FROM headless_builds WHERE build_id = ?
+  `).get(buildId) as BuildStatusRow | undefined;
+  return row ?? null;
+}
+
 // ── Build History Query ──────────────────────────────────────────────────────
 
 interface HeadlessBuildRow {
@@ -470,14 +536,15 @@ interface HeadlessBuildRow {
 }
 
 /**
- * Retrieve past build results for a project, most recent first.
+ * Retrieve past (settled) build results for a project, most recent first.
+ * Rows still queued or running are the ledger, not history, and are skipped.
  */
 export function getBuildHistory(projectPath: string, limit = 20): BuildResult[] {
   ensureHeadlessBuildsTable();
   const db = getDb();
 
   const rows = db.prepare(
-    'SELECT * FROM headless_builds WHERE project_path = ? ORDER BY created_at DESC LIMIT ?',
+    `SELECT * FROM headless_builds WHERE project_path = ? AND ${TERMINAL_BUILD_SQL} ORDER BY created_at DESC LIMIT ?`,
   ).all(projectPath, limit) as HeadlessBuildRow[];
 
   return rows.map((row) => ({

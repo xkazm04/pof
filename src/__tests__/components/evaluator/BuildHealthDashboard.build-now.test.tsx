@@ -35,7 +35,7 @@ function installFetch(opts: { reports: BuildHealthReport[]; polls: unknown[] }) 
     const method = init?.method ?? 'GET';
     if (url.startsWith('/api/ue5-bridge/build-health')) return envelope(reports.length > 1 ? reports.shift() : reports[0]);
     if (url === BUILD_URL && method === 'POST') return envelope({ buildId: 'build-2-new' });
-    if (url.startsWith(`${BUILD_URL}?projectPath=`)) return envelope(polls.length > 1 ? polls.shift() : polls[0]);
+    if (url.startsWith(`${BUILD_URL}?buildId=`)) return envelope(polls.length > 1 ? polls.shift() : polls[0]);
     throw new Error(`unexpected fetch ${method} ${url}`);
   });
   vi.stubGlobal('fetch', spy);
@@ -45,6 +45,8 @@ function installFetch(opts: { reports: BuildHealthReport[]; polls: unknown[] }) 
 const posts = (spy: ReturnType<typeof installFetch>) =>
   spy.mock.calls.filter(([url, init]) => url === BUILD_URL && init?.method === 'POST');
 const pollsMade = (spy: ReturnType<typeof installFetch>) =>
+  spy.mock.calls.filter(([url]) => String(url).startsWith(`${BUILD_URL}?buildId=`));
+const projectPolls = (spy: ReturnType<typeof installFetch>) =>
   spy.mock.calls.filter(([url]) => String(url).startsWith(`${BUILD_URL}?projectPath=`));
 const reportFetches = (spy: ReturnType<typeof installFetch>) =>
   spy.mock.calls.filter(([url]) => String(url).startsWith('/api/ue5-bridge/build-health'));
@@ -63,10 +65,10 @@ afterEach(() => {
 
 describe('Build Health: build now (case 7)', () => {
   it('empty tab offers "Build DidEditor"; mount, polls and the settle refetch never POST — only the click does, once', async () => {
-    const running = (percent: number) => ({ queue: [{ buildId: 'build-2-new', status: 'running', progress: { message: '[3/42] Compile A.cpp', percent } }], history: [] });
+    const running = (percent: number) => ({ buildId: 'build-2-new', status: 'running', owned: true, progress: { message: '[3/42] Compile A.cpp', percent } });
     const spy = installFetch({
       reports: [report(0), report(1)],
-      polls: [running(26), running(60), { queue: [], history: [{ buildId: 'build-2-new', status: 'success', errorCount: 0 }] }],
+      polls: [running(26), running(60), { buildId: 'build-2-new', status: 'success', errorCount: 0, warningCount: 0 }],
     });
 
     const { getByTestId, getByRole, queryByText } = render(<BuildHealthDashboard />);
@@ -92,6 +94,9 @@ describe('Build Health: build now (case 7)', () => {
     await tick(UI_TIMEOUTS.pollInterval);
     await tick(UI_TIMEOUTS.pollInterval);
     expect(pollsMade(spy)).toHaveLength(3);
+    // The in-flight poll follows the run by id (ue5-build-bridge/A case 8), never the project history.
+    expect(pollsMade(spy).every(([url]) => url === `${BUILD_URL}?buildId=build-2-new`)).toBe(true);
+    expect(projectPolls(spy)).toHaveLength(0);
     expect(reportFetches(spy)).toHaveLength(2); // mount + the settle refetch
     expect(queryByText(/No headless builds yet/)).toBeNull();
 
@@ -122,7 +127,7 @@ describe('RegressionBanner: rebuild to confirm (case 8)', () => {
       kind: 'duration', buildId: 'build-9', createdAt: '2026-09-28T10:00:00Z', current: 58_000, baseline: 40_000,
       deltaPct: 45, severity: 'warning', message: 'Build took 58s vs 40s baseline',
     };
-    const spy = installFetch({ reports: [report(1, [alert])], polls: [{ queue: [], history: [] }] });
+    const spy = installFetch({ reports: [report(1, [alert])], polls: [{ buildId: 'build-2-new', status: 'queued', owned: true }] });
     const { getByRole } = render(<BuildHealthDashboard initialReport={report(1, [alert])} />);
     expect(posts(spy)).toHaveLength(0);
 
