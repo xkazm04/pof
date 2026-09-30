@@ -18,6 +18,7 @@ calls in strings.
 | `src/lib/prompts/material-configurator.ts` | Per-module builder (materials); illustrates `.withBestPractices()` |
 | `src/lib/cli-task.ts` | `CLITask` type hierarchy, `TaskFactory`, `buildTaskPrompt()`, callback registry (`registerCallback` / `extractCallbackPayload` / `resolveCallback`) |
 | `src/lib/claude-terminal/cli-service.ts` | `startExecution()` — spawns Claude Code CLI, stream-json parsing, `CLIExecution` lifecycle, `buildCliArgs()` (model/effort pinning) |
+| `src/lib/claude-terminal/run-callbacks.ts` | `settleRunCallbacks()` — the server settles a terminal run's declared `@@CALLBACK`s once each, POSTing only to their `/api/` path on the app's own origin; `sanitizeCallbackDescriptors()` for the query POST |
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
 | `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
@@ -613,31 +614,44 @@ a cancel kills every in-flight pass. The runaway guard's error event carries
    the Evaluator → **Spend** dashboard + budget guard. See *state-and-persistence →
    `cli_spend`*.
 
-6. **Terminal component** subscribes to `CLIExecutionEvent`s. When the run's `result`
-   event arrives, it scans the accumulated output for **every** marker via
-   `extractAllCallbackPayloads(text)` → `{ callbackId, payload }[]` (a run may emit more
-   than one; the single-match `extractCallbackPayload` / `parseCallbackMarker` are still
-   used server-side by `awaitCallback`, which wants only the first). All markers share the
-   one regex source, so the global and single variants can never drift.
+6. **The run declares its callbacks; the SERVER settles them** (settlement lives with
+   the run, not the tab). `useTaskQueue` (`submitPrompt` and queued `executeTask`) derives
+   `callbacks = callbackIdsIn(prompt).map(getCallback)` from the registry of the tab that
+   built the prompt and sends them with the query POST. The route keeps well-formed
+   descriptors (`sanitizeCallbackDescriptors`) and passes them, with
+   `appOrigin = getOriginFromRequest(request)`, to `startExecution`, which stores them on
+   the execution. A run that declares none is unchanged (one-shot, batch review, free-typed
+   prompts).
 
-7. **`resolveCallback(callbackId, rawPayload)`** (`cli-task.ts:118`):
-   - Looks up the callback in `_callbackRegistry` by ID.
-   - `JSON.parse(rawPayload)` — returns error on malformed JSON.
-   - Merges `cb.staticFields` over the parsed object (static fields take precedence,
-     preventing prompt injection from overriding `moduleId` etc.).
-   - `fetch(cb.url, { method, body: JSON.stringify(merged) })` — POSTs to the app API.
-   - On `json.success === true`: removes the callback from the registry and returns
-     `{ success: true, data }`.
-   - On failure: returns `{ success: false, error }` without deregistering (allows retry).
+7. **`settleRunCallbacks({ text, callbacks, appOrigin })`** (`run-callbacks.ts`) runs in
+   `cli-service` when the run's `result` arrives (or on a clean exit without one), once per
+   execution (`callbacksSettling` latch): it parses **every** marker in the run's text
+   (`parseAllCallbackMarkers`), keeps only declared ids, POSTs each id **once** (a repeated
+   marker never double-POSTs), merges `staticFields` over the payload (`mergeCallbackBody` —
+   static fields win), and is bounded per POST by `UI_TIMEOUTS.callbackSettleMax`. **The
+   server is never a relay:** a descriptor is POSTed only to its `/api/…` path resolved
+   against the app's own origin; one naming another host (or a path outside `/api/`) is
+   `failed` and never fetched. The verdict (`confirmed` / `failed` / `missing`, plus the
+   failed `{ callbackId, payload, error }[]`) is recorded as `execution.callbackStatus` /
+   `callbacksFailed` and emitted as a `callbacks` event. The stream route forwards it as a
+   `callbacks` SSE frame and, for a run that declared callbacks, closes after that frame
+   instead of after `result`; `GET /api/claude-terminal/query` returns `callbackStatus`,
+   `callbacksFailed` and `isError` alongside `status`.
 
-8. The terminal displays a confirmation message. The store or API handler on the
-   receiving end updates its state (checklist progress, feature-matrix entry, scan
-   findings, pipeline artifact, etc.).
+8. **The terminal only reads the verdict.** Attached: the `result` handler waits (bounded by
+   `callbackSettleMax`) for the `callbacks` frame and completes with its status. **Hidden**
+   (the module was navigated away from, so the EventSource is closed): a visibility-gated
+   poll of `GET /query` every `UI_TIMEOUTS.stuckCheckInterval` ends the run from the
+   execution status — `onTaskComplete` fires once through `finishRun`, without re-show, and
+   a later re-show does not re-attach. The receiving API handler updates its state
+   (checklist progress, feature-matrix entry, scan findings, pipeline artifact, etc.).
+   `resolveCallback` (client registry) remains only for the host's **Resubmit** of a failed
+   payload and for server routes that registered their own callbacks (batch review).
 
 **Callback truth (additive completion status).** The run's completion signal carries a
 `callbackStatus` — `confirmed` (every marker's POST succeeded), `failed` (a marker was
-emitted but its POST was rejected), or `missing` (no marker at all). It is resolved inside
-the existing `callbackSettleMax` race, so the `isRunning` release is **bounded, never
+emitted but its POST was rejected), or `missing` (no marker at all). It is the server's
+verdict (step 7), awaited inside the existing `callbackSettleMax` race, so the `isRunning` release is **bounded, never
 indefinite** — the session stays running (`runPhase: 'settling'`) only until the race ends.
 It flows `useTaskQueue.onTaskComplete(id, success, { callbackStatus })` → `bindSessionRun`
 → `cliPanelStore.endRun(id, seq, { success, callbackStatus })` (stored as
@@ -678,8 +692,8 @@ the `pof-cli-prompt` event asks for a fresh Claude session), `resume` ("Collect 
 result": a success whose prompt carried `@@CALLBACK:<id>` but reported `missing` asks the
 same session for exactly those ids — no "next item" is offered), `resubmit-callback`, and
 `navigate` (the owning module's overview). `useTaskQueue` reports `onDispatch({ prompt,
-taskType })` from `submitPrompt` and `onCallbacksUnresolved(markers)` from the result path
-(the markers whose POST failed, dropped if a newer run began); `InlineTerminal` stores them
+taskType })` from `submitPrompt` and `onCallbacksUnresolved(markers)` from the server's
+verdict (the markers whose POST failed, dropped if a newer run began); `InlineTerminal` stores them
 via `recordDispatch` / `setPendingCallbacks`. **Resubmit:** `resubmitPendingCallbacks(id)`
 re-POSTs each retained payload through `resolveCallback` (the registry keeps an entry until
 its POST succeeds) — no new run, no tokens — then `recordCallbackResubmit(id, seq, remaining)`
@@ -1058,14 +1072,15 @@ route or UI spawns it; the overseer runs the dispatcher from a session.
   or `PromptBuilder` for per-module builders. This keeps `@@CALLBACK` marker
   registration and context injection in one code path.
 
-- **`staticFields` override Claude's output.** In `resolveCallback`, the merge is
+- **`staticFields` override Claude's output.** In `mergeCallbackBody` (server settlement and `resolveCallback`), the merge is
   `{ ...parsed, ...cb.staticFields }` — static fields win. This prevents prompt
   injection from spoofing `moduleId`, `entityId`, etc.
 
 - **`appOrigin` must be set for callback-bearing tasks.** Use `getAppOrigin()` on the
   client (`src/lib/constants.ts`) or `getOriginFromRequest(request)` in server
-  handlers to get the absolute URL. Relative URLs silently fail since the callback
-  is resolved from within the browser, not from the CLI subprocess.
+  handlers to get the absolute URL. The server settles a terminal run's callbacks
+  against its own origin and accepts only `/api/` paths there — a callback to another
+  host is refused, never relayed.
 
 - **`checklist`, `quick-action`, `feature-fix` get Wiring Requirements.** The set
   `WIRING_TASK_TYPES` gates the wiring block. Other task types (`ask-claude`,
@@ -1077,9 +1092,10 @@ route or UI spawns it; the overseer runs the dispatcher from a session.
   `!dynamicContext?.projectType || projectType === 'ue5'`. Adding `dynamicContext`
   with `projectType: 'nextjs'` switches the entire prompt layer to web-app mode.
 
-- **Callback registry is module-level / in-memory.** It does not survive Next.js
-  hot-reload (dev) or server restart. The registry auto-deregisters on successful
-  `resolveCallback`; failed resolutions leave the entry in place for retry.
+- **Callback registry is module-level / in-memory (the dispatching tab's).** It only
+  supplies the descriptors a run declares at dispatch and the Resubmit path; the run
+  itself is settled by the server, so a hidden or navigated-away tab no longer loses or
+  duplicates it. The registry auto-deregisters on a successful `resolveCallback`.
 
 - **100-minute hard timeout.** `startExecution` sets a 6 000 000 ms `setTimeout`
   that kills the child process if Claude does not finish. (`cli-service.ts:294`)
