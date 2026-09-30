@@ -1,101 +1,83 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  FileUp,
   Import,
   Bone,
   Paintbrush,
   Layers,
   ShieldCheck,
+  ListChecks,
   Check,
   ChevronDown,
   Play,
   ArrowRight,
   Loader2,
+  Lock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { ACCENT_VIOLET, ACCENT_CYAN } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, ACCENT_CYAN, STATUS_ERROR } from '@/lib/chart-colors';
 import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { MicroLabel } from '@/components/ui/MicroLabel';
+import { useModuleStore } from '@/stores/moduleStore';
+import { resolveDiagramNodes, deriveDiagramNodeStates } from '@/lib/checklist-diagram';
 
-interface PipelineStage {
+interface PipelineStageSpec {
   id: string;
-  label: string;
-  description: string;
+  subtitle: string;
   icon: LucideIcon;
-  prompt: string;
+  prerequisites: string[];
 }
 
-const PIPELINE_STAGES: PipelineStage[] = [
-  {
-    id: 'source',
-    label: 'Source File',
-    description: 'Prepare FBX/glTF files from DCC tools (Blender, Maya, 3ds Max)',
-    icon: FileUp,
-    prompt: 'Guide me through preparing 3D source files for UE5 import. Cover FBX and glTF export settings from Blender/Maya, axis conventions, scale settings (1 unit = 1cm), and how to organize source files for a clean import pipeline.',
-  },
-  {
-    id: 'import',
-    label: 'FBX/glTF Import',
-    description: 'Configure import settings: scale, axis, normals, smoothing groups',
-    icon: Import,
-    prompt: 'Set up the FBX/glTF import pipeline in UE5 with proper import settings: auto-detect scale, convert scene, force front axis, import normals (compute or import), combine meshes option, and skeletal mesh settings if applicable. Create a C++ import factory or import rules data asset.',
-  },
-  {
-    id: 'mesh',
-    label: 'Skeletal / Static Mesh',
-    description: 'Choose mesh type, configure skeleton, set up sockets and physics asset',
-    icon: Bone,
-    prompt: 'Set up skeletal and static mesh configuration after import. For skeletal meshes: assign skeleton, configure physics asset with ragdoll capsules, add sockets for weapons/VFX attachment. For static meshes: configure nanite, set mobility, enable collision complexity. Create a mesh setup utility class.',
-  },
-  {
-    id: 'material',
-    label: 'Material Assignment',
-    description: 'Auto-assign materials, create material instances, set up texture mapping',
-    icon: Paintbrush,
-    prompt: 'Create an automatic material assignment system for imported meshes. Scan material slots, create Material Instances from a master material, auto-assign textures by naming convention (Albedo, Normal, ORM/Roughness/Metallic), and set up a material library for reuse across assets.',
-  },
-  {
-    id: 'lod',
-    label: 'LOD Setup',
-    description: 'Generate LOD chain with screen-size thresholds and reduction settings',
-    icon: Layers,
-    prompt: 'Set up LOD (Level of Detail) generation for imported meshes. Configure auto-LOD generation with 3-4 levels, set screen-size thresholds (LOD0: 1.0, LOD1: 0.5, LOD2: 0.25, LOD3: 0.1), polygon reduction percentages per level, and Nanite settings for high-poly meshes. Create a batch LOD setup utility.',
-  },
-  {
-    id: 'collision',
-    label: 'Collision',
-    description: 'Generate collision shapes: simple, convex decomposition, or per-poly',
-    icon: ShieldCheck,
-    prompt: 'Set up collision generation for imported static meshes. Configure auto-convex collision with proper hull count and accuracy, simple box/sphere collision for basic shapes, per-poly collision for complex geometry (with performance notes), and custom collision presets. Create a collision setup utility that can batch-process assets.',
-  },
+/**
+ * The diagram's shape: which REAL `models` checklist items it draws, in import
+ * order. Labels, descriptions and prompts come from `module-registry`
+ * (`mod-1`…`mod-6`) via `@/lib/checklist-diagram`, never from a copy here.
+ *
+ * The stages used to be six local ids (`source` … `collision`) stored under
+ * `pipeline-<id>` keys with their own prompt strings: `resolveProgressKey` knows
+ * none of those keys, `POST /api/checklist/complete` refuses them, so no stage
+ * could ever complete — and a run here never ticked the Roadmap item it mirrored.
+ */
+export const MODELS_PIPELINE_SPEC: readonly PipelineStageSpec[] = [
+  { id: 'mod-1', subtitle: 'Import', icon: Import, prerequisites: [] },
+  { id: 'mod-4', subtitle: 'Mesh / Nanite', icon: Bone, prerequisites: ['mod-1'] },
+  { id: 'mod-5', subtitle: 'Materials & UVs', icon: Paintbrush, prerequisites: ['mod-4'] },
+  { id: 'mod-2', subtitle: 'LOD', icon: Layers, prerequisites: ['mod-5'] },
+  { id: 'mod-3', subtitle: 'Collision', icon: ShieldCheck, prerequisites: ['mod-2'] },
+  { id: 'mod-6', subtitle: 'Validation', icon: ListChecks, prerequisites: ['mod-3'] },
 ];
 
+const STAGES = resolveDiagramNodes('models', MODELS_PIPELINE_SPEC);
+
 const ACCENT = ACCENT_VIOLET;
+const EMPTY_PROGRESS: Record<string, boolean> = {};
 
 interface AssetPipelineDiagramProps {
-  completedStages: Set<string>;
-  onRunPrompt: (prompt: string) => void;
+  onRunPrompt: (itemId: string, prompt: string) => void;
   isRunning: boolean;
+  activeItemId: string | null;
 }
 
 export function AssetPipelineDiagram({
-  completedStages,
   onRunPrompt,
   isRunning,
+  activeItemId,
 }: AssetPipelineDiagramProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
   const panelIdBase = useId();
+  const progress = useModuleStore((s) => s.checklistProgress['models'] ?? EMPTY_PROGRESS);
+  const { nodes: stages, completedCount: doneCount } = useMemo(
+    () => deriveDiagramNodeStates(STAGES, progress, activeItemId),
+    [progress, activeItemId],
+  );
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
-
-  const doneCount = PIPELINE_STAGES.filter((s) => completedStages.has(s.id)).length;
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6 bg-[#03030a] rounded-2xl border border-violet-900/30 relative overflow-hidden shadow-[inset_0_0_100px_rgba(167,139,250,0.03)]">
@@ -115,31 +97,31 @@ export function AssetPipelineDiagram({
               ASSET_PIPELINE.graph
             </h3>
             <p className="text-xs text-violet-300 font-mono uppercase mt-0.5">
-              Automated Import Sequence // {doneCount} of {PIPELINE_STAGES.length} stages complete
+              Automated Import Sequence // {doneCount} of {stages.length} stages complete
             </p>
           </div>
         </div>
         <MeterBar
           value={doneCount}
-          max={PIPELINE_STAGES.length}
+          max={stages.length}
           color={ACCENT_CYAN}
           height={4}
           className="mt-3"
           ariaLabel="Asset pipeline progress"
-          valueText={`${doneCount} of ${PIPELINE_STAGES.length} stages complete`}
+          valueText={`${doneCount} of ${stages.length} stages complete`}
         />
       </div>
 
       <div className="relative pl-4 z-10">
-        {PIPELINE_STAGES.map((stage, index) => {
-          const isCompleted = completedStages.has(stage.id);
+        {stages.map((stage, index) => {
+          const isCompleted = stage.completed;
           const isExpanded = expandedId === stage.id;
-          const isLast = index === PIPELINE_STAGES.length - 1;
+          const isLast = index === stages.length - 1;
           const Icon = stage.icon;
           const panelId = `${panelIdBase}-${stage.id}-panel`;
 
           // Next node is completed
-          const nextCompleted = !isLast ? completedStages.has(PIPELINE_STAGES[index + 1].id) : false;
+          const nextCompleted = !isLast ? stages[index + 1].completed : false;
           // Determine path state
           const pathActive = isCompleted && nextCompleted;
           const pathPending = isCompleted && !nextCompleted && !isLast;
@@ -188,6 +170,8 @@ export function AssetPipelineDiagram({
                   >
                     {isCompleted ? (
                       <Check className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_4px_rgba(6,182,212,1)]" />
+                    ) : stage.locked ? (
+                      <Lock className="w-4 h-4 text-text-muted" />
                     ) : (
                       <Icon className="w-4 h-4 text-text-muted group-hover:text-violet-400 transition-colors" />
                     )}
@@ -225,8 +209,24 @@ export function AssetPipelineDiagram({
                                 Complete
                               </span>
                             )}
+                            <span className="text-xs px-1.5 py-[2px] rounded font-mono uppercase border border-violet-900/50 text-violet-300">
+                              {stage.subtitle}
+                            </span>
                           </div>
                           <p className="text-xs text-text-muted font-mono max-w-[85%]">{stage.description}</p>
+                          {stage.missing ? (
+                            <p className="mt-2 text-xs font-mono uppercase font-bold" style={{ color: STATUS_ERROR }}>
+                              REGISTRY_DRIFT: {stage.id} — not runnable
+                            </p>
+                          ) : stage.locked ? (
+                            <p className="mt-2 flex items-center gap-1 text-xs font-mono text-text-muted">
+                              <Lock className="w-3 h-3" aria-hidden="true" /> Requires {stage.unmetDeps.join(', ')}
+                            </p>
+                          ) : stage.isActive ? (
+                            <p role="status" className="mt-2 flex items-center gap-1 text-xs font-mono text-cyan-300">
+                              <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> Running now
+                            </p>
+                          ) : null}
                         </div>
                         <motion.div
                           aria-hidden="true"
@@ -265,12 +265,22 @@ export function AssetPipelineDiagram({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  onRunPrompt(stage.prompt);
+                                  // A drift stage has no registry prompt: an empty run would look like work.
+                                  if (isRunning || stage.locked || !stage.prompt) return;
+                                  onRunPrompt(stage.id, stage.prompt);
                                   setExpandedId(null);
                                 }}
-                                disabled={isRunning}
-                                aria-busy={isRunning}
-                                title={isRunning ? 'A task is already running — wait for it to finish' : undefined}
+                                disabled={isRunning || stage.locked}
+                                aria-busy={stage.isActive}
+                                title={
+                                  isRunning
+                                    ? 'A task is already running — wait for it to finish'
+                                    : stage.locked
+                                      ? stage.missing
+                                        ? 'This stage has no checklist item behind it'
+                                        : `Complete ${stage.unmetDeps.join(', ')} first`
+                                      : undefined
+                                }
                                 className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.5)] focus-ring disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                               >
                                 {isRunning ? (
@@ -279,7 +289,7 @@ export function AssetPipelineDiagram({
                                   </>
                                 ) : (
                                   <>
-                                    {isCompleted ? `Re-run ${stage.label}` : `Run ${stage.label}`}
+                                    {isCompleted ? `Re-run ${stage.subtitle}` : `Run ${stage.subtitle}`}
                                     <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                                   </>
                                 )}
