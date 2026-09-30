@@ -1,7 +1,8 @@
 import type { RoomNode, LevelDesignDocument, SyncDivergence } from '@/types/level-design';
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY, GENERATE_THE_DIRECTLY } from '@/lib/prompts/_shared';
-import type { StreamingZonePlannerConfig, StreamingZone, ZoneTransition } from '@/components/modules/content/level-design/StreamingZonePlanner';
+import type { StreamingZonePlannerConfig } from '@/lib/level-design/streaming-plan';
+import { ZONE_TYPE_LABELS } from '@/lib/level-design/streaming-plan';
 import { GAMEPLAY_CONSTRAINT_KEYS, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
@@ -180,17 +181,6 @@ INSTRUCTIONS:
 }
 
 // ── Streaming Zone Planner ──
-
-const ZONE_TYPE_LABELS: Record<string, string> = {
-  'town': 'Town',
-  'forest': 'Forest',
-  'ruins': 'Ruins',
-  'catacombs': 'Catacombs',
-  'boss-arena': 'Boss Arena',
-  'hub': 'Hub',
-  'dungeon': 'Dungeon',
-  'custom': 'Custom',
-};
 
 const TRANSITION_LABELS: Record<string, string> = {
   'seamless': 'Seamless (no loading screen)',

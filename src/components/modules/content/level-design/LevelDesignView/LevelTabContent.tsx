@@ -37,6 +37,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
     handleScatter,
     procgenSpec,
     procgenSpecStore,
+    streamingPlanStore,
     MODULE_ID,
     rvRefetch,
     rvLastCompletedId,
@@ -158,6 +159,7 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
         <StreamingZonePlanner
           onGenerate={handleGenerateStreaming}
           isGenerating={streamingCli.isRunning}
+          store={streamingPlanStore}
         />
       )}
 

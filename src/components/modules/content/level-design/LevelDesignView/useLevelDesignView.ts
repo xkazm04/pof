@@ -20,7 +20,10 @@ import {
 } from '@/lib/prompts/level-design';
 import type { RoomNode, SyncDivergence } from '@/types/level-design';
 import type { LevelEditOp } from '@/lib/level-design/level-edit';
-import type { StreamingZonePlannerConfig } from '../StreamingZonePlanner';
+import {
+  streamingPlanReducer, initialStreamingPlan,
+  type StreamingPlanStore, type StreamingZonePlannerConfig,
+} from '@/lib/level-design/streaming-plan';
 import {
   procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore,
 } from '@/components/modules/content/level-design/ProceduralLevelWizard/specState';
@@ -125,6 +128,16 @@ export function useLevelDesignView() {
     label: 'Streaming Gen',
     accentColor: MODULE_COLORS.content,
   });
+
+  // The streaming plan lives HERE, not in the planner: the planner is unmounted
+  // on every tab switch (same reason as the procgen spec below).
+  const [streamingPlanState, dispatchStreamingPlan] = useReducer(
+    streamingPlanReducer, undefined, initialStreamingPlan,
+  );
+  const streamingPlanStore = useMemo<StreamingPlanStore>(
+    () => ({ state: streamingPlanState, dispatch: dispatchStreamingPlan }),
+    [streamingPlanState],
+  );
 
   const handleGenerateStreaming = useCallback((config: StreamingZonePlannerConfig) => {
     const prompt = buildStreamingZonePrompt(config, { projectName, projectPath, ueVersion });
@@ -391,6 +404,7 @@ export function useLevelDesignView() {
     handleScatter,
     procgenSpec,
     procgenSpecStore,
+    streamingPlanStore,
     MODULE_ID,
     rvRefetch,
     rvLastCompletedId,

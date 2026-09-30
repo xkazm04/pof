@@ -7,7 +7,7 @@ import { PaintPalette } from './PaintPalette';
 import { ZoneGrid } from './ZoneGrid';
 import { ZoneEditor } from './ZoneEditor';
 import { TransitionList } from './TransitionList';
-import type { StreamingZonePlannerConfig } from './types';
+import type { StreamingZonePlannerConfig, StreamingPlanStore } from './types';
 
 export type {
   ZoneType,
@@ -16,6 +16,10 @@ export type {
   StreamingZone,
   ZoneTransition,
   StreamingZonePlannerConfig,
+  StreamingMode,
+  StreamingOp,
+  StreamingPlanState,
+  StreamingPlanStore,
 } from './types';
 
 // ── Props ──
@@ -23,21 +27,25 @@ export type {
 interface StreamingZonePlannerProps {
   onGenerate: (config: StreamingZonePlannerConfig) => void;
   isGenerating: boolean;
+  /**
+   * The plan's reducer, owned by the level-design view so a tab switch cannot
+   * reset it. Omitted (tests, standalone), the planner holds a private one.
+   */
+  store?: StreamingPlanStore;
 }
 
 // ── Component ──
 
-export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZonePlannerProps) {
+export function StreamingZonePlanner({ onGenerate, isGenerating, store }: StreamingZonePlannerProps) {
   const {
     zones,
     transitions,
     gridSize,
+    mode,
     paintType,
-    setPaintType,
-    selectedZoneId,
-    setSelectedZoneId,
     linkingFrom,
-    setLinkingFrom,
+    selectedZoneId,
+    dispatch,
     zoneAt,
     handleCellClick,
     updateZone,
@@ -47,17 +55,15 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
     transitionLines,
     config,
     stats,
-  } = useStreamingZonePlanner();
+  } = useStreamingZonePlanner(store);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto w-full max-w-6xl mx-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
       {/* Paint palette */}
       <PaintPalette
-        paintType={paintType}
-        setPaintType={setPaintType}
+        mode={mode}
         selectedZoneId={selectedZoneId}
-        linkingFrom={linkingFrom}
-        setLinkingFrom={setLinkingFrom}
+        dispatch={dispatch}
       />
 
       {/* Dynamic Grid Layout */}
@@ -82,7 +88,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
             <ZoneEditor
               zone={selectedZone!}
               onUpdate={(patch) => updateZone(selectedZone!.id, patch)}
-              onClose={() => setSelectedZoneId(null)}
+              onClose={() => dispatch({ type: 'select', zoneId: null })}
             />
           )}
 

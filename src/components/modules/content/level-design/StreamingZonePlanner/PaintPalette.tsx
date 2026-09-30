@@ -1,18 +1,18 @@
-import type { Dispatch, SetStateAction } from 'react';
 import { X, Eraser, Link2 } from 'lucide-react';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 import { ZONE_TYPES } from './constants';
-import type { ZoneType } from './types';
+import type { ZoneType, StreamingMode, StreamingOp } from './types';
 
 interface PaintPaletteProps {
-  paintType: ZoneType | 'erase' | null;
-  setPaintType: Dispatch<SetStateAction<ZoneType | 'erase' | null>>;
+  /** The planner's one mode: a palette button enters or leaves it, never stacks on it. */
+  mode: StreamingMode;
   selectedZoneId: string | null;
-  linkingFrom: string | null;
-  setLinkingFrom: Dispatch<SetStateAction<string | null>>;
+  dispatch: (op: StreamingOp) => void;
 }
 
-export function PaintPalette({ paintType, setPaintType, selectedZoneId, linkingFrom, setLinkingFrom }: PaintPaletteProps) {
+export function PaintPalette({ mode, selectedZoneId, dispatch }: PaintPaletteProps) {
+  const paintType = mode.kind === 'paint' ? mode.zoneType : mode.kind === 'erase' ? 'erase' : null;
+  const linkingFrom = mode.kind === 'link' ? mode.from : null;
   return (
     <div className="flex items-center gap-2 flex-wrap bg-[#03030a] p-3 rounded-2xl border border-violet-900/40 shadow-[inset_0_0_40px_rgba(167,139,250,0.05)]">
       <span className="text-xs font-mono text-violet-400/80 font-bold mx-2">Paint Mode</span>
@@ -21,7 +21,7 @@ export function PaintPalette({ paintType, setPaintType, selectedZoneId, linkingF
         return (
           <button
             key={type}
-            onClick={() => setPaintType(active ? null : type)}
+            onClick={() => dispatch(active ? { type: 'cancelMode' } : { type: 'setPaint', zoneType: type })}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors border"
             style={{
               color: active ? cfg.color : 'var(--text-muted)',
@@ -41,7 +41,7 @@ export function PaintPalette({ paintType, setPaintType, selectedZoneId, linkingF
       })}
       <div className="w-px h-6 bg-violet-900/40 mx-2" />
       <button
-        onClick={() => setPaintType(paintType === 'erase' ? null : 'erase')}
+        onClick={() => dispatch(paintType === 'erase' ? { type: 'cancelMode' } : { type: 'setErase' })}
         className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border"
         style={{
           color: paintType === 'erase' ? STATUS_ERROR : 'var(--text-muted)',
@@ -56,7 +56,7 @@ export function PaintPalette({ paintType, setPaintType, selectedZoneId, linkingF
         <>
           <div className="w-px h-5 bg-border mx-1" />
           <button
-            onClick={() => setLinkingFrom(selectedZoneId)}
+            onClick={() => dispatch({ type: 'startLink', from: selectedZoneId })}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border text-[#fbbf24] border-[#fbbf2430] bg-[#fbbf2408]"
           >
             <Link2 className="w-3 h-3" />
@@ -68,7 +68,7 @@ export function PaintPalette({ paintType, setPaintType, selectedZoneId, linkingF
         <>
           <div className="w-px h-5 bg-border mx-1" />
           <button
-            onClick={() => setLinkingFrom(null)}
+            onClick={() => dispatch({ type: 'cancelMode' })}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border text-[#f87171] border-[#f8717130] bg-[#f8717108]"
           >
             <X className="w-3 h-3" />
