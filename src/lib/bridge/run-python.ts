@@ -10,13 +10,14 @@
  * Failures report WHAT HAPPENED: a bridge that answered with a broken body is
  * never reported as "unreachable", and a call that outlived its deadline is
  * never reported as either — because that would send a developer to restart an
- * editor that is already running and hide a real plugin bug.
+ * editor that is already running and hide a real plugin bug. The HTTP call and
+ * that classification are the bridge transport kernel (`@/lib/bridge/transport`);
+ * this host keeps the envelope check and the run-python wording.
  */
 
-const DEFAULT_BRIDGE_URL = 'http://localhost:30040/pof/python/run';
+import { bridgeFetch, BRIDGE_SNIPPET_CHARS } from '@/lib/bridge/transport';
 
-/** Max characters of a received body echoed into an error message. */
-const RESPONSE_SNIPPET_CHARS = 200;
+const DEFAULT_BRIDGE_URL = 'http://localhost:30040/pof/python/run';
 
 /**
  * Upper bound applied when the caller supplies neither `timeoutMs` nor a `signal`.
@@ -90,58 +91,20 @@ function isRunPythonEnvelope(value: unknown): value is RunPythonResult {
   return typeof value === 'object' && value !== null && typeof (value as { ok?: unknown }).ok === 'boolean';
 }
 
-/** Describe a live-but-broken reply with the status and a bounded snippet of what arrived. */
-function malformedReply(status: number | undefined, received: string, reason: string): RunPythonErr {
-  const snippet = received.slice(0, RESPONSE_SNIPPET_CHARS);
+/**
+ * Pass the bridge's envelope through. Valid JSON that is NOT the envelope is a
+ * malformed reply, never a result (the old cast surfaced `error: undefined`).
+ */
+function asEnvelope<T>(status: number, value: unknown): RunPythonResult<T> {
+  if (isRunPythonEnvelope(value)) return value as RunPythonResult<T>;
+  const snippet = (JSON.stringify(value) ?? '').slice(0, BRIDGE_SNIPPET_CHARS);
   return {
     ok: false,
     kind: 'malformed-body',
     error:
-      `Bridge answered HTTP ${status ?? '?'} with an unparseable body ` +
-      `(${reason.slice(0, RESPONSE_SNIPPET_CHARS)})` +
+      `Bridge answered HTTP ${status} with an unparseable body ` +
+      `(reply is not a {ok, data|error} envelope)` +
       (snippet ? `: ${snippet}` : ''),
-  };
-}
-
-/**
- * Resolve the deadline for one call and expose the signal to hand to fetch.
- *
- * A caller-supplied signal wins: it suppresses the default (an explicit choice is
- * not second-guessed) and, when a `timeoutMs` is ALSO given, both are composed so
- * either can end the call. Built by hand rather than with `AbortSignal.any` so it
- * behaves identically across the runtimes this module runs in (node, jsdom).
- */
-function resolveDeadline(signal: AbortSignal | undefined, timeoutMs: number | undefined) {
-  const bound = timeoutMs ?? (signal ? undefined : RUN_PYTHON_DEFAULT_TIMEOUT_MS);
-
-  if (bound === undefined || !Number.isFinite(bound) || bound <= 0) {
-    return { signal, boundMs: null as number | null, timedOut: () => false, cleanup: () => {} };
-  }
-
-  const controller = new AbortController();
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, bound);
-
-  let onCallerAbort: (() => void) | undefined;
-  if (signal) {
-    if (signal.aborted) controller.abort();
-    else {
-      onCallerAbort = () => controller.abort();
-      signal.addEventListener('abort', onCallerAbort);
-    }
-  }
-
-  return {
-    signal: controller.signal,
-    boundMs: bound,
-    timedOut: () => timedOut,
-    cleanup: () => {
-      clearTimeout(timer);
-      if (onCallerAbort) signal?.removeEventListener('abort', onCallerAbort);
-    },
   };
 }
 
@@ -149,9 +112,10 @@ function resolveDeadline(signal: AbortSignal | undefined, timeoutMs: number | un
  * Call a Python module function through the bridge.
  *
  * Network errors are converted to a `RunPythonErr` so callers can pattern-match on
- * the `ok` discriminant without try/catch. The body read and JSON parse sit OUTSIDE
- * the fetch's catch, so "the editor answered with garbage" stays distinguishable
- * from "the editor is not running" and from "the editor never answered" (`kind`).
+ * the `ok` discriminant without try/catch. The kernel reads and parses the body
+ * outside its transport catch, so "the editor answered with garbage" stays
+ * distinguishable from "the editor is not running" and from "the editor never
+ * answered" (`kind`).
  *
  * Every call is bounded: see {@link RUN_PYTHON_DEFAULT_TIMEOUT_MS}.
  */
@@ -161,77 +125,43 @@ export async function runPython<T = unknown>(
   args: Record<string, unknown> = {},
   opts: RunPythonOptions = {},
 ): Promise<RunPythonResult<T>> {
-  const f = opts.fetchImpl ?? fetch;
-  const url = opts.bridgeUrl ?? DEFAULT_BRIDGE_URL;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (opts.authToken) headers['X-Pof-Auth-Token'] = opts.authToken;
 
-  const deadline = resolveDeadline(opts.signal, opts.timeoutMs);
+  // A caller-supplied signal wins: it suppresses the default (an explicit choice is
+  // not second-guessed); with a `timeoutMs` as well, the kernel composes both.
+  const bound = opts.timeoutMs ?? (opts.signal ? undefined : RUN_PYTHON_DEFAULT_TIMEOUT_MS);
 
-  /** Classify a thrown transport error: our deadline, the caller's cancel, or a dead bridge. */
-  const transportFailure = (err: unknown): RunPythonErr => {
-    if (deadline.timedOut()) {
+  const res = await bridgeFetch<unknown>(opts.bridgeUrl ?? DEFAULT_BRIDGE_URL, {
+    method: 'POST',
+    headers,
+    body: { module: modulePath, function: fn, args },
+    timeoutMs: bound,
+    signal: opts.signal,
+    fetchImpl: opts.fetchImpl,
+    // The bridge returns its JSON envelope even on 4xx/5xx — parse and pass it through.
+    parseErrorBody: true,
+  });
+
+  if (res.ok) return asEnvelope<T>(res.status, res.data);
+
+  switch (res.kind) {
+    case 'timeout':
       return {
         ok: false,
         kind: 'timeout',
         error:
-          `Bridge timed out after ${deadline.boundMs}ms: ${modulePath}.${fn} was accepted but ` +
+          `Bridge timed out after ${bound ?? '?'}ms: ${modulePath}.${fn} was accepted but ` +
           `never answered (editor compiling, in PIE, or wedged)`,
       };
-    }
-    if (opts.signal?.aborted) {
+    case 'aborted':
       return { ok: false, kind: 'aborted', error: `Bridge call aborted by caller: ${modulePath}.${fn}` };
-    }
-    return {
-      ok: false,
-      kind: 'unreachable',
-      error: `Bridge unreachable: ${err instanceof Error ? err.message : String(err)}`,
-    };
-  };
-
-  try {
-    let res: Response;
-    try {
-      res = await f(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ module: modulePath, function: fn, args }),
-        signal: deadline.signal,
-      });
-    } catch (err) {
-      // Nothing was received — unreachable, timed out, or cancelled, never conflated.
-      return transportFailure(err);
-    }
-
-    // Read as TEXT first: once `res.json()` consumes the stream, a failed parse can
-    // no longer report what was actually received.
-    let raw: string;
-    try {
-      raw = await res.text();
-    } catch (err) {
-      // A stalled body stream is still a timeout, not a malformed payload.
-      if (deadline.timedOut() || opts.signal?.aborted) return transportFailure(err);
-      return malformedReply(
-        res.status,
-        '',
-        `body could not be read: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-
-    // The bridge returns JSON even on 4xx/5xx — parse and pass its envelope through.
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (err) {
-      return malformedReply(res.status, raw, err instanceof Error ? err.message : 'invalid JSON');
-    }
-
-    if (!isRunPythonEnvelope(parsed)) {
-      return malformedReply(res.status, raw, 'reply is not a {ok, data|error} envelope');
-    }
-
-    return parsed as RunPythonResult<T>;
-  } finally {
-    deadline.cleanup();
+    case 'unreachable':
+      return { ok: false, kind: 'unreachable', error: `Bridge unreachable: ${res.detail}` };
+    case 'malformed-body':
+      return { ok: false, kind: 'malformed-body', error: res.detail };
+    default:
+      // auth-rejected / http-error: the bridge answered with its envelope on a non-2xx.
+      return asEnvelope<T>(res.status, res.body);
   }
 }

@@ -69,6 +69,10 @@ describe('bridgeRequest', () => {
     expect(result).toEqual({
       ok: false,
       error: 'Test Bridge GET /ping returned 500: kaboom',
+      kind: 'http-error',
+      reachable: true,
+      indeterminate: false,
+      status: 500,
     });
   });
 
@@ -82,6 +86,10 @@ describe('bridgeRequest', () => {
     expect(result).toEqual({
       ok: false,
       error: 'Test Bridge GET /ping timed out after 5000ms',
+      kind: 'timeout',
+      reachable: false,
+      indeterminate: false,
+      status: 504,
     });
   });
 
@@ -90,6 +98,33 @@ describe('bridgeRequest', () => {
 
     const result = await bridgeRequest(BASE, baseOpts);
 
-    expect(result).toEqual({ ok: false, error: 'ECONNREFUSED' });
+    expect(result).toEqual({
+      ok: false,
+      error: 'ECONNREFUSED',
+      kind: 'unreachable',
+      reachable: false,
+      indeterminate: false,
+      status: 502,
+    });
+  });
+
+  it('reports a live bridge answering 200 with an unparseable body by label, with the kind as a field', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not json', { status: 200 }));
+
+    const result = await bridgeRequest('http://h:1', {
+      method: 'GET',
+      path: '/pof/status',
+      label: 'PoF Bridge',
+      logPrefix: '[t]',
+      timeout: 1000,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain('PoF Bridge');
+    expect(result.error).toContain('HTTP 200');
+    expect(result.error).toContain('unparseable body');
+    // The verdict survives as a field: a live-but-broken plugin is never a dead one.
+    expect(result).toMatchObject({ kind: 'malformed-body', reachable: true, indeterminate: false });
   });
 });
