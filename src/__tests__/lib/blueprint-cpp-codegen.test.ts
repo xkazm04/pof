@@ -14,6 +14,8 @@ import type {
   BlueprintNode,
   BlueprintPin,
   BlueprintVariable,
+  NodeDisposition,
+  NodeLedgerEntry,
   TranspileWarning,
 } from '@/types/blueprint';
 
@@ -466,6 +468,24 @@ describe('generateNodeLogic', () => {
     expect(warnings[0].severity).toBe('info');
   });
 
+  it('stamps the node id into every TODO stub it writes, on one line', () => {
+    const timeline = node({ id: 'tl', type: 'K2Node_Timeline', name: 'MyTimeline', pins: [] });
+    const spawn = node({ id: 'sp', type: 'K2Node_SpawnActorFromClass', pins: [] });
+    const set = node({
+      id: 'st', type: 'K2Node_VariableSet', name: 'Set\nScore', memberName: 'Score',
+      pins: [pin({ name: 'Score', type: 'int', direction: 'input', defaultValue: 'a\nb' })],
+    });
+    for (const n of [timeline, spawn, set]) {
+      const code = generateNodeLogic({ nodes: [n] }, n, 'AFoo', []);
+      const lines = code.split('\n');
+      // A newline in a node name or pin default must not break the comment
+      // (the rest of the stub would land outside it as C++).
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toContain('// TODO');
+      expect(lines[0]).toContain(`(node ${n.id})`);
+    }
+  });
+
   it('returns a placeholder body when nothing is emitted', () => {
     const evt = node({ id: 'evt', type: 'K2Node_Event', pins: [] });
     expect(generateNodeLogic({ nodes: [evt] }, evt, 'AFoo', [])).toBe('\t// TODO: Implement logic');
@@ -728,8 +748,38 @@ describe('renderPinLiteral', () => {
   });
 });
 
+// REWRITTEN (blueprint-tools/B, scan-sweep --challenge run challenge-2026-09-30d):
+// the readout used to be derived from the warning list, so a node the walker
+// never reached raised nothing and counted as translated. It is now counted
+// from the per-node ledger the walker writes; the warning-derived count is
+// kept only as the fallback for a payload that carries no ledger.
+function entry(nodeId: string, disposition: NodeDisposition, reason?: string): NodeLedgerEntry {
+  return { nodeId, nodeType: 'K2Node_X', name: nodeId, graph: 'EventGraph', disposition, reason };
+}
+
 describe('describeTranspileFidelity', () => {
-  it('derives translated/TODO counts from the warning list, not a constant', () => {
+  it('counts the node ledger — structural nodes are not in the denominator', () => {
+    const f = describeTranspileFidelity({
+      nodeCount: 6,
+      warnings: [],
+      nodeLedger: [
+        entry('e', 'structural'), entry('a', 'emitted'), entry('g', 'consumed'),
+        entry('r', 'refused', 'why'), entry('u1', 'unreached', 'why'), entry('u2', 'unreached', 'why'),
+      ],
+    });
+    expect(f).toMatchObject({ total: 5, translated: 2, refused: 1, unreached: 2, todo: 3, perNode: true });
+    expect(f.label).toBe('2 of 5 nodes translated · 1 refused · 2 never reached');
+  });
+
+  it('reports a fully translated ledger without a residue clause', () => {
+    const f = describeTranspileFidelity({
+      nodeCount: 2, warnings: [], nodeLedger: [entry('e', 'structural'), entry('a', 'emitted')],
+    });
+    expect(f.label).toBe('1 of 1 nodes translated');
+    expect(f.todo).toBe(0);
+  });
+
+  it('[guard] with no ledger (older payload) it falls back to the warning-derived count', () => {
     const f = describeTranspileFidelity({
       nodeCount: 5,
       warnings: [
@@ -738,15 +788,9 @@ describe('describeTranspileFidelity', () => {
         { message: 'module warning', severity: 'warning' }, // no node, not a TODO
       ],
     });
-    expect(f.total).toBe(5);
-    expect(f.todo).toBe(1);
-    expect(f.translated).toBe(4);
+    expect(f).toMatchObject({ total: 5, todo: 1, translated: 4, perNode: false });
     expect(f.label).toBe('4 of 5 nodes translated · 1 left as TODO');
-  });
-
-  it('reports a fully translated graph without a TODO clause', () => {
-    expect(describeTranspileFidelity({ nodeCount: 3, warnings: [] }).label)
-      .toBe('3 of 3 nodes translated');
+    expect(describeTranspileFidelity({ nodeCount: 3, warnings: [] }).label).toBe('3 of 3 nodes translated');
   });
 });
 

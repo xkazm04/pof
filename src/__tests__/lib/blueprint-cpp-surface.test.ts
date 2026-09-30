@@ -173,7 +173,7 @@ const HEAD_SAMPLE_SOURCE = [
   '',
   'void APlayerCharacter::TakeDamage(float DamageAmount)',
   '{',
-  '\t// TODO: [K2Node_VariableSet] Set Health — Health — assignment not emitted — pin "Health" default "Health - DamageAmount" is not a numeric literal',
+  '\t// TODO: [K2Node_VariableSet] Set Health — Health (node f2) — assignment not emitted — pin "Health" default "Health - DamageAmount" is not a numeric literal',
   '}',
   '',
 ].join('\n');
@@ -238,7 +238,7 @@ const HEAD_DOOR_SOURCE = [
   '{',
   '\tSuper::BeginPlay();',
   '',
-  '\t// TODO: [K2Node_IfThenElse] Branch — branch not emitted — pin "Condition" is driven by [K2Node_CommutativeAssociativeBinaryOperator] Math Op — the expression is not derivable; both exec paths need manual translation',
+  '\t// TODO: [K2Node_IfThenElse] Branch (node b1) — branch not emitted — pin "Condition" is driven by [K2Node_CommutativeAssociativeBinaryOperator] Math Op — the expression is not derivable; both exec paths need manual translation',
   '}',
   '',
   'void ADoor::OpenDoor()',
