@@ -132,11 +132,24 @@ Owns terminal session objects, `tabOrder`, `activeTabId`, `maximizedTabId`, and
 Persisted keys (via `partialize` at line 271):
 `sessions`, `tabOrder`, `activeTabId`, `maximizedTabId`, `inlineTerminalHeight`.
 
-**Custom `merge` resets transient session fields on rehydration** (line 278–289): after each page
-reload, every persisted session has `isRunning`, `lastTaskSuccess`, `currentExecutionId`, and
-`currentTaskId` reset to `false`/`null`. Sessions cannot be running after a page refresh — without
-this, a session stuck in `isRunning: true` would prevent any new dispatches. The transient
-run-door fields `runPhase`/`runSeq` are reset to `'idle'`/`0` there too.
+**Custom `merge` resets transient session fields on rehydration**: after each page
+reload, every persisted session has `isRunning`, `lastTaskSuccess` and `currentTaskId` reset to
+`false`/`null` (no run is observed by a fresh page — without this, a session stuck in
+`isRunning: true` would prevent any new dispatches), and the run-door fields `runPhase`/`runSeq`
+to `'idle'`/`0`. **`currentExecutionId` is kept**: it names the server execution the session's run
+lives in, which survives a reload (cli-service keeps it in a `globalThis` map, running up to 100 min
+and replayable for 1 h after it ends).
+
+**Re-attach contract** (`useTaskQueue.attachExecution`): `InlineTerminal` wires
+`onExecutionStarted` (fired when the query POST returns) to `setCurrentExecution`; `endRun` clears
+the id, so a settled run is never re-attached. On mount, `CompactTerminal` re-attaches a session
+that still holds an id: `onTaskStart` begins the run (Running, Abort DELETEs that execution), ONE
+stream replays its transcript, and it ends with its real outcome — never a second query POST, never
+a callback POST, and no callback verdict (`callbackStatus` undefined: the server settles the run's
+`@@CALLBACK`s). An id the server no longer holds (`Execution not found`) ends the run as unknown
+(`lastTaskSuccess: null` via `meta.outcomeUnknown`), not failed. Stream frames carry `seq` (1-based
+position in `execution.events`); a re-shown terminal reconnects with `&after=<last seq>`, so the
+transcript is never replayed on top of itself.
 
 **Run lifecycle is written through one door** (`beginRun` / `settleRun` / `endRun`, wired by
 `store/sessionRun.ts` `bindSessionRun`): `beginRun` clears the previous run's
