@@ -4,7 +4,8 @@
  * The evidence modal's ENTITY LEDGER — one row per entity of the step, each with its OWN rung,
  * its OWN verdict and its checker status, ordered so the entity holding the step down is on
  * top (see `cellLedger`). Selecting a row swaps the verdict box, dimension bars and proof
- * together; "Focus entity" hands the entity to Item Focus.
+ * together; "Focus entity" hands the entity to Item Focus, and "Lab ↗" opens the entity AT
+ * this step in the lab through its address (`labHref`) — where the fix actually happens.
  *
  * Replaces a blind `<select>` of `{entityId} ({status})`, which gave no rung or verdict, so
  * finding the condemned entity among N meant clicking through all of them.
@@ -14,6 +15,7 @@
 import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
 import { readinessCode, readinessLabel } from '@/lib/status/readiness';
 import type { CellLedger, EntityEvidence, LedgerRow } from '@/lib/status/cellLedger';
+import { labHref } from '@/lib/shell/labRoute';
 
 const mono = 'var(--lab-font-mono)';
 const surface = { background: 'var(--lab-panel)', border: '1px solid var(--lab-line)', borderRadius: 0 } as const;
@@ -88,6 +90,15 @@ export function EvidenceEntityLedger({
                   Focus →
                 </button>
               )}
+              <a
+                href={labHref({ catalogId: ledger.catalogId, entityId: r.entityId, step: ledger.step, view: 'catalogs' })}
+                aria-label={`Open ${r.entityId} at ${ledger.step} in the lab`}
+                title="Open this entity at this step in the Blueprint lab"
+                className="focus-ring-inset"
+                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', fontFamily: mono, fontSize: 12, color: 'var(--lab-ink)', borderLeft: '1px solid var(--lab-line)', padding: '0 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                Lab ↗
+              </a>
             </li>
           );
         })}

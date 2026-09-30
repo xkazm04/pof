@@ -95,11 +95,12 @@ describe('Back undoes a shell flip', () => {
     expect(push).toHaveBeenCalledTimes(1);
     expect(replace.mock.invocationCallOrder[0]).toBeLessThan(push.mock.invocationCallOrder[0]);
     expect(new URL(String(replace.mock.calls[0][2]), 'http://localhost').searchParams.get('legacy')).toBe('0');
-    expect(window.location.search).toBe('?legacy=1');
+    // The lab entry now carries its own address (c/e/s/v, labRoute.ts); the shell flag is what is pinned here.
+    expect(new URLSearchParams(window.location.search).get('legacy')).toBe('1');
     expect(readShellPref()).toBe('legacy');
 
     await traverse('back');
-    expect(window.location.search).toBe('?legacy=0');
+    expect(new URLSearchParams(window.location.search).get('legacy')).toBe('0');
     expect(readShellPref()).toBe('ecw');
   }, 30_000);
 

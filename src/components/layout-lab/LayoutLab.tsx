@@ -23,6 +23,7 @@ import { useCanonStore } from './canonStore';
 import { switchShell } from '@/lib/ecw/shell-pref';
 import { useLabPrefs } from './hooks/useLabPrefs';
 import { useLabLocation } from './hooks/useLabLocation';
+import { useLabAddress } from './hooks/useLabRouteSync';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
 
@@ -48,6 +49,9 @@ export function LayoutLab() {
   // step are derived away in render, never written back.
   const { loc, detail, nav } = useLabLocation();
   const { catalogId, entityId, stepIdx, view } = loc;
+  // The location's ADDRESS (`/?legacy=0&c=&e=&s=<step label>&v=`): arrival opens it, section moves push,
+  // step moves replace, Back/Forward re-apply through the same `nav` door (useLabRouteSync).
+  useLabAddress(loc, detail, nav);
   // Lab-wide search (⌘/Ctrl+K or "/"), driving the SAME navigate door (`nav`).
   const [searchOpen, setSearchOpen] = useLabSearchShortcut();
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
