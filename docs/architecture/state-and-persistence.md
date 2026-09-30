@@ -55,10 +55,26 @@ a new object reference and unnecessary re-renders — the canonical no-op set pa
 **Completion ledger (`checklistCompletedAt`).** `checklistProgress` records THAT an item is done, never
 WHEN, so it cannot drive a velocity. `setChecklistItem` / `toggleChecklistItem` stamp
 `checklistCompletedAt[module][item] = Date.now()` on the first transition to done and remove the stamp on
-un-done (pure helpers in `src/lib/roadmap/completion-ledger.ts`). It is persisted in the `pof-modules`
-partialize only — not yet in the `project_progress` row — and is emptied by `clearProgress`, by a failed
-foreign load, and by a successful load of a different project (a same-project load keeps it, pruned to the
-items the loaded checklist says are done). The health engine (`computeProjectHealth(..., ledger, now)`)
+un-done (pure helpers in `src/lib/roadmap/completion-ledger.ts`). It is held by the `project_progress` row
+(`completed_json`, schema 5) as well as the `pof-modules` partialize: `saveProgress` sends it, the server
+unions it with the stored ledger (`mergeLedgers`, earliest stamp wins) pruned to done items (un-done drops the
+date server-side too), and `/api/checklist/complete` stamps `Date.now()` on a CLI completion (an item already
+done keeps its first stamp or stays undated). `clearProgress` and a failed foreign load still empty the
+in-memory copy, but a load now ADOPTS the server's stamps — merged with the local ones only when the memory
+already belonged to this project — so a project switch no longer erases velocity history.
+
+**One progress ledger (`src/lib/project-progress-db.ts`).** The only owner of the `project_progress` row;
+`/api/project-progress`, `/api/checklist/complete` and `/api/recent-projects` are thin callers. The row id
+is `progressRowId(path) = sha256(normalizeProjectId(path)).slice(0,16)` — equal to the old per-route hash for
+every canonical spelling (no row is re-keyed), while `C:/x/PoF/` and `c:\x\pof` now share one row. A row
+stored under the legacy hash of a non-canonical spelling (`legacyProgressRowId`) is still returned for that
+spelling: `readProgress` projects it in, the next write copies it into the canonical row and records its id in
+`folded_json` so it folds exactly once. The fold is lossless (a `true` is never overwritten by `false`,
+earliest stamp wins) and the legacy row is never deleted or rewritten. `saveProgress` is the one merge
+(per-key checklist, orphan-key migration on every write, ledger union, keep-or-replace for
+health/verification/history); `markComplete` is the CLI's dated mark. The switcher's % is
+`countAllChecklists` over `readProgress` (declared items only); `recent_projects.checklist_json` is only the
+fallback for a project with no progress row. The health engine (`computeProjectHealth(..., ledger, now)`)
 derives weekly velocity, the burn-up and milestone ETAs from these stamps only; done items without a stamp
 are reported as `velocitySample.undated`, never bucketed, and with no dated completion `avgVelocity` and
 every `predictedDate` are `null`. No series is simulated (the former seeded RNG is gone).
@@ -270,8 +286,8 @@ the browser or edge runtime).
 | `eval_findings` | Module Scan findings. `resolved_at` (nullable, schema 4 — `SCHEMA_VERSION` bumped so existing DBs gain it) is the durable resolution: `PATCH /api/module-scan/import {moduleId, ids, resolved}` stamps or clears it (undo), and unknown ids come back in `missing`. `pass` is one of `EVAL_PASS_VOCABULARY` (`module-eval-prompts.ts`, the keys of `PASS_LABELS` — the only pass list; the route's zod enums, `ScanFinding.pass`, the callback hint and the Scan tab derive from it). db.ts still creates the older 3-pass `CHECK`, so the POST first runs `ensureEvalFindingsPassVocabulary` (`src/lib/evaluator/scan-findings-db.ts`, once per connection): a count-verified rebuild of the stored DDL with only the pass `CHECK` widened, which also re-creates the table's indexes/triggers (`DROP TABLE` drops them). `module_scans.finding_count` counts rows actually stored — `INSERT OR IGNORE` swallows a `CHECK` violation silently. |
 | `module_scans` | One row per Module Scan run, **including a clean one** (`finding_count 0`), written in the same transaction as its findings: `scan_id`, `module_id`, `passes_json` (every pass the scan RAN, from the callback's `passes` staticField — any `EvalPass`, so the 4-pass default incl. ground-truth is accepted), `created_at`. `GET ?view=delta` reconciles the newest scan against the findings still unresolved before it with the pure `reconcileScan` (`src/lib/evaluator/scan-reconcile.ts`): new / persisting / cleared / notRescanned — a pass that did not run clears nothing. |
 | `build_history` | Headless UBT build records |
-| `recent_projects` | Project switcher history |
-| `project_progress` | Full module state (checklist/health/verification/history) per project path |
+| `recent_projects` | Project switcher history. The listed % is counted from the project's `project_progress` row (see the progress ledger above); its own `checklist_json` snapshot is only the fallback when no row exists. A new path takes `progressRowId` as its id; an already-listed path keeps its id. |
+| `project_progress` | Full module state (checklist/health/verification/history) per project, keyed by `progressRowId`. Schema 5 added `completed_json` (the completion ledger, `{module: {item: epoch ms}}`) and `folded_json` (legacy non-canonical row ids already folded in) — additive, defaults `'{}'`/`'[]'`. Owned by `src/lib/project-progress-db.ts`. |
 | `session_log` | Audit trail linking CLI sessions to modules and projects |
 | `request_log` | Idempotency-key replay detection for import/mutation routes |
 | `session_analytics` | Per-CLI-session prompt/outcome telemetry (analytics dashboard, insights, suggestions, Weekly Digest, Project Wrapped). `completed_at` is stored as ISO UTC; reporting periods are cut from it by one authority (see the note below). |
