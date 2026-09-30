@@ -22,6 +22,7 @@ import type { GateEvidence } from '@/types/observation';
 import { readAbslogFacts, scopeAbslogPerTest, ZERO_MATCH_DETAIL } from '@/lib/ue-automation/abslog';
 import { annotateZeroMatchDetail } from '@/lib/ue-test-scaffold/generate';
 import type { GateVerdict } from './types';
+import { buildBatchAutomationArgs } from './batchAutomationArgs';
 
 /** The watchdog-protected spawn seam (`spawnAndWait` in the executor); injectable for tests. */
 export type SpawnFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ timedOut: boolean }>;
@@ -52,31 +53,8 @@ export function parseAbslogVerdict(log: string): { status: 'pass' | 'fail' | 'un
   return { status: 'fail', detail: 'no success marker in abslog' };
 }
 
-/**
- * Args for `UnrealEditor-Cmd` to run MANY automation tests in ONE headless boot:
- * `Automation RunTests A+B+C;Quit`, with `-ReportOutputPath=<dir>` so a machine-readable
- * per-test report (`index.json`) is written, plus the same `-abslog` fallback the single
- * path uses. Pure (tested).
- */
-export function buildBatchAutomationArgs(
-  testNames: readonly string[],
-  uproject: string,
-  abslog: string,
-  reportDir: string,
-): string[] {
-  const filter = testNames.join('+');
-  return [
-    uproject,
-    `-ExecCmds=Automation RunTests ${filter};Quit`,
-    '-unattended',
-    '-nopause',
-    '-nosplash',
-    '-nullrhi',
-    '-log',
-    `-abslog=${abslog}`,
-    `-ReportOutputPath=${reportDir}`,
-  ];
-}
+/** The one-boot arg builder lives in the dependency-free `./batchAutomationArgs` (client-safe); re-exported unchanged. */
+export { buildBatchAutomationArgs };
 
 interface ReportEntry {
   fullTestPath?: string;
@@ -216,8 +194,8 @@ export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map
   return out;
 }
 
-/** Read + parse the automation report `index.json`; null on miss/unparseable. */
-async function readReport(reportDir: string): Promise<unknown | null> {
+/** Read + parse the automation report `index.json`; null on miss/unparseable. Also read by the AI sandbox's `record-run-results`. */
+export async function readReport(reportDir: string): Promise<unknown | null> {
   const raw = await readFile(join(reportDir, 'index.json'), 'utf-8').catch(() => '');
   if (!raw) return null;
   try {

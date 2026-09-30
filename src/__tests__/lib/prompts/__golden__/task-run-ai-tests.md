@@ -42,21 +42,21 @@ If your solution depends on one of these, declare it in Wiring Requirements and 
 
 ## Task: Run AI Behavior Tests
 
-Run the automation tests for suite "Skeleton Aggro Suite" targeting class **AARPGEnemyAIController**.
+Run the automation tests for suite "Skeleton Aggro Suite" targeting class **AARPGEnemyAIController** (run `r-golden01`).
 
 ### Scenarios in this suite
-- scenarioId 1: Sees player at 50m
+- scenarioId 1: Sees player at 50m — test `AI.BehaviorTests.AARPGEnemyAIController.S1_Sees_player_at_50m`
 
 ### Steps:
-1. Build the project in Test configuration (or Editor if Test is not configured)
-2. Run the automation tests with:
+1. Build the project with the build command above (fix and rebuild on a compile error)
+2. Run ALL of this suite's tests in ONE headless boot with exactly this command:
    ```
-   UnrealEditor-Cmd.exe <ProjectPath> -ExecCmds="Automation RunTests AI.BehaviorTests.AARPGEnemyAIController" -Unattended -NoPause -NullRHI -Log
+   "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" C:\proj\PoF\PoF.uproject "-ExecCmds=Automation RunTests AI.BehaviorTests.AARPGEnemyAIController.S1_;Quit" -unattended -nopause -nosplash -nullrhi -log -abslog=C:/proj/PoF/Saved/Automation/PoF-AITests/r-golden01/run.log -ReportOutputPath=C:/proj/PoF/Saved/Automation/PoF-AITests/r-golden01
    ```
-3. Parse the test output log for pass/fail results
-4. Submit a result for EVERY scenarioId listed above via the callback block below — status "passed" or "failed" (with the failure reason in "output"), or "error" if the test could not run.
+3. UE writes its automation report to `C:/proj/PoF/Saved/Automation/PoF-AITests/r-golden01/index.json`. The app reads that report and grades every scenario from it — do NOT create, edit, move or delete anything under `C:/proj/PoF/Saved/Automation/PoF-AITests/r-golden01`.
+4. Submit a note for EVERY scenarioId listed above via the callback block below — your read of the result ("passed" / "failed" / "error") and a short reason in "output". It is recorded as a note next to the report's verdict; it cannot change the verdict.
 
-If the test file doesn't exist yet, say so, suggest generating tests first, and submit every scenario as "error" with output "test file missing".
+If the test file doesn't exist yet, say so and suggest generating tests first (the app will grade those scenarios as missing from the report).
 Do NOT use TodoWrite.
 
 ## Submission
@@ -68,7 +68,7 @@ After completing your work, submit the results by outputting a JSON block wrappe
 @@CALLBACK:cb-TEST
 {
   "results": [
-    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<pass summary or failure reason>" }
+    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<your read of the result - kept as a note>" }
   ]
 }
 @@END_CALLBACK
@@ -76,6 +76,9 @@ After completing your work, submit the results by outputting a JSON block wrappe
 
 The following fields will be added automatically — do NOT include them:
 - `action`: `"record-run-results"`
+- `runId`: `"r-golden01"`
+- `reportDir`: `"C:/proj/PoF/Saved/Automation/PoF-AITests/r-golden01"`
+- `scenarioIds`: `[1]`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

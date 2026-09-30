@@ -195,7 +195,7 @@ const TASK_CASES: Record<CLITaskType, () => CLITask> = {
       ORIGIN,
       'GAS Effects',
     ),
-  'run-ai-tests': () => TaskFactory.runAITests('ai-behavior', SUITE, ORIGIN, 'AI Tests'),
+  'run-ai-tests': () => TaskFactory.runAITests('ai-behavior', SUITE, ORIGIN, 'AI Tests', 'r-golden01'),
   // Phase 1 of the standalone-builder migration. The same fixture the STANDALONE
   // builder golden uses, so `task-material-configurator` and
   // `builder-material-configurator` must stay byte-identical — the pin that says

@@ -49,6 +49,7 @@ Perception + chase behaviour for the crypt skeleton.
 
 ### Scenarios:
   1. "Sees player at 50m" — Player walks into the sight cone at 50 metres.
+    Test path: `AI.BehaviorTests.AARPGEnemyAIController.S1_Sees_player_at_50m`
     Stimuli:
     - [perception_sight] Player enters sight at 50m: Spawn the player inside the sight cone at 5000 units.
     Expected:
@@ -63,7 +64,7 @@ Perception + chase behaviour for the crypt skeleton.
    - For gameplay tags: add/remove tags from the AI controller's tag container
 3. After applying stimuli, tick the behavior tree and assert the expected task/node is active
 4. Use `TestEqual`, `TestTrue`, `TestNotNull` for assertions
-5. Organize tests in the `"AI.BehaviorTests.AARPGEnemyAIController"` category
+5. Register each scenario's test under EXACTLY the "Test path" listed with it (the pretty name passed to the automation macro) — the app runs and grades each scenario by the `S<id>_` prefix of that path, so a renamed or regrouped test is reported as missing
 6. Include setup/teardown that creates a minimal test world with AI controller + pawn
 
 Output a single .cpp file ready to be placed in `Source/<Module>/Tests/`.

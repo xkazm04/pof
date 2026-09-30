@@ -27,6 +27,7 @@ import { trackLabel, trackHint } from '@/lib/pipeline/tracks';
 import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
+import { aiTestReportDir } from '@/lib/ai-testing/test-identity';
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
 import { buildSyncCheckPrompt } from '@/lib/prompts/level-design';
 import { buildMaterialConfiguratorPrompt } from '@/lib/prompts/material-configurator';
@@ -897,14 +898,22 @@ const generateGasEffects: TaskPromptHandler = (task, ctx, { knownAssetDomains, t
 
 const runAITests: TaskPromptHandler = (task, ctx) => {
   const rt = task as RunAITestsTask;
-  const base = buildRunTestsPrompt(rt.suite, ctx);
+  const reportDir = aiTestReportDir(ctx.projectPath, rt.runId);
+  const base = buildRunTestsPrompt(rt.suite, ctx, { runId: rt.runId, reportDir });
+  // App-controlled: the server grades exactly these scenarios from UE's report in
+  // exactly this dir — static fields win the merge, so the model cannot redirect it.
   const cbId = registerCallback({
     url: `${rt.appOrigin}/api/ai-testing`,
     method: 'POST',
-    staticFields: { action: 'record-run-results' },
+    staticFields: {
+      action: 'record-run-results',
+      runId: rt.runId,
+      reportDir,
+      scenarioIds: rt.suite.scenarios.map((s) => s.id),
+    },
     schemaHint:
       '  "results": [\n' +
-      '    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<pass summary or failure reason>" }\n' +
+      '    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<your read of the result - kept as a note>" }\n' +
       '  ]',
   });
   return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;

@@ -17,6 +17,8 @@ import {
   buildSingleScenarioTestPrompt,
 } from '@/lib/prompts/ai-testing';
 import { TaskFactory } from '@/lib/cli-task';
+import { tryApiFetch } from '@/lib/api-utils';
+import { aiTestReportDir, newAiTestRunId } from '@/lib/ai-testing/test-identity';
 import type { TestScenario } from '@/types/ai-testing';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SYSTEMS_ACCENT } from './constants';
@@ -69,9 +71,9 @@ export function AIBehaviorView() {
 
   // ── Testing-specific CLI sessions ──
 
-  // Scenario ids set to 'running' by the last Run Tests dispatch — used to
-  // reset them to 'error' if the CLI run dies before submitting results.
-  const runningIdsRef = useRef<number[]>([]);
+  // The last Run Tests dispatch (ids set to 'running' + where UE writes its
+  // report). Closed on completion so no scenario is ever left 'running'.
+  const runRef = useRef<{ runId: string; reportDir: string; scenarioIds: number[] } | null>(null);
 
   const testGenCli = useModuleCLI({
     moduleId: 'ai-behavior',
@@ -83,25 +85,47 @@ export function AIBehaviorView() {
     onComplete: () => retry(),
   });
 
+  /**
+   * No record-run-results callback landed: POST it ourselves with no claims,
+   * so the server grades every dispatched scenario from UE's report
+   * (passed / failed / error) and none is left 'running'. Only if the server
+   * cannot grade at all does the run fall back to one bulk 'error' reset.
+   */
+  const closeRunFromReport = async (
+    run: { runId: string; reportDir: string; scenarioIds: number[] },
+    success: boolean,
+  ): Promise<void> => {
+    const res = await tryApiFetch<{ updated: number[] }>('/api/ai-testing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'record-run-results', ...run, results: [] }),
+    });
+    if (res.ok) {
+      retry();
+      return;
+    }
+    // One PUT for the whole reset; bulkUpdateScenarioStatus already refetches.
+    await bulkUpdateScenarioStatus(run.scenarioIds, 'error', {
+      lastRunOutput: `${success ? 'CLI run reported no results' : 'CLI run failed before reporting results'} and the run could not be graded: ${res.error}`,
+      lastRunAt: new Date().toISOString(),
+    });
+  };
+
   const testRunCli = useModuleCLI({
     moduleId: 'ai-behavior',
     sessionKey: 'ai-test-run',
     label: 'AI Test Run',
     accentColor: STATUS_SUCCESS,
-    onComplete: (success) => {
-      const ids = runningIdsRef.current;
-      runningIdsRef.current = [];
-      if (!success && ids.length > 0) {
-        // One PUT for the whole reset; bulkUpdateScenarioStatus already
-        // refetches once afterwards, so no separate retry() needed here.
-        bulkUpdateScenarioStatus(ids, 'error', {
-          lastRunOutput: 'CLI run failed before reporting results',
-          lastRunAt: new Date().toISOString(),
-        });
-      } else {
-        // Pick up the statuses the @@CALLBACK wrote during the run.
+    onComplete: (success, callbackStatus) => {
+      const run = runRef.current;
+      runRef.current = null;
+      if (!run || run.scenarioIds.length === 0 || callbackStatus === 'confirmed') {
+        // The @@CALLBACK landed: the server already graded every scenario of
+        // the run from UE's report — just pick the statuses up.
         retry();
+        return;
       }
+      void closeRunFromReport(run, success);
     },
   });
 
@@ -206,10 +230,12 @@ export function AIBehaviorView() {
   const handleRunTests = useCallback(async () => {
     if (!activeSuite) return;
     // The existing 'running' status pill becomes real: mark every scenario
-    // running now; the @@CALLBACK writes the final per-scenario results.
+    // running now; the server grades each one from UE's report when the run
+    // reports back (the @@CALLBACK, or closeRunFromReport if it never lands).
     // One bulk PUT + one refetch for the whole transition (was N PUTs + N refetches).
     const ids = activeSuite.scenarios.map((s) => s.id);
-    runningIdsRef.current = ids;
+    const runId = newAiTestRunId();
+    runRef.current = { runId, reportDir: aiTestReportDir(projectPath, runId), scenarioIds: ids };
     setActionError(null);
     // Await the 'running' PUT + its trailing refetch BEFORE kicking off the CLI
     // run. Otherwise this fire-and-forget refetch can resolve after the CLI's
@@ -225,9 +251,9 @@ export function AIBehaviorView() {
       });
     }
     testRunCli.execute(
-      TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run')
+      TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run', runId)
     );
-  }, [activeSuite, testRunCli, bulkUpdateScenarioStatus, retry]);
+  }, [activeSuite, projectPath, testRunCli, bulkUpdateScenarioStatus, retry]);
 
   const isAnyRunning = testGenCli.isRunning || testRunCli.isRunning;
 

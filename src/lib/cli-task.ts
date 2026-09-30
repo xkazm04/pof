@@ -465,15 +465,17 @@ export interface GenerateGasEffectsTask extends CLITask {
 }
 
 /**
- * Run-AI-tests task — builds + runs the suite's UE automation tests, then
- * writes per-scenario pass/fail/error results back to /api/ai-testing via
- * @@CALLBACK so scenario statuses, the pass-rate ring, and Last Run Output
- * reflect real runs.
+ * Run-AI-tests task — builds + runs the suite's UE automation tests in one boot
+ * that writes UE's report to `aiTestReportDir(projectPath, runId)`; the @@CALLBACK
+ * (staticFields runId/reportDir/scenarioIds) makes /api/ai-testing grade every
+ * scenario from that report — the CLI's own status is kept only as a note.
  */
 export interface RunAITestsTask extends CLITask {
   type: 'run-ai-tests';
   suite: TestSuite;
   appOrigin: string;
+  /** App-chosen run id (`newAiTestRunId()`): names the report dir UE writes and the app grades from. */
+  runId: string;
 }
 
 /**
@@ -957,10 +959,10 @@ export const TaskFactory = {
     };
   },
 
-  /** Create a run-ai-tests task — runs the suite's automation tests and writes
-   *  per-scenario results back to /api/ai-testing via callback. */
-  runAITests(moduleId: SubModuleId, suite: TestSuite, appOrigin: string, label: string): RunAITestsTask {
-    return { type: 'run-ai-tests', moduleId, prompt: '', label, suite, appOrigin };
+  /** Create a run-ai-tests task — runs the suite's automation tests into the run's
+   *  report dir; the callback makes /api/ai-testing grade every scenario from UE's report. */
+  runAITests(moduleId: SubModuleId, suite: TestSuite, appOrigin: string, label: string, runId: string): RunAITestsTask {
+    return { type: 'run-ai-tests', moduleId, prompt: '', label, suite, appOrigin, runId };
   },
 
   /** Create a detect-stimuli task — parses a scenario description into
