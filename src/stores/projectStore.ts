@@ -45,8 +45,10 @@ interface ProjectState {
   /** Close the open project (New Project / Delete). Runs the flip teardown
    *  (services/projectTransition) before clearing the identity. */
   resetProject: (trigger?: 'new' | 'delete') => void;
-  /** Scan the project directory for existing classes, plugins, and dependencies */
-  scanProject: () => Promise<void>;
+  /** Scan the project directory for existing classes, plugins, and dependencies.
+   *  Returns early while the last scan is younger than SCAN_CACHE_MS unless
+   *  `force` is set (a post-run re-check that must see files the run just wrote). */
+  scanProject: (opts?: { force?: boolean }) => Promise<void>;
   /** Save current project to recent_projects in SQLite */
   saveToRecent: () => Promise<void>;
   /** Load recent projects list from SQLite */
@@ -113,12 +115,12 @@ export const useProjectStore = create<ProjectState>()(
         });
       },
 
-      scanProject: async () => {
+      scanProject: async (opts) => {
         const { projectPath, projectName, isScanning, dynamicContext } = get();
         if (!projectPath || !projectName || isScanning) return;
 
-        // Return cached if still fresh
-        if (dynamicContext?.scannedAt) {
+        // Return cached if still fresh (a forced re-check skips the cache)
+        if (!opts?.force && dynamicContext?.scannedAt) {
           const age = Date.now() - new Date(dynamicContext.scannedAt).getTime();
           if (age < SCAN_CACHE_MS) return;
         }

@@ -13,6 +13,9 @@ import { sectionToggleModel, type SectionToggleEntry } from '@/components/module
 import { FeatureCard } from '@/components/shared/FeatureCard';
 import { FeatureCardGrid } from '@/components/shared/FeatureCardGrid';
 import { LayoutGrid } from 'lucide-react';
+import { hasInitPrompts } from '@/components/modules/core-engine/unique-tabs/feature-init-prompts';
+import { useSectionScaffold } from '@/components/modules/core-engine/unique-tabs/useSectionScaffold';
+import { ScaffoldChip, ScaffoldPanel } from '@/components/modules/core-engine/unique-tabs/ScaffoldPanel';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -25,6 +28,17 @@ export default function FeatureMapTab({ moduleId, renderMetric }: { moduleId: Su
   const model = useMemo(() => sectionToggleModel(moduleId, vis), [moduleId, vis]);
   const entryById = useMemo(() => new Map(model.map((e) => [e.id as string, e])), [model]);
   const allIds = useMemo(() => model.filter((e) => e.toggleable).map((e) => e.id as string), [model]);
+  // Project state per section: graded from the scanned UE headers; runs only on a click.
+  const scaffold = useSectionScaffold(moduleId);
+  const showScaffold = hasInitPrompts(moduleId);
+  const cardBody = (id: string): ReactNode => {
+    const view = showScaffold ? scaffold.stateOf(id) : null;
+    const chip = view && view.state !== 'no-prompt'
+      ? <ScaffoldChip view={view} running={scaffold.running === id} />
+      : null;
+    const metric = renderMetric?.(id);
+    return chip || metric ? <>{chip}{metric}</> : undefined;
+  };
 
   const [activeColumn, setActiveColumn] = useState(() => groups[0]?.tabId ?? '');
 
@@ -111,7 +125,7 @@ export default function FeatureMapTab({ moduleId, renderMetric }: { moduleId: Su
               if (entry && !entry.toggleable) {
                 return (
                   <SectionInfoCard key={sec.id} entry={entry} parentLabel={entry.parentId ? entryById.get(entry.parentId)?.label : undefined}>
-                    {renderMetric?.(sec.id)}
+                    {cardBody(sec.id)}
                   </SectionInfoCard>
                 );
               }
@@ -124,11 +138,16 @@ export default function FeatureMapTab({ moduleId, renderMetric }: { moduleId: Su
                   accent={ACCENT}
                   summary={sec.summary}
                 >
-                  {renderMetric?.(sec.id)}
+                  {cardBody(sec.id)}
                 </FeatureCard>
               );
             })}
           </FeatureCardGrid>
+          {showScaffold && (
+            <div className="mt-3 pt-3 border-t border-border/40">
+              <ScaffoldPanel scaffold={scaffold} sections={activeGroup.sections} />
+            </div>
+          )}
         </BlueprintPanel>
       )}
     </div>
