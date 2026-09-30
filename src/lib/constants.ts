@@ -145,6 +145,12 @@ export const UI_TIMEOUTS = {
   pofReconnectMax: 30_000,
   /** Poll interval for manifest checksum change detection. */
   pofManifestPoll: 30_000,
+  /** Interval the Snapshots tab reads back GET /pof/snapshot/diff after a capture ack
+   *  (suspend-gated: a hidden pane stops reading). */
+  pofSnapshotPoll: 1_500,
+  /** Budget for one snapshot readback: past it the capture is reported as timed out,
+   *  naming the presets no newer report covered. Captures load maps / PIE, so minutes. */
+  pofSnapshotReadbackTimeout: 120_000,
   /** Timeout for individual PoF Bridge HTTP requests. */
   pofHttpTimeout: 15_000,
   /** Idle timeout before voice connection auto-disconnects (2 minutes). */

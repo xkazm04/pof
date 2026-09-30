@@ -33,6 +33,7 @@ export function TestHarnessPanel() {
     addScenario, removeScenario, updateScenario,
     openJsonEditor, applyJsonDraft,
     runSuite, abortRun,
+    snapshotPresets, setSnapshotPresets, captureSnapshots, acceptBaselines,
   } = useTestHarnessPanel();
 
   const tabs: { id: HarnessTab; label: string; count?: number }[] = [
@@ -129,8 +130,14 @@ export function TestHarnessPanel() {
           {/* ── Snapshots Tab ────────────────────────────────────────── */}
           {activeTab === 'snapshots' && (
             <SnapshotsTab
+              key={activeSuiteId ?? 'no-suite'}
               diffReport={diffReport}
               isCapturing={isCapturing}
+              presets={snapshotPresets}
+              suiteName={activeSuite?.name ?? null}
+              onPresetsChange={setSnapshotPresets}
+              onCapture={captureSnapshots}
+              onAccept={acceptBaselines}
               onRefresh={refreshDiff}
             />
           )}

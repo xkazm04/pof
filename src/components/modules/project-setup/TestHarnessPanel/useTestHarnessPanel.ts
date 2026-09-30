@@ -8,9 +8,12 @@ import type { TestSuite, SuiteRunResult, HarnessTab } from './types';
 import { TEMPLATE_SCENARIO } from './constants';
 import { generateId } from './helpers';
 
+/** Per-pixel diff threshold (%) every harness capture compares at. */
+const SNAPSHOT_DIFF_THRESHOLD = 0.5;
+
 export function useTestHarnessPanel() {
   const { runTest, results: testResults, isRunning: isTestRunning, error: testError, clearResults } = useTestRunner();
-  const { capture, diffReport, isCapturing, error: snapError, refreshDiff } = useSnapshots();
+  const { capture, acceptBaselines, diffReport, isCapturing, error: snapError, refreshDiff } = useSnapshots();
 
   // ── Suites ──
   const [suites, setSuites] = useState<TestSuite[]>([]);
@@ -24,6 +27,9 @@ export function useTestHarnessPanel() {
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
   const [jsonDraft, setJsonDraft] = useState('');
   const [isSuiteRunning, setIsSuiteRunning] = useState(false);
+
+  /** Snapshot presets typed while no suite is active (a suite's own list lives on the suite). */
+  const [loosePresets, setLoosePresets] = useState<string[]>([]);
 
   const runAbortRef = useRef(false);
 
@@ -71,6 +77,19 @@ export function useTestHarnessPanel() {
   const updateSuiteField = useCallback((id: string, field: keyof TestSuite, value: unknown) => {
     setSuites((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   }, []);
+
+  // ── Snapshot presets + capture (the Snapshots tab) ──
+
+  const snapshotPresets = activeSuite?.snapshotPresets ?? loosePresets;
+
+  const setSnapshotPresets = useCallback((ids: string[]) => {
+    if (activeSuiteId) updateSuiteField(activeSuiteId, 'snapshotPresets', ids);
+    else setLoosePresets(ids);
+  }, [activeSuiteId, updateSuiteField]);
+
+  const captureSnapshots = useCallback((presetIds: string[]) => capture({
+    presetIds, compareToBaseline: true, diffThreshold: SNAPSHOT_DIFF_THRESHOLD,
+  }), [capture]);
 
   // ── Scenario CRUD ──
 
@@ -151,11 +170,12 @@ export function useTestHarnessPanel() {
 
     // Run snapshot capture if presets configured
     let snapshotReport: PofSnapshotDiffReport | null = null;
-    if (activeSuite.snapshotPresets.length > 0 && !runAbortRef.current) {
+    const snapshotsRan = activeSuite.snapshotPresets.length > 0 && !runAbortRef.current;
+    if (snapshotsRan) {
       const captureReq: PofSnapshotCaptureRequest = {
         presetIds: activeSuite.snapshotPresets,
         compareToBaseline: true,
-        diffThreshold: 0.5,
+        diffThreshold: SNAPSHOT_DIFF_THRESHOLD,
       };
       snapshotReport = await capture(captureReq);
     }
@@ -163,7 +183,8 @@ export function useTestHarnessPanel() {
     const finishedAt = Date.now();
     const allPassed = runResults.every((r) => r.status === 'passed');
     const anyFailed = runResults.some((r) => r.status === 'failed' || r.status === 'error');
-    const snapshotPassed = !snapshotReport || snapshotReport.overallStatus === 'passed';
+    // A suite with presets passes only on a read-back report that passed; a failed capture is not a pass.
+    const snapshotPassed = !snapshotsRan || snapshotReport?.overallStatus === 'passed';
 
     const suiteResult: SuiteRunResult = {
       suiteId: activeSuite.id,
@@ -207,5 +228,7 @@ export function useTestHarnessPanel() {
     openJsonEditor, applyJsonDraft,
     // run
     runSuite, abortRun,
+    // snapshots
+    snapshotPresets, setSnapshotPresets, captureSnapshots, acceptBaselines,
   };
 }
