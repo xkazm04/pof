@@ -18,6 +18,7 @@ rollup strip.
 | `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
 | `src/components/layout-lab/labLocation.ts` (+ `hooks/useLabLocation.ts`) | The lab's ONE navigate door (pure): `LabLocation` (catalog · entity · step · view), `reduceLocation(loc, action)` → `{ loc, patch }` for `catalog`/`entity`/`step`/`view`/`open`, `resolveLocation` (phantom-entity reconcile + step clamp as a render derivation), `adoptPrefs` (the one-time restore). `useLabLocation()` holds it, adopts once, persists each action's patch, and consumes `pendingNavigation` |
+| `src/lib/shell/labRoute.ts` (+ `layout-lab/hooks/useLabRouteSync.ts`) | The lab's address codec (pure, the lab half of `shellRoute.ts`): `parseLabRoute(search)` → `{ catalogId, entityId?, step?, view? }` (catalog validated against `CATALOG_SECTIONS` — an unknown one refuses the whole address; an unknown view is dropped), `labHref(route)` (`/?legacy=0&c=&e=&s=<step LABEL>&v=`), `labUrl(href, route)` (keeps the pathname, so `/layout` stays `/layout`). `useLabRouteSync(location, apply, universe?)` keeps the location and the address in step; `useLabAddress(loc, detail, nav)` is LayoutLab's binding |
 | `src/components/layout-lab/Baseline/index.tsx` (+ `Baseline/useBaseline.ts`, `constants.ts`, `types.ts`) | 3-column composition screen: tree / pipeline timeline / work canvas. `index.tsx` is layout only; every produce→persist→render hook lives in `useBaseline.ts`. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
 | `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. **Controlled** catalog dropdown (`catalogId` + `onSelectCatalog` write-through — no private `selected` fork). Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`). **Catalog-wide freshness (2026-08-18):** a `Refresh catalog` action composes the existing `refreshArtifacts(catalogId)` with the per-entity `refreshEntity` — one fetch path, one merge rule — and reconciles ONLY entities holding local state (reconciling every server-only entity would copy a whole catalog's produce bodies into the persisted localStorage store: ~0.5 MB for `items` against a ~5 MB quota). It reports what it re-read — adopted / removed / kept, naming local-only steps with `SERVER_MISSING_REASON` — rather than claiming "nothing changed", which it is in no position to assert. **Changed-since digest (2026-08-18):** above the legend, `CatalogChangesDigest` lists steps that moved since your last visit to this board, sourced only from stored rows + archived versions (see `GET /api/pipeline-artifacts/changes`); it states its own blind spots — a truncated history reads "at least N", a first visit reads "no baseline yet", a failed read reads "unknown, not nothing" |
 | `src/components/layout-lab/MatrixBatchDrain.tsx` | Matrix header action — "drain all deferred gates in this catalog" (shown only when ≥1 entity is deferred). **Executor truth (2026-09-04):** the lab sends no `executor`/`allowSpawn`, so `buildExecutors` always builds the BRIDGE executor — the drain runs THROUGH a running UE editor and never boots one. The button therefore discloses that requirement BEFORE the click from `usePofBridgeStore.connectionStatus` (the same read `LabBridgeStrip` uses) without ever disabling itself, the progress/cancel copy names the request rather than a boot, and a run where nothing executed (`ranNothing`: `ran===0` with skipped gates, and no lock/error) renders a first-class "0 gates ran — no UE executor was available" line instead of hiding the cause in a hover `title`. Plus a flips summary (passed/failed/still-deferred/locked) with per-step fail reasons, and an honest Cancel (skips the retry only — the request already sent can't be recalled). `ranNothing` lives in `entityDrainOutcome.ts` and the captured-frame thumbnails in `DrainFrameLinks.tsx`, both shared with the per-entity coach drain |
@@ -155,6 +156,32 @@ Renders a `100vh` flex column:
   carries an optional `stepIndex`; `useLabLocation` dispatches it as `open` with `stepIndex ?? 0`
   (consumed once, persisted like any other move, and it lands on the Catalogs view — the toast
   is global, so its "Open" may be pressed from the Matrix or Canon).
+- **Addresses + Back (lab)**: every lab location has an address,
+  `/?legacy=0&c=<catalog>&e=<entity>&s=<step LABEL>&v=<view>` (`labRoute.ts`). The step travels by
+  LABEL — an index means a different step per canon profile — and is resolved against the target
+  entity's own list on arrival (`entityStepList`; no entity named → `resolveStepJump`). `legacy=0`
+  is always named, so a lab link opens the lab whatever shell preference is stored. The prefs blob
+  stays the reload mechanism; the address is an additional door into the SAME location, and
+  `useLabAddress` applies it only through `nav` (`open`, then `view` when the address names
+  Matrix/Canon) — never a parallel setter. History classes (`useLabRouteSync`):
+  - **arrival**: a parsed address outranks the persisted location and is applied; the entry is
+    REPLACED once the location lands (arriving never pushes). No address, or an unparseable one,
+    leaves the persisted location and replaces the entry to name it (the defined fallback);
+  - **push**: a catalog, entity, `open` or view move adds ONE entry (so Back after a matrix-cell
+    jump returns to the Matrix instead of leaving the app);
+  - **replace**: a rail step move, the step clamp, and an entity reconcile (the resolved entity
+    changed in the same commit as the entity list — persisted entities landing, an entity removed)
+    rewrite the current entry, so the URL bar is always a link to what is on screen;
+  - **popstate** re-applies the entry's location through `nav` and pushes nothing, so Back/Forward
+    cannot grow history;
+  - the lab's params leave with the lab: on unmount (a shell switch) `c/e/s/v` are stripped from
+    the entry left behind, deferred a microtask and counted per mounted shell so a StrictMode
+    remount keeps them.
+  The sync writes `labUrl(window.location.href, …)`, which keeps the pathname (`/` or `/layout`)
+  and every param the lab does not own. First consumer: the `/status` evidence ledger's per-row
+  **Lab ↗** link (`EvidenceEntityLedger`, `labHref({ catalogId, entityId, step, view: 'catalogs' })`)
+  opens the entity AT the step being read — before, the only way back was the bare `/layout` link
+  to wherever the lab was last left.
 
 On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's project canon rules into
 `canonStore` (replaces the seed if the server responds).
@@ -162,24 +189,34 @@ On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's proj
 Default `catalogId` is `'items'`; `useLabCatalogData()` and `useLabDetail(catalogId)` supply the
 `LabGroup[]` and `LabDetail | null` props.
 
-#### Runner truth chip — `RunnerChip` (`src/components/layout-lab/RunnerChip.tsx`)
+#### Activity chip — `ActivityChip` (`src/components/layout-lab/ActivityChip.tsx` + `hooks/useLabActivity.ts`, `activityModel.ts`)
+
+(Corrected 2026-09-30: this section used to describe `RunnerChip.tsx`, which no longer exists.
+`ActivityChip` replaced the unrelated `RunnerChip` (drain lease) + `LabJobsChip` (one-shot) pair
+with ONE header answer to "is anything running right now?".)
+
+It is a unified READ, not a merged runtime: `useLabActivity()` subscribes to the stores each engine
+already publishes and `summarizeActivity` (pure, `activityModel.ts`) renders them as lanes in one
+state vocabulary — **drain** (the UE drain lease), **one-shot** (`oneShotJobStore`) and **forge**
+(asset-forge background polls). Every lane carries a `blindSpot` naming what it cannot see.
 
 The L3/L4 drain runner talks to a single, non-reentrant UE editor guarded by a **lease**. The
 lease registry lives in `src/lib/test-gate-runner/drain-lease.ts` (`acquireLeases` — all-or-nothing,
 `releaseLeases`, `getLeaseState`; keyed `catalog|entity`, `*|*` = global). `POST /api/pipeline-artifacts/drain`
 acquires it (409 on overlap) and `GET /api/pipeline-artifacts/drain/status` READS it (`{ held, scope,
-since, scopes }`, envelope via `apiSuccess`) — so a held lease is visible instead of only surfacing
-as a 409. The header chip shows three states:
+since, scopes }`, envelope via `apiSuccess`). The drain lane's states (`drainLane`):
 
-- **`draining <scope>`** — THIS session is draining. Read from `labRunnerStore.localDrain`, which the
-  coach drain (`useBaseline.runDrain`) and the batch drain (`useBatchDrain`) publish while running.
-  Authoritative for our own runner, so the chip does **not** poll while `localDrain` is set.
-- **`lease held · <scope>`** — the status API reports a lease we didn't take → another session holds
-  the editor (a batch drain here would 409). `MatrixBatchDrain`'s `locked` outcome points at this chip.
-- **`idle`** — no local drain and the API reports no lease.
+- **running here** (`draining <scope> (via the UE bridge)`) — THIS session is draining, read from
+  `labRunnerStore.localDrain` (published by `useBaseline.runDrain` and `useBatchDrain`). Authoritative,
+  so the lease is **not** polled while it is set.
+- **running elsewhere** — the status API reports a lease this page did not take (a batch drain here
+  would 409).
+- **unknown** — before the first lease poll answers, and after one fails (`leaseProbe`
+  `unpolled` / `failed`). Never read as idle: a false idle invites a second editor boot.
+- **idle** — no local drain and the API reports the lease free.
 
-Polling is suspend-safe (`useSuspendableEffect`) on `UI_TIMEOUTS.runnerLeasePoll` (5 s) and does zero
-work while draining locally or hidden.
+The lease poll is suspend-safe (`useSuspendableEffect`) on `UI_TIMEOUTS.runnerLeasePoll` (5 s) and does
+zero work while draining locally or hidden. The chip also feeds the tab title (`useDynamicTitle`).
 
 ### 4. Category→Catalog→Entity tree — `CatalogTree` (`src/components/layout-lab/CatalogTree.tsx`)
 
