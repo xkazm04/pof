@@ -184,6 +184,25 @@ longer churns the `pof-navigate-tab` listener. The 19 files that render the shel
 are pinned by `__tests__/components/modules/ReviewableModuleViewConsumers.test.tsx`
 (census + render/tab-count guard).
 
+**A checklist diagram is a projection of the registry.** A module view that draws
+its checklist as a diagram (Audio `AudioPipelineDiagram`, Materials
+`MaterialLayerGraph`, Models `AssetPipelineDiagram`) declares only its SHAPE — a
+spec array of `{ id, prerequisites, …presentation }` naming REAL checklist ids —
+and goes through `src/lib/checklist-diagram.ts`: `resolveDiagramNodes(moduleId,
+specs)` takes label / description / prompt from `getModuleChecklist` (an id the
+registry lacks becomes a loud, undispatchable `missing` drift node, never a dropped
+one) and `deriveDiagramNodeStates(nodes, progress, activeItemId)` returns
+completed / locked / isActive / unmetDeps (labels) + `completedCount` +
+`nextBuildable`. Runs go through the tab's `useChecklistCLI` (`TaskFactory.checklist`
+on the node id) with its real `isRunning`, so a confirmed callback ticks the same
+item the Roadmap shows. Diagrams that kept their own ids (`au-*`, `mt-*`, Models'
+`pipeline-*`) wrote keys `resolveProgressKey` calls `unknown` and
+`/api/checklist/complete` refuses, so their nodes could never complete. A new
+diagram is one spec array (Models: `MODELS_PIPELINE_SPEC`, `mod-1 → mod-4 → mod-5 →
+mod-2 → mod-3 → mod-6`), not a copy of the rule. Guards:
+`__tests__/lib/checklist-diagram.test.ts`,
+`__tests__/components/content/ModelsPipelineTab.test.tsx`.
+
 **Two separate dependency graphs coexist.** `MODULE_PREREQUISITES` is module-to-module (coarse, drives `RoadmapChecklist` and `getRecommendedNextModules`). `MODULE_FEATURE_DEFINITIONS[moduleId][].dependsOn` is feature-to-feature (fine, drives the NBA engine via `buildDependencyMap` / `computeBlockers`). They are maintained independently and can disagree.
 
 **`MODULE_FEATURE_DEFINITIONS` is `PartialModuleMap`.** Many modules — including all content modules except `animations` and `materials` — have feature definitions; some (e.g., `audio`, `physics`) do not. `computeNBA` returns an empty array for modules with no checklist or no feature entries.
