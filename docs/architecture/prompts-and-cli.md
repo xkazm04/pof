@@ -191,8 +191,9 @@ both (with a golden per surface):
   `buildTaskPrompt` composes the routed header for them (pinned, so a refactor that
   sends the raw string is caught). The genuinely raw one was **feature-init**:
   `FeatureInitButton` sent `initPrompt.prompt` through `sendPrompt` with no
-  composition at all, and now dispatches `TaskFactory.quickAction` (prompt text
-  unchanged, full header + domain + knowledge gained).
+  composition at all; its successor, the Feature Map's `useSectionScaffold`,
+  dispatches `TaskFactory.quickAction` (prompt text unchanged, full header +
+  domain + knowledge gained).
 
 **Two composition engines, and the migration off the second one.** Knowledge
 routing closed the *content* gap, but a standalone builder dispatched by a raw
