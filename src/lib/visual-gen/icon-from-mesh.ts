@@ -22,13 +22,13 @@
  *    structurally unreachable, and three such files sit preserved in
  *    `generated/icons/_unaddressable/`. A rendered icon is a first-class member of the
  *    same library, resolved by the same precedence, served on the same url.
- * 2. **It ships its provenance in a sidecar.** Once a render sits in the icon directory
- *    it is indistinguishable from generated art, and "this icon depicts the actual
- *    asset" is exactly the kind of claim this project refuses to make without evidence.
- *    `<base>.render.json` names the mesh and the yaw. It is not an image, so the
- *    library's own allow-list ignores it; `buildIconList` surfaces it as `renderedFrom`
- *    when the caller supplies it, and its ABSENCE is left absent rather than filled in
- *    with a guess about where an older file came from.
+ * 2. **It commits through the icon library's door, with its provenance.** Once a render
+ *    sits in the icon directory it is indistinguishable from generated art, and "this
+ *    icon depicts the actual asset" is exactly the kind of claim this project refuses to
+ *    make without evidence. `commitLibraryIcon` (`icon-library.ts`) records a
+ *    `mesh-render` origin naming the mesh and the yaw in `<name>.prov.json`, BOUND to the
+ *    bytes' size + mtime — so when any other writer later overwrites the file, the claim
+ *    reads `unrecorded` instead of outliving the render it described.
  * 3. **The default hero yaw is 45°, and the default view count is chosen so that yaw
  *    EXISTS.** `pof_mesh_views.py` renders `360 * i / N`, so a 4-view orbit has no 45 and
  *    would silently hand back a flat front elevation. Eight views put the three-quarter
@@ -36,10 +36,11 @@
  *    rig, whose rear yaws come back shadowed (its own header measures the palette swing).
  *    An off-grid request still renders — from the nearest yaw, saying that it did.
  */
-import { copyFile as fsCopyFile, writeFile as fsWriteFile, mkdir } from 'node:fs/promises';
+import { copyFile as fsCopyFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runMeshViews, type MeshViewsResult, type MeshViewsSpec, type RenderedView } from './mesh-views';
 import { iconFileBase } from './generated-icons';
+import { commitLibraryIcon, type CommitLibraryIcon } from './icon-library';
 
 /** The three-quarter angle an item icon is conventionally drawn at. */
 export const DEFAULT_HERO_YAW = 45;
@@ -93,36 +94,6 @@ export function pickHeroView(views: RenderedView[], heroYaw: number): PickedHero
   };
 }
 
-/** The provenance file that sits beside an icon. Pure. */
-export function iconSidecarName(iconName: string): string {
-  return `${iconName.replace(/\.[^.]+$/, '')}.render.json`;
-}
-
-export interface IconProvenance {
-  /** Absolute path of the mesh this icon is a render of. */
-  renderedFrom: string;
-  yawDeg: number;
-  at: number;
-}
-
-/**
- * Read a provenance sidecar. Pure; `null` for anything malformed.
- *
- * A half-readable sidecar yields null rather than a partial record: the whole point of
- * the file is to be able to say "this icon is a render of THAT mesh", and a provenance
- * claim missing its mesh is not a weaker claim, it is no claim.
- */
-export function parseIconSidecar(raw: string): IconProvenance | null {
-  try {
-    const v = JSON.parse(raw) as Partial<IconProvenance>;
-    if (!v || typeof v.renderedFrom !== 'string' || !v.renderedFrom) return null;
-    if (typeof v.yawDeg !== 'number' || !Number.isFinite(v.yawDeg)) return null;
-    return { renderedFrom: v.renderedFrom, yawDeg: v.yawDeg, at: typeof v.at === 'number' ? v.at : 0 };
-  } catch {
-    return null;
-  }
-}
-
 export interface IconFromMeshSpec {
   /** The `.glb` to photograph. */
   meshPath: string;
@@ -164,7 +135,8 @@ export interface IconFromMeshResult {
 export interface IconFromMeshDeps {
   render?: (spec: MeshViewsSpec) => Promise<MeshViewsResult>;
   copyFile?: (from: string, to: string) => Promise<void>;
-  writeFile?: (path: string, body: string) => Promise<void>;
+  /** The icon library's door (default `commitLibraryIcon`); the copy is its `write`. */
+  commit?: CommitLibraryIcon;
   ensureDir?: (dir: string) => Promise<void>;
   now?: () => number;
 }
@@ -172,9 +144,9 @@ export interface IconFromMeshDeps {
 /**
  * Render one frame of a mesh into the icon library.
  *
- * The sidecar is written only AFTER the icon lands: a provenance record beside a file
- * that does not exist is worse than no record, because it is a checkable claim that
- * checks out wrong.
+ * The door writes the provenance only AFTER the icon lands: a record beside a file that
+ * does not exist is worse than no record, because it is a checkable claim that checks
+ * out wrong.
  */
 export async function renderIconFromMesh(
   spec: IconFromMeshSpec,
@@ -182,7 +154,7 @@ export async function renderIconFromMesh(
 ): Promise<IconFromMeshResult> {
   const render = deps.render ?? ((s: MeshViewsSpec) => runMeshViews(s));
   const copyFile = deps.copyFile ?? ((from: string, to: string) => fsCopyFile(from, to));
-  const writeFile = deps.writeFile ?? ((p: string, body: string) => fsWriteFile(p, body, 'utf-8'));
+  const commit = deps.commit ?? ((dir, file, write, origin) => commitLibraryIcon(dir, file, write, origin));
   const ensureDir = deps.ensureDir ?? (async (dir: string) => { await mkdir(dir, { recursive: true }); });
   const now = deps.now ?? (() => Date.now());
 
@@ -219,12 +191,13 @@ export async function renderIconFromMesh(
 
   const iconPath = `${iconDir}/${name}`;
   try {
+    const frame = picked.view;
     await ensureDir(iconDir);
-    await copyFile(picked.view.imagePath, iconPath);
-    await writeFile(
-      `${iconDir}/${iconSidecarName(name)}`,
-      `${JSON.stringify({ renderedFrom: spec.meshPath, yawDeg: picked.view.yawDeg, at: now() }, null, 2)}\n`,
-    );
+    await commit(iconDir, name, (to) => copyFile(frame.imagePath, to), {
+      kind: 'mesh-render',
+      renderedFrom: spec.meshPath,
+      yawDeg: frame.yawDeg,
+    });
   } catch (e) {
     return {
       ok: false,

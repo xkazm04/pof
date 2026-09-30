@@ -6,6 +6,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { GENERATED_IMAGE_DIR, generateTwoDImage } from '@/lib/visual-gen/image-providers';
 import { DEFAULT_SHEET_PX, type ContactSheetSpec } from '@/lib/visual-gen/contact-sheet';
 import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slice';
+import { commitLibraryIcon } from '@/lib/visual-gen/icon-library';
 import { styleClause, styleRequestOf } from '@/lib/visual-gen/style-apply';
 import { getDb } from '@/lib/db';
 
@@ -17,7 +18,8 @@ import { getDb } from '@/lib/db';
  * `kit-coherence.ts` measures that spread. This route asks for all of them in one grid
  * image, cuts it on the DELIVERED dimensions, and files each cell under
  * `iconFileBase(catalog, step, entity)` so the existing icon library resolves it
- * entity-first with no other change.
+ * entity-first with no other change. Each cut goes through the library door
+ * (`commitLibraryIcon`), which records the sheet url + cell index bound to the cut's bytes.
  *
  * Refusals keep their own reason: a cast that does not fill the grid is a 400 that never
  * reaches a provider; a provider failure is a 502; a sheet that generated but could not
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
           };
         },
         image: sharpImageOps,
-        iconDir: icons,
+        commit: (name, write, origin) => commitLibraryIcon(icons, name, write, origin),
       },
     );
 

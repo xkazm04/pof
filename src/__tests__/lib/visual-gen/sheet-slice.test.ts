@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { runContactSheet, type SheetRunDeps, type SheetRunRequest } from '@/lib/visual-gen/sheet-slice';
 import type { ContactSheetSpec } from '@/lib/visual-gen/contact-sheet';
 
@@ -29,7 +32,10 @@ function deps(over: Partial<SheetRunDeps> = {}): SheetRunDeps {
       stats: vi.fn(async () => ({ cellStdev: [20.8, 24.1, 25.8, 31.1], seams: [4.254], interior: 4.98 })),
       cut: vi.fn(async () => {}),
     },
-    iconDir: '/repo/generated/icons',
+    // A fake door: runs the cut as its write, records nothing on disk.
+    commit: vi.fn(async (name: string, write: (path: string) => Promise<void>) => {
+      await write(`/repo/generated/icons/${name}`);
+    }),
     ...over,
   };
 }
@@ -91,5 +97,27 @@ describe('runContactSheet', () => {
     if (r.ok) return;
     expect(r.error).toBe('QWEN_API_KEY is not set here');
     expect(r.refused).toBe(true);
+  });
+
+  it('files every cut through the library door with the sheet it came from and its cell', async () => {
+    const { commitLibraryIcon, readIconLibrary } = await import('@/lib/visual-gen/icon-library');
+    const dir = mkdtempSync(join(tmpdir(), 'pof-sheetcut-')).split(/[\\/]/).join('/');
+    try {
+      const d = deps({
+        image: { ...deps().image, cut: vi.fn(async (_p: string, cell: { index: number }, out: string) => { writeFileSync(out, Buffer.from(`cell-${cell.index}`)); }) },
+        commit: (name, write, origin) => commitLibraryIcon(dir, name, write, origin),
+      });
+      const r = await runContactSheet(req(), d);
+      expect(r.ok).toBe(true);
+      const lib = readIconLibrary(dir) ?? [];
+      IDS.forEach((id, i) => {
+        const hit = lib.find((e) => e.entityId === id.replace(/-/g, '_'));
+        expect(hit?.origin).toEqual({
+          kind: 'contact-sheet', sheetUrl: '/api/visual-gen/image/sheet.png', cellIndex: i, model: 'qwen-image-3.0-pro',
+        });
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
