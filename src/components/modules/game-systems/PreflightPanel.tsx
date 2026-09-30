@@ -6,29 +6,13 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL, MODULE_COLORS } from '@/lib/chart-colors';
 import { StatusChip } from '@/components/ui/StatusChip';
 import type { PreflightCheckResult, PreflightStatus } from '@/lib/packaging/preflight';
+import { mapsKeyOf, type PreflightCheckKind as CheckKind, type PreflightStatusSummary } from '@/lib/packaging/package-flow';
 
-type CheckKind = 'fast' | 'build-verify-editor' | 'build-verify-shipping' | 'asset-validation';
+export type { PreflightStatusSummary };
 
 interface PreflightResponse {
   results: PreflightCheckResult[];
   overall: PreflightStatus;
-}
-
-export interface PreflightStatusSummary {
-  /**
-   * True when no COMPLETED check is in a `fail` state — the cook may proceed.
-   * Deliberately unchanged: an unrun check qualifies the verdict, it never
-   * vetoes the build.
-   */
-  canCook: boolean;
-  /** Worst status across all completed checks, or 'idle' if none have run. */
-  overall: PreflightStatus | 'idle';
-  /** True when every cook-relevant check has produced a result. */
-  fullyCovered: boolean;
-  /** Labels of the cook-relevant checks that have never run. */
-  notRunLabels: string[];
-  /** How much of the cook-relevant gate was actually measured. */
-  coverage: { ran: number; total: number };
 }
 
 interface PreflightPanelProps {
@@ -44,6 +28,12 @@ interface PreflightPanelProps {
   cookMaps?: string[];
   /** Name of the profile `cookMaps` came from, for the panel's own disclosure. */
   cookProfileName?: string;
+  /**
+   * Checks the Package flow asks this panel to run for `cookMaps`; each new
+   * `token` runs its kinds once. A kind already in flight for the same maps is
+   * not dispatched twice.
+   */
+  requestedChecks?: { token: number; kinds: CheckKind[] } | null;
   onStatusChange?: (summary: PreflightStatusSummary) => void;
 }
 
@@ -120,9 +110,14 @@ function summaryWord(overall: PreflightStatus | 'idle', ran: number, total: numb
   return `${base} — ${ran} of ${total} checks run, ${notRun} not run`;
 }
 
-export function PreflightPanel({ projectPath, projectName, ueVersion, cookMaps, cookProfileName, onStatusChange }: PreflightPanelProps) {
+export function PreflightPanel({
+  projectPath, projectName, ueVersion, cookMaps, cookProfileName, requestedChecks, onStatusChange,
+}: PreflightPanelProps) {
   const [results, setResults] = useState<PreflightCheckResult[]>([]);
   const [running, setRunning] = useState<Set<CheckKind>>(new Set());
+  // The maps the held FAST verdict measured - the summary's identity, so the
+  // Package flow can tell a verdict for profile A's maps from one for B's.
+  const [fastMapsKey, setFastMapsKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const onStatusChangeRef = useRef(onStatusChange);
@@ -150,12 +145,18 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, cookMaps, 
     setPrevProjectKey(projectKey);
     setResults([]);
     setRunning(new Set());
+    setFastMapsKey(null);
     setError(null);
   }
 
   // Stable dependency for the maps list — the parent may hand a fresh array
   // each render, which would otherwise re-fire the auto-run effect forever.
-  const cookMapsKey = (cookMaps ?? []).join('|');
+  const cookMapsKey = mapsKeyOf(cookMaps);
+  const cookMapsKeyRef = useRef(cookMapsKey);
+  useEffect(() => { cookMapsKeyRef.current = cookMapsKey; }, [cookMapsKey]);
+  // kind -> `project#mapsKey` of the request in flight, so the auto-run and a
+  // Package request for the same maps share one POST.
+  const inFlightRef = useRef(new Map<CheckKind, string>());
 
   // Notify the parent gate whenever the result set changes. The summary carries
   // its own coverage: `canCook` still means "nothing that ran failed", and
@@ -163,20 +164,30 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, cookMaps, 
   useEffect(() => {
     const overall = worstStatus(results);
     const { ran, total, notRun } = coverageOf(results);
+    const failed = KNOWN_CHECKS.filter((c) => results.some((r) => r.id === c.id && r.status === 'fail'));
     onStatusChangeRef.current?.({
       canCook: !results.some((r) => r.status === 'fail'),
       overall,
       fullyCovered: notRun.length === 0,
       notRunLabels: notRun.map((c) => c.label),
+      notRunKinds: [...new Set(notRun.map((c) => c.kind))],
       coverage: { ran, total },
+      mapsKey: fastMapsKey,
+      failing: failed.map((c) => c.label),
+      failingKinds: [...new Set(failed.map((c) => c.kind))],
+      running: [...running],
     });
-  }, [results]);
+  }, [results, fastMapsKey, running]);
 
   const runCheck = useCallback(async (kind: CheckKind) => {
     // Capture the project identity at dispatch. Concurrent checks of
     // different kinds share the same key, so this scopes by project
     // (not per-call) — legitimately parallel checks are never cancelled.
     const gen = projectKey;
+    const mapsKey = cookMapsKey;
+    const flightKey = `${gen}#${mapsKey}`;
+    if (inFlightRef.current.get(kind) === flightKey) return;
+    inFlightRef.current.set(kind, flightKey);
     setRunning((prev) => new Set(prev).add(kind));
     setError(null);
     const res = await tryApiFetch<PreflightResponse>('/api/packaging/preflight', {
@@ -184,9 +195,13 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, cookMaps, 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectPath, projectName, ueVersion, mapsToInclude: cookMaps ?? [], check: kind }),
     });
+    if (inFlightRef.current.get(kind) === flightKey) inFlightRef.current.delete(kind);
     // Drop the response if the active project changed while it was in flight —
     // a stale project's result must not touch this project's ready-to-cook gate.
     if (gen !== projectKeyRef.current) return;
+    // Likewise a fast verdict for maps the panel no longer gates (the pressed
+    // profile changed while it ran): the newer request owns the tile and spinner.
+    if (kind === 'fast' && mapsKey !== cookMapsKeyRef.current) return;
     setRunning((prev) => {
       const next = new Set(prev);
       next.delete(kind);
@@ -201,6 +216,7 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, cookMaps, 
       const kept = prev.filter((r) => !ownedIds.has(r.id));
       return [...kept, ...res.data.results].sort((a, b) => a.id.localeCompare(b.id));
     });
+    if (kind === 'fast') setFastMapsKey(mapsKey);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- cookMaps is tracked by its serialized key
   }, [projectKey, projectPath, projectName, ueVersion, cookMapsKey]);
 
@@ -212,6 +228,21 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, cookMaps, 
     const id = setTimeout(() => { void runCheck('fast'); }, 0);
     return () => clearTimeout(id);
   }, [projectPath, projectName, runCheck]);
+
+  // Run what the Package flow asked for, once per token (deferred like the auto-run).
+  const handledTokenRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!requestedChecks || requestedChecks.token === handledTokenRef.current) return;
+    if (!projectPath || !projectName) return;
+    const { token, kinds } = requestedChecks;
+    // Marked handled only when it actually dispatches: a re-run of this effect
+    // inside the deferral window clears the timer and must re-schedule it.
+    const id = setTimeout(() => {
+      handledTokenRef.current = token;
+      for (const k of kinds) void runCheck(k);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [requestedChecks, projectPath, projectName, runCheck]);
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {

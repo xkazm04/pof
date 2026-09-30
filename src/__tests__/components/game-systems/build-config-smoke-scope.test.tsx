@@ -46,9 +46,26 @@ vi.mock('@/components/modules/game-systems/NightlyBuildScheduler', () => ({
 vi.mock('@/components/modules/game-systems/GateNotifySettings', () => ({
   GateNotifySettings: () => null,
 }));
-vi.mock('@/components/modules/game-systems/PreflightPanel', () => ({
-  PreflightPanel: () => null,
-}));
+// The Package flow only cooks on a fast pre-flight verdict for the pressed profile's
+// maps, so the stub reports a measured, passing gate for whatever maps it is given.
+vi.mock('@/components/modules/game-systems/PreflightPanel', async () => {
+  const { useEffect } = await import('react');
+  return {
+    PreflightPanel: ({ cookMaps, onStatusChange }: {
+      cookMaps?: string[];
+      onStatusChange?: (s: Record<string, unknown>) => void;
+    }) => {
+      const mapsKey = (cookMaps ?? []).join('|');
+      useEffect(() => {
+        onStatusChange?.({
+          canCook: true, overall: 'pass', fullyCovered: true, notRunLabels: [], notRunKinds: [],
+          coverage: { ran: 4, total: 4 }, mapsKey, failing: [], failingKinds: [], running: [],
+        });
+      }, [mapsKey, onStatusChange]);
+      return null;
+    },
+  };
+});
 
 import { BuildConfigSelector } from '@/components/modules/game-systems/BuildConfigSelector';
 import { useProjectStore } from '@/stores/projectStore';

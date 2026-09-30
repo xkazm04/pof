@@ -275,7 +275,8 @@ export async function measureBuildSize(
 export function defaultRunnerDeps(): ScheduledRunDeps {
   return {
     getHead: getGitHead,
-    runPreflight: (ctx) => runFastPreflight(ctx.projectPath, ctx.projectName),
+    // The scheduled profile's own cook maps, like the interactive Package gate.
+    runPreflight: (ctx) => runFastPreflight(ctx.projectPath, ctx.projectName, ctx.profile.cookSettings.mapsToInclude),
     runCook: defaultRunCook,
     measureSize: measureBuildSize,
     runSmoke: (ctx, exePath) =>
