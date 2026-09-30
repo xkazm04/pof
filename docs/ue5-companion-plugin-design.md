@@ -2153,13 +2153,14 @@ All bridge interactions are exposed to React components through dedicated hooks.
 | `useSnapshots` | Snapshot capture trigger, diff report retrieval | `POST /api/pof-bridge/snapshot` -> `GET /api/pof-bridge/snapshot` |
 | `useLiveCoding` | Compile trigger, status polling, diagnostic display | `POST /api/pof-bridge/compile` -> `GET /api/pof-bridge/compile` |
 
-**`useManifest` polling strategy:**
+**`useManifest` feed strategy** (one feed per tab; pure decisions in `src/lib/pof-bridge/manifest-feed.ts`, the refcounted feed in `src/hooks/useManifest.ts`):
 
-1. On mount (if connected): fetch checksum via `?checksum-only=true`.
-2. Compare returned checksum against `pofBridgeStore.manifestChecksum`.
-3. If different: fetch full manifest and update store.
-4. Re-poll checksum every 30 seconds while mounted.
-5. On `pof.connected` event: immediately fetch full manifest.
+1. Keyed: the cached manifest carries `pofBridgeStore.manifestKey` = `${port}::${projectName}` (runtime-only). While connected, a manifest cached under another key is never returned; a reconnect to another editor clears it and refetches in full.
+2. When the first VISIBLE holder acquires the feed (holders acquire via `useSuspendableEffect`, so hidden LRU panes do not count): empty cache -> fetch full; cached for this editor -> fetch checksum via `?checksum-only=true`.
+3. The route normalizes the plugin's `{ checksum }` answer to `{ checksumSha256 }` (`readManifestChecksum` also accepts the legacy key); an answer with neither is a 502. If it differs from `pofBridgeStore.manifestChecksum`: fetch full manifest and update store.
+4. One 30 second checksum interval per tab while at least one visible holder exists; it dies with the last one. Concurrent callers join the in-flight request for the same key.
+5. Immediate sync (not waiting for the poll) when the store's connection status, editor key, or `pluginInfo.manifestAssetCount` (from the 10 s health check) changes - this covers the `pof.connected` event.
+6. Every manifest URL carries `?port=` from `pofBridgeStore.pofPort`. Disconnected: no fetches; the last editor's manifest stays readable.
 
 ### 11.6 Module-to-Plugin Data Flow
 
