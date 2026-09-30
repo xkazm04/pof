@@ -973,6 +973,16 @@ modified-edge blink in `AnimationStateMachine`).
   fallback, a Tab/Shift+Tab focus trap, initial focus into the dialog (`initialFocusRef` or the
   first focusable), Escape-to-close, backdrop-click-to-close, and focus restored to the trigger on
   close. First adopter: the evaluator's Author-Pattern modal (`PatternLibraryView`).
+- **Confirm dialogs own the outcome**: `ConfirmDialog` (`src/components/ui/ConfirmDialog.tsx`) takes
+  the confirmed operation itself - `onConfirm: () => void | Promise<unknown>`. The confirm disarms
+  synchronously on click (a ref, so a same-tick double click runs it once); while the promise runs the
+  button is busy (`aria-busy`, disabled, `busyLabel`) and Cancel / Escape / backdrop / header X are
+  inert; it closes (`onClose`) only when the operation resolves; a rejection or a resolved `Result` err
+  keeps it open with the reason in a `role="alert"` and turns Confirm into `retryLabel`, which re-runs
+  the SAME operation. Outcome rules are pure in `confirmOutcome.ts` (anything that is not a throw or a
+  `Result` err is success). A sync callback returning nothing closes in the same click, as before.
+  Consumers return their promise (never `void op()`) and do not keep a parallel delete-error/retry state;
+  a success-with-warning (e.g. audio rows deleted but files left on disk) stays a page banner.
 
 ---
 
