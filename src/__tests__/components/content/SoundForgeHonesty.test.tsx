@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup, within } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, within, waitFor } from '@testing-library/react';
 import { SoundForgePanel } from '@/components/modules/content/audio/SoundForgePanel';
 import { AudioUsageMeter } from '@/components/modules/content/audio/AudioUsageMeter';
 import type { AudioUsageSummary } from '@/types/audio-asset';
@@ -30,6 +30,15 @@ describe('SoundForgePanel — the Kind list cannot promise what the provider wil
     expect(why.textContent).toContain('tts');
     // A reason, not just a list of names.
     expect(why.textContent!.length).toBeGreaterThan(60);
+  });
+
+  it('[guard] an unreadable library degrades to a stated note, never a throw or a POST', async () => {
+    const mock = vi.fn().mockRejectedValue(new Error('offline'));
+    globalThis.fetch = mock as unknown as typeof fetch;
+    render(<SoundForgePanel />);
+    await waitFor(() => expect(screen.getByTestId('forge-library-unavailable')).toBeTruthy());
+    expect(screen.getByTestId('forge-library-unavailable').textContent).toMatch(/library unavailable/i);
+    expect(mock.mock.calls.every(([, init]) => ((init as RequestInit | undefined)?.method ?? 'GET') === 'GET')).toBe(true);
   });
 });
 

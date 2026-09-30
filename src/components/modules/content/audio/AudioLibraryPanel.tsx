@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X, AlertTriangle } from 'lucide-react';
+import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X, AlertTriangle, Sparkles } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -70,7 +70,15 @@ function fmtDuration(ms: number): string {
   return `${(ms / 1000).toFixed(ms % 1000 === 0 ? 0 : 1)}s`;
 }
 
-export function AudioLibraryPanel() {
+interface AudioLibraryPanelProps {
+  /**
+   * Opens the Sound Forge aimed at this set (`AudioView` switches tab). The click
+   * only hands over the id: nothing is generated or billed from the Library.
+   */
+  onMoreTakes?: (setId: string) => void;
+}
+
+export function AudioLibraryPanel({ onMoreTakes }: AudioLibraryPanelProps = {}) {
   const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null, audioDir: null, disk: null });
   const [reality, setReality] = useState<ImportReality>({ bySet: {}, preflight: null });
   const [loading, setLoading] = useState(true);
@@ -382,9 +390,16 @@ export function AudioLibraryPanel() {
                   )}
                 </span>
                 <span className="text-2xs text-text-muted">· {assets.length}</span>
+                {onMoreTakes && (
+                  <button onClick={() => onMoreTakes(s.id)} data-testid={`more-takes-${s.id}`}
+                          title={`Open the Sound Forge aimed at ${s.name}: new takes continue its numbering`}
+                          className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-medium text-text-muted hover:text-text border border-border focus-ring">
+                    <Sparkles className="w-3 h-3" /> More takes
+                  </button>
+                )}
                 <button onClick={() => handleImport(s, assets)} disabled={importing === s.id}
                         data-testid="import-to-ue"
-                        className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-medium disabled:opacity-50 focus-ring"
+                        className={`${onMoreTakes ? '' : 'ml-auto '}flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-medium disabled:opacity-50 focus-ring`}
                         style={{ backgroundColor: `${MODULE_COLORS.content}15`, color: MODULE_COLORS.content, border: `1px solid ${MODULE_COLORS.content}30` }}>
                   {importing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                   Import to UE

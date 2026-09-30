@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import {
   Trash2, Loader2,
   Zap, Volume2, Radio, Settings, List, Eye, ListChecks, Code2, Wand2,
@@ -85,6 +86,7 @@ export function AudioView() {
     commitDescription,
     commitSetting,
   } = useAudioView();
+  const [forgeTargetSetId, setForgeTargetSetId] = useState<string | null>(null);
 
   // The full-screen spinner is for the FIRST load only. `useCRUD.refetch` raises
   // `isLoading` on every background refetch (each save triggers one), and blanking
@@ -299,12 +301,14 @@ export function AudioView() {
                 </div>
               )}
 
+              {/* The Library's 'More takes' aims the Forge at that set: the id is
+                  handed over here, and the Forge numbers new takes past its own. */}
               {activeTab === 'forge' && (
-                <SoundForgePanel />
+                <SoundForgePanel initialTargetSetId={forgeTargetSetId} />
               )}
 
               {activeTab === 'library' && (
-                <AudioLibraryPanel />
+                <AudioLibraryPanel onMoreTakes={(setId) => { setForgeTargetSetId(setId); setActiveTab('forge'); }} />
               )}
             </div>
           </>
