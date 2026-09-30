@@ -252,6 +252,16 @@ from `useAudioView`. It prints `eventBudget` (declared voices vs the scene limit
 example "21 declared voices exceed the scene limit of 16 ... priority decides which
 voice is stolen".
 
+The Settings tab states what that limit does in a fight: `src/lib/audio-event-budget.ts`
+(`simulateEventBudget`) runs the scene's Event Catalog against the draft
+`maxConcurrentSounds` with the same three rules the event prompt asks
+`UAudioEventRouter` to implement (per-event cooldown, oldest-steal at the class cap,
+lowest-priority steal at the limit, else drop), and `AudioView/BudgetStressPanel`
+shows per-class started/cooled/cut/stolen/dropped, with in-row fixes written to the
+per-scene catalog store. A class never triggered, or with no known clip length, is
+NOT MEASURED. Change the router rules in `prompts/audio-events.ts` and the simulator
+together.
+
 **Asset-Code Oracle remedies start on the rail (remedy -> rescan -> key diff).**
 `src/lib/asset-oracle/oracleRemedy.ts` plans only the task body for the two
 violation types a CLI can fix without a delete (`naming-mismatch`: editor rename
