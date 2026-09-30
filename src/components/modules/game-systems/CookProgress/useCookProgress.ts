@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { usePaneHold } from '@/hooks/usePaneHold';
 import { type ListImperativeAPI } from 'react-window';
-import type { CookEvent, CookPhase } from '@/lib/packaging/cook-executor';
+import type { CookPhase } from '@/lib/packaging/cook-executor';
+import type { CookJobInfo, CookJobKind } from '@/lib/packaging/cook-jobs';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { tryApiFetch } from '@/lib/api-utils';
 import { ZERO_COUNTS, PIN_THRESHOLD_PX } from './constants';
 import { classifyCookLogLine, appendCookLog, lineFacets, formatCookTimestamp } from './helpers';
-import type { CookLogLine, CookLogFilter, CookLogCounts, CookProgressProps, CookCompletion, CookRecordEvent } from './types';
+import { driveCookStream, COOK_JOBS_URL, type CookStreamHandlers, type CookStreamStart } from './cookJobStream';
+import type { CookLogLine, CookLogFilter, CookLogCounts, CookProgressProps, CookCompletion } from './types';
 
 /** The pane-hold reason the Activity Feed shows if the shell tears a cook down. */
 export const COOK_HOLD_REASON = 'UE cook running';
@@ -18,17 +21,23 @@ export const COOK_HOLD_REASON = 'UE cook running';
  * AFTER the build is recorded: the `recorded` (or `record-error`) event that
  * follows `done`/`error`, a stream that ends first, or an HTTP failure. A bare
  * `done` does not settle — the server has yet to write the build row, and evicting
- * the pane then would abort the stream (and, server side, the UAT process tree)
- * before the row and its id exist. Move the settle point here, nowhere else.
+ * the pane then would drop the console before the row and its id exist. Move the
+ * settle point here, nowhere else.
+ *
+ * The cook itself no longer depends on the hold: it is a server job
+ * (`src/lib/packaging/cook-jobs.ts`) that outlives this component, and a remounted
+ * console reattaches. The hold keeps the live console (and the batch chains that
+ * wait on its settle) in place; an `attached` console holds it the same way.
  */
 export function cookHoldsPane(
   request: CookProgressProps['request'],
   result: { status: 'success' | 'failed' } | null,
+  attached = false,
 ): boolean {
-  return request != null && result === null;
+  return (request != null || attached) && result === null;
 }
 
-export function useCookProgress({ request, onComplete }: CookProgressProps) {
+export function useCookProgress({ request, projectPath, onComplete }: CookProgressProps) {
   const [phase, setPhase] = useState<CookPhase | null>(null);
   const [percent, setPercent] = useState<number>(0);
   const [logs, setLogs] = useState<CookLogLine[]>([]);
@@ -43,8 +52,13 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
   // scrolls up so they can read in peace (classic `tail -f` console behavior).
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
+  // The server job this console follows; `attached` = found on the server, not
+  // started by this console's own request.
+  const [job, setJob] = useState<{ jobId: string; kind: CookJobKind } | null>(null);
+  const [attached, setAttached] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const abortRef = useRef<AbortController | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const listRef = useRef<ListImperativeAPI | null>(null);
   const logIdRef = useRef(0);
@@ -59,141 +73,129 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
   // runs once the Errors view re-renders with rows.
   const pendingJumpRef = useRef(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
-  usePaneHold(cookHoldsPane(request, result), COOK_HOLD_REASON);
+  usePaneHold(cookHoldsPane(request, result, attached), COOK_HOLD_REASON);
 
+  /** Follow a cook through the job driver; the console clears when the driver starts. */
+  const follow = useCallback((start: CookStreamStart, signal: AbortSignal, startedAt: number) => {
+    // Phase active as lines arrive — captured locally so each log is tagged
+    // synchronously (state updates are async and would lag the stream).
+    let currentPhase: CookPhase | null = null;
+    // The driver settles ONCE, after the build is recorded (cookJobStream.ts): the
+    // `done`/`error` outcome is held until `recorded {buildId}` / `record-error`,
+    // and a stream that closes first is re-queried against the job, not guessed at.
+    const handlers: CookStreamHandlers = {
+      // A new cook: clear the previous one's console.
+      onStart: () => {
+        setPhase(null);
+        setPercent(0);
+        setLogs([]);
+        setCounts(ZERO_COUNTS);
+        logsRef.current = [];
+        countsRef.current = ZERO_COUNTS;
+        setResult(null);
+        setElapsedMs(0);
+        setFilter('all');
+        setAutoScroll(true);
+        setCancelling(false);
+        setCancelError(null);
+        setJob(start.mode === 'attach' ? { jobId: start.job.jobId, kind: start.job.kind } : null);
+        setAttached(start.mode === 'attach');
+        logIdRef.current = 0;
+        errorCursorRef.current = 0;
+        pendingJumpRef.current = false;
+        startedAtRef.current = startedAt;
+      },
+      onJob: (j) => setJob(j),
+      onSettle: (final) => {
+        setResult(final);
+        onCompleteRef.current?.(final);
+      },
+      onEvent: (ev) => {
+        if (ev.type === 'phase') { currentPhase = ev.phase; setPhase(ev.phase); }
+        else if (ev.type === 'progress') setPercent(ev.percent);
+        else if (ev.type === 'log') {
+          const entry: CookLogLine = {
+            id: logIdRef.current++,
+            line: ev.line,
+            t: typeof ev.t === 'number' ? ev.t : 0,
+            phase: currentPhase,
+            severity: classifyCookLogLine(ev.line),
+          };
+          const prev = logsRef.current;
+          const next = appendCookLog(prev, entry);
+          // Mirror append/trim into the running tallies (O(1)): +1 for the
+          // new line's facets, −1 for any head line that fell off the cap.
+          // Equivalent to rescanning `next` from scratch each tick.
+          const add = lineFacets(entry);
+          const trimmed = prev.length + 1 > next.length ? prev[0] : null;
+          const sub = trimmed ? lineFacets(trimmed) : null;
+          const c = countsRef.current;
+          const nextCounts: CookLogCounts = {
+            all: next.length,
+            error: c.error + (add.error ? 1 : 0) - (sub?.error ? 1 : 0),
+            warning: c.warning + (add.warning ? 1 : 0) - (sub?.warning ? 1 : 0),
+            cook: c.cook + (add.cook ? 1 : 0) - (sub?.cook ? 1 : 0),
+            stage: c.stage + (add.stage ? 1 : 0) - (sub?.stage ? 1 : 0),
+          };
+          logsRef.current = next;
+          countsRef.current = nextCounts;
+          setLogs(next);
+          setCounts(nextCounts);
+        }
+      },
+    };
+    void driveCookStream(start, signal, handlers);
+  }, []);
+
+  // Start (and follow) a cook for a local request. Unmount only DETACHES: the cook
+  // is a server job and keeps running; a remounted console reattaches below.
   useEffect(() => {
     if (!request) return;
     const ctrl = new AbortController();
-    abortRef.current = ctrl;
-    setPhase(null);
-    setPercent(0);
-    setLogs([]);
-    setCounts(ZERO_COUNTS);
-    logsRef.current = [];
-    countsRef.current = ZERO_COUNTS;
-    setResult(null);
-    setElapsedMs(0);
-    setFilter('all');
-    setAutoScroll(true);
-    logIdRef.current = 0;
-    errorCursorRef.current = 0;
-    pendingJumpRef.current = false;
-    startedAtRef.current = Date.now();
-
-    (async () => {
-      // Phase active as lines arrive — captured locally so each log is tagged
-      // synchronously (state updates are async and would lag the stream).
-      let currentPhase: CookPhase | null = null;
-      // The response status was committed at 200 before the first byte, so once
-      // the stream is open the transport can no longer report the outcome. The
-      // `done`/`error` (then `recorded`) events are the only channel left, and their ABSENCE is the
-      // failure: every log line can be well formed and complete while the
-      // sequence is short. Without this flag a stream that just stops leaves the
-      // cook with no verdict at all, which the UI renders as "still running"
-      // forever.
-      let settled = false;
-      // The `done`/`error` outcome, held until the server says whether it RECORDED
-      // the build (`recorded {buildId}` / `record-error`). The cook settles once, there.
-      let pending: CookCompletion | null = null;
-      const settle = (final: CookCompletion) => {
-        settled = true;
-        setResult(final);
-        onComplete?.(final);
-      };
-      try {
-        const res = await fetch('/api/packaging/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(request),
-          signal: ctrl.signal,
-        });
-        if (!res.ok || !res.body) {
-          settle({ status: 'failed', error: `HTTP ${res.status}` });
-          return;
-        }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split('\n\n');
-          buffer = parts.pop() ?? '';
-          for (const part of parts) {
-            const data = part.replace(/^data:\s?/, '').trim();
-            if (!data) continue;
-            let ev: CookEvent | CookRecordEvent;
-            try { ev = JSON.parse(data) as CookEvent | CookRecordEvent; } catch { continue; }
-            if (settled) continue;
-            if (ev.type === 'phase') { currentPhase = ev.phase; setPhase(ev.phase); }
-            else if (ev.type === 'progress') setPercent(ev.percent);
-            else if (ev.type === 'log') {
-              const entry: CookLogLine = {
-                id: logIdRef.current++,
-                line: ev.line,
-                t: typeof ev.t === 'number' ? ev.t : 0,
-                phase: currentPhase,
-                severity: classifyCookLogLine(ev.line),
-              };
-              const prev = logsRef.current;
-              const next = appendCookLog(prev, entry);
-              // Mirror append/trim into the running tallies (O(1)): +1 for the
-              // new line's facets, −1 for any head line that fell off the cap.
-              // Equivalent to rescanning `next` from scratch each tick.
-              const add = lineFacets(entry);
-              const trimmed = prev.length + 1 > next.length ? prev[0] : null;
-              const sub = trimmed ? lineFacets(trimmed) : null;
-              const c = countsRef.current;
-              const nextCounts: CookLogCounts = {
-                all: next.length,
-                error: c.error + (add.error ? 1 : 0) - (sub?.error ? 1 : 0),
-                warning: c.warning + (add.warning ? 1 : 0) - (sub?.warning ? 1 : 0),
-                cook: c.cook + (add.cook ? 1 : 0) - (sub?.cook ? 1 : 0),
-                stage: c.stage + (add.stage ? 1 : 0) - (sub?.stage ? 1 : 0),
-              };
-              logsRef.current = next;
-              countsRef.current = nextCounts;
-              setLogs(next);
-              setCounts(nextCounts);
-            } else if (ev.type === 'done') {
-              pending = { status: 'success', exePath: ev.exePath };
-            } else if (ev.type === 'error') {
-              pending = { status: 'failed', error: ev.message };
-            } else if (ev.type === 'recorded' && pending) {
-              settle({ ...pending, buildId: ev.buildId });
-            } else if (ev.type === 'record-error' && pending) {
-              settle({ ...pending, recordError: ev.message });
-            }
-          }
-        }
-        if (!settled && !ctrl.signal.aborted) {
-          settle(pending
-            ? { ...pending, recordError: 'The cook stream ended before the build was recorded.' }
-            : { status: 'failed', error: 'Cook stream ended without a result — the build may still be running.' });
-        }
-      } catch (err) {
-        if (ctrl.signal.aborted || settled) return;
-        settle({ status: 'failed', error: err instanceof Error ? err.message : String(err) });
-      }
-    })();
-
+    follow({ mode: 'request', request }, ctrl.signal, Date.now());
     return () => { ctrl.abort(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [request]);
+  }, [request, follow]);
+
+  // No local request: attach to a cook job already holding the open project (this
+  // tab reloaded, another tab started it, or the nightly is running).
+  useEffect(() => {
+    if (request || !projectPath) return;
+    const ctrl = new AbortController();
+    void (async () => {
+      const q = await tryApiFetch<{ job: CookJobInfo | null }>(
+        `${COOK_JOBS_URL}?projectPath=${encodeURIComponent(projectPath)}`, { signal: ctrl.signal },
+      );
+      if (ctrl.signal.aborted || !q.ok || !q.data.job || q.data.job.settled) return;
+      follow({ mode: 'attach', job: q.data.job }, ctrl.signal, q.data.job.startedAt);
+    })();
+    return () => { ctrl.abort(); };
+  }, [request, projectPath, follow]);
+
+  /** Ask the server to cancel the job; the stream then carries error{cancelled} + recorded. */
+  const cancel = useCallback(async () => {
+    if (!job) return;
+    setCancelling(true);
+    setCancelError(null);
+    const r = await tryApiFetch<{ job: CookJobInfo }>(
+      `${COOK_JOBS_URL}?jobId=${encodeURIComponent(job.jobId)}`, { method: 'DELETE' },
+    );
+    if (!r.ok) { setCancelling(false); setCancelError(r.error); }
+  }, [job]);
 
   // Live elapsed ticker: updates once a second while the cook runs, then stops
   // (and freezes to the exact total) once a result arrives. Suspendable: while the
   // module is hidden the label cannot be read, and the effect below re-derives the
   // elapsed total from `startedAtRef` on resume, so nothing is lost by pausing.
   useSuspendableEffect(() => {
-    if (!request || result) return;
+    if ((!request && !attached) || result) return;
     const id = setInterval(() => {
       if (startedAtRef.current != null) setElapsedMs(Date.now() - startedAtRef.current);
     }, 1000);
     return () => clearInterval(id);
-  }, [request, result]);
+  }, [request, attached, result]);
 
   // Freeze the elapsed total the instant the cook finishes (any exit path).
   useEffect(() => {
@@ -279,5 +281,11 @@ export function useCookProgress({ request, onComplete }: CookProgressProps) {
     handleListScroll,
     handleJumpToError,
     handleCopyAll,
+    jobId: job?.jobId ?? null,
+    jobKind: job?.kind ?? null,
+    attached,
+    cancel,
+    cancelling,
+    cancelError,
   };
 }

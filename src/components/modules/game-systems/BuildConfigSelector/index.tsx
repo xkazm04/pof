@@ -150,11 +150,17 @@ export function BuildConfigSelector() {
     setCookRequest({ profileId: profile.id, projectPath, projectName, ueVersion });
   }, [cookRequest, gateBlock, projectPath, projectName, ueVersion]);
 
+  // Also called for a cook this panel did not start: the console reattaches to the
+  // project's server cook job after a reload, or to a running nightly. A refused start
+  // (409: the project is busy) settles here too, and clearing the request lets the
+  // console attach to the job that holds the project.
   const handleCookComplete = useCallback((result: CookCompletion) => {
-    const profileId = cookRequest?.profileId;
+    const profileId = result.profileId ?? cookRequest?.profileId;
     setCookRequest(null);
     if (result.status !== 'success') return;
     fetchProfiles();
+    // The nightly chain runs (and records) its own smoke-test.
+    if (result.kind === 'nightly') return;
 
     // Kick off the post-cook smoke-test for runnable (Win64) builds, naming the
     // recorded build: the server launches, watches and condemns exactly that row.
@@ -287,7 +293,7 @@ export function BuildConfigSelector() {
       />
 
       {/* Cook progress */}
-      <CookProgress request={cookRequest} onComplete={handleCookComplete} />
+      <CookProgress request={cookRequest} projectPath={projectPath} onComplete={handleCookComplete} />
 
       {/* Post-cook runnable-exe smoke-test */}
       <SmokeTest key={smokeRequest?.buildId ?? 'idle'} request={smokeRequest} skippedReason={smokeSkipped} />

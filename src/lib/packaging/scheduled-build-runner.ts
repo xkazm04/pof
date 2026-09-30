@@ -4,8 +4,10 @@
 // side-effect injected so it is unit-testable without spawning anything.
 //
 // `tickScheduler` / `startScheduledRun` wire the real implementations in and
-// guard against concurrent runs; they are driven by the API route and the
-// instrumentation cron.
+// run the chain as a `nightly` COOK JOB (`cook-jobs.ts`): the same per-project lock
+// the interactive Package button takes, so an interactive cook and a nightly cook of
+// one project can never run UAT at once, and the Packaging console can attach to a
+// running nightly. They are driven by the API route and the instrumentation cron.
 
 import path from 'node:path';
 import { stat, readdir } from 'node:fs/promises';
@@ -22,9 +24,10 @@ import { finalizeCook, type FinalizeDeps } from './finalize-build';
 import { getGitHead } from './git-head';
 import { shouldSkipUnchanged, isDueAt, type BuildSchedule } from './build-scheduler';
 import {
-  getSchedule, getScheduleState, setScheduleState, isRunning, setRunning,
+  getSchedule, getScheduleState, setScheduleState, isRunning,
   type ScheduleOutcome,
 } from './build-schedule-store';
+import { runCookJob, type CookJobEvent } from './cook-jobs';
 import { logger } from '@/lib/logger';
 
 const SCHED_NOTE = '[NIGHTLY]';
@@ -40,7 +43,8 @@ export interface ScheduledRunContext {
 }
 
 export interface CookOutcome {
-  status: 'success' | 'failed';
+  /** 'cancelled' = the job was cancelled (the tree was killed); recorded as cancelled. */
+  status: 'success' | 'failed' | 'cancelled';
   exePath: string;
   durationMs: number;
   sizeBytes: number;
@@ -103,10 +107,10 @@ export async function runScheduledBuild(
 
   // 3. Cook.
   const cook = await deps.runCook(ctx);
-  if (cook.status === 'failed') {
-    const reason = cook.message ?? 'cook failed';
+  if (cook.status !== 'success') {
+    const reason = cook.message ?? `cook ${cook.status}`;
     const rec = finalizeCook(
-      { kind: 'error', status: 'failed', message: reason, durationMs: cook.durationMs || elapsed(), cookTimeMs: cook.durationMs },
+      { kind: 'error', status: cook.status, message: reason, durationMs: cook.durationMs || elapsed(), cookTimeMs: cook.durationMs },
       { projectPath: ctx.projectPath, platform, config, notes: [`${SCHED_NOTE} ${skip.reason}`] },
       deps,
     );
@@ -159,12 +163,24 @@ function base(
 
 // ── Default (real) dependency wiring ─────────────────────────────────────────
 
-async function defaultRunCook(ctx: ScheduledRunContext): Promise<CookOutcome> {
+/**
+ * Run the cook, forwarding every event to `emit` (the nightly job's console) and
+ * honouring the job's cancel `signal`. A cancel before the cook starts never spawns.
+ */
+async function runCookStreaming(
+  ctx: ScheduledRunContext, emit?: (ev: CookEvent) => void, signal?: AbortSignal,
+): Promise<CookOutcome> {
+  if (signal?.aborted) {
+    const ev: CookEvent = { type: 'error', message: 'cook cancelled before it started', status: 'cancelled', t: 0 };
+    emit?.(ev);
+    return { status: 'cancelled', exePath: '', durationMs: 0, sizeBytes: 0, message: ev.message };
+  }
   let last: CookEvent | null = null;
   for await (const ev of cookExecutor({
-    profile: ctx.profile, projectPath: ctx.projectPath, projectName: ctx.projectName, ueVersion: ctx.ueVersion,
+    profile: ctx.profile, projectPath: ctx.projectPath, projectName: ctx.projectName, ueVersion: ctx.ueVersion, signal,
   })) {
     last = ev;
+    emit?.(ev);
     if (ev.type === 'done' || ev.type === 'error') break;
   }
   if (last?.type === 'done') {
@@ -172,12 +188,19 @@ async function defaultRunCook(ctx: ScheduledRunContext): Promise<CookOutcome> {
     // re-normalizes 0 → null (treated as "unknown size"), so coercing null to 0 here is safe.
     return { status: 'success', exePath: last.exePath, durationMs: last.durationMs, sizeBytes: last.sizeBytes ?? 0 };
   }
+  const cancelled = (last?.type === 'error' && last.status === 'cancelled') || !!signal?.aborted;
+  const message = last?.type === 'error' ? last.message : cancelled ? 'cook cancelled' : 'cook produced no result';
+  if (last?.type !== 'error') emit?.({ type: 'error', message, status: cancelled ? 'cancelled' : 'failed', t: 0 });
   return {
-    status: 'failed', exePath: '',
+    status: cancelled ? 'cancelled' : 'failed', exePath: '',
     durationMs: last?.type === 'error' ? last.t : 0,
     sizeBytes: 0,
-    message: last?.type === 'error' ? last.message : 'cook produced no result',
+    message,
   };
+}
+
+function defaultRunCook(ctx: ScheduledRunContext): Promise<CookOutcome> {
+  return runCookStreaming(ctx);
 }
 
 export const MAX_SIZE_WALK_FILES = 50_000;
@@ -284,9 +307,12 @@ export interface TriggerResult {
 }
 
 /**
- * Start a scheduled build in the background (fire-and-forget). Guards against a
- * second concurrent run and persists the outcome to the schedule state when it
- * finishes. Returns immediately — callers poll the schedule state for progress.
+ * Start a scheduled build in the background as a `nightly` cook job. The job holds
+ * the project for the WHOLE chain (pre-flight, cook, smoke, finalize), so an
+ * interactive cook of the same project is refused meanwhile, and a nightly is refused
+ * while an interactive cook holds it. Persists the outcome to the schedule state when
+ * it finishes. Returns immediately; callers poll the schedule state, or attach to the
+ * job (`GET /api/packaging/cook-jobs`) to watch it live.
  */
 export function startScheduledRun(schedule: BuildSchedule, force = false): TriggerResult {
   if (isRunning()) return { ran: false, reason: 'a scheduled build is already running' };
@@ -306,9 +332,40 @@ export function startScheduledRun(schedule: BuildSchedule, force = false): Trigg
     skipIfUnchanged: schedule.skipIfUnchanged,
   };
 
-  setRunning(true);
-  void runScheduledBuild(ctx, defaultRunnerDeps())
+  const job = runCookJob(
+    { projectPath: ctx.projectPath, profileId: profile.id, kind: 'nightly' },
+    (emit, signal) => runNightlyJob(ctx, emit, signal),
+  );
+  if (!job.ok) return { ran: false, reason: `not started: ${job.error}` };
+  return { ran: true, reason: force ? 'manual run started' : 'scheduled run started' };
+}
+
+/**
+ * The nightly chain inside its job: cook events stream to the job (attachable
+ * console); the chain's own outcome is appended after, so an attached console
+ * settles on it like an interactive cook (`recorded {buildId}` after the terminal).
+ */
+async function runNightlyJob(
+  ctx: ScheduledRunContext, emit: (ev: CookJobEvent) => void, signal: AbortSignal,
+): Promise<string> {
+  let cookTerminal = false;
+  const deps: ScheduledRunDeps = {
+    ...defaultRunnerDeps(),
+    runCook: (c) => runCookStreaming(c, (ev) => {
+      if (ev.type === 'done' || ev.type === 'error') cookTerminal = true;
+      emit(ev);
+    }, signal),
+  };
+  return runScheduledBuild(ctx, deps)
     .then((result) => {
+      if (!cookTerminal && result.status !== 'skipped') {
+        // Stopped before the cook (pre-flight): say why as the terminal event.
+        emit({ type: 'error', message: result.reason, status: 'failed', t: result.durationMs });
+      }
+      if (result.buildId != null) emit({ type: 'recorded', buildId: result.buildId, version: null });
+      else if (result.status !== 'skipped') {
+        emit({ type: 'record-error', message: result.reason, note: 'The nightly run recorded no build row.' });
+      }
       setScheduleState({
         lastRunAt: new Date().toISOString(),
         lastOutcome: result.status,
@@ -320,15 +377,15 @@ export function startScheduledRun(schedule: BuildSchedule, force = false): Trigg
         ...(result.status !== 'skipped' && result.commit ? { lastCommit: result.commit } : {}),
       });
       logger.info(`[nightly-build] ${result.status}: ${result.reason}`);
+      return `nightly ${result.status}: ${result.reason}`;
     })
     .catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
       setScheduleState({ lastRunAt: new Date().toISOString(), lastOutcome: 'failed', lastReason: `runner error: ${message}` });
       logger.warn(`[nightly-build] runner crashed: ${message}`);
-    })
-    .finally(() => setRunning(false));
-
-  return { ran: true, reason: force ? 'manual run started' : 'scheduled run started' };
+      if (!cookTerminal) emit({ type: 'error', message: `runner error: ${message}`, status: 'failed', t: 0 });
+      return `nightly failed: runner error: ${message}`;
+    });
 }
 
 /**

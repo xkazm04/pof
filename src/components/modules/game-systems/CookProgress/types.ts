@@ -1,4 +1,5 @@
 import type { CookPhase } from '@/lib/packaging/cook-executor';
+import type { CookJobKind } from '@/lib/packaging/cook-jobs';
 
 /**
  * How a cook SETTLED — delivered once, after the server recorded (or failed to record)
@@ -12,6 +13,14 @@ export interface CookCompletion {
   buildId?: number;
   /** Why no row was recorded: a `record-error` event, or a stream that ended first. */
   recordError?: string;
+  /** The cook was CANCELLED (its tree killed), not broken: `status` stays 'failed'. */
+  cancelled?: boolean;
+  /** The server job this console followed (absent on a stream without a job id). */
+  jobId?: string;
+  /** Who started the cook: a nightly job runs its own smoke-test. */
+  kind?: CookJobKind;
+  /** The profile cooked (known on reattach, when there is no local request). */
+  profileId?: string;
 }
 
 /** The two events the execute route emits AFTER the terminal one (not in `CookEvent`). */
@@ -21,6 +30,11 @@ export type CookRecordEvent =
 
 export interface CookProgressProps {
   request: { profileId: string; projectPath: string; projectName: string; ueVersion: string } | null;
+  /**
+   * The open project. With no `request`, the console asks the server for a cook job
+   * already holding this project (a reload, another tab, a nightly run) and attaches.
+   */
+  projectPath?: string | null;
   onComplete?: (result: CookCompletion) => void;
 }
 

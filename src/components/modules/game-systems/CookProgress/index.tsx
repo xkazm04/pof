@@ -1,8 +1,8 @@
 'use client';
 
 import { List } from 'react-window';
-import { AlertCircle, ArrowDown, Check, CheckCircle2, Copy, XCircle } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { AlertCircle, ArrowDown, Ban, Check, CheckCircle2, Copy, Link2, XCircle } from 'lucide-react';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, SEVERITY_TOKENS } from '@/lib/chart-colors';
 import { formatDuration } from '@/lib/format';
 import { CountUp } from '@/components/modules/core-engine/sub_world/_shared/CountUp';
 import { PHASE_LABELS, FILTERS, LOG_ROW_HEIGHT, LOG_VIEWPORT_HEIGHT } from './constants';
@@ -15,7 +15,7 @@ import type { CookLogRowData, CookProgressProps } from './types';
 export { classifyCookLogLine, appendCookLog, formatCookTimestamp } from './helpers';
 export type { CookLogSeverity, CookLogLine, CookLogFilter } from './types';
 
-export function CookProgress({ request, onComplete }: CookProgressProps) {
+export function CookProgress({ request, projectPath, onComplete }: CookProgressProps) {
   const {
     phase,
     percent,
@@ -33,9 +33,17 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
     handleListScroll,
     handleJumpToError,
     handleCopyAll,
-  } = useCookProgress({ request, onComplete });
+    jobId,
+    jobKind,
+    attached,
+    cancel,
+    cancelling,
+    cancelError,
+  } = useCookProgress({ request, projectPath, onComplete });
 
-  if (!request && !result) return null;
+  if (!request && !result && !attached) return null;
+
+  const cancelled = result?.cancelled === true;
 
   // Spoken status: changes on phase transitions and on the final result, but
   // NOT on every percent tick — so screen readers stay informed without being
@@ -43,7 +51,7 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
   const liveMessage = result
     ? result.status === 'success'
       ? `Cook succeeded.${result.exePath ? ` Output at ${result.exePath}.` : ''}`
-      : `Cook failed.${result.error ? ` ${result.error}` : ''}`
+      : `Cook ${cancelled ? 'cancelled' : 'failed'}.${result.error ? ` ${result.error}` : ''}`
     : phase
       ? `${PHASE_LABELS[phase]} in progress.`
       : 'Cook starting.';
@@ -96,7 +104,41 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
           format={(n) => `${n}%`}
           className="text-text-muted tabular-nums"
         />
+        {running && jobId && (
+          <button
+            type="button"
+            onClick={() => { void cancel(); }}
+            disabled={cancelling}
+            data-testid="pof-cook-progress-cancel"
+            title="Cancel the cook: kills the UAT process tree and records the build as cancelled"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border text-2xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
+          >
+            <Ban className="w-3 h-3" aria-hidden="true" />
+            {cancelling ? 'Cancelling…' : 'Cancel'}
+          </button>
+        )}
       </div>
+
+      {(attached || cancelError) && (
+        <div className="flex items-center gap-2 text-2xs flex-wrap">
+          {attached && (
+            <span
+              data-testid="pof-cook-progress-attached"
+              className="inline-flex items-center gap-1"
+              style={{ color: STATUS_INFO }}
+              title={jobId ? `Server cook job ${jobId}` : undefined}
+            >
+              <Link2 className="w-3 h-3" aria-hidden="true" />
+              Reattached · {jobKind === 'nightly' ? 'nightly build' : 'interactive cook'}
+            </span>
+          )}
+          {cancelError && (
+            <span data-testid="pof-cook-progress-cancel-error" style={{ color: STATUS_ERROR }}>
+              Cancel failed: {cancelError}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-2xs text-text-muted tabular-nums">
         <span data-testid="pof-cook-progress-elapsed">
@@ -214,17 +256,19 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
       {result && (
         <div
           data-testid="pof-cook-progress-result"
-          data-status={result.status}
+          data-status={cancelled ? 'cancelled' : result.status}
           className="flex items-center gap-1.5"
-          style={{ color: result.status === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
+          style={{ color: result.status === 'success' ? STATUS_SUCCESS : cancelled ? STATUS_WARNING : STATUS_ERROR }}
         >
           {result.status === 'success'
             ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            : <XCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
+            : cancelled
+              ? <Ban className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              : <XCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
           <span>
             {result.status === 'success'
               ? <>Cook succeeded: <span data-testid="pof-cook-progress-exe-path">{result.exePath}</span></>
-              : <>Cook failed: {result.error}</>}
+              : <>Cook {cancelled ? 'cancelled' : 'failed'}: {result.error}</>}
           </span>
         </div>
       )}
