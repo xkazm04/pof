@@ -1,10 +1,12 @@
 'use client';
 import React from 'react';
 import { useFeatureVisibility } from '@/hooks/useFeatureVisibility';
+import type { SectionId } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
 
 interface VisibleSectionProps {
   moduleId: string;
-  sectionId: string;
+  /** A declared Feature Map section (feature-map-config.ts); a typo fails typecheck. */
+  sectionId: SectionId;
   children: React.ReactNode;
 }
 

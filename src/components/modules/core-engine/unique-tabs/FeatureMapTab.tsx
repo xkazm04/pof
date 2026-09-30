@@ -3,12 +3,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { SubModuleId } from '@/types/modules';
-import { MODULE_COLORS, STATUS_NEUTRAL, OPACITY_20, withOpacity } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_NEUTRAL, OPACITY_20, OPACITY_30, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from './_design';
 import { SubTabNavigation } from './_shared';
 import type { SubTab } from './_shared';
 import { useFeatureVisibility } from '@/hooks/useFeatureVisibility';
-import { getTabGroups, getAllSectionIds } from './feature-map-config';
+import { getTabGroups } from './feature-map-config';
+import { sectionToggleModel, type SectionToggleEntry } from '@/components/modules/core-engine/unique-tabs/featureSectionModel';
 import { FeatureCard } from '@/components/shared/FeatureCard';
 import { FeatureCardGrid } from '@/components/shared/FeatureCardGrid';
 import { LayoutGrid } from 'lucide-react';
@@ -19,8 +20,11 @@ const ACCENT = MODULE_COLORS.core;
 
 export default function FeatureMapTab({ moduleId, renderMetric }: { moduleId: SubModuleId; renderMetric?: (sectionId: string) => ReactNode }) {
   const groups = useMemo(() => getTabGroups(moduleId), [moduleId]);
-  const allIds = useMemo(() => getAllSectionIds(moduleId), [moduleId]);
-  const { isVisible, toggle, setMany } = useFeatureVisibility(moduleId);
+  const { isVisible, toggle, setMany, _raw: vis } = useFeatureVisibility(moduleId);
+  // Only gated sections are toggles; sub-panels follow their parent, no-gate ones always show.
+  const model = useMemo(() => sectionToggleModel(moduleId, vis), [moduleId, vis]);
+  const entryById = useMemo(() => new Map(model.map((e) => [e.id as string, e])), [model]);
+  const allIds = useMemo(() => model.filter((e) => e.toggleable).map((e) => e.id as string), [model]);
 
   const [activeColumn, setActiveColumn] = useState(() => groups[0]?.tabId ?? '');
 
@@ -45,7 +49,7 @@ export default function FeatureMapTab({ moduleId, renderMetric }: { moduleId: Su
   const handleDisableAll = useCallback(() => setMany(allIds, false), [allIds, setMany]);
 
   const grpIds = useMemo(
-    () => activeGroup?.sections.map((s) => s.id) ?? [],
+    () => activeGroup?.sections.filter((s) => s.gated).map((s) => s.id as string) ?? [],
     [activeGroup],
   );
 
@@ -93,28 +97,67 @@ export default function FeatureMapTab({ moduleId, renderMetric }: { moduleId: Su
         <BlueprintPanel color={ACCENT} className="p-3">
           <div className="flex items-center justify-between mb-3">
             <SectionHeader label={activeGroup.tabLabel} color={ACCENT} />
-            <div className="flex items-center gap-1.5">
-              <MiniBtn label="All On" onClick={handleGroupOn} />
-              <MiniBtn label="All Off" onClick={handleGroupOff} muted />
-            </div>
+            {grpIds.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <MiniBtn label="All On" onClick={handleGroupOn} />
+                <MiniBtn label="All Off" onClick={handleGroupOff} muted />
+              </div>
+            )}
           </div>
 
           <FeatureCardGrid label={`${activeGroup.tabLabel} features`}>
-            {activeGroup.sections.map((sec) => (
-              <FeatureCard
-                key={sec.id}
-                name={sec.label}
-                active={isVisible(sec.id)}
-                onToggle={() => toggle(sec.id)}
-                accent={ACCENT}
-                summary={sec.summary}
-              >
-                {renderMetric?.(sec.id)}
-              </FeatureCard>
-            ))}
+            {activeGroup.sections.map((sec) => {
+              const entry = entryById.get(sec.id);
+              if (entry && !entry.toggleable) {
+                return (
+                  <SectionInfoCard key={sec.id} entry={entry} parentLabel={entry.parentId ? entryById.get(entry.parentId)?.label : undefined}>
+                    {renderMetric?.(sec.id)}
+                  </SectionInfoCard>
+                );
+              }
+              return (
+                <FeatureCard
+                  key={sec.id}
+                  name={sec.label}
+                  active={isVisible(sec.id)}
+                  onToggle={() => toggle(sec.id)}
+                  accent={ACCENT}
+                  summary={sec.summary}
+                >
+                  {renderMetric?.(sec.id)}
+                </FeatureCard>
+              );
+            })}
           </FeatureCardGrid>
         </BlueprintPanel>
       )}
+    </div>
+  );
+}
+
+/* ── Non-toggle section card ───────────────────────────────────────────────── */
+
+/**
+ * A section no gate of its own hides: a sub-panel reads "in <Parent>" and follows the
+ * parent's toggle; a no-gate section reads "always shown". Not a button, so it offers
+ * no toggle that would do nothing.
+ */
+function SectionInfoCard({ entry, parentLabel, children }: { entry: SectionToggleEntry; parentLabel?: string; children?: ReactNode }) {
+  const on = entry.effectiveVisible;
+  const note = entry.parentId ? `in ${parentLabel ?? entry.parentId}` : 'always shown';
+  return (
+    <div
+      data-section-card={entry.id}
+      data-effective-visible={String(on)}
+      title={entry.parentId ? `Shown and hidden with ${parentLabel ?? entry.parentId}` : 'No toggle: this section is always shown'}
+      className="relative rounded-lg border border-dashed p-3"
+      style={{ borderColor: withOpacity(on ? ACCENT : STATUS_NEUTRAL, OPACITY_30) }}
+    >
+      <span className="block text-xs font-mono font-bold truncate text-text-muted" title={entry.label}>{entry.label}</span>
+      <span className="block text-xs font-mono truncate leading-tight mt-0.5" style={{ color: on ? ACCENT : STATUS_NEUTRAL }}>
+        {note}
+      </span>
+      {children && <div className="mt-2" style={{ filter: on ? 'none' : 'saturate(0.3)' }}>{children}</div>}
     </div>
   );
 }
