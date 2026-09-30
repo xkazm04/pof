@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
 import {
   LODGenerationTab,
   MeshOptimizationTab,
@@ -70,5 +70,30 @@ describe('Blender pipeline tabs compose from the shared MCP primitives', () => {
       target: { value: 'SM_Sword' },
     });
     expect(btn.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('FBX Convert is a headless file job: enabled with the bridge DOWN, POSTs fbx-convert once, never execute', async () => {
+    setConnected(false);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: true,
+      data: { converted: true, url: '/api/visual-gen/asset/m.glb?dir=converted', name: 'm.glb', meshes: 3, tris: 12840, bytes: 4096 },
+    })));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      render(<FBXConversionTab />);
+      expect(screen.queryByText(/connect to blender mcp first/i)).toBeNull();
+      fireEvent.change(screen.getByPlaceholderText('C:/Assets/model.fbx'), { target: { value: 'C:/in/m.fbx' } });
+      const btn = screen.getByRole('button', { name: /convert/i });
+      expect(btn.hasAttribute('disabled')).toBe(false);
+      fireEvent.click(btn);
+      await waitFor(() => expect(screen.getByText(/12,840/)).toBeTruthy());
+      const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+      expect(urls.filter((u) => u === '/api/visual-gen/fbx-convert')).toHaveLength(1);
+      expect(urls.some((u) => u.includes('/api/blender-mcp/execute'))).toBe(false);
+      const body = JSON.parse(String((fetchMock.mock.calls[0][1] as RequestInit).body));
+      expect(body).toEqual({ inputPath: 'C:/in/m.fbx', draco: false });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
