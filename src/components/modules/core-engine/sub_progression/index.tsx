@@ -6,7 +6,7 @@ import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { BlueprintPanel, SectionHeader, UniqueTabHeader } from '../unique-tabs/_design';
 import { ProgressChip, FeatureGrid, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
-import { ACCENT, PROGRESSION_FEATURES, generateChartData } from './_shared/data';
+import { ACCENT, PROGRESSION_FEATURES, LEVEL_REWARDS, generateChartData } from './_shared/data';
 
 /* -- Sub-section components ------------------------------------------------ */
 
@@ -30,6 +30,7 @@ import { PrestigePreview } from './_internals/PrestigePreview';
 import { XpTableGenerator } from './_internals/XpTableGenerator';
 import { DRCodeGenerator } from './_internals/DRCodeGenerator';
 import { DR_CONFIGS, type DRConfig } from '@/components/modules/core-engine/sub_progression/_shared/diminishingReturns';
+import { rewardSchedule, type RewardGroup } from '@/components/modules/core-engine/sub_progression/_shared/rewardPacing';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 
@@ -64,6 +65,9 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
 
   /* Analysis tab: one DR config set feeds the visualizer and the C++ generator */
   const [drConfigs, setDRConfigs] = useState<DRConfig[]>(DR_CONFIGS);
+
+  /* Rewards tab: one reward schedule feeds the pacing preview and the exported XP table */
+  const [rewardGroups, setRewardGroups] = useState<RewardGroup[]>(() => rewardSchedule(LEVEL_REWARDS));
 
   const chartData = useMemo(() => generateChartData(baseXp, curveExp), [baseXp, curveExp]);
   const maxXp = chartData[chartData.length - 1]?.xp ?? 10000;
@@ -158,7 +162,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
 
           <BuildPathComparison />
           <XpSourceBreakdown />
-          <XpTableGenerator baseXp={baseXp} curveExp={curveExp} />
+          <XpTableGenerator baseXp={baseXp} curveExp={curveExp} schedule={rewardGroups} />
         </VisibleSection>
       )}
 
@@ -167,8 +171,8 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           <AchievementBoard />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <LevelUpRewardPreview />
-            <TimeToLevelEstimator />
+            <LevelUpRewardPreview baseXp={baseXp} curveExp={curveExp} schedule={rewardGroups} onScheduleChange={setRewardGroups} />
+            <TimeToLevelEstimator baseXp={baseXp} curveExp={curveExp} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

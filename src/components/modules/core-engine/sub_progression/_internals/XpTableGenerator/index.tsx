@@ -12,6 +12,7 @@ import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, CopyButton } from '../../../unique-tabs/_shared';
 import { ACCENT, MAX_LEVEL, LEVEL_REWARDS } from '../../_shared/data';
+import { rewardSchedule, type RewardGroup } from '@/components/modules/core-engine/sub_progression/_shared/rewardPacing';
 import {
   generateProgressionTable,
   progressionToCSV,
@@ -19,14 +20,18 @@ import {
   progressionToUE5Loader,
 } from './helpers';
 
+const SHIPPED_SCHEDULE = rewardSchedule(LEVEL_REWARDS);
+
 /* ── Component ─────────────────────────────────────────────────────────────── */
 
 interface XpTableGeneratorProps {
   baseXp: number;
   curveExp: number;
+  /** The Rewards tab's schedule; every reward at a level is exported in that row. */
+  schedule?: RewardGroup[];
 }
 
-export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
+export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE }: XpTableGeneratorProps) {
   const prefersReduced = useReducedMotion();
   const [hpPerLevel, setHpPerLevel] = useState(10);
   const [manaPerLevel, setManaPerLevel] = useState(5);
@@ -35,9 +40,10 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
   const [levelOverrides] = useState<Map<number, Partial<{ xpRequired: number; hpBonus: number; manaBonus: number }>>>(new Map());
 
   const progressionRows = useMemo(
-    () => generateProgressionTable(MAX_LEVEL, baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides),
-    [baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides],
+    () => generateProgressionTable(MAX_LEVEL, baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule),
+    [baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule],
   );
+  const leadRewardAt = useMemo(() => new Map(schedule.map((g) => [g.level, g.rewards[0]])), [schedule]);
 
   const xpTableOutput = useMemo(() => {
     switch (xpTableTab) {
@@ -153,7 +159,7 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
             <tbody>
               {progressionRows.map((row, i) => {
                 const hasReward = row.unlockReward.length > 0;
-                const reward = LEVEL_REWARDS.find(r => r.level === row.level);
+                const reward = leadRewardAt.get(row.level);
                 return (
                   <motion.tr
                     key={row.level}
