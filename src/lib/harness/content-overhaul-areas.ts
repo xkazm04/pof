@@ -33,6 +33,8 @@ Define sections for each:
 - materials: Master (base, functions), Instances (dynamic, MPC), Effects (post-process, HLSL)
 - models: Pipeline (import, FBX), Assets (LOD, collision), Validation (Nanite, slots)
 - ui-hud: Menus (main, settings), HUD (health, abilities), Inventory (grid, slots), Polish (damage-numbers, effects)
+Declare every section with the registry helpers in that file: g() ONLY for a section a <VisibleSection sectionId="..."> gate in the module reads (the only kind the Feature Map renders as a toggle), sub() for a sub-panel rendered inside a gated panel, free() for a section nothing hides.
+Keep src/__tests__/components/core-engine/feature-section-coverage.test.ts green: the gated ids must equal the sectionId literals under each sub_* dir.
 Register with getTabGroups() so FeatureMapTab works for content modules.`,
     [
       'animations sections defined in feature-map-config',
@@ -48,6 +50,7 @@ Register with getTabGroups() so FeatureMapTab works for content modules.`,
     `Continue adding content modules to feature-map-config.ts:
 - models sections defined
 - ui-hud sections defined
+Declare each section with g() / sub() / free() exactly as in Part 1 (g() only where a <VisibleSection> gate reads it).
 Verify getTabGroups() returns correct groups for all 6 content modules.
 Add FeatureMapTab as a tab in each content module's view component.`,
     [
