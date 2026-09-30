@@ -11,6 +11,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { toast } from 'sonner';
 import { useRovingFocus } from './hooks/useRovingFocus';
 import type { DerivedLifecycleMap } from './useDerivedLifecycle';
+import { SeedDriftNotice } from './SeedDriftNotice';
 
 interface CatalogTreeProps {
   t: LabTheme;
@@ -348,7 +349,8 @@ export function CatalogTree({
     roving.setActive(activeIdx);
   }
 
-  return (
+  return (<>
+    <SeedDriftNotice t={t} />
     <div
       role="tree"
       aria-label="Catalogs"
@@ -398,5 +400,5 @@ export function CatalogTree({
         );
       })}
     </div>
-  );
+  </>);
 }

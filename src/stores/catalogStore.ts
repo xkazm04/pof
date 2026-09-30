@@ -8,6 +8,13 @@ import type {
 } from '@/lib/catalog/types';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
 import { mergePersistedDrafts, type PersistedRow } from '@/lib/catalog/persistedHydration';
+import {
+  planSeedMerge, persistableSeedState, resolveSeedFindings, type SeedFinding, type SeedRef,
+} from '@/lib/catalog/seedSync';
+
+/** The shipped code seeds — what every persisted copy is classified against (`seedSync.ts`). */
+const SHIPPED = seedAllCatalogs();
+const NO_DRIFT: SeedFinding[] = [];
 
 /**
  * A one-shot draft in the browser store. `browserOnly` is set when the server-side persist
@@ -60,6 +67,14 @@ interface CatalogState {
    * ingest — resolved for every server gate and was invisible in the lab.
    */
   hydratePersisted: (rows: PersistedRow[]) => { added: number; shadowed: string[] };
+  /** `catalog/id` → content hash of the code seed each persisted copy was written against. */
+  seedHashes: Record<string, string>;
+  /** Persisted copies that differ from the shipped seed and need a decision (never persisted). */
+  seedDrift: SeedFinding[];
+  /** The shipped seed wins (overlays kept); a retired orphan is removed. */
+  adoptShippedSeeds: (refs: SeedRef[]) => void;
+  /** The browser copy stays; the current seed hash is recorded so it stops asking. */
+  keepMine: (refs: SeedRef[]) => void;
 }
 
 function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityBase> {
@@ -154,30 +169,38 @@ export const useCatalogStore = create<CatalogState>()(
           delete next[entityId];
           return { draftEntitiesByCatalog: { ...s.draftEntitiesByCatalog, [catalogId]: next } };
         }),
+
+      seedHashes: {},
+      seedDrift: NO_DRIFT,
+      adoptShippedSeeds: (refs) => set((s) => resolveSeedFindings(s, refs, 'adopt', SHIPPED)),
+      keepMine: (refs) => set((s) => resolveSeedFindings(s, refs, 'keep', SHIPPED)),
     }),
     {
       name: 'pof-catalog',
       storage: createJSONStorage(() => localStorage),
-      // Re-seed any seed ENTITY the persisted blob is missing, so newly-added seed entries
-      // appear after a code update without wiping persisted ones.
-      //
-      // The merge has to run one level deeper than it looks. A per-CATALOG spread
-      // (`{...current.entitiesByCatalog, ...persisted.entitiesByCatalog}`) replaces each
-      // seeded catalog wholesale with whatever the persisted blob holds for it, so a newly
-      // seeded entity added to an EXISTING catalog never appeared for a returning user —
-      // only an entirely new catalog id did. Merging per entity keeps the persisted row
-      // authoritative where it exists (edits, lifecycle, ueAssets survive) while letting new
-      // seed entities through.
+      // Version STAYS 0 (no bump, no migrate): a blob without `seedHashes` IS the legacy case
+      // and classifies as `unrecorded` (kept, asks). zustand 5 discards a version-mismatched
+      // blob that has no `migrate`, so a bump would make a revert silently drop local rows and
+      // browser-only drafts that exist nowhere else.
+      version: 0,
+      // Persist only what the code cannot rebuild: entities that differ from their code seed
+      // (overlays, edits, local rows) with their seed provenance, plus the drafts. Pristine seeds
+      // used to be mirrored whole (503 entities) and then shadowed every later seed correction.
+      partialize: (s) => ({
+        ...persistableSeedState(s.entitiesByCatalog, SHIPPED, s.seedHashes),
+        draftEntitiesByCatalog: s.draftEntitiesByCatalog,
+      }),
+      // Per ENTITY, never per catalog (a catalog spread hid new seeds in existing catalogs), and
+      // by provenance, never "persisted wins": an untouched copy follows the code, an edit is
+      // kept, and a copy that cannot be told apart asks (`seedDrift` → SeedDriftNotice).
       merge: (persisted, current) => {
-        const p = persisted as Partial<CatalogState> | undefined;
-        const persistedByCatalog = p?.entitiesByCatalog ?? {};
-        const entitiesByCatalog: Record<string, Record<string, CatalogEntityBase>> = { ...current.entitiesByCatalog };
-        for (const [catalogId, entities] of Object.entries(persistedByCatalog)) {
-          entitiesByCatalog[catalogId] = { ...(entitiesByCatalog[catalogId] ?? {}), ...entities };
-        }
+        const p = persisted as Partial<Pick<CatalogState, 'entitiesByCatalog' | 'draftEntitiesByCatalog' | 'seedHashes'>> | undefined;
+        const plan = planSeedMerge(SHIPPED, p?.entitiesByCatalog ?? {}, p?.seedHashes ?? {});
         return {
           ...current,
-          entitiesByCatalog,
+          entitiesByCatalog: plan.entities,
+          seedHashes: plan.recorded,
+          seedDrift: plan.findings.length ? plan.findings : NO_DRIFT,
           draftEntitiesByCatalog: { ...(p?.draftEntitiesByCatalog ?? {}) },
         };
       },
