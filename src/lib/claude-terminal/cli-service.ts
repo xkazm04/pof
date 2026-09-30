@@ -6,8 +6,10 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { UI_TIMEOUTS, getAppOrigin } from '@/lib/constants';
 import { settleExecution } from '@/lib/claude-terminal/run-settle';
+import { settleRunCallbacks, type RunCallbackSettlement } from '@/lib/claude-terminal/run-callbacks';
+import type { TaskCallback, CallbackStatus } from '@/lib/cli-task';
 import { extractResultMetrics, type NormalizedUsage } from '@/lib/claude-terminal/result-metrics';
 import { killProcessTree } from '@/lib/process-tree-kill';
 import { resolveAutonomousMcpArgs } from '@/lib/claude-terminal/mcp-config';
@@ -88,7 +90,8 @@ export interface CLIResultMessage {
 export type CLIMessage = CLISystemMessage | CLIAssistantMessage | CLIUserMessage | CLIResultMessage;
 
 export interface CLIExecutionEvent {
-  type: 'init' | 'text' | 'tool_use' | 'tool_result' | 'result' | 'error' | 'stdout';
+  /** `callbacks` carries the run's server-side callback settlement ({@link RunCallbackSettlement}). */
+  type: 'init' | 'text' | 'tool_use' | 'tool_result' | 'result' | 'error' | 'stdout' | 'callbacks';
   data: Record<string, unknown>;
   timestamp: number;
 }
@@ -114,6 +117,16 @@ export interface CLIExecution {
   spendRecorded?: boolean;
   /** Set by {@link abortExecution} so the spend row is stamped 'aborted'. */
   aborted?: boolean;
+  /** The run's declared `@@CALLBACK` descriptors — settled here when the run ends. */
+  callbacks?: TaskCallback[];
+  /** The app origin callbacks resolve against (their `/api/` path only; never another host). */
+  appOrigin?: string;
+  /** Latched once settlement starts, so a run's callbacks are POSTed at most once. */
+  callbacksSettling?: boolean;
+  /** The settlement verdict; unset until it lands (and for runs that declared none). */
+  callbackStatus?: CallbackStatus | null;
+  /** The declared markers whose POST did not land (re-POSTable by the host's Resubmit). */
+  callbacksFailed?: RunCallbackSettlement['failed'];
 }
 
 const globalForExecutions = globalThis as unknown as {
@@ -213,6 +226,13 @@ export interface StartExecutionOptions {
   effort?: string;
   /** Best-known spend attribution — recorded with the run's terminal outcome. */
   attribution?: SpawnAttribution;
+  /**
+   * The run's declared `@@CALLBACK` descriptors (terminal runs). When present the
+   * execution settles them itself when the run ends — see run-callbacks.ts.
+   */
+  callbacks?: TaskCallback[];
+  /** App origin the callbacks resolve against; defaults to the server's own origin. */
+  appOrigin?: string;
 }
 
 /**
@@ -267,6 +287,8 @@ export function startExecution(
     logFilePath,
     listeners: new Set(),
     attribution: options?.attribution,
+    callbacks: options?.callbacks?.length ? options.callbacks : undefined,
+    appOrigin: options?.appOrigin,
   };
 
   activeExecutions.set(executionId, execution);
@@ -298,6 +320,32 @@ export function startExecution(
       execution.spendRecorded = true;
       recordExecutionSpend(execution, event);
     }
+  };
+
+  /**
+   * Settle the run's declared callbacks once, from the text it produced — the run's
+   * owner does this, not whichever tab happens to be watching. Emits a `callbacks`
+   * event and records `callbackStatus`. A run that declared none is untouched.
+   */
+  const settleDeclaredCallbacks = () => {
+    const declared = execution.callbacks;
+    if (!declared || execution.callbacksSettling) return;
+    execution.callbacksSettling = true;
+    const text = execution.events
+      .filter((e) => e.type === 'text')
+      .map((e) => String(e.data.content ?? ''))
+      .join('\n');
+    void settleRunCallbacks({ text, callbacks: declared, appOrigin: execution.appOrigin ?? getAppOrigin() })
+      .catch((e): RunCallbackSettlement => ({
+        status: 'failed',
+        failed: [{ callbackId: '*', payload: '', error: e instanceof Error ? e.message : 'settlement failed' }],
+      }))
+      .then((settled) => {
+        execution.callbackStatus = settled.status;
+        execution.callbacksFailed = settled.failed;
+        logMessage(`Callbacks settled: ${settled.status} (${settled.failed.length} failed)`);
+        emitEvent({ type: 'callbacks', data: { status: settled.status, failed: settled.failed }, timestamp: Date.now() });
+      });
   };
 
   logMessage('=== Claude Terminal Execution Started ===');
@@ -362,6 +410,7 @@ export function startExecution(
         execution.sessionId = metrics.sessionId || execution.sessionId;
         const resultEvent: CLIExecutionEvent = { type: 'result', data: { sessionId: metrics.sessionId, usage: metrics.usage, durationMs: metrics.durationMs, costUsd: metrics.costUsd, isError: metrics.isError }, timestamp: Date.now() };
         emitEvent(resultEvent);
+        settleDeclaredCallbacks();
       }
     };
 
@@ -404,6 +453,9 @@ export function startExecution(
           emitEvent({ type: 'result', data: { sessionId: execution.sessionId, isError: false, synthetic: true }, timestamp: Date.now() });
         }
       }
+      // A clean exit settles the declared callbacks even without a result line
+      // (no-op when the result already started the settlement).
+      if (code === 0) settleDeclaredCallbacks();
     });
 
     childProcess.on('error', (err: Error) => {
@@ -506,7 +558,13 @@ export async function awaitCallback(
  */
 export function getExecutionStatus(
   executionId: string,
-): { state: 'running' | 'completed' | 'failed'; exitCode?: number; lastEvent?: CLIExecutionEvent } | null {
+): {
+  state: 'running' | 'completed' | 'failed';
+  exitCode?: number;
+  lastEvent?: CLIExecutionEvent;
+  /** The run's server-side callback verdict; null when none declared or not yet settled. */
+  callbackStatus: CallbackStatus | null;
+} | null {
   const execution = activeExecutions.get(executionId);
   if (!execution) return null;
 
@@ -521,5 +579,6 @@ export function getExecutionStatus(
   return {
     state: stateMap[execution.status],
     lastEvent,
+    callbackStatus: execution.callbackStatus ?? null,
   };
 }

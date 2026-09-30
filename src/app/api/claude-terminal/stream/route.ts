@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
             return { type: 'result', data: { sessionId: cliEvent.data.sessionId, usage: cliEvent.data.usage, durationMs: cliEvent.data.durationMs, totalCostUsd: cliEvent.data.costUsd, isError: cliEvent.data.isError }, timestamp: cliEvent.timestamp };
           case 'error':
             return { type: 'error', data: { error: cliEvent.data.message, exitCode: cliEvent.data.exitCode }, timestamp: cliEvent.timestamp };
+          case 'callbacks':
+            return { type: 'callbacks', data: { status: cliEvent.data.status, failed: cliEvent.data.failed }, timestamp: cliEvent.timestamp };
           default:
             return { type: 'stdout', data: cliEvent.data, timestamp: cliEvent.timestamp };
         }
@@ -91,17 +93,26 @@ export async function GET(request: NextRequest) {
         return;
       }
 
+      // A run that declared @@CALLBACKs is settled server-side AFTER its result: its
+      // stream ends with the `callbacks` frame (the verdict), not with `result`.
+      const settlesCallbacks = (execution.callbacks?.length ?? 0) > 0;
+      const isTerminal = (type: CLIExecutionEvent['type']) =>
+        type === 'error' || type === (settlesCallbacks ? 'callbacks' : 'result');
+
       for (const event of execution.events) {
         if (event.type === 'stdout') continue;
         sendEvent(convertEvent(event));
-        if (event.type === 'result' || event.type === 'error') {
+        if (isTerminal(event.type)) {
           closeStream();
           return;
         }
       }
 
+      // A cleanly finished run whose callback settlement is still in flight: wait for it.
+      const awaitingSettlement = settlesCallbacks && execution.status === 'completed' && execution.callbackStatus === undefined;
+
       // If execution already finished during replay
-      if (execution.status !== 'running') {
+      if (execution.status !== 'running' && !awaitingSettlement) {
         sendEvent({
           type: execution.status === 'completed' ? 'result' : 'error',
           data: { status: execution.status, sessionId: execution.sessionId },
@@ -116,7 +127,7 @@ export async function GET(request: NextRequest) {
         if (isStreamClosed) { unsubscribe?.(); return; }
         if (cliEvent.type === 'stdout') return;
         sendEvent(convertEvent(cliEvent));
-        if (cliEvent.type === 'result' || cliEvent.type === 'error') {
+        if (isTerminal(cliEvent.type)) {
           unsubscribe?.();
           closeStream();
         }

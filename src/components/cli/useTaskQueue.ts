@@ -3,10 +3,13 @@
 import { useEffect, useCallback, useRef, useState, useReducer } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS, BUILD_PARSE_CACHE_MAX } from '@/lib/constants';
-import { extractAllCallbackPayloads, resolveCallback, type CallbackStatus } from '@/lib/cli-task';
+import {
+  extractAllCallbackPayloads, callbackIdsIn, getCallback,
+  type CallbackStatus, type TaskCallback,
+} from '@/lib/cli-task';
 import type {
   QueuedTask, FileChange, LogEntry,
-  ExecutionInfo, ExecutionResult, CLISSEEvent,
+  ExecutionInfo, ExecutionResult, CLISSEEvent, ServerFailedCallback, HiddenRunStatus,
 } from './types';
 import type { SkillId } from './skills';
 import { injectSkillsIntoPrompt } from './skills';
@@ -20,6 +23,17 @@ import { parseBuildOutput, type BuildParseResult } from './UE5BuildParser';
 // queued-task id. onTaskComplete must fire for them too — hosts release
 // session.isRunning from it.
 const INTERACTIVE_TASK_ID = 'interactive';
+
+/**
+ * The registry descriptors of every `@@CALLBACK:<id>` a prompt asks for. They ride
+ * the query POST so the server that owns the run settles them (run-callbacks.ts) —
+ * the tab never POSTs a run's callbacks itself.
+ */
+function declaredCallbacksOf(prompt: string): TaskCallback[] {
+  return callbackIdsIn(prompt)
+    .map((id) => getCallback(id))
+    .filter((cb): cb is TaskCallback => cb !== undefined);
+}
 
 interface UseTaskQueueOpts {
   instanceId: string;
@@ -296,6 +310,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   useEffect(() => { onCallbacksUnresolvedRef.current = onCallbacksUnresolved; }, [onCallbacksUnresolved]);
   /** Bumped on every dispatch — lets a late callback settle tell whether its run is still current. */
   const runTokenRef = useRef(0);
+  /** The current run's declared callbacks — the server settles them; non-empty means "await its verdict". */
+  const declaredCallbacksRef = useRef<TaskCallback[]>([]);
+  /** Resolves the clean-result path's wait with the server's `callbacks` verdict. */
+  const callbacksWaiterRef = useRef<((status: CallbackStatus | undefined) => void) | null>(null);
 
   const flushLogBuffer = useCallback(() => {
     rafIdRef.current = null;
@@ -361,6 +379,22 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     finishRun(success);
   }, [finishRun]);
 
+  /**
+   * Surface the server's callback verdict for the current run: log it and hand any
+   * failed payloads to the host (Resubmit re-POSTs them through the client registry).
+   */
+  const applyServerVerdict = useCallback((status: CallbackStatus, failed: ServerFailedCallback[], runToken: number) => {
+    if (status === 'confirmed') {
+      addLog({ id: `cb-ok-${Date.now()}`, type: 'system', content: 'Callback submitted successfully', timestamp: Date.now() });
+    }
+    for (const f of failed) {
+      addLog({ id: `cb-err-${Date.now()}-${f.callbackId}`, type: 'error', content: `Callback failed: ${f.error}`, timestamp: Date.now() });
+    }
+    if (failed.length > 0 && runTokenRef.current === runToken) {
+      onCallbacksUnresolvedRef.current?.(failed.map((f) => ({ callbackId: f.callbackId, payload: f.payload })));
+    }
+  }, [addLog]);
+
   // --- SSE event handling ---
 
   const handleSSEEvent = useCallback((event: CLISSEEvent) => {
@@ -425,50 +459,36 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         // recordExecutionSpend) — the old client-only result path is gone, so
         // failed/aborted/autonomous runs are no longer missed or double-counted.
 
-        // Resolve EVERY structured callback present in assistant output (a run may
-        // emit more than one). `callbackStatus` is ADDITIVE truth carried into the
-        // completion signal: 'missing' when no marker was emitted, 'confirmed' when
-        // all POSTs succeeded, 'failed' if any was rejected. It is computed inside
-        // the settle race — if the race times out first it stays undefined, i.e.
-        // the callback simply did not confirm in time (treated as unconfirmed).
-        const cbMarkers = extractAllCallbackPayloads(assistantOutputRef.current);
-        const runToken = runTokenRef.current;
-        let callbackStatus: CallbackStatus | undefined = cbMarkers.length === 0 ? 'missing' : undefined;
-        const cbPromise =
-          cbMarkers.length === 0
-            ? Promise.resolve()
-            : Promise.all(
-                cbMarkers.map((m) =>
-                  resolveCallback(m.callbackId, m.payload).then((cbResult) => {
-                    if (cbResult.success) {
-                      addLog({ id: `cb-ok-${Date.now()}-${m.callbackId}`, type: 'system', content: `Callback submitted successfully`, timestamp: Date.now() });
-                    } else {
-                      addLog({ id: `cb-err-${Date.now()}-${m.callbackId}`, type: 'error', content: `Callback failed: ${cbResult.error}`, timestamp: Date.now() });
-                    }
-                    return cbResult.success;
-                  }),
-                ),
-              ).then((results) => {
-                callbackStatus = results.every(Boolean) ? 'confirmed' : 'failed';
-                // Hand the failed payloads to the host before the text is gone — the
-                // registry kept their entries, so they stay re-POSTable without a re-run.
-                const unresolved = cbMarkers.filter((_, i) => !results[i]);
-                if (unresolved.length > 0 && runTokenRef.current === runToken) {
-                  onCallbacksUnresolvedRef.current?.(unresolved);
-                }
-              });
-
+        // The SERVER settles the run's declared @@CALLBACKs (run-callbacks.ts) — the
+        // tab never POSTs them, so a hidden, re-shown or reloaded tab can neither
+        // drop nor duplicate a result. `callbackStatus` stays ADDITIVE truth carried
+        // into the completion signal: the server's verdict arrives as the `callbacks`
+        // frame right after `result`. A run that declared none reports 'missing'
+        // when no marker was emitted, 'failed' when one was (nothing can submit it).
+        let verdict: Promise<CallbackStatus | undefined>;
+        if (declaredCallbacksRef.current.length > 0) {
+          verdict = new Promise((resolve) => { callbacksWaiterRef.current = resolve; });
+        } else {
+          const stray = extractAllCallbackPayloads(assistantOutputRef.current);
+          if (stray.length > 0) {
+            addLog({ id: `cb-err-${Date.now()}`, type: 'error', content: 'Callback failed: the run emitted a callback it never declared', timestamp: Date.now() });
+            onCallbacksUnresolvedRef.current?.(stray);
+          }
+          verdict = Promise.resolve(stray.length === 0 ? 'missing' : 'failed');
+        }
         assistantOutputRef.current = '';
 
-        // Complete the task once the callback POST settles — but never wait on
-        // it indefinitely. resolveCallback's POST can hang; gating onTaskComplete
-        // on it alone strands session.isRunning forever (the SP-B chunk-1 run #4
-        // hang). Race it against callbackSettleMax so the completion — and the
-        // isRunning release — always fires within a bounded window.
+        // Never wait on the verdict indefinitely: gating onTaskComplete on it alone
+        // could strand session.isRunning (the SP-B chunk-1 run #4 hang). Race it
+        // against callbackSettleMax so the completion — and the isRunning release —
+        // always fires within a bounded window (undefined = did not confirm in time).
+        let settleTimer: ReturnType<typeof setTimeout> | undefined;
         Promise.race([
-          cbPromise,
-          new Promise<void>((resolve) => setTimeout(resolve, UI_TIMEOUTS.callbackSettleMax)),
-        ]).finally(() => {
+          verdict,
+          new Promise<undefined>((resolve) => { settleTimer = setTimeout(() => resolve(undefined), UI_TIMEOUTS.callbackSettleMax); }),
+        ]).then((callbackStatus) => {
+          clearTimeout(settleTimer);
+          callbacksWaiterRef.current = null;
           // completedRef is already latched (set synchronously above), so this is
           // the single completion firing for the clean-result path. Interactive
           // runs (submitPrompt) have no queued task id, but the completion signal
@@ -476,6 +496,14 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           finishRun(!data.isError, { callbackStatus });
         });
 
+        break;
+      }
+      case 'callbacks': {
+        // The server's settlement of this run's declared callbacks (see above).
+        const data = event.data as { status?: CallbackStatus | null; failed?: ServerFailedCallback[] };
+        const status = data.status ?? undefined;
+        if (status) applyServerVerdict(status, Array.isArray(data.failed) ? data.failed : [], runTokenRef.current);
+        callbacksWaiterRef.current?.(status);
         break;
       }
       case 'error': {
@@ -488,7 +516,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         break;
       }
     }
-  }, [addLog, addFileChange, instanceId, clearHeartbeat, completeOnce, finishRun]);
+  }, [addLog, addFileChange, instanceId, clearHeartbeat, completeOnce, finishRun, applyServerVerdict]);
 
   const connectToStream = useCallback((streamUrl: string) => {
     if (eventSourceRef.current) eventSourceRef.current.close();
@@ -504,7 +532,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       try {
         const data = JSON.parse(event.data) as CLISSEEvent;
         handleSSEEvent(data);
-        if (data.type === 'result' || data.type === 'error') {
+        // A run that declared callbacks ends with the server's `callbacks` verdict.
+        const ends = data.type === 'error' || data.type === 'callbacks'
+          || (data.type === 'result' && declaredCallbacksRef.current.length === 0);
+        if (ends) {
           eventSource.close();
           eventSourceRef.current = null;
           savedStreamUrlRef.current = null;
@@ -568,13 +599,17 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
     addLog({ id: `task-${Date.now()}`, type: 'system', content: `Starting: ${task.label}`, timestamp: Date.now() });
 
+    const callbacks = declaredCallbacksOf(taskPrompt);
+    declaredCallbacksRef.current = callbacks;
+
     try {
       const attribution = resolveAttributionRef.current?.() ?? {};
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // taskLabel from the queued task; module/type/sessionKey from the session.
-        body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label }),
+        // `callbacks`: the server settles them when the run ends (never this tab).
+        body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label, ...(callbacks.length > 0 ? { callbacks } : {}) }),
       });
       executionIdRef.current = data.executionId;
       // Record which execution backs this task so a future 409-conflict
@@ -623,6 +658,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       basePrompt: prompt, enabledSkills, resumeSession, runLabel: opts?.taskType ?? 'interactive',
     });
 
+    const callbacks = declaredCallbacksOf(dispatchPrompt);
+    declaredCallbacksRef.current = callbacks;
+
     try {
       const attribution = resolveAttributionRef.current?.() ?? {};
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null; model: string | null; effort: string | null }>('/api/claude-terminal/query', {
@@ -630,7 +668,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         headers: { 'Content-Type': 'application/json' },
         // taskType lets the route resolve the model-policy pin (WS0) AND attribute spend;
         // this dispatch's explicit taskType wins over the session's last-known one.
-        body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskType: opts?.taskType ?? attribution.taskType }),
+        // `callbacks`: the server settles them when the run ends (never this tab).
+        body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskType: opts?.taskType ?? attribution.taskType, ...(callbacks.length > 0 ? { callbacks } : {}) }),
       });
       executionIdRef.current = data.executionId;
       dispatch({ type: 'SET_RESOLVED_MODEL', model: data.model ?? null, effort: data.effort ?? null });
@@ -711,6 +750,37 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     }, UI_TIMEOUTS.stuckCheckInterval);
     return () => { if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; } };
   }, [visible, autoStart, streaming, taskId, finishRun, clearHeartbeat]);
+
+  // --- Hidden-run settle: a hidden terminal still ends its run ---
+  // Hiding closes the EventSource (below) — an attention cost — but the run's
+  // existence is the server's: poll its execution status and end the run from there,
+  // with the server's callback verdict, without waiting for the tab to be re-shown.
+  useEffect(() => {
+    if (visible || !streaming) return;
+    const poll = setInterval(async () => {
+      if (completedRef.current) return;
+      const execId = executionIdRef.current;
+      if (!execId) return;
+      let ex: HiddenRunStatus;
+      try {
+        ex = (await apiFetch<{ execution: HiddenRunStatus }>(`/api/claude-terminal/query?executionId=${encodeURIComponent(execId)}`)).execution;
+      } catch { return; /* transient — the next poll (or a re-show) retries */ }
+      if (completedRef.current || executionIdRef.current !== execId || ex.status === 'running') return;
+      const clean = ex.status === 'completed';
+      const declared = declaredCallbacksRef.current.length > 0;
+      if (clean && declared && !ex.callbackStatus) return; // the server is still settling
+      completedRef.current = true;
+      savedStreamUrlRef.current = null; // settled: a re-show must not re-attach
+      if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
+      clearHeartbeat();
+      const callbackStatus = clean && declared ? ex.callbackStatus ?? undefined : undefined;
+      if (callbackStatus) applyServerVerdict(callbackStatus, ex.callbacksFailed ?? [], runTokenRef.current);
+      const success = clean && !ex.isError;
+      finishRun(success, callbackStatus ? { callbackStatus } : undefined);
+      dispatch({ type: 'STUCK_RESOLVED', success });
+    }, UI_TIMEOUTS.stuckCheckInterval);
+    return () => clearInterval(poll);
+  }, [visible, streaming, finishRun, clearHeartbeat, applyServerVerdict]);
 
   // --- Process task queue ---
 

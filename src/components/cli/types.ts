@@ -59,6 +59,23 @@ export interface ExecutionResult {
   isError?: boolean;
 }
 
+/** A declared `@@CALLBACK` the server could not land (payload kept for Resubmit). */
+export interface ServerFailedCallback {
+  callbackId: string;
+  payload: string;
+  error: string;
+}
+
+/** The execution status a hidden terminal polls (GET /api/claude-terminal/query). */
+export interface HiddenRunStatus {
+  status: 'running' | 'completed' | 'error' | 'aborted';
+  /** The server's callback verdict — null when none declared or still settling. */
+  callbackStatus?: CallbackStatus | null;
+  callbacksFailed?: ServerFailedCallback[];
+  /** The CLI reported an error result. */
+  isError?: boolean;
+}
+
 export interface CLISSEEvent {
   type: string;
   data: Record<string, unknown>;
