@@ -304,6 +304,14 @@ the browser or edge runtime).
 > calendar arithmetic runs on keys. `generateWeeklyDigest(ref?, zone?)` and
 > `aggregateProjectWrapped(rows, now, zone?)` read every key from it and echo `zone` on the result
 > (`periodEnd` is the exclusive next Monday). Nothing new is stored; tests pin an explicit zone.
+>
+> **Weekly review.** `GET /api/weekly-digest?weeksAgo=N` (integer 0-52, else 400; absent = the
+> current week) walks `previousWeek()` N times from `weekWindow(now, reportZone())`. The digest's
+> Checklist figure is client-side `weekLanded` (`WeeklyDigestView/weekLanded.ts`) over the completion
+> ledger: done items stamped in the digest's zone-cut `[start, end)`, a delta against the week before
+> that is `null` (not 0) when neither week has a dated stamp but undated completions exist, `doneByEnd`
+> counting only stamps before the end, and undated items disclosed but never bucketed. The server's
+> `checklistCompleted` / `checklistDelta` stay 0 placeholders that the view does not read.
 
 > `session_analytics` / `telemetry_snapshots` / `genre_suggestions` were previously
 > bootstrapped divergently (an unguarded per-call `CREATE TABLE` in `session-analytics-db.ts`
