@@ -32,6 +32,12 @@ interface PofBridgeState {
   manifestChecksum: string | null;
   /** ISO timestamp of the last manifest update. */
   lastManifestUpdate: string | null;
+  /**
+   * Cache key (`${port}::${projectName}`, see `manifestKey`) the cached manifest
+   * was fetched under. Runtime-only; `useManifest` never serves a manifest whose
+   * key differs from the connected editor's.
+   */
+  manifestKey: string | null;
   /** Current error message, if any. */
   error: string | null;
 
@@ -41,7 +47,9 @@ interface PofBridgeState {
   setAutoDetect: (auto: boolean) => void;
   setConnectionStatus: (status: PofConnectionStatus) => void;
   setPluginInfo: (info: PofBridgeStatus | null) => void;
-  setManifest: (manifest: AssetManifest | null, checksum?: string) => void;
+  setManifest: (manifest: AssetManifest | null, checksum?: string, key?: string | null) => void;
+  /** Drop the cached manifest (e.g. the connected editor changed). */
+  clearManifest: () => void;
   setError: (error: string | null) => void;
 }
 
@@ -59,6 +67,7 @@ export const usePofBridgeStore = create<PofBridgeState>()(
       manifest: null,
       manifestChecksum: null,
       lastManifestUpdate: null,
+      manifestKey: null,
       error: null,
 
       // Actions
@@ -67,12 +76,15 @@ export const usePofBridgeStore = create<PofBridgeState>()(
       setAutoDetect: (autoDetect) => set({ autoDetect }),
       setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
       setPluginInfo: (pluginInfo) => set({ pluginInfo }),
-      setManifest: (manifest, checksum) =>
+      setManifest: (manifest, checksum, key) =>
         set({
           manifest,
           manifestChecksum: checksum ?? manifest?.checksumSha256 ?? null,
           lastManifestUpdate: manifest ? new Date().toISOString() : null,
+          manifestKey: manifest ? key ?? null : null,
         }),
+      clearManifest: () =>
+        set({ manifest: null, manifestChecksum: null, lastManifestUpdate: null, manifestKey: null }),
       setError: (error) => set({ error }),
     }),
     {
