@@ -1,8 +1,6 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
-import { applyStyleFragment, styleDnaToPromptFragment } from '@/lib/visual-gen/style-dna';
-import { styleDnaForProfile } from '@/lib/visual-gen/style-dna-db';
-import { subjectClassOf } from '@/lib/catalog/canon/subjectClass';
+import { applyStyle, styleRequestOf } from '@/lib/visual-gen/style-apply';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -19,7 +17,7 @@ type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
  * reason when the chosen one has no key here, calls `generateImage` directly, and
  * saves the bytes to `generated/images/` so the result is retrievable. This route
  * stays as the Leonardo-specific surface (and the `applyStyleDna` path the gap-loop
- * batch scripts use); the 2D front does not send style DNA — see `STYLE_DNA_REACH`.
+ * batch scripts use). Both resolve Style DNA through the one resolver, `style-apply.ts`.
  */
 
 export async function POST(request: Request) {
@@ -37,32 +35,13 @@ export async function POST(request: Request) {
       if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
       const opts: GenerateImageOptions = body?.opts ?? {};
 
-      // Opt-in project-style consistency: append the active Style DNA fragment through
-      // the SHARED helper, capped so the combined prompt never exceeds the provider limit.
-      //
-      // NOTE ON REACH: nothing in `src/` sends `applyStyleDna` — only the gap-loop batch
-      // scripts do. The forge's Style DNA panel now STATES that (`STYLE_DNA_REACH`)
-      // instead of implying this path with a label that just says "prompts".
-      //
-      // `canonProfile` (the entity's canon profile, /diablo W03 D13) picks WHICH style: the project's
-      // active one for PoF's own entities, only a style bound to that profile for any other — and a
-      // withheld style says why instead of silently rendering a Diablo entity in PoF's look.
-      let styleDnaApplied: string | null = null;
-      let styleDnaWithheld: string | null = null;
-      let finalPrompt = prompt;
-      if (body?.applyStyleDna === true) {
-        const canonProfile = typeof body?.canonProfile === 'string' ? body.canonProfile : null;
-        // The subject's class picks the profile's per-class style variant (D15) — from the catalog.
-        const subjectClass = subjectClassOf(typeof body?.catalogId === 'string' ? body.catalogId : null);
-        const style = styleDnaForProfile(getDb(), canonProfile, subjectClass);
-        if (style) {
-          finalPrompt = applyStyleFragment(prompt, styleDnaToPromptFragment(style.dna), MAX_PROMPT_LENGTH);
-          styleDnaApplied = style.name;
-        } else if (canonProfile) {
-          styleDnaWithheld = `no Style DNA is bound to canon profile "${canonProfile}" — the project's style is never applied to another canon`;
-        }
-      }
-      const result = await generateImage(finalPrompt, opts);
+      // Opt-in style consistency through the ONE canon-aware resolver (style-apply.ts):
+      // `canonProfile` (/diablo W03 D13) picks WHICH style — the project's active one for PoF's
+      // own entities, only a style bound to that canon for any other, and a withheld style says
+      // why instead of rendering a Diablo entity in PoF's look; `catalogId` picks the canon's
+      // per-subject-class variant (D15). Capped at Leonardo's own prompt ceiling.
+      const style = applyStyle(getDb, prompt, styleRequestOf(body), MAX_PROMPT_LENGTH);
+      const result = await generateImage(style.prompt, opts);
 
       // NO SEAM FIELD HERE, DELIBERATELY. This route used to run a tileability pass gated
       // on `opts.tiling` and return a `seam` alongside the image — but nothing anywhere
@@ -73,7 +52,12 @@ export async function POST(request: Request) {
       // the material lab renders in BOTH directions (seam found / checked and clean).
       // To bring it back, add a caller that actually requests a seamless tile from
       // Leonardo and restore the branch with it — not before.
-      return apiSuccess({ ...result, styleDnaApplied, styleDnaWithheld });
+      return apiSuccess({
+        ...result,
+        styleDnaApplied: style.styleDnaApplied,
+        styleDnaWithheld: style.styleDnaWithheld,
+        styleDnaDropped: style.styleDnaDropped,
+      });
     }
 
     if (mode === 'upscale') {
