@@ -1,4 +1,5 @@
 import type { WeeklyDigest } from '@/types/weekly-digest';
+import type { WeekLanded } from './weekLanded';
 import { roundRect } from '@/lib/canvas-poster';
 import { formatDuration } from '@/lib/format';
 import { MODULE_COLORS, ACCENT_VIOLET, STATUS_INFO, ACCENT_RED, ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_5, OPACITY_8, OPACITY_10 } from '@/lib/chart-colors';
@@ -15,7 +16,15 @@ export function formatDateRange(start: string, end: string): string {
 
 // ── Markdown export ──────────────────────────────────────────────────────────
 
-export function formatDigestMarkdown(d: WeeklyDigest): string {
+/** The Checklist figure: what landed this week vs last, or (no ledger read) the stored count. */
+export function checklistLine(d: WeeklyDigest, landed?: WeekLanded): string {
+  if (!landed) return `${d.checklistCompleted}/${d.checklistTotal}`;
+  const delta = landed.delta === null ? 'no dated baseline' : `${landed.delta >= 0 ? '+' : ''}${landed.delta} vs last week`;
+  const undated = landed.undated > 0 ? `, ${landed.undated} undated` : '';
+  return `${landed.count} landed (${delta}) · ${landed.doneByEnd}/${d.checklistTotal} dated done by week end${undated}`;
+}
+
+export function formatDigestMarkdown(d: WeeklyDigest, landed?: WeekLanded): string {
   const lines: string[] = [];
   lines.push(`# POF Weekly Digest`);
   lines.push(`**${formatDateRange(d.periodStart, d.periodEnd)}**`);
@@ -23,10 +32,16 @@ export function formatDigestMarkdown(d: WeeklyDigest): string {
   lines.push(`## Stats`);
   lines.push(`- **Sessions:** ${d.totalSessions} (${d.totalSessions - d.prevWeekSessions >= 0 ? '+' : ''}${d.totalSessions - d.prevWeekSessions} vs last week)`);
   lines.push(`- **Success Rate:** ${Math.round(d.successRate * 100)}%`);
-  lines.push(`- **Checklist:** ${d.checklistCompleted}/${d.checklistTotal}`);
+  lines.push(`- **Checklist:** ${checklistLine(d, landed)}`);
   lines.push(`- **Time Invested:** ${formatDuration(d.totalTimeMs)}`);
   lines.push(`- **Current Streak:** ${d.currentStreak} | **Best:** ${d.longestStreak}`);
   lines.push('');
+
+  if (landed && landed.items.length > 0) {
+    lines.push(`## Landed this week`);
+    for (const i of landed.items) lines.push(`- ${i.moduleLabel}: ${i.label}`);
+    lines.push('');
+  }
 
   if (d.mostActiveModule) {
     lines.push(`## Most Active`);
@@ -58,7 +73,7 @@ export function formatDigestMarkdown(d: WeeklyDigest): string {
 
 // ── Canvas PNG rendering ─────────────────────────────────────────────────────
 
-export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void {
+export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest, landed?: WeekLanded): void {
   const W = 800;
   const H = 600;
   canvas.width = W;
@@ -98,7 +113,7 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest)
   const stats = [
     { label: 'Sessions', value: d.totalSessions.toString(), color: STATUS_INFO },
     { label: 'Success Rate', value: `${Math.round(d.successRate * 100)}%`, color: MODULE_COLORS.setup },
-    { label: 'Checklist', value: `${d.checklistCompleted}/${d.checklistTotal}`, color: ACCENT_VIOLET },
+    { label: 'Checklist', value: landed ? `${landed.count} landed` : `${d.checklistCompleted}/${d.checklistTotal}`, color: ACCENT_VIOLET },
     { label: 'Time', value: formatDuration(d.totalTimeMs), color: MODULE_COLORS.content },
   ];
 
