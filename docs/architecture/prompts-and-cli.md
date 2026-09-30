@@ -344,6 +344,22 @@ The report persists as the spec's `codegen` provenance (`ability_specs.codegen`)
 and drives the `dispatched → confirmed/failed` line in the Forge adopt bar and
 the GAS Blueprint editor's spec bar.
 
+The `run-ai-tests` task (`TaskFactory.runAITests(..., runId)`) never lets the
+agent grade itself. Every sandbox prompt names a scenario's UE test through ONE
+identity (`@/lib/ai-testing/test-identity`: `AI.BehaviorTests.<Class>.S<id>_<Slug>`,
+matched by the rename-proof, prefix-free `S<id>_` prefix). The run prompt spells a
+single headless boot via `buildBatchAutomationArgs` (pure, in
+`test-gate-runner/batchAutomationArgs.ts` so client prompt builders can use it)
+with `-ReportOutputPath=<project>/Saved/Automation/PoF-AITests/<runId>`. The
+callback's staticFields carry `runId` / `reportDir` / `scenarioIds`, and
+`record-run-results` checks the dir's shape (400 on `..` or any other path),
+reads UE's `index.json` (`readReport`) and derives each scenario through
+`deriveRunVerdicts` (`@/lib/ai-testing/run-verdict`): report pass means passed,
+fail means failed, and an unmatched test or a missing report means error. The
+agent's claim survives only as a note. If the run ends without a confirmed
+callback, `AIBehaviorView` POSTs `record-run-results` itself with `results: []`,
+so no dispatched scenario stays `running`.
+
 An `ability_specs` row carries **all five** GAS Blueprint editor slices —
 `effects` / `tag_rules` (required) plus the additive, nullable `attributes` /
 `relationships` / `loadout` columns that feed `AttributeSet.h` and
