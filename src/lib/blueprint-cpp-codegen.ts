@@ -14,21 +14,18 @@
  * the HTTP route — mirroring how `replication-scaffolder.ts` is kept pure.
  */
 
-import { blueprintTypeToCpp, buildEndpointIndex } from '@/lib/blueprint-parser';
+import { buildEndpointIndex } from '@/lib/blueprint-parser';
+import { deriveCppSurface, type CppSurfaceFunction, type EventOverride } from '@/lib/blueprint-cpp-surface';
 import {
   REPLICATION_INCLUDE,
-  buildReplicationInfo,
-  replicationSpecifier,
   lifetimeReplicatedPropsDeclaration,
   lifetimeReplicatedPropsDefinition,
-  onRepDeclarations,
   onRepDefinitions,
 } from '@/lib/replication-scaffolder';
 import type {
   TranspileResult,
   TranspileWarning,
   BlueprintAsset,
-  BlueprintGraph,
   BlueprintNode,
   BlueprintPin,
 } from '@/types/blueprint';
@@ -56,42 +53,13 @@ export function apiMacroFor(moduleName: string): string {
 }
 
 /**
- * A UE engine event this transpiler knows how to override, resolved to the ONE
- * signature used by both the declaration and the definition.
- *
- * The header used to declare `EndPlay` while the source pass only ever defined
- * `BeginPlay`/`Tick` — a declared-but-undefined override is an unresolved
- * external at link time. Both passes now walk the same resolved list, so a
- * declaration without a definition is structurally impossible.
+ * The member model — class name/prefix, UPROPERTY specifiers, the UFUNCTION set,
+ * overrides and replication — lives in `blueprint-cpp-surface.ts`; this module
+ * only RENDERS it. The semantic diff compares against the same record, so the
+ * transpiler's own output round-trips clean. Re-exported for existing callers.
  */
-export interface EventOverride {
-  /** C++ member name. `Tick` becomes `TickComponent` on a UActorComponent. */
-  name: string;
-  /** Parameter list, identical in the declaration and the definition. */
-  params: string;
-  /** Argument list for the `Super::` call in the definition body. */
-  args: string;
-}
-
-export function resolveEventOverride(eventName: string, isComponent = false): EventOverride | null {
-  // UE names the Blueprint-side node `ReceiveBeginPlay`; the C++ override is `BeginPlay`.
-  switch (eventName.replace(/^Receive/, '')) {
-    case 'BeginPlay':
-      return { name: 'BeginPlay', params: '', args: '' };
-    case 'Tick':
-      return isComponent
-        ? {
-            name: 'TickComponent',
-            params: 'float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction',
-            args: 'DeltaTime, TickType, ThisTickFunction',
-          }
-        : { name: 'Tick', params: 'float DeltaTime', args: 'DeltaTime' };
-    case 'EndPlay':
-      return { name: 'EndPlay', params: 'const EEndPlayReason::Type EndPlayReason', args: 'EndPlayReason' };
-    default:
-      return null;
-  }
-}
+export { resolveEventOverride, deriveFunctionSignature } from '@/lib/blueprint-cpp-surface';
+export type { EventOverride } from '@/lib/blueprint-cpp-surface';
 
 export function overrideDeclaration(o: EventOverride): string {
   return `virtual void ${o.name}(${o.params}) override;`;
@@ -101,34 +69,13 @@ export function overrideDefinitionSignature(cppClassName: string, o: EventOverri
   return `void ${cppClassName}::${o.name}(${o.params})`;
 }
 
-/**
- * Derive the C++ parameter list and return type for a Blueprint function from
- * its entry/result nodes. Shared by both the header and source passes so their
- * signatures can never drift apart. Also returns the entry node, which the
- * source pass needs to generate the function body.
- */
-export function deriveFunctionSignature(fn: BlueprintGraph): {
-  params: string[];
-  returnType: string;
-  entryNode: BlueprintNode | undefined;
-} {
-  const entryNode = fn.nodes.find((n) => n.type.includes('FunctionEntry'));
-  const resultNode = fn.nodes.find((n) => n.type.includes('FunctionResult'));
+/** `UFUNCTION(...)` + declaration, indented for the class body. */
+function ufunctionDeclarationLines(fn: CppSurfaceFunction): string[] {
+  return [`\tUFUNCTION(${fn.specifiers.join(', ')})`, `\t${fn.returnType} ${fn.name}(${fn.params.join(', ')});`];
+}
 
-  const params: string[] = [];
-  if (entryNode) {
-    for (const pin of entryNode.pins.filter((p) => p.direction === 'output' && p.type !== 'exec')) {
-      params.push(`${blueprintTypeToCpp(pin.type)} ${pin.name}`);
-    }
-  }
-
-  let returnType = 'void';
-  if (resultNode) {
-    const returnPin = resultNode.pins.find((p) => p.direction === 'input' && p.type !== 'exec');
-    if (returnPin) returnType = blueprintTypeToCpp(returnPin.type);
-  }
-
-  return { params, returnType, entryNode };
+function ufunctionDefinitionSignature(cppClassName: string, fn: CppSurfaceFunction): string {
+  return `${fn.returnType} ${cppClassName}::${fn.name}(${fn.params.join(', ')})`;
 }
 
 export function generateCppFromBlueprint(
@@ -148,25 +95,18 @@ export function generateCppFromBlueprint(
     });
   }
 
-  // Replication scaffolding — drives the GetLifetimeReplicatedProps body,
-  // the ReplicatedUsing specifiers, OnRep handlers, and the UnrealNetwork include.
-  const replication = buildReplicationInfo(asset);
+  // One member model: everything declared below is rendered from it, and the
+  // semantic diff expects exactly this set. Replication scaffolding (the
+  // GetLifetimeReplicatedProps body, ReplicatedUsing, OnRep handlers) rides on
+  // `surface.replication` from `replication-scaffolder.ts`.
+  const surface = deriveCppSurface(asset);
+  const { cppClassName, prefix, isComponent, replication, overrides, unknownEvents } = surface;
   const repProps = replication.properties;
+  const bpFunctions = surface.functions.filter((f) => f.origin === 'bp-function');
+  const customEvents = surface.functions.filter((f) => f.origin === 'custom-event');
+  const onRepHandlers = surface.functions.filter((f) => f.origin === 'onrep-handler');
 
   const parentClass = asset.parentClass;
-  // UHT derives the required class prefix from the parent: UObject-rooted
-  // (components included) take `U`, AActor-rooted take `A`. The old blanket `A`
-  // emitted `AHealthComponent : public UActorComponent`, a prefix error, from
-  // the same function that recognises components one branch later.
-  const isComponent = parentClass === 'UActorComponent' || parentClass.includes('Component');
-  const prefix = isComponent || parentClass.startsWith('U') ? 'U' : 'A';
-
-  // Strip BP_ prefix for C++ class name
-  const cppClassName = asset.className.startsWith('BP_')
-    ? `${prefix}${asset.className.slice(3)}`
-    : asset.className.startsWith('A') || asset.className.startsWith('U')
-      ? asset.className
-      : `${prefix}${asset.className}`;
 
   // An explicitly-prefixed source name we must not rewrite can still disagree
   // with the parent — say so rather than emitting a header UHT will reject.
@@ -175,6 +115,13 @@ export function generateCppFromBlueprint(
       message: `Class "${cppClassName}" carries a "${cppClassName[0]}" prefix but parent "${parentClass}" requires "${prefix}" — `
         + 'UHT rejects a mismatched class prefix. Rename the Blueprint or change its parent.',
       severity: 'error',
+    });
+  }
+  for (const dup of surface.duplicateEvents) {
+    warnings.push({
+      nodeId: dup.node.id,
+      message: `Duplicate event "${dup.name}" — ${dup.overrideName} is already overridden; this node's logic was not emitted.`,
+      severity: 'warning',
     });
   }
 
@@ -217,71 +164,28 @@ export function generateCppFromBlueprint(
   headerLines.push('');
 
   // Variables → UPROPERTY
-  if (asset.variables.length > 0) {
+  if (surface.properties.length > 0) {
     headerLines.push('\t// ── Properties ──');
     headerLines.push('');
-    for (const v of asset.variables) {
-      const cppType = blueprintTypeToCpp(v.type);
-      const specifiers: string[] = [];
-      if (v.isExposedToEditor) specifiers.push('EditAnywhere');
-      if (v.isReplicated) specifiers.push(replicationSpecifier({ name: v.name, repNotify: v.isRepNotify }));
-      specifiers.push('BlueprintReadWrite');
-      if (v.category) specifiers.push(`Category = "${v.category}"`);
-
-      if (v.tooltip) {
-        headerLines.push(`\t/** ${v.tooltip} */`);
+    for (const p of surface.properties) {
+      if (p.tooltip) {
+        headerLines.push(`\t/** ${p.tooltip} */`);
       }
-      headerLines.push(`\tUPROPERTY(${specifiers.join(', ')})`);
-      headerLines.push(`\t${cppType} ${v.name}${v.defaultValue ? ` = ${v.defaultValue}` : ''};`);
+      headerLines.push(`\tUPROPERTY(${p.specifiers.join(', ')})`);
+      headerLines.push(`\t${p.cppType} ${p.name}${p.defaultValue ? ` = ${p.defaultValue}` : ''};`);
       headerLines.push('');
     }
   }
 
   // Functions → UFUNCTION
-  const declaredFunctions: string[] = [];
-  for (const fn of asset.functions) {
-    const fnName = fn.name.replace(/\s+/g, '');
-    declaredFunctions.push(fnName);
-
-    // Determine return type and params from entry/result nodes
-    const { params, returnType } = deriveFunctionSignature(fn);
-
-    headerLines.push(`\tUFUNCTION(BlueprintCallable, Category = "${asset.className}")`);
-    headerLines.push(`\t${returnType} ${fnName}(${params.join(', ')});`);
+  for (const fn of bpFunctions) {
+    headerLines.push(...ufunctionDeclarationLines(fn));
     headerLines.push('');
   }
 
-  // Event graph events → overrides.
-  //
-  // Resolved ONCE here; the header declares and the source defines from this
-  // same list, so every declaration is guaranteed a matching definition. A
-  // repeated event (e.g. both `BeginPlay` and `ReceiveBeginPlay` present)
-  // collapses to a single override — declaring it twice is a redefinition error.
-  const eventNodes = asset.eventGraph.nodes.filter((n) =>
-    n.type.includes('Event') && !n.type.includes('Custom')
-  );
-  const overrides: { override: EventOverride; node: BlueprintNode }[] = [];
-  const unknownEvents: { name: string; node: BlueprintNode }[] = [];
-  const seenOverrides = new Set<string>();
-  for (const ev of eventNodes) {
-    const eventName = ev.memberName ?? ev.name;
-    const resolved = resolveEventOverride(eventName, isComponent);
-    if (!resolved) {
-      unknownEvents.push({ name: eventName, node: ev });
-      continue;
-    }
-    if (seenOverrides.has(resolved.name)) {
-      warnings.push({
-        nodeId: ev.id,
-        message: `Duplicate event "${eventName}" — ${resolved.name} is already overridden; this node's logic was not emitted.`,
-        severity: 'warning',
-      });
-      continue;
-    }
-    seenOverrides.add(resolved.name);
-    overrides.push({ override: resolved, node: ev });
-  }
-
+  // Event graph events → overrides. The surface resolved them ONCE; the header
+  // declares and the source defines from that same list, so every declaration
+  // is guaranteed a matching definition.
   if (overrides.length > 0 || unknownEvents.length > 0) {
     headerLines.push('protected:');
     headerLines.push('\t// ── Event Overrides ──');
@@ -297,17 +201,12 @@ export function generateCppFromBlueprint(
   }
 
   // Custom events → UFUNCTION
-  const customEvents = asset.eventGraph.nodes.filter((n) =>
-    n.type.includes('CustomEvent') || n.type.includes('K2Node_Event_Custom')
-  );
   if (customEvents.length > 0) {
     headerLines.push('public:');
     headerLines.push('\t// ── Custom Events ──');
     headerLines.push('');
-    for (const ev of customEvents) {
-      const evName = ev.memberName ?? ev.name;
-      headerLines.push(`\tUFUNCTION(BlueprintCallable, Category = "Events")`);
-      headerLines.push(`\tvoid ${evName}();`);
+    for (const fn of customEvents) {
+      headerLines.push(...ufunctionDeclarationLines(fn));
       headerLines.push('');
     }
   }
@@ -319,12 +218,11 @@ export function generateCppFromBlueprint(
     headerLines.push(`\t${lifetimeReplicatedPropsDeclaration()}`);
     headerLines.push('');
 
-    const onRepDecls = onRepDeclarations(repProps);
-    if (onRepDecls.length > 0) {
+    if (onRepHandlers.length > 0) {
       headerLines.push('protected:');
       headerLines.push('\t// ── RepNotify Handlers ──');
-      for (const line of onRepDecls) {
-        headerLines.push(`\t${line}`);
+      for (const fn of onRepHandlers) {
+        headerLines.push(...ufunctionDeclarationLines(fn));
       }
       headerLines.push('');
     }
@@ -362,14 +260,12 @@ export function generateCppFromBlueprint(
   }
 
   // Function implementations
-  for (const fn of asset.functions) {
-    const fnName = fn.name.replace(/\s+/g, '');
-    const { params, returnType, entryNode } = deriveFunctionSignature(fn);
-
-    sourceLines.push(`${returnType} ${cppClassName}::${fnName}(${params.join(', ')})`);
+  for (const fn of bpFunctions) {
+    const { returnType, entryNode } = fn;
+    sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
     if (entryNode) {
-      sourceLines.push(generateNodeLogic(fn, entryNode, cppClassName, warnings));
+      sourceLines.push(generateNodeLogic(fn.graph, entryNode, cppClassName, warnings));
     } else {
       sourceLines.push('\t// TODO: Implement function logic');
     }
@@ -381,11 +277,10 @@ export function generateCppFromBlueprint(
   }
 
   // Custom event implementations
-  for (const ev of customEvents) {
-    const evName = ev.memberName ?? ev.name;
-    sourceLines.push(`void ${cppClassName}::${evName}()`);
+  for (const fn of customEvents) {
+    sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
-    sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings));
+    sourceLines.push(generateNodeLogic(asset.eventGraph, fn.node, cppClassName, warnings));
     sourceLines.push('}');
     sourceLines.push('');
   }
@@ -408,7 +303,7 @@ export function generateCppFromBlueprint(
     includes: emittedIncludes,
     warnings,
     nodeCount: asset.eventGraph.nodes.length + asset.functions.reduce((s, f) => s + f.nodes.length, 0),
-    functionCount: asset.functions.length + customEvents.length,
+    functionCount: bpFunctions.length + customEvents.length,
     replication,
   };
 }
