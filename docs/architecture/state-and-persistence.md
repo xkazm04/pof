@@ -425,6 +425,25 @@ platform: still failing while the latest finished, parseable build of any lane i
 from `error_memory`, which has no project column and which no build writes without a `moduleId`. When the
 builds counted errors that carried no parseable diagnostic, the card says so instead of an all-clear.
 
+**`ai_test_run_history`** (`src/lib/ai-testing-db.ts`, same `ensureAITestingTables()` guard, additive:
+no existing column or row is touched; `ON DELETE CASCADE` from `ai_test_scenarios`) retains the AI
+Testing Sandbox's per-scenario run outcomes, which every run used to overwrite in place. One row per
+**(scenario, runId)** — `status` (`passed | failed | error`), `ran_at`, `definition_hash` (FNV-1a of
+description + stimuli + expected actions as graded) and the head of the graded output. It is written by
+**one door only**, `recordRunVerdicts(runId, ranAt, verdicts)`, which `POST record-run-results` calls
+with the verdicts `deriveRunVerdicts` read from UE's `index.json` — so history holds report-graded
+outcomes, never the CLI's claim. Grading the same run twice (callback + view close) upserts one row.
+`updateScenario`, `bulkUpdateScenarioStatus` (dispatch `running`, the ungraded bulk `error` fallback) and a
+client-set `status` never record a run. `getAllSuites` / `getSuite` attach the 8 newest as
+`scenario.history` (`RUN_HISTORY_LIMIT`); the pure `src/lib/ai-testing/run-trend.ts` derives
+`classifyTrend` (never-run | steady-pass | steady-fail | regressed | fixed, plus `afterEdit` when the
+definition hash changed between the last two runs) and `summarizeTrends`, which drive the sandbox's
+"Since last run: N regressed / N fixed" header, the per-card Regressed / Fixed chip + outcome strip and
+the per-suite regression count. There is deliberately **no "flaky" kind**: the BT/C++ under test is not
+fingerprinted, so a pass/fail flip on an unchanged scenario is the designer's break/fix loop, not
+evidence of non-determinism. No `SCHEMA_VERSION` bump: that version gates `db.ts` migration probes, and
+this table is a lazy `CREATE TABLE IF NOT EXISTS` with no probe.
+
 **`cli_spend` + `cli_spend_budget`** (`src/lib/cli-spend-db.ts`, same guard pattern) capture the
 token/cost `result` event every Claude Code CLI run emits — previously parsed but thrown away.
 `cli_service.ts` normalizes the result usage/cost via the pure `result-metrics.ts` (tolerant of both
