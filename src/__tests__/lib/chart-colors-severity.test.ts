@@ -97,7 +97,10 @@ describe('scoreBandToken', () => {
     expect(scoreBandToken(79)).toBe(SEVERITY_TOKENS.medium);
     expect(scoreBandToken(60)).toBe(SEVERITY_TOKENS.medium);
     expect(scoreBandToken(59)).toBe(SEVERITY_TOKENS.high);
-    expect(scoreBandToken(40)).toBe(SEVERITY_TOKENS.high);
+    expect(scoreBandToken(50)).toBe(SEVERITY_TOKENS.high);
+    // 40-49 moved high -> critical when the ladder joined SCORE_BANDS (downward only).
+    expect(scoreBandToken(49)).toBe(SEVERITY_TOKENS.critical);
+    expect(scoreBandToken(40)).toBe(SEVERITY_TOKENS.critical);
     expect(scoreBandToken(39)).toBe(SEVERITY_TOKENS.critical);
     expect(scoreBandToken(0)).toBe(SEVERITY_TOKENS.critical);
   });
