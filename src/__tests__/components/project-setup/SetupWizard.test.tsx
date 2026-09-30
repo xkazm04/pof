@@ -62,14 +62,28 @@ describe('SetupWizard open/create flow', () => {
     expect(await screen.findByText('MyGame')).toBeTruthy();
   });
 
-  it('creates a fresh project and completes setup', async () => {
+  it('creates a fresh project under the real projects root and completes setup', async () => {
+    // Browse actions share one URL; route by the POSTed action (list '~' -> this user's home).
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      const data =
+        body.action === 'list' && body.path === '~' ? { path: 'C:\\Users\\me' }
+        : body.action === 'list' ? { path: body.path, directories: [] }
+        : body.action === 'detect-engines' ? { engines: [{ version: '5.5.4', path: 'C:\\UE_5.5' }] }
+        : { projects: [] };
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ success: true, data }) });
+    }) as unknown as typeof fetch;
     render(<SetupWizard />);
     fireEvent.click(screen.getByTestId('pof-setup-wizard-tab-fresh'));
     fireEvent.change(screen.getByTestId('pof-setup-wizard-project-name-input'), {
       target: { value: 'FreshGame' },
     });
+    await waitFor(() =>
+      expect((screen.getByTestId('pof-setup-wizard-create-btn') as HTMLButtonElement).disabled).toBe(false),
+    );
     fireEvent.click(screen.getByTestId('pof-setup-wizard-create-btn'));
     await waitFor(() => expect(useProjectStore.getState().isSetupComplete).toBe(true));
     expect(useProjectStore.getState().projectName).toBe('FreshGame');
+    expect(useProjectStore.getState().projectPath).toBe('C:\\Users\\me\\Documents\\Unreal Projects\\FreshGame');
   });
 });
