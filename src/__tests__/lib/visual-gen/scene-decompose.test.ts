@@ -159,6 +159,26 @@ describe('parseSceneDecomposeReply', () => {
     // It RAN — an empty scene is an answer, not an outage.
     expect(r.ran).toBe(true);
   });
+
+  it('drops rows naming scenery the prompt excludes, whether or not the model listened', () => {
+    // The live-run reply shape on the ravaged-courtyard art: "stairs" and "bush" offered as
+    // props. The prompt sentence asks the model not to; this check does not rely on that.
+    const r = parseSceneDecomposeReply(
+      'PROP=stone stairs; BOX=0.40,0.70,0.60,0.95; SIZE_CM=300; COUNT=2; MATERIAL=stone\n' +
+        'PROP=bush; BOX=0.20,0.30,0.30,0.40; SIZE_CM=80; COUNT=4; MATERIAL=default\n' +
+        'PROP=crate; BOX=0.27,0.64,0.32,0.70; SIZE_CM=60; COUNT=1; MATERIAL=wood',
+    );
+    expect(r.props.map((p) => p.name)).toEqual(['crate']);
+    expect(r.excluded).toEqual(['stone stairs', 'bush']);
+    expect(r.skipped).toBe(0);
+  });
+
+  it('reports ok:false naming the exclusions when every row was scenery', () => {
+    const r = parseSceneDecomposeReply('PROP=vines; BOX=0,0,0.2,0.3; SIZE_CM=60; COUNT=1');
+    expect(r.ok).toBe(false);
+    expect(r.ran).toBe(true);
+    expect(r.error).toMatch(/excluded scenery \(vines\)/);
+  });
 });
 
 describe('toCompositionAssets', () => {
