@@ -3,6 +3,7 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { stampTemplate } from '@/lib/catalog/produceTemplate';
 import type { StepSpec } from '@/lib/catalog/stepSpec';
 import { ITEM_STEP_SPECS } from '@/components/layout-lab/steps/itemsSteps';
+import { itemsBespokeStepSpec } from '@/components/layout-lab/itemsBespokeSpecs';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { StepOutput } from '@/components/layout-lab/labPipelineStore';
 
@@ -37,13 +38,23 @@ export function itemsLabelOwner(label: string): ItemsLabelOwner | null {
 }
 
 /**
- * The stub an items label's OWNER writes for `entity`. A registry-owned label goes through the
- * registered `produce` + `stampTemplate` — the same door `ArchetypeStep` uses — so a data-blind
- * exemplar body written for any other entity is held at `pending` (TEMPLATE) by the registration
- * guard instead of grading `pass` on exemplar content. `null` when neither spec declares it.
+ * The `StepSpec` that owns an items label, in the server's order: the registered spec, else the
+ * bespoke adapter (`itemsBespokeSpecs.ts`) for the 7 bespoke-owned labels; undefined when neither
+ * declares it. The one-shot route resolves an items label through this, so the bespoke labels can
+ * be produced by the only live/headless produce seam instead of 404ing there.
+ */
+export function itemsStepSpec(label: string): StepSpec | undefined {
+  return itemsRegisteredStep(label) ?? itemsBespokeStepSpec(label);
+}
+
+/**
+ * The stub an items label's OWNER writes for `entity`, always through `stampTemplate` — the same
+ * door `ArchetypeStep` and the bespoke `useStaticStep` use — so a data-blind exemplar body written
+ * for any other entity is held at `pending` (TEMPLATE) instead of grading `pass` on exemplar
+ * content. The registered checkers are guarded at registration, the bespoke ones in
+ * `ITEMS_BESPOKE_CHECKERS`. `null` when neither spec declares the label.
  */
 export function produceItemStep(entity: LabEntity, label: string): StepOutput | null {
-  const reg = itemsRegisteredStep(label);
-  if (reg) return stampTemplate('items', reg, entity, reg.produce(entity));
-  return ITEM_STEP_SPECS[label]?.produce(entity) ?? null;
+  const owner = itemsRegisteredStep(label) ?? ITEM_STEP_SPECS[label];
+  return owner ? stampTemplate('items', owner, entity, owner.produce(entity)) : null;
 }

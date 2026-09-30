@@ -16,6 +16,7 @@ import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service
 import { resolveDispatchModelChoice, claudeProvenance } from '@/lib/model-policy';
 import { ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { itemsStepSpec } from '@/components/layout-lab/itemsLabelOwner';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { labIdentityOf } from '@/lib/catalog/canon/profiles';
 import type { StepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
@@ -186,7 +187,9 @@ export async function POST(req: NextRequest) {
     const pipeline = getCatalogPipeline(catalogId);
     if (!pipeline) return apiError(`no pipeline registered for catalog '${catalogId}'`, 404);
 
-    const step = pipeline.steps.find((s) => s.label === stepLabel);
+    // Items resolves through its label owner (registered, else the bespoke adapter) so the 7 bespoke
+    // labels the server already grades can be produced here too, instead of 404ing.
+    const step = catalogId === 'items' ? itemsStepSpec(stepLabel) : pipeline.steps.find((s) => s.label === stepLabel);
     if (!step) return apiError(`step '${stepLabel}' not found in catalog '${catalogId}'`, 404);
 
     // Resolve entity: first check seeded entities, then fall back to the inline proposal

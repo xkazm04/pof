@@ -346,9 +346,10 @@ describe('shared items labels route to the registered spec', () => {
       expect(r.status, `"${label}" graded ${r.status} on an exemplar template`).toBe('pending');
       expect(String(r.reason)).toMatch(/^TEMPLATE:/);
     }
-    // The bespoke-only labels keep their own produce door.
+    // The bespoke-only labels keep their own produce body, through the same TEMPLATE stamp (2026-09-30).
     for (const label of BESPOKE_ONLY) {
-      expect(writes[label]).toEqual(ITEM_STEP_SPECS[label].produce(ITEM_2));
+      expect(writes[label]).toEqual(stampTemplate('items', ITEM_STEP_SPECS[label], ITEM_2, ITEM_STEP_SPECS[label].produce(ITEM_2)));
+      expect((writes[label].data ?? {}).template, label).toEqual({ exemplar: 'item-1', entity: ITEM_2.id });
     }
   });
 

@@ -7,7 +7,7 @@ import type { StepProps } from './stepProps';
 /** Items · Inventory UI Integration. View: grid preview + binding (persisted). Produce: wire. */
 export function ItemInventoryUI({ t, entity, step }: StepProps) {
   return (
-    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce, liveEligible, live, stepPrompt }) => {
       const wired = !!art?.data?.wired;
       const slot = String((art?.data?.slot as string) ?? 'Weapon');
       return [
@@ -37,10 +37,11 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Wire to inventory UI (CLI)" rows={3}
-            note={`Registers ${entity.name} with the inventory widget (slot rules + stack size).`}
-            buildPrompt={(dir) => `Register ${entity.name} with the inventory UI: ${slot} slot, stack size 1, icon binding. ${dir}`}
-            onComplete={runProduce} />
+          <CliProduce t={t} label="Wire to inventory UI" rows={3} liveEligible={liveEligible}
+            note={live
+              ? `Live CLI session: ${entity.name}’s slot binding was authored for it and graded by the server.`
+              : 'Stub: records a Weapon slot binding with wired: true — the inventory widget is not touched.'}
+            buildPrompt={stepPrompt} onComplete={runProduce} />
         ) },
       ];
     }} />

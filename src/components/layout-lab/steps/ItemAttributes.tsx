@@ -47,7 +47,7 @@ export function ItemAttributes({ t, entity, step }: StepProps) {
           label: 'Produce',
           node: (
             <CliProduce t={t} label="Produce attribute mix" rows={3}
-              note="Writes the full attribute set to the UE Weapon row + the pipeline store."
+              note="Stub: records the Weapon schema's default values in the pipeline store — nothing is written to the UE Weapon row."
               buildPrompt={(dir) => `Fill the Weapon attributes for ${entity.name} from its brief + peers (${PEERS.map((p) => p[0]).join(', ')}). ${dir}`}
               onComplete={runProduce} />
           ),

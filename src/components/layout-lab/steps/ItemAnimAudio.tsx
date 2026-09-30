@@ -33,7 +33,7 @@ function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string;
 /** Items · Animations. View: clip set (persisted). Produce: retarget. */
 export function ItemAnimations({ t, entity, step }: StepProps) {
   return (
-    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce, liveEligible, live, stepPrompt }) => {
       const clips = (art?.data?.clips ?? []) as [string, string][];
       const rows = clips.length ? clips : DEFAULT_ANIM_CLIPS;
       const made = clips.length > 0;
@@ -47,10 +47,11 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Produce anim / retarget" rows={3}
-            note={`Writes A_${entitySlug(entity)}_Equip + pickup/idle montages to the UE project.`}
-            buildPrompt={(dir) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${dir}`}
-            onComplete={runProduce} />
+          <CliProduce t={t} label="Produce anim / retarget" rows={3} liveEligible={liveEligible}
+            note={live
+              ? 'Live CLI session: this item’s clips were authored for it and graded by the server.'
+              : `Stub: records the default clip set and declares A_${entitySlug(entity)}_Equip — nothing is written to the UE project.`}
+            buildPrompt={stepPrompt} onComplete={runProduce} />
         ) },
       ];
     }} />
@@ -60,7 +61,7 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
 /** Items · VFX. View: variant set + GPU budget (persisted). Produce: Niagara. */
 export function ItemVFX({ t, entity, step }: StepProps) {
   return (
-    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce, liveEligible, live, stepPrompt }) => {
       const variants = (art?.data?.variants ?? []) as [string, string][];
       const made = variants.length > 0;
       const cost = Number((art?.data?.cost as number) ?? 0);
@@ -74,10 +75,11 @@ export function ItemVFX({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Produce Niagara" rows={3}
-            note={`Writes NS_${entitySlug(entity)}_Use bound to anim notifies.`}
-            buildPrompt={(dir) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${dir}`}
-            onComplete={runProduce} />
+          <CliProduce t={t} label="Produce Niagara" rows={3} liveEligible={liveEligible}
+            note={live
+              ? 'Live CLI session: this item’s VFX variants and GPU cost were authored for it and graded by the server.'
+              : `Stub: records the default variant set and declares NS_${entitySlug(entity)}_Use — nothing is written to the UE project.`}
+            buildPrompt={stepPrompt} onComplete={runProduce} />
         ) },
       ];
     }} />
@@ -87,7 +89,7 @@ export function ItemVFX({ t, entity, step }: StepProps) {
 /** Items · SFX. View: cue set + loudness + waveform (persisted). Produce: import set. */
 export function ItemSFX({ t, entity, step }: StepProps) {
   return (
-    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce, liveEligible, live, stepPrompt }) => {
       const cues = (art?.data?.cues ?? []) as [string, string][];
       const made = cues.length > 0;
       const rows = made ? cues : DEFAULT_SFX_CUES;
@@ -107,10 +109,11 @@ export function ItemSFX({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Import set (CLI)" rows={3}
-            note={`Imports SC_${entitySlug(entity)} (randomizing SoundCue set) wired to anim notifies.`}
-            buildPrompt={(dir) => `Import a randomizing SoundCue set for ${entity.name} (pickup/equip/swing), normalized loudness. ${dir}`}
-            onComplete={runProduce} />
+          <CliProduce t={t} label="Produce SFX cue set" rows={3} liveEligible={liveEligible}
+            note={live
+              ? 'Live CLI session: this item’s SFX cues were authored for it and graded by the server.'
+              : `Stub: records the default cue set and declares SC_${entitySlug(entity)} — nothing is imported to the UE project.`}
+            buildPrompt={stepPrompt} onComplete={runProduce} />
         ) },
       ];
     }} />

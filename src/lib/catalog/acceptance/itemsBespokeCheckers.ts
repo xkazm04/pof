@@ -1,5 +1,6 @@
 import { readHistory, selectedCandidate } from '@/components/layout-lab/steps/shared/genHistory';
 import { candidateAsset } from './galleryArtifact';
+import { templateGuard } from './template';
 import type { AcceptanceResult, Checker } from './types';
 
 /**
@@ -16,19 +17,16 @@ import type { AcceptanceResult, Checker } from './types';
  * door (`Attributes` ×9, plus `3D Generation`, `Animations`, `Inventory UI Integration`,
  * `Material / Texture`, `SFX`, `VFX` ×1 each).
  *
- * The fix is deliberately NOT a rename. A step label is a DB key — `pipeline_artifacts` is
- * upserted on `(catalog_id, entity_id, step)` — so aligning the bespoke labels onto the
- * registered ones would orphan every existing row. Instead the server learns the bespoke
- * labels' checkers, and the rows stay exactly where they are.
+ * Deliberately NOT a rename: a step label is a DB key (`pipeline_artifacts` upserts on
+ * `(catalog_id, entity_id, step)`), so the server learns the bespoke labels' checkers instead.
  *
  * SINGLE SOURCE: `itemsSteps.ts` builds its `ITEM_STEP_SPECS[…].accept` from these very
  * functions (wrapping them in plain-language copy), so the on-screen verdict and the
  * server's re-grade cannot drift apart. This module is pure — no React, no store, no DB —
  * so it imports cleanly on the server.
  *
- * Every SHAPE checker here grades DATA SHAPE only (tier L0). None of them observes a rendered
- * mesh, an audible cue, or a running game; claiming a higher tier would be the shape-only
- * overclaim `/status` exists to expose.
+ * Every SHAPE checker here grades DATA SHAPE only (tier L0) — no rendered mesh, audible cue or
+ * running game is observed; a higher tier would be the overclaim `/status` exists to expose.
  *
  * The two GENERATIVE bespoke labels (`3D Generation`, `Material / Texture`) are the exception,
  * and deliberately so — see {@link withGeneratedAsset}. Their shape check still grades L0, but
@@ -274,8 +272,11 @@ export function withGeneratedAsset(shape: Checker): Checker {
  * The bespoke Items step labels the registered pipeline does not declare, mapped to the
  * checker that grades each. Keys are the LIVE DB step labels — never rename one here
  * without migrating `pipeline_artifacts` rows for the same `(catalog_id, entity_id, step)`.
+ * Each is wrapped in `templateGuard` ONCE, here, so the lab (`itemsSteps` accept) and the server
+ * (`bespokeCheckerFor`) read one guarded checker: every bespoke produce body is data-blind, so a
+ * stub stamped for a non-exemplar item holds at `pending` (TEMPLATE) instead of passing.
  */
-export const ITEMS_BESPOKE_CHECKERS: Readonly<Record<string, Checker>> = {
+export const ITEMS_BESPOKE_CHECKERS: Readonly<Record<string, Checker>> = Object.fromEntries(Object.entries({
   'Attributes': itemsAttributesPopulated,
   '3D Generation': withGeneratedAsset(itemsMeshWithinTriBudget),
   'Material / Texture': withGeneratedAsset(itemsPbrMapsPresent),
@@ -283,4 +284,4 @@ export const ITEMS_BESPOKE_CHECKERS: Readonly<Record<string, Checker>> = {
   'VFX': itemsVfxWithinBudget,
   'SFX': itemsSfxCuesCovered,
   'Inventory UI Integration': itemsInventoryWired,
-};
+}).map(([label, checker]) => [label, templateGuard(checker)]));
