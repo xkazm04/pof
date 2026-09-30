@@ -166,6 +166,26 @@ drifted content — all local-only work. The storage adapter (`quotaSafeLocalSto
 a refused write (quota) used to escape `set()` and skip the produce write-through; it is now
 recorded in the non-persisted `persistError` and shown as one line in `ProduceLogPanel`.
 
+#### `useCatalogStore` (`src/stores/catalogStore.ts`) — seed provenance
+
+The lab's catalog entities under the `pof-catalog` key. **A persisted copy never shadows a code seed
+by default:** it used to mirror all ~503 seeded entities and let every persisted copy win forever,
+so a seed correction (Vael crit ×2.5, bestiary loot links 5→14) never reached a returning browser
+and the lab previewed/graded content the server (`seededEntities`) no longer holds. `partialize`
+(`persistableSeedState`, `src/lib/catalog/seedSync.ts`) writes only entities NOT byte-equal to
+their code seed (server overlays, edits, `user-<slug>` rows) plus `seedHashes` (`catalog/id` → the
+content hash of the seed each copy was written against; overlays `lifecycle`/`ueAssets`/
+`lastTestResult`/`lastVerifiedAt` excluded) and the drafts. `merge` runs `planSeedMerge` per
+entity in `canonSync`'s closed vocabulary: `fresh`/`follow` (untouched → code content, overlays
+kept), `edited` (kept, silent), `conflict`/`unrecorded` (kept, ask), `local` (kept), `orphaned`
+(untouched retired seed removed, edited one kept; both reported). Asking findings land in the
+non-persisted `seedDrift` and render as `SeedDriftNotice` atop `CatalogTree`, answered in bulk by
+`adoptShippedSeeds` (code wins, overlays kept) or `keepMine` (records the current seed hash, so the
+copy reads `edited` until the code moves again). **Persist version stays 0** — no bump, no
+`migrate`: a blob without `seedHashes` IS the legacy case (`unrecorded`, never auto-overwritten),
+and zustand 5 discards a version-mismatched blob that has no `migrate`, so a bump would make a
+revert silently drop local rows and browser-only drafts.
+
 #### `useLootTuningStore` (`src/components/modules/core-engine/sub_loot/_shared/lootTuningStore.ts`)
 
 The loot module's one tuned enemy->loot roster and its one gold-per-rarity table. It lives in memory only and is never persisted, so a tune is a what-if that writes no catalog row, DB row or UE file. It is module-level rather than component state because `LootTabPanels` mounts each tab under `AnimatePresence` keyed by the tab, and tab-local state would be lost on every tab switch. All state changes go through `dispatch(action)` into the pure `tunerReducer` (`_shared/bindingTuner.ts`: select / setField / setWeight / setGold / goalSeek / undo / reset). Inputs are clamped, the history is capped at 50, and undo on an empty history returns the same state. Every Core-tab loot surface reads this store: the header Enemy Source picker (the 22 bindings in tier optgroups), `BindingTuner`, `EnemyLootBindingSection` (simulated drops plus the C++ export) and `EVCalculator`, whose sell-value inputs write the shared gold table. Goal-seek solves against that same table (`solveWeightsForTargetEV`, then one-point integer refinement if the rounded weights miss the target). `rosterFindings` lints each binding against the peers of its **untuned** tier (`lootTierOf` in `src/lib/loot/economy.ts`, the same rule the catalog seed uses), so a drop-chance edit never moves the binding into a different peer group.
