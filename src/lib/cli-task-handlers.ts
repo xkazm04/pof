@@ -398,7 +398,7 @@ const moduleScan: TaskPromptHandler = (task, ctx) => {
     },
     schemaHint: `  "findings": [
     {
-      "pass": "structure|quality|performance",
+      "pass": "${st.passes.join('|')}",
       "category": "string",
       "severity": "critical|high|medium|low",
       "file": "relative/path.h or null",

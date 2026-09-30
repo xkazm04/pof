@@ -5,7 +5,7 @@ export type ScanEffort = 'trivial' | 'small' | 'medium' | 'large';
 
 export interface ScanFinding {
   id: string;
-  pass: 'structure' | 'quality' | 'performance';
+  pass: EvalPass;
   category: string;
   severity: ScanSeverity;
   file: string | null;

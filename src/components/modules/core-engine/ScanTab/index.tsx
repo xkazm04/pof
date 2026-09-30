@@ -4,7 +4,7 @@ import {
   ScanSearch, Play, Loader2, Zap, RotateCcw,
   CheckCircle, Square, CheckSquare,
 } from 'lucide-react';
-import { EVAL_PASSES, PASS_LABELS } from '@/lib/evaluator/module-eval-prompts';
+import { PASS_LABELS } from '@/lib/evaluator/module-eval-prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { SubModuleId } from '@/types/modules';
 import type { ScanSeverity } from '@/types/scan';
@@ -37,6 +37,7 @@ export function ScanTab({ moduleId }: ScanTabProps) {
     bySeverity,
     severityCounts,
     passCounts,
+    passOptions,
     expandedFindings,
     toggleFinding,
     selectedFindings,
@@ -81,10 +82,10 @@ export function ScanTab({ moduleId }: ScanTabProps) {
       {/* Pass selector + Scan button */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">
-          {EVAL_PASSES.map((pass) => {
+          {passOptions.map((pass) => {
             const isActive = selectedPasses.has(pass);
             const PassIcon = PASS_ICONS[pass];
-            const count = passCounts[pass];
+            const count = passCounts[pass] ?? 0;
             return (
               <button
                 key={pass}

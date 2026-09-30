@@ -95,7 +95,7 @@ After completing your work, submit the results by outputting a JSON block wrappe
 {
   "findings": [
     {
-      "pass": "structure|quality|performance",
+      "pass": "structure|quality",
       "category": "string",
       "severity": "critical|high|medium|low",
       "file": "relative/path.h or null",

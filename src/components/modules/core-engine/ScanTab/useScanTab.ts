@@ -7,7 +7,7 @@ import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useModuleStore } from '@/stores/moduleStore';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { TaskFactory } from '@/lib/cli-task';
-import { EVAL_PASSES, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
+import { EVAL_PASSES, getPassesForModule, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
 import type { SubModuleId } from '@/types/modules';
 import type { ScanDelta, ScanDeltaState, ScanFinding, ScanSeverity } from '@/types/scan';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
@@ -39,6 +39,9 @@ export function useScanTab(moduleId: SubModuleId) {
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [lastResolved, setLastResolved] = useState<string[] | null>(null);
 
+  // The selector offers every pass this module has (arpg-combat adds combat-trace);
+  // the default selection stays the 4 passes every module runs.
+  const passOptions = useMemo(() => getPassesForModule(moduleId), [moduleId]);
   const [selectedPasses, setSelectedPasses] = useState<Set<EvalPass>>(new Set(EVAL_PASSES));
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
   const [scanCount, setScanCount] = useState(0);
@@ -339,12 +342,13 @@ export function useScanTab(moduleId: SubModuleId) {
 
   // Stats by pass
   const passCounts = useMemo(() => {
-    const counts: Record<EvalPass, number> = { 'ground-truth': 0, structure: 0, quality: 0, performance: 0, 'combat-trace': 0 };
+    const counts: Partial<Record<EvalPass, number>> = {};
+    for (const pass of passOptions) counts[pass] = 0;
     for (const f of activeFindings) {
-      counts[f.pass]++;
+      if (f.pass in counts) counts[f.pass] = (counts[f.pass] ?? 0) + 1;
     }
     return counts;
-  }, [activeFindings]);
+  }, [activeFindings, passOptions]);
 
   // Batch fix progress
   const isBatchFixing = activeFixId !== null;
@@ -372,6 +376,7 @@ export function useScanTab(moduleId: SubModuleId) {
     undoResolve,
     lastResolved,
     resolveError,
+    passOptions,
     selectedPasses,
     togglePass,
     scanCount,

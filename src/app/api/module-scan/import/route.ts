@@ -4,11 +4,15 @@ import type Database from 'better-sqlite3';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { getDb } from '@/lib/db';
 import { reconcileScan } from '@/lib/evaluator/scan-reconcile';
-import type { EvalPass } from '@/lib/evaluator/module-eval-prompts';
+import { EVAL_PASS_VOCABULARY, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
+import { ensureEvalFindingsPassVocabularyOnce } from '@/lib/evaluator/scan-findings-db';
 import type { ScanDelta, ScanFinding, ScanRecord } from '@/types/scan';
 
+/** The one pass vocabulary — the same list the eval_findings CHECK is kept equal to. */
+const passSchema = z.enum(EVAL_PASS_VOCABULARY);
+
 const findingSchema = z.object({
-  pass: z.enum(['structure', 'quality', 'performance']),
+  pass: passSchema,
   category: z.string().min(1),
   severity: z.enum(['critical', 'high', 'medium', 'low']),
   file: z.string().nullable().default(null),
@@ -18,17 +22,11 @@ const findingSchema = z.object({
   effort: z.enum(['trivial', 'small', 'medium', 'large']).default('medium'),
 });
 
-/**
- * The passes a scan RAN — every EvalPass, so the Scan tab's default 4-pass run
- * (ground-truth included) is accepted. Findings stay on their own 3-pass enum.
- */
-const scanPassSchema = z.enum(['ground-truth', 'structure', 'quality', 'performance', 'combat-trace']);
-
 const importSchema = z.object({
   moduleId: z.string().min(1),
   /** Injected by the scan callback's staticFields. Absent (a legacy caller) → the
    *  passes the findings name, so an unreported pass never clears anything. */
-  passes: z.array(scanPassSchema).optional(),
+  passes: z.array(passSchema).optional(),
   findings: z.array(findingSchema),
 });
 
@@ -68,6 +66,9 @@ export const POST = withRoute(async (req: NextRequest) => {
   const now = new Date().toISOString();
 
   const db = getDb();
+  // A DB created before ground-truth/combat-trace existed still carries the 3-pass
+  // CHECK, which INSERT OR IGNORE would silently swallow a finding against.
+  ensureEvalFindingsPassVocabularyOnce(db);
   const insert = db.prepare(`
     INSERT OR IGNORE INTO eval_findings
       (id, scan_id, module_id, pass, category, severity, file, line, description, suggested_fix, effort, created_at)
@@ -80,12 +81,13 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const { scanId, enriched } = db.transaction(() => {
     const id = mintScanId(db, moduleId);
-    const rows = findings.map((f, i) => {
+    const rows = findings.flatMap((f, i) => {
       const fid = `${id}-${i}`;
-      insert.run(fid, id, moduleId, f.pass, f.category, f.severity, f.file, f.line, f.description, f.suggestedFix, f.effort, now);
-      return { ...f, id: fid, scanId: id, foundAt: now };
+      const stored = insert.run(fid, id, moduleId, f.pass, f.category, f.severity, f.file, f.line, f.description, f.suggestedFix, f.effort, now);
+      return stored.changes > 0 ? [{ ...f, id: fid, scanId: id, foundAt: now }] : [];
     });
-    insertScan.run(id, moduleId, JSON.stringify(passes), findings.length, now);
+    // finding_count is the rows actually stored, never the rows submitted.
+    insertScan.run(id, moduleId, JSON.stringify(passes), rows.length, now);
     return { scanId: id, enriched: rows };
   })();
 
@@ -102,7 +104,8 @@ interface EvalFindingRow {
   id: string;
   scan_id: string;
   module_id: string;
-  pass: string;
+  /** Guaranteed by the table CHECK, which ensureEvalFindingsPassVocabulary keeps equal to EVAL_PASS_VOCABULARY. */
+  pass: EvalPass;
   category: string;
   severity: string;
   file: string | null;
@@ -125,7 +128,7 @@ interface ModuleScanRow {
 function toFinding(r: EvalFindingRow): ScanFinding {
   return {
     id: r.id,
-    pass: r.pass as ScanFinding['pass'],
+    pass: r.pass,
     category: r.category,
     severity: r.severity as ScanFinding['severity'],
     file: r.file,
