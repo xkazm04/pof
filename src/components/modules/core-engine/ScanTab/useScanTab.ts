@@ -13,6 +13,11 @@ import type { ScanDelta, ScanDeltaState, ScanFinding, ScanSeverity } from '@/typ
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import {
+  buildScanFixPrompt, formatPreviousFinding, planFixVerification, settleFixVerification,
+  FIX_VERIFICATION_IDLE, idsIn, beginFixes, recordFixOutcome, dropFixTarget, finishFixes,
+  beginVerification, applySettlement, markUnverified, type FixVerification,
+} from '@/lib/evaluator/scan-fix-verify';
 import { ACCENT, EMPTY_FINDINGS } from './constants';
 
 /** The store caps a module at 100 findings; the GET is newest-first, so keep the newest. */
@@ -54,6 +59,13 @@ export function useScanTab(moduleId: SubModuleId) {
   const [activeFixId, setActiveFixId] = useState<string | null>(null);
   const fixTotalRef = useRef(0);
 
+  // --- Fix & verify: a fix exiting 0 resolves nothing; a Verify click runs ONE
+  // scan over the fixed targets' passes and only what it no longer finds resolves.
+  const [fixVerification, setFixVerification] = useState<FixVerification>(FIX_VERIFICATION_IDLE);
+  /** Targets of the verification scan in flight (null = none). */
+  const verifyTargetsRef = useRef<string[] | null>(null);
+  const settleVerifyRef = useRef<(delta: ScanDelta) => void>(() => {});
+
   // Load findings + the latest scan's delta from the DB. The DB is the source of
   // truth for resolutions, so the store is REPLACED, never merged: a merge kept a
   // stale in-memory copy active over a server-side resolution.
@@ -78,6 +90,7 @@ export function useScanTab(moduleId: SubModuleId) {
     } else if (delta && Date.parse(delta.scan.createdAt) >= since) {
       scanDispatchedAtRef.current = null;
       setDeltaState({ status: 'recorded', delta });
+      settleVerifyRef.current(delta);
     } else {
       setDeltaState({ status: 'pending' });
     }
@@ -95,6 +108,11 @@ export function useScanTab(moduleId: SubModuleId) {
       : success ? UNRECORDED_REASON : FAILED_UNRECORDED_REASON;
     logger.warn(`[ScanTab] ${moduleId} scan unrecorded: ${reason}`);
     setDeltaState({ status: 'unrecorded', reason });
+    if (verifyTargetsRef.current) {
+      // A verification scan with no record verifies nothing — and resolves nothing.
+      verifyTargetsRef.current = null;
+      setFixVerification((prev) => markUnverified(prev, reason));
+    }
   }, [fetchAndMergeFindings, moduleId]);
 
   /** Resolve findings server-side (ONE request), then reload the DB's truth.
@@ -124,6 +142,18 @@ export function useScanTab(moduleId: SubModuleId) {
     const saved = await setResolved(ids, true);
     setLastResolved(saved.length > 0 ? saved : null);
   }, [setResolved]);
+
+  // The verification scan's record arrived: settle its targets, PATCH only the verified.
+  const settleVerification = useCallback((delta: ScanDelta) => {
+    const targets = verifyTargetsRef.current;
+    if (!targets) return;
+    verifyTargetsRef.current = null;
+    const settlement = settleFixVerification(targets, delta);
+    logger.info(`[ScanTab] ${moduleId} fix verification: ${settlement.verified.length} verified, ${settlement.stillPresent.length} still present, ${settlement.unverified.length} unverified`);
+    setFixVerification((prev) => applySettlement(prev, settlement));
+    if (settlement.verified.length > 0) void resolveFindings(settlement.verified);
+  }, [moduleId, resolveFindings]);
+  settleVerifyRef.current = settleVerification;
 
   const undoResolve = useCallback(async () => {
     const ids = lastResolved ?? [];
@@ -172,6 +202,7 @@ export function useScanTab(moduleId: SubModuleId) {
     if (queue.length === 0) {
       setActiveFixId(null);
       fixTotalRef.current = 0;
+      setFixVerification(finishFixes);
       logger.info(`[ScanTab] ${moduleId} batch fix ended: queue drained`);
       return;
     }
@@ -183,12 +214,12 @@ export function useScanTab(moduleId: SubModuleId) {
     const finding = useModuleStore.getState().scanResults[moduleId]?.find((f) => f.id === nextId);
     if (!finding) {
       logger.warn(`[ScanTab] ${moduleId} batch fix skipped "${nextId}": finding no longer in scan results — advancing to the next item`);
+      setFixVerification((prev) => dropFixTarget(prev, nextId));
       scheduleAdvance();
       return;
     }
 
-    const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
-    fixCliRef.current?.sendPrompt(prompt);
+    fixCliRef.current?.sendPrompt(buildScanFixPrompt(finding, moduleLabel));
   }, [moduleId, moduleLabel, scheduleAdvance]);
 
   advanceFixRef.current = advanceFix;
@@ -204,14 +235,15 @@ export function useScanTab(moduleId: SubModuleId) {
     }
   }, [moduleId]);
 
+  // A fix run's exit code is its outcome, never a resolution: the finding stays
+  // open until a Verify scan no longer finds it.
   const handleFixComplete = useCallback((success: boolean) => {
     const completedId = activeFixId;
-    if (success && completedId) {
-      void resolveFindings([completedId]);
-    }
+    if (completedId) setFixVerification((prev) => recordFixOutcome(prev, completedId, success));
+    if (fixQueueRef.current.length === 0) setFixVerification(finishFixes);
     // Advance to next in queue
     scheduleAdvance();
-  }, [activeFixId, resolveFindings, scheduleAdvance]);
+  }, [activeFixId, scheduleAdvance]);
 
   const fixCli = useModuleCLI({
     moduleId,
@@ -224,22 +256,26 @@ export function useScanTab(moduleId: SubModuleId) {
   const fixCliRef = useRef(fixCli);
   fixCliRef.current = fixCli;
 
-  const startBatchFix = useCallback(() => {
-    const ids = Array.from(selectedFindings);
-    if (ids.length === 0) return;
+  /** Fix `ids` through the FIX session — a batch, or a single row as a queue of one. */
+  const startFixes = useCallback((ids: string[]) => {
+    if (ids.length === 0 || activeFixId !== null) return;
 
     fixTotalRef.current = ids.length;
     const [firstId, ...rest] = ids;
     setFixQueue(rest);
     setActiveFixId(firstId);
-    setSelectedFindings(new Set());
+    setFixVerification((prev) => beginFixes(prev, ids));
 
     const finding = findings.find((f) => f.id === firstId);
-    if (finding) {
-      const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
-      fixCli.sendPrompt(prompt);
-    }
-  }, [selectedFindings, findings, moduleLabel, fixCli]);
+    if (finding) fixCli.sendPrompt(buildScanFixPrompt(finding, moduleLabel));
+  }, [activeFixId, findings, moduleLabel, fixCli]);
+
+  const startBatchFix = useCallback(() => {
+    startFixes(Array.from(selectedFindings));
+    setSelectedFindings(new Set());
+  }, [selectedFindings, startFixes]);
+
+  const fixFinding = useCallback((id: string) => { startFixes([id]); }, [startFixes]);
 
   const markSelectedResolved = useCallback(() => {
     void resolveFindings(Array.from(selectedFindings));
@@ -279,7 +315,7 @@ export function useScanTab(moduleId: SubModuleId) {
     // Build previous findings summary for iterative scanning
     const activeFindings = findings.filter((f) => !f.resolvedAt);
     const previousFindings = activeFindings.length > 0
-      ? activeFindings.map((f) => `- [${f.severity}] ${f.category}: ${f.description} (${f.file ?? 'general'})`).join('\n')
+      ? activeFindings.map(formatPreviousFinding).join('\n')
       : undefined;
 
     const task = TaskFactory.moduleScan(moduleId, passes, appOrigin, `${moduleLabel} Scan`, previousFindings);
@@ -288,6 +324,24 @@ export function useScanTab(moduleId: SubModuleId) {
     setLastResolved(null);
     scanCli.execute(task);
   }, [selectedPasses, findings, moduleId, moduleLabel, scanCli]);
+
+  /** Verify the fixed findings: ONE module scan over their passes — only ever on a click. */
+  const verifyFixes = useCallback(() => {
+    if (fixVerification.status !== 'ready-to-verify') return;
+    const fixed = new Set(idsIn(fixVerification, 'fixed'));
+    const plan = planFixVerification(findings.filter((f) => fixed.has(f.id) && !f.resolvedAt));
+    if (!plan) {
+      setFixVerification((prev) => markUnverified(prev, 'the fixed findings are no longer listed'));
+      return;
+    }
+    const task = TaskFactory.moduleScan(moduleId, plan.passes, getAppOrigin(), `${moduleLabel} Fix verification`, plan.previousFindings);
+    verifyTargetsRef.current = plan.targetIds;
+    scanDispatchedAtRef.current = Date.now();
+    setDeltaState({ status: 'pending' });
+    setLastResolved(null);
+    setFixVerification((prev) => beginVerification(prev, plan.targetIds));
+    void scanCli.execute(task);
+  }, [fixVerification, findings, moduleId, moduleLabel, scanCli]);
 
   const togglePass = useCallback((pass: EvalPass) => {
     setSelectedPasses((prev) => {
@@ -395,6 +449,9 @@ export function useScanTab(moduleId: SubModuleId) {
     toggleSelectAll,
     allSelected,
     startBatchFix,
+    fixFinding,
+    fixVerification,
+    verifyFixes,
     markSelectedResolved,
     isBatchFixing,
     fixProgress,

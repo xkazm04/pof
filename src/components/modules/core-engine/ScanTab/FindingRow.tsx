@@ -6,8 +6,20 @@ import {
   CheckCircle, Square, CheckSquare,
 } from 'lucide-react';
 import { PASS_LABELS } from '@/lib/evaluator/module-eval-prompts';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_MUTED } from '@/lib/chart-colors';
+import type { FixTargetState } from '@/lib/evaluator/scan-fix-verify';
 import type { ScanFinding } from '@/types/scan';
 import { SEVERITY_CONFIG, EFFORT_CONFIG, PASS_ICONS, ACCENT } from './constants';
+
+const FIX_BADGE: Record<FixTargetState, { label: string; color: string; title: string }> = {
+  fixing: { label: 'fixing', color: ACCENT, title: 'A fix run is queued or running for this finding' },
+  fixed: { label: 'fixed · unverified', color: ACCENT, title: 'The fix run finished; Verify re-scans before anything is resolved' },
+  'fix-failed': { label: 'fix failed', color: STATUS_ERROR, title: 'The fix run failed; this finding is not part of the verification' },
+  verifying: { label: 'verifying', color: ACCENT, title: 'The verification scan is running' },
+  verified: { label: 'verified', color: STATUS_SUCCESS, title: 'The verification scan no longer finds it' },
+  'still-present': { label: 'still present after fix', color: STATUS_WARNING, title: 'The verification scan still finds it: the fix did not fix it' },
+  unverified: { label: 'unverified', color: STATUS_MUTED, title: 'The verification scan did not judge it' },
+};
 
 export const FindingRow = memo(function FindingRow({
   finding,
@@ -19,6 +31,7 @@ export const FindingRow = memo(function FindingRow({
   selected,
   onSelect,
   isActivelyFixing,
+  fixState,
 }: {
   finding: ScanFinding;
   isExpanded: boolean;
@@ -29,8 +42,11 @@ export const FindingRow = memo(function FindingRow({
   selected?: boolean;
   onSelect?: () => void;
   isActivelyFixing?: boolean;
+  /** Where this finding stands in Fix & verify (absent = never fixed here). */
+  fixState?: FixTargetState;
 }) {
   const cfg = SEVERITY_CONFIG[finding.severity];
+  const fixBadge = fixState ? FIX_BADGE[fixState] : null;
   const effortCfg = EFFORT_CONFIG[finding.effort];
   const PassIcon = PASS_ICONS[finding.pass];
 
@@ -72,6 +88,11 @@ export const FindingRow = memo(function FindingRow({
                 <PassIcon className="w-2.5 h-2.5" />
                 {PASS_LABELS[finding.pass]}
               </span>
+              {fixBadge && (
+                <span className="text-2xs px-1.5 py-px rounded border" style={{ color: fixBadge.color, borderColor: fixBadge.color }} title={fixBadge.title}>
+                  {fixBadge.label}
+                </span>
+              )}
               {finding.file && (
                 <span className="text-2xs font-mono text-text-muted truncate max-w-[200px]">
                   {finding.file}{finding.line ? `:${finding.line}` : ''}

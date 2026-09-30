@@ -13,6 +13,7 @@ import { useScanTab } from './useScanTab';
 import { FindingRow } from './FindingRow';
 import { ResolvedSection } from './ResolvedSection';
 import { ScanDelta } from './ScanDelta';
+import { FixVerifySummary } from './FixVerifySummary';
 
 interface ScanTabProps {
   moduleId: SubModuleId;
@@ -45,6 +46,9 @@ export function ScanTab({ moduleId }: ScanTabProps) {
     toggleSelectAll,
     allSelected,
     startBatchFix,
+    fixFinding,
+    fixVerification,
+    verifyFixes,
     markSelectedResolved,
     isBatchFixing,
     fixProgress,
@@ -142,6 +146,13 @@ export function ScanTab({ moduleId }: ScanTabProps) {
         lastResolved={lastResolved}
         onUndo={undoResolve}
         resolveError={resolveError}
+      />
+
+      {/* Fix & verify: fixed findings wait for ONE verification scan, on click */}
+      <FixVerifySummary
+        verification={fixVerification}
+        onVerify={verifyFixes}
+        disabled={isBatchFixing || scanCli.isRunning || fixCli.isRunning}
       />
 
       {/* Summary stats */}
@@ -242,14 +253,12 @@ export function ScanTab({ moduleId }: ScanTabProps) {
                       isExpanded={expandedFindings.has(finding.id)}
                       onToggle={() => toggleFinding(finding.id)}
                       onResolve={() => { void resolveFindings([finding.id]); }}
-                      onFix={() => {
-                        const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
-                        scanCli.sendPrompt(prompt);
-                      }}
-                      isRunning={scanCli.isRunning || fixCli.isRunning}
+                      onFix={() => fixFinding(finding.id)}
+                      isRunning={scanCli.isRunning || fixCli.isRunning || isBatchFixing}
                       selected={selectedFindings.has(finding.id)}
                       onSelect={() => toggleSelectFinding(finding.id)}
                       isActivelyFixing={activeFixId === finding.id}
+                      fixState={fixVerification.byId[finding.id]}
                     />
                   ))}
                 </div>
