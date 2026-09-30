@@ -3,22 +3,8 @@
 import { useCallback, useMemo } from 'react';
 import { Brush, Crown, Globe, Paintbrush, Lock, Check } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
-import { getModuleChecklist } from '@/lib/module-registry';
+import { resolveDiagramNodes, deriveDiagramNodeStates, type DiagramNode, type DiagramNodeState } from '@/lib/checklist-diagram';
 import type { LucideIcon } from 'lucide-react';
-
-interface MaterialNode {
-  id: string;
-  label: string;
-  subtitle: string;
-  description: string;
-  icon: LucideIcon;
-  prompt: string;
-  /** Tier in the hierarchy: 0 = root master material, 1 = what builds on it */
-  tier: number;
-  dependencies: string[];
-  /** True when `id` resolves to no registry checklist item — surfaced, not hidden. */
-  missing: boolean;
-}
 
 /**
  * The shape of the graph: which REAL `materials` checklist items it draws and how
@@ -33,40 +19,28 @@ interface MaterialNode {
  * The UE5 workflow this draws: Master Material → Material Instances (dynamic) and
  * the shared Material Parameter Collections both depend on it. Post-process is NOT
  * a materials checklist item — it has its own Post-Process tab in this module.
+ * Resolution and state derivation are the shared `@/lib/checklist-diagram` model.
  */
 interface MaterialNodeSpec {
   id: string;
   subtitle: string;
   icon: LucideIcon;
+  /** Tier in the hierarchy: 0 = root master material, 1 = what builds on it */
   tier: number;
-  dependencies: string[];
+  prerequisites: string[];
 }
 
 const HIERARCHY: MaterialNodeSpec[] = [
-  { id: 'mat-1', subtitle: 'Root Shader', icon: Crown, tier: 0, dependencies: [] },
-  { id: 'mat-2', subtitle: 'Instances', icon: Paintbrush, tier: 1, dependencies: ['mat-1'] },
-  { id: 'mat-3', subtitle: 'Shared Params', icon: Globe, tier: 1, dependencies: ['mat-1'] },
+  { id: 'mat-1', subtitle: 'Root Shader', icon: Crown, tier: 0, prerequisites: [] },
+  { id: 'mat-2', subtitle: 'Instances', icon: Paintbrush, tier: 1, prerequisites: ['mat-1'] },
+  { id: 'mat-3', subtitle: 'Shared Params', icon: Globe, tier: 1, prerequisites: ['mat-1'] },
 ];
 
-/**
- * Resolve a node against the registry. A spec whose id no longer exists renders as
- * a loud, undispatchable drift marker rather than vanishing from the graph — a
- * silently-dropped node is exactly how the `mt-*` divergence survived.
- */
-function nodeFrom(spec: MaterialNodeSpec): MaterialNode {
-  const item = getModuleChecklist('materials').find((i) => i.id === spec.id);
-  return {
-    ...spec,
-    label: item?.label ?? spec.id,
-    description:
-      item?.description ??
-      `No "${spec.id}" item exists in the materials checklist — this graph and the registry have drifted.`,
-    prompt: item?.prompt ?? '',
-    missing: !item,
-  };
-}
+type MaterialNode = DiagramNode<MaterialNodeSpec>;
 
-const NODES: MaterialNode[] = HIERARCHY.map(nodeFrom);
+// A spec whose id no longer exists resolves to a loud, undispatchable drift node
+// rather than vanishing — a silently-dropped node is how `mt-*` survived.
+const NODES: MaterialNode[] = resolveDiagramNodes('materials', HIERARCHY);
 
 interface MaterialLayerGraphProps {
   onRunPrompt: (itemId: string, prompt: string) => void;
@@ -79,25 +53,11 @@ const EMPTY_PROGRESS: Record<string, boolean> = {};
 export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: MaterialLayerGraphProps) {
   const progress = useModuleStore((s) => s.checklistProgress['materials'] ?? EMPTY_PROGRESS);
 
-  const nodeStates = useMemo(() => {
-    const labelOf = new Map(NODES.map((n) => [n.id, n.label]));
-    return NODES.map((node) => {
-      const completed = !!progress[node.id];
-      const unmetDeps = node.dependencies.filter((d) => !progress[d]);
-      const locked = node.missing || (unmetDeps.length > 0 && !completed);
-      const isActive = activeItemId === node.id;
-      const isRoot = node.tier === 0;
-      return {
-        ...node,
-        completed,
-        locked,
-        isActive,
-        isRoot,
-        // Name what is actually missing instead of a hard-coded id.
-        unmetDeps: unmetDeps.map((d) => labelOf.get(d) ?? d),
-      };
-    });
-  }, [progress, activeItemId]);
+  // `unmetDeps` names what is actually missing (labels), never a hard-coded id.
+  const { nodes: nodeStates, completedCount } = useMemo(
+    () => deriveDiagramNodeStates(NODES, progress, activeItemId),
+    [progress, activeItemId],
+  );
 
   const root = nodeStates[0];
   const children = nodeStates.slice(1);
@@ -111,8 +71,6 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
     },
     [onRunPrompt, isRunning],
   );
-
-  const completedCount = nodeStates.filter((n) => n.completed).length;
 
   return (
     <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto select-none">
@@ -190,14 +148,7 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
 
 // ── Node Card ──
 
-interface NodeState extends MaterialNode {
-  completed: boolean;
-  locked: boolean;
-  isActive: boolean;
-  isRoot: boolean;
-  /** Labels of the prerequisites still outstanding, in graph order. */
-  unmetDeps: string[];
-}
+type NodeState = DiagramNodeState<MaterialNode>;
 
 interface NodeCardProps {
   node: NodeState;
