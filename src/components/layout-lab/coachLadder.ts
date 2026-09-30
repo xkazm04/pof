@@ -19,7 +19,9 @@
  *    reconciled, every OTHER status on this entity is suspect, so it outranks all
  *    work. (The old per-entity ladder simply had no place for drift and therefore
  *    silently coached against a status it could not trust.)
- * 3. **pending** — produced, acceptance still resolving: real in-flight work.
+ * 3. **pending** — produced, acceptance held (a declared gap, a seeded row, a template): real
+ *    in-flight work. A row NOTHING can settle (UNGRADED) is skipped by every caller through
+ *    `coachSettlement.ladderStatusOf`, the rank the MCP loop's `entityNextStep` uses too.
  * 4. **deferred** — produced, waiting on a live Unreal run. Below `pending` because
  *    it is not locally actionable (it needs a drain), but ABOVE `unproduced`
  *    because the work exists and only needs to be finished.
@@ -57,7 +59,7 @@ export interface CoachHint {
 export const COACH_HINT: Record<CoachPriority, CoachHint> = {
   fail: { glyph: '✕', actionWord: 'Fix', hint: 'a gate failed here — open it to see what to change' },
   drift: { glyph: '≠', actionWord: 'Review', hint: 'the local and server verdicts disagree — reconcile them' },
-  pending: { glyph: '○', actionWord: 'Produce', hint: 'this step is produced — its acceptance is still resolving' },
+  pending: { glyph: '○', actionWord: 'Settle', hint: 'produced but held — its acceptance names what is still missing' },
   deferred: { glyph: '⏸', actionWord: 'Run live test', hint: 'waiting on a live Unreal run — drain its gate' },
   unproduced: { glyph: '·', actionWord: 'Start', hint: 'not produced yet — nothing has run here' },
 };

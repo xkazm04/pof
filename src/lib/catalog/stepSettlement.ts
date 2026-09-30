@@ -9,10 +9,12 @@
  * settle and never reached the settle route that settles L2/packaging/icon deferrals.
  *
  * `entityNextStep` is the lab coaches' own ladder (`pickLadderIssue`) over the entity's persisted
- * verdicts, with rows nothing here can settle skipped — so the headless loop and the lab name the
- * same next step. Pure: no db, no fs.
+ * verdicts, ranked through the same `ladderStatusOf` every lab ladder caller uses (rows nothing
+ * here can settle are skipped) — so the headless loop and the lab name the same next step.
+ * Pure: no db, no fs.
  */
 import { pickLadderIssue, type CoachPriority } from '@/components/layout-lab/coachLadder';
+import { ladderStatusOf } from '@/components/layout-lab/coachSettlement';
 import type { StepDisplayStatus } from '@/components/layout-lab/hooks/useEntityArtifacts';
 import { SOURCED_MARKER, TEMPLATE_MARKER, UNGRADED_MARKER } from '@/lib/catalog/acceptance/markers';
 import { isPackagingStep } from '@/lib/catalog/acceptance/packagingStep';
@@ -100,9 +102,7 @@ export function entityNextStep(steps: readonly SettleSpec[], verdictOf: (label: 
   const specs = new Map(steps.map((s) => [s.label, s]));
   const statusOf = (label: string): StepDisplayStatus => {
     const v = verdictOf(label);
-    if (!v) return 'unproduced';
-    if (settlementOf(v, specs.get(label))?.actionable === false) return 'pass';
-    return v.status as StepDisplayStatus;
+    return v ? ladderStatusOf(v.status as StepDisplayStatus, v, specs.get(label)) : 'unproduced';
   };
   const pick = pickLadderIssue(steps.map((s) => s.label), statusOf);
   return pick ? { step: pick.step, priority: pick.priority } : null;

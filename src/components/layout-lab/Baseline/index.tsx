@@ -280,7 +280,7 @@ export function Baseline(props: Props) {
                     t={t}
                     steps={steps}
                     statusByStep={(s, i) => displayStatus(s, i)}
-                    reasonForStep={(s) => artifactByStep.get(s)?.reason}
+                    verdictOf={(s) => artifactByStep.get(s)} stepSpecs={pipeline?.steps}
                     driftByStep={driftByStep}
                     rollup={rollupSummary}
                     onJump={(i) => setStepIdx(i)}

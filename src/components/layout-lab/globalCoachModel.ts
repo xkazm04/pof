@@ -1,5 +1,6 @@
 import { deriveEntityArtifacts, gradeStepGuarded, type StepDisplayStatus, type StepDrift } from './hooks/useEntityArtifacts';
 import { COACH_PRIORITY_RANK, pickLadderIssue, type CoachPriority } from './coachLadder';
+import { settledLadder } from './coachSettlement';
 import { buildLabCheckerContext } from './labCheckerContext';
 import { labContentHash } from './labContentDrift';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
@@ -151,7 +152,7 @@ function assembleCandidate(
   driftByStep: Map<string, StepDrift>,
   reasonForStep: (step: string) => string | undefined,
 ): CoachCandidate | null {
-  const issue = pickEntityIssue(steps, displayStatus, driftByStep);
+  const issue = pickEntityIssue(steps, settledLadder(displayStatus, reasonForStep), driftByStep); // unsettleable rows skipped, as MCP does
   if (!issue) return null;
   // The concrete reason: for drift, the local-vs-server disagreement; otherwise the
   // reason carried on the derived artifact (fail/deferred checker output). Undefined

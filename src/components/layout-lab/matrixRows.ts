@@ -6,6 +6,7 @@ import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { pickLadderIssue, type LadderIssue } from './coachLadder';
+import { settledLadder } from './coachSettlement';
 import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
 
 export interface MatrixBlocker { step: string; reason: string }
@@ -63,7 +64,7 @@ export function buildMatrixRows(
     }
     const effective = { ...serverAsLocal, ...(localByEntity[e.id] ?? {}) }; // add-only: local wins
 
-    const { artifacts, displayStatus, driftByStep } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
+    const { artifacts, artifactByStep, displayStatus, driftByStep } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
     const statusMap = new Map<string, StepDisplayStatus>(own.map((s, i) => [s, displayStatus(s, i)]));
 
@@ -82,8 +83,9 @@ export function buildMatrixRows(
       stepIndex: (s: string) => own.indexOf(s),
       rollup: summarizeEntity(artifacts, own.length),
       blockers,
-      // The SAME pick both coaches make (one ladder), so the board ranks by what they say is next.
-      issue: pickLadderIssue(own, displayStatus, driftByStep),
+      // The SAME pick both coaches and the MCP loop make (one ladder, unsettleable rows skipped),
+      // so the board ranks by what they say is next. The cell's own status is not moved.
+      issue: pickLadderIssue(own, settledLadder(displayStatus, (s) => artifactByStep.get(s)?.reason), driftByStep),
     };
   });
 }
