@@ -11,20 +11,16 @@
 import type { AcceptanceResult } from './types';
 import type { UeChecker } from './ueStaticCheckers';
 import { resolveUeRoot } from './ueStaticCheckers';
-import { isPackagingStep } from './packagingStep';
+import { isPackagingLabel } from './packagingStep';
 import { foldContentHold, holdsBackAtDataTier } from './combineVerdicts';
-import { gradeArtifact } from '../headless';
 import { getCatalogPipeline } from '../pipeline-registry';
 // Side-effect: register all pipelines. Without it a cold server grades NOTHING — getCatalogPipeline
 // returns null for every step and the sweep reports an empty success (verify-static: verified 0).
 import '@/lib/catalog/pipelines/registry.generated';
 import { seededEntities } from '../seed';
-import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { realArtifactIO, createTouched, sweepRow, sweepIODeps, contentVerdictVia, type SweepFilter } from './regrade';
 
-export interface StaticVerifyFilter {
-  catalogId?: string;
-  entityId?: string;
-}
+export type StaticVerifyFilter = SweepFilter;
 
 export interface StaticVerifyRow {
   catalogId: string;
@@ -88,6 +84,9 @@ export interface StaticVerifyDeps {
   /** The step's own content checker, re-run on the stored data (raw — no judge overlay).
    *  Optional so a hand-built dep set needs no change; absent → the static verdict stands. */
   getContentVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
+  /** Re-derive one entity's lifecycle cache, once per entity an APPLY run wrote. Optional; absent
+   *  → no sync (a stage, a hand-built dep set). */
+  syncLifecycle?: (catalogId: string, entityId: string) => void;
 }
 
 /**
@@ -105,6 +104,7 @@ export function verifyStaticAll(
   const apply = opts?.apply !== false;
   const results: StaticVerifyRow[] = [];
   let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, delegated = 0, changed = 0;
+  const touched = createTouched();
 
   for (const a of deps.listArtifacts(filter)) {
     // A packaging step answers to BOTH its static checks and its package's disk truth; if each
@@ -127,16 +127,11 @@ export function verifyStaticAll(
     else if (verdict.status === 'deferred') deferred++;
     else if (verdict.status === 'fail') failed++;
 
-    const moved = verdict.status !== a.status;
-    if (moved && apply) { deps.upsertStatus(a.catalogId, a.entityId, a.step, verdict); changed++; }
-    results.push({
-      catalogId: a.catalogId, entityId: a.entityId, step: a.step,
-      from: a.status, to: verdict.status,
-      ...(verdict.detail ? { detail: verdict.detail } : {}),
-      ...(verdict.reason ? { reason: verdict.reason } : {}),
-      changed: moved,
-    });
+    const row = sweepRow(a, verdict);
+    if (row.changed && apply) { deps.upsertStatus(a.catalogId, a.entityId, a.step, verdict); changed++; touched.add(a.catalogId, a.entityId); }
+    results.push(row);
   }
+  touched.flush(deps.syncLifecycle);
 
   return { ueRoot, verified, passed, deferred, failed, skipped, delegated, changed, results };
 }
@@ -152,37 +147,17 @@ export function staticChecksFor(catalogId: string, entityId: string, step: strin
   return spec.staticChecks({ id: entity.id, name: entity.name, lifecycle: entity.lifecycle, data: entity.data });
 }
 
-function defaultUpsertStatus(catalogId: string, entityId: string, step: string, res: AcceptanceResult): void {
-  const existing = getArtifact(catalogId, entityId, step);
-  upsertArtifact({
-    catalogId, entityId, step,
-    data: existing?.data ?? {},
-    ueAssets: existing?.ueAssets ?? [],
-    status: res.status,
-    tier: res.tier,
-    ...(res.reason ? { reason: res.reason } : res.detail ? { reason: res.detail } : {}),
-  });
-}
-
-/** The step's own content checker re-run RAW (no judge overlay) on the stored data, or null when
- *  no row / no checker — the content half BOTH L2 sweeps fold in (`foldContentHold`). */
+/** The step's own content checker re-run RAW on the STORED data (`contentVerdictVia` over the
+ *  real store), or null when no row / no checker — what the lab's package panel folds in. */
 export function contentVerdictFor(catalogId: string, entityId: string, step: string): AcceptanceResult | null {
-  const art = getArtifact(catalogId, entityId, step);
-  if (!art) return null;
-  const g = gradeArtifact(catalogId, step, art.data, entityId);
-  return g.graded ? g.raw : null;
+  return contentVerdictVia(realArtifactIO)(catalogId, entityId, step);
 }
 
 export const defaultStaticVerifyDeps: StaticVerifyDeps = {
   resolveUeRoot,
-  listArtifacts: (filter) => listAllArtifacts(filter),
   getStaticChecks: staticChecksFor,
-  upsertStatus: defaultUpsertStatus,
-  getContentVerdict: contentVerdictFor,
-  isPackaging: (catalogId, step) => {
-    const spec = getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step);
-    return spec ? isPackagingStep(spec) : step === 'UE Packaging';
-  },
+  isPackaging: isPackagingLabel,
+  ...sweepIODeps(realArtifactIO),
 };
 
 /** One step's aggregated L2 static verdict against the resolved UE root, or null when the

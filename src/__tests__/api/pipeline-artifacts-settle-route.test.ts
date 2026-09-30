@@ -238,3 +238,25 @@ describe('[guard] GET /api/pipeline-artifacts/bind-icons — unchanged by the de
     expect(m.upsertArtifact).not.toHaveBeenCalled();
   });
 });
+
+describe('settle scoped to ONE entity (optional entityId)', () => {
+  it('GET ?catalogId=&entityId= previews only that entity, and remaining is scoped the same way', async () => {
+    const res = await GET(get('?catalogId=bestiary&entityId=e1'));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    const allRows = data.plan.passes.flatMap((p: { rows: { entityId: string }[] }) => p.rows);
+    expect(allRows.length).toBeGreaterThan(0);
+    for (const r of allRows) expect(r.entityId).toBe('e1');
+    expect(data.plan.passes[1]).toMatchObject({ drops: 1 });
+    expect(m.collectDeferred).toHaveBeenCalledWith(expect.objectContaining({ catalogId: 'bestiary', entityId: 'e1' }));
+    expect(data.remaining).toContainEqual(expect.objectContaining({ drainPython: 0 }));
+    expect(m.upsertArtifact).not.toHaveBeenCalled();
+  });
+
+  it('POST { catalogId, entityId } applies to that entity only', async () => {
+    const res = await POST(post({ catalogId: 'bestiary', entityId: 'e1', confirmDrops: 1 }));
+    expect(res.status).toBe(200);
+    expect((m.db.get(key('bestiary', 'e1', 'Stat Blocks')) as Row).status).toBe('deferred');
+    expect((m.db.get(key('bestiary', 'e2', 'Stat Blocks')) as Row).status).toBe('pass');
+  });
+});

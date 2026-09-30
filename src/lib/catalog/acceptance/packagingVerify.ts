@@ -16,20 +16,17 @@ import type { AcceptanceResult } from './types';
 import type { SiblingArtifact } from '../packaging/collect';
 import type { PackageManifest, PackagingFsDeps } from '../packaging/packageArtifacts';
 import { buildPackage, defaultPackagingFsDeps } from '../packaging/packageArtifacts';
-import { allCatalogPipelines, getCatalogPipeline } from '../pipeline-registry';
+import { allCatalogPipelines } from '../pipeline-registry';
 // Side-effect: register all pipelines. Without it a cold server grades NOTHING — getCatalogPipeline
 // returns null for every step and the sweep reports an empty success (verify-static: verified 0).
 import '@/lib/catalog/pipelines/registry.generated';
-import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
-import { isPackagingStep } from './packagingStep';
-import { staticVerdictFor, contentVerdictFor } from './staticVerify';
+import { isPackagingStep, isPackagingLabel } from './packagingStep';
+import { staticVerdictFor } from './staticVerify';
+import { realArtifactIO, createTouched, sweepRow, sweepIODeps, type ArtifactIO, type SweepFilter } from './regrade';
 import { foldContentHold } from './combineVerdicts';
 import { aggregatePackaging, combinePackagingVerdict, siblingsForPackaging } from './packagingGrade';
 
-export interface PackagingVerifyFilter {
-  catalogId?: string;
-  entityId?: string;
-}
+export type PackagingVerifyFilter = SweepFilter;
 
 export { isPackagingStep };
 
@@ -104,6 +101,8 @@ export interface PackagingVerifyDeps {
   getStaticVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
   /** The step's own content checker, re-run raw on the stored data. Optional; absent → no content fold. */
   getContentVerdict?: (catalogId: string, entityId: string, step: string) => AcceptanceResult | null;
+  /** Re-derive one entity's lifecycle cache, once per entity an APPLY run wrote. Optional. */
+  syncLifecycle?: (catalogId: string, entityId: string) => void;
 }
 
 /** Rebuild + grade every persisted packaging artifact. `apply: false` = dry-run preview.
@@ -116,6 +115,7 @@ export function verifyPackagingAll(
   const apply = opts?.apply !== false;
   const results: PackagingVerifyRow[] = [];
   let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, changed = 0;
+  const touched = createTouched();
 
   for (const a of deps.listArtifacts(filter)) {
     if (!deps.isPackaging(a.catalogId, a.step)) { skipped++; continue; }
@@ -131,26 +131,18 @@ export function verifyPackagingAll(
     else if (verdict.status === 'fail') failed++;
     else if (verdict.status === 'deferred') deferred++;
 
-    const moved = verdict.status !== a.status;
-    if (moved && apply) { deps.upsertStatus(a.catalogId, a.entityId, a.step, verdict); changed++; }
-    results.push({
-      catalogId: a.catalogId, entityId: a.entityId, step: a.step,
-      from: a.status, to: verdict.status,
-      ...(verdict.detail ? { detail: verdict.detail } : {}),
-      ...(verdict.reason ? { reason: verdict.reason } : {}),
-      changed: moved && apply,
-    });
+    // `changed` = the verdict moves, dry run or not (as every sweep reports it); the summary's
+    // `changed` count stays the writes made.
+    const row = sweepRow(a, verdict);
+    if (row.changed && apply) { deps.upsertStatus(a.catalogId, a.entityId, a.step, verdict); changed++; touched.add(a.catalogId, a.entityId); }
+    results.push(row);
   }
+  touched.flush(deps.syncLifecycle);
 
   return { verified, passed, deferred, failed, skipped, changed, results, exempt: deps.listExemptions?.(filter) ?? [] };
 }
 
 // ── default (server) deps — real registry / artifacts db / filesystem ──
-function defaultIsPackaging(catalogId: string, step: string): boolean {
-  const spec = getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step);
-  return spec ? isPackagingStep(spec) : step === 'UE Packaging';
-}
-
 /** Every registered pipeline in scope that declares a packaging exemption. Read from the
  *  REGISTRY, not from persisted rows: a catalog with no artifacts yet is still exempt by
  *  declaration, and reporting it only when a row happens to exist would be the same
@@ -164,31 +156,19 @@ function defaultListExemptions(filter: PackagingVerifyFilter): PackagingExemptio
     );
 }
 
-function defaultGetSiblings(catalogId: string, entityId: string, packagingStep: string): SiblingArtifact[] {
-  return siblingsForPackaging(listAllArtifacts({ catalogId, entityId }), packagingStep);
-}
-
-function defaultUpsertStatus(catalogId: string, entityId: string, step: string, res: AcceptanceResult): void {
-  const existing = getArtifact(catalogId, entityId, step);
-  upsertArtifact({
-    catalogId, entityId, step,
-    data: existing?.data ?? {},
-    ueAssets: existing?.ueAssets ?? [],
-    status: res.status,
-    tier: res.tier,
-    ...(res.reason ? { reason: res.reason } : res.detail ? { reason: res.detail } : {}),
-  });
-}
-
-export function defaultPackagingVerifyDeps(fsDeps: PackagingFsDeps = defaultPackagingFsDeps()): PackagingVerifyDeps {
+/** The server deps over one store — the real db, or the settle preview's stage (`stagedIO`),
+ *  whose siblings then carry an earlier pass's staged writes. */
+export function defaultPackagingVerifyDeps(
+  fsDeps: PackagingFsDeps = defaultPackagingFsDeps(),
+  io: ArtifactIO = realArtifactIO,
+): PackagingVerifyDeps {
   return {
-    listArtifacts: (filter) => listAllArtifacts(filter),
-    isPackaging: defaultIsPackaging,
+    ...sweepIODeps(io),
+    isPackaging: isPackagingLabel,
     listExemptions: defaultListExemptions,
-    getSiblings: defaultGetSiblings,
+    getSiblings: (catalogId, entityId, packagingStep): SiblingArtifact[] =>
+      siblingsForPackaging(io.list({ catalogId, entityId }), packagingStep),
     build: (catalogId, entityId, siblings) => buildPackage(catalogId, entityId, siblings, fsDeps),
-    upsertStatus: defaultUpsertStatus,
     getStaticVerdict: staticVerdictFor,
-    getContentVerdict: contentVerdictFor,
   };
 }

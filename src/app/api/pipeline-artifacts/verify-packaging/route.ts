@@ -1,10 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import {
-  verifyPackagingAll,
-  defaultPackagingVerifyDeps,
-  type PackagingVerifyFilter,
-} from '@/lib/catalog/acceptance/packagingVerify';
+import { verifyPackagingAll, defaultPackagingVerifyDeps } from '@/lib/catalog/acceptance/packagingVerify';
+import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
 
 /**
  * Packaging-verify pass — rebuilds each row's package from its SIBLING artifacts
@@ -12,13 +9,8 @@ import {
  * generated/packages/<catalogId>/<entityId>/ + manifest.json) and re-grades the
  * packaging artifact from disk truth. The L2 sibling of /verify-static: pure
  * filesystem, no bridge/editor needed. Un-does the audited "packaging never touches
- * disk/UE" hollow-pass class.
+ * disk/UE" hollow-pass class. Writes go through the one re-grade door (`acceptance/regrade.ts`).
  */
-function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undefined): PackagingVerifyFilter {
-  const catalogId = get('catalogId');
-  const entityId = get('entityId');
-  return { ...(catalogId ? { catalogId } : {}), ...(entityId ? { entityId } : {}) };
-}
 
 /** GET — dry-run preview: the would-be verdicts (and what each package would contain /
  *  is missing) WITHOUT writing artifacts. NOTE: the package dirs/manifests themselves
@@ -27,7 +19,7 @@ function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undef
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
-    const summary = verifyPackagingAll(parseFilter((k) => sp.get(k)), defaultPackagingVerifyDeps(), { apply: false });
+    const summary = verifyPackagingAll(parseSweepFilter(sp), defaultPackagingVerifyDeps(), { apply: false });
     return apiSuccess(summary);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'verify-packaging GET failed', 500);
@@ -39,8 +31,8 @@ export async function GET(req: NextRequest) {
  *  otherwise). Body: { catalogId?, entityId? }. */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as { catalogId?: string; entityId?: string };
-    const summary = verifyPackagingAll(parseFilter((k) => body[k]), defaultPackagingVerifyDeps(), { apply: true });
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const summary = verifyPackagingAll(parseSweepFilter(body), defaultPackagingVerifyDeps(), { apply: true });
     return apiSuccess(summary);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'verify-packaging POST failed', 500);

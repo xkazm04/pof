@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { bindIconsAll, type BindIconsFilter } from '@/lib/catalog/acceptance/bindIconsAll';
+import { bindIconsAll } from '@/lib/catalog/acceptance/bindIconsAll';
 import { listIconLibrary, makeBindIconsDeps } from '@/lib/catalog/acceptance/bindIconsDeps';
+import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
 import '@/lib/catalog/pipelines/registry.generated';
 
 /**
@@ -21,18 +22,13 @@ import '@/lib/catalog/pipelines/registry.generated';
  * The library reader and the db wiring live in `bindIconsDeps.ts`, shared with the catalog
  * re-settle (`/api/pipeline-artifacts/settle`), which runs this pass for one catalog.
  */
-function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undefined): BindIconsFilter {
-  const catalogId = get('catalogId');
-  const entityId = get('entityId');
-  return { ...(catalogId ? { catalogId } : {}), ...(entityId ? { entityId } : {}) };
-}
 
 /** GET — dry-run preview: what WOULD be bound and how each verdict would move. No writes. */
 export async function GET(req: NextRequest) {
   try {
     const icons = listIconLibrary();
     const sp = req.nextUrl.searchParams;
-    return apiSuccess(bindIconsAll(parseFilter((k) => sp.get(k)), makeBindIconsDeps(icons), { apply: false, library: icons.length }));
+    return apiSuccess(bindIconsAll(parseSweepFilter(sp), makeBindIconsDeps(icons), { apply: false, library: icons.length }));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'bind-icons GET failed', 500);
   }
@@ -43,8 +39,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const icons = listIconLibrary();
-    const body = (await req.json().catch(() => ({}))) as { catalogId?: string; entityId?: string };
-    return apiSuccess(bindIconsAll(parseFilter((k) => body[k]), makeBindIconsDeps(icons), { apply: true, library: icons.length }));
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const deps = makeBindIconsDeps(icons);
+    const summary = bindIconsAll(parseSweepFilter(body), deps, { apply: true, library: icons.length });
+    deps.flushLifecycle(); // each rebound entity's lifecycle re-derived once
+    return apiSuccess(summary);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'bind-icons POST failed', 500);
   }

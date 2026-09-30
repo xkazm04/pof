@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { drainPythonAll, readDispatch, hasResult, type PythonDrainFilter, type PythonDrainDeps } from '@/lib/catalog/acceptance/pythonDrain';
-import { listAllArtifacts, getArtifact, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { drainPythonAll, readDispatch, hasResult, type PythonDrainDeps } from '@/lib/catalog/acceptance/pythonDrain';
+import { listAllArtifacts } from '@/lib/pipeline-artifacts-db';
+import { persistRegrade, realArtifactIO, createTouched, parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
 import { gradeArtifact } from '@/lib/catalog/headless';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { runPython } from '@/lib/bridge/run-python';
@@ -15,8 +16,12 @@ import '@/lib/catalog/pipelines/registry.generated';
  * closed every step reports `bridge-error` and NOTHING is written — "we could not ask" is
  * not "the step failed". This is the opposite prerequisite to `/drain`, which spawns its own
  * headless editor and therefore needs the editor CLOSED.
+ *
+ * The module's return is persisted through the one re-grade door (`acceptance/regrade.ts`), and
+ * each entity it wrote gets its lifecycle re-derived once after the run.
  */
-function makeDeps(bridgeUrl?: string): PythonDrainDeps {
+function makeDeps(bridgeUrl?: string): PythonDrainDeps & { flushLifecycle: () => void } {
+  const touched = createTouched();
   return {
     listArtifacts: (filter) =>
       listAllArtifacts(filter).map((a) => ({
@@ -36,23 +41,11 @@ function makeDeps(bridgeUrl?: string): PythonDrainDeps {
       return graded ? raw : null;
     },
     save: (catalogId, entityId, step, data, res) => {
-      const existing = getArtifact(catalogId, entityId, step);
-      upsertArtifact({
-        catalogId, entityId, step,
-        data,
-        ueAssets: existing?.ueAssets ?? [],
-        status: res.status,
-        tier: res.tier,
-        ...(res.reason ? { reason: res.reason } : res.detail ? { reason: res.detail } : {}),
-      });
+      persistRegrade(realArtifactIO, { catalogId, entityId, step }, res, data);
+      touched.add(catalogId, entityId);
     },
+    flushLifecycle: () => touched.flush(realArtifactIO.syncLifecycle),
   };
-}
-
-function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undefined): PythonDrainFilter {
-  const catalogId = get('catalogId');
-  const entityId = get('entityId');
-  return { ...(catalogId ? { catalogId } : {}), ...(entityId ? { entityId } : {}) };
 }
 
 /**
@@ -63,7 +56,7 @@ function parseFilter(get: (k: 'catalogId' | 'entityId') => string | null | undef
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
-    const filter = parseFilter((k) => sp.get(k));
+    const filter = parseSweepFilter(sp);
     const rows = listAllArtifacts(filter)
       .map((a) => {
         const dispatch = readDispatch(a.data ?? {});
@@ -94,11 +87,13 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as {
       catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: string; apply?: boolean;
     };
+    const deps = makeDeps(body.bridgeUrl);
     const summary = await drainPythonAll(
-      parseFilter((k) => body[k]),
-      makeDeps(body.bridgeUrl),
+      parseSweepFilter(body),
+      deps,
       { apply: body.apply !== false, force: body.force === true, continueOnFail: body.continueOnFail === true },
     );
+    deps.flushLifecycle();
     return apiSuccess(summary);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'drain-python POST failed', 500);

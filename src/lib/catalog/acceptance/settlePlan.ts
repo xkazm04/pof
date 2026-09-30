@@ -31,7 +31,8 @@ export interface SettleRow {
   to: string;
   reason?: string;
   detail?: string;
-  /** Carried by the pass summaries; the plan derives moves from from/to and drops it. */
+  /** Carried by the pass summaries — `from !== to` in every pass (`regrade.sweepRow`); the plan
+   *  derives moves from from/to itself and drops it. */
   changed?: boolean;
 }
 
