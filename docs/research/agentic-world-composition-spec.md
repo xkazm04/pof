@@ -154,7 +154,7 @@ unplaced rows with the solver's reason). **Block out in Blender** dispatches
 proxy cube per placed instance with `obj["pof_tags"]` = its UE actor tags, in a NEW
 collection, never touching existing objects. The manifest's cm (z = prop base) becomes
 Blender metres (origin = proxy centre) there, once, and the UI believes only the
-`POF_BLOCKOUT_PLACED=<n>` receipt.
+`blockout` receipt on the shared `POF_RESULT=` envelope (`{ placed: <n> }`, read by `readReceipt` in `src/lib/blender-mcp/receipt.ts`).
 
 The crop gate's error path was also made honest: a throw inside it (crop, seam, bug) is now
 `{ ran: false, unavailable: true, note: "crop gate error: …" }` — `skipped` stays reserved
