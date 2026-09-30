@@ -16,3 +16,11 @@ export {
   type PlannedTest,
   type ScaffoldForName,
 } from './plannedTests';
+export {
+  registeredTestNames,
+  testPresence,
+  annotatePresence,
+  scanRegisteredTests,
+  type TestPresence,
+  type SourceRegistryScan,
+} from './sourceRegistry';

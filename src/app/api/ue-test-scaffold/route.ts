@@ -1,3 +1,4 @@
+import { isAbsolute } from 'path';
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
@@ -6,21 +7,27 @@ import {
   scaffoldAllPlanned,
   scaffoldForTest,
   buildScaffoldTask,
+  scanRegisteredTests,
+  annotatePresence,
   type ScaffoldForName,
 } from '@/lib/ue-test-scaffold';
 
 /**
  * VS-test scaffolder API.
  *
- * GET  /api/ue-test-scaffold[?tier=&catalogId=&entityId=]
+ * GET  /api/ue-test-scaffold[?tier=&catalogId=&entityId=&projectPath=]
  *      → the planned-but-unmatched UE tests (deferred L3 gates with a recovered test name), each
- *        flagged `scaffoldAvailable`.
+ *        flagged `scaffoldAvailable`. With `projectPath` (absolute, no `..`), each also carries
+ *        `presence` ('in-source' | 'not-in-source' | 'ambiguous') from a read-only scan of
+ *        `<projectPath>/Source` (sourceRegistry.ts); without it the payload is unchanged.
  *
  * POST /api/ue-test-scaffold  body: { action?, testName?, claim?, tier?, catalogId?, entityId? }
  *      - action 'scaffold' (default): generate C++ scaffold text. `testName` → one; else all
  *        planned (de-duped by name) for the filter.
  *      - action 'authoring-tasks': return the CLI authoring task(s) (`TaskFactory.askClaude`
- *        prompts) that instruct an agent to write the scaffold into the UE tree + compile.
+ *        prompts) that instruct an agent to write the scaffold into the UE tree + compile. Each
+ *        entry also carries the `scaffold` {suggestedPath, code} the prompt embeds and the
+ *        `requestedBy` gates, so a UI can preview exactly what the agent will be handed.
  *
  * **'dispatch' was a lie and is gone.** It returned `{ dispatched: N, tasks }` — but
  * `TaskFactory.askClaude` is a PURE CONSTRUCTOR (`{type, moduleId, prompt, label}`) and the task
@@ -34,7 +41,15 @@ export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
     const filter = parseDrainFilter((k) => sp.get(k));
-    return apiSuccess(listPlannedTests(filter));
+    const projectPath = sp.get('projectPath');
+    if (projectPath === null) return apiSuccess(listPlannedTests(filter));
+
+    if (!projectPath || !isAbsolute(projectPath) || projectPath.split(/[\\/]/).includes('..')) {
+      return apiError('projectPath must be an absolute path with no traversal (..)', 400);
+    }
+    const scan = await scanRegisteredTests(projectPath);
+    if (!scan.ok) return apiError(scan.error, 422);
+    return apiSuccess(annotatePresence(listPlannedTests(filter), scan.data.names));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'ue-test-scaffold GET failed', 500);
   }
@@ -71,7 +86,12 @@ export async function POST(req: NextRequest) {
       ? [scaffoldForName(testName, filter, body.claim)]
       : scaffoldAllPlanned(filter);
     if (targets.length === 0) return apiError('no planned tests for the given filter', 404);
-    const tasks = targets.map((sf) => ({ testName: sf.testName, task: buildScaffoldTask(sf) }));
+    const tasks = targets.map((sf) => ({
+      testName: sf.testName,
+      task: buildScaffoldTask(sf),
+      scaffold: { suggestedPath: sf.scaffold.suggestedPath, code: sf.scaffold.code },
+      requestedBy: sf.requestedBy,
+    }));
     return apiSuccess({
       enqueued: false,
       tasks,

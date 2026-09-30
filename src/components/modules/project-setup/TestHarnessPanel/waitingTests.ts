@@ -18,6 +18,8 @@ import type { Result } from '@/types/result';
 import type { GateJob } from '@/lib/test-gate-runner/types';
 import type { SettleOutcome } from '@/lib/test-gate-runner/settleFromTest';
 import type { LeaseState } from '@/lib/test-gate-runner/drain-lease';
+import type { TestPresence } from '@/lib/ue-test-scaffold/sourceRegistry';
+import type { CLITask } from '@/lib/cli-task';
 
 export const WAITING_TESTS_URL = '/api/pipeline-artifacts/drain?tier=L3';
 export const DRAIN_STATUS_URL = '/api/pipeline-artifacts/drain/status';
@@ -116,4 +118,94 @@ export function describeRunOutcome(o: WaitingRunOutcome): string {
       return `matched ${s.matched} · settled ${s.settled} · passed ${s.passed} · failed ${s.failed} · deferred ${s.deferred} — ${s.note}`;
     }
   }
+}
+
+// ── Presence in UE source + the author flow (a test UE lacks: preview, author, then prove) ────
+
+export const PLANNED_TESTS_URL = '/api/ue-test-scaffold';
+export const plannedTestsUrl = (projectPath: string) =>
+  `${PLANNED_TESTS_URL}?tier=L3&projectPath=${encodeURIComponent(projectPath)}`;
+
+/** `unknown` = no source scan for this name (no project, scan refused, or not a planned row). */
+export type WaitingPresence = TestPresence | 'unknown';
+export interface WaitingRow extends WaitingTest {
+  presence: WaitingPresence;
+  /** The row's PRIMARY action. Run stays available on every row regardless (see below). */
+  action: 'author' | 'run';
+}
+export interface WaitingView { tests: WaitingRow[]; unnamed: number; notInSource: number; scanned: boolean }
+
+/**
+ * Put the source-scan presence on each waiting row. Only `not-in-source` makes Author the
+ * primary action; `ambiguous` / `in-source` / `unknown` stay Run. A C++ scan cannot see a
+ * map-placed functional test, so Run is never taken away. `planned === null` = no scan.
+ */
+export function mergeWaitingPresence(
+  waiting: WaitingTests,
+  planned: ReadonlyArray<{ testName: string; presence?: TestPresence }> | null,
+): WaitingView {
+  const byName = new Map<string, TestPresence>();
+  for (const p of planned ?? []) if (p.presence && !byName.has(p.testName)) byName.set(p.testName, p.presence);
+  const tests = waiting.tests.map((t): WaitingRow => {
+    const presence = byName.get(t.testName) ?? 'unknown';
+    return { ...t, presence, action: presence === 'not-in-source' ? 'author' : 'run' };
+  });
+  const notInSource = tests.filter((t) => t.action === 'author').length;
+  return { tests, unnamed: waiting.unnamed, notInSource, scanned: planned !== null };
+}
+
+/** Header fragment, or null when no scan ran (a count we did not measure is not claimed). */
+export function notInSourceLabel(view: WaitingView): string | null {
+  return view.scanned ? `${view.notInSource} not in UE source` : null;
+}
+
+export interface AuthorScaffold { suggestedPath: string; code: string }
+export type AuthorRequester = { catalogId: string; entityId: string; step: string };
+/** One `authoring-tasks` entry as the route returns it. */
+export interface AuthoringTaskEntry { testName: string; task: CLITask; scaffold: AuthorScaffold; requestedBy?: AuthorRequester[] }
+
+interface AuthorTarget { testName: string; scaffold: AuthorScaffold; requestedBy: AuthorRequester[]; task: CLITask }
+export type AuthorState =
+  | { phase: 'idle' }
+  | ({ phase: 'preview' | 'dispatched' | 'authored-unverified' } & AuthorTarget)
+  | ({ phase: 'author-failed'; reason: string } & AuthorTarget)
+  | ({ phase: 'verified'; settle: SettleOutcome } & AuthorTarget);
+
+export type AuthorEvent =
+  | ({ type: 'preview' } & AuthorTarget)
+  | { type: 'dispatch' }
+  | { type: 'cli-complete'; success: boolean; reason?: string }
+  | { type: 'run-outcome'; testName: string; outcome: WaitingRunOutcome }
+  | { type: 'close' };
+
+export const AUTHOR_IDLE: AuthorState = { phase: 'idle' };
+
+/**
+ * The author flow. The CLI finishing is the executor's own claim, never the verdict: success
+ * leaves the test `authored-unverified`; ONLY a `runWaitingTest` 'settled' outcome for this
+ * test, after authoring, reaches `verified` (carrying the settle counts, pass or fail).
+ */
+export function authorReducer(state: AuthorState, ev: AuthorEvent): AuthorState {
+  switch (ev.type) {
+    case 'preview':
+      return { ...targetOf(ev), phase: 'preview' };
+    case 'close':
+      return AUTHOR_IDLE;
+    case 'dispatch':
+      return state.phase === 'preview' || state.phase === 'author-failed'
+        ? { ...targetOf(state), phase: 'dispatched' }
+        : state;
+    case 'cli-complete':
+      if (state.phase !== 'dispatched') return state;
+      return ev.success
+        ? { ...targetOf(state), phase: 'authored-unverified' }
+        : { ...targetOf(state), phase: 'author-failed', reason: ev.reason ?? 'the CLI run ended without success — see its terminal' };
+    case 'run-outcome':
+      if (state.phase !== 'authored-unverified' || ev.testName !== state.testName) return state;
+      return ev.outcome.kind === 'settled' ? { ...targetOf(state), phase: 'verified', settle: ev.outcome.outcome } : state;
+  }
+}
+
+function targetOf(s: AuthorTarget): AuthorTarget {
+  return { testName: s.testName, scaffold: s.scaffold, requestedBy: s.requestedBy, task: s.task };
 }
