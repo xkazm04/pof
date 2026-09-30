@@ -59,10 +59,12 @@ describe('itemAssetPaths — one table for every Items UE path', () => {
     const unique = { id: 'u1', name: 'The Grandfather', data: { rarity: 'Legendary', powers: [{ power: 'all-res', min: 5 }, { power: 'to_hit', min: 20 }] } };
     const declared = itemDeclaredAssets(unique, []);
     expect(declared['Affixes']).toEqual(['/Game/Data/Items/GE_Affix_AllRes', '/Game/Data/Items/GE_Affix_ToHit']);
-    // Its packaging claims exactly those effects — never the Rare example roll's GE_Affix_* set.
-    const claim = itemPackagingClaim(unique, []).assets;
-    expect(claim.filter((p) => p.includes('/GE_'))).toEqual(declared['Affixes']);
-    expect(claim).toContain('/Game/UI/Icons/T_TheGrandfather_Icon_Unique');
+    // Packaging never claims a GameplayEffect (they are verified by the static compile checks), so
+    // its claim reads no entity DATA: the same identity yields the same claim with or without powers.
+    const claim = itemPackagingClaim(unique, []);
+    expect(claim.assets.filter((p) => p.includes('/GE_'))).toEqual([]);
+    expect(claim.assets).toContain('/Game/UI/Icons/T_TheGrandfather_Icon_Unique');
+    expect(itemPackagingClaim({ ...unique, data: {} }, [])).toEqual(claim);
   });
 
   it('the packaging claim is a subset of what the producing steps declare', () => {

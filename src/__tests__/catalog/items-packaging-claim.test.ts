@@ -64,10 +64,26 @@ describe('Items UE Packaging — the claim is derived from sibling declarations'
 
   it('a Common item with no declared powers packages no GE_Affix_* effect', () => {
     expect(packaging.filter((p) => /GE_Affix_/.test(p))).toEqual([]);
-    // It still packages the one effect its Affixes step declares (the sword implicit).
+    // Its Affixes step declares the one effect it realizes (the sword implicit); GameplayEffects are
+    // verified by the static compile checks, so packaging does not claim them as Content .uassets.
     const affixes = outputs['Affixes'].ueAssets ?? [];
     expect(affixes.some((p) => p.endsWith('/GE_Implicit_SwordAccuracy'))).toBe(true);
-    expect(packaging).toEqual(expect.arrayContaining(affixes));
+    expect(packaging.filter((p) => p.includes('/GE_'))).toEqual([]);
+  });
+
+  it('a non-exemplar item WITH declared powers stays held as a TEMPLATE on UE Packaging (honest floor, as at base)', () => {
+    const unique: LabEntity = {
+      id: 'd1-uitem-synthetic-blade', name: 'Synthetic Blade', lifecycle: 'planned',
+      data: { uniqueBase: 'SYNTH_BASE', powers: [{ power: 'STR', min: '2', max: '4' }, { power: 'SETDAM', min: '5', max: '9' }] },
+    };
+    const out = produceItemStep(unique, 'UE Packaging')!;
+    const r = resolveAccept('items', 'UE Packaging')!(out.data ?? {});
+    expect(r.status).toBe('pending');
+    expect(String(r.reason)).toMatch(/^TEMPLATE:/);
+    // Every claimed path is still declared by a sibling produced for THIS entity.
+    const declared = new Set(catalogManifest('items').steps.filter((l) => l !== 'UE Packaging')
+      .flatMap((l) => produceItemStep(unique, l)?.ueAssets ?? []));
+    expect((out.ueAssets ?? []).filter((p) => !declared.has(p))).toEqual([]);
   });
 
   it("the bespoke '3D Generation' declares the registered '3D Mesh' LOD0 path", () => {

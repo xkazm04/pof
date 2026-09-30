@@ -160,17 +160,24 @@ export interface ItemPackagingClaim {
 }
 
 /**
- * UE Packaging's claim: the item's primary assets, each kept only if a sibling declares it. Every
- * icon frame the Icon step declares is claimed (not only the item's own rarity), so the claim reads
- * no entity data beyond declared powers: a seed item's packaging stays the data-blind body the
- * template guard (`produceTemplate.ts`) holds at pending off the exemplar, exactly as before.
+ * UE Packaging's claim: the item's primary Content assets, each kept only if a sibling declares it.
+ *
+ * It reads the entity's IDENTITY only (id + name), never its data, on purpose:
+ *  • every icon frame the Icon step declares is claimed, not only the item's own rarity;
+ *  • no GameplayEffect is claimed — the Affixes step declares them, and they are verified by the
+ *    step's static compile checks ("every GameplayEffect THIS item declares compiles in Source/"),
+ *    not as `.uasset`s under Content/.
+ * A claim that read `data.powers`/`data.rarity` would make the packaging body entity-reading while
+ * its wiring-contract prose is still the exemplar's, lifting the template hold
+ * (`produceTemplate.ts`) off every non-exemplar item — 90 ingested uniques graded pass with no new
+ * evidence (measured 2026-09-30). Data-blind, the hold applies exactly as it did before the table.
  */
 export function itemPackagingClaim(entity: ItemRef, siblings?: readonly ItemRef[]): ItemPackagingClaim {
   const p = itemAssetPaths(entity, siblings);
   const declared = itemDeclaredAssets(entity, siblings);
   const owner = new Map<string, string>();
   for (const [step, paths] of Object.entries(declared)) for (const path of paths) if (!owner.has(path)) owner.set(path, step);
-  const wanted = [p.da, ...declared['Affixes'], p.materialInstance, p.mesh, ...declared['Icon 2D Art'], p.anim, p.vfx, p.sfx];
+  const wanted = [p.da, p.materialInstance, p.mesh, ...declared['Icon 2D Art'], p.anim, p.vfx, p.sfx];
   const assets = wanted.filter((path) => owner.has(path));
   const names = assets.map((path) => path.slice(path.lastIndexOf('/') + 1));
   return {
