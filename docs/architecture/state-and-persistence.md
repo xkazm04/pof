@@ -167,7 +167,7 @@ line 86).
 
 Character Blueprint state under the `pof-character-feel-stack` key. Persisted keys (`partialize`):
 `baseFeelPresetId`, `feelLayers` (the feel adjustment-layer stack, incl. the Property Inspector's
-reserved `inspector-overrides` layer) and `bindingOverrides` — the Input tab's sparse
+reserved `inspector-overrides` layer and the Feel Playground's reserved `playground-curves` layer) and `bindingOverrides` — the Input tab's sparse
 `action -> key` rebinds over `INPUT_BINDINGS`. The custom `merge` sanitizes every key on rehydration
 (unknown preset -> default, `sanitizeLayers`, and `sanitizeBindingOverrides` drops unknown actions,
 non-string keys and overrides equal to the default); `activeSubTab` is not persisted. Rebinds go
@@ -176,6 +176,13 @@ never swap) and every input surface — table, keyboard caps, legend, mouse, abi
 Features `KeyboardMetric` — reads the one `useResolvedBindings()` value (pure
 `resolveBindings` in `src/lib/character/input-bindings.ts`). "Apply to IMC_Default" only dispatches
 a CLI task on an explicit click, gated off at defaults and while any key conflicts.
+Reserved layers are written through one upsert, `upsertReservedSets` (`src/lib/feel-adjustment-layers.ts`):
+`set` modifiers, a value equal to the stack beneath the reserved layer removes its modifier, an emptied
+layer is dropped. The Playground's curves are not state: `src/lib/character/feel-curve-codec.ts`
+(`CURVE_CHANNELS`, one coordinate per field, ranges = `FEEL_FIELD_META`) renders
+`encodeCurves(resolved stack)`, and a drag goes `applyPlaygroundCurve` -> `applyCurveEdit`, which writes
+only the fields whose decoded value changed. Playground Apply dispatches `buildStackApplyPrompt`, the same
+prompt as AI Feel. No store version bump: a `playground-curves` layer is an ordinary layer to `sanitizeLayers`.
 
 #### `useLabPipelineStore` (`src/components/layout-lab/labPipelineStore.ts`)
 
