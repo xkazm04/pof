@@ -81,3 +81,35 @@ describe('useGeneration · CATALOG_MODULE routing', () => {
     expect(lastConfig.value!.moduleId).toBe(expectedModuleId);
   });
 });
+
+/**
+ * scan-sweep --challenge catalog-core-infrastructure/A (run challenge-2026-09-29d):
+ * the hook owns the recipe-derived next step, and refuses a step the recipe lacks.
+ */
+describe('useGeneration · nextStep from the recipe', () => {
+  beforeEach(() => { execute.mockClear(); });
+
+  const montage = {
+    id: 'e-state-graph', catalogId: 'state-graph', name: 'n-state-graph',
+    categoryPath: ['x'], tags: [], lifecycle: 'generated' as const,
+    data: { id: 'm1' } as unknown as AnimationEntry['data'],
+  };
+
+  it('case 8: a generated state-graph entity offers verify, dispatches it by default, and refuses wire', () => {
+    const { result } = renderHook(() => useGeneration(montage));
+    expect(result.current.nextStep).toBe('verify');
+    act(() => result.current.generate());
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect((execute.mock.calls[0][0] as { step: string }).step).toBe('verify');
+    execute.mockClear();
+    act(() => result.current.generate('wire'));
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('a verified entity has no next step and generate() dispatches nothing', () => {
+    const { result } = renderHook(() => useGeneration({ ...fireball, lifecycle: 'verified' }));
+    expect(result.current.nextStep).toBeNull();
+    act(() => result.current.generate());
+    expect(execute).not.toHaveBeenCalled();
+  });
+});

@@ -1,5 +1,6 @@
-import { STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
-import type { LifecycleState, ScreenEntry } from '@/lib/catalog/types';
+import type { GenerationStep } from '@/lib/catalog/recipe';
+import type { ScreenEntry } from '@/lib/catalog/types';
+import { nextGenerationStep } from '@/lib/catalog/generationPlan';
 import { SCREEN_TO_FLOW } from '@/components/modules/core-engine/sub_ui/_shared/data';
 
 /**
@@ -32,29 +33,15 @@ export function screenEntityFor(nodeId: string, entries: readonly ScreenEntry[])
   return flowId == null ? undefined : entries.find((e) => e.data.id === flowId);
 }
 
-const ORDER: readonly LifecycleState[] = ['planned', 'scaffolded', 'generated', 'wired', 'verified'];
-
 /**
  * The recipe step to dispatch next for an entity at `lifecycle`, or null when no
- * step may be dispatched.
+ * step may be dispatched (verified, failed, or no step advances it).
  *
- * Contract:
- * - returns the FIRST step of `steps` whose target lifecycle (STEP_TO_LIFECYCLE)
- *   lies after `lifecycle` — so it never returns a step the recipe lacks;
- * - 'verified' → null (nothing left; re-running would knock a runtime-proven
- *   entity back mid-pipeline);
- * - 'failed' → null (failed → planned is the only legal transition, lifecycle.ts
- *   canTransition; any step's callback would be 409'd by /api/catalog);
- * - null too when no step of `steps` advances past `lifecycle`.
+ * The ONE next-step rule lives in `@/lib/catalog/generationPlan`
+ * (`nextGenerationStep`, which `useGeneration().nextStep` also reads) — this is that
+ * function under the Screen Flow tab's name, so the two can never diverge.
  */
-export function nextRecipeStep(
-  steps: readonly GenerationStep[],
-  lifecycle: LifecycleState,
-): GenerationStep | null {
-  if (lifecycle === 'verified' || lifecycle === 'failed') return null;
-  const at = ORDER.indexOf(lifecycle);
-  return steps.find((s) => ORDER.indexOf(STEP_TO_LIFECYCLE[s]) > at) ?? null;
-}
+export const nextRecipeStep = nextGenerationStep;
 
 export interface ScreenWorklist {
   total: number;

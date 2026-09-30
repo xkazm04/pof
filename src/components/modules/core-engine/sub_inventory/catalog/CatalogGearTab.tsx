@@ -15,7 +15,6 @@ import { ACCENT, DUMMY_ITEMS, RARITY_ORDER, type ItemData } from '../_shared/dat
 import { useCatalogStore, useItemEntries } from '@/stores/catalogStore';
 import { itemToEntry } from '@/lib/catalog/seed-items';
 import { useGeneration } from '@/hooks/useGeneration';
-import type { GenerationStep } from '@/lib/catalog/recipe';
 import type { ItemEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
 import { AddItemForm, type NewItemState } from './AddItemForm';
@@ -130,10 +129,6 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   // backing entry we hand it a placeholder and gate the actual (Re)generate
   // affordance below so nothing is ever dispatched for a non-existent entity.
   const gen = useGeneration(primaryEntry ?? EMPTY_ITEM_ENTRY);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
 
   const gridRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -248,7 +243,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           setSelectedItem={setSelectedItem}
           primaryEntry={primaryEntry}
           isGenRunning={gen.isRunning}
-          onRegenerate={primaryEntry ? () => gen.generate(nextStep) : undefined}
+          onRegenerate={primaryEntry && gen.nextStep ? () => gen.generate() : undefined}
           onGridKeyDown={handleGridKeyDown}
           hasActiveFilters={hasActiveFilters}
           onClearFilters={clearFilters}

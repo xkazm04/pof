@@ -5,7 +5,6 @@ import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { BestiaryEntry } from '@/lib/catalog/types';
-import type { GenerationStep } from '@/lib/catalog/recipe';
 import type { ArchetypeConfig } from '../_shared/data';
 
 interface PrimaryArchetypeLifecycleProps {
@@ -31,10 +30,6 @@ export function PrimaryArchetypeLifecycle({
     (primaryArchetypeId != null ? entryByArchetypeId.get(primaryArchetypeId) : undefined)
     ?? bestiaryEntries[0];
   const gen = useGeneration(primaryEntry!);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
 
   if (!primaryEntry) return null;
 
@@ -47,7 +42,7 @@ export function PrimaryArchetypeLifecycle({
         lifecycle={primaryEntry.lifecycle}
         ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
         busy={gen.isRunning}
-        onRegenerate={() => gen.generate(nextStep)}
+        onRegenerate={gen.nextStep ? () => gen.generate() : undefined}
       />
     </div>
   );

@@ -14,7 +14,6 @@ import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { CombatInteractionEntry } from '@/lib/catalog/types';
-import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const PAGE_SIZE = 6;
@@ -45,10 +44,6 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
     (primaryComboId != null ? entryByComboId.get(primaryComboId) : undefined)
     ?? comboEntries[0];
   const gen = useGeneration(primaryEntry!);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
@@ -59,7 +54,7 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
             lifecycle={primaryEntry.lifecycle}
             ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
             busy={gen.isRunning}
-            onRegenerate={() => gen.generate(nextStep)}
+            onRegenerate={gen.nextStep ? () => gen.generate() : undefined}
           />
         )}
         <span className="text-2xs px-2 py-0.5 rounded-md ml-auto" style={{ backgroundColor: sc.bg, color: sc.dot }}>

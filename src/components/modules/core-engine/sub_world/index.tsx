@@ -33,7 +33,6 @@ import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { ZoneEntry } from '@/lib/catalog/types';
-import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const ACCENT = ACCENT_CYAN;
 
@@ -243,10 +242,6 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
    assertions, no conditional hook calls in the parent. */
 function ZoneLifecycleBar({ entry }: { entry: ZoneEntry }) {
   const gen = useGeneration(entry);
-  const nextStep: GenerationStep =
-    entry.lifecycle === 'generated' ? 'wire'
-      : entry.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
 
   return (
     <div className="flex items-center justify-between gap-2 px-1">
@@ -257,7 +252,7 @@ function ZoneLifecycleBar({ entry }: { entry: ZoneEntry }) {
         lifecycle={entry.lifecycle}
         ueAssetCount={entry.ueAssets?.length ?? 0}
         busy={gen.isRunning}
-        onRegenerate={() => gen.generate(nextStep)}
+        onRegenerate={gen.nextStep ? () => gen.generate() : undefined}
       />
     </div>
   );
