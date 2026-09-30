@@ -17,7 +17,7 @@ import { renderIconFromMesh } from '@/lib/visual-gen/icon-from-mesh';
  * Synchronous, unlike `/view-gate`: this is one headless Blender orbit and NO vision
  * call, so it returns inside a request rather than needing a job to poll.
  *
- * The written icon carries a `<base>.render.json` provenance sidecar and is surfaced by
+ * The icon is written through the library door (`commitLibraryIcon`, a `<name>.prov.json` bound to its bytes) and is surfaced by
  * `GET /api/visual-gen/icons` with `renderedFrom` set — the claim "this icon depicts the
  * shipped asset" is checkable rather than asserted.
  */

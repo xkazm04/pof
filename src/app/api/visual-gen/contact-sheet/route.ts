@@ -8,6 +8,7 @@ import { DEFAULT_SHEET_PX, type ContactSheetSpec } from '@/lib/visual-gen/contac
 import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slice';
 import { commitLibraryIcon } from '@/lib/visual-gen/icon-library';
 import { styleClause, styleRequestOf } from '@/lib/visual-gen/style-apply';
+import { SHEET_DEFAULTS, SHEET_PROVIDER_ID } from '@/lib/visual-gen/icon-set-plan';
 import { getDb } from '@/lib/db';
 
 /**
@@ -24,7 +25,10 @@ import { getDb } from '@/lib/db';
  * Refusals keep their own reason: a cast that does not fill the grid is a 400 that never
  * reaches a provider; a provider failure is a 502; a sheet that generated but could not
  * be cut is a 502 that still hands back the sheet url and the verdict, because the art
- * exists and a human can look at it.
+ * exists and a human can look at it: `details` = `{ sheetUrl, verdict }` plus the style outcome.
+ *
+ * The prompt defaults and the default provider are `icon-set-plan.ts`'s, so the forge's icon-set
+ * preview shows the prompt this route sends and checks the provider this route calls.
  */
 
 function imageDir(): string {
@@ -116,9 +120,9 @@ export async function POST(request: NextRequest) {
     const spec: ContactSheetSpec = {
       cols: Number(body?.cols) || 4,
       rows: Number(body?.rows) || 4,
-      cellSubject: body?.cellSubject ?? 'game entity icon',
-      style: dna.clause ?? body?.style ?? 'painterly dark-fantasy ARPG art',
-      background: body?.background ?? 'subtle deep charcoal atmospheric background',
+      cellSubject: body?.cellSubject ?? SHEET_DEFAULTS.cellSubject,
+      style: dna.clause ?? body?.style ?? SHEET_DEFAULTS.style,
+      background: body?.background ?? SHEET_DEFAULTS.background,
       accent: typeof body?.accent === 'string' ? body.accent : undefined,
       cast: cast.map((c) => ({ id: c.entityId!, brief: c.brief! })),
       width: DEFAULT_SHEET_PX,
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
           const g = await generateTwoDImage(
             {
               prompt,
-              providerId: typeof body?.providerId === 'string' ? body.providerId : 'qwen-image',
+              providerId: typeof body?.providerId === 'string' ? body.providerId : SHEET_PROVIDER_ID,
               size: typeof body?.size === 'string' ? body.size : `${DEFAULT_SHEET_PX}*${DEFAULT_SHEET_PX}`,
               width: DEFAULT_SHEET_PX,
               height: DEFAULT_SHEET_PX,
@@ -159,7 +163,11 @@ export async function POST(request: NextRequest) {
     );
 
     if (!result.ok) {
-      return apiError(result.error, result.refused ? 400 : 502);
+      // The uncut branch: the credit is spent and the sheet exists — hand back its url and verdict.
+      const uncut = result.sheetUrl || result.verdict
+        ? { sheetUrl: result.sheetUrl, verdict: result.verdict, ...dna.outcome }
+        : undefined;
+      return apiError(result.error, result.refused ? 400 : 502, uncut);
     }
     return apiSuccess({ ...result, ...dna.outcome });
   } catch (e) {

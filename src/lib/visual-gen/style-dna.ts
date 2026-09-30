@@ -141,6 +141,12 @@ export const STYLE_DNA_SENDERS: readonly StyleDnaSender[] = [
     resolution: 'server',
     reaches: 'Asset Forge 2D image prompts (resolved on the server)',
   },
+  {
+    file: 'src/components/modules/visual-gen/asset-forge/IconSetPanel.tsx',
+    path: '2D',
+    resolution: 'server',
+    reaches: 'Asset Forge icon-set contact sheets (resolved on the server, per canon profile)',
+  },
 ];
 
 const reachedPaths = [...new Set(STYLE_DNA_SENDERS.map((s) => s.path))].sort();
@@ -152,9 +158,9 @@ const reachedPaths = [...new Set(STYLE_DNA_SENDERS.map((s) => s.path))].sort();
  *
  * `senders` is asserted against the real readers of the flag by
  * `src/__tests__/components/visual-gen/StyleDnaReach.test.tsx`: adding a reader without a table
- * row (or the reverse) fails that test. Server routes that accept `applyStyleDna` without a forge
- * sender (/api/leonardo, /api/visual-gen/contact-sheet — batch scripts and catalog sheets) resolve
- * through the same `style-apply.ts` and are not toggle reach.
+ * row (or the reverse) fails that test. /api/visual-gen/contact-sheet is toggle reach only through
+ * the forge's icon-set panel; its other callers (batch scripts) and /api/leonardo resolve through
+ * the same `style-apply.ts` and are not toggle reach.
  */
 export const STYLE_DNA_REACH = {
   /** Source files that READ the flag and inject (or send) the style for a submitted prompt. */

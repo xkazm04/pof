@@ -61,6 +61,8 @@ export interface EntitySummary {
   lifecycle: LifecycleState;
   ueAssets: string[];
   lastTestResult?: TestResult;
+  /** The canon profile its prompts (and a sheet's Style line) are resolved for (`canonProfileOf`). */
+  canonProfile: string;
 }
 
 export interface StepRecipe {
@@ -256,6 +258,7 @@ export function listEntitySummaries(catalogId: string): EntitySummary[] {
       name: e.name,
       lifecycle: derived.get(e.id)?.lifecycle ?? row?.lifecycle ?? e.lifecycle,
       ueAssets: row?.ueAssets ?? e.ueAssets ?? [],
+      canonProfile: canonProfileOf(e),
       ...(lastTestResult ? { lastTestResult: lastTestResult as TestResult } : {}),
     };
   });

@@ -9,6 +9,7 @@ import { GenerationPanel } from './GenerationPanel';
 import { GenerationQueue } from './GenerationQueue';
 import { StyleDnaPanel } from './StyleDnaPanel';
 import { Image2DPanel } from './Image2DPanel';
+import { IconSetPanel } from './IconSetPanel';
 import { ChaosClothPanel } from './ChaosClothPanel';
 import { UeImportPanel } from './UeImportPanel';
 
@@ -18,6 +19,8 @@ import { UeImportPanel } from './UeImportPanel';
  * (a 2D provider can be wired and still keyless), different output (an image file vs
  * a polled mesh job). The one thing they DO share is the project style: the Style DNA
  * panel sits on both tabs, so the switch and the active profile are visible where they apply.
+ * Beneath the one-prompt front sits Icon Set mode: a catalog step's missing entity art as planned
+ * contact sheets, previewed free, run on one paid click.
  */
 function Image2DTab() {
   return (
@@ -28,6 +31,7 @@ function Image2DTab() {
       />
       <StyleDnaPanel />
       <Image2DPanel />
+      <IconSetPanel />
     </div>
   );
 }
