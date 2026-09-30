@@ -11,6 +11,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { ImplementationPattern } from '@/types/pattern-library';
 import type { Recommendation } from '@/types/evaluator';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
 import { MOTION } from '@/lib/constants';
 import type { NexusNode } from './types';
 import { itemIdToModule } from './helpers';
@@ -32,7 +33,7 @@ export function NodeDeepDivePanel({
 }) {
   const [expandedSection, setExpandedSection] = useState<string | null>('checklist');
 
-  const healthColor = node.healthScore >= 70 ? STATUS_SUCCESS : node.healthScore >= 40 ? STATUS_WARNING : STATUS_ERROR;
+  const healthColor = scoreStatusToken(node.healthScore).color;
   const successCount = history.filter((h) => h.status === 'completed').length;
   const failCount = history.filter((h) => h.status === 'failed').length;
 
