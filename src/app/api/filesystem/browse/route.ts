@@ -148,32 +148,33 @@ async function getProjectsFromLauncher(): Promise<string[]> {
   return projectPaths;
 }
 
+/**
+ * Lists `dirPath`'s subdirectories. A refused listing THROWS rather than
+ * answering [] — callers such as the Start Fresh collision check would read an
+ * empty list as "nothing here" (fail open).
+ */
 async function listSubdirectories(
   dirPath: string
 ): Promise<{ name: string; path: string; hasUProject: boolean }[]> {
-  try {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    const dirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith('.'));
+  const entries = await fs.readdir(dirPath, { withFileTypes: true });
+  const dirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith('.'));
 
-    const results = await Promise.all(
-      dirs.map(async (d) => {
-        const fullPath = path.join(dirPath, d.name);
-        const uprojectFiles = await findUProjectFiles(fullPath);
-        return {
-          name: d.name,
-          path: fullPath,
-          hasUProject: uprojectFiles.length > 0,
-        };
-      })
-    );
+  const results = await Promise.all(
+    dirs.map(async (d) => {
+      const fullPath = path.join(dirPath, d.name);
+      const uprojectFiles = await findUProjectFiles(fullPath);
+      return {
+        name: d.name,
+        path: fullPath,
+        hasUProject: uprojectFiles.length > 0,
+      };
+    })
+  );
 
-    return results.sort((a, b) => {
-      if (a.hasUProject !== b.hasUProject) return a.hasUProject ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-  } catch {
-    return [];
-  }
+  return results.sort((a, b) => {
+    if (a.hasUProject !== b.hasUProject) return a.hasUProject ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 async function getWindowsDrives(): Promise<{ letter: string; path: string }[]> {
@@ -456,10 +457,17 @@ async function handleList(requestedPath: string) {
     });
   }
 
-  const [directories, uprojectFiles] = await Promise.all([
-    listSubdirectories(normalized),
-    findUProjectFiles(normalized),
-  ]);
+  let directories: Awaited<ReturnType<typeof listSubdirectories>>;
+  let uprojectFiles: string[];
+  try {
+    [directories, uprojectFiles] = await Promise.all([
+      listSubdirectories(normalized),
+      findUProjectFiles(normalized),
+    ]);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code ?? 'unknown';
+    return apiError(`Cannot read directory ${normalized} (${code})`, 500);
+  }
 
   const parent = path.dirname(normalized);
 
