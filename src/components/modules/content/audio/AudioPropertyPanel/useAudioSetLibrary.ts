@@ -20,6 +20,10 @@ export interface AudioSetOption {
    * plausible-looking path.
    */
   cuePath: string | null;
+  /** Longest non-zero clip length in the set; 0 when no clip records a length (unknown, not silent). */
+  clipMs?: number;
+  /** The set was generated as a loop — one voice holds its slot until stopped. */
+  loopable?: boolean;
 }
 
 interface LibraryData {
@@ -49,7 +53,11 @@ export function useAudioSetLibrary(enabled: boolean) {
     ]);
     const clipsBySet: Record<string, AuditionClip[]> = {};
     for (const s of lib.sets ?? []) clipsBySet[s.id] = [];
-    for (const a of lib.assets ?? []) clipsBySet[a.setId]?.push({ relPath: a.relPath, favorite: a.favorite });
+    const clipMsBySet: Record<string, number> = {};
+    for (const a of lib.assets ?? []) {
+      clipsBySet[a.setId]?.push({ relPath: a.relPath, favorite: a.favorite });
+      if (a.durationMs > 0) clipMsBySet[a.setId] = Math.max(clipMsBySet[a.setId] ?? 0, a.durationMs);
+    }
     return {
       clipsBySet,
       options: (lib.sets ?? []).map((s) => ({
@@ -58,6 +66,8 @@ export function useAudioSetLibrary(enabled: boolean) {
         kind: s.kind,
         clipCount: clipsBySet[s.id].length,
         cuePath: imports.bySet?.[s.name]?.cuePath ?? null,
+        clipMs: clipMsBySet[s.id] ?? 0,
+        loopable: s.loopable === true,
       })),
     };
   }, []);

@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { AudioSceneDocument } from '@/types/audio-scene';
 import { useDebouncedCommit } from './useDebouncedCommit';
+import { BudgetStressPanel } from '@/components/modules/content/audio/AudioView/BudgetStressPanel';
 
 type SettingKey = 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset';
 
@@ -73,6 +74,9 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
           <p className="text-2xs text-text-muted mt-1">Limit on simultaneous active sounds</p>
         </div>
       </div>
+
+      {/* What the limit does to this scene's events — runs against the draft, before it is saved. */}
+      <BudgetStressPanel sceneId={String(activeDoc.id)} voiceLimit={maxConcurrent.value} />
 
       <div>
         <label className="text-2xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
