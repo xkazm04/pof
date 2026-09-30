@@ -18,8 +18,12 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+import {
+  itemAssetPaths, itemDeclaredAssets, itemDeclaredPowers, itemPackagingClaim, itemRarity, itemSlug,
+} from '@/lib/catalog/itemAssetPaths';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+/** Collision-safe slug — the one Items asset-path table (`itemAssetPaths.ts`) owns it. */
+const slug = (e: LabEntity) => itemSlug(e);
 
 /**
  * Items pipeline (catalogId: 'items').
@@ -101,9 +105,7 @@ registerCatalogPipeline({
         const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
         const effectiveValue = <T,>(field: string): T | undefined => effective?.[field]?.value as T | undefined;
         // Derive rarity from entity seed data; default to 'Common' if absent.
-        const entityRarity: string = Array.isArray(entityData.powers)
-          ? 'Unique'
-          : entityData.rarity as string ?? 'Common';
+        const entityRarity = itemRarity(e);
         // ilvl and requiredLevel by rarity tier (§1c: requiredLevel within ilvl−5..15).
         // Common (tier-1): ilvl 6, requiredLevel 1 (ilvl−5 = 1, exactly at floor).
         // Rare (mid-range): ilvl 45, requiredLevel 33 (ilvl−12).
@@ -166,18 +168,18 @@ registerCatalogPipeline({
             },
             ueSchema: 'UARPGItemDefinition',
             ueDT: 'DT_Items',
-            ueDA: `DA_${slug(e.name)}`,
+            ueDA: `DA_${slug(e)}`,
             wiringContract: {
               grantedBy: 'UARPGInventoryComponent equips the item and activates the equip GE bundle',
               activatedBy: 'On-equip (slot assignment in UARPGInventoryComponent)',
               dependencies: ['UARPGAttributeSet (stat targets)', 'UARPGItemDefinition (schema)', 'DT_Items (data row)'],
               verification:
-                `L2: cppSymbolExists(UARPGItemDefinition) + seedRowPresent(author_items.py, DA_${slug(e.name)}); ` +
+                `L2: cppSymbolExists(UARPGItemDefinition) + seedRowPresent(author_items.py, DA_${slug(e)}); ` +
                 'L3: VSItemsDefinitionsTest — DA loaded + requiredLevel/slot/rarity fields assert correct',
             },
           },
         },
-        ueAssets: [`/Game/Data/Items/DA_${slug(e.name)}`],
+        ueAssets: itemDeclaredAssets(e)['Base Type & Rarity'],
       });
       },
       contract: {
@@ -220,18 +222,12 @@ registerCatalogPipeline({
       produce: (e: LabEntity) => {
         const entityData = (e.data as Record<string, unknown> | null) ?? {};
         // Derive entity rarity to annotate the illustrative roll.
-        const entityRarity: string = Array.isArray(entityData.powers)
-          ? 'Unique'
-          : entityData.rarity as string ?? 'Common';
+        const entityRarity = itemRarity(e);
         const rarityMode = entityData.rarityRolled === true ? 'rolled' : 'fixed';
-        const declaredPowers = Array.isArray(entityData.powers)
-          ? (entityData.powers as Record<string, unknown>[]).map((power) => ({
-              power: power.power,
-              min: power.min ?? 0,
-              max: power.max ?? power.min ?? 0,
-            }))
-          : [{ power: 'implicit-sword-accuracy', min: 30, max: 30 }];
+        const declaredPowers = itemDeclaredPowers(e);
         return ({
+        // The GameplayEffects THIS item's declared powers realize as — the only GEs packaging may claim.
+        ueAssets: itemDeclaredAssets(e)['Affixes'],
         data: {
           powers: declaredPowers,
           affixes: {
@@ -698,7 +694,9 @@ registerCatalogPipeline({
         field: 'material',
         columns: [{ key: 'surface' }, { key: 'parentMaterial' }, { key: 'textures' }],
       },
-      produce: (e: LabEntity) => ({
+      produce: (e: LabEntity) => {
+        const p = itemAssetPaths(e);
+        return ({
         data: {
           material: {
             // mat-weathered-stone is the one seeded material entity in seed-materials.ts.
@@ -706,13 +704,9 @@ registerCatalogPipeline({
             // bespoke MI_IronLongsword_Blade instances from M_ARPG_Surface_Master with metal params.
             surface: 'iron (weathered, worn)',
             parentMaterial: '/Game/Materials/M_ARPG_Surface_Master',
-            instancePath: `/Game/Items/Materials/MI_${slug(e.name)}_Blade`,
+            instancePath: p.materialInstance,
             textureFamily: 'iron-worn',
-            textures: {
-              albedo:  `/Game/Items/Textures/T_${slug(e.name)}_Albedo`,
-              normal:  `/Game/Items/Textures/T_${slug(e.name)}_Normal`,
-              orm:     `/Game/Items/Textures/T_${slug(e.name)}_ORM`,   // Occlusion/Roughness/Metal
-            },
+            textures: { ...p.textures }, // albedo / normal / orm (Occlusion/Roughness/Metal)
             masterParams: {
               baseColorTint: [0.55, 0.54, 0.52],  // dull iron grey
               roughness: 0.72,
@@ -727,7 +721,10 @@ registerCatalogPipeline({
         links: [
           { catalogId: 'materials', entityId: 'mat-weathered-stone', role: 'surface-family' },
         ],
-      }),
+        // The instance + its three textures — declared by the step that authors them.
+        ueAssets: itemDeclaredAssets(e)['Material'],
+      });
+      },
       accept: allOf(
         materialShape('material', 'surface / parentMaterial / textures (single or multi-master)'),
         linksResolve(),
@@ -745,12 +742,7 @@ registerCatalogPipeline({
         links: [
           { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-library' },
         ],
-        ueAssets: [
-          `/Game/UI/Icons/T_${slug(e.name)}_Icon_Common`,
-          `/Game/UI/Icons/T_${slug(e.name)}_Icon_Magic`,
-          `/Game/UI/Icons/T_${slug(e.name)}_Icon_Rare`,
-          `/Game/UI/Icons/T_${slug(e.name)}_Icon_Unique`,
-        ],
+        ueAssets: itemDeclaredAssets(e)['Icon 2D Art'], // T_<slug>_Icon_{Common,Magic,Rare,Unique}
       }),
       accept: allOf(
         linksResolve(),
@@ -766,11 +758,7 @@ registerCatalogPipeline({
       view: { kind: 'gallery', field: 'mesh3dSelected', candidates: 3 },
       produce: (e: LabEntity) => ({
         data: { ...gallerySeed('mesh3dSelected', 3) },
-        ueAssets: [
-          `/Game/Items/Meshes/SM_${slug(e.name)}_LOD0`,
-          `/Game/Items/Meshes/SM_${slug(e.name)}_LOD1`,
-          `/Game/Items/Meshes/SM_${slug(e.name)}_LOD2`,
-        ],
+        ueAssets: itemDeclaredAssets(e)['3D Mesh'], // SM_<slug>_LOD0..2
       }),
       accept: selected('mesh3dSelected', 'A 3D mesh variant is selected (L1 human selection)'),
     },
@@ -808,8 +796,8 @@ registerCatalogPipeline({
               'Increased Attack Speed displays as "APS ×(1+increased%)" to make speed intuitive. ' +
               'HUD tooltip binds to hud-elements presentation catalog (canon proj-hud-binding).',
             locKeys: {
-              name: `Item_${slug(e.name)}_Name`,
-              desc: `Item_${slug(e.name)}_Desc`,
+              name: `Item_${slug(e)}_Name`,
+              desc: `Item_${slug(e)}_Desc`,
             },
           },
         },
@@ -831,7 +819,7 @@ registerCatalogPipeline({
       engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
       produce: (e: LabEntity) => {
-        const s = slug(e.name);
+        const s = slug(e);
         return ({
         data: {
           checks: [
@@ -884,7 +872,7 @@ registerCatalogPipeline({
       ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGItemDefinition', 'UARPGItemDefinition declared in Source/'),
-        seedRowPresent('author_items.py', slug(e.name), 'Item DA row seeded in Content/Python'),
+        seedRowPresent('author_items.py', slug(e), 'Item DA row seeded in Content/Python'),
       ],
     },
 
@@ -900,24 +888,16 @@ registerCatalogPipeline({
       packaging: true,
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
-        const s = slug(e.name);
-        const assets = [
-          `DA_${s}`,
-          `DT_Items :: ${s}`,
-          `GE_Affix_MaximumLife`,
-          `GE_Affix_AddedPhysicalDamage`,
-          `GE_Affix_IncreasedAttackSpeed`,
-          `GE_Affix_FireResistance`,
-          `GE_Affix_LightningResistance`,
-          `GE_Affix_IncreasedCritChance`,
-          `GE_Implicit_SwordAccuracy`,
-          `MI_${s}_Blade`,
-          `SM_${s}_LOD0`,
-          `T_${s}_Icon_Rare`,
-        ];
+        const s = slug(e);
+        // The claim is DERIVED from what the producing siblings declare (itemAssetPaths.ts), never
+        // hand-typed: the drain passes only when every claimed path exists as a .uasset, so a path
+        // no step produces (or a DT row written as a path) would hold this step deferred forever.
+        const claim = itemPackagingClaim(e);
         return {
           data: {
-            assets,
+            assets: claim.names, // readable manifest (asset names + the DT row reference)
+            declaredBy: claim.declaredBy,
+            dataTableRow: claim.dataTableRow, // a ROW inside DT_Items — data, never a file on disk
             wiringContract: {
               grantedBy:
                 `UARPGItemDefinition (DA_${s}) realized as a row in DT_Items; ` +
@@ -940,18 +920,7 @@ registerCatalogPipeline({
                 `equips on dummy ASC, checks GE handles + attribute delta`,
             },
           },
-          ueAssets: assets.map((a) => {
-            if (a.startsWith('DA_') || a.startsWith('GE_') || a.startsWith('DT_')) {
-              return `/Game/Data/Items/${a}`;
-            }
-            if (a.startsWith('MI_') || a.startsWith('T_')) {
-              return `/Game/Items/Materials/${a}`;
-            }
-            if (a.startsWith('SM_')) {
-              return `/Game/Items/Meshes/${a}`;
-            }
-            return `/Game/Items/${a}`;
-          }),
+          ueAssets: claim.assets,
         };
       },
       contract: {
@@ -972,7 +941,7 @@ registerCatalogPipeline({
       ),
       staticChecks: (e) => [
         cppSymbolExists('UARPGItemDefinition', 'UARPGItemDefinition present in Source/'),
-        seedRowPresent('author_items.py', slug(e.name), 'Item DA row seeded in Content/Python'),
+        seedRowPresent('author_items.py', slug(e), 'Item DA row seeded in Content/Python'),
       ],
     },
   ],

@@ -3,7 +3,8 @@
 import { GenerativeStepFrame } from './GenerativeStepFrame';
 import { GeneratedAssetCaption, AssetTarget } from './shared/assetHonesty';
 import { iconCandidates, meshCandidates, materialCandidates } from './shared/itemGenCandidates';
-import { entitySlug, itemAsset } from './itemsSteps';
+import { itemPaths } from './itemsSteps';
+import { iconTierFor, itemRarity } from '@/lib/catalog/itemAssetPaths';
 import type { GenCandidate } from './shared/genHistory';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
@@ -48,7 +49,7 @@ function PreviewTile({ t, selected, size }: { t: LabTheme; selected: GenCandidat
 
 /** Items · Icon 2D Art. View: persistent candidate gallery + selection. Produce: Leonardo gen. */
 export function ItemIcon2D({ t, entity, step }: StepProps) {
-  const asset = itemAsset(entity, 'T_', '_Icon');
+  const asset = itemPaths(entity).icons[iconTierFor(itemRarity(entity))];
   const DEFAULT_DIR = 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon';
   return (
     <GenerativeStepFrame
@@ -75,7 +76,7 @@ export function ItemIcon2D({ t, entity, step }: StepProps) {
 
 /** Items · 3D Generation. View: mesh preview + LOD budget (from the selected candidate) + gallery. */
 export function Item3DGen({ t, entity, step }: StepProps) {
-  const asset = itemAsset(entity, 'SM_');
+  const asset = itemPaths(entity).mesh; // the registered 3D Mesh LOD0 path (one asset-path table)
   const DEFAULT_DIR = 'game-ready retopo, clean silhouette, hard-surface bevels';
   return (
     <GenerativeStepFrame
@@ -84,7 +85,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
       defaultDirection={DEFAULT_DIR}
       buildPrompt={(dir) => `Generate a base mesh for ${entity.name} from its icon + brief via Blender/Meshy, then auto-LOD. ${dir}`}
       produceLabel="Produce mesh"
-      produceNote={`Each batch is kept; the selected variant writes SM_${entitySlug(entity)} + auto-LODs.`}
+      produceNote={`Each batch is kept; the selected variant writes ${asset.split('/').pop()} + auto-LODs.`}
       galleryEmptyHint="No mesh candidates yet — run Produce to generate a batch of LOD0 variants."
       galleryColumns={3}
       panels={({ art, selected }) => {
@@ -123,7 +124,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
 
 /** Items · Material / Texture. View: PBR map set (from the selected candidate) + preview + gallery. */
 export function ItemMaterial({ t, entity, step }: StepProps) {
-  const asset = itemAsset(entity, 'MI_');
+  const asset = itemPaths(entity).materialInstance; // the registered Material instance path
   const DEFAULT_DIR = 'PBR set from the master material; expose wear + tint params';
   return (
     <GenerativeStepFrame
@@ -132,7 +133,7 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
       defaultDirection={DEFAULT_DIR}
       buildPrompt={(dir) => `Author a PBR set for ${entity.name} from the master material; expose params + wear variants. ${dir}`}
       produceLabel="Produce PBR maps"
-      produceNote={`Each look is kept; the selected one writes MI_${entitySlug(entity)} (Albedo/Normal/ORM).`}
+      produceNote={`Each look is kept; the selected one writes ${asset.split('/').pop()} (Albedo/Normal/ORM).`}
       galleryEmptyHint="No material looks yet — run Produce to generate a batch of surface treatments."
       galleryColumns={3}
       panels={({ art, selected }) => {
