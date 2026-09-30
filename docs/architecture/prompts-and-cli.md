@@ -951,6 +951,20 @@ removal is the explicit Delete. The lab's Canon view banners the active profile'
 with a count preview before the write, and Undo per adopted rule). The stamp is a `contentHash` of the canon
 fields; changing that hash makes every stamped row read as edited, which only ever asks (never auto-writes).
 
+**Canon law reach + refusal at authoring time** (`@/lib/catalog/canon/ruleReach.ts`, 2026-09-30).
+`ruleReach(rule, pipelines)` → `{ scopeKnown, stepCount, steps, byCatalog }` is exactly the set of Produce prompts a
+law enters, derived from the SAME `rulesForProfile` (own profile + profiles inheriting it) × `stepsForProfile` ×
+`canonCategoriesForStep` × `selectRules` that `buildStepProducePrompt` uses — a parity test pins reach == the steps
+whose built prompt carries the law (a global `game` law reaches 253 prompts; the same law as `art`, 77).
+`validateRuleDraft(draft, pipelines)` (`canon/validation.ts`) is the ONE upsert check, run by the editor before POSTing
+and by `POST /api/project-rules`: schema, registered profile, and scope ∈ `global` ∪ registered catalog ids — an
+unregistered scope is refused `400 Unknown scope "<scope>"` (it used to be stored with 200 and reach nothing). The
+route imports `pipelines/registry.generated` itself, so catalog scopes resolve in its own import graph.
+`useCanonStore.upsert` is server-first: it POSTs, commits locally only on success and returns the `Result` — lab
+previews read the store while dispatch reads the DB, so the old optimistic write cited laws the dispatch never
+carried. `CanonRuleEditor` shows the live reach line, picks scope from a list, and stays open with the refusal;
+'+ Add rule' is a local draft, so Cancel writes nothing.
+
 **A produce prompt names everything its checker grades** (`acceptance/requiredFields.ts`): `fieldsPopulated` keys,
 `minLength` text fields, `minCount` lists and the `wiringContract` STRUCTURE are tagged on the checker, collected
 through `allOf`, and rendered FIRST in the step contract (`## Required fields`) so the size cap cannot drop them.
