@@ -21,7 +21,8 @@ const DB_DIR = path.dirname(DB_PATH);
 // cold start. A fresh DB (user_version 0) runs them once against freshly-created
 // tables (all guards no-op) then stamps the version.
 // 4: eval_findings.resolved_at (durable scan-finding resolutions).
-const SCHEMA_VERSION = 4;
+// 5: project_progress.completed_json + folded_json (server-held completion ledger).
+const SCHEMA_VERSION = 5;
 
 let db: Database.Database | null = null;
 
@@ -346,9 +347,28 @@ function bootstrap(conn: Database.Database): void {
       health_json TEXT NOT NULL DEFAULT '{}',
       verification_json TEXT NOT NULL DEFAULT '{}',
       history_json TEXT NOT NULL DEFAULT '{}',
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- WHEN each done item was first completed ({module: {item: epoch ms}}) and
+      -- which legacy row ids (non-canonical spellings) were folded into this row.
+      -- Owned by src/lib/project-progress-db.ts.
+      completed_json TEXT NOT NULL DEFAULT '{}',
+      folded_json TEXT NOT NULL DEFAULT '[]'
     )
   `);
+
+  // Migrate (schema 5): additive columns with defaults — existing rows read as
+  // "no dated completions, nothing folded yet". Nothing is re-keyed or rewritten.
+  if (needsMigrations) {
+    const ppCols = new Set(
+      (conn.prepare('PRAGMA table_info(project_progress)').all() as { name: string }[]).map((c) => c.name),
+    );
+    if (!ppCols.has('completed_json')) {
+      conn.exec("ALTER TABLE project_progress ADD COLUMN completed_json TEXT NOT NULL DEFAULT '{}'");
+    }
+    if (!ppCols.has('folded_json')) {
+      conn.exec("ALTER TABLE project_progress ADD COLUMN folded_json TEXT NOT NULL DEFAULT '[]'");
+    }
+  }
 
   // Session log — unified audit trail linking CLI sessions to modules and projects
   conn.exec(`

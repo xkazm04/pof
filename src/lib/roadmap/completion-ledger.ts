@@ -5,11 +5,14 @@
 // `checklistProgress` records THAT an item is done, never WHEN — so no velocity
 // or forecast can be derived from it alone. The ledger is the missing ground
 // truth: `ledger[module][item] = epoch ms of the transition to done`. It is
-// stamped by moduleStore on the first completion, removed when the item is
-// un-done, and dropped with the rest of a project's progress.
+// stamped by moduleStore on the first completion and by the server when the CLI
+// marks an item (`/api/checklist/complete`), removed when the item is un-done,
+// and persisted in the project_progress row (`completed_json`) through
+// `src/lib/project-progress-db.ts` — two copies meet via `mergeLedgers` (the
+// earliest stamp wins).
 //
 // Items that are done but carry no stamp (completed before the ledger existed,
-// or by a path that does not stamp yet) are UNDATED: counted and disclosed,
+// or by a path that did not stamp yet) are UNDATED: counted and disclosed,
 // never placed in a week. A forecast with no dated sample is null, not a guess
 // (game-production ▸ production-work-prioritization: a rate travels with its
 // sample; unmeasured is not a pass).
@@ -47,6 +50,27 @@ export function stampCompletion(
   const rest = { ...mod };
   delete rest[itemId];
   return { ...ledger, [moduleId]: rest };
+}
+
+/**
+ * Union two ledgers of the SAME project; where both date an item the earliest
+ * stamp wins (a completion happened once, at its first recorded time). Non-finite
+ * values are dropped rather than trusted.
+ */
+export function mergeLedgers(a: CompletionLedger, b: CompletionLedger): CompletionLedger {
+  const out: CompletionLedger = {};
+  for (const src of [a, b]) {
+    for (const [moduleId, stamps] of Object.entries(src ?? {})) {
+      if (!stamps || typeof stamps !== 'object') continue;
+      for (const [itemId, at] of Object.entries(stamps)) {
+        if (typeof at !== 'number' || !Number.isFinite(at)) continue;
+        const mod = (out[moduleId] ??= {});
+        const prev = mod[itemId];
+        mod[itemId] = prev === undefined ? at : Math.min(prev, at);
+      }
+    }
+  }
+  return out;
 }
 
 /** Keep only stamps whose item is done in `progress` (a load replaced the checklist). */
