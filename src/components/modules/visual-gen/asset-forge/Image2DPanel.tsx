@@ -7,7 +7,9 @@ import { useCRUD } from '@/hooks/useCRUD';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { StatusTag } from '@/components/ui/StatusTag';
 import type { ImageProviderCapability, TwoDGenerateResult } from '@/lib/visual-gen/image-providers';
+import type { StyleOutcome } from '@/lib/visual-gen/style-apply';
 import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
+import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
 
 /**
  * The app's 2D generation front — the first surface anywhere in PoF that turns a
@@ -21,6 +23,11 @@ import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
  *
  * Type-only imports from `image-providers` on purpose: the orchestration it also
  * exports reaches for `node:fs` and the provider SDKs and must not enter this bundle.
+ *
+ * Project style: with the forge's switch on and an active Style DNA, the submit carries
+ * `applyStyleDna: true` and the SERVER resolves and appends the style (style-apply.ts) — the
+ * prompt is sent raw, never pre-styled here. Off (or no style), the body is exactly
+ * `{ prompt, providerId }`. What the server applied, and any chip its caps dropped, is shown.
  */
 interface CapabilityPayload {
   providers: ImageProviderCapability[];
@@ -32,8 +39,10 @@ export function Image2DPanel() {
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [result, setResult] = useState<TwoDGenerateResult | null>(null);
+  const [result, setResult] = useState<(TwoDGenerateResult & Partial<StyleOutcome>) | null>(null);
   const isMounted = useIsMounted();
+  const activeStyleDna = useForgeStore((s) => s.activeStyleDna);
+  const styled = useForgeStore((s) => s.applyStyleDna) && activeStyleDna !== null;
 
   // The shared fetch hook, not a hand-rolled mount effect: it owns the loading /
   // error states and the mounted guard (and keeps this off the
@@ -79,10 +88,10 @@ export function Image2DPanel() {
     setGenerating(true);
     setGenError(null);
     setResult(null);
-    const res = await tryApiFetch<TwoDGenerateResult>('/api/visual-gen/generate-2d', {
+    const res = await tryApiFetch<TwoDGenerateResult & Partial<StyleOutcome>>('/api/visual-gen/generate-2d', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt.trim(), providerId: selected.id }),
+      body: JSON.stringify({ prompt: prompt.trim(), providerId: selected.id, ...(styled ? { applyStyleDna: true } : {}) }),
     });
     if (!isMounted()) return;
     setGenerating(false);
@@ -150,6 +159,11 @@ export function Image2DPanel() {
           className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-text
                      placeholder:text-text-muted focus:outline-none focus:border-[var(--visual-gen)]"
         />
+        {styled && (
+          <p className="text-2xs text-text-muted mt-1" data-testid="image2d-style-note">
+            Project style “{activeStyleDna?.name}” is appended on the server.
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -191,6 +205,13 @@ export function Image2DPanel() {
             {result.model ? ` · ${result.model}` : ''} · saved as generated/images/{result.name} · served at{' '}
             {result.url}
           </p>
+          {(result.styleDnaApplied || result.styleDnaWithheld) && (
+            <div className="text-2xs" data-testid="image2d-style-outcome">
+              {result.styleDnaApplied && <p className="text-text-muted">Styled with “{result.styleDnaApplied}”.</p>}
+              {result.styleDnaWithheld && <p className="text-amber-400">{result.styleDnaWithheld}</p>}
+              {result.styleDnaDropped?.map((d) => <p key={d} className="text-amber-400">{d}</p>)}
+            </div>
+          )}
         </div>
       )}
     </div>

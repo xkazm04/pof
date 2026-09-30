@@ -20,8 +20,10 @@ import {
   MAX_BOARD_IMAGE_BYTES,
 } from '@/components/modules/visual-gen/asset-forge/StyleDnaPanel';
 import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
+import { Image2DPanel } from '@/components/modules/visual-gen/asset-forge/Image2DPanel';
 import {
   STYLE_DNA_REACH,
+  STYLE_DNA_SENDERS,
   STYLE_PROMPT_MAX_LENGTH,
   applyStyleFragment,
 } from '@/lib/visual-gen/style-dna';
@@ -98,14 +100,21 @@ describe('Style DNA reach — the label cannot claim more than the senders deliv
     expect(realSenders()).toEqual([...STYLE_DNA_REACH.senders].sort());
   });
 
-  it('every declared sender is a 3D generation path, matching the label', () => {
-    expect(STYLE_DNA_REACH.label).toBe('3D prompts');
-    for (const s of STYLE_DNA_REACH.senders) expect(s).toContain('asset-forge/');
+  it('the reach is DERIVED from the sender table: senders, label and note all come from it', () => {
+    expect(STYLE_DNA_REACH.senders).toEqual(STYLE_DNA_SENDERS.map((s) => s.file));
+    // The 2D forge is a sender now — resolved on the server, canon-aware.
+    const twoD = STYLE_DNA_SENDERS.find((s) => s.file.endsWith('asset-forge/Image2DPanel.tsx'));
+    expect(twoD).toMatchObject({ path: '2D', resolution: 'server' });
+    for (const s of STYLE_DNA_SENDERS) {
+      expect(STYLE_DNA_REACH.label).toContain(s.path);
+      expect(STYLE_DNA_REACH.note).toContain(s.reaches);
+    }
+    expect(STYLE_DNA_REACH.label).toBe('2D + 3D prompts');
   });
 
-  it('the note names the 2D path it does NOT reach', () => {
-    expect(STYLE_DNA_REACH.note).toMatch(/leonardo/i);
-    expect(STYLE_DNA_REACH.note).toMatch(/nothing in the app sends it/i);
+  it('the label names no path that no sender delivers', () => {
+    const paths = new Set(STYLE_DNA_SENDERS.map((s) => s.path));
+    for (const p of STYLE_DNA_REACH.label.match(/\b\dD\b/g) ?? []) expect(paths.has(p as '2D' | '3D')).toBe(true);
   });
 
   it('the toggle renders the reach in its label and the full note beside it', async () => {
@@ -117,6 +126,51 @@ describe('Style DNA reach — the label cannot claim more than the senders deliv
 
     fireEvent.click(screen.getByRole('button', { name: /project style/i }));
     expect(screen.getByTestId('style-dna-reach').textContent).toBe(STYLE_DNA_REACH.note);
+  });
+});
+
+describe('the 2D forge sends the flag; the server resolves the style', () => {
+  const LEO = { id: 'leonardo', name: 'Leonardo', description: 'cloud', executable: true };
+  async function submitFrom2D(styleResult: Record<string, unknown> = {}) {
+    fetchMock.mockImplementation(async (_url: string, init?: RequestInit) =>
+      init?.method === 'POST'
+        ? envelope({ ok: true, providerId: 'leonardo', providerName: 'Leonardo', url: '/api/visual-gen/image/l.png', name: 'l.png', durationMs: 1, ...styleResult })
+        : envelope({ providers: [LEO], defaultProviderId: 'leonardo' }));
+    render(<Image2DPanel />);
+    await screen.findByTestId('image2d-provider-leonardo');
+    fireEvent.change(screen.getByTestId('image2d-prompt'), { target: { value: 'a sword' } });
+    fireEvent.click(screen.getByTestId('image2d-submit'));
+    await waitFor(() => expect(methodsOf(fetchMock)).toContain('POST'));
+    const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === 'POST')!;
+    return JSON.parse(String((post[1] as RequestInit).body)) as Record<string, unknown>;
+  }
+
+  it('case 8: with the switch on and an active style, the 2D submit carries applyStyleDna: true', async () => {
+    useForgeStore.setState({ activeStyleDna: PROFILE, applyStyleDna: true });
+    const body = await submitFrom2D({ styleDnaApplied: 'Alice gothic', styleDnaWithheld: null, styleDnaDropped: [] });
+    expect(body).toEqual({ prompt: 'a sword', providerId: 'leonardo', applyStyleDna: true });
+    // The prompt is sent RAW: the server applies the style, the client never pre-renders it.
+    expect(String(body.prompt)).not.toContain('In the established project art style');
+    expect((await screen.findByTestId('image2d-style-outcome')).textContent).toContain('Alice gothic');
+  });
+
+  it('case 8: with the switch off the body is byte-identical to the unstyled request', async () => {
+    useForgeStore.setState({ activeStyleDna: PROFILE, applyStyleDna: false });
+    const body = await submitFrom2D();
+    expect(body).toEqual({ prompt: 'a sword', providerId: 'leonardo' });
+    expect(screen.queryByTestId('image2d-style-note')).toBeNull();
+  });
+
+  it('with no active style the body stays unstyled even though the switch defaults on', async () => {
+    useForgeStore.setState({ activeStyleDna: null, applyStyleDna: true });
+    expect(await submitFrom2D()).toEqual({ prompt: 'a sword', providerId: 'leonardo' });
+  });
+
+  it('the chips a long prompt drops are named beside the result, not hidden', async () => {
+    useForgeStore.setState({ activeStyleDna: PROFILE, applyStyleDna: true });
+    await submitFrom2D({ styleDnaApplied: 'Alice gothic', styleDnaDropped: ['1 chip past the 1500-char budget behind a 1490-char prompt: “painterly”'] });
+    const outcome = await screen.findByTestId('image2d-style-outcome');
+    expect(outcome.textContent).toContain('1500-char budget');
   });
 });
 
