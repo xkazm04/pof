@@ -63,20 +63,27 @@ export function parseStyleDnaReply(text: string): StyleDnaReply {
 }
 
 /** Max items per dimension in the injected fragment — keeps it inside prompt budgets. */
-const FRAGMENT_CAP = 4;
+export const FRAGMENT_CAP = 4;
+
+/**
+ * The fragment's grammar, exported so `styleFragmentPreview` (style-dna-edit.ts) can locate each
+ * chip INSIDE the real fragment instead of re-deriving a second one. Order = emission order.
+ */
+export const STYLE_DNA_FRAGMENT_PREFIX = 'In the established project art style — ';
+export const STYLE_DNA_FRAGMENT_LABELS: ReadonlyArray<readonly [keyof StyleDna, string]> = [
+  ['palette', 'palette of'],
+  ['materials', 'materials:'],
+  ['mood', 'mood:'],
+  ['render', 'rendered'],
+  ['motifs', 'recurring motifs:'],
+];
 
 /** Compact prompt fragment appended to a generation prompt. Empty dimensions are skipped. */
 export function styleDnaToPromptFragment(dna: StyleDna): string {
-  const part = (label: string, items: string[]) =>
-    items.length ? `${label} ${items.slice(0, FRAGMENT_CAP).join(', ')}` : '';
-  const parts = [
-    part('palette of', dna.palette),
-    part('materials:', dna.materials),
-    part('mood:', dna.mood),
-    part('rendered', dna.render),
-    part('recurring motifs:', dna.motifs),
-  ].filter(Boolean);
-  return `In the established project art style — ${parts.join('; ')}.`;
+  const parts = STYLE_DNA_FRAGMENT_LABELS.map(([key, label]) =>
+    dna[key].length ? `${label} ${dna[key].slice(0, FRAGMENT_CAP).join(', ')}` : '',
+  ).filter(Boolean);
+  return `${STYLE_DNA_FRAGMENT_PREFIX}${parts.join('; ')}.`;
 }
 
 /**

@@ -88,6 +88,26 @@ export function saveStyleDna(db: Database.Database, input: SaveStyleDnaInput): S
   return getStyleDna(db, id)!;
 }
 
+export interface ForkStyleDnaInput {
+  name: string;
+  dna: StyleDna;
+}
+
+/**
+ * Save an edited DNA as a COPY of `fromId` — the correction path that needs no vision call. The
+ * parent row's content is never touched (only saveStyleDna's single-active rule moves the flag),
+ * so "Use “parent”" undoes any fork. The copy inherits the parent's sourceImageCount.
+ *
+ * Returns null when the parent is missing OR bound to a canon profile: a bound style is edited in
+ * its canon, and a fork (the newest row for that canon) would silently displace the binding with
+ * no undo in the UI. Forks are for the project's own (unbound) styles only.
+ */
+export function forkStyleDna(db: Database.Database, fromId: string, input: ForkStyleDnaInput): StyleDnaProfile | null {
+  const parent = getStyleDna(db, fromId);
+  if (!parent || parent.canonProfile) return null;
+  return saveStyleDna(db, { name: input.name, dna: input.dna, sourceImageCount: parent.sourceImageCount });
+}
+
 export function getStyleDna(db: Database.Database, id: string): StyleDnaProfile | null {
   createStyleDnaDb(db);
   const row = db.prepare('SELECT * FROM style_dna WHERE id = ?').get(id) as Row | undefined;
