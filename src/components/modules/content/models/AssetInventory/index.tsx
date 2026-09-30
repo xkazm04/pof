@@ -34,6 +34,8 @@ export function AssetInventory() {
     setSearch,
     typeFilter,
     setTypeFilter,
+    ueFilter,
+    setUeFilter,
     sortKey,
     sortDir,
     toggleSort,
@@ -43,6 +45,11 @@ export function AssetInventory() {
     handleScan,
     typeCounts,
     displayAssets,
+    edges,
+    edgeProvenance,
+    unresolvedRefs,
+    reconcile,
+    ueListed,
     edgeCount,
   } = useAssetInventory();
 
@@ -108,7 +115,7 @@ export function AssetInventory() {
 
   if (!scanResult) return null;
 
-  const depCount = scanResult.dependencies.length;
+  const depCount = edges.length;
 
   return (
     <div className="space-y-4">
@@ -123,6 +130,12 @@ export function AssetInventory() {
           </span>
           <span>
             <span className="text-text font-semibold tabular-nums">{depCount}</span> dependencies
+            {/* Provenance: UE-declared edges vs name guesses, never blended. */}
+            <span className="ml-1 text-xs opacity-80">
+              {reconcile.available
+                ? `(${edgeProvenance.declared} UE-declared, ${edgeProvenance.inferred} guessed from names${unresolvedRefs > 0 ? `; ${unresolvedRefs} UE refs with no file` : ''})`
+                : '(guessed from names)'}
+            </span>
           </span>
           <span className="text-xs tabular-nums opacity-80">
             scanned in {scanResult.scanDurationMs}ms
@@ -142,7 +155,10 @@ export function AssetInventory() {
 
       {/* Bridge Assets summary */}
       {bridgeConnected && bridgeSummary && (
-        <BridgeManifestCard summary={bridgeSummary} />
+        <BridgeManifestCard
+          summary={bridgeSummary}
+          missingOnDisk={reconcile.available ? reconcile.missingOnDisk : undefined}
+        />
       )}
 
       {/* Type filter chips */}
@@ -169,6 +185,15 @@ export function AssetInventory() {
             />
           );
         })}
+        {ueFilter !== null && reconcile.available && (
+          <FilterChip
+            label="Not in UE manifest"
+            count={reconcile.notInManifest.length}
+            active={ueFilter === 'not-in-manifest'}
+            color={ACCENT}
+            onClick={() => setUeFilter(ueFilter === 'not-in-manifest' ? 'all' : 'not-in-manifest')}
+          />
+        )}
       </div>
 
       {/* Search bar */}
@@ -221,7 +246,7 @@ export function AssetInventory() {
         <AnimatePresence mode="popLayout">
           {displayAssets.length === 0 ? (
             <div className="col-span-full py-16 text-center text-xs text-text-muted bg-surface/30 rounded-xl border border-dashed border-border">
-              {search || typeFilter !== 'all' ? 'No assets match your filters' : 'No assets found in Content/'}
+              {search || typeFilter !== 'all' || ueFilter === 'not-in-manifest' ? 'No assets match your filters' : 'No assets found in Content/'}
             </div>
           ) : (
             displayAssets.map(asset => (
@@ -231,7 +256,8 @@ export function AssetInventory() {
                 isExpanded={expandedAsset === asset.relativePath}
                 edgeCount={edgeCount}
                 allAssets={scanResult.assets}
-                dependencies={scanResult.dependencies}
+                dependencies={edges}
+                ueListed={ueListed ? ueListed[asset.relativePath] ?? false : null}
                 setExpandedAsset={setExpandedAsset}
               />
             ))

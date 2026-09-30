@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScanLine, FolderOpen } from 'lucide-react';
-import type { ScannedAsset, AssetDependencyEdge } from '@/app/api/filesystem/scan-assets/route';
+import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
+import type { InventoryEdge } from '@/lib/asset-inventory/declared-edges';
 import { TYPE_CONFIG } from './constants';
 import { formatBytes, formatDate } from './helpers';
 import { DependencyGraph } from './DependencyGraph';
@@ -12,11 +13,13 @@ interface AssetCardProps {
   isExpanded: boolean;
   edgeCount: Record<string, number>;
   allAssets: ScannedAsset[];
-  dependencies: AssetDependencyEdge[];
+  dependencies: InventoryEdge[];
+  /** Whether UE's manifest lists this asset; null when no manifest is connected. */
+  ueListed: boolean | null;
   setExpandedAsset: (value: string | null) => void;
 }
 
-export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencies, setExpandedAsset }: AssetCardProps) {
+export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencies, ueListed, setExpandedAsset }: AssetCardProps) {
   const conf = TYPE_CONFIG[asset.type];
   const Icon = conf.icon;
 
@@ -54,7 +57,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
         aria-label={
           isExpanded
             ? `Dependency graph for ${asset.name}`
-            : `${asset.name} — ${conf.label}, ${edgeCount[asset.relativePath] ?? 0} dependency edges. Show dependency graph`
+            : `${asset.name} — ${conf.label}, ${edgeCount[asset.relativePath] ?? 0} dependency edges${ueListed === null ? '' : ueListed ? ', listed in UE manifest' : ', not in UE manifest'}. Show dependency graph`
         }
         onClick={() => !isExpanded && setExpandedAsset(asset.relativePath)}
         onKeyDown={(e) => {
@@ -107,8 +110,26 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
         {!isExpanded && (
           <div className="px-4 py-2.5 bg-surface/40 flex justify-between items-center relative z-10">
             <span className="text-xs text-text-muted opacity-80">{formatDate(asset.modifiedAt)}</span>
-            <div className="text-xs text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
-              {edgeCount[asset.relativePath] ?? 0} edges
+            <div className="flex items-center gap-1.5">
+              {ueListed === true && (
+                <span
+                  className="text-2xs font-mono font-bold px-1.5 py-0.5 rounded border border-green-500/30 bg-green-500/10 text-green-400"
+                  title="Listed in the UE manifest: its edges are UE-declared"
+                >
+                  UE
+                </span>
+              )}
+              {ueListed === false && (
+                <span
+                  className="text-2xs font-mono px-1.5 py-0.5 rounded border border-border/40 text-text-muted italic"
+                  title="UE's manifest does not list this file: its edges are guessed from names"
+                >
+                  not in UE manifest
+                </span>
+              )}
+              <div className="text-xs text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
+                {edgeCount[asset.relativePath] ?? 0} edges
+              </div>
             </div>
           </div>
         )}
@@ -140,6 +161,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
                     asset={asset}
                     allAssets={allAssets}
                     dependencies={dependencies}
+                    ueListed={ueListed}
                   />
                 </div>
               </div>
