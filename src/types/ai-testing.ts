@@ -48,6 +48,28 @@ export interface TestScenario {
   lastRunAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Retained report-graded run outcomes, newest first (at most
+   * `RUN_HISTORY_LIMIT`). Attached by the DB read paths; absent on a
+   * scenario built client-side, which reads as never run.
+   */
+  history?: ScenarioRunRecord[];
+}
+
+/** How many retained runs a scenario carries to the client. */
+export const RUN_HISTORY_LIMIT = 8;
+
+/**
+ * One graded outcome of one Run Tests dispatch for one scenario. Written only
+ * by `record-run-results` (UE's automation report decides the status), keyed
+ * by the run's `runId` — a client-set status or an ungraded reset is not a run.
+ */
+export interface ScenarioRunRecord {
+  runId: string;
+  status: 'passed' | 'failed' | 'error';
+  ranAt: string;
+  /** Hash of description + stimuli + expected actions as the run graded them. */
+  definitionHash: string;
 }
 
 export interface TestSuite {

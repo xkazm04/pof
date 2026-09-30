@@ -10,6 +10,7 @@ import {
   updateScenario,
   deleteScenario,
   bulkUpdateScenarioStatus,
+  recordRunVerdicts,
   getTestingSummary,
 } from '@/lib/ai-testing-db';
 import type { ScenarioStatus } from '@/types/ai-testing';
@@ -97,12 +98,9 @@ export async function POST(req: NextRequest) {
         return apiError('scenarioIds must belong to one suite', 400);
       }
       const report = await readReport(body.reportDir);
-      const now = new Date().toISOString();
-      const updated: number[] = [];
-      for (const v of deriveRunVerdicts(report, scenarioIds, body.results, suite)) {
-        const scenario = updateScenario({ id: v.scenarioId, status: v.status, lastRunOutput: v.output, lastRunAt: now });
-        if (scenario) updated.push(v.scenarioId);
-      }
+      // One door: status + last-run fields AND the run-history row keyed by runId.
+      const verdicts = deriveRunVerdicts(report, scenarioIds, body.results, suite);
+      const updated = recordRunVerdicts(body.runId, new Date().toISOString(), verdicts);
       return apiSuccess({ updated });
     }
 

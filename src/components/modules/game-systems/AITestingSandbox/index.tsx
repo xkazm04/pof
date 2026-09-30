@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Play, FlaskConical, Zap, Loader2,
+  Plus, Play, FlaskConical, Zap, Loader2, TrendingDown, TrendingUp,
 } from 'lucide-react';
 import { summarizeScenarios } from '@/types/ai-testing';
 import type {
@@ -19,6 +19,7 @@ import {
 import { DURATION, EASE_OUT, STAGGER } from '@/lib/motion';
 import { SYSTEMS_ACCENT } from './constants';
 import { ScenarioCard } from './ScenarioCard';
+import { summarizeTrends } from '@/lib/ai-testing/run-trend';
 
 // ── Props ──
 
@@ -60,6 +61,8 @@ export function AITestingSandbox({
     summarizeScenarios(suite.scenarios);
   // Live pass-rate ring: emerald when the whole suite is green, indigo while pending/mixed.
   const ringColor = passRate === 100 ? ACCENT_EMERALD : ACCENT_INDIGO;
+  // What broke (or got fixed) since each scenario's previous graded run.
+  const sinceLast = summarizeTrends(suite.scenarios);
 
   return (
     <div className="flex flex-col h-full">
@@ -96,6 +99,23 @@ export function AITestingSandbox({
             style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}30` }}
           >
             {failedCount} failed
+          </span>
+        )}
+
+        {/* Since last run — from retained report-graded history, not current status */}
+        {(sinceLast.regressed > 0 || sinceLast.fixed > 0) && (
+          <span className="text-2xs text-text-muted ml-1">Since last run:</span>
+        )}
+        {sinceLast.regressed > 0 && (
+          <span className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_15}`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}${OPACITY_30}` }}>
+            <TrendingDown className="w-3 h-3" aria-hidden="true" />
+            {sinceLast.regressed} regressed
+          </span>
+        )}
+        {sinceLast.fixed > 0 && (
+          <span className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}${OPACITY_30}` }}>
+            <TrendingUp className="w-3 h-3" aria-hidden="true" />
+            {sinceLast.fixed} fixed
           </span>
         )}
 
