@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   STATUS_SUBDUED,
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
@@ -19,20 +19,6 @@ export const DEBUG_COMMANDS = [
   { syntax: 'spawn <type>', description: 'Spawn enemy at cursor location' },
   { syntax: 'killall', description: 'Purge all active enemies in cell' },
 ];
-
-/* -- Optimizations --------------------------------------------------------- */
-
-export type EffortLevel = 'Small' | 'Medium' | 'Large';
-export type ImpactLevel = 'High' | 'Medium' | 'Low';
-
-export const OPTIMIZATIONS: { title: string; featureName: string; effort: EffortLevel; impact: ImpactLevel; description: string }[] = [
-  { title: 'Object Pooling Init', featureName: 'Object pooling', effort: 'Medium', impact: 'High', description: 'Pre-allocate projectiles, VFX actors, and floating text.' },
-  { title: 'Tick Optimization', featureName: 'Tick optimization', effort: 'Small', impact: 'High', description: 'Throttle tick on idle actors; move to timer delegates.' },
-  { title: 'Async Asset Streaming', featureName: 'Async asset loading', effort: 'Large', impact: 'Medium', description: 'Stream level chunks to avoid main thread hitches.' },
-];
-
-export const EFFORT_COLORS: Record<EffortLevel, string> = { Small: ACCENT_EMERALD, Medium: STATUS_WARNING, Large: STATUS_ERROR };
-export const IMPACT_COLORS: Record<ImpactLevel, string> = { High: STATUS_SUCCESS, Medium: STATUS_WARNING, Low: STATUS_SUBDUED };
 
 export const FEATURE_NAMES = [
   'Structured logging', 'Debug draw helpers', 'Debug console commands',

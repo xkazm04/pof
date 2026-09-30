@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { Activity, Wrench, Terminal, LayoutGrid } from 'lucide-react';
-import { OPACITY_10, OPACITY_30,
+import {
   withOpacity, OPACITY_90, OPACITY_25, OPACITY_12, OPACITY_5, OPACITY_80, GLOW_MD,
   ACCENT_EMERALD_DARK, STATUS_SUBDUED,
 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { SectionHeader, BlueprintPanel } from '../unique-tabs/_design';
-import { STATUS_COLORS, FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
+import { FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import { CircularGauge, CopyButton } from './system/CircularGauge';
 import { SystemHealthMatrix, FrameTimeWaterfall } from './system/SystemHealthSection';
 import { MemorySection } from './performance/MemorySection';
@@ -16,15 +16,14 @@ import { ConsoleSection } from './console/ConsoleSection';
 import { NetworkSection } from './network/NetworkSection';
 import { GCTimelineSection } from './performance/GCTimelineSection';
 import { DrawCallSection } from './performance/DrawCallSection';
+import { OptimizationQueue } from './performance/OptimizationQueue';
 import { StatDashboardSection } from './crashes/StatDashboardSection';
 import { CrashPredictionSection } from './crashes/CrashPredictionSection';
 import { RegressionSection } from './crashes/RegressionSection';
 import {
-  ACCENT, DEBUG_COMMANDS, OPTIMIZATIONS,
-  EFFORT_COLORS, IMPACT_COLORS, FEATURE_NAMES,
+  ACCENT, DEBUG_COMMANDS, FEATURE_NAMES,
 } from './_shared/data';
 import type { SubModuleId } from '@/types/modules';
-import type { FeatureStatus } from '@/types/feature-matrix';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { useDebugSnapshot } from '@/components/modules/core-engine/sub_debug/_shared/useDebugSnapshot';
@@ -36,7 +35,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   // Every perf panel below is a projection of ONE ProfilingSession (newest capture, or the sample).
-  const { snapshot, provenance } = useDebugSnapshot();
+  const { snapshot, provenance, latest } = useDebugSnapshot();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const tabs: SubTab[] = useMemo(() => [
@@ -115,38 +114,8 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
         </div>
       </div>
 
-      {/* Optimization queue */}
-      <div className="mt-2">
-        <SectionHeader label="PERF_OPTIMIZATION_QUEUE" color={ACCENT} icon={Activity} />
-        <div className="space-y-3 mt-2">
-          {OPTIMIZATIONS.map((opt, i) => {
-            const status: FeatureStatus = featureMap.get(opt.featureName)?.status ?? 'unknown';
-            const sc = STATUS_COLORS[status];
-            return (
-              <BlueprintPanel key={opt.title} color={ACCENT} className="px-3 py-3 group">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold font-mono border"
-                      style={{ backgroundColor: `${ACCENT}${OPACITY_10}`, color: ACCENT, borderColor: `${ACCENT}${OPACITY_30}` }}>{String(i + 1).padStart(2, '0')}</span>
-                    <span className="text-sm font-bold font-mono tracking-widest" style={{ color: `${withOpacity(ACCENT, OPACITY_90)}` }}>{opt.title}</span>
-                  </div>
-                  <div className="sm:ml-auto flex items-center gap-2 flex-wrap pl-9 sm:pl-0">
-                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
-                      style={{ backgroundColor: `${EFFORT_COLORS[opt.effort]}${OPACITY_10}`, color: EFFORT_COLORS[opt.effort], borderColor: `${EFFORT_COLORS[opt.effort]}${OPACITY_30}` }}>{opt.effort} EFFORT</span>
-                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
-                      style={{ backgroundColor: `${IMPACT_COLORS[opt.impact]}${OPACITY_10}`, color: IMPACT_COLORS[opt.impact], borderColor: `${IMPACT_COLORS[opt.impact]}${OPACITY_30}` }}>{opt.impact} IMPACT</span>
-                    <span className="flex items-center gap-1.5 px-2 py-[2px] rounded border bg-surface" style={{ borderColor: `${withOpacity(sc.dot, OPACITY_25)}` }}>
-                      <span className="w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: sc.dot, color: sc.dot }} />
-                      <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: sc.dot }}>{sc.label}</span>
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-text-muted leading-relaxed pl-9 font-mono border-l ml-[11px] mt-1 tracking-wide" style={{ borderColor: `${withOpacity(ACCENT, OPACITY_12)}` }}>{opt.description}</p>
-              </BlueprintPanel>
-            );
-          })}
-        </div>
-      </div>
+      {/* Optimization queue: the newest capture's triage, one-click Fix, verified by re-capture */}
+      <OptimizationQueue latest={latest} />
 
       {/* Section panels */}
       <FrameTimeWaterfall frame={snapshot.frame} />
