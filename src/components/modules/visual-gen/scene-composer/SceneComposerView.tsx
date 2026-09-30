@@ -12,6 +12,7 @@ import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnection
 import { ViewportPreview } from '@/components/blender-mcp/ViewportPreview';
 import { SceneTree } from './SceneTree';
 import { SceneExporter } from './SceneExporter';
+import { SceneDressPanel } from './SceneDressPanel';
 import { useSceneComposerStore } from './useSceneComposerStore';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
@@ -38,6 +39,10 @@ function ComposerTab() {
           <div className="rounded-lg border border-border bg-surface-secondary p-3">
             <h3 className="text-xs font-medium text-text mb-2">Export</h3>
             <SceneExporter />
+          </div>
+          <div className="rounded-lg border border-border bg-surface-secondary p-3">
+            <h3 className="text-xs font-medium text-text mb-2">Dress from image</h3>
+            <SceneDressPanel />
           </div>
         </div>
         <ViewportPreview />
