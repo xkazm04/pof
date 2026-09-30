@@ -334,6 +334,21 @@ export function createSession(
   return session;
 }
 
+/**
+ * The session a stored harness run was imported as, or null. The run id lives
+ * in the session's config JSON (`config.harnessRunId`) — no schema change; old
+ * sessions simply have no such key. Oldest first, so a legacy duplicate (none can
+ * be written through the import door) resolves to the original.
+ */
+export function getSessionByHarnessRun(runId: string): PlaytestSession | null {
+  ensureTables();
+  if (!runId) return null;
+  const row = prepareCached(
+    `SELECT * FROM game_director_sessions WHERE json_extract(config, '$.harnessRunId') = ? ORDER BY ${SESSION_CHRONOLOGY_ASC} LIMIT 1`
+  ).get(runId) as SessionRow | undefined;
+  return row ? rowToSession(row) : null;
+}
+
 export function getSession(id: string): PlaytestSession | null {
   ensureTables();
   const row = prepareCached('SELECT * FROM game_director_sessions WHERE id = ?').get(id) as SessionRow | undefined;

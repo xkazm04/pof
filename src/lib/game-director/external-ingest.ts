@@ -252,6 +252,8 @@ export interface BuildPlanOptions {
   sessionName?: string;
   /** Project this session belongs to — carried so the write-back can scope itself. */
   projectId?: string;
+  /** The stored harness run this record came from; stamped into the session config. */
+  harnessRunId?: string;
 }
 
 /**
@@ -472,6 +474,7 @@ export function buildIngestPlan(
     aggressiveMode: false,
     prioritySystems: modules,
     projectId: opts.projectId,
+    ...(opts.harnessRunId ? { harnessRunId: opts.harnessRunId } : {}),
   };
 
   return ok({
@@ -520,6 +523,8 @@ export interface IngestDeps {
   now?: () => number;
   sessionName?: string;
   projectId?: string;
+  /** Run identity when the record is a stored harness run (see `harness-import.ts`). */
+  harnessRunId?: string;
 }
 
 export interface IngestOutcome {
@@ -553,6 +558,7 @@ export async function ingestExternalPlaytest(
     now: deps.now ?? (() => Date.now()),
     sessionName: deps.sessionName,
     projectId: deps.projectId,
+    harnessRunId: deps.harnessRunId,
   });
   if (!planned.ok) return err(planned.error);
   const ingest = planned.data;

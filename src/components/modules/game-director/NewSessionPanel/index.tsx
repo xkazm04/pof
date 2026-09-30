@@ -14,8 +14,10 @@ import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useProjectStore } from '@/stores/projectStore';
 import { derivePrioritySystems, type AggregateRow, type PrioritySuggestion } from '@/lib/game-director/matrix-routing';
+import type { UseGameDirectorResult } from '@/hooks/useGameDirector';
 import { PrioritySystems } from './PrioritySystems';
 import { SettingTooltip } from './SettingTooltip';
+import { HarnessRunImport } from './HarnessRunImport';
 import {
   ACCENT,
   TEST_CATEGORIES,
@@ -24,12 +26,67 @@ import {
   AGGRESSIVE_TIPS,
 } from './constants';
 
-interface NewSessionPanelProps {
+interface SimulatorSessionFormProps {
   onCreated: () => void;
   createSession: (payload: CreateSessionPayload) => Promise<PlaytestSession>;
 }
 
-export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelProps) {
+interface NewSessionPanelProps extends SimulatorSessionFormProps {
+  /** The harness-run import door. Absent ⇒ only the simulator form is offered. */
+  harness?: Pick<UseGameDirectorResult, 'listHarnessRuns' | 'previewHarnessRun' | 'ingestHarnessRun'>;
+  /** Open a session's detail (the one just imported, or the one a run already became). */
+  onOpenSession?: (sessionId: string) => void;
+}
+
+type SessionMode = 'simulator' | 'harness';
+
+const SESSION_MODES: { id: SessionMode; label: string }[] = [
+  { id: 'simulator', label: 'Simulator' },
+  { id: 'harness', label: 'From a harness run' },
+];
+
+/**
+ * New Session: the built-in simulator form, or — when the harness door is
+ * wired — import a stored harness run (preview first, import on click).
+ */
+export function NewSessionPanel({ onCreated, createSession, harness, onOpenSession }: NewSessionPanelProps) {
+  const [mode, setMode] = useState<SessionMode>('simulator');
+  const projectPath = useProjectStore((s) => s.projectPath);
+  if (!harness || !onOpenSession) {
+    return <SimulatorSessionForm onCreated={onCreated} createSession={createSession} />;
+  }
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div role="group" aria-label="Session source" className="inline-flex gap-1 p-1 rounded-lg border border-border bg-surface-deep">
+        {SESSION_MODES.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            aria-pressed={mode === m.id}
+            onClick={() => setMode(m.id)}
+            className={`focus-ring px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === m.id ? 'text-text' : 'text-text-muted hover:text-text'}`}
+            style={mode === m.id ? { backgroundColor: `${ACCENT}${OPACITY_15}`, color: ACCENT } : undefined}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+      {mode === 'simulator' ? (
+        <SimulatorSessionForm onCreated={onCreated} createSession={createSession} />
+      ) : (
+        <HarnessRunImport
+          projectPath={projectPath || null}
+          onOpenSession={onOpenSession}
+          listHarnessRuns={harness.listHarnessRuns}
+          previewHarnessRun={harness.previewHarnessRun}
+          ingestHarnessRun={harness.ingestHarnessRun}
+        />
+      )}
+    </div>
+  );
+}
+
+function SimulatorSessionForm({ onCreated, createSession }: SimulatorSessionFormProps) {
   const [name, setName] = useState(`Playtest ${new Date().toLocaleDateString()}`);
   const [buildPath, setBuildPath] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Set<TestCategory>>(

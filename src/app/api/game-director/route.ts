@@ -15,6 +15,7 @@ import {
   getHealthTrend,
   updateFindingTriage,
   markFindingFixDispatched,
+  getSessionByHarnessRun,
 } from '@/lib/game-director-db';
 import type {
   CreateSessionPayload,
@@ -31,6 +32,13 @@ import { ingestExternalPlaytest } from '@/lib/game-director/external-ingest';
 import { createDbDirectorWriter, createDbMatrixRoutingDeps } from '@/lib/game-director/db-writer';
 import { routeFindingsToMatrix } from '@/lib/game-director/matrix-routing';
 import { processSession } from '@/lib/regression-tracker';
+import { listRuns, getRun } from '@/lib/harness-runs-db';
+import {
+  previewHarnessRun,
+  importHarnessRun,
+  type HarnessRunOption,
+} from '@/lib/game-director/harness-import';
+import { normalizeProjectId } from '@/lib/project-id';
 import { logger } from '@/lib/logger';
 
 /**
@@ -188,6 +196,29 @@ export async function GET(req: Request) {
         return apiSuccess(getHealthTrend(limit));
       }
 
+      case 'harness-runs': {
+        // The stored harness runs of ONE project, each with the session it was
+        // already imported as. harness_runs keeps the raw project path while the
+        // Director's projectId may be spelled differently, so the join is on the
+        // normalized id — over the newest 500 runs (listRuns' ceiling).
+        const projectId = normalizeProjectId(searchParams.get('projectId'));
+        if (!projectId) return apiError('projectId required — harness runs are listed per project', 400);
+        const rows: HarnessRunOption[] = listRuns({ limit: 500 })
+          .filter((r) => normalizeProjectId(r.projectPath) === projectId)
+          .map((r) => ({
+            runId: r.runId,
+            projectName: r.projectName,
+            projectPath: r.projectPath,
+            status: r.status,
+            startedAt: r.startedAt,
+            endedAt: r.endedAt,
+            iteration: r.iteration,
+            passRate: r.passRate,
+            ingestedSessionId: getSessionByHarnessRun(r.runId)?.id ?? null,
+          }));
+        return apiSuccess(rows);
+      }
+
       default:
         return apiError(`Unknown action: ${action}`, 400);
     }
@@ -321,6 +352,45 @@ export async function POST(req: Request) {
         });
         if (!outcome.ok) return apiError(outcome.error, 400);
         await completeSessionPipeline(outcome.data.sessionId, 'external', projectId);
+        return apiSuccess(outcome.data);
+      }
+
+      case 'preview-harness-run': {
+        // What importing a STORED run would write — the import's own validation
+        // and mapping, projected to counts. Writes nothing.
+        const { runId, projectId, sessionName } = body as {
+          action: string; runId?: string; projectId?: string; sessionName?: string;
+        };
+        if (!runId) return apiError('runId required', 400);
+        const run = getRun(runId);
+        if (!run) return apiError(`Harness run ${runId} not found`, 404);
+        const preview = previewHarnessRun(run, { now: () => Date.now(), projectId, sessionName });
+        if (!preview.ok) return apiError(preview.error, 400);
+        return apiSuccess({ ...preview.data, ingestedSessionId: getSessionByHarnessRun(runId)?.id ?? null });
+      }
+
+      case 'ingest-harness-run': {
+        // Import a stored run, at most once: a re-import (sequential or
+        // concurrent) is 409 naming the session that already holds the run.
+        // Completion goes through the SAME pipeline as every other completion.
+        const { runId, projectId, sessionName } = body as {
+          action: string; runId?: string; projectId?: string; sessionName?: string;
+        };
+        if (!runId) return apiError('runId required', 400);
+        const run = getRun(runId);
+        if (!run) return apiError(`Harness run ${runId} not found`, 404);
+        const outcome = await importHarnessRun(run, {
+          writer: createDbDirectorWriter(),
+          projectId,
+          sessionName,
+          findIngested: (id) => getSessionByHarnessRun(id)?.id ?? null,
+          complete: (id) => completeSessionPipeline(id, 'external', projectId),
+        });
+        if (!outcome.ok) {
+          return outcome.error.kind === 'duplicate'
+            ? apiError(outcome.error.message, 409, { sessionId: outcome.error.sessionId })
+            : apiError(outcome.error.message, 400);
+        }
         return apiSuccess(outcome.data);
       }
 
