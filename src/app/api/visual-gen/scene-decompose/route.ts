@@ -14,6 +14,7 @@ import {
 import { toUeActorTags, DEFAULT_AFFORDANCE } from '@/lib/visual-gen/generators/placement-tags';
 import { physicalForSize, toPhysicsActorTags } from '@/lib/visual-gen/generators/physical-tags';
 import { cropPropRegion, cropToVisionImage } from '@/lib/visual-gen/scene-crop';
+import type { SceneDecomposeCropGate } from '@/lib/visual-gen/scene-dress-plan';
 
 /**
  * POST /api/visual-gen/scene-decompose
@@ -53,14 +54,7 @@ interface Body {
   jitterDegrees?: number;
 }
 
-interface CropGate {
-  id: string;
-  ran: boolean;
-  verdict?: 'pass' | 'warn' | 'fail';
-  score?: number;
-  reasons?: string[];
-  note: string;
-}
+type CropGate = SceneDecomposeCropGate;
 
 /** Gate every prop crop. One vision call per prop, so it is opt-in at the route boundary. */
 async function gateCropsOf(
@@ -75,10 +69,13 @@ async function gateCropsOf(
       out.push(
         outcome.ran
           ? { id: p.id, ran: true, verdict: outcome.verdict, score: outcome.score, reasons: outcome.reasons, note: outcome.note }
-          : { id: p.id, ran: false, note: outcome.note },
+          : { id: p.id, ran: false, ...(outcome.unavailable ? { unavailable: true } : {}), note: outcome.note },
       );
     } catch (e) {
-      out.push({ id: p.id, ran: false, note: `crop gate skipped: ${e instanceof Error ? e.message : String(e)}` });
+      // A throw (sharp crop, seam construction, a programming error) means the gate could
+      // not run — `unavailable`, input-gate.ts's word for it. 'skipped' is reserved for a
+      // caller that opted out, and filing an error under it hid real failures.
+      out.push({ id: p.id, ran: false, unavailable: true, note: `crop gate error: ${e instanceof Error ? e.message : String(e)}` });
     }
   }
   return out;
