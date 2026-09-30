@@ -15,6 +15,11 @@ interface SSEEvent {
   type: string;
   data: Record<string, unknown>;
   timestamp: number;
+  /**
+   * Position of the execution event this frame carries: its index in
+   * `execution.events` + 1. Absent on synthesized frames (connected, heartbeat).
+   */
+  seq?: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -23,6 +28,9 @@ export async function GET(request: NextRequest) {
   const projectPath = searchParams.get('projectPath');
   const prompt = searchParams.get('prompt');
   const resumeSessionId = searchParams.get('resumeSessionId');
+  // Resume cursor: the last `seq` the client already holds. A re-shown terminal
+  // reconnects with it so the replay skips what is on screen (missing = 0 = full replay).
+  const after = Math.max(0, Number.parseInt(searchParams.get('after') ?? '0', 10) || 0);
 
   let activeExecutionId = executionId;
 
@@ -99,9 +107,11 @@ export async function GET(request: NextRequest) {
       const isTerminal = (type: CLIExecutionEvent['type']) =>
         type === 'error' || type === (settlesCallbacks ? 'callbacks' : 'result');
 
-      for (const event of execution.events) {
-        if (event.type === 'stdout') continue;
-        sendEvent(convertEvent(event));
+      for (let i = 0; i < execution.events.length; i++) {
+        const event = execution.events[i];
+        const seq = i + 1;
+        if (event.type === 'stdout' || seq <= after) continue;
+        sendEvent({ ...convertEvent(event), seq });
         if (isTerminal(event.type)) {
           closeStream();
           return;
@@ -126,7 +136,9 @@ export async function GET(request: NextRequest) {
       const unsubscribe = subscribeToExecution(activeExecutionId!, (cliEvent) => {
         if (isStreamClosed) { unsubscribe?.(); return; }
         if (cliEvent.type === 'stdout') return;
-        sendEvent(convertEvent(cliEvent));
+        // Live events are appended before listeners run: the position is where it landed.
+        const idx = execution.events.lastIndexOf(cliEvent);
+        sendEvent(idx >= 0 ? { ...convertEvent(cliEvent), seq: idx + 1 } : convertEvent(cliEvent));
         if (isTerminal(cliEvent.type)) {
           unsubscribe?.();
           closeStream();

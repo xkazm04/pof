@@ -38,6 +38,11 @@ export interface CLISessionState {
   label: string;
   projectPath: string | null;
   claudeSessionId: string | null;
+  /**
+   * The server execution this session's current run lives in. PERSISTED so a reload
+   * (or a remount) re-attaches to a still-live run instead of orphaning it; cleared by
+   * endRun, so a settled run is never re-attached.
+   */
   currentExecutionId: string | null;
   currentTaskId: string | null;
   isRunning: boolean;
@@ -275,6 +280,8 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
               runPhase: 'idle',
               lastTaskSuccess: outcome.success,
               lastCallbackStatus: outcome.callbackStatus ?? null,
+              // The run is over: nothing is left on the server to re-attach to.
+              currentExecutionId: null,
               lastActivityAt: Date.now(),
             },
           },
@@ -442,11 +449,13 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
       }),
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as Partial<CLIPanelStoreState>) };
-        // Reset transient runtime fields — sessions can't be running after a page refresh
+        // Reset transient runtime fields: no run is observed by a freshly loaded page.
+        // currentExecutionId is KEPT — the server run may still be live, and the
+        // session's terminal re-attaches to it on mount (useTaskQueue.attachExecution).
         if (merged.sessions) {
           const cleaned: Record<string, CLISessionState> = {};
           for (const [id, sess] of Object.entries(merged.sessions)) {
-            cleaned[id] = { ...sess, isRunning: false, runPhase: 'idle', runSeq: 0, lastTaskSuccess: null, currentExecutionId: null, currentTaskId: null };
+            cleaned[id] = { ...sess, isRunning: false, runPhase: 'idle', runSeq: 0, lastTaskSuccess: null, currentTaskId: null };
           }
           merged.sessions = cleaned;
         }

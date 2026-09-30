@@ -1,6 +1,6 @@
 'use client';
 
-import type { CallbackStatus } from '@/lib/cli-task';
+import type { TaskCompleteMeta } from '@/components/cli/types';
 import { useCLIPanelStore } from './cliPanelStore';
 
 /** The three terminal lifecycle signals a host forwards to CompactTerminal. */
@@ -10,7 +10,7 @@ export interface SessionRunHandlers {
   /** Stream phase hint: true is ignored (onTaskStart begins the run), false moves it to 'settling'. */
   onStreamingChange: (streaming: boolean) => void;
   /** The run's single completion (useTaskQueue.finishRun) — ends it with its outcome. */
-  onTaskComplete: (taskId: string, success: boolean, meta?: { callbackStatus?: CallbackStatus }) => void;
+  onTaskComplete: (taskId: string, success: boolean, meta?: TaskCompleteMeta) => void;
 }
 
 /**
@@ -39,7 +39,9 @@ export function bindSessionRun(sessionId: string): SessionRunHandlers {
       // A binding re-created mid-run (host remount) falls back to the store's current run.
       const runSeq = seq ?? store().sessions[sessionId]?.runSeq ?? 0;
       seq = null;
-      store().endRun(sessionId, runSeq, { success, callbackStatus: meta?.callbackStatus ?? null });
+      // A run whose end was never observed (its execution is gone from the server) is
+      // recorded as unknown, never as a failure.
+      store().endRun(sessionId, runSeq, { success: meta?.outcomeUnknown ? null : success, callbackStatus: meta?.callbackStatus ?? null });
     },
   };
 }

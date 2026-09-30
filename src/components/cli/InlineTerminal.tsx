@@ -35,6 +35,12 @@ export function InlineTerminal({
   const runFacts = useMemo(() => ({
     onDispatch: (dispatch: DispatchRecord) => useCLIPanelStore.getState().recordDispatch(sessionId, dispatch),
     onCallbacksUnresolved: (markers: PendingCallback[]) => useCLIPanelStore.getState().setPendingCallbacks(sessionId, markers),
+    // The server run this session owns — persisted, so a reload re-attaches to it
+    // (CompactTerminal); endRun clears it. Only a run still open may claim it.
+    onExecutionStarted: (executionId: string) => {
+      const store = useCLIPanelStore.getState();
+      if (store.sessions[sessionId]?.isRunning) store.setCurrentExecution(sessionId, executionId, null);
+    },
   }), [sessionId]);
   const height = useCLIPanelStore((s) => s.inlineTerminalHeight);
   const setInlineTerminalHeight = useCLIPanelStore((s) => s.setInlineTerminalHeight);
@@ -179,6 +185,7 @@ export function InlineTerminal({
           onTaskComplete={run.onTaskComplete}
           onDispatch={runFacts.onDispatch}
           onCallbacksUnresolved={runFacts.onCallbacksUnresolved}
+          onExecutionStarted={runFacts.onExecutionStarted}
           visible={visible}
         />
       </div>

@@ -16,7 +16,7 @@ export function CompactTerminal({
   instanceId, projectPath, title = 'Terminal', className = '',
   taskQueue = [], onTaskStart, onTaskComplete, onQueueEmpty,
   autoStart = false, enabledSkills = [], onStreamingChange, visible = true,
-  onDispatch, onCallbacksUnresolved,
+  onDispatch, onCallbacksUnresolved, onExecutionStarted,
 }: CompactTerminalProps) {
   const sessionModuleId = useCLIPanelStore((s) => s.sessions[instanceId]?.moduleId);
   const accentColor = useCLIPanelStore((s) => s.sessions[instanceId]?.accentColor ?? MODULE_COLORS.core);
@@ -46,13 +46,23 @@ export function CompactTerminal({
   const tq = useTaskQueue({
     instanceId, projectPath, taskQueue, autoStart, enabledSkills, visible,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange,
-    onBatchFlushed, resolveAttribution, onDispatch, onCallbacksUnresolved,
+    onBatchFlushed, resolveAttribution, onDispatch, onCallbacksUnresolved, onExecutionStarted,
   });
   // tqRef always points at the latest task queue. The pof-cli-prompt handler
   // is registered in an [instanceId]-keyed effect, so it must reach the
   // current submitPrompt/sessionId through this ref, not a stale closure.
   const tqRef = useRef(tq);
   tqRef.current = tq;
+
+  // Re-attach: a session that still owns a server run (the page reloaded, or this
+  // terminal remounted mid-run) resumes it on mount — Running, a working Abort, the
+  // replayed transcript, and its real outcome. The store clears the id when the run
+  // ends, so a settled run is never re-attached; an id the server no longer holds
+  // ends as unknown (useTaskQueue).
+  useEffect(() => {
+    const executionId = useCLIPanelStore.getState().sessions[instanceId]?.currentExecutionId;
+    if (executionId && !tqRef.current.isStreaming) tqRef.current.attachExecution(executionId);
+  }, [instanceId]);
 
   const scroll = useScrollSync({
     logCount: tq.logs.length,

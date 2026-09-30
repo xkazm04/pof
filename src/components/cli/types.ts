@@ -80,6 +80,16 @@ export interface CLISSEEvent {
   type: string;
   data: Record<string, unknown>;
   timestamp: number;
+  /** Position of the execution event this frame carries (1-based) — the `?after=` resume cursor. */
+  seq?: number;
+}
+
+/** What a run's single completion reports beyond success. */
+export interface TaskCompleteMeta {
+  /** The server's verdict on the run's declared @@CALLBACKs (additive truth). */
+  callbackStatus?: CallbackStatus;
+  /** The run was never observed ending (its execution is gone from the server): record the outcome as unknown. */
+  outcomeUnknown?: boolean;
 }
 
 export interface CompactTerminalProps {
@@ -89,7 +99,9 @@ export interface CompactTerminalProps {
   className?: string;
   taskQueue?: QueuedTask[];
   onTaskStart?: (taskId: string) => void;
-  onTaskComplete?: (taskId: string, success: boolean, meta?: { callbackStatus?: CallbackStatus }) => void;
+  onTaskComplete?: (taskId: string, success: boolean, meta?: TaskCompleteMeta) => void;
+  /** Fired once per dispatched run when the server returns its execution id (the host persists it for re-attach). */
+  onExecutionStarted?: (executionId: string) => void;
   onQueueEmpty?: () => void;
   autoStart?: boolean;
   enabledSkills?: SkillId[];

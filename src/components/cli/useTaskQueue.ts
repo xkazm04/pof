@@ -9,7 +9,7 @@ import {
 } from '@/lib/cli-task';
 import type {
   QueuedTask, FileChange, LogEntry,
-  ExecutionInfo, ExecutionResult, CLISSEEvent, ServerFailedCallback, HiddenRunStatus,
+  ExecutionInfo, ExecutionResult, CLISSEEvent, ServerFailedCallback, HiddenRunStatus, TaskCompleteMeta,
 } from './types';
 import type { SkillId } from './skills';
 import { injectSkillsIntoPrompt } from './skills';
@@ -23,6 +23,9 @@ import { parseBuildOutput, type BuildParseResult } from './UE5BuildParser';
 // queued-task id. onTaskComplete must fire for them too — hosts release
 // session.isRunning from it.
 const INTERACTIVE_TASK_ID = 'interactive';
+
+/** The stream/query routes' answer for an execution the server no longer holds (ended > 1 h ago, or a restart). */
+const EXECUTION_NOT_FOUND = 'Execution not found';
 
 /**
  * The registry descriptors of every `@@CALLBACK:<id>` a prompt asks for. They ride
@@ -50,7 +53,12 @@ interface UseTaskQueueOpts {
    * — present only for runs that emit a callback marker; it never gates or delays
    * this signal (isRunning is always released within the existing bounds).
    */
-  onTaskComplete?: (taskId: string, success: boolean, meta?: { callbackStatus?: CallbackStatus }) => void;
+  onTaskComplete?: (taskId: string, success: boolean, meta?: TaskCompleteMeta) => void;
+  /**
+   * Fired once per dispatched run, when the query POST returns its server execution
+   * id — the host persists it so a reload can re-attach (see attachExecution).
+   */
+  onExecutionStarted?: (executionId: string) => void;
   onQueueEmpty?: () => void;
   onStreamingChange?: (streaming: boolean) => void;
   onBatchFlushed?: (count: number) => void;
@@ -234,7 +242,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     instanceId, projectPath, taskQueue, autoStart, enabledSkills,
     visible = true,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange, onBatchFlushed,
-    resolveAttribution, onDispatch, onCallbacksUnresolved,
+    resolveAttribution, onDispatch, onCallbacksUnresolved, onExecutionStarted,
   } = opts;
 
   const [state, dispatch] = useReducer(taskQueueReducer, INITIAL_STATE);
@@ -308,6 +316,17 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   useEffect(() => { onDispatchRef.current = onDispatch; }, [onDispatch]);
   const onCallbacksUnresolvedRef = useRef(onCallbacksUnresolved);
   useEffect(() => { onCallbacksUnresolvedRef.current = onCallbacksUnresolved; }, [onCallbacksUnresolved]);
+  const onExecutionStartedRef = useRef(onExecutionStarted);
+  useEffect(() => { onExecutionStartedRef.current = onExecutionStarted; }, [onExecutionStarted]);
+  /**
+   * The current run was ATTACHED (attachExecution), not dispatched by this page: its
+   * callbacks were declared by a page that no longer exists and are settled by the
+   * server alone, so this tab reports no callback verdict for it (callbackStatus
+   * undefined) and never hands its markers to Resubmit.
+   */
+  const attachedRef = useRef(false);
+  /** Highest stream `seq` delivered for the current run — the re-show resume cursor. */
+  const lastSeqRef = useRef(0);
   /** Bumped on every dispatch — lets a late callback settle tell whether its run is still current. */
   const runTokenRef = useRef(0);
   /** The current run's declared callbacks — the server settles them; non-empty means "await its verdict". */
@@ -357,13 +376,16 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
    */
   const finishRun = useCallback((
     success: boolean,
-    opts?: { callbackStatus?: CallbackStatus; taskId?: string | null; register?: boolean },
+    opts?: { callbackStatus?: CallbackStatus; outcomeUnknown?: boolean; taskId?: string | null; register?: boolean },
   ) => {
     dispatchingRef.current = false; // run terminated — allow the next dispatch
     const tid = opts?.taskId !== undefined ? opts.taskId : currentTaskIdRef.current;
     if (tid && opts?.register !== false) registerTaskComplete(tid, instanceId, success);
     const id = tid ?? INTERACTIVE_TASK_ID;
-    if (opts?.callbackStatus) onTaskComplete?.(id, success, { callbackStatus: opts.callbackStatus });
+    const meta: TaskCompleteMeta = {};
+    if (opts?.callbackStatus) meta.callbackStatus = opts.callbackStatus;
+    if (opts?.outcomeUnknown) meta.outcomeUnknown = true;
+    if (meta.callbackStatus || meta.outcomeUnknown) onTaskComplete?.(id, success, meta);
     else onTaskComplete?.(id, success);
   }, [instanceId, onTaskComplete]);
 
@@ -373,11 +395,30 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
    * synchronously on arrival and calls finishRun after the bounded callback-settle
    * race, so it can carry the resolved `callbackStatus`.
    */
-  const completeOnce = useCallback((success: boolean) => {
+  const completeOnce = useCallback((success: boolean, opts?: { outcomeUnknown?: boolean }) => {
     if (completedRef.current) return;
     completedRef.current = true;
-    finishRun(success);
+    finishRun(success, opts);
   }, [finishRun]);
+
+  /**
+   * The run's execution is gone from the server (it ended over an hour ago, or the
+   * server restarted): nothing is left to watch or abort, and its outcome was never
+   * observed — end it as UNKNOWN (never as a failure) with a plain system line.
+   */
+  const endLostRun = useCallback(() => {
+    if (completedRef.current) return;
+    const execId = executionIdRef.current;
+    executionIdRef.current = null;
+    savedStreamUrlRef.current = null;
+    if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
+    clearHeartbeat();
+    addLog({
+      id: `lost-${Date.now()}`, type: 'system', timestamp: Date.now(),
+      content: `Run ${execId ?? ''} is no longer on the server (it ended over an hour ago, or the server restarted) — its outcome is unknown.`,
+    });
+    completeOnce(false, { outcomeUnknown: true });
+  }, [addLog, clearHeartbeat, completeOnce]);
 
   /**
    * Surface the server's callback verdict for the current run: log it and hand any
@@ -466,7 +507,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         // frame right after `result`. A run that declared none reports 'missing'
         // when no marker was emitted, 'failed' when one was (nothing can submit it).
         let verdict: Promise<CallbackStatus | undefined>;
-        if (declaredCallbacksRef.current.length > 0) {
+        if (attachedRef.current) {
+          // Attached after a reload: the callbacks were declared by the page that
+          // dispatched the run and are the server's alone to settle — no verdict here.
+          verdict = Promise.resolve(undefined);
+        } else if (declaredCallbacksRef.current.length > 0) {
           verdict = new Promise((resolve) => { callbacksWaiterRef.current = resolve; });
         } else {
           const stray = extractAllCallbackPayloads(assistantOutputRef.current);
@@ -500,6 +545,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       }
       case 'callbacks': {
         // The server's settlement of this run's declared callbacks (see above).
+        if (attachedRef.current) break; // an attached run reports no callback verdict (see result)
         const data = event.data as { status?: CallbackStatus | null; failed?: ServerFailedCallback[] };
         const status = data.status ?? undefined;
         if (status) applyServerVerdict(status, Array.isArray(data.failed) ? data.failed : [], runTokenRef.current);
@@ -509,6 +555,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       case 'error': {
         const data = event.data as { error: string };
         dispatch({ type: 'SSE_ERROR', error: data.error });
+        if (data.error === EXECUTION_NOT_FOUND) {
+          assistantOutputRef.current = '';
+          endLostRun();
+          break;
+        }
         clearHeartbeat();
         addLog({ id: `error-${Date.now()}`, type: 'error', content: data.error, timestamp: event.timestamp });
         assistantOutputRef.current = '';
@@ -516,21 +567,32 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         break;
       }
     }
-  }, [addLog, addFileChange, instanceId, clearHeartbeat, completeOnce, finishRun, applyServerVerdict]);
+  }, [addLog, addFileChange, instanceId, clearHeartbeat, completeOnce, finishRun, applyServerVerdict, endLostRun]);
 
-  const connectToStream = useCallback((streamUrl: string) => {
+  /**
+   * Open the run's stream. A fresh connection replays the whole execution log; a
+   * `resume` (re-show) asks only for what came after the last `seq` delivered, so
+   * the transcript is never replayed on top of itself.
+   */
+  const connectToStream = useCallback((streamUrl: string, resume = false) => {
     if (eventSourceRef.current) eventSourceRef.current.close();
     savedStreamUrlRef.current = streamUrl;
+    if (!resume) lastSeqRef.current = 0;
+    const after = lastSeqRef.current;
     // Fresh live connection for this run — arm the shared completion latch. The
     // clean-result path re-latches synchronously on result arrival; every other
     // terminal path (onerror, abort, stuck poller) reads this same ref so the run
     // completes exactly once regardless of which observes the stream end.
     completedRef.current = false;
-    const eventSource = new EventSource(streamUrl);
+    const eventSource = new EventSource(after > 0 ? `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}after=${after}` : streamUrl);
     eventSourceRef.current = eventSource;
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as CLISSEEvent;
+        if (typeof data.seq === 'number') {
+          if (data.seq <= lastSeqRef.current) return; // already delivered to this run
+          lastSeqRef.current = data.seq;
+        }
         handleSSEEvent(data);
         // A run that declared callbacks ends with the server's `callbacks` verdict.
         const ends = data.type === 'error' || data.type === 'callbacks'
@@ -587,6 +649,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
     assistantOutputRef.current = '';
     completedRef.current = false;
+    attachedRef.current = false;
     dispatch({ type: 'TASK_START', taskId: task.id });
     onTaskStart?.(task.id);
 
@@ -612,6 +675,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label, ...(callbacks.length > 0 ? { callbacks } : {}) }),
       });
       executionIdRef.current = data.executionId;
+      onExecutionStartedRef.current?.(data.executionId);
       // Record which execution backs this task so a future 409-conflict
       // recovery (above) can kill the real process. Fire-and-forget.
       void attachTaskExecution(task.id, data.executionId);
@@ -641,6 +705,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     dispatchingRef.current = true;
     assistantOutputRef.current = '';
     completedRef.current = false;
+    attachedRef.current = false;
     dispatch({ type: 'SUBMIT_START' });
     // Announce the run start synchronously — before any await — so the host's run
     // door opens before any terminal path can fire (see store/sessionRun.ts).
@@ -672,6 +737,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskType: opts?.taskType ?? attribution.taskType, ...(callbacks.length > 0 ? { callbacks } : {}) }),
       });
       executionIdRef.current = data.executionId;
+      onExecutionStartedRef.current?.(data.executionId);
       dispatch({ type: 'SET_RESOLVED_MODEL', model: data.model ?? null, effort: data.effort ?? null });
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
@@ -681,6 +747,31 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       completeOnce(false);
     }
   }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, onTaskStart, enabledSkills]);
+
+  // --- Attach (re-open a live server run this page did not dispatch) ---
+
+  /**
+   * Resume the server run `executionId` — e.g. the one a session owned before a
+   * reload. Starts the run through onTaskStart (Running, Abort armed), opens ONE
+   * stream that replays its transcript from the start, and ends it with its real
+   * outcome. It never POSTs a query (no second spawn) and never a callback. Returns
+   * false when a run is already dispatching/streaming here.
+   */
+  const attachExecution = useCallback((executionId: string): boolean => {
+    if (!executionId || dispatchingRef.current) return false;
+    dispatchingRef.current = true;
+    runTokenRef.current++;
+    attachedRef.current = true;
+    declaredCallbacksRef.current = [];
+    assistantOutputRef.current = '';
+    completedRef.current = false;
+    executionIdRef.current = executionId;
+    dispatch({ type: 'SUBMIT_START' });
+    onTaskStart?.(INTERACTIVE_TASK_ID);
+    addLog({ id: `attach-${Date.now()}`, type: 'system', content: `Re-attached to run ${executionId}`, timestamp: Date.now() });
+    connectToStream(`/api/claude-terminal/stream?executionId=${encodeURIComponent(executionId)}`);
+    return true;
+  }, [addLog, connectToStream, onTaskStart]);
 
   // --- Abort ---
 
@@ -764,7 +855,14 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       let ex: HiddenRunStatus;
       try {
         ex = (await apiFetch<{ execution: HiddenRunStatus }>(`/api/claude-terminal/query?executionId=${encodeURIComponent(execId)}`)).execution;
-      } catch { return; /* transient — the next poll (or a re-show) retries */ }
+      } catch (e) {
+        // Gone from the server: nothing will ever end it — record it as unknown.
+        if (e instanceof Error && e.message === EXECUTION_NOT_FOUND && executionIdRef.current === execId) {
+          endLostRun();
+          dispatch({ type: 'STUCK_RESOLVED', success: false });
+        }
+        return; /* otherwise transient — the next poll (or a re-show) retries */
+      }
       if (completedRef.current || executionIdRef.current !== execId || ex.status === 'running') return;
       const clean = ex.status === 'completed';
       const declared = declaredCallbacksRef.current.length > 0;
@@ -780,7 +878,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       dispatch({ type: 'STUCK_RESOLVED', success });
     }, UI_TIMEOUTS.stuckCheckInterval);
     return () => clearInterval(poll);
-  }, [visible, streaming, finishRun, clearHeartbeat, applyServerVerdict]);
+  }, [visible, streaming, finishRun, clearHeartbeat, applyServerVerdict, endLostRun]);
 
   // --- Process task queue ---
 
@@ -802,9 +900,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   useEffect(() => {
     if (visible) {
-      // Re-show: reconnect SSE if we were streaming when hidden
+      // Re-show: reconnect SSE if we were streaming when hidden — resuming after the
+      // last event already on screen, never replaying the transcript on top of itself.
       if (streaming && savedStreamUrlRef.current && !eventSourceRef.current) {
-        connectToStream(savedStreamUrlRef.current);
+        connectToStream(savedStreamUrlRef.current, true);
       }
       // Restart heartbeats too. They're started only once in executeTask and
       // cleared on hide (below); without this, a run hidden longer than the
@@ -837,7 +936,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) eventSourceRef.current.close();
+      // Null the ref too: a StrictMode remount must see no live stream so its
+      // visibility effect can resume (with the cursor) instead of holding a dead one.
+      if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       if (stuckCheckIntervalRef.current) clearInterval(stuckCheckIntervalRef.current);
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
@@ -858,6 +959,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     resolvedEffort: state.resolvedEffort,
     buildParseCache,
     submitPrompt,
+    attachExecution,
     handleAbort,
     handleClear,
   };
