@@ -1,4 +1,4 @@
-export type ViewTab = 'overview' | 'strings' | 'translations' | 'hazards' | 'qa' | 'tables';
+export type ViewTab = 'overview' | 'strings' | 'readiness' | 'translations' | 'hazards' | 'qa' | 'tables';
 
 export type StringPreset = 'hardcoded' | 'low-confidence' | 'missing-translations' | 'critical-hazards';
 
