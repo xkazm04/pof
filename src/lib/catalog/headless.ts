@@ -27,6 +27,8 @@ import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance
 import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
 import { canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
+import { stampTemplate } from '@/lib/catalog/produceTemplate';
+import { settlementOf, entityNextStep, type Settlement, type EntityStepPick } from '@/lib/catalog/stepSettlement';
 import { collectStepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
@@ -74,7 +76,8 @@ export interface StepRecipe {
   canonCategories: string[];
   /** The full instruction Claude should fulfil: canon prefix + the Produce line. */
   prompt: string;
-  /** A deterministic example of a passing artifact's data + the UE asset paths the step owns. */
+  /** The step body's deterministic output + the UE asset paths the step owns. For a non-exemplar entity
+   *  with a data-blind body it is the EXEMPLAR's content: stamped `data.template` and graded pending. */
   example: { data: Record<string, unknown>; ueAssetTargets: string[] } | null;
   /** The Acceptance contract, derived from the step's Checker (never a manual toggle). */
   acceptance: {
@@ -83,6 +86,8 @@ export interface StepRecipe {
     /** What the verdict would be if the example data were submitted — i.e. what "good" looks like. */
     exampleStatus?: string;
     exampleDetail?: string;
+    /** Why the example is not a pass (a `TEMPLATE:` reason when it is another entity's content). */
+    exampleReason?: string;
     /** The verdict for whatever is currently persisted (or the pending message if nothing is). */
     currentStatus: string;
     currentDetail?: string;
@@ -90,6 +95,8 @@ export interface StepRecipe {
   };
   /** What's already persisted for this step, if anything (so Claude sees prior work). */
   current: { data: Record<string, unknown>; status: string; tier?: string; ueAssets: string[] } | null;
+  /** What settles the CURRENT verdict (`stepSettlement`); null when it is a pass. */
+  settle: Settlement | null;
 }
 
 /**
@@ -421,7 +428,9 @@ export function buildStepRecipe(
 
   let example: StepRecipe['example'] = null;
   try {
-    const out = spec.produce(labEntity);
+    // Stamped exactly as the lab's stub write is, so the guarded checker holds another entity's
+    // template at pending instead of presenting it as passing data (D12, one field over).
+    const out = stampTemplate(catalogId, spec, labEntity, spec.produce(labEntity));
     example = { data: out.data ?? {}, ueAssetTargets: out.ueAssets ?? [] };
   } catch {
     example = null;
@@ -464,6 +473,7 @@ export function buildStepRecipe(
     label: exampleRes?.label ?? pendingRes?.label ?? spec.label,
     tier: exampleRes?.tier ?? pendingRes?.tier ?? 'L0',
     ...(exampleRes ? { exampleStatus: exampleRes.status, exampleDetail: exampleRes.detail } : {}),
+    ...(exampleRes?.reason ? { exampleReason: exampleRes.reason } : {}),
     currentStatus: curRes?.status ?? pendingRes?.status ?? 'pending',
     ...(!cur && pendingRes?.detail ? { currentDetail: pendingRes.detail } : {}),
     ...(curRes?.reason ? { currentReason: curRes.reason } : {}),
@@ -483,6 +493,7 @@ export function buildStepRecipe(
     example,
     acceptance,
     current,
+    settle: settlementOf(curRes ?? pendingRes, spec),
   };
 }
 
@@ -499,6 +510,20 @@ export interface SubmitResult {
   };
   /** The DERIVED acceptance verdict — the server grades the submission; Claude never self-grades. */
   acceptance: { status: string; tier: string; label: string; detail?: string; reason?: string };
+  /** What settles this verdict, and the step the lab coach ladder picks next for the entity. */
+  next: { settle: Settlement | null; entityStep: EntityStepPick | null };
+}
+
+/** The ladder pick over the entity's profile-scoped steps, reading persisted judge-bridged verdicts. */
+function nextEntityStep(catalogId: string, entityId: string): EntityStepPick | null {
+  const pipeline = getCatalogPipeline(catalogId);
+  if (!pipeline) return null;
+  const entity = seededEntities(catalogId).find((e) => e.id === entityId);
+  const arts = new Map(listArtifacts(catalogId, entityId).map((a) => [a.step, a]));
+  return entityNextStep(stepsForProfile(pipeline, canonProfileOf(entity)), (step) => {
+    const a = arts.get(step);
+    return a ? bridgeAcceptance(catalogId, entityId, step, { label: step, tier: a.tier ?? 'L0', status: a.status, detail: '', ...(a.reason ? { reason: a.reason } : {}) }, a.data) : null;
+  });
 }
 
 /** What the one write door (`@/lib/catalog/artifactCommit`) grades and syncs with. */
@@ -542,6 +567,13 @@ export function submitStepArtifact(
   // deliberate — judge_verdicts lives apart). The RETURNED acceptance the caller consumes
   // is bridged, so a current-rubric judge FAIL surfaces here instead of a stale pass.
   const bridged = res ? bridgeAcceptance(catalogId, entityId, step, res) : res;
+  const acceptance: SubmitResult['acceptance'] = {
+    status: bridged?.status ?? status,
+    tier: bridged?.tier ?? tier,
+    label: bridged?.label ?? res?.label ?? step,
+    ...(bridged?.detail ? { detail: bridged.detail } : {}),
+    ...(bridged?.reason ? { reason: bridged.reason } : reason ? { reason } : {}),
+  };
   return {
     artifact: {
       catalogId: artifact.catalogId,
@@ -553,12 +585,10 @@ export function submitStepArtifact(
       ...(artifact.tier ? { tier: artifact.tier } : {}),
       ...(artifact.reason ? { reason: artifact.reason } : {}),
     },
-    acceptance: {
-      status: bridged?.status ?? status,
-      tier: bridged?.tier ?? tier,
-      label: bridged?.label ?? res?.label ?? step,
-      ...(bridged?.detail ? { detail: bridged.detail } : {}),
-      ...(bridged?.reason ? { reason: bridged.reason } : reason ? { reason } : {}),
+    acceptance,
+    next: {
+      settle: settlementOf(acceptance, getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step)),
+      entityStep: nextEntityStep(catalogId, entityId),
     },
   };
 }
