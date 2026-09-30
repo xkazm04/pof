@@ -3,7 +3,8 @@ import type { VerificationResult } from '@/types/pof-bridge';
 import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, ACCENT_CYAN_LIGHT, statusBg, statusBorder } from '@/lib/chart-colors';
 
 export function VerificationSummaryBanner({ results }: { results: VerificationResult[] }) {
-  const changed = results.filter((r) => r.previousStatus !== null && r.previousStatus !== r.newStatus);
+  // Name what the apply WROTE, not just how many: the user picked these rows.
+  const written = results.filter((r) => r.written);
   const writeError = results.find((r) => r.writeError)?.writeError;
   const implemented = results.filter((r) => r.newStatus === 'implemented' || r.newStatus === 'improved').length;
   const partial = results.filter((r) => r.newStatus === 'partial').length;
@@ -33,9 +34,13 @@ export function VerificationSummaryBanner({ results }: { results: VerificationRe
           <span style={{ color: STATUS_ERROR }}>{missing} missing</span>
         )}
       </span>
-      {changed.length > 0 && !writeError && (
-        <span className="text-2xs" style={{ color: ACCENT_CYAN_LIGHT }}>
-          {changed.length} status{changed.length !== 1 ? 'es' : ''} updated
+      {!writeError && (
+        <span data-testid="verify-written" className="text-2xs min-w-0" style={{ color: ACCENT_CYAN_LIGHT }}>
+          {written.length === 0
+            ? 'nothing written'
+            : `wrote ${written.length}: ${written
+                .map((r) => `${r.featureName} (${r.previousStatus ?? 'no row'} -> ${r.newStatus})`)
+                .join(', ')}`}
         </span>
       )}
       {writeError && (

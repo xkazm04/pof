@@ -9,7 +9,7 @@
  */
 
 import type { SubModuleId } from './modules';
-import type { FeatureStatus } from './feature-matrix';
+import type { FeatureSource, FeatureStatus } from './feature-matrix';
 
 // ── Plugin Status ────────────────────────────────────────────────────────────
 
@@ -370,10 +370,23 @@ export interface PofHotPatchResult {
 
 // ── Verification ─────────────────────────────────────────────────────────────
 
+/**
+ * What a rule concluded AND the manifest assets that justify it. `evidence` is the
+ * paths of the assets the check matched — empty when nothing matched (a `missing`
+ * verdict from an asset manifest is absence of a Blueprint/asset, never proof that
+ * a C++-only feature is absent).
+ */
+export interface VerificationVerdict {
+  status: FeatureStatus;
+  evidence: string[];
+}
+
 export interface VerificationRule {
   featureName: string;
   moduleId: SubModuleId;
-  check: (manifest: AssetManifest) => FeatureStatus;
+  /** Built-in rules return a {@link VerificationVerdict}; a bare status is accepted
+   *  for ad-hoc rules and reads as a verdict with no evidence. */
+  check: (manifest: AssetManifest) => VerificationVerdict | FeatureStatus;
 }
 
 export interface VerificationResult {
@@ -382,6 +395,57 @@ export interface VerificationResult {
   previousStatus: FeatureStatus | null;
   newStatus: FeatureStatus;
   details?: string;
+  /** Manifest asset paths that justify `newStatus` (see {@link VerificationVerdict}). */
+  evidence?: string[];
+  /** True when this verdict was WRITTEN to the matrix by an apply. */
+  written?: boolean;
   /** Set when the batch write failed — the statuses above did NOT persist. */
   writeError?: string;
+}
+
+/** Direction of a proposed flip on the status ladder missing < partial < implemented < improved.
+ *  `lateral` = the row had no verdict (`unknown` / no row) and the rule says `missing`. */
+export type VerificationChangeKind = 'upgrade' | 'downgrade' | 'lateral';
+
+/** One proposed status flip, shown to the user before anything is written. */
+export interface VerificationChange {
+  featureName: string;
+  moduleId: SubModuleId;
+  /** The stored status, or null when the feature has no row in this scope yet. */
+  from: FeatureStatus | null;
+  to: FeatureStatus;
+  evidence: string[];
+  kind: VerificationChangeKind;
+  /** False for a downgrade of a `review` or `fix` verdict: a heuristic over asset
+   *  paths must not lower a human-read verdict unless the user picks it. */
+  selectedByDefault: boolean;
+  /** Provenance of the stored row (`FeatureSource`), absent when there is no row. */
+  fromSource?: FeatureSource;
+  /** The stored row's non-status fields, carried so the apply's full upsert keeps them. */
+  base?: {
+    category: string;
+    description: string;
+    filePaths: string[];
+    qualityScore: number | null;
+    nextSteps: string;
+  };
+}
+
+/** A rule whose feature is not declared for its module: never proposed, never written. */
+export interface VerificationRefusal {
+  featureName: string;
+  moduleId: SubModuleId;
+  reason: 'undeclared';
+}
+
+/** Pure output of `planVerification` — the preview the user decides on. */
+export interface VerificationPlan {
+  moduleId: SubModuleId;
+  assetCount: number;
+  changes: VerificationChange[];
+  /** Declared features whose stored status already equals the rule's verdict. */
+  unchanged: VerificationResult[];
+  refused: VerificationRefusal[];
+  /** Every evaluated (declared) rule, changed or not — the per-row badge source. */
+  results: VerificationResult[];
 }

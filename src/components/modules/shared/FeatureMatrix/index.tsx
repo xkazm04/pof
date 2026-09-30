@@ -17,6 +17,7 @@ import { StatusFilterChips } from './StatusFilterChips';
 import { QualitySparkline } from './QualitySparkline';
 import { ReviewProgressBar } from './ReviewProgressBar';
 import { VerificationSummaryBanner } from './VerificationSummaryBanner';
+import { VerifyPreviewPanel } from './VerifyPreviewPanel';
 import { QualityRangeFilter } from './QualityRangeFilter';
 import { SortButton } from './SortButton';
 import { FeatureList } from './FeatureList';
@@ -30,7 +31,11 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     error,
     retry,
     refetch,
-    runAutoVerify,
+    previewAutoVerify,
+    applyAutoVerify,
+    discardAutoVerify,
+    verifyPlan,
+    verifyError,
     isVerifying,
     verificationResults,
     bridgeConnected,
@@ -189,7 +194,8 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           )}
           {bridgeConnected && (
             <button
-              onClick={runAutoVerify}
+              // Opens a PREVIEW of the proposed flips — nothing is written until Apply.
+              onClick={() => { void previewAutoVerify(); }}
               disabled={isVerifying}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
               style={{
@@ -197,7 +203,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                 color: STATUS_SUCCESS,
                 border: `1px solid ${statusBorder(STATUS_SUCCESS)}`,
               }}
-              title="Auto-verify features against UE5 asset manifest"
+              title="Preview status changes proposed by the UE5 asset manifest"
             >
               {isVerifying ? (
                 <>
@@ -240,8 +246,23 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
         />
       )}
 
-      {/* Verification results summary — shown after auto-verify */}
-      {verificationResults.length > 0 && (
+      {/* Auto-Verify preview — the proposed flips with their evidence; writes only the picks */}
+      {verifyPlan && (
+        <VerifyPreviewPanel
+          plan={verifyPlan}
+          onApply={(names) => { void applyAutoVerify(names); }}
+          onClose={discardAutoVerify}
+          isApplying={isVerifying}
+        />
+      )}
+      {verifyError && !verifyPlan && (
+        <p data-testid="verify-error" className="text-xs" style={{ color: STATUS_WARNING }}>
+          Auto-Verify proposed nothing: {verifyError}
+        </p>
+      )}
+
+      {/* Verification results summary — shown after an apply */}
+      {!verifyPlan && verificationResults.length > 0 && (
         <VerificationSummaryBanner results={verificationResults} />
       )}
 

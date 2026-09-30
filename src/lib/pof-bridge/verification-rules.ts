@@ -1,62 +1,82 @@
-import type { VerificationRule, AssetManifest } from '@/types/pof-bridge';
+import type { VerificationRule, VerificationVerdict, AssetManifest } from '@/types/pof-bridge';
+import type { FeatureStatus } from '@/types/feature-matrix';
 
 /**
  * Verification rules that check the UE5 asset manifest for evidence
- * of implemented features. Used by the verification engine to
- * auto-update the Feature Matrix.
+ * of implemented features. Used by the verification engine to PROPOSE
+ * Feature Matrix flips (see `planVerification`); nothing here writes.
  *
- * Each rule maps a featureName + moduleId pair to a check function that
- * inspects the manifest and returns a FeatureStatus.
+ * Each rule maps a DECLARED featureName + moduleId pair (a feature in
+ * `MODULE_FEATURE_DEFINITIONS[moduleId]` — pinned by a drift test) to a check
+ * that returns a verdict AND the manifest assets that justify it.
+ *
+ * The manifest lists assets, not C++ classes: a `missing` verdict means "no
+ * matching asset", which is why a proposed downgrade of a review/fix verdict is
+ * never picked by default.
  */
+
+interface HasPath {
+  path: string;
+}
+
+/** Found-or-missing: `status` when anything matched, with the matched assets as evidence. */
+function matched(assets: HasPath[], status: FeatureStatus = 'implemented'): VerificationVerdict {
+  return assets.length > 0
+    ? { status, evidence: assets.map((a) => a.path) }
+    : { status: 'missing', evidence: [] };
+}
+
+/** Count-tiered: implemented at `implementedAt` matches, partial at `partialAt`. */
+function tiered(assets: HasPath[], implementedAt: number, partialAt = 1): VerificationVerdict {
+  const evidence = assets.map((a) => a.path);
+  if (assets.length >= implementedAt) return { status: 'implemented', evidence };
+  if (assets.length >= partialAt) return { status: 'partial', evidence };
+  return { status: 'missing', evidence };
+}
+
+const lower = (s: string) => s.toLowerCase();
+
 export const VERIFICATION_RULES: VerificationRule[] = [
   // ── arpg-character ──────────────────────────────────────────────────────────
 
   {
     featureName: 'AARPGCharacterBase',
     moduleId: 'arpg-character',
-    check: (m: AssetManifest) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.parentCppClass.includes('ARPGCharacterBase') ||
-          (bp.path.toLowerCase().includes('character') &&
-            bp.path.toLowerCase().includes('base')),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m: AssetManifest) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            bp.parentCppClass.includes('ARPGCharacterBase') ||
+            (lower(bp.path).includes('character') && lower(bp.path).includes('base')),
+        ),
+      ),
   },
   {
     featureName: 'AARPGPlayerCharacter',
     moduleId: 'arpg-character',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('player') &&
-          bp.path.toLowerCase().includes('character'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) => lower(bp.path).includes('player') && lower(bp.path).includes('character'),
+        ),
+      ),
   },
   {
+    // IA_* actions WITH an IMC_* mapping context (the former 'Input Mapping Context'
+    // rule named no declared feature; the declared feature asks for both).
     featureName: 'Enhanced Input actions',
     moduleId: 'arpg-character',
     check: (m) => {
-      const inputAssets = m.otherAssets.filter(
+      const actions = m.otherAssets.filter(
         (a) => a.assetClass.includes('InputAction') || a.path.includes('IA_'),
       );
-      if (inputAssets.length >= 5) return 'implemented';
-      if (inputAssets.length >= 2) return 'partial';
-      return 'missing';
-    },
-  },
-  {
-    featureName: 'Input Mapping Context',
-    moduleId: 'arpg-character',
-    check: (m) => {
-      const found = m.otherAssets.some(
-        (a) =>
-          a.assetClass.includes('InputMappingContext') || a.path.includes('IMC_'),
+      const contexts = m.otherAssets.filter(
+        (a) => a.assetClass.includes('InputMappingContext') || a.path.includes('IMC_'),
       );
-      return found ? 'implemented' : 'missing';
+      const evidence = [...actions, ...contexts].map((a) => a.path);
+      if (actions.length >= 5 && contexts.length > 0) return { status: 'implemented', evidence };
+      if (actions.length >= 2 || contexts.length > 0) return { status: 'partial', evidence };
+      return { status: 'missing', evidence };
     },
   },
 
@@ -65,50 +85,36 @@ export const VERIFICATION_RULES: VerificationRule[] = [
   {
     featureName: 'AbilitySystemComponent',
     moduleId: 'arpg-gas',
-    check: (m) => {
-      const found = m.blueprints.some((bp) =>
-        bp.addedComponents.some((c) =>
-          c.componentClass.includes('AbilitySystem'),
+    check: (m) =>
+      matched(
+        m.blueprints.filter((bp) =>
+          bp.addedComponents.some((c) => c.componentClass.includes('AbilitySystem')),
         ),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+      ),
   },
   {
     featureName: 'Core AttributeSet',
     moduleId: 'arpg-gas',
-    check: (m) => {
-      const found = m.blueprints.some((bp) =>
-        bp.parentCppClass.includes('AttributeSet'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) => matched(m.blueprints.filter((bp) => bp.parentCppClass.includes('AttributeSet'))),
   },
   {
-    featureName: 'Gameplay Abilities',
+    // Formerly 'Gameplay Abilities': Blueprint abilities subclassing the ability base.
+    featureName: 'Base GameplayAbility',
     moduleId: 'arpg-gas',
-    check: (m) => {
-      const abilities = m.blueprints.filter((bp) =>
-        bp.parentCppClass.includes('GameplayAbility'),
-      );
-      if (abilities.length >= 3) return 'implemented';
-      if (abilities.length >= 1) return 'partial';
-      return 'missing';
-    },
+    check: (m) =>
+      tiered(m.blueprints.filter((bp) => bp.parentCppClass.includes('GameplayAbility')), 3),
   },
   {
-    featureName: 'Gameplay Effects',
+    // Formerly 'Gameplay Effects'.
+    featureName: 'Core Gameplay Effects',
     moduleId: 'arpg-gas',
-    check: (m) => {
-      const effects = m.blueprints.filter(
-        (bp) =>
-          bp.parentCppClass.includes('GameplayEffect') ||
-          bp.path.includes('GE_'),
-      );
-      if (effects.length >= 3) return 'implemented';
-      if (effects.length >= 1) return 'partial';
-      return 'missing';
-    },
+    check: (m) =>
+      tiered(
+        m.blueprints.filter(
+          (bp) => bp.parentCppClass.includes('GameplayEffect') || bp.path.includes('GE_'),
+        ),
+        3,
+      ),
   },
 
   // ── arpg-animation ──────────────────────────────────────────────────────────
@@ -117,63 +123,49 @@ export const VERIFICATION_RULES: VerificationRule[] = [
     featureName: 'Animation state machine',
     moduleId: 'arpg-animation',
     check: (m) => {
-      const abps = m.animAssets.filter((a) => a.assetType === 'AnimBlueprint');
-      const withSM = abps.filter(
-        (a) => a.stateMachines && a.stateMachines.length > 0,
+      const withSM = m.animAssets.filter(
+        (a) => a.assetType === 'AnimBlueprint' && a.stateMachines && a.stateMachines.length > 0,
       );
-      if (withSM.length > 0) {
-        const totalStates = withSM.reduce(
-          (sum, a) =>
-            sum +
-            (a.stateMachines?.reduce((s, sm) => s + sm.states.length, 0) ?? 0),
-          0,
-        );
-        return totalStates >= 3 ? 'implemented' : 'partial';
-      }
-      return 'missing';
+      if (withSM.length === 0) return { status: 'missing', evidence: [] };
+      const totalStates = withSM.reduce(
+        (sum, a) => sum + (a.stateMachines?.reduce((s, sm) => s + sm.states.length, 0) ?? 0),
+        0,
+      );
+      return { status: totalStates >= 3 ? 'implemented' : 'partial', evidence: withSM.map((a) => a.path) };
     },
   },
   {
     featureName: 'Attack montages',
     moduleId: 'arpg-animation',
-    check: (m) => {
-      const montages = m.animAssets.filter(
-        (a) =>
-          a.assetType === 'AnimMontage' &&
-          (a.path.toLowerCase().includes('attack') ||
-            a.path.toLowerCase().includes('combo')),
-      );
-      if (montages.length >= 3) return 'implemented';
-      if (montages.length >= 1) return 'partial';
-      return 'missing';
-    },
+    check: (m) =>
+      tiered(
+        m.animAssets.filter(
+          (a) =>
+            a.assetType === 'AnimMontage' &&
+            (lower(a.path).includes('attack') || lower(a.path).includes('combo')),
+        ),
+        3,
+      ),
   },
   {
     featureName: 'Anim Notify classes',
     moduleId: 'arpg-animation',
     check: (m) => {
-      const withNotifies = m.animAssets.filter(
-        (a) => a.notifies && a.notifies.length > 0,
-      );
+      const withNotifies = m.animAssets.filter((a) => a.notifies && a.notifies.length > 0);
       const uniqueClasses = new Set(
         withNotifies.flatMap((a) => a.notifies?.map((n) => n.notifyClass) ?? []),
       );
-      if (uniqueClasses.size >= 3) return 'implemented';
-      if (uniqueClasses.size >= 1) return 'partial';
-      return 'missing';
+      const evidence = withNotifies.map((a) => a.path);
+      if (uniqueClasses.size >= 3) return { status: 'implemented', evidence };
+      if (uniqueClasses.size >= 1) return { status: 'partial', evidence };
+      return { status: 'missing', evidence };
     },
   },
   {
-    featureName: 'Blend Spaces',
+    // Formerly 'Blend Spaces'.
+    featureName: 'Locomotion Blend Space',
     moduleId: 'arpg-animation',
-    check: (m) => {
-      const blendSpaces = m.animAssets.filter(
-        (a) => a.assetType === 'BlendSpace',
-      );
-      if (blendSpaces.length >= 2) return 'implemented';
-      if (blendSpaces.length >= 1) return 'partial';
-      return 'missing';
-    },
+    check: (m) => tiered(m.animAssets.filter((a) => a.assetType === 'BlendSpace'), 2),
   },
 
   // ── arpg-combat ─────────────────────────────────────────────────────────────
@@ -181,42 +173,42 @@ export const VERIFICATION_RULES: VerificationRule[] = [
   {
     featureName: 'Melee attack ability',
     moduleId: 'arpg-combat',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.parentCppClass.includes('GameplayAbility') &&
-          (bp.path.toLowerCase().includes('melee') ||
-            bp.path.toLowerCase().includes('attack')),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            bp.parentCppClass.includes('GameplayAbility') &&
+            (lower(bp.path).includes('melee') || lower(bp.path).includes('attack')),
+        ),
+      ),
   },
   {
     featureName: 'Hit detection',
     moduleId: 'arpg-combat',
-    check: (m) => {
-      const hitNotifies = m.animAssets.some((a) =>
-        a.notifies?.some(
-          (n) =>
-            n.notifyClass.toLowerCase().includes('hit') ||
-            n.notifyClass.toLowerCase().includes('trace') ||
-            n.notifyClass.toLowerCase().includes('damage'),
+    check: (m) =>
+      matched(
+        m.animAssets.filter((a) =>
+          a.notifies?.some(
+            (n) =>
+              lower(n.notifyClass).includes('hit') ||
+              lower(n.notifyClass).includes('trace') ||
+              lower(n.notifyClass).includes('damage'),
+          ),
         ),
-      );
-      return hitNotifies ? 'implemented' : 'missing';
-    },
+      ),
   },
   {
-    featureName: 'Damage Gameplay Effect',
+    // Formerly 'Damage Gameplay Effect'. A damage GE asset is the effect the hit
+    // applies, not proof that anything applies it on hit: capped at partial.
+    featureName: 'GAS damage application',
     moduleId: 'arpg-combat',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.parentCppClass.includes('GameplayEffect') &&
-          bp.path.toLowerCase().includes('damage'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) => bp.parentCppClass.includes('GameplayEffect') && lower(bp.path).includes('damage'),
+        ),
+        'partial',
+      ),
   },
 
   // ── arpg-enemy-ai ───────────────────────────────────────────────────────────
@@ -224,35 +216,27 @@ export const VERIFICATION_RULES: VerificationRule[] = [
   {
     featureName: 'AARPGEnemyCharacter',
     moduleId: 'arpg-enemy-ai',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('enemy') &&
-          bp.path.toLowerCase().includes('character'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) => lower(bp.path).includes('enemy') && lower(bp.path).includes('character'),
+        ),
+      ),
   },
   {
+    // The former 'Blackboard' rule named no declared feature; its assets now count
+    // as supporting evidence for the tree they serve.
     featureName: 'Behavior Tree',
     moduleId: 'arpg-enemy-ai',
     check: (m) => {
-      const found = m.otherAssets.some(
-        (a) =>
-          a.assetClass.includes('BehaviorTree') || a.path.includes('BT_'),
+      const trees = m.otherAssets.filter(
+        (a) => a.assetClass.includes('BehaviorTree') || a.path.includes('BT_'),
       );
-      return found ? 'implemented' : 'missing';
-    },
-  },
-  {
-    featureName: 'Blackboard',
-    moduleId: 'arpg-enemy-ai',
-    check: (m) => {
-      const found = m.otherAssets.some(
-        (a) =>
-          a.assetClass.includes('BlackboardData') || a.path.includes('BB_'),
+      if (trees.length === 0) return { status: 'missing', evidence: [] };
+      const boards = m.otherAssets.filter(
+        (a) => a.assetClass.includes('BlackboardData') || a.path.includes('BB_'),
       );
-      return found ? 'implemented' : 'missing';
+      return { status: 'implemented', evidence: [...trees, ...boards].map((a) => a.path) };
     },
   },
 
@@ -261,110 +245,87 @@ export const VERIFICATION_RULES: VerificationRule[] = [
   {
     featureName: 'UARPGInventoryComponent',
     moduleId: 'arpg-inventory',
-    check: (m) => {
-      const found = m.blueprints.some((bp) =>
-        bp.addedComponents.some((c) =>
-          c.componentClass.toLowerCase().includes('inventory'),
+    check: (m) =>
+      matched(
+        m.blueprints.filter((bp) =>
+          bp.addedComponents.some((c) => lower(c.componentClass).includes('inventory')),
         ),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+      ),
   },
   {
     featureName: 'UARPGItemDefinition',
     moduleId: 'arpg-inventory',
-    check: (m) => {
-      const found = m.dataTables.some(
-        (dt) =>
-          dt.rowStruct.toLowerCase().includes('item') ||
-          dt.path.toLowerCase().includes('item'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.dataTables.filter(
+          (dt) => lower(dt.rowStruct).includes('item') || lower(dt.path).includes('item'),
+        ),
+      ),
   },
   {
-    featureName: 'Equipment slots',
+    // Formerly 'Equipment slots'.
+    featureName: 'Equipment slot system',
     moduleId: 'arpg-inventory',
-    check: (m) => {
-      const found =
-        m.dataTables.some(
-          (dt) =>
-            dt.rowStruct.toLowerCase().includes('equipment') ||
-            dt.path.toLowerCase().includes('equipment'),
-        ) ||
-        m.blueprints.some(
-          (bp) =>
-            bp.path.toLowerCase().includes('equipment') &&
-            bp.path.toLowerCase().includes('slot'),
-        );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched([
+        ...m.dataTables.filter(
+          (dt) => lower(dt.rowStruct).includes('equipment') || lower(dt.path).includes('equipment'),
+        ),
+        ...m.blueprints.filter(
+          (bp) => lower(bp.path).includes('equipment') && lower(bp.path).includes('slot'),
+        ),
+      ]),
   },
 
   // ── arpg-loot ───────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Loot table data',
+    // Formerly 'Loot table data'.
+    featureName: 'UARPGLootTable',
     moduleId: 'arpg-loot',
-    check: (m) => {
-      const found = m.dataTables.some(
-        (dt) =>
-          dt.rowStruct.toLowerCase().includes('loot') ||
-          dt.path.toLowerCase().includes('loot'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.dataTables.filter(
+          (dt) => lower(dt.rowStruct).includes('loot') || lower(dt.path).includes('loot'),
+        ),
+      ),
   },
   {
-    featureName: 'Drop component',
+    // Formerly 'Drop component'. A loot/drop component is the mechanism, not proof
+    // it rolls on death: capped at partial.
+    featureName: 'Loot drop on death',
     moduleId: 'arpg-loot',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.addedComponents.some(
-            (c) =>
-              c.componentClass.toLowerCase().includes('loot') ||
-              c.componentClass.toLowerCase().includes('drop'),
-          ) ||
-          (bp.path.toLowerCase().includes('loot') &&
-            bp.path.toLowerCase().includes('drop')),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            bp.addedComponents.some(
+              (c) =>
+                lower(c.componentClass).includes('loot') || lower(c.componentClass).includes('drop'),
+            ) ||
+            (lower(bp.path).includes('loot') && lower(bp.path).includes('drop')),
+        ),
+        'partial',
+      ),
   },
 
   // ── materials ───────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Base material library',
+    // Replaces 'Base material library' / 'Material instances' / 'Parameterized
+    // materials' (none declared): a master material is a parameterized parent that
+    // instances derive from.
+    featureName: 'Master material',
     moduleId: 'materials',
     check: (m) => {
-      if (m.materials.length >= 5) return 'implemented';
-      if (m.materials.length >= 1) return 'partial';
-      return 'missing';
-    },
-  },
-  {
-    featureName: 'Material instances',
-    moduleId: 'materials',
-    check: (m) => {
-      const totalInstances = m.materials.reduce(
-        (sum, mat) => sum + mat.materialInstances.length,
-        0,
+      const masters = m.materials.filter(
+        (mat) => mat.parameters.length > 0 && mat.materialInstances.length > 0,
       );
-      if (totalInstances >= 5) return 'implemented';
-      if (totalInstances >= 1) return 'partial';
-      return 'missing';
-    },
-  },
-  {
-    featureName: 'Parameterized materials',
-    moduleId: 'materials',
-    check: (m) => {
-      const withParams = m.materials.filter((mat) => mat.parameters.length > 0);
-      if (withParams.length >= 3) return 'implemented';
-      if (withParams.length >= 1) return 'partial';
-      return 'missing';
+      if (masters.length > 0) return { status: 'implemented', evidence: masters.map((mat) => mat.path) };
+      return matched(
+        m.materials.filter((mat) => mat.parameters.length > 0 || mat.materialInstances.length > 0),
+        'partial',
+      );
     },
   },
 
@@ -373,226 +334,197 @@ export const VERIFICATION_RULES: VerificationRule[] = [
   {
     featureName: 'Main HUD widget',
     moduleId: 'arpg-ui',
+    check: (m) =>
+      matched(m.blueprints.filter((bp) => lower(bp.path).includes('hud') || bp.path.includes('WBP_'))),
+  },
+  {
+    // Formerly 'Health bar widget'. Only an ENEMY health bar widget is the declared
+    // feature; any other health bar widget is partial evidence.
+    featureName: 'Enemy health bars',
+    moduleId: 'arpg-ui',
     check: (m) => {
-      const found = m.blueprints.some(
+      const bars = m.blueprints.filter(
         (bp) =>
-          bp.path.toLowerCase().includes('hud') || bp.path.includes('WBP_'),
+          lower(bp.path).includes('health') &&
+          (bp.path.includes('WBP_') || lower(bp.path).includes('widget') || lower(bp.path).includes('bar')),
       );
-      return found ? 'implemented' : 'missing';
+      const enemy = bars.filter((bp) => lower(bp.path).includes('enemy'));
+      return enemy.length > 0 ? matched(enemy) : matched(bars, 'partial');
     },
   },
   {
-    featureName: 'Health bar widget',
+    // Formerly 'Inventory UI'.
+    featureName: 'Inventory screen',
     moduleId: 'arpg-ui',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('health') &&
-          (bp.path.includes('WBP_') ||
-            bp.path.toLowerCase().includes('widget') ||
-            bp.path.toLowerCase().includes('bar')),
-      );
-      return found ? 'implemented' : 'missing';
-    },
-  },
-  {
-    featureName: 'Inventory UI',
-    moduleId: 'arpg-ui',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('inventory') &&
-          (bp.path.includes('WBP_') ||
-            bp.path.toLowerCase().includes('widget') ||
-            bp.path.toLowerCase().includes('screen')),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            lower(bp.path).includes('inventory') &&
+            (bp.path.includes('WBP_') ||
+              lower(bp.path).includes('widget') ||
+              lower(bp.path).includes('screen')),
+        ),
+      ),
   },
 
   // ── arpg-progression ────────────────────────────────────────────────────────
 
   {
-    featureName: 'Experience / leveling data',
+    // Formerly 'Experience / leveling data'.
+    featureName: 'XP curve table',
     moduleId: 'arpg-progression',
-    check: (m) => {
-      const found = m.dataTables.some(
-        (dt) =>
-          dt.rowStruct.toLowerCase().includes('experience') ||
-          dt.rowStruct.toLowerCase().includes('level') ||
-          dt.path.toLowerCase().includes('xp') ||
-          dt.path.toLowerCase().includes('level'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.dataTables.filter(
+          (dt) =>
+            lower(dt.rowStruct).includes('experience') ||
+            lower(dt.rowStruct).includes('level') ||
+            lower(dt.path).includes('xp') ||
+            lower(dt.path).includes('level'),
+        ),
+      ),
   },
   {
-    featureName: 'Skill tree / talent data',
+    // Formerly 'Skill tree / talent data'. Skill data is what the unlock system
+    // spends points on, not the system itself: capped at partial.
+    featureName: 'Ability unlock system',
     moduleId: 'arpg-progression',
-    check: (m) => {
-      const found =
-        m.dataTables.some(
-          (dt) =>
-            dt.rowStruct.toLowerCase().includes('skill') ||
-            dt.rowStruct.toLowerCase().includes('talent') ||
-            dt.path.toLowerCase().includes('skill') ||
-            dt.path.toLowerCase().includes('talent'),
-        ) ||
-        m.blueprints.some(
-          (bp) =>
-            bp.path.toLowerCase().includes('skill') &&
-            bp.path.toLowerCase().includes('tree'),
-        );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        [
+          ...m.dataTables.filter(
+            (dt) =>
+              ['skill', 'talent'].some(
+                (k) => lower(dt.rowStruct).includes(k) || lower(dt.path).includes(k),
+              ),
+          ),
+          ...m.blueprints.filter(
+            (bp) => lower(bp.path).includes('skill') && lower(bp.path).includes('tree'),
+          ),
+        ],
+        'partial',
+      ),
   },
 
   // ── level-design ────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Zone layout design',
+    // Formerly 'Level streaming volumes'.
+    featureName: 'Level streaming setup',
     moduleId: 'level-design',
-    check: (m) => {
-      const maps = m.otherAssets.filter(
-        (a) =>
-          a.assetClass === 'World' ||
-          a.path.endsWith('.umap') ||
-          a.assetClass.includes('Map'),
-      );
-      if (maps.length >= 3) return 'implemented';
-      if (maps.length >= 1) return 'partial';
-      return 'missing';
-    },
-  },
-  {
-    featureName: 'Level streaming volumes',
-    moduleId: 'level-design',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('streaming') ||
-          bp.addedComponents.some((c) =>
-            c.componentClass.toLowerCase().includes('levelstreaming'),
-          ),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            lower(bp.path).includes('streaming') ||
+            bp.addedComponents.some((c) => lower(c.componentClass).includes('levelstreaming')),
+        ),
+      ),
   },
 
   // ── arpg-world ──────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Interactable base class',
+    // Moved from level-design: the zone plan (Town, Forest, Ruins, …) is declared
+    // under arpg-world.
+    featureName: 'Zone layout design',
     moduleId: 'arpg-world',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('interact') &&
-          (bp.path.toLowerCase().includes('base') ||
-            bp.interfaces.some((i) => i.toLowerCase().includes('interact'))),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      tiered(
+        m.otherAssets.filter(
+          (a) => a.assetClass === 'World' || a.path.endsWith('.umap') || a.assetClass.includes('Map'),
+        ),
+        3,
+      ),
   },
   {
-    featureName: 'Spawn points / volumes',
+    // Formerly 'Interactable base class'. An interactable base is the foundation
+    // the chests/doors/NPC points build on: capped at partial.
+    featureName: 'Interactive world objects',
     moduleId: 'arpg-world',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.path.toLowerCase().includes('spawn') &&
-          (bp.path.toLowerCase().includes('point') ||
-            bp.path.toLowerCase().includes('volume')),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            lower(bp.path).includes('interact') &&
+            (lower(bp.path).includes('base') ||
+              bp.interfaces.some((i) => lower(i).includes('interact'))),
+        ),
+        'partial',
+      ),
+  },
+  {
+    // Formerly 'Spawn points / volumes'. A spawn point class is not a placement
+    // per zone: capped at partial.
+    featureName: 'Enemy spawn placement',
+    moduleId: 'arpg-world',
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) =>
+            lower(bp.path).includes('spawn') &&
+            (lower(bp.path).includes('point') || lower(bp.path).includes('volume')),
+        ),
+        'partial',
+      ),
   },
 
   // ── arpg-save ───────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Save game object',
+    // Formerly 'Save game object'.
+    featureName: 'UARPGSaveGame',
     moduleId: 'arpg-save',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.parentCppClass.includes('SaveGame') ||
-          bp.path.toLowerCase().includes('savegame'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) => bp.parentCppClass.includes('SaveGame') || lower(bp.path).includes('savegame'),
+        ),
+      ),
   },
   {
-    featureName: 'Save/load subsystem',
+    // Formerly 'Save/load subsystem'. A save subsystem is where the save function
+    // lives, not proof it gathers every system's state: capped at partial.
+    featureName: 'Save function',
     moduleId: 'arpg-save',
-    check: (m) => {
-      const found = m.blueprints.some(
-        (bp) =>
-          bp.parentCppClass.includes('GameInstanceSubsystem') &&
-          bp.path.toLowerCase().includes('save'),
-      );
-      return found ? 'implemented' : 'missing';
-    },
+    check: (m) =>
+      matched(
+        m.blueprints.filter(
+          (bp) => bp.parentCppClass.includes('GameInstanceSubsystem') && lower(bp.path).includes('save'),
+        ),
+        'partial',
+      ),
   },
 
   // ── audio ───────────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Sound cue library',
+    // Formerly 'Sound cue library' (cues + waves + MetaSounds). Only MetaSound
+    // assets speak to the declared feature.
+    featureName: 'MetaSounds integration',
     moduleId: 'audio',
-    check: (m) => {
-      const soundAssets = m.otherAssets.filter(
-        (a) =>
-          a.assetClass.includes('SoundCue') ||
-          a.assetClass.includes('SoundWave') ||
-          a.assetClass.includes('MetaSound'),
-      );
-      if (soundAssets.length >= 5) return 'implemented';
-      if (soundAssets.length >= 1) return 'partial';
-      return 'missing';
-    },
-  },
-  {
-    featureName: 'Sound class hierarchy',
-    moduleId: 'audio',
-    check: (m) => {
-      const soundClasses = m.otherAssets.filter(
-        (a) =>
-          a.assetClass.includes('SoundClass') ||
-          a.assetClass.includes('SoundMix'),
-      );
-      if (soundClasses.length >= 2) return 'implemented';
-      if (soundClasses.length >= 1) return 'partial';
-      return 'missing';
-    },
+    check: (m) => matched(m.otherAssets.filter((a) => a.assetClass.includes('MetaSound'))),
   },
 
   // ── models ──────────────────────────────────────────────────────────────────
 
   {
-    featureName: 'Skeletal mesh assets',
+    // Formerly 'Skeletal mesh assets'.
+    featureName: 'Skeletal mesh import',
     moduleId: 'models',
-    check: (m) => {
-      const skeletalMeshes = m.otherAssets.filter(
-        (a) =>
-          a.assetClass.includes('SkeletalMesh') ||
-          a.assetClass.includes('Skeleton'),
-      );
-      if (skeletalMeshes.length >= 3) return 'implemented';
-      if (skeletalMeshes.length >= 1) return 'partial';
-      return 'missing';
-    },
+    check: (m) =>
+      tiered(
+        m.otherAssets.filter(
+          (a) => a.assetClass.includes('SkeletalMesh') || a.assetClass.includes('Skeleton'),
+        ),
+        3,
+      ),
   },
   {
-    featureName: 'Static mesh library',
+    // Formerly 'Static mesh library'.
+    featureName: 'Static mesh import pipeline',
     moduleId: 'models',
-    check: (m) => {
-      const staticMeshes = m.otherAssets.filter((a) =>
-        a.assetClass.includes('StaticMesh'),
-      );
-      if (staticMeshes.length >= 10) return 'implemented';
-      if (staticMeshes.length >= 3) return 'partial';
-      return 'missing';
-    },
+    check: (m) => tiered(m.otherAssets.filter((a) => a.assetClass.includes('StaticMesh')), 10, 3),
   },
 ];
