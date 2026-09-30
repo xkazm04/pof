@@ -535,3 +535,35 @@ steered every later live produce through the sibling section ("stay consistent w
 - The spec linter's content-read probe exempts `TEMPLATE_FIELD` exactly as it exempts `SOURCED_FIELD`.
 - Tests: `src/__tests__/catalog/acceptance/template-guard.test.ts`,
   `src/__tests__/catalog/produce-template.test.ts`, `src/__tests__/api/one-shot/step-template.test.ts`.
+
+## 10. The coach names the act that settles each step — one ladder with the MCP loop (2026-09-30)
+
+A non-pass verdict is settled by exactly one act (`src/lib/catalog/stepSettlement.ts` `settlementOf`:
+resubmit / fill-gap / produce / produce-live / settle route / drain / none). The lab coaches used to
+rank the raw display status and call every held row "produced — its acceptance is still resolving"
+(measured 2026-09-30: 378/378 pending picks, of which 182 were declared gaps, 160 SOURCED seeds and 36
+UNGRADED rows), while the MCP loop's `entityNextStep` skipped UNGRADED rows — so the two named a
+different next step on 36 entities.
+
+- **One rank** — `src/components/layout-lab/coachSettlement.ts` `ladderStatusOf(display, verdict, spec?)`
+  (and `settledLadder(statusByStep, reasonOf)`): a row whose settlement is `actionable: false` ranks as
+  settled. Used by `entityNextStep`, `pickNextActionableStep` (optional `verdictOf`/`specOf`),
+  `buildMatrixRows` and the global coach's `assembleCandidate`, so all four pick the same step. It is
+  **display-only**: the cell/rail/rollup status never moves. A checker that THREW in the lab
+  (`ungradedResult`) is the one UNGRADED row still coached — a lab-local defect, never a persisted row.
+- **One hint channel** — `coachActionFor(settlement, reason)` → `{ actionWord, plainHint, cta }`, built
+  from the verdict's own reason ("Fill gap: … The reference does not state moveSpeed", "Produce" for a
+  SOURCED seed, "Produce for this entity" naming a TEMPLATE's exemplar, "Settle" naming bind-icons →
+  verify-static → verify-packaging for an L0–L2/packaging deferral with `cta: 'jump'`, `cta: 'drain'`
+  only for a live L3/L4 gate). Route any new coach wording through it. No verdict known → the rung's
+  pre-settlement copy (verdict-free callers keep today's picks).
+- **Drain count** — `drainableCount(verdicts, specOf?)` counts only what the L3/L4 drain settles;
+  `NextStepCoach` labels "Run N deferred gates" from it (falls back to `rollup.deferred` without
+  verdicts). `unsettleable(steps, verdictOf)` is listed in the coach's "more" region
+  (`NextStepCoachMore.tsx`), and a coach with only such rows left says "Nothing left the coach can
+  settle." instead of "All done.". `Baseline` passes `verdictOf` (the derived artifact) + `stepSpecs`.
+- **Words** — `STATUS_GLOSSARY.pending` is "held" (a row exists, its acceptance is held), no longer
+  "not started"; `EntityRollup` gains an additive `unproduced` (the never-produced part of `pending`),
+  and `plainEntitySummary` says "N held for authoring · M not started".
+- Tests: `src/__tests__/components/layout-lab/coachSettlement.test.ts`,
+  `src/__tests__/components/layout-lab/NextStepCoach.test.tsx`, `src/__tests__/lib/catalog/stepSettlement.test.ts`.
