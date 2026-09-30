@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('next/font/google', () => {
   const font = () => ({ className: 'font', variable: '--font' });
@@ -34,6 +34,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   (CANON_PROFILES.diablo1 as { inheritsPof: readonly string[] }).inheritsPof = originalInheritedIds;
 });
 
@@ -67,11 +68,20 @@ describe('CanonView profiles', () => {
     expect(within(inherited).queryByRole('button', { name: 'Delete' })).toBeNull();
   });
 
-  it('adds new rules to the selected profile', () => {
+  it('adds new rules to the selected profile', async () => {
+    // '+ Add rule' opens a local draft; the rule enters the store once the server stores it (Save).
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true, status: 200, json: async () => ({ success: true, data: init?.body ? JSON.parse(String(init.body)) : null }),
+    })));
     render(<CanonView t={LIGHT} />);
     selectDiablo();
     fireEvent.click(screen.getAllByRole('button', { name: '+ Add rule' })[0]);
+    expect(useCanonStore.getState().rules).toEqual(rules);
+    fireEvent.change(screen.getByPlaceholderText('Rule title'), { target: { value: 'New law' } });
+    fireEvent.change(screen.getByPlaceholderText('Rule body / guidance'), { target: { value: 'Body' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
+    await waitFor(() => expect(useCanonStore.getState().rules).toHaveLength(rules.length + 1));
     const added = useCanonStore.getState().rules.find((rule) => !rules.some((existing) => existing.id === rule.id));
     expect(added?.category).toBe('game');
     expect(added?.profile).toBe('diablo1');

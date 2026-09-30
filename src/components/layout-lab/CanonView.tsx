@@ -7,9 +7,8 @@ import { CANON_PROFILES, DEFAULT_CANON_PROFILE, profileOfRule } from '@/lib/cata
 import { TabBar } from '@/components/ui/TabBar';
 import { useCanonStore } from './canonStore';
 import { CanonDriftPanel, driftCount } from './CanonDriftPanel';
-import { Lbl, LabButton, LabInput, LabTextarea } from './steps/controls';
-
-const CATEGORIES: RuleCategory[] = ['game', 'art', 'project'];
+import { LabButton } from './steps/controls';
+import { CANON_CATEGORIES as CATEGORIES, CanonRuleEditor } from './CanonRuleEditor';
 const PROFILE_TABS = Object.values(CANON_PROFILES).map((profile) => ({ id: profile.id, label: profile.title }));
 
 function CanonRuleCard({ t, rule, onEdit, onDelete }: {
@@ -31,54 +30,6 @@ function CanonRuleCard({ t, rule, onEdit, onDelete }: {
   );
 }
 
-function CanonRuleEditor({ t, rule, onSave, onCancel }: {
-  t: LabTheme;
-  rule: ProjectRule;
-  onSave: (r: ProjectRule) => void;
-  onCancel: () => void;
-}) {
-  const [title, setTitle] = useState(rule.title);
-  const [body, setBody] = useState(rule.body);
-  const [scope, setScope] = useState(rule.scope);
-  const [category, setCategory] = useState<RuleCategory>(rule.category);
-
-  return (
-    <div style={{ border: `1px solid ${t.ink}`, borderRadius: t.glass ? 10 : 0, padding: '14px 16px', background: t.panel, marginBottom: 10 }}>
-      <div style={{ marginBottom: 8 }}>
-        <Lbl t={t}>Title</Lbl>
-        <div style={{ marginTop: 4 }}><LabInput t={t} value={title} onChange={setTitle} placeholder="Rule title" /></div>
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <Lbl t={t}>Body</Lbl>
-        <div style={{ marginTop: 4 }}><LabTextarea t={t} value={body} onChange={setBody} rows={3} placeholder="Rule body / guidance" /></div>
-      </div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <Lbl t={t}>Scope</Lbl>
-          <div style={{ marginTop: 4 }}><LabInput t={t} value={scope} onChange={setScope} placeholder="global or a catalogId" /></div>
-        </div>
-        <div style={{ flex: 1 }}>
-          <Lbl t={t}>Category</Lbl>
-          <div style={{ marginTop: 4 }}>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as RuleCategory)}
-              className={t.fontBody}
-              style={{ width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: '9px 12px', fontSize: 15, outline: 'none' }}
-            >
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <LabButton t={t} onClick={() => onSave({ ...rule, title, body, scope, category })}>Save</LabButton>
-        <button onClick={onCancel} className={t.fontMono} style={{ fontSize: 14, cursor: 'pointer', background: 'transparent', border: `1px solid ${t.line}`, color: t.muted, padding: '10px 16px', borderRadius: t.glass ? 8 : 0 }}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
 export function CanonView({ t }: { t: LabTheme }) {
   const rules = useCanonStore((s) => s.rules);
   const upsert = useCanonStore((s) => s.upsert);
@@ -89,6 +40,8 @@ export function CanonView({ t }: { t: LabTheme }) {
   useEffect(() => { void loadDrift(); }, [loadDrift]);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_CANON_PROFILE);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // '+ Add rule' opens a LOCAL draft: nothing is POSTed (or enters a prompt) until Save succeeds.
+  const [draft, setDraft] = useState<ProjectRule | null>(null);
   const selectedProfile = CANON_PROFILES[selectedProfileId];
   const drifted = driftCount(drift?.byProfile[selectedProfileId]);
   const undoable = (drift?.adopted ?? []).filter((a) => a.profile === selectedProfileId).length;
@@ -99,17 +52,20 @@ export function CanonView({ t }: { t: LabTheme }) {
 
   const handleAdd = (category: RuleCategory) => {
     const id = `rule-${Date.now()}`;
-    const newRule: ProjectRule = {
+    setDraft({
       id, category, scope: 'global', title: '', body: '',
       ...(selectedProfileId === DEFAULT_CANON_PROFILE ? {} : { profile: selectedProfileId }),
-    };
-    void upsert(newRule);
+    });
     setEditingId(id);
   };
 
-  const handleSave = (rule: ProjectRule) => {
-    void upsert(rule);
-    setEditingId(null);
+  const closeEditor = () => { setEditingId(null); setDraft(null); };
+
+  // The store commits only what the server stored; a refusal is returned to the editor, which stays open.
+  const handleSave = async (rule: ProjectRule) => {
+    const r = await upsert(rule);
+    if (r.ok) closeEditor();
+    return r;
   };
 
   const handleDelete = (id: string) => {
@@ -127,7 +83,7 @@ export function CanonView({ t }: { t: LabTheme }) {
         <TabBar
           tabs={PROFILE_TABS}
           activeId={selectedProfileId}
-          onChange={(profileId) => { setSelectedProfileId(profileId); setEditingId(null); setReviewOpen(false); }}
+          onChange={(profileId) => { setSelectedProfileId(profileId); closeEditor(); setReviewOpen(false); }}
           layoutId="canon-profile-tab"
           accent={t.ink}
           ariaLabel="Canon profile"
@@ -161,14 +117,17 @@ export function CanonView({ t }: { t: LabTheme }) {
                   + Add rule
                 </button>
               </div>
-              {catRules.length === 0 && (
+              {draft?.category === cat && editingId === draft.id && (
+                <CanonRuleEditor key={draft.id} t={t} rule={draft} onSave={handleSave} onCancel={closeEditor} />
+              )}
+              {catRules.length === 0 && !(draft?.category === cat) && (
                 <p className={t.fontBody} style={{ fontSize: 14, color: t.muted, fontStyle: 'italic' }}>No {cat} rules yet.</p>
               )}
               {catRules.map((rule) =>
                 editingId === rule.id ? (
-                  <CanonRuleEditor key={rule.id} t={t} rule={rule} onSave={handleSave} onCancel={() => setEditingId(null)} />
+                  <CanonRuleEditor key={rule.id} t={t} rule={rule} onSave={handleSave} onCancel={closeEditor} />
                 ) : (
-                  <CanonRuleCard key={rule.id} t={t} rule={rule} onEdit={() => setEditingId(rule.id)} onDelete={() => handleDelete(rule.id)} />
+                  <CanonRuleCard key={rule.id} t={t} rule={rule} onEdit={() => { setDraft(null); setEditingId(rule.id); }} onDelete={() => handleDelete(rule.id)} />
                 )
               )}
             </section>

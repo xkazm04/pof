@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
+import type { Result } from '@/types/result';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 import { allShippedRules } from '@/lib/catalog/canon/profiles';
@@ -11,7 +12,10 @@ interface CanonState {
   rules: ProjectRule[];
   hydrated: boolean;
   hydrate: () => Promise<void>;
-  upsert: (rule: ProjectRule) => Promise<void>;
+  /** POSTs, and commits locally ONLY when the server stored it — lab prompts read these rules, so an
+   *  optimistic write would cite a law the dispatch (which reads the DB) never carries. A refusal is
+   *  returned (the server's reason), never swallowed. */
+  upsert: (rule: ProjectRule) => Promise<Result<ProjectRule, string>>;
   remove: (id: string) => Promise<void>;
   /** Shipped-vs-DB canon drift (GET ?view=drift); null until loaded or when unreachable. */
   drift: CanonDrift | null;
@@ -46,8 +50,10 @@ export const useCanonStore = create<CanonState>((set, get) => {
       else set({ hydrated: true });
     },
     upsert: async (rule) => {
+      const r = await tryApiFetch<ProjectRule>('/api/project-rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rule) });
+      if (!r.ok) return r;
       set((s) => ({ rules: [...s.rules.filter((x) => x.id !== rule.id), rule] }));
-      await tryApiFetch('/api/project-rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rule) });
+      return { ok: true, data: rule };
     },
     remove: async (id) => {
       set((s) => ({ rules: s.rules.filter((x) => x.id !== id) }));

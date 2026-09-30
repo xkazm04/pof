@@ -2,8 +2,11 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { listRules, upsertRule, deleteRule, restoreCanonSeed, canonDrift, adoptShipped, keepMine, undoAdopt } from '@/lib/project-rules-db';
 import { requireOperator } from '@/lib/api-auth';
-import { ruleUpsertSchema } from '@/lib/catalog/canon/validation';
-import { CANON_PROFILES } from '@/lib/catalog/canon/profiles';
+import { validateRuleDraft } from '@/lib/catalog/canon/validation';
+// Populates the pipeline registry through THIS route's own import graph: the scope check below
+// reads `allCatalogPipelines()`, and an empty registry would refuse every catalog scope.
+import '@/lib/catalog/pipelines/registry.generated';
+import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 
 /**
@@ -22,7 +25,8 @@ export async function GET(req?: NextRequest) {
 }
 
 /**
- * POST /api/project-rules — upsert a rule.
+ * POST /api/project-rules — upsert a rule. Refused (400) unless `validateRuleDraft` passes: a scope
+ * must be `global` or a registered catalog id, since any other scope enters no prompt.
  *
  * POST /api/project-rules?action=restore-defaults re-writes the shipped canon.
  * That is the ONLY path that puts `CANON_SEED` back: emptying the table no longer
@@ -49,14 +53,10 @@ export async function POST(req: NextRequest) {
       return apiSuccess(review(ids));
     }
     if (action) return apiError(`Unknown action "${action}"`, 400);
-    const body = await req.json();
-    const parsed = ruleUpsertSchema.safeParse(body);
-    if (!parsed.success) {
-      return apiError('Invalid rule', 400, parsed.error.issues);
-    }
-    if (parsed.data.profile && !CANON_PROFILES[parsed.data.profile]) {
-      return apiError(`Unknown canon profile "${parsed.data.profile}" — registered: ${Object.keys(CANON_PROFILES).join(', ')}`, 400);
-    }
+    // One check shared with the editor: schema, registered profile, and a scope that reaches a
+    // prompt (`global` or a registered catalog) — an unknown scope used to be stored with 200.
+    const parsed = validateRuleDraft(await req.json(), allCatalogPipelines());
+    if (!parsed.ok) return apiError(parsed.error, 400);
     const rule: ProjectRule = {
       id: parsed.data.id,
       category: parsed.data.category,
