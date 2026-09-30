@@ -130,6 +130,8 @@ The goal: make PoF a unified cockpit where a solo developer can go from text des
 
 **UE5 integration**: Export PBR maps as named texture files following UE5 conventions (`T_MaterialName_D`, `_N`, `_R`, `_M`, `_AO`). Auto-generate a Material Instance parameter set that the PoF Bridge can apply.
 
+**Built: one material boundary (2026-09-30).** The lab sends one material across three edges: the three.js preview, Blender (`createMaterialScript` via the MCP bridge) and the UE MaterialInstance script (`ue5-material-instance.ts`). All three read `src/lib/visual-gen/material-boundary.ts`. It holds `MATERIAL_CHANNELS`, the per-role table (label, `srgb`/`linear` colour space, Blender colourspace, UE texture parameter). It holds `hexToLinearRgb`, the single IEC 61966-2-1 sRGB decode, so the Blender Base Color socket and the UE `BaseColorTint` LinearColor get the same linear value three's colour management shows in the preview. It also holds `resolveChannelSource(url, 'blender' | 'ue5', origin)`, the only texture resolver: `/Game/` paths go only to UE, and app routes, URLs and files go only to Blender. `material-boundary-swatch.test.ts` checks that the three projections agree across a swatch that includes non-endpoint greys, because `#000` and `#fff` agree under any transfer curve. Adding a channel (emissive, height) means adding one table row. The UE script's stand-in parent sets `used_with_skeletal_mesh`, and it warns when an imported texture's `srgb` flag does not match its role.
+
 ---
 
 ## Direction 5: Blender Pipeline Engine (Headless Mesh Processing)
