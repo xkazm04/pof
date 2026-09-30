@@ -2150,7 +2150,7 @@ All bridge interactions are exposed to React components through dedicated hooks.
 | `useManifest` | Manifest fetching with checksum-based polling | `GET /api/pof-bridge/manifest` -> `pofBridgeStore.manifest` |
 | `usePofBridge` | Connection state, connect/disconnect actions | `PofBridgeConnectionManager` -> `pofBridgeStore` |
 | `useTestRunner` | Test spec submission, result polling, test history | `POST /api/pof-bridge/test` -> `GET /api/pof-bridge/test` |
-| `useSnapshots` | Snapshot capture trigger, diff report retrieval | `POST /api/pof-bridge/snapshot` -> `GET /api/pof-bridge/snapshot` |
+| `useSnapshots` | Snapshot capture (ack) + diff readback, baseline accept verified by a re-compare | `POST /api/pof-bridge/snapshot` (ack) -> `GET /api/pof-bridge/snapshot` readback; `POST { action: 'baseline' }` -> recapture -> readback |
 | `useLiveCoding` | Compile trigger, status polling, diagnostic display | `POST /api/pof-bridge/compile` -> `GET /api/pof-bridge/compile` |
 
 **`useManifest` feed strategy** (one feed per tab; pure decisions in `src/lib/pof-bridge/manifest-feed.ts`, the refcounted feed in `src/hooks/useManifest.ts`):
@@ -2161,6 +2161,13 @@ All bridge interactions are exposed to React components through dedicated hooks.
 4. One 30 second checksum interval per tab while at least one visible holder exists; it dies with the last one. Concurrent callers join the in-flight request for the same key.
 5. Immediate sync (not waiting for the poll) when the store's connection status, editor key, or `pluginInfo.manifestAssetCount` (from the 10 s health check) changes - this covers the `pof.connected` event.
 6. Every manifest URL carries `?port=` from `pofBridgeStore.pofPort`. Disconnected: no fetches; the last editor's manifest stays readable.
+
+**`useSnapshots` review loop** (pure decisions in `src/lib/pof-bridge/snapshot-review.ts`; the surface is the Test Harness Snapshots tab on /harness):
+
+1. Capture is asynchronous: `normalizeCaptureReply` reads the capture POST reply as `accepted` (the plugin's `{ accepted, presetIds }` ack), an inline `report`, or `invalid` with a reason. An ack is never stored as a DiffReport.
+2. Readback: GET diff every `UI_TIMEOUTS.pofSnapshotPoll` through `useSuspendableEffect` (a hidden LRU pane stops reading) until `isReadbackFresh`: a report whose `generatedAt` is newer than the one known before the capture (the plugin's clock, never the browser's; with no report shown yet, one GET before the capture learns it) and that covers every requested preset. Bounded by `UI_TIMEOUTS.pofSnapshotReadbackTimeout`; past it the capture fails with that reason.
+3. Accept: `planAccept` keeps only ids the shown report did not pass. The plugin has no restore endpoint, so the tab confirms first with `describeAccept` ("Overwrites N existing baseline(s) (ids) - cannot be undone from PoF; creates M (ids)"). Then baseline POST -> recapture those ids with `compareToBaseline` -> readback: the accept is verified by a fresh compare, not assumed. A failed baseline POST stops there (no recapture, reason shown, report kept); a re-diff that still differs is reported.
+4. `runSuite` derives the suite's snapshot status from the read-back report; a suite whose presets were captured passes only on a passed report. Presets are edited in the Snapshots tab and saved to the active suite. Every snapshot bridge call is a click; nothing runs on mount. Snapshot URLs carry `?port=` like the manifest's.
 
 ### 11.6 Module-to-Plugin Data Flow
 
