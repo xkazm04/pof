@@ -51,8 +51,8 @@ function buildProfileParamList(profile: FeelProfile): string {
 
 const APPLY_INSTRUCTIONS = `### Instructions
 1. Read ARPGCharacterBase.h and ARPGCharacterBase.cpp
-2. Find or create each UPROPERTY listed above
-3. Set the default values in the constructor
+2. Find each UPROPERTY listed above (the project may use its own name for it, e.g. SprintSpeed for MaxSprintSpeed)
+3. Set the default values in the constructor for the properties you found. Do NOT create a property the project does not declare: list those under "Not declared" in your summary instead
 4. Ensure properties are in the correct UPROPERTY category for Blueprint exposure
 5. Verify the code compiles`;
 

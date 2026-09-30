@@ -26,6 +26,17 @@ describe('buildStackApplyPrompt', () => {
     expect(prompt).toContain('Turn Rate -20%');
   });
 
+  it('never asks the CLI to create a property the project does not declare', () => {
+    // Most listed names are PoF's vocabulary, not necessarily the project's (the
+    // Feel vs UE panel found 18 of 34 undeclared in a real project); creating them
+    // would add dead UPROPERTYs nothing reads. Undeclared ones are reported instead.
+    const resolved = resolveStack(BASE.profile, LAYERS);
+    const prompt = buildStackApplyPrompt(BASE, LAYERS, resolved);
+    expect(prompt).not.toMatch(/find or create/i);
+    expect(prompt).toMatch(/do not create/i);
+    expect(prompt).toMatch(/not declared/i);
+  });
+
   it('excludes disabled layers', () => {
     const resolved = resolveStack(BASE.profile, LAYERS);
     const prompt = buildStackApplyPrompt(BASE, LAYERS, resolved);
