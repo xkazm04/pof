@@ -603,9 +603,16 @@ e.g. a session stuck `isRunning: true` after a crash blocks all future dispatche
 from the database on mount. Do not add it back to `partialize` — it can be large and is always
 authoritative in the DB. That includes resolutions: `useScanTab`'s `fetchAndMergeFindings` REPLACES the
 module's findings with the server's (a merge kept a stale active copy over a server-side resolution),
-and every resolve path (row, Mark Selected, Resolve all, a successful batch fix, the ScanDelta
+and every resolve path (row, Mark Selected, Resolve all, a verified fix, the ScanDelta
 "Resolve N no longer found") goes through one `PATCH`. A scan this view dispatched shows as
 `unrecorded` — never as an earlier scan's delta — when no scan newer than its dispatch was recorded.
+**Fix & verify** (`src/lib/evaluator/scan-fix-verify.ts`): a fix run exiting 0 resolves nothing.
+Batch and single-row Fix This both go through the fix session (a fix is not counted as a scan) and
+mark each target `fixed` / `fix-failed` in `useScanTab`'s `fixVerification` (hook state, never
+persisted). Only the operator's Verify click (`verifyFixes`) dispatches ONE module scan over the fixed
+targets' passes naming exactly them; when its delta is recorded, targets it `cleared` are PATCHed
+resolved, `persisting` ones stay open as `still-present`, and an `unrecorded` verification scan
+resolves nothing (`status: 'unverified'` with the reason).
 
 **`deepEvalStore` is the fast baseline cache; durable history lives in SQLite.**
 `src/stores/deepEvalStore.ts` (localStorage `pof-deep-eval`) keeps only the *most recent* deep-eval
