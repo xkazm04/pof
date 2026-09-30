@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCachedHighlight, highlight } from '@/lib/shiki-highlighter';
@@ -18,7 +18,15 @@ interface CodeViewerProps {
   languageLabel?: string;
   /** Max-height utility class for the scroll region (default: 'max-h-96'). */
   maxHeightClass?: string;
+  /**
+   * 1-based line to mark (`data-focused="true"`) and scroll into view once the
+   * code is highlighted. Optional; omitted, nothing is marked or scrolled.
+   */
+  focusLine?: number | null;
 }
+
+/** Highlighted HTML together with the input it was computed from. */
+interface Highlighted { code: string; lang: string; html: string }
 
 /** Build + click a transient anchor to save `text` as a file (client-only). */
 function triggerDownload(fileName: string, text: string): void {
@@ -51,22 +59,44 @@ export function CodeViewer({
   lang = 'cpp',
   languageLabel,
   maxHeightClass = 'max-h-96',
+  focusLine = null,
 }: CodeViewerProps) {
   // Trim trailing whitespace so Shiki doesn't emit a numbered empty last line.
   const trimmed = useMemo(() => code.replace(/\s+$/, ''), [code]);
-  const [html, setHtml] = useState<string | null>(() => getCachedHighlight(trimmed, lang));
+  // The highlight is keyed by the code it was made from. It used to be plain
+  // state initialised once, and the effect returned early whenever it was
+  // non-null — so a viewer handed NEW code (TranspilePane's .h/.cpp tabs share
+  // one instance) kept rendering the previous file's HTML.
+  const [highlighted, setHighlighted] = useState<Highlighted | null>(null);
+  const cached = useMemo(() => getCachedHighlight(trimmed, lang), [trimmed, lang]);
+  const html = highlighted && highlighted.code === trimmed && highlighted.lang === lang
+    ? highlighted.html
+    : cached;
   const [copied, setCopied] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (html !== null) return;
 
     let cancelled = false;
     highlight(trimmed, lang).then((result) => {
-      if (!cancelled) setHtml(result);
+      if (!cancelled) setHighlighted({ code: trimmed, lang, html: result });
     });
 
     return () => { cancelled = true; };
   }, [trimmed, lang, html]);
+
+  // Mark and reveal the requested line once the highlighted body is in the DOM.
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || html === null) return;
+    for (const el of body.querySelectorAll('[data-focused]')) el.removeAttribute('data-focused');
+    if (!focusLine) return;
+    const target = body.querySelectorAll('.line')[focusLine - 1];
+    if (!target) return;
+    target.setAttribute('data-focused', 'true');
+    target.scrollIntoView?.({ block: 'center' });
+  }, [html, focusLine]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -122,11 +152,14 @@ export function CodeViewer({
       </div>
 
       {/* Code body */}
-      <div className={`${maxHeightClass} overflow-auto`}>
+      <div ref={bodyRef} className={`${maxHeightClass} overflow-auto`}>
         {html === null ? (
           <pre className="px-4 py-3 text-2xs font-mono text-text-muted whitespace-pre">{trimmed}</pre>
         ) : (
-          <div className="code-viewer-shiki text-2xs" dangerouslySetInnerHTML={{ __html: html }} />
+          <div
+            className="code-viewer-shiki text-2xs [&_[data-focused=true]]:bg-amber-400/15"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
         )}
       </div>
 
