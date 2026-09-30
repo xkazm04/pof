@@ -146,7 +146,14 @@ export function EconomyRunsStrip() {
       <ConfirmDialog
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        onConfirm={() => { if (pendingDelete) deleteRun(pendingDelete.id); }}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          // deleteRun resolves false (never throws) and parks the reason on the store's `error`;
+          // turn that into a rejection so the dialog stays open with the reason and a Retry.
+          if (!(await deleteRun(pendingDelete.id))) {
+            throw new Error(useEconomySimulatorStore.getState().error ?? 'Could not delete that run.');
+          }
+        }}
         title="Delete this saved run?"
         description={
           <>
@@ -155,6 +162,7 @@ export function EconomyRunsStrip() {
           </>
         }
         confirmLabel="Delete run"
+        busyLabel="Deleting…"
       />
     </SurfaceCard>
   );

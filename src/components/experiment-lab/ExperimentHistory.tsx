@@ -26,7 +26,6 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const [a, setA] = useState<ExperimentRunDetail | null>(null);
   const [b, setB] = useState<ExperimentRunDetail | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // The empty state ("no past runs") is only honest once a load has actually
   // succeeded — while in flight we show a spinner, and a failure explains itself
@@ -55,20 +54,13 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     (slot === 'a' ? setAId : setBId)((cur) => (cur === id ? null : id));
   }, []);
 
+  // A delete that failed must SAY so — the row silently reappearing on the next load would read
+  // as the app ignoring the action. The rejection is left to ConfirmDialog, which keeps the dialog
+  // open with the reason and a Retry that re-runs this same delete (pendingDelete is still set).
   const onConfirmDelete = useCallback(async () => {
     if (!pendingDelete) return;
-    try {
-      await deleteRun(pendingDelete);
-      setDeleteError(null);
-      setPendingDelete(null);
-      setRetryKey((k) => k + 1); // re-list
-    } catch (e) {
-      // A delete that failed must SAY so — the row silently reappearing on the next load would
-      // read as the app ignoring the action.
-      logger.error('experiment run delete failed', e);
-      setPendingDelete(null);
-      setDeleteError(e instanceof Error ? e.message : 'Could not delete that run.');
-    }
+    await deleteRun(pendingDelete);
+    setRetryKey((k) => k + 1); // re-list
   }, [pendingDelete]);
 
   const showCompare = a && b && a.id === aId && b.id === bId;
@@ -126,8 +118,8 @@ export function ExperimentHistory({ refreshKey = 0 }: { refreshKey?: number }) {
         title="Delete this run?"
         description="The run row and its captured frame are removed permanently. Experiments are otherwise kept indefinitely, so an old baseline stays available to compare against."
         confirmLabel="Delete run"
+        busyLabel="Deleting…"
       />
-      {deleteError && <InlineErrorRetry dense message={deleteError} onRetry={onConfirmDelete} />}
     </section>
   );
 }

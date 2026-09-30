@@ -162,7 +162,7 @@ export function SnapshotsTab({
       <ConfirmDialog
         open={pendingAccept !== null && diffReport !== null}
         onClose={() => setPendingAccept(null)}
-        onConfirm={() => { if (pendingAccept) void onAccept(pendingAccept); }}
+        onConfirm={() => (pendingAccept ? onAccept(pendingAccept) : undefined)}
         title={`Accept ${pendingAccept?.length ?? 0} as baseline?`}
         description={
           pendingAccept && diffReport
@@ -170,6 +170,7 @@ export function SnapshotsTab({
             : ''
         }
         confirmLabel="Confirm"
+        busyLabel="Accepting…"
       />
     </div>
   );
