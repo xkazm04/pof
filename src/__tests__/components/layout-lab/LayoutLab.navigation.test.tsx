@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, renderHook, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, renderHook, within, waitFor } from '@testing-library/react';
 
 // next/font is a Next compiler transform; stub it for the vitest environment.
 vi.mock('next/font/google', () => {
@@ -17,7 +17,17 @@ vi.mock('framer-motion', async () => {
     void initial; void animate; void exit; void transition; void whileHover; void whileTap; void whileInView; void layout; void variants; void drag;
     return rest;
   };
-  const motion = new Proxy({}, { get: (_t, tag: string) => (props: Record<string, unknown>) => React.createElement(tag, strip(props)) });
+  // ONE stable component per tag, like the real `motion.div`: a fresh function per property
+  // read would be a new component TYPE on every render, remounting the whole view subtree
+  // (and the 2,574-cell Matrix grid) on each LayoutLab re-render and detaching any node a
+  // test had just found.
+  const byTag = new Map<string, (props: Record<string, unknown>) => React.ReactElement>();
+  const motion = new Proxy({}, {
+    get: (_t, tag: string) => {
+      if (!byTag.has(tag)) byTag.set(tag, (props: Record<string, unknown>) => React.createElement(tag, strip(props)));
+      return byTag.get(tag);
+    },
+  });
   return {
     AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
     motion,
@@ -42,10 +52,23 @@ vi.mock('@/components/layout-lab/labArtifactClient', () => ({
 import { LayoutLab } from '@/components/layout-lab/LayoutLab';
 import { useLabDetail } from '@/components/layout-lab/useLabCatalogData';
 import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
+import { _resetArtifactCache, getCachedArtifacts } from '@/components/layout-lab/labArtifactCache';
 
 const PREFS_KEY = 'pof-lab-prefs';
 const readPrefs = () => JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}');
 const pipeline = () => screen.getByRole('list', { name: /pipeline/i });
+/**
+ * A Matrix node, found only once the catalog's artifact fetch has LANDED. Before its effect
+ * runs, the Matrix paints one grid from the empty cache entry, then swaps it for the loading
+ * skeleton and back — a node found in that first paint is detached by the time it is clicked.
+ */
+const matrixGrid = (container: HTMLElement, selector: string) =>
+  waitFor(() => {
+    expect(getCachedArtifacts('items').loaded).toBe(true);
+    const el = container.querySelector(selector);
+    expect(el).toBeTruthy();
+    return el as HTMLElement;
+  });
 
 /**
  * Direction 1 — "the lab never forgets": navigation state is owned by LayoutLab (single
@@ -60,6 +83,10 @@ describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
   afterEach(cleanup);
   beforeEach(() => {
     useLabPipelineStore.setState({ byEntity: {} });
+    // The artifact cache is module-level: without a reset each case depends on an EARLIER
+    // case having warmed it (the Matrix grid is a skeleton until the fetch lands), so a case
+    // run alone could not find a cell. Every Matrix case awaits its own fetch instead.
+    _resetArtifactCache();
     localStorage.clear();
   });
 
@@ -89,13 +116,13 @@ describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
     expect(screen.getByText(`sheet · ${other}`)).toBeTruthy();
   });
 
-  it('consumes a matrix jump exactly once — a later manual step change is not overwritten', () => {
+  it('consumes a matrix jump exactly once — a later manual step change is not overwritten', async () => {
     const { result } = renderHook(() => useLabDetail('items'));
     const firstId = result.current!.entities[0].id;
     const { container } = render(<LayoutLab />);
     // Jump from the first entity's Economy cell (a non-zero step).
     fireEvent.click(screen.getByRole('button', { name: 'Matrix' }));
-    fireEvent.click(container.querySelector(`[data-cell="${firstId}::Economy"]`) as HTMLElement);
+    fireEvent.click(await matrixGrid(container, `[data-cell="${firstId}::Economy"]`));
     expect(screen.getByRole('heading', { level: 2, name: 'Economy' })).toBeTruthy();
     // The user then manually selects step 0 (Concept Brief).
     fireEvent.click(within(pipeline()).getByRole('button', { name: /Concept Brief/ }));
@@ -204,13 +231,14 @@ describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
     });
   });
 
-  it('persists last-location on a matrix open the same way a tree click does', () => {
+  it('persists last-location on a matrix open the same way a tree click does', async () => {
     const { result } = renderHook(() => useLabDetail('items'));
     const firstEntity = result.current!.entities[0];
     const { container } = render(<LayoutLab />);
     fireEvent.click(screen.getByRole('button', { name: 'Matrix' }));
     // Open the first entity from the matrix (row-name button → onOpenStep at step 0).
-    fireEvent.click(within(container.querySelector(`[data-testid="matrix-progress-${firstEntity.id}"]`)!.closest('button')!).getByText(firstEntity.name));
+    const progress = await matrixGrid(container, `[data-testid="matrix-progress-${firstEntity.id}"]`);
+    fireEvent.click(within(progress.closest('button')!).getByText(firstEntity.name));
     const prefs = readPrefs();
     expect(prefs.lastCatalogId).toBe('items');
     expect(prefs.lastEntityId).toBe(firstEntity.id);
