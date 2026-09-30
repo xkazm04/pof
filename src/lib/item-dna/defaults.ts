@@ -11,12 +11,14 @@ import type {
   ItemGenome, TraitGene, TraitAxis, MutationConfig, EvolutionState,
   ItemGenomeParentRef,
 } from '@/types/item-genome';
+import { ITEM_TYPES, RARITY_ORDER } from '@/lib/item-dna/rules';
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
 
 export const TRAIT_AXES: TraitAxis[] = ['offensive', 'defensive', 'utility', 'economic'];
-export const ITEM_TYPES: ItemGenome['itemType'][] = ['Weapon', 'Armor', 'Consumable', 'Material', 'Accessory'];
-export const ITEM_RARITIES: ItemGenome['minRarity'][] = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+/** Item types and rarity order are rules: they live in rules.ts. */
+export { ITEM_TYPES };
+export const ITEM_RARITIES = RARITY_ORDER;
 
 export const DEFAULT_TRAITS: TraitGene[] = TRAIT_AXES.map((axis) => ({ axis, weight: 0.25, affinityTags: [] }));
 export const DEFAULT_MUTATION: MutationConfig = { mutationRate: 0.08, maxMutations: 1, wildMutation: false };

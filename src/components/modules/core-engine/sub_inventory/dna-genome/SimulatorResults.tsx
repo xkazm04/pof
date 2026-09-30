@@ -8,29 +8,8 @@ import {
   OPACITY_10, OPACITY_20, OPACITY_37,
 } from '@/lib/chart-colors';
 import { SectionHeader, CornerBrackets, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
+import type { SimulationStats } from '@/lib/item-dna/rolling-engine';
 import { ACCENT, AXIS_CONFIGS } from './data';
-
-const GOD_ROLL_THRESHOLD = 0.85;
-
-// NOTE: `SimulationStats` type cannot be imported from rolling-engine — the
-// module's exports are broken upstream (pre-existing baseline error in
-// MonteCarloSimulator). Use a structural type to avoid duplicating the
-// broken import here.
-interface SimulationStats {
-  avgCoherence: number;
-  avgAffixCount: number;
-  observedMutationRate: number;
-  configuredMutationRate: number;
-  godRollProbability: number;
-  coherenceHistogram: number[];
-  iterations: number;
-  axisFrequency: Record<string, number>;
-  affixFrequency: Record<string, {
-    perRoll: number;
-    appearances: number;
-    affix: { id: string; name: string; axis: string; isPrefix: boolean };
-  }>;
-}
 
 interface Props {
   stats: SimulationStats;
@@ -70,7 +49,7 @@ export function SimulatorResults({ stats }: Props) {
         <SummaryStat
           label="God-Roll"
           value={`${(stats.godRollProbability * 100).toFixed(2)}%`}
-          sub={`≥${(GOD_ROLL_THRESHOLD * 100).toFixed(0)}% coherent + max affixes`}
+          sub={`≥${(stats.godRollThreshold * 100).toFixed(0)}% coherent + max affixes`}
           color={ACCENT_PINK}
         />
       </div>
