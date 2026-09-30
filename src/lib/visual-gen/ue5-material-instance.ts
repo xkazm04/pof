@@ -16,7 +16,18 @@
  * is not.
  *
  * Everything here is PURE: same input, same bytes out. No clock, no randomness.
+ *
+ * The colour theory, the per-role channel table and the texture resolver are NOT
+ * restated here: they come from `material-boundary.ts`, the one module the
+ * preview and the Blender projection read too.
  */
+
+import {
+  MATERIAL_CHANNELS,
+  hexToLinearRgb,
+  resolveChannelSource,
+  type MaterialChannel,
+} from '@/lib/visual-gen/material-boundary';
 
 /** The lab's PBR scalars. Structurally the component-side `PBRParams`. */
 export interface UE5MaterialParams {
@@ -28,7 +39,7 @@ export interface UE5MaterialParams {
   aoStrength: number;
 }
 
-export type UE5TextureChannel = 'albedo' | 'normal' | 'metallic' | 'roughness' | 'ao';
+export type UE5TextureChannel = MaterialChannel;
 
 export interface UE5MaterialInstanceInput {
   /** Desired asset name; sanitised and prefixed with `MI_` if it is not already. */
@@ -74,14 +85,6 @@ export interface UE5MaterialInstance {
 export const DEFAULT_PARENT_MATERIAL = '/Game/PoF/Materials/M_ARPG_Surface_Master';
 export const DEFAULT_PACKAGE_PATH = '/Game/PoF/Materials';
 
-const TEXTURE_PARAMETER: Record<UE5TextureChannel, string> = {
-  albedo: 'Albedo',
-  normal: 'Normal',
-  metallic: 'Metallic',
-  roughness: 'Roughness',
-  ao: 'AO',
-};
-
 /** UE asset names accept letters, digits and underscore. */
 export function sanitizeAssetName(raw: string): string {
   const cleaned = raw.trim().replace(/[^A-Za-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
@@ -90,23 +93,12 @@ export function sanitizeAssetName(raw: string): string {
   return named.startsWith('MI_') ? named : `MI_${named}`;
 }
 
-/** Hex "#rrggbb" → linear-ish 0-1 triple, rounded so the output is byte-stable. */
+/**
+ * Hex "#rrggbb" -> the scene-linear triple a `LinearColor` expects (the sRGB
+ * code value decoded, not copied), rounded so the output is byte-stable.
+ */
 export function hexToLinearColor(hex: string): [number, number, number] {
-  const h = hex.replace('#', '').padEnd(6, '0').slice(0, 6);
-  const channel = (offset: number) => {
-    const value = parseInt(h.substring(offset, offset + 2), 16);
-    return Number.isNaN(value) ? 0 : Math.round((value / 255) * 1e6) / 1e6;
-  };
-  return [channel(0), channel(2), channel(4)];
-}
-
-/** A texture only travels if it is already an imported UE asset path. */
-function resolveTexture(url: string): { assetPath: string } | { reason: string } {
-  if (url.startsWith('/Game/')) return { assetPath: url };
-  if (url.startsWith('blob:')) {
-    return { reason: 'held only in the browser (blob: URL). Save the map, import it into UE, then set this texture parameter on the instance.' };
-  }
-  return { reason: `"${url}" is not a UE asset path. Import the map into the Content Browser and re-export, or set the parameter by hand.` };
+  return hexToLinearRgb(hex);
 }
 
 function pythonFloat(value: number): string {
@@ -170,6 +162,10 @@ def _ensure_parent():
         node.set_editor_property("default_value", default)
         _connect(node, prop)
 
+    # An instance inherits usage flags from its parent, and a -game run cannot
+    # add one: without this a lab MI on a skeletal mesh silently draws the
+    # DEFAULT material.
+    master.set_editor_property("used_with_skeletal_mesh", True)
     lib.recompile_material(master)
     unreal.EditorAssetLibrary.save_asset(PARENT_MATERIAL)
     return master
@@ -200,16 +196,16 @@ export function buildUE5MaterialInstance(input: UE5MaterialInstanceInput): UE5Ma
   ];
   const notExported: UE5Dropped[] = [];
 
-  const channels: UE5TextureChannel[] = ['albedo', 'normal', 'metallic', 'roughness', 'ao'];
-  for (const channel of channels) {
-    const url = input.textures?.[channel];
-    if (!url) continue;
-    const resolved = resolveTexture(url);
+  const textureSrgb: string[] = [];
+  for (const spec of MATERIAL_CHANNELS) {
+    const resolved = resolveChannelSource(input.textures?.[spec.channel], 'ue5');
+    if (!resolved) continue;
     if ('reason' in resolved) {
-      notExported.push({ label: `${TEXTURE_PARAMETER[channel]} texture`, reason: resolved.reason });
+      notExported.push({ label: `${spec.ueParameter} texture`, reason: resolved.reason });
       continue;
     }
-    parameters.push({ name: TEXTURE_PARAMETER[channel], kind: 'texture', value: resolved.assetPath });
+    parameters.push({ name: spec.ueParameter, kind: 'texture', value: resolved.assetPath });
+    textureSrgb.push(`    "${spec.ueParameter}": ${spec.colourSpace === 'srgb' ? 'True' : 'False'},`);
   }
 
   const scalars = parameters.filter((p) => p.kind === 'scalar');
@@ -239,6 +235,11 @@ ${vectors.map((p) => `    "${p.name}": ${p.value},`).join('\n')}
 }
 TEXTURES = {
 ${textures.length ? textures.map((p) => `    "${p.name}": "${p.value}",`).join('\n') : '    # no imported UE texture assets - see the export report'}
+}
+# Per-role colour space from the lab's channel table: colour maps sample as
+# sRGB, data maps (normal/metallic/roughness/AO) must not.
+TEXTURE_SRGB = {
+${textureSrgb.length ? textureSrgb.join('\n') : '    # no textures'}
 }
 
 ${HELPERS}
@@ -274,6 +275,11 @@ def build():
         if texture is None:
             unsupported.append("%s (asset %s not found)" % (name, path))
             continue
+        if texture.get_editor_property("srgb") != TEXTURE_SRGB[name]:
+            unreal.log_warning(
+                "%s: %s imports with sRGB=%s but its role needs sRGB=%s - it will sample wrong."
+                % (ASSET_PATH, path, texture.get_editor_property("srgb"), TEXTURE_SRGB[name])
+            )
         if not lib.set_material_instance_texture_parameter_value(instance, name, texture):
             unsupported.append(name)
 

@@ -1,4 +1,8 @@
 import { py } from '@/lib/blender-mcp/escape';
+import { channelSpec, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
+
+/** The image node's colourspace for a channel, read from the lab's per-role table. */
+const colorspace = (channel: MaterialChannel) => channelSpec(channel).blenderColorspace;
 
 /** A texture source Blender can actually open: a local file path or an http(s) URL. */
 export interface MaterialTextureSources {
@@ -11,6 +15,7 @@ export interface MaterialTextureSources {
 
 export interface CreateMaterialParams {
   name: string;
+  /** SCENE-LINEAR 0-1 (the Base Color socket is linear): decode a hex with `hexToLinearRgb`. */
   baseColor: [number, number, number];
   metallic: number;
   roughness: number;
@@ -99,11 +104,11 @@ export function createMaterialScript(params: CreateMaterialParams): string {
 
   // Base colour chain: albedo image (if any) optionally multiplied by the AO map.
   if (tex.albedo) {
-    body.push(`albedo_tex = _tex_node(nodes, "${py(tex.albedo)}", "sRGB", 300)`);
+    body.push(`albedo_tex = _tex_node(nodes, "${py(tex.albedo)}", "${colorspace('albedo')}", 300)`);
     body.push('applied.append("Albedo map")');
   }
   if (tex.ao) {
-    body.push(`ao_tex = _tex_node(nodes, "${py(tex.ao)}", "Non-Color", -300)`);
+    body.push(`ao_tex = _tex_node(nodes, "${py(tex.ao)}", "${colorspace('ao')}", -300)`);
     body.push(`ao_mix, ao_a, ao_b, ao_out = _multiply_node(nodes, ${params.aoStrength})`);
     body.push("ao_mix.location = (-400, 200)");
     if (tex.albedo) {
@@ -121,17 +126,17 @@ export function createMaterialScript(params: CreateMaterialParams): string {
   }
 
   if (tex.metallic) {
-    body.push(`metallic_tex = _tex_node(nodes, "${py(tex.metallic)}", "Non-Color", 0)`);
+    body.push(`metallic_tex = _tex_node(nodes, "${py(tex.metallic)}", "${colorspace('metallic')}", 0)`);
     body.push('links.new(metallic_tex.outputs["Color"], bsdf.inputs["Metallic"])');
     body.push('applied.append("Metallic map")');
   }
   if (tex.roughness) {
-    body.push(`roughness_tex = _tex_node(nodes, "${py(tex.roughness)}", "Non-Color", -150)`);
+    body.push(`roughness_tex = _tex_node(nodes, "${py(tex.roughness)}", "${colorspace('roughness')}", -150)`);
     body.push('links.new(roughness_tex.outputs["Color"], bsdf.inputs["Roughness"])');
     body.push('applied.append("Roughness map")');
   }
   if (tex.normal) {
-    body.push(`normal_tex = _tex_node(nodes, "${py(tex.normal)}", "Non-Color", 150)`);
+    body.push(`normal_tex = _tex_node(nodes, "${py(tex.normal)}", "${colorspace('normal')}", 150)`);
     body.push('normal_map = nodes.new("ShaderNodeNormalMap")');
     body.push('normal_map.location = (-400, 150)');
     body.push(`normal_map.inputs["Strength"].default_value = ${params.normalStrength}`);

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
 import { getAppOrigin } from '@/lib/constants';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
+import { hexToLinearRgb, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
 import { planMaterialTransfer, type MaterialTransferPlan } from './materialTransfer';
 import { ok, type Result } from '@/types/result';
 
@@ -59,16 +60,8 @@ function toPreset(record: MaterialRecordDto): MaterialPreset {
 
 export type PreviewMesh = 'sphere' | 'cube' | 'plane' | 'cylinder';
 
-export type TextureChannel = 'albedo' | 'normal' | 'metallic' | 'roughness' | 'ao';
-
-/** Convert a hex color string like "#c0c0c0" to [r, g, b] in 0-1 range. */
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16) / 255;
-  const g = parseInt(h.substring(2, 4), 16) / 255;
-  const b = parseInt(h.substring(4, 6), 16) / 255;
-  return [r, g, b];
-}
+/** The lab's texture slots — the channel column of `MATERIAL_CHANNELS`. */
+export type TextureChannel = MaterialChannel;
 
 interface MaterialState {
   params: PBRParams;
@@ -263,7 +256,9 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
     const code = createMaterialScript({
       name,
-      baseColor: hexToRgb(params.baseColor),
+      // Base Color is a scene-linear socket: decode the hex the same way the
+      // preview's colour management does (material-boundary.ts).
+      baseColor: hexToLinearRgb(params.baseColor),
       metallic: params.metallic,
       roughness: params.roughness,
       normalStrength: params.normalStrength,
