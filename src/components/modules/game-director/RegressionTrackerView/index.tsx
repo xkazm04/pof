@@ -9,27 +9,36 @@ import { TabBar, type TabItem } from '@/components/ui/TabBar';
 import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import type { ScanDelta } from '@/lib/evaluator/scan-delta';
-import type { PlaytestSession } from '@/types/game-director';
 import type {
   FindingFingerprint,
   RegressionAlert,
   RegressionReport,
+  RegressionSessionOption,
   RegressionStats,
 } from '@/types/regression-tracker';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 import { FetchError } from '../../shared/FetchError';
 import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
-import { ACCENT, EMPTY_SESSIONS } from './constants';
+import { ACCENT } from './constants';
 import type { SubTab, FailedAction } from './types';
 import { DashboardTab } from './DashboardTab';
 import { FingerprintsTab } from './FingerprintsTab';
 import { AlertsTab } from './AlertsTab';
 
+/** Stable empty list (module-level, so the initial state never re-allocates). */
+const NO_SESSIONS: RegressionSessionOption[] = [];
+
+/** Picker label: name, date, and whether the tracker has already analyzed it. */
+function sessionOptionLabel(s: RegressionSessionOption): string {
+  const date = new Date(s.createdAt).toLocaleDateString();
+  return `${s.name} (${date})${s.analyzed ? ' · analyzed' : ''}`;
+}
+
 // ─── Main view ────────────────────────────────────────────────────────────────
 
 export function RegressionTrackerView() {
   const [subTab, setSubTab] = useState<SubTab>('dashboard');
-  const [sessions, setSessions] = useState<PlaytestSession[]>(EMPTY_SESSIONS);
+  const [sessions, setSessions] = useState<RegressionSessionOption[]>(NO_SESSIONS);
   const [fingerprints, setFingerprints] = useState<FindingFingerprint[]>([]);
   const [alerts, setAlerts] = useState<RegressionAlert[]>([]);
   const [stats, setStats] = useState<RegressionStats | null>(null);
@@ -53,7 +62,7 @@ export function RegressionTrackerView() {
         apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
         apiFetch<RegressionAlert[]>('/api/regression-tracker?action=alerts'),
         apiFetch<RegressionStats>('/api/regression-tracker?action=stats'),
-        apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
+        apiFetch<RegressionSessionOption[]>('/api/regression-tracker?action=sessions'),
         tryApiFetch<{ deltas: ScanDelta[] }>('/api/evaluator/deltas'),
       ]);
       if (!isMounted()) return;
@@ -156,6 +165,10 @@ export function RegressionTrackerView() {
   }
 
   const activeAlertCount = alerts.filter(a => !a.dismissed).length;
+  // Session time decides the pass: a session older than the newest analyzed one
+  // can only backfill occurrences, so the button says so before it is pressed.
+  const selected = sessions.find(s => s.id === selectedSessionId);
+  const backfill = selected?.analysisMode === 'backfill';
   const tabs: TabItem<SubTab>[] = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'fingerprints', label: 'Tracked Issues' },
@@ -179,6 +192,9 @@ export function RegressionTrackerView() {
             <Bug className="w-4 h-4" style={{ color: ACCENT }} />
             <span className="text-sm font-semibold text-text">Analyze Session for Regressions</span>
           </div>
+          <p className="text-xs text-text-muted mt-1">
+            Completed sessions are analyzed automatically; re-run one here.
+          </p>
           <div className="flex items-center gap-2 mt-3">
             <select
               value={selectedSessionId}
@@ -188,7 +204,7 @@ export function RegressionTrackerView() {
             >
               <option value="">Select a completed session...</option>
               {sessions.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({new Date(s.createdAt).toLocaleDateString()})</option>
+                <option key={s.id} value={s.id}>{sessionOptionLabel(s)}</option>
               ))}
             </select>
             <button
@@ -198,9 +214,14 @@ export function RegressionTrackerView() {
               style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
             >
               {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-              {processing ? 'Processing…' : 'Analyze'}
+              {processing ? 'Processing…' : backfill ? 'Backfill' : 'Analyze'}
             </button>
           </div>
+          {backfill && (
+            <p className="text-xs text-text-muted mt-2">
+              Older than the newest analyzed session: this records its occurrences only and changes no status.
+            </p>
+          )}
         </div>
       </SurfaceCard>
 

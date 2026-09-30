@@ -1,12 +1,19 @@
 import { getDb } from './db';
 import { logger } from '@/lib/logger';
 import { resolveConfidence } from '@/lib/game-director-styles';
-import { getFindings, isTriageExcluded } from './game-director-db';
+import {
+  getFindings,
+  isTriageExcluded,
+  markRegressionAnalyzed,
+  sessionChronology,
+  type SessionChronologyEntry,
+} from './game-director-db';
 import type { PlaytestConfig, PlaytestFinding, PlaytestSession } from '@/types/game-director';
 import type {
   FindingFingerprint,
   FingerprintOccurrence,
   RegressionAlert,
+  RegressionAnalysisMode,
   RegressionReport,
   RegressionStats,
   RegressionStatus,
@@ -230,9 +237,49 @@ function parseTestCategories(rawConfig: string): string[] {
   }
 }
 
+// ─── Session time ────────────────────────────────────────────────────────────
+
+/**
+ * Which pass analyzing `sessionId` runs, given the session chronology.
+ *
+ * Status transitions (open → fixed → regressed) are written ONLY by a session at
+ * or after the newest session already analyzed ('forward'). A session older than
+ * that one is 'backfill': it records its occurrences (new fingerprints start
+ * 'open') but changes no status, raises no alert and sweeps nothing — an older
+ * build cannot overrule what a newer build already showed. So no analysis order
+ * can mark 'fixed' a fingerprint the newest analyzed session contains.
+ *
+ * This bounds order-dependence; it does not remove it: S1{X} S2{} S3{X} analyzed
+ * S1,S3,S2 leaves X 'open', while S1,S2,S3 ends 'regressed'. Both are honest;
+ * only the old behaviour ('fixed' while the newest build still has X) lied.
+ * A session not in the chronology backfills once anything has been analyzed.
+ */
+export function analysisMode(
+  chronology: readonly SessionChronologyEntry[],
+  sessionId: string,
+): RegressionAnalysisMode {
+  let newestAnalyzed = -1;
+  chronology.forEach((s, i) => { if (s.regressionAnalyzedAt != null) newestAnalyzed = i; });
+  const at = chronology.findIndex(s => s.id === sessionId);
+  return at >= newestAnalyzed ? 'forward' : 'backfill';
+}
+
+/** Per-session analysis state for the tracker's session picker. */
+export function getSessionAnalysisStates(): Map<string, { analyzed: boolean; analysisMode: RegressionAnalysisMode }> {
+  const chronology = sessionChronology();
+  return new Map(chronology.map(s => [s.id, {
+    analyzed: s.regressionAnalyzedAt != null,
+    analysisMode: analysisMode(chronology, s.id),
+  }]));
+}
+
 // ─── Core tracking ───────────────────────────────────────────────────────────
 
-/** Process all findings from a session and update fingerprint tracking */
+/**
+ * Process all findings from a session and update fingerprint tracking. Runs the
+ * full pass ('forward') or occurrences only ('backfill') — see {@link analysisMode}
+ * — and stamps the session analyzed either way.
+ */
 export function processSession(session: PlaytestSession): RegressionReport {
   ensureTables();
   const db = getDb();
@@ -246,14 +293,12 @@ export function processSession(session: PlaytestSession): RegressionReport {
   // fingerprinting so noise doesn't inflate regression counts.
   const findings = getFindings(session.id).filter(f => !isTriageExcluded(f.triageStatus));
 
-  // Session ordering + names in ONE chronological SELECT. This used to call
-  // listSessions() unbounded — hydrating and JSON-parsing every session's config
-  // and summary for the whole project's history — purely so the regression
-  // branch could look up one session's NAME. The ordered id+name projection is
-  // all this function ever read off it.
-  const sortedSessions = db.prepare(
-    'SELECT id, name FROM game_director_sessions ORDER BY datetime(created_at)'
-  ).all() as SessionRef[];
+  // Session ordering + names in ONE chronological SELECT — the shared session
+  // clock (created_at, rowid), so same-second sessions order by insertion. An
+  // id+name(+analyzed) projection, never the hydrated listSessions().
+  const chronology = sessionChronology();
+  const sortedSessions: SessionRef[] = chronology;
+  const mode = analysisMode(chronology, session.id);
   const nameById = new Map(sortedSessions.map(s => [s.id, s.name]));
 
   // Build session index ordered by creation date
@@ -365,7 +410,14 @@ export function processSession(session: PlaytestSession): RegressionReport {
       distinctSessionsByFp.set(fpId, distinctSet);
       const occCount = distinctSet.size;
 
-      if (prevStatus === 'fixed' || prevStatus === 'resolved') {
+      if (mode === 'backfill') {
+        // An older session adds evidence, never a verdict: counts only.
+        db.prepare(`
+          UPDATE regression_fingerprints SET peak_severity = ?, occurrence_count = ? WHERE id = ?
+        `).run(newPeak, occCount, fpId);
+        existing.peak_severity = newPeak;
+        existing.occurrence_count = occCount;
+      } else if (prevStatus === 'fixed' || prevStatus === 'resolved') {
         // REGRESSION: was fixed but reappeared
         const regCount = (existing.regression_count as number) + 1;
 
@@ -440,11 +492,16 @@ export function processSession(session: PlaytestSession): RegressionReport {
   //
   // A session can only testify about ground it covered. Absence of evidence is
   // evidence of a fix ONLY where the session looked.
+  //
+  // A backfill session sweeps nothing: a newer analyzed session already
+  // testified about the current build, and an older one cannot overrule it.
   const newlyFixed: FindingFingerprint[] = [];
   const sweepScope = new Set<string>(session.config?.testCategories ?? []);
-  const openFingerprints = db.prepare(
-    "SELECT * FROM regression_fingerprints WHERE status IN ('open', 'regressed')"
-  ).all() as Record<string, unknown>[];
+  const openFingerprints = mode === 'forward'
+    ? db.prepare(
+      "SELECT * FROM regression_fingerprints WHERE status IN ('open', 'regressed')"
+    ).all() as Record<string, unknown>[]
+    : [];
 
   // Which test categories has each open fingerprint ever been observed under?
   // Fingerprints carry a FindingCategory ('animation-issue', 'level-pacing'),
@@ -507,9 +564,11 @@ export function processSession(session: PlaytestSession): RegressionReport {
   const persistent = db.prepare(
     "SELECT * FROM regression_fingerprints WHERE status = 'open' AND hash != ''"
   ).all() as Record<string, unknown>[];
-  const persistentList = persistent
+  const persistentList = mode === 'backfill' ? [] : persistent
     .filter(r => currentHashes.has(r.hash as string) && !newFindings.some(n => n.hash === r.hash as string))
     .map(rowToFingerprint);
+
+  markRegressionAnalyzed(session.id);
 
   // Stats
   const allFps = db.prepare('SELECT status FROM regression_fingerprints').all() as { status: string }[];
@@ -519,6 +578,7 @@ export function processSession(session: PlaytestSession): RegressionReport {
     sessionId: session.id,
     sessionName: session.name,
     generatedAt: new Date().toISOString(),
+    mode,
     newFindings,
     regressions,
     persistent: persistentList,

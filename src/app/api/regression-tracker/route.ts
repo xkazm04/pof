@@ -9,8 +9,10 @@ import {
   dismissAlert,
   markResolved,
   getRegressionStats,
+  getSessionAnalysisStates,
 } from '@/lib/regression-tracker';
 import { getSession, listSessions } from '@/lib/game-director-db';
+import type { RegressionSessionOption } from '@/types/regression-tracker';
 
 // GET ?action=fingerprints | alerts | active-alerts | occurrences&fpId=X | stats
 export async function GET(req: NextRequest) {
@@ -35,8 +37,16 @@ export async function GET(req: NextRequest) {
       return apiSuccess(getRegressionStats());
     }
     if (action === 'sessions') {
-      // Return completed sessions for the dropdown
-      const sessions = listSessions().filter(s => s.status === 'complete');
+      // Completed sessions for the picker, each stating whether it was already
+      // analyzed and which pass analyzing it now would run (session time decides).
+      const states = getSessionAnalysisStates();
+      const sessions: RegressionSessionOption[] = listSessions()
+        .filter(s => s.status === 'complete')
+        .map(s => ({
+          ...s,
+          analyzed: states.get(s.id)?.analyzed ?? false,
+          analysisMode: states.get(s.id)?.analysisMode ?? 'backfill',
+        }));
       return apiSuccess(sessions);
     }
     return apiError('Unknown action', 400);
