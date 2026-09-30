@@ -23,23 +23,22 @@ import { POST } from '@/app/api/one-shot/step/route';
 import { buildStepProducePrompt, stepCallbackId } from '@/lib/catalog/stepPrompt';
 import type { StepSpec } from '@/lib/catalog/stepSpec';
 
-/** A contract-bearing brief step — the class the live CLI seam can actually author. */
+/**
+ * A contract-bearing brief step — the class the live CLI seam can actually author. The contract is
+ * DECLARED (`contract`), as every registered step's is since /diablo W03 (D12): the produce stub is
+ * never read for a prompt.
+ */
 const SPEC: StepSpec = {
   archetype: 'brief',
   label: 'Concept Brief',
   view: { kind: 'prose', field: 'brief', emptyText: '' },
-  produce: () => ({
-    data: {
-      brief: 'A solid iron sword for early-game combat.',
-      wiringContract: {
-        grantedBy: 'DT_ItemCatalog row seeded by seed_item_catalog.py',
-        activatedBy: 'UPoFInventoryComponent::EquipItem on the player pawn',
-        verification: 'L3 functional test Project.Functional Tests.Maps.VerticalSlice.EquipSword',
-        dependencies: ['items::Attributes'],
-      },
-    },
-    ueAssets: [],
-  }),
+  produce: () => ({ data: { brief: 'A solid iron sword for early-game combat.' }, ueAssets: [] }),
+  contract: {
+    grantedBy: 'DT_ItemCatalog row seeded by seed_item_catalog.py',
+    activatedBy: 'UPoFInventoryComponent::EquipItem on the player pawn',
+    verification: 'L3 functional test Project.Functional Tests.Maps.VerticalSlice.EquipSword',
+    dependencies: ['items::Attributes'],
+  },
   accept: () => ({ tier: 'L0', status: 'pass', label: 'Brief', detail: 'ok' }),
 };
 

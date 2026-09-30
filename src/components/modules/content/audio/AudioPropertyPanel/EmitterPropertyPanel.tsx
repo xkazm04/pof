@@ -6,24 +6,35 @@ import { AssetSetPicker } from './AssetSetPicker';
 import { EMITTER_TYPES } from './constants';
 import { Field, SliderField } from './controls';
 import { SaveErrorBanner } from './SaveErrorBanner';
-import { useRecordCommit } from './useRecordCommit';
+import { useRecordCommit, NO_COMMIT, type RecordCommit } from './useRecordCommit';
 
-interface EmitterPropertyPanelProps {
+type EmitterPropertyPanelProps = {
   emitter: SoundEmitter;
-  /**
-   * Persist ONE patch of this emitter. Rejects when the server refused it.
-   * Mount with `key={emitter.id}` so a pending edit is flushed on deselect.
-   */
-  onCommit: (patch: Partial<SoundEmitter>) => void | Promise<unknown>;
   accentColor: string;
-}
+} & (
+  | {
+      /**
+       * Persist ONE patch of this emitter. Rejects when the server refused it.
+       * Mount with `key={emitter.id}` so a pending edit is flushed on deselect.
+       */
+      onCommit: (patch: Partial<SoundEmitter>) => void | Promise<unknown>;
+      record?: undefined;
+    }
+  | {
+      /** A record inside a shared scene buffer (`useSceneEmitter`): render and write through it. */
+      record: RecordCommit<SoundEmitter>;
+      onCommit?: undefined;
+    }
+);
 
 export function EmitterPropertyPanel({
   emitter,
   onCommit,
+  record,
   accentColor,
 }: EmitterPropertyPanelProps) {
-  const buf = useRecordCommit(emitter, onCommit);
+  const own = useRecordCommit(emitter, onCommit ?? NO_COMMIT);
+  const buf = record ?? own;
   const v = buf.value;
 
   return (

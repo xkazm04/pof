@@ -1,4 +1,4 @@
-import { Plus, Volume2, Radio } from 'lucide-react';
+import { Plus, Volume2, Radio, Headphones } from 'lucide-react';
 import { ToolBtn } from './ToolBtn';
 import type { PaintMode } from './types';
 
@@ -33,6 +33,13 @@ export function Toolbar({ paintMode, setPaintMode }: {
           onClick={() => setPaintMode('emitter')}
           label="EMITTER"
           icon={<Plus className="w-3.5 h-3.5" />}
+        />
+        <div className="w-px h-6 bg-border mx-1" />
+        <ToolBtn
+          active={paintMode === 'listen'}
+          onClick={() => setPaintMode('listen')}
+          label="LISTEN"
+          icon={<Headphones className="w-3.5 h-3.5" />}
         />
       </div>
     </div>

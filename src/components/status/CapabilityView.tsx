@@ -16,11 +16,10 @@
  * Pipelines tab then paid again. A catalog that fails to read is NAMED rather than folded
  * into the gate denominators.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import { useMemo } from 'react';
 import { buildCapabilityRows, type CapabilityRow, type CapabilityGradeLevel } from '@/lib/status/capabilityModel';
 import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusVerdicts } from './statusVerdictSource';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import type { StatusLevel } from '@/lib/status-token';
@@ -132,33 +131,15 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
   // consumes — one deduped fetch per catalog, cached across tabs. This tab is the DEFAULT
   // landing, and it used to fan out its own per-catalog artifact GETs on every mount.
   const { catalogs, reload } = useStatusArtifacts();
-  const [verdicts, setVerdicts] = useState<JudgeVerdict[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  /** Bumped by Retry to re-run the load effect. */
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      // Verdicts (all judges: llm-panel + vlm + human) feed the score/human streams; the
-      // L3/L4 gate artifacts feed the gate-judged classes. buildCapabilityRows routes each
-      // class to its own stream.
-      const res = await tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts');
-      if (!alive) return;
-      if (!res.ok) {
-        // Grading an EMPTY verdict set would render every score-judged class as
-        // "unproven / no evidence" — a fabricated verdict manufactured by a dead
-        // endpoint, in the one view whose whole job is honest capability truth.
-        // Report the failure instead.
-        setError(res.error);
-        return;
-      }
-      setVerdicts(res.data);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [attempt]);
+  // Verdicts (all judges: llm-panel + vlm + human) feed the score/human streams; the L3/L4
+  // gate artifacts feed the gate-judged classes. They come from the SHARED /status verdict
+  // read (one deduped request across every tab). A FAILED read is reported, never graded:
+  // an EMPTY verdict set would render every score-judged class "unproven / no evidence" —
+  // a fabricated verdict manufactured by a dead endpoint, in the one view whose whole job
+  // is honest capability truth.
+  const { verdicts: verdictRead, reload: reloadVerdicts } = useStatusVerdicts();
+  const verdicts = verdictRead?.ok ? verdictRead.all : null;
+  const error = verdictRead && !verdictRead.ok ? verdictRead.error : null;
 
   /** Catalogs whose gate artifacts could not be read. Their L3/L4 rows are MISSING from the
    *  denominators below, so an "N/M gates pass" figure is incomplete — named, not hidden. */
@@ -173,10 +154,8 @@ export function CapabilityView({ onFilterClass }: { onFilterClass: (klass: strin
   );
 
   const retry = () => {
-    setError(null);
-    setVerdicts(null);
     reload();
-    setAttempt((a) => a + 1);
+    reloadVerdicts();
   };
 
   return (

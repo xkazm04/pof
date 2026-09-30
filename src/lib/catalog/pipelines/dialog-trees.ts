@@ -1,8 +1,9 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields, maxWordsPerEntry } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { voLineLength } from '../acceptance/invariants';
 import { graphValid } from '../acceptance/graphCheckers';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
@@ -190,6 +191,15 @@ registerCatalogPipeline({
           { catalogId: 'quests',     entityId: 'quest-ember-pact',  role: 'advances' },
         ],
       }),
+      contract: {
+        grantedBy: 'UARPGDialogComponent on this tree’s host character reads its FARPGDialogTreeRow from DT_DialogTrees and evaluates every declared FARPGDialogCondition',
+        activatedBy: 'player interaction with the declared host opens THIS dialog tree and evaluates its edge conditions until a declared terminal is reached',
+        dependencies: [
+          'characters::<id> for THIS dialog tree’s host',
+          'quests::<id>, factions::<id>, or other catalog entities affected by THIS tree’s terminals',
+        ],
+        verification: 'L2: FARPGDialogTreeRow and UARPGDialogComponent compile in Source/PoF/ and this tree’s DT_DialogTrees row is seeded; L3: VSDialogBranchTest — every terminal declared by {name} is reachable, its conditions are enforced, and its declared events fire',
+      },
       accept: allOf(
         graphValid('graph', 'Dialog branches reachable + have terminals'),
         linksResolve(),
@@ -210,9 +220,9 @@ registerCatalogPipeline({
         const s = slug(e.name);
         return {
         data: {
-          conditionsEffects: {
+          conditionsEffects: [
             // Per-node conditions and effects for the three non-trivial nodes
-            skillCheck: {
+            {
               node: 'skill_check',
               condition:
                 'UARPGAttributeSet.Intelligence ≥ 14  →  edge to skill_pass; ' +
@@ -221,7 +231,7 @@ registerCatalogPipeline({
               effect:
                 'No direct effect on condition check; effect fires on terminal resolution (see EMBER_PACT_UNLOCKED).',
             },
-            emberPactUnlocked: {
+            {
               node: 'ember_pact_unlocked',
               condition: 'Always reached when skill_pass exits (no further gate).',
               effect:
@@ -230,7 +240,7 @@ registerCatalogPipeline({
                 'World-state tag State.Dialog.EmberPactIntroPlayed applied via ' +
                 'GE_WorldState_EmberPactIntroPlayed (prevents re-triggering the quest start branch).',
             },
-            hostile: {
+            {
               node: 'hostile',
               condition: 'Reached only if threaten_warn exit is selected (player confirms threat or auto-triggers).',
               effect:
@@ -238,14 +248,14 @@ registerCatalogPipeline({
                 'faction-ashen-order standing delta −30 applied via GE_FactionDelta_AshenOrder (SetByCaller −30). ' +
                 'Vael\'s AARPGNPCActor hostility flag set to true (persisted to AARPGWorldStateComponent).',
             },
-            dismissed: {
+            {
               node: 'dismissed',
               condition: 'Reached via ask_response or skill_fail.',
               effect:
                 'No gameplay effect; UARPGDialogComponent closes the widget and restores input. ' +
                 'State.Dialog.EmberPactIntroPlayed NOT set — player may retry on re-interact if Intelligence is raised.',
             },
-          },
+          ],
           wiringContract: {
             grantedBy:
               'FARPGDialogCondition structs in DT_DialogTrees row + GE_WorldState_EmberPactIntroPlayed + ' +
@@ -267,13 +277,19 @@ registerCatalogPipeline({
         ueAssets: [`/Game/Dialog/DA_${s}_Effects`],
         };
       },
+      contract: {
+        grantedBy: 'THIS dialog tree’s FARPGDialogCondition records and DA_{slug}_Effects name one GameplayEvent or GameplayEffect for EACH non-empty node effect',
+        activatedBy: 'UARPGDialogComponent reaches a node or terminal and fires exactly the event or GameplayEffect declared for that path',
+        dependencies: [
+          'characters::<id> for EACH character state changed by this tree',
+          'quests::<id> for EACH quest changed by this tree',
+          'factions::<id> for EACH faction changed by this tree',
+        ],
+        verification: 'L2: DA_{slug}_Effects exists, FARPGDialogCondition compiles, and every GameplayEffect declared by {name} compiles; L3: VSDialogBranchTest — each terminal path applies exactly its declared effects',
+      },
       accept: allOf(
-        fieldsPopulated('conditionsEffects', 'skill-check, ember-pact, hostile, dismissed nodes defined', [
-          'skillCheck',
-          'emberPactUnlocked',
-          'hostile',
-          'dismissed',
-        ]),
+        minCount('conditionsEffects', '≥1 condition/effect path defined', 1),
+        entriesHaveFields('conditionsEffects', 'every path carries node + condition + effect', ['node', 'condition', 'effect']),
         wiringContractSound(),
       ),
     },
@@ -282,6 +298,8 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Skill Checks',
+      // Not a step of a Diablo I conversation (/diablo W16): a skill check gates a player REPLY; under d1-dialogue-hub-law the hero never picks a reply, so a Diablo conversation has no node to gate. Its produced artifacts were all gap markers.
+      profiles: ['pof'],
       view: {
         kind: 'table',
         field: 'skillChecks',
@@ -330,6 +348,14 @@ registerCatalogPipeline({
         },
         ueAssets: [`/Game/Dialog/DA_${s}_Effects`],
         };
+      },
+      contract: {
+        grantedBy: 'one FARPGDialogCondition in this tree’s DT_DialogTrees row for EACH skill check names its attribute, operator, threshold, pass edge, and fail edge',
+        activatedBy: 'UARPGDialogComponent evaluates the declared condition when the player selects the corresponding choice node',
+        dependencies: [
+          'characters (UARPGAttributeSet and every attribute THIS dialog tree checks)',
+        ],
+        verification: 'L2: UARPGAttributeSet declares every checked attribute and DA_{slug}_Effects stores every declared threshold; L3: VSDialogBranchTest — values immediately below and at each threshold in {name} route to its declared fail and pass edges',
       },
       accept: allOf(
         minCount('skillChecks', '≥1 skill-check rule defined', 1),
@@ -383,7 +409,8 @@ registerCatalogPipeline({
       // authoring is where it bites, which is exactly where it is needed.
       accept: allOf(
         minCount('voLines', '≥1 VO line script entry present', 1),
-        maxWordsPerEntry('voLines', 'Every VO line ≤ 10 spoken words', 10),
+        // The cap is canon law `dialog-vo-line-length` (PoF), graded only where that law is in force (/diablo W16).
+        voLineLength('voLines', 'Every VO line ≤ 10 spoken words'),
       ),
     },
 
@@ -391,6 +418,8 @@ registerCatalogPipeline({
     {
       archetype: 'rules',
       label: 'Camera',
+      // Not a step of a Diablo I conversation (/diablo W16): a dialogue camera frames a conversation scene; under d1-camera Diablo keeps its fixed diagonal gameplay view while people talk. Its produced artifacts were all gap markers.
+      profiles: ['pof'],
       view: {
         kind: 'table',
         field: 'camera',
@@ -398,8 +427,8 @@ registerCatalogPipeline({
       },
       produce: (e: LabEntity) => ({
         data: {
-          camera: {
-            opening: {
+          camera: [
+            {
               phase: 'opening',
               shot: 'Medium two-shot: player left, Vael right, 3/4 angle.  Depth of field: Vael in focus.',
               anchor:
@@ -407,39 +436,37 @@ registerCatalogPipeline({
                 'Position offset: 200 cm behind player, 180 cm height, yaw −30° toward Vael.',
               blend: '0.4 s ease-in-out blend from gameplay camera on dialog open.',
             },
-            vaelSpeaking: {
+            {
               phase: 'vael_speaking',
               shot: 'Close-up on Vael face (bust shot, slight Dutch angle −5°) when Vael delivers a line.',
               anchor: 'Bone socket: Vael head bone + 20 cm Y offset.  FOV 50°.',
               blend: '0.25 s cut on line start.',
             },
-            playerChoice: {
+            {
               phase: 'player_choice',
               shot: 'Pull back to two-shot for player choice display; choices overlay top-right.',
               anchor: 'Midpoint between player and Vael, height 160 cm.  FOV 65°.',
               blend: '0.2 s ease-out.',
             },
-            close: {
+            {
               phase: 'close',
               shot: 'Blend back to gameplay camera over 0.5 s on terminal node reached.',
               anchor: 'Restore original gameplay camera transform.',
               blend: '0.5 s ease-in.',
             },
-            hudBinding: {
-              widget: 'WBP_DialogCamera',
-              format: '[{phase}] {shot}',
-              anchor: 'Managed by UARPGDialogComponent — never hard-coded placement (canon proj-hud-binding).',
-            },
+          ],
+          hudBinding: {
+            widget: 'WBP_DialogCamera',
+            format: '[{phase}] {shot}',
+            anchor: 'Managed by UARPGDialogComponent — never hard-coded placement (canon proj-hud-binding).',
           },
         },
         ueAssets: [`/Game/Cinematics/Dialog/BP_DialogCameraRig_${slug(e.name)}`],
       }),
-      accept: fieldsPopulated('camera', 'opening / vael-speaking / player-choice / close phases defined', [
-        'opening',
-        'vaelSpeaking',
-        'playerChoice',
-        'close',
-      ]),
+      accept: allOf(
+        minCount('camera', '≥1 camera phase defined', 1),
+        entriesHaveFields('camera', 'every phase carries phase + shot + anchor', ['phase', 'shot', 'anchor']),
+      ),
     },
 
     // ── 7. Subtitles & Choices UI ─────────────────────────────────────────────
@@ -494,6 +521,14 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        grantedBy: 'UARPGDialogComponent owns WBP_DialogSubtitle and WBP_DialogChoiceList through the project dialog-widget class references',
+        activatedBy: 'OpenTree creates and adds the declared dialog widgets to the HUD viewport, updates them for each node, and removes them at a terminal',
+        dependencies: [
+          'hud-elements::<id> for EACH subtitle or choice presentation binding THIS dialog tree uses',
+        ],
+        verification: 'L2: WBP_DialogSubtitle and WBP_DialogChoiceList exist under /Game/UI/Dialog/; L3: VSDialogBranchTest — {name} displays the current speaker and line and renders every available choice with its declared condition state',
+      },
       accept: allOf(
         fieldsPopulated('subtitleUI', 'subtitle widget / choice widget / anchors defined', [
           'subtitleWidget',
@@ -585,8 +620,10 @@ registerCatalogPipeline({
       // the same call the fleet already made on 7 identically-shaped Test Gate steps.
       engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
+      produce: (e: LabEntity) => ({
         data: {
+          // Per-entity runtime test (/diablo W16, like characters): another entity's gate is never 'proven' by the exemplar's test.
+          automationName: e.id === 'dialog-gatekeeper' ? 'PoF.DialogTrees.BranchIntegrity' : `PoF.DialogTrees.${slug(e.name)}.BranchIntegrity`,
           checks: [
             'dialog opens on player interact with Vael',
             'root node presents all 3 choices (ask / threaten / persuade)',
@@ -601,7 +638,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: entityRuntimeDeferred('PoF.DialogTrees.BranchIntegrity', 'All branches reachable + skill-check gates resolve in PIE'),
+      accept: allOf(automationNameDeclared(), entityRuntimeDeferred('PoF.DialogTrees.BranchIntegrity', 'All branches reachable + skill-check gates resolve in PIE')),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────
@@ -653,6 +690,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Dialog/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGDialogComponent on this tree’s host reads its FARPGDialogTreeRow from DT_DialogTrees; DA_{slug}_Effects owns its declared conditions and effect references; BP_DialogCameraRig_{slug} and the dialog widgets provide presentation',
+        activatedBy: 'player interaction with the declared host opens THIS dialog tree, evaluates its nodes and conditions, fires each terminal’s declared effects, and closes its widgets and camera rig',
+        dependencies: [
+          'characters::<id> for THIS dialog tree’s host',
+          'quests::<id>, factions::<id>, or other catalog entities changed by THIS tree',
+          'icon-sets::<id> for THIS dialog tree’s icon family when declared',
+        ],
+        verification: 'L2: FARPGDialogTreeRow and UARPGDialogComponent compile in Source/PoF/, this tree’s row and DA_{slug}_Effects are seeded, and its widgets exist; L3: VSDialogBranchTest — every path, condition, effect, and presentation transition declared by {name} works in PIE',
       },
       accept: allOf(
         minCount('assets', '≥3 UE dialog assets packaged', 3),

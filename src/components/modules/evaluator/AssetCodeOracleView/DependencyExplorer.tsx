@@ -3,15 +3,18 @@
 import { useState, useMemo } from 'react';
 import { Link2, FileCode, Box, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { STATUS_ERROR, statusBg } from '@/lib/chart-colors';
+import { STATUS_ERROR, STATUS_SUCCESS, STATUS_INFO, statusBg } from '@/lib/chart-colors';
+import type { DependencyNode } from '@/lib/asset-code-oracle';
 
 // ── Dependency Explorer ────────────────────────────────────────────────────
+// Nodes and edges share one identity: the asset relativePath (class name for a
+// class node). The basename `label` is display-only — it collides across folders.
 
 export function DependencyExplorer({
   nodes,
   edges,
 }: {
-  nodes: { name: string; type: string; inDegree: number; outDegree: number }[];
+  nodes: DependencyNode[];
   edges: { from: string; to: string; relation: string }[];
 }) {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -23,10 +26,14 @@ export function DependencyExplorer({
   }, [nodes]);
 
   const filteredNodes = useMemo(() => {
-    const list = typeFilter === 'all' ? nodes : nodes.filter((n) => n.type === typeFilter);
+    const list = typeFilter === 'all' ? [...nodes] : nodes.filter((n) => n.type === typeFilter);
     // Sort by total connections descending
     return list.sort((a, b) => (b.inDegree + b.outDegree) - (a.inDegree + a.outDegree));
   }, [nodes, typeFilter]);
+
+  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  const labelOf = (id: string) => byId.get(id)?.label ?? id;
+  const selected = selectedNode ? byId.get(selectedNode) : undefined;
 
   const selectedEdges = useMemo(() => {
     if (!selectedNode) return { incoming: [], outgoing: [] };
@@ -66,19 +73,20 @@ export function DependencyExplorer({
 
         <div className="max-h-[400px] overflow-y-auto space-y-0.5 rounded-lg border border-border bg-surface-deep p-1">
           {filteredNodes.slice(0, 100).map((node) => {
-            const isSelected = selectedNode === node.name;
+            const isSelected = selectedNode === node.id;
             const NodeIcon = TYPE_ICONS[node.type] ?? Link2;
             return (
               <button
-                key={node.name}
-                onClick={() => setSelectedNode(isSelected ? null : node.name)}
+                key={node.id}
+                title={node.id}
+                onClick={() => setSelectedNode(isSelected ? null : node.id)}
                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-left transition-colors ${
                   isSelected ? 'text-text' : 'hover:bg-surface-hover text-text-muted-hover'
                 }`}
                 style={isSelected ? { backgroundColor: statusBg(STATUS_ERROR) } : undefined}
               >
                 <NodeIcon className="w-3 h-3 flex-shrink-0 text-text-muted" />
-                <span className="flex-1 truncate font-mono text-2xs">{node.name}</span>
+                <span className="flex-1 truncate font-mono text-2xs">{node.label}</span>
                 <span className="text-2xs text-text-muted tabular-nums flex-shrink-0">
                   {node.inDegree}↓ {node.outDegree}↑
                 </span>
@@ -98,9 +106,9 @@ export function DependencyExplorer({
         {selectedNode ? (
           <>
             <div>
-              <h4 className="text-xs font-semibold text-text truncate">{selectedNode}</h4>
-              <p className="text-2xs text-text-muted mt-0.5">
-                {nodes.find((n) => n.name === selectedNode)?.type ?? 'unknown'}
+              <h4 className="text-xs font-semibold text-text truncate">{selected?.label ?? selectedNode}</h4>
+              <p className="text-2xs text-text-muted mt-0.5 truncate font-mono" title={selectedNode}>
+                {selected?.type ?? 'unknown'} · {selectedNode}
               </p>
             </div>
 
@@ -116,8 +124,8 @@ export function DependencyExplorer({
                       onClick={() => setSelectedNode(e.from)}
                       className="w-full flex items-center gap-1.5 px-2 py-1 rounded text-2xs text-left hover:bg-surface-hover transition-colors"
                     >
-                      <span className="text-[#4ade80]">←</span>
-                      <span className="text-text-muted-hover truncate flex-1 font-mono">{e.from}</span>
+                      <span style={{ color: STATUS_SUCCESS }}>←</span>
+                      <span className="text-text-muted-hover truncate flex-1 font-mono" title={e.from}>{labelOf(e.from)}</span>
                       <Badge>{e.relation}</Badge>
                     </button>
                   ))}
@@ -137,8 +145,8 @@ export function DependencyExplorer({
                       onClick={() => setSelectedNode(e.to)}
                       className="w-full flex items-center gap-1.5 px-2 py-1 rounded text-2xs text-left hover:bg-surface-hover transition-colors"
                     >
-                      <span className="text-[#60a5fa]">→</span>
-                      <span className="text-text-muted-hover truncate flex-1 font-mono">{e.to}</span>
+                      <span style={{ color: STATUS_INFO }}>→</span>
+                      <span className="text-text-muted-hover truncate flex-1 font-mono" title={e.to}>{labelOf(e.to)}</span>
                       <Badge>{e.relation}</Badge>
                     </button>
                   ))}

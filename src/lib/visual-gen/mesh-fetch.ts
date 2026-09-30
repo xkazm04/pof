@@ -41,6 +41,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { logger } from '@/lib/logger';
+import { DEFAULT_THRESHOLDS } from './mesh-critique';
 
 /**
  * Hosts a provider mesh may be downloaded from. Exact host or any subdomain of it.
@@ -60,6 +61,87 @@ export const MESH_HOST_ALLOWLIST: readonly string[] = [
  * under this. A provider result bigger than this is refused rather than paged in.
  */
 export const MESH_FETCH_MAX_BYTES = 96 * 1024 * 1024;
+
+/**
+ * How far past the grader's own decimation line a delivery may sit and still be worth
+ * loading at all. The grader warns above {@link DEFAULT_THRESHOLDS}.`maxFacesWarn`
+ * ("needs decimation for game use"); a pre-retopology source mesh legitimately arrives
+ * far denser than that, and the densest real one under `generated/` (2026-09-17 sweep,
+ * 60 files) declares 1,492,072 triangles. This headroom clears that with room and is
+ * stated here rather than folded into a byte figure, because it is a claim about the
+ * grader, not about the wire.
+ */
+export const MESH_ADMISSION_HEADROOM = 16;
+
+/**
+ * The most geometry this door will admit, in the unit the grader is charged in.
+ *
+ * The byte cap above cannot stand in for this one, and the reason is arithmetic rather
+ * than taste: across the 60 real `.glb` files in this tree, bytes per triangle ranges
+ * from 18.6 to 640.5 — a 34x spread — and a 615 KB hilt declares 30,700 triangles while
+ * a 3.1 MB bust declares 4,867. Bytes do not even ORDER deliveries by the cost they
+ * impose. At the densest observed ratio the 96 MB cap admits 5.4M triangles, and a
+ * container may declare geometry it does not carry at all: a 200-byte JSON chunk can
+ * announce a hundred million triangles and clear the byte cap by five orders of
+ * magnitude. So the door reads the declared dimension too.
+ */
+export const MESH_FETCH_MAX_TRIANGLES = DEFAULT_THRESHOLDS.maxFacesWarn * MESH_ADMISSION_HEADROOM;
+
+/** Primitive modes that produce triangles (TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN). */
+const TRIANGLE_MODES = new Set([4, 5, 6]);
+
+/**
+ * Triangles the container DECLARES, or null when the body is not a readable glTF binary.
+ *
+ * Null is "unmeasured", never "compliant" — a `.gltf` JSON delivery, a future container
+ * revision and a corrupt body all land here, and the caller admits them on the byte cap
+ * alone while saying so. Three disciplines, each one a failure this would otherwise have:
+ *
+ *  - **The JSON chunk is bounded by the body already read**, so a header declaring a
+ *    chunk longer than the file cannot make this read past the buffer. A declared length
+ *    is a hint here exactly as `content-length` is a hint upstream.
+ *  - **The running total is compared, never completed.** Counts come from the request, so
+ *    summing first and comparing second lets a sum leave exact-integer range before the
+ *    comparison happens; the loop stops the moment the total passes the budget, and a
+ *    count that is not a safe non-negative integer aborts the read rather than being
+ *    coerced.
+ *  - **Triangles are derived by DIVISION**, not by multiplying a count back up: an index
+ *    count divided by three cannot exceed the count it came from, so the derivation
+ *    cannot grow into the headroom the budget was supposed to withhold.
+ */
+export function declaredGlbTriangles(buf: Uint8Array): number | null {
+  if (buf.byteLength < 20) return null;
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (dv.getUint32(0, true) !== 0x46546c67) return null; // 'glTF'
+  const jsonLen = dv.getUint32(12, true);
+  if (dv.getUint32(16, true) !== 0x4e4f534a) return null; // 'JSON'
+  if (jsonLen > buf.byteLength - 20) return null;
+  let doc: { accessors?: { count?: unknown }[]; meshes?: { primitives?: { mode?: unknown; indices?: unknown; attributes?: { POSITION?: unknown } }[] }[] };
+  try {
+    doc = JSON.parse(new TextDecoder().decode(buf.subarray(20, 20 + jsonLen)));
+  } catch {
+    return null;
+  }
+  const accessors = Array.isArray(doc.accessors) ? doc.accessors : [];
+  const elements = (i: unknown): number | null => {
+    if (typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= accessors.length) return null;
+    const c = accessors[i]?.count;
+    if (typeof c !== 'number' || !Number.isSafeInteger(c) || c < 0) return null;
+    return c;
+  };
+  let total = 0;
+  for (const mesh of Array.isArray(doc.meshes) ? doc.meshes : []) {
+    for (const prim of Array.isArray(mesh.primitives) ? mesh.primitives : []) {
+      const mode = typeof prim.mode === 'number' ? prim.mode : 4;
+      if (!TRIANGLE_MODES.has(mode)) continue;
+      const n = elements(prim.indices !== undefined ? prim.indices : prim.attributes?.POSITION);
+      if (n === null) return Number.POSITIVE_INFINITY; // a count we cannot read is not a small one
+      total += mode === 4 ? Math.floor(n / 3) : Math.max(0, n - 2);
+      if (total > MESH_FETCH_MAX_TRIANGLES) return total;
+    }
+  }
+  return total;
+}
 
 /** The dir every fetched provider mesh lands in, under the repo's `generated/` root. */
 export const MCP_ASSET_DIR = 'mcp';
@@ -82,7 +164,15 @@ export function meshFileNameFor(jobId: string, url: string): string | null {
 }
 
 export type MeshFetchOutcome =
-  | { ok: true; path: string; name: string; bytes: number; cached?: boolean }
+  | {
+    ok: true; path: string; name: string; bytes: number; cached?: boolean;
+    /**
+     * Triangles the container declared at admission, when it was readable. Absent
+     * means unmeasured, not small: the grader measures what it actually loads, and
+     * a delivery whose measurement exceeds this declaration lied at the door.
+     */
+    declaredTriangles?: number;
+  }
   | { ok: false; reason: string };
 
 export interface MeshFetchDeps {
@@ -166,12 +256,29 @@ export async function fetchMeshForGrading(
     return { ok: false, reason: `refused: the body is ${buf.byteLength} bytes, over the ${MESH_FETCH_MAX_BYTES}-byte cap` };
   }
 
+  // The byte caps above bound the WIRE; the grader is charged in triangles, and a
+  // container declares its own. An arrival past the whole admission budget can never be
+  // graded no matter how idle this server is, so it is refused here rather than written
+  // and handed to a python subprocess that will load all of it.
+  const tri = declaredGlbTriangles(buf);
+  if (tri !== null && tri > MESH_FETCH_MAX_TRIANGLES) {
+    return {
+      ok: false,
+      reason: `refused: the container declares ${Number.isFinite(tri) ? tri : 'an unreadable number of'} triangles, `
+        + `over the ${MESH_FETCH_MAX_TRIANGLES}-triangle admission budget — `
+        + `${buf.byteLength} bytes cleared the ${MESH_FETCH_MAX_BYTES}-byte cap, which cannot see geometry`,
+    };
+  }
+
   try {
     mkdir(outDir);
     write(path, buf);
   } catch (e) {
     return { ok: false, reason: `refused: could not write ${path} — ${e instanceof Error ? e.message : String(e)}` };
   }
-  logger.info(`[mesh-fetch] ${jobId}: ${buf.byteLength} bytes from ${finalHost} → ${path}`);
-  return { ok: true, path, name, bytes: buf.byteLength };
+  logger.info(
+    `[mesh-fetch] ${jobId}: ${buf.byteLength} bytes from ${finalHost} → ${path}`
+    + (tri === null ? ' (declared geometry unmeasured — not a readable glTF binary)' : ` (declares ${tri} triangles)`),
+  );
+  return { ok: true, path, name, bytes: buf.byteLength, ...(tri === null ? {} : { declaredTriangles: tri }) };
 }

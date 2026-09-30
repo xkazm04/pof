@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { buildStepRecipe, CatalogNotFoundError } from '@/lib/catalog/headless';
 import { listRules } from '@/lib/project-rules-db';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
+import { allShippedRules } from '@/lib/catalog/canon/profiles';
 
 /**
  * GET /api/catalog/step-recipe?catalogId=&entityId=&step=[&direction=] → StepRecipe
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     // Canon source: the project_rules table; fall back to the seed when empty so the
     // prompt still carries canon on a fresh DB (mirrors the client canon store).
     const rules = listRules();
-    const canon = rules.length ? rules : CANON_SEED;
+    const canon = rules.length ? rules : allShippedRules(CANON_SEED);
     return apiSuccess(buildStepRecipe(catalogId, entityId, step, direction, canon));
   } catch (e) {
     if (e instanceof CatalogNotFoundError) return apiError(e.message, 404);

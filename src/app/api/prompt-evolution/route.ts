@@ -6,7 +6,8 @@ import {
   mutateVariant,
   getVariantsForItem,
   getVariantsForModule,
-  getAllTests,
+  getTestViews,
+  getTestView,
   startABTest,
   recordTestTrial,
   concludeTest,
@@ -84,8 +85,11 @@ export async function POST(req: NextRequest) {
         if (!body.moduleId || !body.checklistItemId || !body.variantId || !body.testId) {
           return apiError('moduleId, checklistItemId, variantId (A), and testId (B) required', 400);
         }
-        const test = startABTest(body.moduleId as SubModuleId, body.checklistItemId, body.variantId, body.testId);
-        return apiSuccess(test);
+        const started = startABTest(body.moduleId as SubModuleId, body.checklistItemId, body.variantId, body.testId);
+        // 409: another test is still running on this item — one live test per item
+        // (serving reads the newest, booking the oldest; see engine.startABTest).
+        if (!started.ok) return apiError(started.error, 409);
+        return apiSuccess(started.data);
       }
 
       case 'record-trial': {
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
         const slot = body.variantId as 'A' | 'B';
         const result = recordTestTrial(body.testId, slot, body.success, body.durationMs ?? 0);
         if (!result) return apiError('Test not found or not running', 404);
-        return apiSuccess(result);
+        return apiSuccess(getTestView(result));
       }
 
       case 'conclude-test': {
@@ -139,9 +143,9 @@ export async function POST(req: NextRequest) {
       case 'get-tests': {
         // List persisted A/B tests (all statuses) so the UI can show / conclude
         // them after a reload. Without this, started tests vanished from the
-        // Tests tab while Stats still counted them as Active.
-        const tests = getAllTests().filter((t) => !body.moduleId || t.moduleId === body.moduleId);
-        return apiSuccess(tests);
+        // Tests tab while Stats still counted them as Active. Each row carries
+        // its verdict reading (basis, band, floor shortfall) — see verdict.ts.
+        return apiSuccess(getTestViews(body.moduleId as SubModuleId | undefined));
       }
 
       case 'get-suggestions': {

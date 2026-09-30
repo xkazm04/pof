@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useModuleStore } from '@/stores/moduleStore';
+import { useModuleActions } from '@/hooks/useModuleActions';
 import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
+import { resolveSearchIntents } from './searchIntents';
 
 // ── Index freshness ───────────────────────────────────────────────────────────
 // The search index source is almost entirely static (categories, sub-modules,
@@ -40,6 +43,8 @@ export function useGlobalSearchPanel() {
 
   const navigateToModule = useNavigationStore((s) => s.navigateToModule);
   const projectPath = useProjectStore((s) => s.projectPath);
+  const checklistProgress = useModuleStore((s) => s.checklistProgress);
+  const { sendPromptToModule } = useModuleActions();
   const prefersReduced = useReducedMotion();
 
   // ── Keyboard shortcut: Ctrl+K ──
@@ -129,13 +134,27 @@ export function useGlobalSearchPanel() {
     if (!silent) setRebuilding(false);
   }, [projectPath]);
 
-  // ── Navigate to result ──
+  // ── Resolve every hit to its intents (navigate / run / done-state) ──
+  const intents = useMemo(
+    () => results.map((r) => resolveSearchIntents(r, checklistProgress)),
+    [results, checklistProgress],
+  );
+
+  // ── Navigate to result (Enter / row click — never a paid run) ──
   const handleSelect = useCallback((result: SearchResult) => {
-    if (result.moduleId) {
-      navigateToModule(result.moduleId);
-    }
+    const { primary } = resolveSearchIntents(result, checklistProgress);
+    if (primary) navigateToModule(primary.moduleId);
     setOpen(false);
-  }, [navigateToModule]);
+  }, [navigateToModule, checklistProgress]);
+
+  // ── Run a quick action (Shift+Enter / Run button only) ──
+  // A hit with no run intent falls back to its navigation.
+  const handleRun = useCallback((result: SearchResult) => {
+    const { run } = resolveSearchIntents(result, checklistProgress);
+    if (!run) { handleSelect(result); return; }
+    sendPromptToModule(run.moduleId, run.prompt);
+    setOpen(false);
+  }, [checklistProgress, handleSelect, sendPromptToModule]);
 
   // ── Keyboard navigation ──
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -147,9 +166,10 @@ export function useGlobalSearchPanel() {
       setActiveIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter' && results[activeIndex]) {
       e.preventDefault();
-      handleSelect(results[activeIndex]);
+      if (e.shiftKey) handleRun(results[activeIndex]);
+      else handleSelect(results[activeIndex]);
     }
-  }, [results, activeIndex, handleSelect]);
+  }, [results, activeIndex, handleSelect, handleRun]);
 
   // ── Scroll active item into view ──
   useEffect(() => {
@@ -173,6 +193,7 @@ export function useGlobalSearchPanel() {
     open, setOpen,
     query, setQuery,
     results,
+    intents,
     loading,
     rebuilding,
     activeIndex, setActiveIndex,
@@ -182,6 +203,7 @@ export function useGlobalSearchPanel() {
     resultsRef,
     handleRebuild,
     handleSelect,
+    handleRun,
     handleKeyDown,
     filterTypes,
     backdropMotion,

@@ -56,6 +56,14 @@ export interface CraftVerdict {
    * unknown", never to "current".
    */
   artifactUpdatedAt?: string;
+  /**
+   * `stepContentHash` of the artifact this verdict gauged — the CONTENT binding, stamped by the
+   * same step-binding door judge verdicts use (`@/lib/judge/stepBinding`). With it, staleness
+   * follows the content rather than the row's write time (a drain re-upserting identical data
+   * bumps `updated_at` but not this). NULL on legacy rows and process scorecards, which keep
+   * the timestamp rule.
+   */
+  contentHash?: string;
   judgedAt?: string;
 }
 
@@ -86,10 +94,12 @@ function ensureTable() {
       model TEXT NOT NULL DEFAULT '',
       effort TEXT NOT NULL DEFAULT '',
       artifact_updated_at TEXT,
+      content_hash TEXT,
       judged_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (catalog_id, entity_id, step)
     )
   `);
+  ensureContentHashColumn('craft_verdicts');
   ensureHistoryTable();
   tableEnsured = true;
 }
@@ -124,10 +134,12 @@ function ensureHistoryTable() {
       model TEXT NOT NULL DEFAULT '',
       effort TEXT NOT NULL DEFAULT '',
       artifact_updated_at TEXT,
+      content_hash TEXT,
       judged_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_cvh_step ON craft_verdict_history (catalog_id, entity_id, step, id);
   `);
+  ensureContentHashColumn('craft_verdict_history');
   // One-time seed: the gauges already on record ARE the first point of every trend. Left alone
   // they would read as never gauged until the next re-gauge, and the first movement would start
   // from the NEW level — losing exactly the evidence this log exists to keep. Runs only when the
@@ -135,11 +147,21 @@ function ensureHistoryTable() {
   if (!existed) {
     getDb().exec(`
       INSERT INTO craft_verdict_history
-        (catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, judged_at)
-      SELECT catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, judged_at
+        (catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, content_hash, judged_at)
+      SELECT catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, content_hash, judged_at
         FROM craft_verdicts
     `);
   }
+}
+
+/**
+ * ADDITIVE migration for tables created before the content binding existed: a nullable
+ * `content_hash` column, added once. No row is rewritten — existing gauges stay hash-less and
+ * keep the timestamp rule, and a rollback simply leaves the column unread.
+ */
+function ensureContentHashColumn(table: 'craft_verdicts' | 'craft_verdict_history') {
+  const cols = getDb().prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === 'content_hash')) getDb().exec(`ALTER TABLE ${table} ADD COLUMN content_hash TEXT`);
 }
 
 /** Parse stored findings JSON, tolerating malformed rows (yield [] — never throw). */
@@ -174,6 +196,7 @@ export function rowToCraftVerdict(row: Record<string, unknown>): CraftVerdict {
     model: (row.model as string) ?? '',
     ...(row.effort ? { effort: row.effort as string } : {}),
     ...(row.artifact_updated_at ? { artifactUpdatedAt: row.artifact_updated_at as string } : {}),
+    ...(row.content_hash ? { contentHash: row.content_hash as string } : {}),
     ...(row.judged_at ? { judgedAt: row.judged_at as string } : {}),
   };
 }
@@ -301,13 +324,14 @@ export function upsertCraftVerdict(v: CraftVerdict, cost?: Partial<CraftGaugeCos
     v.model,
     v.effort ?? '',
     v.artifactUpdatedAt ?? null,
+    v.contentHash ?? null,
     now,
   ] as const;
 
   const write = db.transaction(() => {
     db.prepare(
-      `INSERT INTO craft_verdict_history (catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, judged_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO craft_verdict_history (catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, content_hash, judged_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(...args);
     // Bounded retention — prune inside the same transaction so the cap always holds.
     db.prepare(
@@ -320,12 +344,13 @@ export function upsertCraftVerdict(v: CraftVerdict, cost?: Partial<CraftGaugeCos
           )`,
     ).run(v.catalogId, v.entityId, v.step, v.catalogId, v.entityId, v.step, CRAFT_HISTORY_LIMIT);
     db.prepare(
-      `INSERT INTO craft_verdicts (catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, judged_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO craft_verdicts (catalog_id, entity_id, step, lens, lens_version, a_level, findings, model, effort, artifact_updated_at, content_hash, judged_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (catalog_id, entity_id, step) DO UPDATE SET
          lens = excluded.lens, lens_version = excluded.lens_version, a_level = excluded.a_level,
          findings = excluded.findings, model = excluded.model, effort = excluded.effort,
-         artifact_updated_at = excluded.artifact_updated_at, judged_at = excluded.judged_at`,
+         artifact_updated_at = excluded.artifact_updated_at, content_hash = excluded.content_hash,
+         judged_at = excluded.judged_at`,
     ).run(...args);
   });
   write();

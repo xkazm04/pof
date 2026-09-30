@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { aggregateStatic, verifyStaticAll, type StaticVerifyDeps } from '@/lib/catalog/acceptance/staticVerify';
+import { aggregateStatic, verifyStaticAll, holdsBackAtDataTier, type StaticVerifyDeps } from '@/lib/catalog/acceptance/staticVerify';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
 import type { UeChecker } from '@/lib/catalog/acceptance/ueStaticCheckers';
 
@@ -69,5 +69,104 @@ describe('verifyStaticAll', () => {
     expect(upsert).not.toHaveBeenCalled();
     expect(s.changed).toBe(0);
     expect(s.results.find((r) => r.catalogId === 'crafting-recipes')?.changed).toBe(true);
+  });
+});
+
+describe('verifyStaticAll — packaging steps belong to the packaging sweep', () => {
+  it('delegates a packaging step instead of writing its status (no last-writer-wins)', () => {
+    const upsertStatus = vi.fn();
+    const s = verifyStaticAll({}, {
+      resolveUeRoot: () => 'C:/ue',
+      listArtifacts: () => [
+        { catalogId: 'bestiary', entityId: 'g', step: 'UE Packaging', status: 'deferred' },
+        { catalogId: 'bestiary', entityId: 'g', step: 'Stat Block', status: 'deferred' },
+      ],
+      getStaticChecks: () => [() => pass('Row')],
+      upsertStatus,
+      isPackaging: (_c, step) => step === 'UE Packaging',
+    });
+    expect(s).toMatchObject({ delegated: 1, verified: 1, changed: 1 });
+    expect(upsertStatus).toHaveBeenCalledTimes(1);
+    expect(upsertStatus.mock.calls[0][2]).toBe('Stat Block');
+  });
+});
+
+describe('verifyStaticAll — a symbol in UE never lifts incomplete content', () => {
+  const run = (contentStatus: AcceptanceResult['status'] | null, stat: AcceptanceResult) => {
+    const upsertStatus = vi.fn();
+    const s = verifyStaticAll({}, {
+      resolveUeRoot: () => 'C:/ue',
+      listArtifacts: () => [{ catalogId: 'bestiary', entityId: 'd1', step: 'Stat Block', status: 'pending' }],
+      getStaticChecks: () => [() => stat],
+      upsertStatus,
+      getContentVerdict: () => (contentStatus
+        ? { label: 'Stat Block', tier: 'L0', status: contentStatus, detail: 'checker', reason: 'declared gap: moveSpeed' }
+        : null),
+    });
+    return { s, written: upsertStatus.mock.calls[0]?.[3] as AcceptanceResult | undefined };
+  };
+
+  it('content pending + static pass stays pending, naming the content gap (no write: unchanged)', () => {
+    const { s } = run('pending', pass('FARPGMonsterRow'));
+    expect(s.results[0]).toMatchObject({ from: 'pending', to: 'pending', changed: false });
+    expect(s.results[0].reason).toContain('moveSpeed');
+  });
+
+  it('content fail + static pass stays fail', () => {
+    const { written } = run('fail', pass('FARPGMonsterRow'));
+    expect(written?.status).toBe('fail');
+  });
+
+  it('content pass leaves the static verdict standing', () => {
+    expect(run('pass', pass('Row')).written?.status).toBe('pass');
+    expect(run(null, defer('Row')).written?.status).toBe('deferred');
+  });
+});
+
+describe('verifyStaticAll — a content hold never reads as a static deferral', () => {
+  const sweep = (row: string, stat: AcceptanceResult, content: AcceptanceResult) => {
+    const upsertStatus = vi.fn();
+    const s = verifyStaticAll({}, {
+      resolveUeRoot: () => null,
+      listArtifacts: () => [{ catalogId: 'bestiary', entityId: 'd1-MT_COUNSLR', step: 'Stat Block', status: row }],
+      getStaticChecks: () => [() => stat],
+      upsertStatus,
+      getContentVerdict: () => content,
+    });
+    return { s, upsertStatus, written: upsertStatus.mock.calls[0]?.[3] as AcceptanceResult | undefined };
+  };
+  const absent: AcceptanceResult = { label: 'FARPGMonsterRow', tier: 'L2', status: 'deferred', detail: 'absent', reason: 'FARPGMonsterRow not found in UE Source' };
+
+  it('content declared-gap pending + static deferred → stays pending, nothing written', () => {
+    const { s, upsertStatus } = sweep('pending', absent,
+      { label: 'Stat Block', tier: 'L0', status: 'pending', detail: 'checker', reason: 'field "stats" missing: moveSpeed (declared gap: moveSpeed — "not in the reference")' });
+    expect(s.results[0]).toMatchObject({ from: 'pending', to: 'pending', changed: false });
+    expect(s.results[0].reason?.startsWith('field "stats" missing')).toBe(true);
+    expect(upsertStatus).not.toHaveBeenCalled();
+  });
+
+  it('[guard] content pass + static deferred → the static verdict stands (deferred@L2 written)', () => {
+    const { written } = sweep('pending', absent, { label: 'Stat Block', tier: 'L1', status: 'pass', detail: 'ok' });
+    expect(written).toMatchObject({ status: 'deferred', tier: 'L2' });
+  });
+
+  it('[guard] content deferred@L3 (runtime gate) + static pass → pass (drained passes survive)', () => {
+    const { written } = sweep('deferred', pass('FARPGMonsterRow'), { label: 'Stat Block', tier: 'L3', status: 'deferred', detail: 'awaits drain' });
+    expect(written?.status).toBe('pass');
+  });
+});
+
+describe('holdsBackAtDataTier', () => {
+  const at = (status: AcceptanceResult['status'], tier: AcceptanceResult['tier']): AcceptanceResult =>
+    ({ label: 'S', tier, status, detail: 'd' });
+  it('a data-tier deferral (unresolved link, L2) holds the row back — the off-arc-fp Effect Logic case', () => {
+    expect(holdsBackAtDataTier(at('deferred', 'L2'))).toBe(true);
+    expect(holdsBackAtDataTier(at('pending', 'L0'))).toBe(true);
+    expect(holdsBackAtDataTier(at('fail', 'L1'))).toBe(true);
+  });
+  it('a runtime-gate deferral (L3/L4) does not — the drain owns it, so drained passes survive', () => {
+    expect(holdsBackAtDataTier(at('deferred', 'L3'))).toBe(false);
+    expect(holdsBackAtDataTier(at('deferred', 'L4'))).toBe(false);
+    expect(holdsBackAtDataTier(at('pass', 'L2'))).toBe(false);
   });
 });

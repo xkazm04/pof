@@ -3,13 +3,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { OPACITY_12, OPACITY_37, withOpacity } from '@/lib/chart-colors';
-import type { BlueprintProperty } from '../_shared/data';
+import type { InspectorRow } from '@/lib/character/inspector-fields';
 import { PropertyRow } from './PropertyRow';
 
 interface Props {
   category: string;
   catColor: string;
-  properties: BlueprintProperty[];
+  properties: InspectorRow[];
   isCollapsed: boolean;
   highlightedProps: Set<string>;
   onToggleCollapse: (cat: string) => void;

@@ -149,6 +149,17 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'layout',
+        grantedBy: 'AARPGEncounterArena owns this map’s FArenaTacticalPoint array, and AARPGCoverPoint actors represent every cover point THIS layout declares',
+        activatedBy: 'AARPGEncounterArena::ScanArena runs on BeginPlay, resolves each declared tactical tier, and registers the declared cover actors with the cover system',
+        dependencies: [
+          'AARPGEncounterArena (FArenaTacticalPoint and EArenaTier)',
+          'AARPGCoverPoint (ECoverType and cover dimensions)',
+          'the arena-build script or level geometry that creates THIS map’s declared footprint and cover',
+        ],
+        verification: 'L2: AARPGEncounterArena and AARPGCoverPoint compile in Source/PoF/; L3: VSArenaSliceRulesTest — ScanArena returns every tactical and cover point declared by THIS combat map',
+      },
       accept: allOf(
         fieldsPopulated('layout', 'Layout dimensions + tactical + cover points populated', [
           'extentCm',
@@ -298,6 +309,18 @@ registerCatalogPipeline({
           { catalogId: 'loot-tables', entityId: 'lt-Brute',                  role: 'encounter-loot' },
         ],
       }),
+      contract: {
+        field: 'waves',
+        grantedBy: 'ASpawnVolume owns one FSpawnWaveConfig for EACH wave THIS combat map declares and resolves each spawned enemy’s rarity and modifier GameplayEffects',
+        activatedBy: 'player entry calls ASpawnVolume::StartEncounter; each wave’s declared gate determines when the next wave begins',
+        dependencies: [
+          'bestiary::<id> for EACH enemy archetype THIS combat map spawns',
+          'loot-tables::<id> for EACH encounter reward table THIS map uses',
+          'ASpawnVolume and AARPGEncounterVolume',
+          'one GameplayEffect per rarity modifier used by THIS map’s waves (name each)',
+        ],
+        verification: 'L2: ASpawnVolume and AARPGEncounterVolume compile in Source/PoF/, every declared modifier GameplayEffect compiles, and all bestiary and loot ids resolve; L3: VSArenaSliceRulesTest — every wave declared by {name} spawns in order and completion fires after its final gate',
+      },
       accept: allOf(
         fieldsPopulated('waves', 'areaLevel / waveCount / waveDetails populated', [
         'areaLevel',
@@ -362,6 +385,16 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'winLoss',
+        grantedBy: 'the encounter-state evaluator subscribes to ASpawnVolume completion delegates and AARPGCharacter::OnDeathDelegate for THIS combat map',
+        activatedBy: 'the win and loss events THIS map declares broadcast and the evaluator applies their corresponding outcome',
+        dependencies: [
+          'ASpawnVolume (wave and encounter completion delegates)',
+          'AARPGCharacter (OnDeathDelegate)',
+        ],
+        verification: 'L2: every delegate used by this map’s declared outcome rules compiles in Source/PoF/; L3: VSArenaSliceRulesTest — {name} enters the win state on its declared win event and the loss state on its declared loss event',
+      },
       accept: allOf(
         fieldsPopulated('winLoss', 'winCondition / lossCondition / failSafe populated', [
           'winCondition',
@@ -453,6 +486,18 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'hazards',
+        grantedBy: 'one AARPGEnvironmentalHazard actor and one named GameplayEffect for EACH hazard THIS combat map declares',
+        activatedBy: 'each declared hazard’s overlap or other trigger applies its GameplayEffect at the cadence and conditions declared for that hazard',
+        dependencies: [
+          'AARPGEnvironmentalHazard (EHazardType, DamageEffect, interval, and AI avoidance fields)',
+          'one GameplayEffect per hazard THIS map declares (name each)',
+          'ARPGDamageExecution for every damaging hazard',
+          'status-effects::<id> for EACH ailment a hazard can apply',
+        ],
+        verification: 'L2: AARPGEnvironmentalHazard and every hazard GameplayEffect declared by {name} compile in Source/PoF/; L3: VSArenaSliceRulesTest — each hazard triggers at its declared interval and damage mitigation or status effects behave as declared',
+      },
       accept: allOf(
         fieldsPopulated('hazards', 'hazardList populated with kind/damagePerTick/ge/wiringContract', [
           'hazardList',
@@ -775,6 +820,19 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/ArenaEncounters/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'AARPGEncounterArena and ASpawnVolume are placed in this map; every declared hazard, enemy modifier, material, and wave config is bound to its owning actor or mesh',
+        activatedBy: 'player entry starts this map’s declared wave sequence; hazard triggers apply their effects; enemy spawn rarity grants declared modifiers; completion queries the declared reward table',
+        dependencies: [
+          'bestiary::<id> for EACH enemy archetype THIS combat map spawns',
+          'loot-tables::<id> for EACH reward table THIS map uses',
+          'materials::<id> for EACH surface family THIS map uses',
+          'AARPGEncounterArena, ASpawnVolume, and AARPGEnvironmentalHazard',
+          'one GameplayEffect per hazard or enemy modifier THIS map declares (name each)',
+          'UARPGLootDropComponent and ARPGDamageExecution',
+        ],
+        verification: 'L2: all framework classes compile in Source/PoF/, every declared GameplayEffect exists, and every linked bestiary, loot-table, and material id resolves; L3: VSArenaSliceRulesTest — {name}’s full wave, hazard, and outcome sequence passes in PIE',
       },
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),

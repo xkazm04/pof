@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { listRules, upsertRule, deleteRule, restoreCanonSeed } from '@/lib/project-rules-db';
 import { ruleUpsertSchema } from '@/lib/catalog/canon/validation';
+import { CANON_PROFILES } from '@/lib/catalog/canon/profiles';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 
 /** GET /api/project-rules → ProjectRule[] */
@@ -31,6 +32,9 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return apiError('Invalid rule', 400, parsed.error.issues);
     }
+    if (parsed.data.profile && !CANON_PROFILES[parsed.data.profile]) {
+      return apiError(`Unknown canon profile "${parsed.data.profile}" — registered: ${Object.keys(CANON_PROFILES).join(', ')}`, 400);
+    }
     const rule: ProjectRule = {
       id: parsed.data.id,
       category: parsed.data.category,
@@ -38,6 +42,8 @@ export async function POST(req: NextRequest) {
       title: parsed.data.title,
       body: parsed.data.body,
       refs: parsed.data.refs,
+      // Carried explicitly: dropping it here would move an edited Diablo rule back into PoF's world.
+      ...(parsed.data.profile ? { profile: parsed.data.profile } : {}),
     };
     return apiSuccess(upsertRule(rule));
   } catch (e) {

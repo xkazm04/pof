@@ -61,12 +61,23 @@ export interface FeatureGap {
   moduleId: SubModuleId;
   moduleLabel: string;
   featureName: string;
+  /** The gap's feature names in definition order: one for a single gap, all of a
+   *  module's missing|partial features for a recommendation group. */
+  featureNames: string[];
   status: FeatureStatus;
   description: string;
   /** Estimated DIY hours from checklist */
   diyHours: number;
   /** Category for marketplace matching */
   category: AssetCategory;
+}
+
+/** A module's features that have no review verdict yet (absent / 'unknown'). They are
+ *  unmeasured — reported apart from gaps, never counted as missing. */
+export interface UnreviewedModule {
+  moduleId: SubModuleId;
+  moduleLabel: string;
+  featureNames: string[];
 }
 
 // ── Recommendation ──────────────────────────────────────────────────────────
@@ -153,7 +164,10 @@ export interface AcquiredAsset {
 // ── API request/response shapes ─────────────────────────────────────────────
 
 export interface RecommendationRequest {
+  /** `${moduleId}::${featureName}` → status, from the project's feature matrix. */
+  statusMap?: Record<string, string>;
   moduleId?: string;
+  /** Statuses counted as gaps; defaults to ['missing', 'partial']. */
   statusFilter?: FeatureStatus[];
 }
 
@@ -162,6 +176,9 @@ export interface RecommendationResponse {
   totalGaps: number;
   totalAssets: number;
   estimatedTimeSaved: number;
+  /** Features with no review verdict, grouped by module (not counted in totalGaps). */
+  unreviewed: UnreviewedModule[];
+  totalUnreviewed: number;
 }
 
 export interface GenerateIntegrationRequest {

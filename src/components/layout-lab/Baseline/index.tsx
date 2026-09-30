@@ -9,6 +9,7 @@ import { useLabPipelineStore } from '../labPipelineStore';
 import { CatalogTree } from '../CatalogTree';
 import { useDerivedLifecycle } from '../useDerivedLifecycle';
 import { NextStepCoach } from '../NextStepCoach';
+import { EntityDrainResult } from '@/components/layout-lab/EntityDrainResult';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
 import { ProduceErrorBanner } from '../ProduceErrorBanner';
@@ -59,7 +60,7 @@ export function Baseline(props: Props) {
     artsLoading, artsError, retryArts,
     refreshFromServer, refreshing, refreshError, refreshOutcome, dismissRefresh,
     driftByStep, adoptServerStep, entitySteps,
-    runDrain,
+    runDrain, drainOutcome, dismissDrainOutcome,
     handleSelectCatalog, handleSelectEntity, selectStep,
   } = useBaseline(props);
   // Reset is destructive on BOTH sides (local store + persisted server artifacts), so it
@@ -291,6 +292,11 @@ export function Baseline(props: Props) {
                     onRetryLoad={retryArts}
                     doneProvenance={doneProvenance}
                   />
+                )}
+                {/* What the coach drain did (keyed to this entity) — never a silent fire-and-forget. */}
+                {entity && drainOutcome && (
+                  <EntityDrainResult t={t} outcome={drainOutcome} onJump={(i) => setStepIdx(i)}
+                    onRetry={() => { void runDrain(); }} onDismiss={dismissDrainOutcome} draining={draining} />
                 )}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>

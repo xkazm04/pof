@@ -12,11 +12,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Modal } from '@/components/ui/Modal';
-import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
 import { tryApiFetch } from '@/lib/api-utils';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
-import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { engineClass, engineClassNote, engineSourceMark, isTrustedClass, type StepCell } from '@/lib/status/statusModel';
+import type { ArtifactVerdictRow, PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import { engineClass, engineClassNote, engineSourceMark, isTrustedClass, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import { cellLedger, evidenceFor } from '@/lib/status/cellLedger';
+import { ok, err } from '@/types/result';
+import type { StatusVerdictRead } from './statusVerdictSource';
+import { EvidenceEntityLedger, EntityVerdict } from './EvidenceEntityLedger';
 import { readProvenance, describeProducer } from '@/lib/provenance';
 
 const GlbViewer = dynamic(() => import('@/components/layout-lab/steps/shared/GlbViewer').then((m) => m.GlbViewer), {
@@ -126,49 +128,69 @@ function ProofPanel({ data, label }: { data: Data; label: string }) {
   );
 }
 
-export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: string; step: string; cell: StepCell; onClose: () => void }) {
-  const [arts, setArts] = useState<PipelineArtifact[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [reload, setReload] = useState(0);
-  const [verdicts, setVerdicts] = useState<JudgeVerdict[]>([]);
-  const [idx, setIdx] = useState(0);
+/** One entity's proof read: `art` null = nothing stored for this step; `error` = the read failed. */
+interface Proof { entityId: string; art: PipelineArtifact | null; error: string | null }
 
-  // The modal is remounted per cell (keyed in PipelinesView), so state starts fresh —
-  // this effect only fetches, no synchronous reset needed.
-  // Read the artifacts through `tryApiFetch` rather than `fetchArtifacts` (which folds any
-  // failure into `[]`): a transport error must NOT be rendered as "nothing produced yet" —
-  // that's exactly the blind trust this modal exists to break.
+export function EvidenceModal({
+  catalogId,
+  step,
+  cell,
+  rows,
+  verdicts,
+  onClose,
+  onFocusEntity,
+}: {
+  catalogId: string;
+  step: StepMeta;
+  cell: StepCell;
+  /** The catalog's rows from the SHARED blob-free /status read — the ledger's input. */
+  rows: readonly ArtifactVerdictRow[];
+  /** The SHARED /status verdict read (`statusVerdictSource`); the modal never re-fetches it. */
+  verdicts: StatusVerdictRead | null;
+  onClose: () => void;
+  /** Hand an entity to Item Focus (`/status?entity=cat:id`). */
+  onFocusEntity?: (catalogId: string, entityId: string) => void;
+}) {
+  // Every entity's own rung + verdict, by the map's own derivation (display-only).
+  const ledger = useMemo(() => cellLedger({
+    catalogId,
+    step,
+    rows,
+    verdicts: verdicts === null
+      ? err('the verdict read has not settled')
+      : verdicts.ok ? ok(verdicts.byCatalog.get(catalogId) ?? []) : err(verdicts.error),
+  }), [catalogId, step, rows, verdicts]);
+  const [picked, setPicked] = useState<string | null>(null);
+  // Opens on the entity holding the step down; a pick that left the ledger falls back to it.
+  const active = picked && ledger.rows.some((r) => r.entityId === picked) ? picked : ledger.decides;
+  const [proof, setProof] = useState<Proof | null>(null);
+  const [reload, setReload] = useState(0);
+
+  // ONE entity's artifacts (the GET's `entityId` filter), not the whole catalog's full blobs.
+  // Read through `tryApiFetch` rather than `fetchArtifacts` (which folds any failure into
+  // `[]`): a transport error must NOT be rendered as "nothing produced yet" — that's exactly
+  // the blind trust this modal exists to break.
   useEffect(() => {
+    if (!active) return;
     let live = true;
-    tryApiFetch<PipelineArtifact[]>(`/api/pipeline-artifacts?catalogId=${encodeURIComponent(catalogId)}`)
+    tryApiFetch<PipelineArtifact[]>(`/api/pipeline-artifacts?catalogId=${encodeURIComponent(catalogId)}&entityId=${encodeURIComponent(active)}`)
       .then((r) => {
         if (!live) return;
-        if (r.ok) setArts(r.data.filter((a) => a.step === step));
-        else setLoadError(r.error);
+        setProof(r.ok
+          ? { entityId: active, art: r.data.find((a) => a.step === step.label) ?? null, error: null }
+          : { entityId: active, art: null, error: r.error });
       });
-    // The judged projection on the cell carries the verdict summary but not the per-dimension
-    // scores; fetch the raw verdicts for this catalog so the detail view can show them (WS2).
-    tryApiFetch<JudgeVerdict[]>(`/api/judge-verdicts?catalogId=${encodeURIComponent(catalogId)}`)
-      .then((r) => { if (live && r.ok) setVerdicts(r.data.filter((v) => v.step === step)); });
     return () => { live = false; };
-  }, [catalogId, step, reload]);
+  }, [catalogId, step.label, active, reload]);
 
   // Re-run the effect from a clean slate (state reset lives here, not in the effect body).
-  const retry = () => { setArts(null); setLoadError(null); setIdx(0); setReload((n) => n + 1); };
+  const retry = () => { setProof(null); setReload((n) => n + 1); };
 
-  const art = arts?.[idx];
-  const j = cell.judged;
+  const shown = proof && proof.entityId === active ? proof : null;
+  const art = shown?.art ?? undefined;
+  const loadError = shown?.error ?? null;
+  const evidence = active ? evidenceFor(ledger, active) : null;
 
-  // Per-dimension scores for the currently shown entity: match verdicts on entity, prefer the
-  // newest rubric, and among those the one that actually carries dimensions.
-  const dimensions = useMemo(() => {
-    if (!art) return undefined;
-    const matching = verdicts.filter((v) => v.entityId === art.entityId);
-    if (!matching.length) return undefined;
-    const newestRubric = matching.reduce((mx, v) => Math.max(mx, v.rubricVersion ?? 1), 0);
-    const withDims = matching.filter((v) => (v.rubricVersion ?? 1) === newestRubric && v.dimensions);
-    return withDims[0]?.dimensions;
-  }, [art, verdicts]);
   const proofKind = useMemo(() => {
     if (!art) return '';
     const d = art.data as Data;
@@ -179,7 +201,7 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
     <Modal
       open
       onClose={onClose}
-      label={`Evidence for ${catalogId} ${step}`}
+      label={`Evidence for ${catalogId} ${step.label}`}
       className="max-w-[806px]"
     >
       {/* Guaranteed-opaque Blueprint fill via inline style (Tailwind important on the shared
@@ -190,7 +212,7 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
         {/* Blueprint header (own close — the shared dark header is suppressed via `label`). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderBottom: '1px solid var(--lab-line)', paddingBottom: 10, marginBottom: 14 }}>
           <h2 style={{ fontFamily: mono, fontSize: 15, color: 'var(--lab-ink-deep)', letterSpacing: '0.03em', textTransform: 'uppercase', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {catalogId} · {step}
+            {catalogId} · {step.label}
           </h2>
           <button type="button" onClick={onClose} aria-label="Close evidence" className="focus-ring"
             style={{ flexShrink: 0, fontFamily: mono, fontSize: 16, lineHeight: 1, color: 'var(--lab-muted)', background: 'transparent', border: '1px solid var(--lab-line)', borderRadius: 0, width: 26, height: 26, cursor: 'pointer' }}>
@@ -222,39 +244,12 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
           {proofKind && <Badge>proof: {proofKind}</Badge>}
         </div>
 
-        {/* Verdict — compare against the proof below */}
-        {j ? (
-          <div style={{ fontSize: 13, borderLeft: `3px solid ${j.verdict === 'pass' ? 'var(--lab-ok)' : 'var(--lab-bad)'}`, padding: '8px 12px', marginBottom: SECTION_GAP, ...surface }}>
-            <span style={{ fontFamily: mono, fontWeight: 700, color: j.verdict === 'pass' ? 'var(--lab-ok)' : 'var(--lab-bad)' }}>{j.verdict.toUpperCase()} {j.score}/100</span>
-            <span style={{ color: 'var(--lab-muted)', fontFamily: mono, fontSize: 12 }}> · {j.model}{j.effort ? `/${j.effort}` : ''}{j.rubricVersion != null ? ` · rubric v${j.rubricVersion}` : ''}</span>
-            <div style={{ marginTop: 5, color: 'var(--lab-text)', lineHeight: 1.5 }}>{j.findings}</div>
-          </div>
-        ) : null}
+        {/* Every entity of the step with its OWN rung and verdict, opened on the one holding
+            the step down. Selecting a row swaps the verdict, dimensions and proof below together. */}
+        <EvidenceEntityLedger ledger={ledger} selected={active} onSelect={setPicked} onFocusEntity={onFocusEntity} />
 
-        {/* Per-dimension craft scores for this entity, when the verdict recorded them (WS2). */}
-        {dimensions && (
-          <div style={{ marginBottom: SECTION_GAP }}>
-            <DimensionScoreBars dimensions={dimensions} variant="lab" />
-          </div>
-        )}
-
-        {!j && (
-          <div style={{ fontSize: 13, color: 'var(--lab-muted)', padding: '8px 12px', marginBottom: SECTION_GAP, borderLeft: '3px solid var(--lab-line)', ...surface }}>
-            No content-quality judgment{cell.judge ? ` — would need a ${cell.judge} judge` : ''}{cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}.
-            {cell.reason ? ` (${cell.reason})` : ''}
-          </div>
-        )}
-
-        {/* Entity switcher when the step has multiple seeded entities */}
-        {arts && arts.length > 1 && (
-          <label style={{ fontSize: 12, color: 'var(--lab-muted)', display: 'flex', gap: 8, alignItems: 'center', marginBottom: SECTION_GAP, fontFamily: mono }}>
-            ENTITY
-            <select value={idx} onChange={(e) => setIdx(Number(e.target.value))} className="focus-ring"
-              style={{ fontSize: 12, fontFamily: mono, color: 'var(--lab-ink)', background: 'var(--lab-panel)', border: '1px solid var(--lab-line)', borderRadius: 0, padding: '2px 6px' }}>
-              {arts.map((a, i) => <option key={a.entityId} value={i}>{a.entityId} ({a.status})</option>)}
-            </select>
-          </label>
-        )}
+        {/* Verdict — the SELECTED entity's own, compare against its proof below */}
+        <EntityVerdict evidence={evidence} ledger={ledger} judgeKind={cell.judge} shapeOnly={cell.checkerMeaningful === false} reason={cell.reason} />
 
         {/* Provenance — who/how produced this output (Quality Program WS0).
             An artifact with NO stamp, or the legacy `engine:'unknown'` placeholder, is not a
@@ -281,12 +276,12 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
               Retry
             </button>
           </div>
-        ) : arts === null ? (
+        ) : active && !shown ? (
           <div role="status" style={stateBox}>Loading stored output…</div>
         ) : !art ? (
           <div role="status" style={stateBox}>Nothing produced yet — this step has no stored artifact, so the grade above has no output behind it.</div>
         ) : (
-          <ProofPanel data={art.data as Data} label={`${catalogId} · ${step}`} />
+          <ProofPanel data={art.data as Data} label={`${catalogId} · ${step.label} · ${art.entityId}`} />
         )}
       </div>
     </Modal>

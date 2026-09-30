@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo, useEffect, useDeferredValue } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect, useDeferredValue, useReducer } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -9,18 +9,15 @@ import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { generatePreview } from '@/lib/level-design/procgen-preview';
-import {
-  buildProcgenSpec, previewConfigFromSpec, type ProcgenSpec,
-} from '@/lib/level-design/procgen-spec';
-import { ALGORITHMS, LEVEL_TYPES, DEFAULT_SIZE } from './constants';
+import { previewConfigFromSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
+import { ALGORITHMS, LEVEL_TYPES } from './constants';
 import {
   MAX_EXPORT_SIZE, EXPORT_CELL_SIZE, EXPORT_WALL_HEIGHT,
   buildExportPlan, describeExportPlan, describeSpawnPlacement, type ExportPlan,
 } from './exportPlan';
 import { planSpawns, type SpawnPlacement } from './spawnPlacement';
-import type {
-  GenAlgorithm, LevelType, SizeParams, GameplayConstraints, ProceduralLevelConfig,
-} from './types';
+import { procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore } from './specState';
+import type { GenAlgorithm, LevelType, SizeParams, GameplayConstraints } from './types';
 
 /** A prepared export, held until the operator confirms the size it states. */
 export interface PendingBlenderExport {
@@ -68,79 +65,60 @@ export function useRovingRadioGroup(count: number, onSelectIndex: (i: number) =>
 }
 
 interface UseProceduralLevelWizardArgs {
-  onGenerate: (config: ProceduralLevelConfig) => void;
-  /** Publish the configured spec so another surface can adopt it. */
-  onSpecChange?: (spec: ProcgenSpec) => void;
+  /** Dispatch the C++ codegen task for exactly this spec. */
+  onGenerate: (spec: ProcgenSpec) => void;
+  /**
+   * Controlled mode: the spec lives in a reducer the caller owns, so it outlives
+   * this component (the level-design view unmounts the wizard on every tab
+   * switch). Omitted, the wizard keeps a private instance of the same reducer.
+   */
+  specStore?: ProcgenSpecStore;
 }
 
-export function useProceduralLevelWizard({ onGenerate, onSpecChange }: UseProceduralLevelWizardArgs) {
-  const [algorithm, setAlgorithm] = useState<GenAlgorithm>('bsp');
-  const [levelType, setLevelType] = useState<LevelType>('dungeon');
-  const [size, setSize] = useState<SizeParams>(DEFAULT_SIZE.dungeon);
-  const [constraints, setConstraints] = useState<GameplayConstraints>({
-    spawnPoints: true,
-    lootPlacement: true,
-    bossRoom: true,
-    secretRooms: false,
-    safeZones: false,
-    // OFF by default on purpose: a spec without it reproduces the exact grid the
-    // generators produced before the repair pass existed.
-    ensureConnected: false,
-  });
-  const [seed, setSeed] = useState('');
+export function useProceduralLevelWizard({ onGenerate, specStore }: UseProceduralLevelWizardArgs) {
+  const [ownState, ownDispatch] = useReducer(procgenSpecReducer, undefined, initialProcgenSpecState);
+  const { spec } = specStore?.state ?? ownState;
+  const dispatch = specStore?.dispatch ?? ownDispatch;
+  const { algorithm, levelType, constraints, seedLabel: seed } = spec;
+  const size = useMemo<SizeParams>(() => ({
+    gridWidth: spec.gridWidth,
+    gridHeight: spec.gridHeight,
+    roomCountMin: spec.roomCountMin,
+    roomCountMax: spec.roomCountMax,
+    corridorWidth: spec.corridorWidth,
+  }), [spec.gridWidth, spec.gridHeight, spec.roomCountMin, spec.roomCountMax, spec.corridorWidth]);
+
+  // Being on screen is what makes the spec adoptable: the UE handoff offers it
+  // from the first time a designer has seen its preview.
+  useEffect(() => { dispatch({ type: 'shown' }); }, [dispatch]);
+
   const [blenderExporting, setBlenderExporting] = useState(false);
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
   const [pendingExport, setPendingExport] = useState<PendingBlenderExport | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   // ── Spec → live preview ──
-  // The wizard's state IS a ProcgenSpec; the preview config is derived from it
-  // rather than assembled beside it, so the spec is load-bearing and one seed is
-  // resolved once. The preview runs the chosen algorithm purely in TypeScript
+  // The wizard's state IS a ProcgenSpec (see specState); the preview config is
+  // derived from it rather than assembled beside it, and the seed was resolved
+  // once, by the reducer. The preview runs the chosen algorithm purely in TypeScript
   // against FRandomStream — it judges the PARAMETERS. It is NOT a picture of the
   // level UE will bake: `ARPGLevelGenerator` places room-template actors from a
   // pool and has no algorithm parameter, and the C++ codegen path is authored
   // freehand by the CLI (see `layoutAgreement` in procgen-spec).
   // Deferred so dragging sliders / typing stays smooth.
-  const spec = useMemo<ProcgenSpec>(() => buildProcgenSpec({
-    algorithm,
-    levelType,
-    gridWidth: size.gridWidth,
-    gridHeight: size.gridHeight,
-    roomCountMin: size.roomCountMin,
-    roomCountMax: size.roomCountMax,
-    corridorWidth: size.corridorWidth,
-    seed,
-    constraints,
-  }), [algorithm, levelType, size, seed, constraints]);
   const deferredSpec = useDeferredValue(spec);
   const preview = useMemo(() => generatePreview(previewConfigFromSpec(deferredSpec)), [deferredSpec]);
 
-  // Publish the settled spec, not the per-keystroke one, so adopting surfaces
-  // re-render on a pause rather than on every drag frame.
-  useEffect(() => { onSpecChange?.(deferredSpec); }, [deferredSpec, onSpecChange]);
+  const setAlgorithm = useCallback((a: GenAlgorithm) => dispatch({ type: 'setAlgorithm', algorithm: a }), [dispatch]);
+  const setSeed = useCallback((s: string) => dispatch({ type: 'setSeed', seed: s }), [dispatch]);
+  const selectLevelType = useCallback((lt: LevelType) => dispatch({ type: 'selectLevelType', levelType: lt }), [dispatch]);
+  const toggleConstraint = useCallback((key: keyof GameplayConstraints) => dispatch({ type: 'toggleConstraint', key }), [dispatch]);
+  const updateSize = useCallback((key: keyof SizeParams, value: number) => dispatch({ type: 'updateSize', key, value }), [dispatch]);
 
-  const selectLevelType = useCallback((lt: LevelType) => {
-    setLevelType(lt);
-    setSize(DEFAULT_SIZE[lt]);
-  }, []);
-
-  const toggleConstraint = useCallback((key: keyof GameplayConstraints) => {
-    setConstraints((prev) => ({ ...prev, [key]: !prev[key] }));
-  }, []);
-
-  const updateSize = useCallback((key: keyof SizeParams, value: number) => {
-    setSize((prev) => ({ ...prev, [key]: value }));
-  }, []);
-
-  const handleGenerate = useCallback(() => {
-    // `ensureConnected` repairs the BROWSER preview grid; `llm-codegen` is
-    // declared not to read it (`PROCGEN_ENGINES` in procgen-spec). Passing it on
-    // would leak a bullet into the C++ prompt for behaviour the generated
-    // generator does not implement, so the CLI config drops it rather than
-    // quietly contradicting the engine matrix.
-    onGenerate({ algorithm, levelType, size, seed, constraints: { ...constraints, ensureConnected: false } });
-  }, [algorithm, levelType, size, constraints, seed, onGenerate]);
+  // The spec on screen, as is. What the C++ prompt uses of it is decided by the
+  // prompt builder against `PROCGEN_ENGINES['llm-codegen'].reads` (enforced by
+  // test), not by stripping fields here.
+  const handleGenerate = useCallback(() => onGenerate(spec), [spec, onGenerate]);
 
   // ── Blender export: prepare → state the real numbers → confirm ──
   // The export does NOT ship the preview grid. The preview is capped at 96 per

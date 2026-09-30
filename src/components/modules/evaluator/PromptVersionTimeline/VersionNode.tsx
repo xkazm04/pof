@@ -1,5 +1,5 @@
 import {
-  History, GitBranch, RotateCcw, CheckCircle2, GitCompareArrows,
+  History, GitBranch, RotateCcw, CheckCircle2, GitCompareArrows, FlaskConical,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
@@ -14,6 +14,7 @@ export function VersionNode({
   compareSlot,
   onToggleCompare,
   onRestore,
+  onChallenge,
   isRestoring,
 }: {
   node: VariantLineageNode;
@@ -21,6 +22,8 @@ export function VersionNode({
   compareSlot: number;
   onToggleCompare: (id: string) => void;
   onRestore: (id: string) => void;
+  /** Open the preflight for testing this version against the current one. */
+  onChallenge: (id: string) => void;
   isRestoring: boolean;
 }) {
   const { variant, stats, isActive } = node;
@@ -101,6 +104,16 @@ export function VersionNode({
               >
                 <RotateCcw className="w-3 h-3" />
                 Restore
+              </button>
+              <button
+                onClick={() => onChallenge(variant.id)}
+                disabled={isActive}
+                data-testid={`challenge-${variant.id}`}
+                title={isActive ? 'This is the current version' : 'Test this version against the current one'}
+                className="focus-ring inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border border-border text-text-muted hover:text-text transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FlaskConical className="w-3 h-3" />
+                Challenge current
               </button>
             </div>
           </div>

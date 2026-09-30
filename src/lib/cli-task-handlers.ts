@@ -30,6 +30,7 @@ import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-te
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
 import { buildSyncCheckPrompt } from '@/lib/prompts/level-design';
 import { buildMaterialConfiguratorPrompt } from '@/lib/prompts/material-configurator';
+import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
 import {
   buildAnimationChecklistPrompt,
   findAnimationChecklistStep,
@@ -61,6 +62,7 @@ import {
   type RunAITestsTask,
   type DetectStimuliTask,
   type MaterialConfiguratorTask,
+  type PostProcessTask,
 } from '@/lib/cli-task';
 
 /**
@@ -755,6 +757,7 @@ export function taskVariantBody(task: CLITask, ctx: ProjectContext): string {
   if (task.type === 'material-configurator') {
     return buildMaterialConfiguratorPrompt((task as MaterialConfiguratorTask).config, ctx);
   }
+  if (task.type === 'post-process') return buildPostProcessPrompt((task as PostProcessTask).config, ctx);
   return task.prompt;
 }
 
@@ -772,6 +775,12 @@ const materialConfigurator: TaskPromptHandler = (task, ctx) => {
   // `taskVariantBody`) arrives on `task.prompt`; recompute only when the dispatch
   // path resolved nothing, so the static path stays byte-identical.
   return mt.prompt.trim() ? mt.prompt : buildMaterialConfiguratorPrompt(mt.config, ctx);
+};
+
+/** Post-process handler — same contract as {@link materialConfigurator}: the builder owns the whole prompt. */
+const postProcess: TaskPromptHandler = (task, ctx) => {
+  const pt = task as PostProcessTask;
+  return pt.prompt.trim() ? pt.prompt : buildPostProcessPrompt(pt.config, ctx);
 };
 
 const generate: TaskPromptHandler = (task, ctx) => {
@@ -940,4 +949,5 @@ export const taskPromptHandlers: Record<CLITaskType, TaskPromptHandler> = {
   'run-ai-tests': runAITests,
   'detect-stimuli': detectStimuli,
   'material-configurator': materialConfigurator,
+  'post-process': postProcess,
 };

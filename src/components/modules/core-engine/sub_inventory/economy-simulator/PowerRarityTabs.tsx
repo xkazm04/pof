@@ -5,12 +5,13 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { TrendingUp, Zap, Coins, Layers, PieChart } from 'lucide-react';
 import {
   ACCENT_EMERALD, ACCENT_ORANGE,
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   withOpacity, OPACITY_20,
 } from '@/lib/chart-colors';
 import { motionSafe, EASE_OUT, STAGGER } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import type { ItemEconomyConfig, ItemEconomyResult } from '@/lib/economy/item-economy-engine';
+import type { EconomyVerdict } from '@/lib/economy/item-economy-verdicts';
+import { VERDICT_COLORS, formatVerdictValue } from './AlertCard';
 import { ACCENT, RARITY_COLORS, RARITY_LABELS } from './constants';
 import { PowerCurveChart } from './PowerCurveChart';
 import { RarityStackChart, RarityLegend } from './RarityStackChart';
@@ -109,9 +110,12 @@ export function PowerTab({ result, config }: {
 
 /* ── Rarity Flow Tab ──────────────────────────────────────────────────── */
 
-export function RarityTab({ result, config }: {
+export function RarityTab({ result, config, inflation }: {
   result: ItemEconomyResult; config: ItemEconomyConfig;
+  /** The rarity-inflation verdict — coloured only when measured, an em dash when not */
+  inflation: EconomyVerdict;
 }) {
+  const endgame = result.brackets.slice(-4);
   return (
     <div className="space-y-3">
       <StaggerItem index={0}>
@@ -137,16 +141,13 @@ export function RarityTab({ result, config }: {
             />
             <GlowStat
               label="Inflation"
-              value={`${result.rarityInflation.toFixed(1)}x`}
-              color={
-                result.rarityInflation > 5 ? STATUS_ERROR
-                  : result.rarityInflation > 3 ? STATUS_WARNING
-                    : STATUS_SUCCESS
-              }
+              value={formatVerdictValue(inflation)}
+              color={VERDICT_COLORS[inflation.state]}
             />
             <RarityBreakdown
               label="Endgame" sublabel={`(Lv ${config.maxLevel - 3}+)`}
-              brackets={result.brackets.slice(-4)}
+              brackets={endgame}
+              unsampled={endgame.every((b) => b.agents === 0)}
             />
           </div>
         </BlueprintPanel>
@@ -157,9 +158,10 @@ export function RarityTab({ result, config }: {
 
 /* ── Rarity Breakdown helper ──────────────────────────────────────────── */
 
-function RarityBreakdown({ label, sublabel, brackets }: {
+function RarityBreakdown({ label, sublabel, brackets, unsampled = false }: {
   label: string; sublabel: string;
   brackets: { rarityDistribution: Record<string, number> }[];
+  unsampled?: boolean;
 }) {
   return (
     <BlueprintPanel color={ACCENT} className="p-2 text-center">
@@ -168,7 +170,10 @@ function RarityBreakdown({ label, sublabel, brackets }: {
       </span>
       <span className="text-xs font-mono text-text block">{sublabel}</span>
       <div className="flex gap-1 mt-1 justify-center">
-        {RARITY_LABELS.map((r) => {
+        {unsampled && (
+          <span className="text-xs font-mono uppercase text-text-muted">no agent reached it</span>
+        )}
+        {!unsampled && RARITY_LABELS.map((r) => {
           const avg = brackets.reduce((s, b) => s + (b.rarityDistribution[r] ?? 0), 0)
             / Math.max(brackets.length, 1);
           return avg > 0.005 ? (

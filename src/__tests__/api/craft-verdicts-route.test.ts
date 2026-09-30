@@ -12,12 +12,14 @@ vi.hoisted(() => {
 import { GET, POST } from '@/app/api/craft-verdicts/route';
 import {
   listCraftVerdicts,
+  listCraftVerdictHistory,
   rowToCraftVerdict,
   PROCESS_ENTITY,
   PROCESS_STEP,
   type CraftVerdict,
 } from '@/lib/craft/craft-verdicts-db';
 import { upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { stepContentHash } from '@/lib/judge/contentHash';
 
 function post(body: unknown): NextRequest {
   return new NextRequest('http://localhost/api/craft-verdicts', {
@@ -116,6 +118,46 @@ describe('POST /api/craft-verdicts', () => {
     const stored = listCraftVerdicts(BASE.catalogId).filter((v) => v.step === BASE.step);
     expect(stored).toHaveLength(1);
     expect(stored[0].aLevel).toBe('A3');
+  });
+});
+
+describe('POST /api/craft-verdicts binds the gauge to the CONTENT it read', () => {
+  it('stamps contentHash = stepContentHash(artifact.data) on the stored row, the history row and the GET row', async () => {
+    const data = { stats: { hp: 40, armor: 12 }, statBudget: 52 };
+    upsertArtifact({ catalogId: 'items', entityId: 'e1', step: 'Stats', status: 'pass', tier: 'L0', data, ueAssets: [] });
+    const res = await POST(
+      post({
+        ...BASE,
+        entityId: 'e1',
+        step: 'Stats',
+        aLevel: 'A2',
+        findings: [{ criterion: 'stat-curve', detail: 'no per-tier budget curve behind the numbers', class: 'content' }],
+      }),
+    );
+    const json = (await res.json()) as { success: boolean; data: CraftVerdict };
+    expect(json.success).toBe(true);
+    const H = stepContentHash(data);
+    expect(json.data.contentHash).toBe(H);
+
+    const stored = listCraftVerdicts('items').find((v) => v.entityId === 'e1' && v.step === 'Stats');
+    expect(stored?.contentHash).toBe(H);
+    expect(stored?.artifactUpdatedAt).toBeTruthy();
+    expect(listCraftVerdictHistory('items', 'e1', 'Stats').at(-1)?.contentHash).toBe(H);
+
+    const got = (await (await GET(new NextRequest('http://localhost/api/craft-verdicts?catalogId=items'))).json()) as {
+      data: CraftVerdict[];
+    };
+    expect(got.data.find((v) => v.entityId === 'e1' && v.step === 'Stats')?.contentHash).toBe(H);
+    const proc = got.data.find((v) => v.step === PROCESS_STEP);
+    expect(proc).toBeTruthy();
+    expect(proc!.contentHash).toBeUndefined();
+    expect(proc!.artifactUpdatedAt).toBeUndefined();
+  });
+
+  it('rowToCraftVerdict surfaces content_hash, and omits it on a legacy row', () => {
+    const row = { catalog_id: 'c', entity_id: 'e', step: 's', lens: 'audio', lens_version: 1, a_level: 'A2', findings: '[]', model: 'm' };
+    expect(rowToCraftVerdict({ ...row, content_hash: 'v3-1-abc' }).contentHash).toBe('v3-1-abc');
+    expect('contentHash' in rowToCraftVerdict(row)).toBe(false);
   });
 });
 

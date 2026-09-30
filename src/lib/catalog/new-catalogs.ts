@@ -24,6 +24,9 @@ export interface NewCatalogDef {
  * xlsx + player-movement") was already wrong by two. Use `NEW_CATALOG_COUNT` below.
  */
 export const NEW_CATALOGS: NewCatalogDef[] = [
+  // ── Core / Existing ──
+  { catalogId: 'affixes', label: 'Affixes', category: 'Core / Existing', description: 'Prefix and suffix families, tier ranges, item-level unlocks, and roll weights.', module: 'arpg-inventory', tracks: ['logic', 'test'],
+    starters: [{ id: 'affix-added-physical-damage', name: 'Added Physical Damage', categoryPath: ['Prefixes', 'Damage'], tags: ['prefix', 'physical', 'weapon'], description: 'A weapon-only added physical damage prefix family with five item-level-gated tiers.' }] },
   // ── Quests & Narrative ──
   { catalogId: 'quests', label: 'Quests', category: 'Quests & Narrative', description: 'Structured player objectives with stages, rewards, and narrative beats.', module: 'dialogue-quests', tracks: ['logic', 'audio', 'test'],
     starters: [

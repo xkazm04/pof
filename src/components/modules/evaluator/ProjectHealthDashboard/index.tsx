@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Radar as RadarIcon } from 'lucide-react';
-import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
-import { TaskFactory } from '@/lib/cli-task';
+import { useProjectStore } from '@/stores/projectStore';
+import { generateFixPlan } from '@/lib/evaluator/fix-plan-generator';
 import { MODULE_LABELS } from '@/lib/module-registry';
+import { logger } from '@/lib/logger';
 import type { Recommendation } from '@/types/evaluator';
+import type { SubModuleId } from '@/types/modules';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { EVAL_ACCENT, RADAR_R } from './constants';
 import { polarToXY, scoreColor } from './helpers';
-import type { ProjectHealthDashboardProps, RegressionAlert } from './types';
+import type { ProjectHealthDashboardProps } from './types';
+import { useScannerFeed } from './useScannerFeed';
 import { RegressionAlerts } from './RegressionAlerts';
 import { HealthHeader } from './HealthHeader';
 import { HealthRadarChart } from './HealthRadarChart';
@@ -18,77 +22,75 @@ import { SelectedModuleDetail } from './SelectedModuleDetail';
 import { TopRecommendations } from './TopRecommendations';
 import { ScanHistoryTimeline } from './ScanHistoryTimeline';
 
+/** Session module before any Fix is clicked (no prompt is sent until one is). */
+const IDLE_FIX_MODULE: SubModuleId = 'ai-behavior';
+
+interface FixTarget {
+  moduleId: SubModuleId;
+  prompt: string;
+  seq: number;
+}
+
 // ── Component ──
 
 export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboardProps) {
-  const lastScan = useEvaluatorStore((s) => s.lastScan);
-  const scanHistory = useEvaluatorStore((s) => s.scanHistory);
-  const isScanning = useEvaluatorStore((s) => s.isScanning);
-  const setScanning = useEvaluatorStore((s) => s.setScanning);
-  const setLastScan = useEvaluatorStore((s) => s.setLastScan);
-  const addScanToHistory = useEvaluatorStore((s) => s.addScanToHistory);
+  // The durable deep-eval history (evaluator_results), projected into reports.
+  const feed = useScannerFeed();
+  const lastScan = feed.latest;
+  const scanHistory = feed.reports;
 
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
-  const [regressionAlerts, setRegressionAlerts] = useState<RegressionAlert[]>([]);
+  const [dismissed, setDismissed] = useState<{ scanId: string | null; ids: string[] }>({ scanId: null, ids: [] });
 
-  // ── Fix CLI session ──
+  // ── Fix CLI session — on the finding's OWN module ──
 
+  const [fixTarget, setFixTarget] = useState<FixTarget | null>(null);
+  const fixModule = fixTarget?.moduleId ?? IDLE_FIX_MODULE;
   const fixCli = useModuleCLI({
-    moduleId: 'ai-behavior', // evaluator doesn't have its own sub-module, use generic
-    sessionKey: 'evaluator-fix',
-    label: 'Evaluator Fix',
+    moduleId: fixModule,
+    sessionKey: `evaluator-fix:${fixModule}`,
+    label: `Fix · ${MODULE_LABELS[fixModule] ?? fixModule}`,
     accentColor: EVAL_ACCENT,
   });
 
   const handleFix = useCallback(
     (rec: Recommendation) => {
-      const task = TaskFactory.askClaude('ai-behavior', rec.suggestedPrompt, 'Evaluator Fix');
-      fixCli.execute(task);
+      const finding = feed.findingsById.get(rec.id);
+      if (!finding) {
+        logger.warn(`[scanner] no finding ${rec.id} in the newest scan — Fix skipped`);
+        return;
+      }
+      const { projectName, projectPath, ueVersion } = useProjectStore.getState();
+      const plan = generateFixPlan(finding, { projectName, projectPath, ueVersion });
+      setFixTarget((prev) => ({ moduleId: finding.moduleId, prompt: plan.prompt, seq: (prev?.seq ?? 0) + 1 }));
     },
-    [fixCli],
+    [feed.findingsById],
   );
 
-  // ── Regression detection ──
-
+  // Dispatch once the CLI hook is bound to the target's module (the render after
+  // the click), so the session the prompt lands in belongs to that module.
+  const sentSeq = useRef(0);
   useEffect(() => {
-    if (scanHistory.length < 2) return;
-    const current = scanHistory[scanHistory.length - 1];
-    const previous = scanHistory[scanHistory.length - 2];
+    if (!fixTarget || fixTarget.seq === sentSeq.current) return;
+    sentSeq.current = fixTarget.seq;
+    fixCli.sendPrompt(fixTarget.prompt);
+  }, [fixTarget, fixCli]);
 
-    const alerts: RegressionAlert[] = [];
+  // ── Regression alerts (fingerprint diff of the two newest scans) ──
 
-    // Overall score regression
-    if (current.overallScore < previous.overallScore - 5) {
-      alerts.push({
-        id: 'overall',
-        message: `Overall health dropped from ${previous.overallScore} → ${current.overallScore}`,
-        severity: 'high',
-      });
-    }
+  const regressionAlerts = useMemo(() => {
+    const hidden = dismissed.scanId === lastScan?.id ? new Set(dismissed.ids) : new Set<string>();
+    return feed.alerts.filter((a) => !hidden.has(a.id));
+  }, [feed.alerts, dismissed, lastScan?.id]);
 
-    // Per-module regressions
-    const prevMap = new Map(previous.moduleScores.map((m) => [m.moduleId, m.score]));
-    for (const ms of current.moduleScores) {
-      const prevScore = prevMap.get(ms.moduleId);
-      if (prevScore != null && ms.score < prevScore - 10) {
-        alerts.push({
-          id: ms.moduleId,
-          message: `${MODULE_LABELS[ms.moduleId] ?? ms.moduleId} dropped from ${prevScore} → ${ms.score}`,
-          severity: ms.score < 40 ? 'critical' : 'medium',
-        });
-      }
-    }
-
-    // Always replace the alert set — including with an empty array — so stale
-    // alerts clear once the underlying regression has recovered on a new scan.
-    const raf = requestAnimationFrame(() => setRegressionAlerts(alerts));
-    return () => cancelAnimationFrame(raf);
-  }, [scanHistory]);
-
-  const dismissAlert = useCallback((id: string) => {
-    setRegressionAlerts((prev) => prev.filter((a) => a.id !== id));
-  }, []);
+  const dismissAlert = useCallback(
+    (id: string) => {
+      const scanId = lastScan?.id ?? null;
+      setDismissed((prev) => ({ scanId, ids: [...(prev.scanId === scanId ? prev.ids : []), id] }));
+    },
+    [lastScan?.id],
+  );
 
   // ── Radar data ──
 
@@ -154,20 +156,31 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
     ? scoreColor(lastScan.overallScore)
     : 'var(--text-muted)';
 
+  const runDeepEval = onNavigateTab ? () => onNavigateTab('deep-eval') : undefined;
+
   return (
     <div className="space-y-5">
+      {/* ── Load failure — never read as "never scanned" ── */}
+      {feed.error !== null && (
+        <div className="space-y-1">
+          <InlineErrorRetry message="Couldn't load scan history" onRetry={feed.retry} />
+          <p className="text-2xs text-text-muted">{feed.error}</p>
+        </div>
+      )}
+
       {/* ── Regression alerts ── */}
       {regressionAlerts.length > 0 && (
         <RegressionAlerts regressionAlerts={regressionAlerts} dismissAlert={dismissAlert} />
       )}
 
-      {/* ── Top row: Radial gauge + info + scan button ── */}
+      {/* ── Top row: Radial gauge + info + Deep Eval door ── */}
       <HealthHeader
         lastScan={lastScan}
-        isScanning={isScanning}
+        isLoading={feed.loading}
         scanHistory={scanHistory}
         showHistoryOverlay={showHistoryOverlay}
         setShowHistoryOverlay={setShowHistoryOverlay}
+        onRunDeepEval={runDeepEval}
       />
 
       {/* ── Radar Chart ── */}
@@ -206,16 +219,16 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
         <ScanHistoryTimeline scanHistory={scanHistory} />
       )}
 
-      {/* ── Empty state ── */}
-      {!lastScan && !isScanning && (
+      {/* ── Empty state: the history loaded and holds no scan ── */}
+      {!lastScan && !feed.loading && feed.error === null && (
         <EmptyState
           icon={RadarIcon}
           title="No health data yet"
-          description="Scan your project to generate a health radar with per-module scores, issues, and actionable recommendations."
+          description="Health is scored from Deep Eval scans: run one to get per-module scores, issues, regressions and one-click fixes here."
           iconColor={EVAL_ACCENT}
-          action={onNavigateTab ? {
-            label: 'Review Features First',
-            onClick: () => onNavigateTab('features'),
+          action={runDeepEval ? {
+            label: 'Run Deep Eval',
+            onClick: runDeepEval,
             color: EVAL_ACCENT,
           } : undefined}
         />

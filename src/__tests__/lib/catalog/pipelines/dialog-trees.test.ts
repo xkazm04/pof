@@ -101,7 +101,9 @@ describe('dialog-trees pipeline', () => {
 
     // ── Test Gate: deferred L3 ────────────────────────────────────────────────
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;
-    expect(gate.accept({})).toMatchObject({ tier: 'L3', status: 'deferred' });
+    // An empty gate names no per-entity runtime test, so it fails (/diablo W16); a produced one defers to UE.
+    expect(gate.accept({})).toMatchObject({ status: 'fail' });
+    expect(gate.accept(gate.produce(entity).data ?? {})).toMatchObject({ tier: 'L3', status: 'deferred' });
 
     // ── Icon 2D Art: links iconset-abilities ──────────────────────────────────
     const icon = p!.steps.find((s) => s.label === 'Icon 2D Art')!;

@@ -3,9 +3,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useLiveStateSync } from '@/hooks/useLiveStateSync';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
+import { appendLog, deriveConflicts, sameLedger, type Ledger } from '@/lib/ue5-bridge/sync-ledger';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { MAX_LOG_ENTRIES } from './constants';
 import { nextLogId, truncate } from './helpers';
+import type { WriteReceipt } from '@/types/ue5-bridge';
 import type { SyncDirection, LogLevel, SyncLogEntry, PropertyEdit, ViewportTarget } from './types';
 
 export function useBidirectionalStateSyncPanel() {
@@ -28,12 +30,18 @@ export function useBidirectionalStateSyncPanel() {
   const [logFilter, setLogFilter] = useState<SyncDirection | 'all'>('all');
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  const addLog = useCallback((direction: SyncDirection, level: LogLevel, category: string, message: string, detail?: string) => {
-    setSyncLog((prev) => {
-      const next = [...prev, { id: nextLogId(), ts: Date.now(), direction, level, category, message, detail }];
-      return next.length > MAX_LOG_ENTRIES ? next.slice(-MAX_LOG_ENTRIES) : next;
-    });
+  const addLog = useCallback((direction: SyncDirection, level: LogLevel, category: string, message: string, detail?: string, dropped?: boolean) => {
+    const entry: SyncLogEntry = { id: nextLogId(), ts: Date.now(), direction, level, category, message, detail };
+    if (dropped) entry.dropped = true;
+    setSyncLog((prev) => appendLog(prev, entry, MAX_LOG_ENTRIES));
   }, []);
+
+  /** Log an outbound action as it actually went: a dropped frame is a warning, not a send. */
+  const logWrite = useCallback((receipts: WriteReceipt[], category: string, message: string, detail: string) => {
+    const dropped = receipts.some((r) => !r.sent);
+    if (dropped) addLog('outbound', 'warn', category, message, `${detail} - dropped (socket not open)`, true);
+    else addLog('outbound', 'info', category, message, detail);
+  }, [addLog]);
 
   // Auto-scroll log
   useEffect(() => {
@@ -57,25 +65,25 @@ export function useBidirectionalStateSyncPanel() {
     } catch {
       parsed = propEdit.value;
     }
-    setProperty(propEdit.objectPath.trim(), propEdit.propertyName.trim(), parsed);
-    addLog('outbound', 'info', 'SET', `${propEdit.propertyName} = ${truncate(propEdit.value, 40)}`, propEdit.objectPath);
+    const receipt = setProperty(propEdit.objectPath.trim(), propEdit.propertyName.trim(), parsed);
+    logWrite([receipt], 'SET', `${propEdit.propertyName} = ${truncate(propEdit.value, 40)}`, propEdit.objectPath);
     setPropEdit({ objectPath: '', propertyName: '', value: '' });
-  }, [propEdit, setProperty, addLog]);
+  }, [propEdit, setProperty, logWrite]);
 
   // ── Watched property push-back ──
   const watchEntries = useMemo(() => Object.entries(propertyWatches), [propertyWatches]);
 
   const handleWatchedPush = useCallback((objectPath: string, propertyName: string, value: unknown) => {
-    setProperty(objectPath, propertyName, value);
-    addLog('outbound', 'info', 'SET', `${propertyName} = ${truncate(JSON.stringify(value), 40)}`, objectPath);
-  }, [setProperty, addLog]);
+    const receipt = setProperty(objectPath, propertyName, value);
+    logWrite([receipt], 'SET', `${propertyName} = ${truncate(JSON.stringify(value), 40)}`, objectPath);
+  }, [setProperty, logWrite]);
 
   // ── PIE control ──
   const handlePIE = useCallback((action: 'play' | 'pause' | 'stop') => {
     // PIE control uses set.property on the editor subsystem
-    setProperty('/Script/UnrealEd.Default__UnrealEditorSubsystem', 'PIECommand', action);
-    addLog('outbound', 'info', 'PIE', `PIE ${action}`, 'EditorSubsystem');
-  }, [setProperty, addLog]);
+    const receipt = setProperty('/Script/UnrealEd.Default__UnrealEditorSubsystem', 'PIECommand', action);
+    logWrite([receipt], 'PIE', `PIE ${action}`, 'EditorSubsystem');
+  }, [setProperty, logWrite]);
 
   // ── Viewport teleport ──
   const [viewTarget, setViewTarget] = useState<ViewportTarget>({
@@ -87,12 +95,13 @@ export function useBidirectionalStateSyncPanel() {
     const rot = { pitch: parseFloat(viewTarget.pitch) || 0, yaw: parseFloat(viewTarget.yaw) || 0, roll: parseFloat(viewTarget.roll) || 0 };
     const fov = parseFloat(viewTarget.fov) || 90;
 
-    setProperty('/Editor/ViewportClient', 'CameraLocation', loc);
-    setProperty('/Editor/ViewportClient', 'CameraRotation', rot);
-    setProperty('/Editor/ViewportClient', 'FOV', fov);
-
-    addLog('outbound', 'info', 'CAM', `Teleport → (${loc.x}, ${loc.y}, ${loc.z})`, `P:${rot.pitch} Y:${rot.yaw} R:${rot.roll} FOV:${fov}`);
-  }, [viewTarget, setProperty, addLog]);
+    const receipts = [
+      setProperty('/Editor/ViewportClient', 'CameraLocation', loc),
+      setProperty('/Editor/ViewportClient', 'CameraRotation', rot),
+      setProperty('/Editor/ViewportClient', 'FOV', fov),
+    ];
+    logWrite(receipts, 'CAM', `Teleport → (${loc.x}, ${loc.y}, ${loc.z})`, `P:${rot.pitch} Y:${rot.yaw} R:${rot.roll} FOV:${fov}`);
+  }, [viewTarget, setProperty, logWrite]);
 
   const handleCopyFromSnapshot = useCallback(() => {
     if (!snapshot?.viewport) return;
@@ -109,28 +118,12 @@ export function useBidirectionalStateSyncPanel() {
     addLog('inbound', 'info', 'CAM', 'Copied viewport from snapshot');
   }, [snapshot, addLog]);
 
-  // ── Conflict detection ──
-  const conflicts = useMemo(() => {
-    const found: Array<{ watchId: string; propertyName: string; inbound: unknown; outbound: string }> = [];
-    for (const [watchId, update] of watchEntries) {
-      // Track if we recently wrote to this same property
-      const recentWrite = syncLog
-        .filter((e) => e.direction === 'outbound' && e.category === 'SET' && e.message.startsWith(update.propertyName))
-        .at(-1);
-      if (recentWrite && update.previousValue !== undefined && update.previousValue !== update.value) {
-        found.push({
-          watchId,
-          propertyName: update.propertyName,
-          inbound: update.value,
-          outbound: recentWrite.message,
-        });
-      }
-    }
-    return found;
-  }, [watchEntries, syncLog]);
+  // ── Conflict detection: the WS client's write ledger, three-way compare on the exact key ──
+  const [writes, setWrites] = useState<Ledger>(() => ue5LiveState.getState().writes);
+  const conflicts = useMemo(() => deriveConflicts(writes), [writes]);
 
-  // ── Stats ──
-  const outboundCount = useMemo(() => syncLog.filter((e) => e.direction === 'outbound').length, [syncLog]);
+  // ── Stats (a dropped write never went out, so it is not counted as sent) ──
+  const outboundCount = useMemo(() => syncLog.filter((e) => e.direction === 'outbound' && !e.dropped).length, [syncLog]);
   const inboundCount = useMemo(() => syncLog.filter((e) => e.direction === 'inbound').length, [syncLog]);
 
   const filteredLog = useMemo(() => {
@@ -144,17 +137,17 @@ export function useBidirectionalStateSyncPanel() {
     let prevWatchCount = 0;
 
     const unsub = ue5LiveState.onStateChange((state) => {
+      // Mirror the write ledger (skip the re-render when only the clone changed)
+      setWrites((prev) => (sameLedger(prev, state.writes) ? prev : state.writes));
+
       // Track snapshot changes
       if (state.snapshot && prevTs !== null && state.snapshot.timestamp !== prevTs) {
-        setSyncLog((prev) => {
-          const entry: SyncLogEntry = {
-            id: nextLogId(), ts: Date.now(), direction: 'inbound', level: 'info',
-            category: 'SNAP', message: `Editor: ${state.snapshot!.editorState}`,
-            detail: `Level: ${state.snapshot!.openLevel}`,
-          };
-          const next = [...prev, entry];
-          return next.length > MAX_LOG_ENTRIES ? next.slice(-MAX_LOG_ENTRIES) : next;
-        });
+        const entry: SyncLogEntry = {
+          id: nextLogId(), ts: Date.now(), direction: 'inbound', level: 'info',
+          category: 'SNAP', message: `Editor: ${state.snapshot.editorState}`,
+          detail: `Level: ${state.snapshot.openLevel}`,
+        };
+        setSyncLog((prev) => appendLog(prev, entry, MAX_LOG_ENTRIES));
       }
       if (state.snapshot) prevTs = state.snapshot.timestamp;
 
@@ -164,16 +157,13 @@ export function useBidirectionalStateSyncPanel() {
         const entries = [...state.propertyWatches.entries()];
         const latest = entries.at(-1);
         if (latest) {
-          setSyncLog((prev) => {
-            const entry: SyncLogEntry = {
-              id: nextLogId(), ts: Date.now(), direction: 'inbound', level: 'info',
-              category: 'PROP',
-              message: `${latest[1].propertyName} = ${truncate(JSON.stringify(latest[1].value), 30)}`,
-              detail: latest[1].objectPath,
-            };
-            const next = [...prev, entry];
-            return next.length > MAX_LOG_ENTRIES ? next.slice(-MAX_LOG_ENTRIES) : next;
-          });
+          const entry: SyncLogEntry = {
+            id: nextLogId(), ts: Date.now(), direction: 'inbound', level: 'info',
+            category: 'PROP',
+            message: `${latest[1].propertyName} = ${truncate(JSON.stringify(latest[1].value), 30)}`,
+            detail: latest[1].objectPath,
+          };
+          setSyncLog((prev) => appendLog(prev, entry, MAX_LOG_ENTRIES));
         }
       }
       prevWatchCount = watchCount;

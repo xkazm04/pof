@@ -8,6 +8,7 @@ import {
 import type { BuildProfile } from '@/lib/packaging/build-profiles';
 import { createDefaultProfile } from '@/lib/packaging/build-profiles';
 import type { SmokeTestResult } from '@/lib/packaging/smoke-test';
+import { evaluateBuildSize, type SizeBudgetConfig } from '@/lib/packaging/size-budgets';
 
 function profile(platform: 'Win64' | 'Linux' = 'Win64'): BuildProfile {
   return {
@@ -44,9 +45,12 @@ function deps(overrides: Partial<ScheduledRunDeps> = {}): ScheduledRunDeps {
     runCook: vi.fn().mockResolvedValue(okCook),
     measureSize: vi.fn().mockResolvedValue(5_000_000),
     runSmoke: vi.fn().mockResolvedValue(okSmoke),
-    lastGreenSize: vi.fn().mockReturnValue(4_000_000),
-    evaluateSize: vi.fn().mockReturnValue(null),
-    recordBuild: vi.fn().mockReturnValue({ id: 7 }),
+    lastGreenBaseline: vi.fn().mockReturnValue({
+      buildId: 6, projectId: 'C:\\proj', sizeBytes: 4_000_000, version: '0.1.0', createdAt: 't',
+    }),
+    evaluateBuildSize: vi.fn().mockReturnValue(null),
+    nextVersion: vi.fn().mockReturnValue('0.1.1'),
+    insertBuild: vi.fn().mockReturnValue({ id: 7 }),
     now: () => (t += 100),
     ...overrides,
   };
@@ -59,7 +63,7 @@ describe('runScheduledBuild', () => {
     expect(res.status).toBe('skipped');
     expect(res.reason).toMatch(/unchanged/i);
     expect(d.runCook).not.toHaveBeenCalled();
-    expect(d.recordBuild).not.toHaveBeenCalled();
+    expect(d.insertBuild).not.toHaveBeenCalled();
   });
 
   it('builds anyway when skip-if-unchanged is off even if HEAD matches', async () => {
@@ -80,7 +84,7 @@ describe('runScheduledBuild', () => {
     expect(res.status).toBe('failed');
     expect(res.preflight).toBe('fail');
     expect(d.runCook).not.toHaveBeenCalled();
-    expect(d.recordBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+    expect(d.insertBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
     expect(res.reason).toMatch(/ProjectID is empty/);
   });
 
@@ -92,7 +96,7 @@ describe('runScheduledBuild', () => {
     expect(res.status).toBe('failed');
     expect(res.reason).toMatch(/code 1/);
     expect(d.runSmoke).not.toHaveBeenCalled();
-    expect(d.recordBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+    expect(d.insertBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
   });
 
   it('runs the full chain on success and records a success build', async () => {
@@ -104,8 +108,8 @@ describe('runScheduledBuild', () => {
     expect(res.smoke).toBe('pass');
     expect(d.runSmoke).toHaveBeenCalled();
     // measured size feeds the size-budget evaluation
-    expect(d.evaluateSize).toHaveBeenCalledWith('Win64', 5_000_000, 4_000_000);
-    expect(d.recordBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'success', sizeBytes: 5_000_000 }));
+    expect(d.evaluateBuildSize).toHaveBeenCalledWith('Win64', 5_000_000, 4_000_000, expect.objectContaining({ buildId: 6 }));
+    expect(d.insertBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'success', sizeBytes: 5_000_000 }));
   });
 
   it('treats a smoke-test failure as a failed gate', async () => {
@@ -114,7 +118,7 @@ describe('runScheduledBuild', () => {
     const res = await runScheduledBuild(context(), d);
     expect(res.status).toBe('failed');
     expect(res.smoke).toBe('fail');
-    expect(d.recordBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+    expect(d.insertBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
   });
 
   it('skips the smoke-test for non-Win64 platforms', async () => {
@@ -127,12 +131,49 @@ describe('runScheduledBuild', () => {
 
   it('records a size-regression note without failing the gate', async () => {
     const d = deps({
-      evaluateSize: vi.fn().mockReturnValue({ note: '[SIZE_BUDGET] Win64 6.0 GB — exceeds 5 GB budget', exceedsBudget: true } as never),
+      evaluateBuildSize: vi.fn().mockReturnValue({ note: '[SIZE_BUDGET] Win64 6.0 GB — exceeds 5 GB budget', exceedsBudget: true } as never),
     });
     const res = await runScheduledBuild(context(), d);
     expect(res.status).toBe('success');
     expect(res.sizeRegression).toMatch(/SIZE_BUDGET/);
-    const recorded = (d.recordBuild as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const recorded = (d.insertBuild as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(recorded.notes).toMatch(/SIZE_BUDGET/);
+  });
+  it('stamps the next version on a green nightly build', async () => {
+    const d = deps({ nextVersion: vi.fn().mockReturnValue('0.2.0') });
+    await runScheduledBuild(context(), d);
+    const recorded = (d.insertBuild as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(recorded.version).toBe('0.2.0');
+  });
+
+  it('names its project-scoped baseline build in a size-regression verdict', async () => {
+    const growth5: SizeBudgetConfig = { budgets: { Win64: { budgetBytes: 0, growthPercent: 5 } }, failOnRegression: false };
+    const d = deps({
+      measureSize: vi.fn().mockResolvedValue(110_000_000),
+      lastGreenBaseline: vi.fn().mockReturnValue({
+        buildId: 9, projectId: 'P', sizeBytes: 100_000_000, version: '0.1.4', createdAt: 't',
+      }),
+      evaluateBuildSize: vi.fn((platform, sizeBytes, lastGreen, baseline) =>
+        evaluateBuildSize(platform, sizeBytes, lastGreen, growth5, baseline)),
+    });
+    const res = await runScheduledBuild(context({ projectPath: 'P' }), d);
+    expect(res.sizeRegression).toContain('build #9');
+    expect(res.sizeRegression).not.toContain('unidentified last-green size');
+  });
+
+  it('[guard] never records or versions a skipped run', async () => {
+    const d = deps({ getHead: vi.fn().mockResolvedValue('oldsha') });
+    const res = await runScheduledBuild(context({ lastBuiltCommit: 'oldsha', skipIfUnchanged: true }), d);
+    expect(res.status).toBe('skipped');
+    expect(d.insertBuild).not.toHaveBeenCalled();
+    expect(d.nextVersion).not.toHaveBeenCalled();
+  });
+
+  it('[guard] a smoke-failed build is recorded failed and carries no version', async () => {
+    const failSmoke: SmokeTestResult = { ...okSmoke, status: 'fail', gameAlive: false };
+    const d = deps({ runSmoke: vi.fn().mockResolvedValue(failSmoke) });
+    await runScheduledBuild(context(), d);
+    expect(d.insertBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+    expect(d.nextVersion).not.toHaveBeenCalled();
   });
 });

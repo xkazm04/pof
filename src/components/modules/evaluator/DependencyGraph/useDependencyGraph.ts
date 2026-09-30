@@ -1,11 +1,34 @@
-import { useState, useMemo, useRef } from 'react';
-import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
+import { buildModuleTopology, isOpenBlocked, TOPOLOGY_COMPACT } from '@/lib/topology/moduleGraph';
+import {
+  unblockFrontier, previewUnblock, criticalUnblocker, clearedEdgeIds,
+} from '@/lib/topology/unblockFrontier';
+import { generatePlan } from '@/lib/implementation-planner/plan-generator';
+import { MODULE_COLORS as CHART_MODULE_COLORS } from '@/lib/chart-colors';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
-import { MODULE_LABELS } from '@/lib/module-registry';
 import { useManifest } from '@/hooks/useManifest';
+import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import type { SubModuleId } from '@/types/modules';
-import { MODULE_COLORS, COL_WIDTH, ROW_HEIGHT, NODE_W, NODE_H, PAD_X, PAD_Y, getNodeCenter } from './constants';
-import type { ModuleNode, Edge } from './types';
+import { MODULE_COLORS } from './constants';
+import type { BuildTarget, ModuleNode } from './types';
+
+const NO_EDGES: ReadonlySet<string> = new Set();
+
+/** `moduleId::featureName` -> its module id (the part before the first `::`). */
+const moduleOf = (key: string) => key.slice(0, key.indexOf('::')) as SubModuleId;
+
+/** A buildable feature plus what building it clears. */
+function toBuildTarget(statusMap: ReadonlyMap<string, string>, key: string): BuildTarget {
+  const { newlyReady } = previewUnblock(statusMap, key);
+  return {
+    key,
+    moduleId: moduleOf(key),
+    featureName: key.slice(key.indexOf('::') + 2),
+    newlyReady,
+    moduleCount: new Set(newlyReady.map(moduleOf)).size,
+  };
+}
 
 export function useDependencyGraph() {
   // Statuses come from the ONE shared all-statuses path. A failed load must not
@@ -19,6 +42,8 @@ export function useDependencyGraph() {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  // Feature whose Build is being previewed (hover / focus on a Build affordance).
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const { manifest, isConnected: bridgeConnected } = useManifest();
 
@@ -40,86 +65,64 @@ export function useDependencyGraph() {
     return refs;
   }, [manifest]);
 
-  // Build dep map with blocker info
-  const depMap = useMemo(() => {
-    const base = buildDependencyMap();
-    return computeBlockers(base, statusMap);
+  // Nodes, cross-module edges, placement and viewport: the ONE module-topology
+  // projection shared with NexusView and the Overview roll-up.
+  const topology = useMemo(() => buildModuleTopology(statusMap, TOPOLOGY_COMPACT), [statusMap]);
+  const { depMap, edges } = topology;
+  const nodes: ModuleNode[] = useMemo(
+    () => topology.nodes.map((n) => ({ ...n, color: MODULE_COLORS[n.moduleId] ?? 'var(--text-muted)' })),
+    [topology],
+  );
+
+  // The single best next build across every module (impact-scorer ranked).
+  const criticalBuild = useMemo(() => {
+    const key = criticalUnblocker(statusMap);
+    return key ? toBuildTarget(statusMap, key) : null;
   }, [statusMap]);
 
-  // Build nodes
-  const nodes: ModuleNode[] = useMemo(() => {
-    return Object.keys(MODULE_FEATURE_DEFINITIONS).map((moduleId) => {
-      const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
-      const center = getNodeCenter(moduleId as SubModuleId);
-      let blockedCount = 0;
-      let implementedCount = 0;
+  // Cross-module edges the previewed build would stop blocking.
+  const previewEdges = useMemo(
+    () => (previewKey ? clearedEdgeIds(statusMap, previewKey) : NO_EDGES),
+    [previewKey, statusMap],
+  );
 
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const status = statusMap.get(key) ?? 'unknown';
-        if (status === 'implemented') implementedCount++;
-        const info = depMap.get(key);
-        if (info?.isBlocked && status !== 'implemented') blockedCount++;
-      }
-
-      return {
-        moduleId: moduleId as SubModuleId,
-        label: MODULE_LABELS[moduleId] ?? moduleId,
-        color: MODULE_COLORS[moduleId] ?? 'var(--text-muted)',
-        featureCount: features.length,
-        blockedCount,
-        implementedCount,
-        cx: center.x,
-        cy: center.y,
-      };
-    });
-  }, [depMap, statusMap]);
-
-  // Build cross-module edges
-  const edges: Edge[] = useMemo(() => {
-    const edgeMap = new Map<string, { count: number; hasBlockers: boolean }>();
-
-    for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const info = depMap.get(key);
-        if (!info) continue;
-
-        for (const dep of info.deps) {
-          if (dep.moduleId === moduleId) continue; // skip same-module
-          const edgeKey = `${dep.moduleId}->${moduleId}`;
-          const existing = edgeMap.get(edgeKey);
-          const isBlocker = info.blockers.some((b) => b.key === dep.key);
-          if (existing) {
-            existing.count++;
-            if (isBlocker) existing.hasBlockers = true;
-          } else {
-            edgeMap.set(edgeKey, { count: 1, hasBlockers: isBlocker });
-          }
-        }
-      }
-    }
-
-    return Array.from(edgeMap.entries()).map(([key, val]) => {
-      const [from, to] = key.split('->');
-      return { from, to, count: val.count, hasBlockers: val.hasBlockers };
-    });
-  }, [depMap]);
+  // One-click build: resolve the feature's PlanItem and dispatch it through the
+  // ONE plan dispatch door (usePlanDispatch — the ImplementationPlan path):
+  // gated on readiness, feature-fix task, and a confirmed landing refreshes the
+  // shared statuses this graph reads. No prompt is built here.
+  const { dispatch, isRunning: isBuilding } = usePlanDispatch({
+    sessionKey: 'dependency-graph-build',
+    label: 'Dependencies Build',
+    accentColor: CHART_MODULE_COLORS.evaluator,
+  });
+  const buildFeature = useCallback((key: string) => {
+    const item = generatePlan(statusMap).items.find((i) => i.key === key);
+    if (!item) return;
+    dispatch(item);
+  }, [statusMap, dispatch]);
 
   // Feature-level details for selected module
   const selectedDetails = useMemo(() => {
     if (!selectedModule) return null;
     const features = MODULE_FEATURE_DEFINITIONS[selectedModule as SubModuleId] ?? [];
+    // Rows share frontier features (AARPGCharacterBase fronts many): preview each once.
+    const targets = new Map<string, BuildTarget>();
+    const targetFor = (k: string) => {
+      if (!targets.has(k)) targets.set(k, toBuildTarget(statusMap, k));
+      return targets.get(k)!;
+    };
     return features.map((feat) => {
       const key = `${selectedModule}::${feat.featureName}`;
       const status = statusMap.get(key) ?? 'unknown';
       const info = depMap.get(key);
+      const isBlocked = isOpenBlocked(info, status);
       return {
         featureName: feat.featureName,
         status,
         deps: info?.deps ?? [],
         blockers: info?.blockers ?? [],
-        isBlocked: (info?.isBlocked ?? false) && status !== 'implemented',
+        isBlocked,
+        frontier: isBlocked ? unblockFrontier(statusMap, key).map(targetFor) : [],
       };
     });
   }, [selectedModule, depMap, statusMap]);
@@ -149,8 +152,7 @@ export function useDependencyGraph() {
     return counts;
   }, [manifest, manifestCrossRefs]);
 
-  const svgWidth = PAD_X * 2 + 3 * COL_WIDTH + NODE_W;
-  const svgHeight = PAD_Y * 2 + 2 * ROW_HEIGHT + NODE_H;
+  const { width: svgWidth, height: svgHeight } = topology;
 
   const highlightModule = hoveredModule ?? selectedModule;
 
@@ -176,5 +178,10 @@ export function useDependencyGraph() {
     svgWidth,
     svgHeight,
     highlightModule,
+    criticalBuild,
+    buildFeature,
+    isBuilding,
+    setPreviewKey,
+    previewEdges,
   };
 }

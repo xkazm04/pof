@@ -154,7 +154,7 @@ export function StatusDashboard() {
               progress; red is blocked. Click a readiness or engine chip to highlight, or a pipeline to open its category
               overview.
             </TabIntro>
-            <PipelinesView onFocusCatalog={focusCatalog} filterClass={filterClass} onClearFilter={clearFilter} />
+            <PipelinesView onFocusCatalog={focusCatalog} onFocusEntity={focusEntity} filterClass={filterClass} onClearFilter={clearFilter} />
           </>
         )}
 

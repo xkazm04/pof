@@ -8,7 +8,8 @@ import type {
   JobStatusResult,
   ImportedObject,
 } from '@/lib/blender-mcp/types';
-import type { ForgeCritique, ForgeGateProjection, ForgeStatusResponse } from './forgeJobStatus';
+import type { ForgeCritique, ForgeFinishState, ForgeGateProjection, ForgeStatusResponse } from './forgeJobStatus';
+import type { DeliveryRemedy } from '@/lib/visual-gen/delivery-remedy';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider, getProviderById, providerExecution } from '@/lib/visual-gen/providers';
 
@@ -29,6 +30,9 @@ export interface GenerationJob {
   completedAt?: number;
   /** Remote job id returned by the MCP generation API */
   mcpJobId?: string;
+  /** The Blender-MCP provider `mcpJobId` belongs to — set on the MCP path only, so a
+   *  runner job (which reuses `mcpJobId` for its runner id) is never re-attached as MCP. */
+  mcpProvider?: McpProvider;
   /** Tier-1 quality-gate outcome — a scorecard, or a stated "did not run" reason. */
   critique?: ForgeCritique;
   /** Tier-2 CLIP fidelity (0–1) of the generated mesh vs the input image. */
@@ -72,6 +76,10 @@ export interface GenerationJob {
    * before any provider call, and the reason lands on `error`.
    */
   inputGateNote?: string;
+  /** The delivery's next step, as the status poll projected it (see `remedyFor`). */
+  remedy?: DeliveryRemedy;
+  /** Where the $0 local finish this card offered stands — set only by `finishJob`. */
+  finish?: ForgeFinishState;
 }
 
 interface ForgeState {
@@ -111,6 +119,21 @@ interface ForgeState {
   setActiveStyleDnaProfile: (profile: StyleDnaProfile | null) => void;
   setApplyStyleDna: (apply: boolean) => void;
   submitMcpJob: (providerId: string, prompt: string, mode: GenerationMode) => Promise<void>;
+  /** Re-adopt the paid Blender-MCP jobs the SERVER ledger still holds (GET
+   *  /api/blender-mcp/generate/jobs) — after a reload the queue is empty but the provider
+   *  jobs are not. Never submits: a job already in the queue is skipped (or, if nothing is
+   *  polling it, adopted). Returns the ledger's `ownerEpoch` (null when unreadable) so the
+   *  queue can state a server restart instead of reading an empty list as "nothing ran". */
+  resumeMcpJobs: () => Promise<{ ownerEpoch: string | null }>;
+  /** Re-poll a transport-failed MCP job's EXISTING provider job id — the paid generation
+   *  may well have finished. Unlike `retryJob`, this never pays for a new generation.
+   *  No-op for a job `mcpReattachable` refuses. */
+  reattachJob: (id: string) => void;
+  /** Explicit operator click on a `remedy.kind === 'finish'` card: POST the EXISTING $0
+   *  critique -> mesh-finish route (basename + dir, never a path), then poll its status on
+   *  the same tracked-poller rail as a generation. Never calls a generation route — the
+   *  only paid path stays `retryJob`, which still runs on `failed` jobs only. */
+  finishJob: (id: string) => Promise<void>;
   /** Runner-backed generation: POST to /api/visual-gen/generate, then poll /status.
    *  Serves BOTH modes — image-to-3d (TripoSR / Hunyuan3D / Tripo3D, `imageDataUrl`)
    *  and text-to-3d (Tripo3D, `prompt`). The prompt used to be dropped here, which
@@ -137,6 +160,42 @@ const MCP_PROVIDER_MAP: Record<string, McpProvider> = {
   rodin: 'hyper3d',
   hunyuan3d: 'hunyuan3d',
 };
+
+/** The forge provider id a ledger's MCP provider name came from (inverse of the map). */
+function forgeProviderFor(mcp: unknown): string | undefined {
+  return Object.keys(MCP_PROVIDER_MAP).find((id) => MCP_PROVIDER_MAP[id] === mcp);
+}
+
+/** The error a REMOTE failure writes — the one failure re-attaching cannot help. */
+export const MCP_REMOTE_FAILED_ERROR = 'Generation failed on remote provider';
+
+/** The MCP provider a job's `mcpJobId` belongs to, or undefined for a non-MCP job. Jobs
+ *  queued before `mcpProvider` existed fall back to the provider's execution path. */
+function mcpProviderOf(job: GenerationJob): McpProvider | undefined {
+  if (job.mcpProvider) return job.mcpProvider;
+  const provider = getProviderById(job.providerId);
+  if (!provider || providerExecution(provider, job.mode).path !== 'mcp') return undefined;
+  return MCP_PROVIDER_MAP[job.providerId];
+}
+
+/** A failed MCP job whose PAID provider job may still be alive: it has a provider job id,
+ *  nothing is polling it, and the provider itself did not report the failure (a transport
+ *  miss, an operator stop, the tracking deadline, or a failed import). */
+export function mcpReattachable(job: GenerationJob): boolean {
+  return job.status === 'failed'
+    && !!job.mcpJobId
+    && !!mcpProviderOf(job)
+    && job.error !== MCP_REMOTE_FAILED_ERROR
+    && !pollingIntervals.has(job.id);
+}
+
+/** The ledger row shape GET /api/blender-mcp/generate/jobs lists (read defensively). */
+interface LedgerJobView {
+  jobId?: unknown;
+  provider?: unknown;
+  prompt?: unknown;
+  createdAt?: unknown;
+}
 
 /**
  * Track active pollers so they can be cancelled. A poller is a self-scheduling
@@ -300,6 +359,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         error: 'Tracking stopped by operator — the remote generation may still be running.',
         completedAt: Date.now(),
       });
+    } else if (job?.finish?.state === 'running') {
+      // A stopped FINISH poll: the delivered mesh is untouched, the Blender run may not be.
+      get().updateJob(id, {
+        finish: { state: 'failed', error: 'Tracking stopped by operator — the Blender finish may still be running.' },
+      });
     }
   },
 
@@ -349,6 +413,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     get().updateJob(localId, {
       status: 'generating',
       mcpJobId,
+      mcpProvider,
     });
 
     // Save prompt to history
@@ -356,143 +421,87 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       get().addToHistory(prompt.trim());
     }
 
-    // Start polling for status. A poll miss is a TRANSPORT failure (dev-server
-    // restart, Wi-Fi blip, one 502) — the multi-minute remote generation is
-    // still running and already paid for. Only consecutive misses, or an
-    // explicit remote 'failed', terminate the job.
-    const MAX_CONSECUTIVE_POLL_FAILURES = 3;
-    let pollFailures = 0;
+    trackMcpJob(localId, mcpJobId, mcpProvider);
+  },
 
-    // Self-scheduling poll loop. We use a recursive `setTimeout` rather than a
-    // `setInterval` with an async body so that the next tick is only scheduled
-    // AFTER the current poll (and its trailing awaits) settle — overlapping
-    // in-flight polls for the same job are therefore impossible. `stopped`
-    // guards every post-await branch so a late-resolving body can't mutate a job
-    // that has already finished or been torn down (prevents the importing →
-    // generating state-flip race), and `timer` is nulled/cleared on stop.
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const pollStartedAt = Date.now();
+  resumeMcpJobs: async () => {
+    const res = await tryApiFetch<{ jobs?: unknown; ownerEpoch?: unknown }>('/api/blender-mcp/generate/jobs');
+    if (!res.ok || !Array.isArray(res.data?.jobs)) return { ownerEpoch: null };
+    const ownerEpoch = typeof res.data.ownerEpoch === 'string' ? res.data.ownerEpoch : null;
 
-    const stop = () => {
-      stopped = true;
-      if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    };
+    // Everything below is synchronous after the one await, so two concurrent resumes
+    // cannot both miss a job the other just added.
+    for (const row of res.data.jobs as LedgerJobView[]) {
+      if (!row || typeof row.jobId !== 'string') continue;
+      const providerId = forgeProviderFor(row.provider);
+      if (!providerId) continue;
+      const mcpJobId = row.jobId;
+      const mcpProvider = row.provider as McpProvider;
 
-    const scheduleNext = () => {
-      if (stopped) return;
-      timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval);
-    };
-
-    async function tick() {
-      // The timeout has fired; this poll is now the only in-flight tick.
-      timer = null;
-      if (stopped) return;
-
-      // Terminal condition 3: wall-clock deadline. A remote job that never
-      // reaches `completed`/`failed` would otherwise be polled forever.
-      if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the provider.`,
-          completedAt: Date.now(),
-        });
-        return;
+      const held = get().jobs.find((j) => j.mcpJobId === mcpJobId);
+      if (held) {
+        // Already queued. Adopt it only if it is in flight with nothing polling it.
+        const inFlight = held.status === 'pending' || held.status === 'generating';
+        if (inFlight && !pollingIntervals.has(held.id)) trackMcpJob(held.id, mcpJobId, mcpProvider);
+        continue;
       }
 
-      // The MCP status route now projects the SAME verdict axis as the runner route, so
-      // the client type is the transport shape plus that projection — an MCP delivery
-      // can no longer arrive here as a bare status and render as a passed gate.
-      const statusResult = await tryApiFetch<JobStatusResult & ForgeGateProjection>(
-        `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
-      );
-      if (stopped) return;
-
-      if (!statusResult.ok) {
-        pollFailures++;
-        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
-          scheduleNext(); // transient — keep polling
-          return;
-        }
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Status polling failed ${pollFailures} times in a row: ${statusResult.error}`,
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      pollFailures = 0;
-
-      const { status, progress, resultUrl, accepted, ungated, gateReason } = statusResult.data;
-
-      if (status === 'completed') {
-        // Stop scheduling BEFORE the long /import await so no poll fires during
-        // import; `stopped` is now set, so any race that re-enters this body
-        // bails immediately.
-        stop();
-        untrackPoller(localId);
-
-        // Auto-import into Blender
-        get().updateJob(localId, {
-          status: 'importing',
-          progress: 100,
-          resultUrl,
-        });
-
-        const importResult = await tryApiFetch<ImportedObject>(
-          '/api/blender-mcp/generate/import',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobId: mcpJobId, provider: mcpProvider }),
-          },
-        );
-
-        if (importResult.ok) {
-          get().updateJob(localId, {
-            status: 'completed',
-            // The server's verdict rides onto the job exactly as it does for a runner
-            // job, so ONE queue-card code path serves both. On this path it is always
-            // "delivered, ungated, and here is why nothing measured it" — which is the
-            // truth a bare `completed` was quietly rounding up to a pass.
-            accepted, ungated, gateReason,
-            completedAt: Date.now(),
-          });
-        } else {
-          get().updateJob(localId, {
-            status: 'failed',
-            error: `Import failed: ${importResult.error}`,
-            completedAt: Date.now(),
-          });
-        }
-        return;
-      }
-
-      if (status === 'failed') {
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: 'Generation failed on remote provider',
-          completedAt: Date.now(),
-        });
-        return;
-      }
-
-      // Still processing — update progress, then schedule the next poll.
-      get().updateJob(localId, { progress });
-      scheduleNext();
+      const job: GenerationJob = {
+        id: `forge-${Date.now()}-${++jobCounter}`,
+        // The MCP submit carries only a prompt, so every ledger job is text-to-3d.
+        mode: 'text-to-3d',
+        prompt: typeof row.prompt === 'string' ? row.prompt : '',
+        providerId,
+        status: 'generating',
+        progress: 0,
+        // The SERVER's submit time, so the elapsed clock tells the truth after a reload.
+        createdAt: typeof row.createdAt === 'number' ? row.createdAt : Date.now(),
+        mcpJobId,
+        mcpProvider,
+      };
+      set((s) => ({ jobs: [job, ...s.jobs] }));
+      trackMcpJob(job.id, mcpJobId, mcpProvider);
     }
+    return { ownerEpoch };
+  },
 
-    trackPoller(localId, stop);
-    scheduleNext();
+  reattachJob: (id) => {
+    const job = get().jobs.find((j) => j.id === id);
+    if (!job || !mcpReattachable(job)) return;
+    const mcpProvider = mcpProviderOf(job)!;
+    get().updateJob(id, { status: 'generating', mcpProvider, error: undefined, completedAt: undefined });
+    trackMcpJob(id, job.mcpJobId!, mcpProvider);
+  },
+
+  finishJob: async (id) => {
+    const job = get().jobs.find((j) => j.id === id);
+    if (!job || job.status !== 'completed' || job.remedy?.kind !== 'finish') return;
+    // One finish at a time per card, and never on top of a live poll.
+    if (job.finish?.state === 'running' || pollingIntervals.has(id)) return;
+    const { name, dir } = job.remedy;
+    get().updateJob(id, { finish: { state: 'running' } });
+
+    const res = await tryApiFetch<{ routed?: boolean; jobId?: string; reason?: string; note?: string }>(
+      '/api/visual-gen/mesh-finish/remediate',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, dir, assetClass: job.assetClass }),
+      },
+    );
+    // The card was removed while the POST was in flight: nothing is left to report to,
+    // so no orphan poll is started (the routed run itself is local and $0).
+    if (!get().jobs.some((j) => j.id === id)) return;
+    if (!res.ok) {
+      get().updateJob(id, { finish: { state: 'failed', error: res.error } });
+      return;
+    }
+    if (!res.data.routed || !res.data.jobId) {
+      get().updateJob(id, { finish: { state: 'refused', reason: res.data.reason ?? 'the finish route declined without a reason' } });
+      return;
+    }
+    get().updateJob(id, { finish: { state: 'running', note: res.data.note } });
+    trackFinishJob(id, res.data.jobId);
   },
 
   submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
@@ -575,7 +584,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       pollFailures = 0;
       const {
         status, meshPath, error, critique, fidelity,
-        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl,
+        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl, remedy,
       } = res.data;
       if (status === 'done') {
         stop();
@@ -585,7 +594,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         // a gate rejected from one nothing ever measured.
         get().updateJob(localId, {
           status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
-          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl,
+          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy,
           // Refreshed from the store's own record; falls back to the 202's sentence
           // rather than blanking a line the operator has already read.
           ...(polledGradedAs !== undefined ? { gradedAs: polledGradedAs } : {}),
@@ -605,3 +614,221 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     scheduleNext();
   },
 }));
+
+/**
+ * The MCP status poll loop for ONE provider job, bound to one local queue entry. Extracted
+ * unchanged from `submitMcpJob` so a re-adopted job (`resumeMcpJobs`) and a re-attached one
+ * (`reattachJob`) are tracked by the very same loop — same terminal conditions, same
+ * auto-import (which the import route now makes idempotent), same operator stop.
+ */
+function trackMcpJob(localId: string, mcpJobId: string, mcpProvider: McpProvider): void {
+  const get = useForgeStore.getState;
+
+  // Start polling for status. A poll miss is a TRANSPORT failure (dev-server
+  // restart, Wi-Fi blip, one 502) — the multi-minute remote generation is
+  // still running and already paid for. Only consecutive misses, or an
+  // explicit remote 'failed', terminate the job.
+  const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+  let pollFailures = 0;
+
+  // Self-scheduling poll loop. We use a recursive `setTimeout` rather than a
+  // `setInterval` with an async body so that the next tick is only scheduled
+  // AFTER the current poll (and its trailing awaits) settle — overlapping
+  // in-flight polls for the same job are therefore impossible. `stopped`
+  // guards every post-await branch so a late-resolving body can't mutate a job
+  // that has already finished or been torn down (prevents the importing →
+  // generating state-flip race), and `timer` is nulled/cleared on stop.
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const pollStartedAt = Date.now();
+
+  const stop = () => {
+    stopped = true;
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  const scheduleNext = () => {
+    if (stopped) return;
+    timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval);
+  };
+
+  async function tick() {
+    // The timeout has fired; this poll is now the only in-flight tick.
+    timer = null;
+    if (stopped) return;
+
+    // Terminal condition 3: wall-clock deadline. A remote job that never
+    // reaches `completed`/`failed` would otherwise be polled forever.
+    if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
+      stop();
+      untrackPoller(localId);
+      get().updateJob(localId, {
+        status: 'failed',
+        error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the provider.`,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+
+    // The MCP status route now projects the SAME verdict axis as the runner route, so
+    // the client type is the transport shape plus that projection — an MCP delivery
+    // can no longer arrive here as a bare status and render as a passed gate.
+    const statusResult = await tryApiFetch<JobStatusResult & ForgeGateProjection>(
+      `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
+    );
+    if (stopped) return;
+
+    if (!statusResult.ok) {
+      pollFailures++;
+      if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
+        scheduleNext(); // transient — keep polling
+        return;
+      }
+      stop();
+      untrackPoller(localId);
+      get().updateJob(localId, {
+        status: 'failed',
+        error: `Status polling failed ${pollFailures} times in a row: ${statusResult.error}`,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+    pollFailures = 0;
+
+    const { status, progress, resultUrl, accepted, ungated, gateReason } = statusResult.data;
+
+    if (status === 'completed') {
+      // Stop scheduling BEFORE the long /import await so no poll fires during
+      // import; `stopped` is now set, so any race that re-enters this body
+      // bails immediately.
+      stop();
+      untrackPoller(localId);
+
+      // Auto-import into Blender
+      get().updateJob(localId, {
+        status: 'importing',
+        progress: 100,
+        resultUrl,
+      });
+
+      const importResult = await tryApiFetch<ImportedObject>(
+        '/api/blender-mcp/generate/import',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: mcpJobId, provider: mcpProvider }),
+        },
+      );
+
+      if (importResult.ok) {
+        get().updateJob(localId, {
+          status: 'completed',
+          // The server's verdict rides onto the job exactly as it does for a runner
+          // job, so ONE queue-card code path serves both. On this path it is always
+          // "delivered, ungated, and here is why nothing measured it" — which is the
+          // truth a bare `completed` was quietly rounding up to a pass.
+          accepted, ungated, gateReason,
+          completedAt: Date.now(),
+        });
+      } else {
+        get().updateJob(localId, {
+          status: 'failed',
+          error: `Import failed: ${importResult.error}`,
+          completedAt: Date.now(),
+        });
+      }
+      return;
+    }
+
+    if (status === 'failed') {
+      stop();
+      untrackPoller(localId);
+      get().updateJob(localId, {
+        status: 'failed',
+        error: MCP_REMOTE_FAILED_ERROR,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+
+    // Still processing — update progress, then schedule the next poll.
+    get().updateJob(localId, { progress });
+    scheduleNext();
+  }
+
+  trackPoller(localId, stop);
+  scheduleNext();
+}
+
+/** What GET /api/visual-gen/mesh-finish/status returns (the fields the card reads). */
+interface FinishStatusView {
+  status?: string;
+  meshPath?: string;
+  error?: string;
+  remediation?: { improved?: boolean; summary?: string };
+}
+
+/**
+ * The poll loop for ONE routed mesh-finish job, bound to the queue card that asked for it.
+ * Same termination guarantees as a generation poll (terminal status, consecutive misses,
+ * `FORGE_POLL_MAX_DURATION_MS`, operator stop), registered under the card's id so the
+ * queue's "Stop tracking" reaches it. It only ever GETs the finish status.
+ */
+function trackFinishJob(localId: string, finishJobId: string): void {
+  const get = useForgeStore.getState;
+  const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+  let pollFailures = 0;
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const pollStartedAt = Date.now();
+  const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
+  const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
+  const end = (finish: ForgeFinishState) => {
+    stop();
+    untrackPoller(localId);
+    get().updateJob(localId, { finish });
+  };
+
+  async function tick() {
+    timer = null;
+    if (stopped) return;
+    if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
+      end({ state: 'failed', error: `Gave up tracking the finish after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status.` });
+      return;
+    }
+    const res = await tryApiFetch<FinishStatusView>(
+      `/api/visual-gen/mesh-finish/status?jobId=${encodeURIComponent(finishJobId)}`,
+    );
+    if (stopped) return;
+    if (!res.ok) {
+      pollFailures++;
+      if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) { scheduleNext(); return; }
+      end({ state: 'failed', error: `Finish status polling failed ${pollFailures} times in a row: ${res.error}` });
+      return;
+    }
+    pollFailures = 0;
+    const { status, meshPath, error, remediation } = res.data;
+    if (status === 'done') {
+      end({
+        state: 'done',
+        // The strict before -> after line; absent only if the job was not routed, which
+        // this path never starts — so its absence is stated, not papered over.
+        summary: remediation?.summary ?? 'finished, but no before -> after re-grade was reported',
+        improved: remediation?.improved === true,
+        meshPath,
+      });
+      return;
+    }
+    if (status === 'error') {
+      end({ state: 'failed', error: error ?? 'the Blender finish failed' });
+      return;
+    }
+    scheduleNext();
+  }
+
+  trackPoller(localId, stop);
+  scheduleNext();
+}

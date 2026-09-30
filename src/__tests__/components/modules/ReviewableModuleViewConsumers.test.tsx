@@ -72,7 +72,7 @@ const RENDERABLE: { name: string; Component: () => React.ReactNode; tabs: number
   { name: 'MaterialsView', Component: MaterialsView, tabs: 8 },
   { name: 'ModelsView', Component: ModelsView, tabs: 4 },
   { name: 'UIHudView', Component: UIHudView, tabs: 6 },
-  { name: 'AIBehaviorView', Component: AIBehaviorView, tabs: 3 },
+  { name: 'AIBehaviorView', Component: AIBehaviorView, tabs: 4 },
   { name: 'MultiplayerView', Component: MultiplayerView, tabs: 3 },
   { name: 'PackagingView', Component: PackagingView, tabs: 4 },
   { name: 'createSimpleModuleView(audio)', Component: createSimpleModuleView('audio'), tabs: 2 },

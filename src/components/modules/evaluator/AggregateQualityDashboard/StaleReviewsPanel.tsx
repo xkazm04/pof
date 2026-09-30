@@ -1,15 +1,17 @@
 import { CheckCircle2, Clock, Loader2, Zap } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { STATUS_SUCCESS, STATUS_STALE, statusBg, statusBorder } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_STALE, STATUS_ERROR, statusBg, statusBorder } from '@/lib/chart-colors';
 import type { CellData } from './types';
 
 interface StaleReviewsPanelProps {
   staleModules: CellData[];
   customStaleDays: number;
   setCustomStaleDays: (v: number) => void;
-  onBatchReview?: (moduleIds: string[]) => void;
   handleBatchReview: () => void;
+  /** A review is starting or a batch is running — the action is unavailable. */
   isBatchReviewing: boolean;
+  /** Why the last review start was refused (e.g. 409 already running), else null. */
+  reviewError: string | null;
   setSelectedModule: (v: string | null) => void;
 }
 
@@ -17,9 +19,9 @@ export function StaleReviewsPanel({
   staleModules,
   customStaleDays,
   setCustomStaleDays,
-  onBatchReview,
   handleBatchReview,
   isBatchReviewing,
+  reviewError,
   setSelectedModule,
 }: StaleReviewsPanelProps) {
   return (
@@ -45,6 +47,16 @@ export function StaleReviewsPanel({
         </div>
       </div>
 
+      {reviewError && (
+        <div
+          role="alert"
+          className="text-xs rounded-md px-3 py-2 mb-3"
+          style={{ color: STATUS_ERROR, backgroundColor: statusBg(STATUS_ERROR), border: `1px solid ${statusBorder(STATUS_ERROR)}` }}
+        >
+          {reviewError}
+        </div>
+      )}
+
       {staleModules.length > 0 ? (
         <>
           <div className="space-y-1 mb-3">
@@ -64,26 +76,17 @@ export function StaleReviewsPanel({
               </div>
             ))}
           </div>
-          {onBatchReview && (
-            <button
-              onClick={handleBatchReview}
-              disabled={isBatchReviewing}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 hover:brightness-125"
-              style={{ backgroundColor: statusBg(STATUS_STALE), color: STATUS_STALE, border: `1px solid ${statusBorder(STATUS_STALE)}` }}
-            >
-              {isBatchReviewing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Queuing reviews...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-3.5 h-3.5" />
-                  Review All Stale ({staleModules.length} modules)
-                </>
-              )}
-            </button>
-          )}
+          <button
+            onClick={handleBatchReview}
+            disabled={isBatchReviewing}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 hover:brightness-125"
+            style={{ backgroundColor: statusBg(STATUS_STALE), color: STATUS_STALE, border: `1px solid ${statusBorder(STATUS_STALE)}` }}
+          >
+            {isBatchReviewing
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <Zap className="w-3.5 h-3.5" />}
+            Review {staleModules.length} stale {staleModules.length === 1 ? 'module' : 'modules'}
+          </button>
         </>
       ) : (
         <div className="flex items-center gap-2 px-3 py-3">

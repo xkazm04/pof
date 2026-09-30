@@ -1,6 +1,66 @@
 {
   "steps": [
     {
+      "catalogId": "affixes",
+      "step": "Concept Brief",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "minLength(300) checks the brief's size, not whether the prefix/suffix identity is correct."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Affix Definition",
+      "trueEngine": "Hand-authored",
+      "deliverable": "text-config",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "Shape checks cover the FAffixTableRow-facing fields, and wiringContractSound rejects a hollow grant/activation contract."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Tiers & Item Level",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": true,
+      "note": "tiersAscend is a content invariant: decreasing a later minItemLevel or valueMax makes acceptance fail."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Spawn Rules",
+      "trueEngine": "Hand-authored",
+      "deliverable": "text-config",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "fieldsPopulated checks that itemTypes exists; it does not prove the eligibility design is correct."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "Test Gate",
+      "trueEngine": "Hand-authored",
+      "deliverable": "ue-runtime",
+      "generatorWired": false,
+      "judge": "ue-test",
+      "checkerMeaningful": false,
+      "note": "The produce stub authors a checklist and entityRuntimeDeferred names the UE test that must supply the runtime verdict."
+    },
+    {
+      "catalogId": "affixes",
+      "step": "UE Packaging",
+      "trueEngine": "Packaging engine",
+      "deliverable": "ue-runtime",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "The packaging drain re-grades disk truth; local acceptance also rejects a hollow wiring contract."
+    },
+    {
       "catalogId": "achievements",
       "step": "Concept Brief",
       "trueEngine": "Claude",
@@ -319,6 +379,16 @@
       "judge": "vlm",
       "checkerMeaningful": true,
       "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Static mesh (game-tier 40k). Rig/anim clips are a documented follow-up. 2026-07-29: the selection gate now grades the SELECTED CANDIDATE (real asset -> pass; deterministic swatch -> deferred with a reason; an unresolved or mismatched selection -> fail), so a wrong index or a lost candidate no longer passes. judge class corrected none->vlm by gap-loop run 9 (2026-09-08): the July batch that powered this step with a real generator flipped trueEngine/generatorWired but left the pre-generator audit's judge:none, so the step discarded every VLM verdict and its shape pass could not be challenged."
+    },
+    {
+      "catalogId": "bestiary",
+      "step": "Sprite Render",
+      "trueEngine": "Blender",
+      "deliverable": "2d-art",
+      "generatorWired": false,
+      "judge": "vlm",
+      "checkerMeaningful": false,
+      "note": "Added /diablo W05 (2026-09-22), scoped to canon profile diablo1 (D18): a prerendered-sprite game renders its rigged model from one fixed camera (orthographic 30°/45°) into 8 directions. The render runs OUTSIDE the lab via scripts/diablo/render.ts (Blender headless) — nothing in the UI produce path renders, so generatorWired=false. The blind creature-family check (vlm) is run by render.ts on the rendered sprite and recorded as a content-bound verdict. The checker grades what the render RECORDS (8 directions, the projection, a frame size), not the pixels, so it is shape-only; an unrendered request defers with the command that runs it."
     },
     {
       "catalogId": "bestiary",
@@ -1167,7 +1237,7 @@
       "deliverable": "text-config",
       "generatorWired": false,
       "judge": "llm-panel",
-      "checkerMeaningful": false,
+      "checkerMeaningful": true,
       "note": "Produces text VO lines only, not audio; ueAssets reference SoundCue paths that no generator (ElevenLabs or otherwise) actually creates here — claimed VO deliverable is text, not recorded voice. 2026-09-07: the checker is no longer purely shape-only — acceptance now also enforces the ≤10-word cap the step declares in voDirection.maxLineLength (allOf(minCount, maxWordsPerEntry)). The AUDIO half stays unpowered: the tts AudioKind has no provider (see docs/research/local-tts-provider-spec.md)."
     },
     {
@@ -2828,7 +2898,7 @@
       "generatorWired": true,
       "judge": "llm-panel",
       "checkerMeaningful": true,
-      "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check. 2026-07-29: acceptance now also composes sumReconciles(sustainedDPS = hitDPS + igniteDPS), arithmeticReconciles(hitDPS = baseDamage / cooldown) and powerWithinTierTarget against the DECLARED tierTarget - the DPS chain must be internally consistent. 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
+      "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check. 2026-07-29: acceptance now also composes sumReconciles(sustainedDPS = hitDPS + igniteDPS), arithmeticReconciles(hitDPS = baseDamage / cooldown) and powerWithinTierTarget against the DECLARED tierTarget - the DPS chain must be internally consistent. 2026-09-25 (/diablo W12, D4): the hitDPS reconcile is now hitRateFromLimiter - baseDamage over the limiter that BINDS (longest of cooldown / castTime / manaCost / manaRegenPerSec); a cooldown-only artifact grades exactly as before (Fireball: pass under both). 2026-08-20 (wave 25, Lot MC audit dispute): trueEngine corrected `Claude` -> `Code`. `balance` is absent from labProduceMode.CLI_ELIGIBLE_ARCHETYPES (= brief|graph|rules), so NO model can ever author this artifact; the produce body writes literals. The audit already records `Code`/`Code (deterministic)` on 6 structurally identical balance steps, so the inconsistency was inside the audit. Note the standing caveat: `Code` here means \"a function returning numbers a human typed\", which TRUSTED_CLASSES still treats as trustworthy. 2026-08-20 (wave 26, Lot NB): trueEngine corrected to `Hand-authored`. Measured, not inferred: produce() is a pure synchronous (entity) => StepOutput that structurally cannot read disk, DB, UE or a model, and run against two different synthetic entities this step emits a byte-identical artifact — so what it writes is determined by literals in its own file. `Code` is reserved for engines that COMPUTE from real inputs (the packaging verifier, which rebuilds from sibling artifacts and hashes files on disk); `Hand-authored` is NOT in TRUSTED_CLASSES, because the question is not who wrote the value but whether anything verified it."
     },
     {
       "catalogId": "spellbook",

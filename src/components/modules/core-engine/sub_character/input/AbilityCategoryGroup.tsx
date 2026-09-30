@@ -6,9 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_37, withOpacity,
 } from '@/lib/chart-colors';
+import { useResolvedBindings } from '@/stores/characterBlueprintStore';
 import {
   type AbilityCategory, type AbilityMeta, type AbilitySortKey, type AbilitySortDir,
-  ABILITY_CATEGORY_MAP, INPUT_BINDINGS, sortAbilities,
+  ABILITY_CATEGORY_MAP, sortAbilities,
 } from '../_shared/data';
 
 const TIER_DOT_COUNT = 5;
@@ -24,6 +25,7 @@ interface Props {
 export function AbilityCategoryGroup({ category, abilities, sortKey, sortDir }: Props) {
   const def = ABILITY_CATEGORY_MAP.get(category)!;
   const [collapsed, setCollapsed] = useState(false);
+  const { byAction } = useResolvedBindings();
   const sorted = useMemo(() => sortAbilities(abilities, sortKey, sortDir), [abilities, sortKey, sortDir]);
 
   if (abilities.length === 0) return null;
@@ -62,7 +64,7 @@ export function AbilityCategoryGroup({ category, abilities, sortKey, sortDir }: 
           >
             <ul className="space-y-px">
               {sorted.map((a) => (
-                <AbilityRow key={a.id} ability={a} catColor={def.color} />
+                <AbilityRow key={a.id} ability={a} boundKey={byAction.get(a.action)?.key ?? '—'} catColor={def.color} />
               ))}
             </ul>
           </motion.div>
@@ -72,10 +74,8 @@ export function AbilityCategoryGroup({ category, abilities, sortKey, sortDir }: 
   );
 }
 
-function AbilityRow({ ability, catColor }: { ability: AbilityMeta; catColor: string }) {
-  const binding = INPUT_BINDINGS.find((b) => b.action === ability.action);
-  const key = binding?.defaultKey ?? '—';
-
+/** `boundKey` is the effective (rebound) key from the resolved binding state. */
+function AbilityRow({ ability, boundKey, catColor }: { ability: AbilityMeta; boundKey: string; catColor: string }) {
   return (
     <li
       className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-mono"
@@ -89,7 +89,7 @@ function AbilityRow({ ability, catColor }: { ability: AbilityMeta; catColor: str
           border: `1px solid ${withOpacity(catColor, OPACITY_20)}`,
         }}
       >
-        {key}
+        {boundKey}
       </span>
       <span className="font-bold text-text flex-1 truncate">{ability.name}</span>
       <TierDots tier={ability.tier} color={catColor} />

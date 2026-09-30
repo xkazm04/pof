@@ -12,11 +12,35 @@
  *     the unchanged buildSwimlane().
  *   - cross-catalog edges already exist as CatalogLink on every entity; the reverse
  *     index is a single inverting pass over all entities.
+ *
+ * A FAILED READ IS NOT A GRADE (the rule the Pipelines tab already keeps). A catalog whose
+ * artifact read failed arrives as an {@link UnknownRead}; its nodes are marked `unknown` and
+ * get NO swimlane - grading a failure's empty list would paint every step R0 NOT WIRED / 0%.
+ * A failed VERDICT read still grades from the artifact rows (as Pipelines does) but every node
+ * carries `verdictsUnknown`, because without verdicts a judge-condemned step reads as reached:
+ * the flag is what keeps that grade from being presented as the whole truth.
  */
 import type { CatalogEntityBase, CatalogLink } from '@/lib/catalog/types';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from './judge-verdicts-db';
-import { buildSwimlane, type Swimlane, type StepMeta } from './statusModel';
+import { buildSwimlane, type HeadlessLookup, type Swimlane, type StepMeta } from './statusModel';
+
+/** A read that FAILED - distinct from an empty one. `error` is the reason, shown as-is. */
+export interface UnknownRead {
+  unknown: true;
+  error: string;
+}
+
+/** A per-catalog read as the model receives it: the rows, or UNKNOWN. */
+export type CatalogRead<T> = readonly T[] | UnknownRead;
+
+export function unknownRead(error: string): UnknownRead {
+  return { unknown: true, error };
+}
+
+function isUnknown<T>(read: CatalogRead<T>): read is UnknownRead {
+  return !Array.isArray(read);
+}
 
 /** A resolved cross-catalog reference with the role that connects the two. */
 export interface CatalogRef {
@@ -44,8 +68,16 @@ export interface FocusNode {
   entityId: string;
   name: string;
   role?: string;
-  swimlane: Swimlane;
+  /** `null` exactly when `unknown` - a node whose evidence could not be read has no grade. */
+  swimlane: Swimlane | null;
   missing?: boolean;
+  /** The catalog's artifact read FAILED: nothing here is graded (never R0 / 0%). */
+  unknown?: true;
+  unknownReason?: string;
+  /** The judge-verdict read failed: the swimlane shows checker status only, so a judged
+   *  pass or fail is not reflected in it. */
+  verdictsUnknown?: true;
+  verdictsUnknownReason?: string;
 }
 
 export interface ItemFocus {
@@ -82,10 +114,13 @@ export function buildDependencyIndex(entitiesByCatalog: EntitiesByCatalog): Depe
 export interface SwimlaneCtx {
   /** Step metas for a catalog's pipeline (from pipeline-registry). */
   stepsFor: (catalogId: string) => StepMeta[];
-  /** All persisted artifacts for a catalog (pre-fetched, entity-filtered here). */
-  artifactsFor: (catalogId: string) => PipelineArtifact[];
-  /** Judge verdicts for a catalog. */
-  verdictsFor: (catalogId: string) => JudgeVerdict[];
+  /** All persisted artifact rows for a catalog (pre-fetched, entity-filtered here) - verdict
+   *  fields only, so the blob-free summary projection is a valid input - or UNKNOWN. */
+  artifactsFor: (catalogId: string) => CatalogRead<ArtifactVerdictRow>;
+  /** Judge verdicts for a catalog, or UNKNOWN when the verdict read failed. */
+  verdictsFor: (catalogId: string) => CatalogRead<JudgeVerdict>;
+  /** Headless-operability lookup (defaults to the audited coverage JSON); a test seam. */
+  headless?: HeadlessLookup;
 }
 
 export interface ItemFocusCtx extends SwimlaneCtx {
@@ -93,12 +128,21 @@ export interface ItemFocusCtx extends SwimlaneCtx {
   index: DependencyIndex;
 }
 
+type NodeGrade = Pick<FocusNode, 'swimlane' | 'unknown' | 'unknownReason' | 'verdictsUnknown' | 'verdictsUnknownReason'>;
+
 /** Build the entity-scoped realization swimlane for one entity: the catalog's step
- *  list graded against ONLY that entity's artifacts + verdicts. */
-function nodeSwimlane(catalogId: string, entityId: string, name: string, ctx: SwimlaneCtx): Swimlane {
-  const artifacts = ctx.artifactsFor(catalogId).filter((a) => a.entityId === entityId);
-  const verdicts = ctx.verdictsFor(catalogId).filter((v) => v.entityId === entityId);
-  return buildSwimlane(catalogId, name, ctx.stepsFor(catalogId), artifacts, verdicts);
+ *  list graded against ONLY that entity's artifacts + verdicts - or, when the artifact read
+ *  failed, no swimlane at all and the reason. */
+function nodeGrade(catalogId: string, entityId: string, name: string, ctx: SwimlaneCtx): NodeGrade {
+  const arts = ctx.artifactsFor(catalogId);
+  if (isUnknown(arts)) return { swimlane: null, unknown: true, unknownReason: arts.error };
+  const verdictRead = ctx.verdictsFor(catalogId);
+  const artifacts = arts.filter((a) => a.entityId === entityId);
+  const verdicts = isUnknown(verdictRead) ? [] : verdictRead.filter((v) => v.entityId === entityId);
+  const swimlane = buildSwimlane(catalogId, name, ctx.stepsFor(catalogId), artifacts, verdicts, ctx.headless);
+  return isUnknown(verdictRead)
+    ? { swimlane, verdictsUnknown: true, verdictsUnknownReason: verdictRead.error }
+    : { swimlane };
 }
 
 function lookupName(entitiesByCatalog: EntitiesByCatalog, catalogId: string, entityId: string): string | undefined {
@@ -112,7 +156,7 @@ function toNode(ref: CatalogRef, ctx: ItemFocusCtx): FocusNode {
     entityId: ref.entityId,
     name: name ?? ref.entityId,
     role: ref.role,
-    swimlane: nodeSwimlane(ref.catalogId, ref.entityId, name ?? ref.entityId, ctx),
+    ...nodeGrade(ref.catalogId, ref.entityId, name ?? ref.entityId, ctx),
     ...(name ? {} : { missing: true }),
   };
 }
@@ -128,7 +172,7 @@ export function resolveItemFocus(catalogId: string, entityId: string, ctx: ItemF
     catalogId,
     entityId,
     name: entity.name,
-    swimlane: nodeSwimlane(catalogId, entityId, entity.name, ctx),
+    ...nodeGrade(catalogId, entityId, entity.name, ctx),
   };
 
   const seen = new Set<string>([selfKey]);
@@ -156,11 +200,16 @@ export function resolveItemFocus(catalogId: string, entityId: string, ctx: ItemF
 
 /** Order nodes weakest-first: least production-ready coverage (R4+) ascending, then name
  *  ascending as a stable tiebreak — the whole point of the category overview is to
- *  float the least-realized entities to the top so effort lands where it's needed. Pure. */
+ *  float the least-realized entities to the top so effort lands where it's needed.
+ *  UNKNOWN nodes (no swimlane) form their own band after the graded ones: ranking them as
+ *  weakest would read a failed read as 0%, ranking them strongest would bury a grade. Pure. */
 export function sortWeakestFirst(nodes: FocusNode[]): FocusNode[] {
-  return [...nodes].sort(
-    (a, b) => a.swimlane.readyPct - b.swimlane.readyPct || a.name.localeCompare(b.name),
-  );
+  const rank = (n: FocusNode) => (n.swimlane ? n.swimlane.readyPct : Number.POSITIVE_INFINITY);
+  return [...nodes].sort((a, b) => {
+    const ra = rank(a);
+    const rb = rank(b);
+    return (ra === rb ? 0 : ra < rb ? -1 : 1) || a.name.localeCompare(b.name);
+  });
 }
 
 /** Project EVERY entity in a catalog into a weakest-first list of realization
@@ -176,7 +225,7 @@ export function buildCategoryNodes(
     catalogId,
     entityId: e.id,
     name: e.name,
-    swimlane: nodeSwimlane(catalogId, e.id, e.name, ctx),
+    ...nodeGrade(catalogId, e.id, e.name, ctx),
   }));
   return sortWeakestFirst(nodes);
 }

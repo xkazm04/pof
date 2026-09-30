@@ -2,6 +2,8 @@
 // Types for the AI Director: Emergent Squad Tactics via EQS Composition system.
 // Models squad roles, formations, EQS composition, and simulation results.
 
+import type { EQSComponentId, EQSComponentRef, EQSCost } from '@/lib/ai-director/eqs-catalog';
+
 /** Role a squad member can be assigned by the AI Director. */
 export type SquadRole =
   | 'flanker'
@@ -15,12 +17,14 @@ export interface SquadRoleDefinition {
   role: SquadRole;
   label: string;
   description: string;
-  /** EQS generators used by this role. */
-  generators: string[];
-  /** EQS tests applied to score positions. */
-  tests: string[];
+  /** EQS generators used by this role — references into the EQS catalog. */
+  generators: EQSComponentRef[];
+  /** EQS tests applied to score/filter positions — references into the EQS catalog. */
+  tests: EQSComponentRef[];
   /** Preferred engagement distance range [min, max] in UU. */
   engagementRange: [number, number];
+  /** Preferred flank angle in degrees from target forward (0 = front, 180 = behind). */
+  preferredFlankAngle: number;
   /** Priority weight when allocating positions (higher = allocated first). */
   priority: number;
 }
@@ -85,12 +89,21 @@ export interface DirectorResult {
   composedPipeline: ComposedEQSStep[];
 }
 
-/** A step in the composed EQS pipeline visualization. */
+/**
+ * A step in the composed EQS pipeline visualization. Identity (label, cppClass,
+ * kind, cost) is read from the EQS catalog via `componentId`.
+ */
 export interface ComposedEQSStep {
+  /** Catalog component this step instantiates. Absent only on the terminal result step. */
+  componentId?: EQSComponentId;
   label: string;
   cppClass: string;
   kind: 'context' | 'generator' | 'test-score' | 'test-filter' | 'director' | 'result';
   description: string;
+  /** Declared test cost (tests only) — drives the cost-sorted runtime order. */
+  cost?: EQSCost;
+  /** Whether the in-app TS allocator actually models this step (false = UE5 only). */
+  simulated: boolean;
 }
 
 /** Why a {@link DirectorConfig} was rejected by the squad engine. */

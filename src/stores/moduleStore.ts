@@ -10,6 +10,11 @@ import {
 } from '@/services/ProjectModuleBridge';
 import type { SubModuleId, ModuleHealth, TaskHistoryEntry } from '@/types/modules';
 import type { ScanFinding } from '@/types/scan';
+import {
+  stampCompletion,
+  pruneLedger,
+  type CompletionLedger,
+} from '@/lib/roadmap/completion-ledger';
 
 /** Semantic verification status for a checklist item */
 export type VerificationStatus = 'full' | 'partial' | 'stub' | 'missing';
@@ -69,6 +74,13 @@ interface ModuleState {
   moduleHistory: Record<string, TaskHistoryEntry[]>;
   moduleHealth: Record<string, ModuleHealth>;
   checklistProgress: Record<string, Record<string, boolean>>;
+  /**
+   * WHEN each checklist item was first completed (epoch ms) — the ground truth
+   * the health engine derives velocity and milestone ETAs from. Stamped on the
+   * first transition to done, removed on un-done; a done item with no stamp is
+   * "undated" and is disclosed, never bucketed. See `@/lib/roadmap/completion-ledger`.
+   */
+  checklistCompletedAt: CompletionLedger;
   /** Semantic verification results per module per item */
   checklistVerification: Record<string, Record<string, VerificationInfo>>;
   /** User preference: collapse the QuickActionsPanel sidebar */
@@ -127,6 +139,7 @@ export const useModuleStore = create<ModuleState>()(
       moduleHistory: {},
       moduleHealth: {},
       checklistProgress: {},
+      checklistCompletedAt: {},
       checklistVerification: {},
       quickActionsPanelCollapsed: true,
       scanResults: {},
@@ -170,14 +183,18 @@ export const useModuleStore = create<ModuleState>()(
       toggleChecklistItem: (subModuleId, itemId) => {
         set((state) => {
           const moduleProgress = state.checklistProgress[subModuleId] ?? {};
+          const checked = !moduleProgress[itemId];
           return {
             checklistProgress: {
               ...state.checklistProgress,
               [subModuleId]: {
                 ...moduleProgress,
-                [itemId]: !moduleProgress[itemId],
+                [itemId]: checked,
               },
             },
+            checklistCompletedAt: stampCompletion(
+              state.checklistCompletedAt, subModuleId, itemId, checked, Date.now(),
+            ),
           };
         });
         scheduleAutoSave();
@@ -195,6 +212,9 @@ export const useModuleStore = create<ModuleState>()(
                 [itemId]: checked,
               },
             },
+            checklistCompletedAt: stampCompletion(
+              state.checklistCompletedAt, subModuleId, itemId, checked, Date.now(),
+            ),
           };
         });
         scheduleAutoSave();
@@ -312,8 +332,16 @@ export const useModuleStore = create<ModuleState>()(
             moduleHistory: Record<string, TaskHistoryEntry[]>;
           }>(`/api/project-progress?path=${encodeURIComponent(projectPath)}`);
 
+          const checklistProgress = data.checklistProgress ?? {};
+          // The ledger is client-held (the server row does not carry it yet). It
+          // may only date THIS project's marks: kept — minus items the loaded
+          // checklist says are not done — when the memory already belonged to
+          // this project, dropped when it belonged to another.
+          const { progressProjectPath: owner, checklistCompletedAt } = get();
           set({
-            checklistProgress: data.checklistProgress ?? {},
+            checklistProgress,
+            checklistCompletedAt:
+              owner === projectPath ? pruneLedger(checklistCompletedAt, checklistProgress) : {},
             moduleHealth: data.moduleHealth ?? {},
             checklistVerification: data.checklistVerification ?? {},
             moduleHistory: data.moduleHistory ?? {},
@@ -333,6 +361,7 @@ export const useModuleStore = create<ModuleState>()(
             ...(foreign
               ? {
                   checklistProgress: {},
+                  checklistCompletedAt: {},
                   moduleHealth: {},
                   checklistVerification: {},
                   moduleHistory: {},
@@ -352,6 +381,7 @@ export const useModuleStore = create<ModuleState>()(
       clearProgress: () => {
         set({
           checklistProgress: {},
+          checklistCompletedAt: {},
           moduleHealth: {},
           checklistVerification: {},
           moduleHistory: {},
@@ -379,6 +409,7 @@ export const useModuleStore = create<ModuleState>()(
         moduleHistory: state.moduleHistory,
         moduleHealth: state.moduleHealth,
         checklistProgress: state.checklistProgress,
+        checklistCompletedAt: state.checklistCompletedAt,
         checklistVerification: state.checklistVerification,
         quickActionsPanelCollapsed: state.quickActionsPanelCollapsed,
         // Identity of the persisted blob — without it a reload cannot tell whose

@@ -9,6 +9,19 @@ export interface SelectedFeatureDetail {
   deps: ResolvedDependency[];
   blockers: ResolvedDependency[];
   isBlocked: boolean;
+  /** Build frontier (`unblockFrontier`) of a blocked feature — what to build first; [] otherwise. */
+  frontier: BuildTarget[];
+}
+
+/** A buildable feature offered by the Dependencies tab, with what building it clears. */
+export interface BuildTarget {
+  key: string;
+  moduleId: SubModuleId;
+  featureName: string;
+  /** Features that become ready once this one is built (`previewUnblock().newlyReady`). */
+  newlyReady: string[];
+  /** Distinct modules among `newlyReady`. */
+  moduleCount: number;
 }
 
 export interface ModuleNode {

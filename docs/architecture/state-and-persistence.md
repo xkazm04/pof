@@ -14,6 +14,7 @@ server and client through a uniform API envelope.
 | `src/stores/navigationStore.ts` | Active category/sub-module, sidebar mode |
 | `src/components/cli/store/cliPanelStore.ts` | Terminal sessions, tab order, inline-height preference |
 | `src/services/ProjectModuleBridge.ts` | Runtime bridge that breaks the project↔module circular dep |
+| `src/services/projectTransition.ts` | The one project-flip owner: enumerated triggers + ordered outgoing-project teardown |
 | `src/lib/db.ts` | `getDb()` singleton — creates `~/.pof/pof.db`, WAL, all DDL |
 | `src/lib/catalog-db.ts` | `catalog_lifecycle` + `catalog_entities` table helpers (pattern representative) |
 | `src/lib/pipeline-artifacts-db.ts` | `pipeline_artifacts` + `pipeline_artifact_revisions` table helpers |
@@ -51,6 +52,17 @@ debounces a 2-second write to SQLite via `saveProgress` → `POST /api/project-p
 `setChecklistItem` (line 112) returns `state` unchanged when the value is already equal, avoiding
 a new object reference and unnecessary re-renders — the canonical no-op set pattern.
 
+**Completion ledger (`checklistCompletedAt`).** `checklistProgress` records THAT an item is done, never
+WHEN, so it cannot drive a velocity. `setChecklistItem` / `toggleChecklistItem` stamp
+`checklistCompletedAt[module][item] = Date.now()` on the first transition to done and remove the stamp on
+un-done (pure helpers in `src/lib/roadmap/completion-ledger.ts`). It is persisted in the `pof-modules`
+partialize only — not yet in the `project_progress` row — and is emptied by `clearProgress`, by a failed
+foreign load, and by a successful load of a different project (a same-project load keeps it, pruned to the
+items the loaded checklist says are done). The health engine (`computeProjectHealth(..., ledger, now)`)
+derives weekly velocity, the burn-up and milestone ETAs from these stamps only; done items without a stamp
+are reported as `velocitySample.undated`, never bucketed, and with no dated completion `avgVelocity` and
+every `predictedDate` are `null`. No series is simulated (the former seeded RNG is gone).
+
 `addScanFindings` (line 143) deduplicates by `file::description` key and skips the update when
 there are no novel findings (`if (novel.length === 0) return state`). Scan results are capped at
 100 per module; history entries are capped at 200 per module.
@@ -77,10 +89,11 @@ a reload.
 `completeSetup` (line 79) auto-saves to recents and then branches: new projects call
 `saveModuleProgress`, existing ones call `loadModuleProgress` — both delegated to the bridge.
 
-`switchProject` (line 203) saves the current project, calls
-`useCLIPanelStore.getState().clearAllSessions()` to prevent cross-project CLI leakage, cancels
-open session-log entries, touches the target's `last_opened_at` in SQLite, restores target state,
-then calls `loadModuleProgress` for the target.
+`switchProject` saves the current project to recents, hands the outgoing-project teardown to the
+flip owner (`transitionProject({ kind: 'switch' })`, section 2b), touches the target's
+`last_opened_at` in SQLite, restores target state, then calls `loadModuleProgress` for the target.
+`resetProject(trigger = 'new' | 'delete')` runs the same teardown before clearing the identity. The
+store does not import the CLI panel store or any other per-project cache.
 
 The store registers itself at module scope (line 296):
 ```ts
@@ -106,11 +119,52 @@ Persisted keys (via `partialize` at line 271):
 **Custom `merge` resets transient session fields on rehydration** (line 278–289): after each page
 reload, every persisted session has `isRunning`, `lastTaskSuccess`, `currentExecutionId`, and
 `currentTaskId` reset to `false`/`null`. Sessions cannot be running after a page refresh — without
-this, a session stuck in `isRunning: true` would prevent any new dispatches.
+this, a session stuck in `isRunning: true` would prevent any new dispatches. The transient
+run-door fields `runPhase`/`runSeq` are reset to `'idle'`/`0` there too.
+
+**Run lifecycle is written through one door** (`beginRun` / `settleRun` / `endRun`, wired by
+`store/sessionRun.ts` `bindSessionRun`): `beginRun` clears the previous run's
+`lastTaskSuccess`/`lastCallbackStatus` and bumps `runSeq`; `runPhase` is
+`'running' → 'settling'` (stream ended, callback still settling — `isRunning` stays true) →
+`'idle'`; `endRun(id, seq, outcome)` flips `isRunning` false and records the outcome in ONE
+`set()`, ignoring a stale `seq`. `isRunning` stays a stored field kept in lockstep, so
+selectors reading it are unchanged. See `prompts-and-cli.md` § callback truth.
 
 `createSession` (line 77) enforces a soft cap of `MAX_SESSIONS = 8`. At cap, the least-recently-
 active **idle** session is reused. Running sessions are never clobbered (`!s.isRunning` filter at
 line 86).
+
+#### `useCharacterBlueprintStore` (`src/stores/characterBlueprintStore.ts`)
+
+Character Blueprint state under the `pof-character-feel-stack` key. Persisted keys (`partialize`):
+`baseFeelPresetId`, `feelLayers` (the feel adjustment-layer stack, incl. the Property Inspector's
+reserved `inspector-overrides` layer) and `bindingOverrides` — the Input tab's sparse
+`action -> key` rebinds over `INPUT_BINDINGS`. The custom `merge` sanitizes every key on rehydration
+(unknown preset -> default, `sanitizeLayers`, and `sanitizeBindingOverrides` drops unknown actions,
+non-string keys and overrides equal to the default); `activeSubTab` is not persisted. Rebinds go
+through `setBindingOverride` (the `rebindAction` swap rule; key groups such as the movement cluster
+never swap) and every input surface — table, keyboard caps, legend, mouse, ability badges, the
+Features `KeyboardMetric` — reads the one `useResolvedBindings()` value (pure
+`resolveBindings` in `src/lib/character/input-bindings.ts`). "Apply to IMC_Default" only dispatches
+a CLI task on an explicit click, gated off at defaults and while any key conflicts.
+
+#### `useLabPipelineStore` (`src/components/layout-lab/labPipelineStore.ts`)
+
+The `/layout` lab's per-step artifacts under the `pof-lab-pipeline` key. Its persist options live in
+`src/components/layout-lab/labPipelinePersistence.ts` (`labPersistOptions`). **It persists the
+OUTBOX, not the in-memory map:** server rows are re-fetched and re-hydrated whenever an entity is
+opened, so `partialize` (`outboxOf`) writes every step EXCEPT one proven, by a server observation in
+this session, to be an exact copy of the row just observed — `done`, `ueAssets` and `data`
+INCLUDING the local-only `genHistory` canonically equal, no `error`, no `syncError` (`_provenance`
+is excluded: the server stamps it on every write). `hydrateEntity`, `refreshEntity` and
+`adoptServer` record each observation (`observeServerRow`); the proof is a `WeakMap` keyed by the
+artifact object, so any later write un-proves the step, a rehydrated (or legacy full-mirror) blob is
+unproven until a hydrate proves it, and neither the in-memory nor the persisted shape changes. Do
+not swap in `isServerDerived` as the admission rule: it is true for an adopt that kept local
+`genHistory`, for a never-synced produce whose `syncError` a newer server row cleared, and for
+drifted content — all local-only work. The storage adapter (`quotaSafeLocalStorage`) never throws:
+a refused write (quota) used to escape `set()` and skip the produce write-through; it is now
+recorded in the non-persisted `persistError` and shown as one line in `ProduceLogPanel`.
 
 ---
 
@@ -130,6 +184,26 @@ Exported surface:
 - `getChecklistProgress()` — snapshot read, used by `projectStore.saveToRecent`
 - `scheduleAutoSave()` — called by `moduleStore` after every checklist mutation; restarts a
   `createTimerLifecycle` debounced 2 seconds (line 70–76)
+
+### 2b. Project-flip owner (`src/services/projectTransition.ts`)
+
+Everything that must happen to the OUTGOING project when the open project changes lives in one
+ordered list, `TEARDOWN_STEPS`, run by `transitionProject({ kind, from })`:
+`save-outgoing-progress` → `cancel-auto-save` → `clear-module-progress` → `clear-cli-sessions` →
+`cancel-open-session-log` (fire-and-forget) → `clear-activity-feed`.
+
+- **Triggers** are enumerated: `PROJECT_FLIP_TRIGGERS = ['switch', 'new', 'delete']`. Each runs the
+  full list. TopBar handlers call the store action only; they never clear a cache themselves.
+- **Recorded exclusion**: `PROJECT_FLIP_EXCLUSIONS = ['rename']`. Rename changes `projectName`
+  only and never rewrites `projectPath` (no folder moves on disk), so it runs no teardown.
+- **Placement**: the owner sits below both the identity store (`projectStore` calls it) and the
+  caches (it imports `cliPanelStore`, `activityFeedStore` and the bridge).
+- **Isolation**: each step runs in its own try/catch. A throwing step is reported through
+  `logger.warn` and the flip still completes. The synchronous steps finish before
+  `transitionProject` returns, so `resetProject` can clear the identity immediately.
+  `switchProject` awaits the returned promise (the outgoing save) before loading the target.
+- **Adding a per-project cache** means adding one entry to `TEARDOWN_STEPS`. The activity feed is
+  on the list because its events carry Fix prompts written for the project that was open.
 
 ---
 
@@ -171,11 +245,20 @@ the browser or edge runtime).
 | `project_progress` | Full module state (checklist/health/verification/history) per project path |
 | `session_log` | Audit trail linking CLI sessions to modules and projects |
 | `request_log` | Idempotency-key replay detection for import/mutation routes |
-| `session_analytics` | Per-CLI-session prompt/outcome telemetry (analytics dashboard, insights, suggestions) |
+| `session_analytics` | Per-CLI-session prompt/outcome telemetry (analytics dashboard, insights, suggestions, Weekly Digest, Project Wrapped). `completed_at` is stored as ISO UTC; reporting periods are cut from it by one authority (see the note below). |
 | `telemetry_snapshots` | Genre-evolution signal snapshots |
 | `genre_suggestions` | Detected sub-genre suggestions (pending/accepted/dismissed) |
 | `checklist_metadata` | Per-item priority and notes |
 | `milestone_deadlines` | User-set target dates for deliverables |
+
+> **Reporting windows.** Every "which day / week / month is this row" decision for the session
+> ledger goes through `src/lib/analytics/report-window.ts`: `reportZone()` is the single declared
+> accessor (the server process's resolved Intl zone = the operator's calendar in this single-user
+> desktop app), and `dayKey` / `monthKey` / `weekKey` / `weekWindow` take the zone explicitly.
+> Windows are half-open `[start, end)` cut at zone midnight (DST-safe), weeks are Monday-first, and
+> calendar arithmetic runs on keys. `generateWeeklyDigest(ref?, zone?)` and
+> `aggregateProjectWrapped(rows, now, zone?)` read every key from it and echo `zone` on the result
+> (`periodEnd` is the exclusive next Monday). Nothing new is stored; tests pin an explicit zone.
 
 > `session_analytics` / `telemetry_snapshots` / `genre_suggestions` were previously
 > bootstrapped divergently (an unguarded per-call `CREATE TABLE` in `session-analytics-db.ts`
@@ -190,7 +273,14 @@ etc.) and expose typed CRUD functions. No ORM — raw prepared statements throug
 
 **`catalog_entities`** (`src/lib/catalog-db.ts`, same `ensureTable()` guard) is the durable record
 of a **user-created** catalog entity — keyed `(catalog_id, entity_id)` with `data` (the whole
-`StoredCatalogEntity` as JSON), `source` (`'user' | 'one-shot'`), `created_at` and `updated_at`.
+`StoredCatalogEntity` as JSON), `source` (`'user' | 'one-shot' | 'ingest'`), `created_at` and `updated_at`.
+An `'ingest'` row carries `entity.provenance` (`EntityProvenance`: source game, project, file, row and a
+**per-row licence note**) — written by the legacy-game ingest chassis (`src/lib/catalog/ingest/`, see
+`docs/research/legacy-game-ingest-spec.md`). **The payload must be JSON-safe:** `upsertEntity` stringifies it,
+and a React component or `Map` survives as a hollow `{}` that still passes every presence check
+(`ArchetypeConfig.icon` did exactly this until it became `iconKey` + `ARCHETYPE_ICONS`, 2026-09-22). `jsonUnsafeKeys`
+(`src/lib/catalog/entityPayload.ts`) names such keys in a `logger.error` at the write. The route's accepted-source list is DERIVED from the union
+(an exhaustive `Record<CatalogEntitySource, …>`), so widening the type cannot leave the API rejecting it.
 Before it, the one-shot flow created a `draft-<catalog>-<ts>` entity in the browser store
 (`catalogStore.addDraft`, persisted to `localStorage`) while writing its ~11 pipeline artifacts to
 SQLite, so the server could never resolve the entity again: `seededEntities` missed it,
@@ -206,6 +296,30 @@ draft the server did not accept is flagged `browserOnly` and rendered `BROWSER-O
 tree. `deleteEntity` returns the real `changes()` count, and the lab's discard calls
 `DELETE /api/pipeline-artifacts` first so a discarded entity leaves no orphaned artifact rows.
 Reads use an explicit column list (never `SELECT *`).
+**The lab reads these rows back.** `usePersistedEntityHydration` (mounted in `LayoutLab`) calls
+`GET /api/catalog-entities?all=1` once and merges the rows into the draft cache through the pure
+`mergePersistedDrafts` (`src/lib/catalog/persistedHydration.ts`): a row never shadows a code seed,
+a server row replaces a stale cached copy, and a browser-only draft the server does not know is kept.
+Before it, the store's "cache of `catalog_entities`" was filled only by the same browser session's
+`addDraft`, so a persisted entity from anywhere else was gate-resolvable and invisible. An `ingest`
+row renders an **INGEST** tag in the tree with its provenance and licence note in the tooltip.
+
+**`reference_wrappers` + `reference_ingest_runs`** (`src/lib/catalog/reference/wrappers-db.ts`,
+injected `db` handle) hold ingested reference-game rows for the `/diablo` loop: each wrapper keeps
+the RAW source record (`raw`, `raw_hash`, the reading `technique`) apart from its current projection
+into a catalog entity (`projection`, `projection_hash`, `mapping_version`), so a mapping adjustment is
+a counted re-projection rather than a re-read. `upsertWrappers` reports `created / rawChanged /
+reprojected / unchanged` (the projection hash ignores `provenance.ingestedAt`, so an identical re-run
+is `unchanged`); every run's summary (coverage, gaps, undecoded sentinels, unresolved links) is kept in
+`reference_ingest_runs`. Promotion into `catalog_entities` (`source: 'ingest'`) is selective and refuses a
+JSON-unsafe payload. The raw values are another studio's design data and live only in the local DB,
+never in the repo. Consumers that need the reference's NUMBERS read the wrapper's `raw` row, not a
+produced step artifact (a produced Stat Block's inner shape is unconstrained — /diablo W07 found 3
+`damage` shapes in 5 rows): `reference/playerScale.ts` converts a monster's raw HP/damage/resistance to
+PoF's scale through two named player anchors (hits-to-kill preserved both ways, a loss grade per field)
+for the UE stat rows `scripts/diablo/stats.ts` writes, and `reference/behaviourScale.ts` derives each monster's walk speed and attack cadence from its animation frames plus its AI routine (engine-derived laws parsed from the diablo1 canon; an unmodelled routine is refused), applied as the per-entity `MoveSpeedOverride`/`AttackCooldownOverride` on the UE enemy; a table spec may also DERIVE (`reference/derive.ts`, D29): values computed at ingest from mapped columns plus engine-derived canon laws land in the projection as `data.derived` in the reference's own units (a missing input or an unmodelled routine is a declared gap), and the derivation's version — code revision plus the law texts it reads — is part of the mapping version so a law edit re-projects; `reference/spellLaw.ts` (W13, D33) does the same for a SPELL, whose damage/to-hit/cast timing are engine code, not data — per-spell damage laws plus one `d1-spell-cast-law`, evaluated for a named reference caster read from the class tables at seed time (`ingest.ts --seed-steps spellbook --root`), refusing an unstated number or level; `reference/familyHead.ts` derives a family head from
+the mapped `data.artSet`; `reference/ueRoot.ts` gives each entity its gitignored `/Game/Diablo` folder,
+disambiguating display names another source row also carries.
 
 **`pipeline_artifact_revisions`** (`src/lib/pipeline-artifacts-db.ts`, same guard pattern) is the
 version history behind `pipeline_artifacts`. The live table is keyed
@@ -252,7 +366,10 @@ archived verdict can be stale and trusting a stored `status` would re-open the f
 that route closed. It returns `regraded` + `archivedStatus` so the UI can say when a restored version
 did **not** come back with the verdict it was archived under. A restore is itself a content-changing
 upsert, so the version it displaces is archived in turn — reverting is undoable. Surfaced per step by
-`layout-lab/steps/shared/StepHistoryPanel.tsx` (loaded on demand, not on mount across ~342 steps).
+`layout-lab/steps/shared/StepHistoryPanel.tsx` (loaded on demand, not on mount across ~342 steps). `POST {revisionId, dryRun: true}` is the compare-before-restore preview: the same read-only
+`gradeArtifact` run and **no upsert** (nothing archived, no history slot spent), answering the RAW
+`wouldStatus`/`wouldTier`/`wouldReason` the restore would persist; the panel shows it beside a
+`revisionDiff.ts` field diff against the on-screen artifact.
 
 **Dependency-injected variant** (`src/lib/visual-gen/asset-library-db.ts` — the local Asset Library
 backing `audio-asset-db.ts`'s style): the helpers take an explicit `Database` argument so they can be
@@ -459,6 +576,31 @@ inside `useCRUD`'s `refetch` and anywhere already wrapped in try/catch.
 
 **`useCRUD`'s `mutate` silently returns `null` on error** (`:84`) and logs via `console.error`.
 If you need to surface the error to the user, use `apiFetch` directly or check the return value.
+
+**Paid in-flight work the browser cannot keep lives in a server ledger, not a persisted store.**
+The asset-forge queue (`useForgeStore`) is memory-only by design, so a Blender-MCP generation's
+provider job id used to vanish on reload and the only recovery (Retry) paid again.
+`src/lib/blender-mcp/generation-ledger.ts` is a `globalThis`-anchored in-process map (the
+visual-gen `*-job-store.ts` idiom) of `{ jobId, provider, prompt, createdAt, state }` — ids and
+state only, no credentials, no SQLite table. `POST /api/blender-mcp/generate` records, `/status`
+moves state, `/import` runs once per job (`ledger.importOnce`: a repeat or concurrent caller is
+answered from the ledger with `alreadyImported: true`), and `GET /api/blender-mcp/generate/jobs`
+lists resumable jobs plus a per-process `ownerEpoch`. `GenerationQueue` calls `resumeMcpJobs()`
+once on mount; a changed `ownerEpoch` (remembered per tab in sessionStorage) is shown as a server
+restart rather than read as "nothing in flight". `reattachJob(id)` re-polls a transport-failed
+job's same provider id for free; `retryJob` still submits a new, paid generation.
+
+**Feature done = `isFeatureDone`; plan dispatch = `usePlanDispatch`.** A feature-matrix status is
+done when `isFeatureDone(status)` (`src/lib/constellation/layout.ts`: implemented OR improved) - the
+one rule `generatePlan`, `unblockFrontier` and `moduleGraph` share, so the planner's `isReady` /
+`unmetDeps` / `implementedCount` agree with the Dependencies tab. The plan's own Build lands as
+`improved` (the feature-fix callback), so a planner counting only `implemented` could never advance.
+Every plan dispatch (plan table, plan map, Dependencies Build) goes through `usePlanDispatch`
+(`src/hooks/usePlanDispatch.ts`), only from an explicit click: `planDispatch(item, origin)`
+(`plan-dispatch.ts`) refuses a not-ready item with `{ reason: 'blocked', unmet }` and creates no
+task; a ready item runs as a feature-fix task via `useModuleCLI.execute`; `onComplete(true,
+'confirmed')` calls `invalidateFeatureData()` so every plan view re-derives from fresh statuses
+(`onSettled(item, landed)` lets a sequencer advance). The other done-rule sites are not migrated yet.
 
 **UI_TIMEOUTS is the single source for all timing constants.** Inline `setTimeout(fn, 3000)` or
 similar literals are a lint target. Import `UI_TIMEOUTS` from `@/lib/constants`.

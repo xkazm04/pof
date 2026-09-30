@@ -9,6 +9,8 @@ import { Minimap } from './Minimap';
 import { ZoneLayer } from './ZoneLayer';
 import { EmitterLayer } from './EmitterLayer';
 import { DrawPreview } from './DrawPreview';
+import { ListenerLayer } from './ListenerLayer';
+import { AuditionReadout } from './AuditionReadout';
 import { ZoomCluster } from './ZoomCluster';
 import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
@@ -18,6 +20,7 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
     selectedZoneId,
     selectedEmitterId,
     accentColor,
+    onSelectEmitter,
   } = props;
 
   const {
@@ -30,6 +33,7 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
     showMinimap,
     setShowMinimap,
     drawState,
+    listener,
     // Render the optimistic buffer, not the (round-trip-stale) props.
     sceneZones,
     sceneEmitters,
@@ -72,6 +76,17 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
 
       {/* Toolbar */}
       <Toolbar paintMode={paintMode} setPaintMode={setPaintMode} />
+
+      {/* LISTEN mode — mounted only while listening, so leaving the tool stops the audio. */}
+      {paintMode === 'listen' && (
+        <AuditionReadout
+          zones={sceneZones}
+          emitters={sceneEmitters}
+          listener={listener}
+          onSelectEmitter={onSelectEmitter}
+          accentColor={accentColor}
+        />
+      )}
 
       {/* Top-right cluster — stats badge + minimap */}
       <Minimap
@@ -139,6 +154,8 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
 
           {/* Drawing preview */}
           <DrawPreview drawState={drawState} accentColor={accentColor} />
+
+          {paintMode === 'listen' && <ListenerLayer listener={listener} zoom={view.zoom} accentColor={accentColor} />}
         </g>
       </svg>
 

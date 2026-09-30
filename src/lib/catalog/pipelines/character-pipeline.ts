@@ -87,6 +87,7 @@ registerCatalogPipeline({
           },
         },
       }),
+      criteria: ['visible sclera and defined pupils; natural brows; no glow or heavy makeup; expression readable'],
       accept: fieldsPopulated('gate', 'face gate recorded (verdict+method+evidence)', ['verdict', 'method', 'criteria', 'evidence']),
       produceNote: 'Cheapest gate in the chain. A creepy source face survives every downstream model — reject here.',
     },
@@ -97,7 +98,7 @@ registerCatalogPipeline({
       label: '3D Generation',
       engine: 'Tripo',
       view: { kind: 'gallery', field: 'selected', candidates: 3 },
-      // Surface REAL generated .glb meshes when any exist on disk: each candidate carries
+      // Surface REAL .glb meshes generated FOR this step (name re-encodes its identity): each carries
       // payload.glbUrl so the selected mesh renders in the interactive GlbViewer (orbit/
       // zoom) instead of a colored swatch. Empty manifest → honest deterministic swatch
       // fallback (never a fake 3D preview) — and acceptance TELLS THEM APART: a candidate
@@ -108,7 +109,7 @@ registerCatalogPipeline({
       genCandidates: {
         needsAssets: true,
         assetKind: '3d',
-        build: (dir, seq, assets) => meshGalleryCandidates('selected', 3, assets, dir, seq),
+        build: (dir, seq, assets) => meshGalleryCandidates('selected', 3, assets, dir, seq, { catalogId: 'character-pipeline', step: '3D Generation' }),
       },
       produce: () => ({
         data: {
@@ -141,6 +142,7 @@ registerCatalogPipeline({
           },
         },
       }),
+      criteria: ['eyes with irises and lids survive meshing; hair and fine details read as geometry, not tubes'],
       accept: fieldsPopulated('gate', '3D face gate recorded', ['verdict', 'method', 'criteria', 'evidence']),
       produceNote: 'Rig + retargets cost ~55 credits — gate the mesh first. Re-texturing with a DIFFERENT reference image smears (projection mismatch); only regenerate.',
     },

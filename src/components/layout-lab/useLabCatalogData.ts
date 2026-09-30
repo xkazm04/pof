@@ -1,10 +1,12 @@
 'use client';
 
+import type { LabReference } from '@/lib/catalog/canon/profiles';
 import { useMemo } from 'react';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { resolveCatalogSteps } from './catalogManifest';
-import type { LifecycleState } from '@/lib/catalog/types';
+import { toLabEntity } from './entityPipeline';
+import type { CatalogLink, LifecycleState } from '@/lib/catalog/types';
 
 export interface LabCatalog {
   catalogId: string;
@@ -59,6 +61,16 @@ export interface LabEntity {
   name: string;
   lifecycle: LifecycleState;
   data: unknown;
+  /** Recorded cross-catalog edges used to attach linked reference values to produce prompts. */
+  links?: CatalogLink[];
+  /**
+   * Canon profile its prompts are written for (`canonProfileOf`). Set by EVERY constructor —
+   * a LabEntity is where provenance used to be dropped, so an ingested entity's prompts fell
+   * back to PoF's world.
+   */
+  canonProfile?: string;
+  /** Where an INGESTED entity's values came from — cited in its produce prompt (`referenceValuesBlock`). */
+  reference?: LabReference;
 }
 
 export interface LabDetail {
@@ -86,9 +98,7 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
         catalogId, label: section.label, description: section.description ?? '',
         total: all.length,
       },
-      entities: all.map((e) => ({
-        id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,
-      })),
+      entities: all.map(toLabEntity),
       steps: resolveCatalogSteps(catalogId),
     };
   }, [catalogId, entitiesByCatalog, draftEntitiesByCatalog]);

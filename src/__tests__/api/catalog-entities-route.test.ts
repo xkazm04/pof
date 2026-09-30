@@ -105,3 +105,22 @@ describe('DELETE /api/catalog-entities', () => {
     expect((await del(`catalogId=${CATALOG}`)).status).toBe(400);
   });
 });
+
+describe('GET ?all=1 + source ingest (/diablo backlog B2/B6)', () => {
+  it('accepts source "ingest" — the widened union is not rejected by a stale list', async () => {
+    const res = await post({ catalogId: CATALOG, entityId: 'd1-MT_TEST', name: 'Zombie', source: 'ingest' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.source).toBe('ingest');
+  });
+
+  it('lists every persisted row across catalogs for the lab hydration', async () => {
+    await post({ catalogId: CATALOG, entityId: 'd1-MT_ALL', name: 'Ghoul', source: 'ingest' });
+    const json = await (await get('all=1')).json();
+    expect(json.success).toBe(true);
+    expect(json.data.entities.map((e: { entityId: string }) => e.entityId)).toContain('d1-MT_ALL');
+  });
+
+  it('still refuses a GET with neither catalogId nor all=1', async () => {
+    expect((await get('')).status).toBe(400);
+  });
+});

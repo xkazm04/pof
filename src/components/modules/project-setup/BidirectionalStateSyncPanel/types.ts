@@ -11,6 +11,8 @@ export interface SyncLogEntry {
   category: string;
   message: string;
   detail?: string;
+  /** Outbound only: the frame never left (socket not OPEN) - not counted as sent. */
+  dropped?: boolean;
 }
 
 export interface PropertyEdit {
@@ -29,9 +31,5 @@ export interface ViewportTarget {
   fov: string;
 }
 
-export interface SyncConflict {
-  watchId: string;
-  propertyName: string;
-  inbound: unknown;
-  outbound: string;
-}
+/** A diverged write from the WS client's ledger (base / written / inbound, typed). */
+export type { SyncConflict } from '@/types/ue5-bridge';

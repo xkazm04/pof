@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { runDeepEval, runSingleModuleEval, cancelDeepEval } from '@/lib/evaluator/deep-eval-engine';
 import { generateFixPlan, generateBatchFixPlan } from '@/lib/evaluator/fix-plan-generator';
 import { getEvaluableModuleIds } from '@/lib/evaluator/module-eval-prompts';
 import type { EvalProgress, DeepEvalResult } from '@/lib/evaluator/deep-eval-engine';
+import type { DeepEvalJobSnapshot } from '@/lib/evaluator/deep-eval-job';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { aggregateFindings } from '@/lib/evaluator/finding-collector';
 import type { EvalFinding, ScanFindings, ModuleFindings } from '@/lib/evaluator/finding-collector';
 import { diffScans, mergeBaseline } from '@/lib/evaluator/regression-diff';
@@ -16,6 +17,13 @@ import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import type { PersistedScan } from '@/lib/evaluator/evaluator-results-db';
 import { EVAL_ACCENT } from './constants';
+
+function idleProgress(): EvalProgress {
+  return {
+    status: 'idle', currentModule: null, currentPass: null, completedSteps: 0,
+    totalSteps: 0, passStatuses: {}, findings: [], error: null,
+  };
+}
 
 export function useDeepEvalResults() {
   const projectName = useProjectStore((s) => s.projectName);
@@ -188,49 +196,103 @@ export function useDeepEvalResults() {
     [projectPath],
   );
 
-  // ── Run evaluation ─────────────────────────────────────────────────────────
+  // ── Run evaluation (a server job: start, poll, reattach) ────────────────────
 
-  const handleRunEval = useCallback(async () => {
-    if (isRunning) return;
+  // The scan runs server-side (`/api/evaluator/deep-eval`); this hook starts it,
+  // polls its snapshot, and applies the result exactly once when it settles. Only
+  // the Run buttons start a job — mounting (e.g. after a reload) only reattaches.
+  // The job this tab follows, keyed by project so a project switch drops it.
+  const [attached, setAttached] = useState<{ projectPath: string; scanId: string } | null>(null);
+  const attachedScanId = attached?.projectPath === projectPath ? attached.scanId : null;
+  const appliedScanRef = useRef<string | null>(null);
+  const expandOnApplyRef = useRef<SubModuleId | undefined>(undefined);
+  const jobUrl = `/api/evaluator/deep-eval?project=${encodeURIComponent(projectPath)}`;
 
-    const moduleIds = Array.from(selectedModuleIds);
-    if (moduleIds.length === 0) return;
+  /** Mirror a job snapshot; when it has settled with a result, apply that once. */
+  const consumeJob = useCallback(
+    (job: DeepEvalJobSnapshot) => {
+      setProgress(job.progress);
+      if (job.status === 'running') {
+        setAttached({ projectPath, scanId: job.scanId });
+        return;
+      }
+      setAttached(null);
+      if (job.result && appliedScanRef.current !== job.scanId) {
+        appliedScanRef.current = job.scanId;
+        void applyScanResult(job.result, { expandModule: expandOnApplyRef.current });
+      }
+    },
+    [applyScanResult, projectPath],
+  );
 
-    setResult(null);
+  // Reattach: a job already running for this project (a reload, a second tab) is
+  // adopted, never restarted. A job that settled while nothing was attached is not
+  // re-applied here (its baseline merge needs the context of the tab that ran it).
+  useEffect(() => {
+    if (!projectPath) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await tryApiFetch<{ job: DeepEvalJobSnapshot | null }>(jobUrl);
+      if (cancelled || !res.ok || !res.data.job || res.data.job.status !== 'running') return;
+      consumeJob(res.data.job);
+    })();
+    return () => { cancelled = true; };
+  }, [projectPath, jobUrl, consumeJob]);
 
-    try {
-      const evalResult = await runDeepEval({
-        moduleIds,
-        projectContext: { projectName, projectPath, ueVersion },
-        projectPath,
-        onProgress: setProgress,
+  useEffect(() => {
+    if (!attachedScanId) return;
+    const timer = setInterval(() => {
+      void (async () => {
+        const res = await tryApiFetch<{ job: DeepEvalJobSnapshot | null }>(jobUrl);
+        if (!res.ok || !res.data.job || res.data.job.scanId !== attachedScanId) return;
+        consumeJob(res.data.job);
+      })();
+    }, UI_TIMEOUTS.pollInterval);
+    return () => clearInterval(timer);
+  }, [attachedScanId, jobUrl, consumeJob]);
+
+  const startJob = useCallback(
+    async (moduleIds: string[], expandModule?: SubModuleId) => {
+      if (isRunning || moduleIds.length === 0) return;
+      setResult(null);
+      expandOnApplyRef.current = expandModule;
+      const res = await tryApiFetch<{ scanId: string; job: DeepEvalJobSnapshot | null }>('/api/evaluator/deep-eval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectPath, projectName, ueVersion, moduleIds }),
       });
-      await applyScanResult(evalResult);
-    } catch (err) {
-      console.error('Deep eval error:', err);
-    }
-  }, [isRunning, selectedModuleIds, projectName, projectPath, ueVersion, applyScanResult]);
+      if (res.ok && res.data.job) {
+        consumeJob(res.data.job);
+        return;
+      }
+      // Refused (e.g. 409: one is already running for this project) — adopt that
+      // one if it exists, otherwise say why nothing started.
+      const current = await tryApiFetch<{ job: DeepEvalJobSnapshot | null }>(jobUrl);
+      if (current.ok && current.data.job?.status === 'running') {
+        consumeJob(current.data.job);
+        return;
+      }
+      const reason = res.ok ? 'The server did not return a job' : res.error;
+      logger.error('Deep eval did not start:', reason);
+      setProgress({ ...idleProgress(), status: 'error', error: reason });
+    },
+    [isRunning, projectPath, projectName, ueVersion, jobUrl, consumeJob],
+  );
 
-  const handleRunSingle = useCallback(async (moduleId: SubModuleId) => {
-    if (isRunning) return;
+  const handleRunEval = useCallback(
+    () => startJob(Array.from(selectedModuleIds)),
+    [startJob, selectedModuleIds],
+  );
 
-    setResult(null);
+  const handleRunSingle = useCallback(
+    (moduleId: SubModuleId) => startJob([moduleId], moduleId),
+    [startJob],
+  );
 
-    try {
-      const evalResult = await runSingleModuleEval(moduleId, {
-        projectContext: { projectName, projectPath, ueVersion },
-        projectPath,
-        onProgress: setProgress,
-      });
-      await applyScanResult(evalResult, { expandModule: moduleId });
-    } catch (err) {
-      console.error('Single module eval error:', err);
-    }
-  }, [isRunning, projectName, projectPath, ueVersion, applyScanResult]);
-
-  const handleCancel = useCallback(() => {
-    cancelDeepEval();
-  }, []);
+  const handleCancel = useCallback(async () => {
+    const res = await tryApiFetch<{ job: DeepEvalJobSnapshot | null }>(jobUrl, { method: 'DELETE' });
+    if (res.ok && res.data.job) consumeJob(res.data.job);
+  }, [jobUrl, consumeJob]);
 
   // ── Fix handlers ───────────────────────────────────────────────────────────
 

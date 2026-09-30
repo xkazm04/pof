@@ -17,6 +17,7 @@ import type {
 import type { EvaluatorReport, ModuleScore } from '@/types/evaluator';
 import { ALL_MODULE_DEFS, ALL_CHECKLIST_TOTAL } from './module-registry';
 import { SLICE_UNMEASURED_NOTE } from './roadmap/milestone-progress';
+import { weeklyCompletionSeries, type CompletionLedger } from './roadmap/completion-ledger';
 
 /* ---- Module definitions ------------------------------------------ */
 // "Overall completion" must span EVERY module, not just core-engine — otherwise
@@ -30,16 +31,9 @@ const MODULE_DEFS = ALL_MODULE_DEFS;
 
 const TOTAL_CHECKLIST_ITEMS = ALL_CHECKLIST_TOTAL;
 
-/* ---- Seeded RNG for reproducible simulated data ------------------ */
+const MODULE_IDS = MODULE_DEFS.map((m) => m.id);
 
-function mulberry32(seed: number) {
-  return () => {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /* ---- Compute module health from checklist + evaluator data ------- */
 
@@ -84,71 +78,11 @@ function computeModuleHealth(
   });
 }
 
-/* ---- Generate simulated velocity history ------------------------- */
-
-function generateVelocityHistory(
-  completedItems: number,
-  rng: () => number,
-): VelocityPoint[] {
-  const points: VelocityPoint[] = [];
-  const totalWeeks = 8;
-  let cumulative = 0;
-
-  // Distribute completedItems across weeks with increasing velocity
-  const basePerWeek = Math.max(1, Math.floor(completedItems / totalWeeks));
-
-  for (let w = 0; w < totalWeeks; w++) {
-    const weekDate = new Date();
-    weekDate.setDate(weekDate.getDate() - (totalWeeks - w) * 7);
-    const weekLabel = `W${w + 1}`;
-
-    // Velocity tends to increase over time (ramp up)
-    const rampFactor = 0.5 + (w / totalWeeks) * 1.0;
-    const variance = 0.7 + rng() * 0.6;
-    const itemsThisWeek = Math.max(0, Math.round(basePerWeek * rampFactor * variance));
-    cumulative += itemsThisWeek;
-
-    // Cap at actual completedItems
-    if (cumulative > completedItems) {
-      cumulative = completedItems;
-    }
-
-    points.push({
-      weekLabel,
-      weekStart: weekDate.toISOString(),
-      itemsCompleted: itemsThisWeek,
-      cumulativeCompleted: cumulative,
-    });
-  }
-
-  return points;
-}
-
-/* ---- Generate quality history from scan history ------------------ */
+/* ---- Quality history — recorded scans only ------------------------ */
 
 function generateQualityHistory(scanHistory: EvaluatorReport[]): QualityPoint[] {
-  if (scanHistory.length === 0) {
-    // Generate simulated quality trend
-    const rng = mulberry32(42);
-    const points: QualityPoint[] = [];
-    let score = 40 + Math.floor(rng() * 20);
-
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i) * 5);
-      // Quality generally improves
-      score = Math.min(100, Math.max(0, score + Math.floor(rng() * 15) - 3));
-      points.push({
-        timestamp: d.toISOString(),
-        label: `Scan ${i + 1}`,
-        overallScore: score,
-        criticalIssues: Math.max(0, Math.floor(rng() * 4) - i),
-        highIssues: Math.max(0, Math.floor(rng() * 8) - i),
-      });
-    }
-    return points;
-  }
-
+  // No recorded scan → no quality series. The trend is then 'unknown' (fewer
+  // than two points), never a simulated "improving".
   return scanHistory.map((scan, i) => ({
     timestamp: new Date(scan.timestamp).toISOString(),
     label: `Scan ${i + 1}`,
@@ -163,7 +97,8 @@ function generateQualityHistory(scanHistory: EvaluatorReport[]): QualityPoint[] 
 function predictMilestones(
   completedItems: number,
   totalItems: number,
-  avgVelocity: number,
+  avgVelocity: number | null,
+  now: number,
 ): Milestone[] {
   const completionPct = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
 
@@ -224,7 +159,10 @@ function predictMilestones(
     },
   ];
 
-  if (avgVelocity > 0) {
+  // An ETA needs a measured rate: null velocity (no dated completion) or a
+  // zero rate leaves every predictedWeeks/predictedDate null — the Gantt then
+  // draws no bar rather than an invented one.
+  if (avgVelocity !== null && avgVelocity > 0) {
     for (const ms of milestones) {
       const targetItems = Math.ceil((ms.targetCompletion / 100) * totalItems);
       const remaining = Math.max(0, targetItems - completedItems);
@@ -232,12 +170,10 @@ function predictMilestones(
 
       if (remaining <= 0) {
         ms.predictedWeeks = 0;
-        ms.predictedDate = new Date().toISOString();
+        ms.predictedDate = new Date(now).toISOString();
       } else {
         ms.predictedWeeks = Math.round(weeksNeeded * 10) / 10;
-        const predicted = new Date();
-        predicted.setDate(predicted.getDate() + Math.ceil(weeksNeeded * 7));
-        ms.predictedDate = predicted.toISOString();
+        ms.predictedDate = new Date(now + Math.ceil(weeksNeeded * 7) * DAY_MS).toISOString();
       }
     }
   }
@@ -409,14 +345,22 @@ function generateSubsystemSignals(
 /*  Main Aggregation Function                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Pure aggregation: every time series is derived from recorded data — dated
+ * completions (`completionLedger`) or recorded scans — and `now` is injected so
+ * the same inputs always give the same summary. Nothing is simulated: with no
+ * dated completion `avgVelocity` is null and no milestone is predicted; with no
+ * scan the quality series is empty and its trend 'unknown'.
+ */
 export function computeProjectHealth(
   checklistProgress: Record<string, Record<string, boolean>>,
   scanHistory: EvaluatorReport[],
   lastScan: EvaluatorReport | null,
   perfInput: PerfHealthInput | null = null,
   crashInput: CrashHealthInput | null = null,
+  completionLedger: CompletionLedger = {},
+  now: number = Date.now(),
 ): ProjectHealthSummary {
-  const rng = mulberry32(99);
 
   // Count completed checklist items
   let completedChecklistItems = 0;
@@ -445,15 +389,12 @@ export function computeProjectHealth(
     else qualityTrend = 'stable';
   }
 
-  // Velocity
-  const velocityHistory = generateVelocityHistory(completedChecklistItems, rng);
-  const recentWeeks = velocityHistory.slice(-3);
-  const avgVelocity = recentWeeks.length > 0
-    ? recentWeeks.reduce((s, v) => s + v.itemsCompleted, 0) / recentWeeks.length
-    : 0;
+  // Velocity — dated completions only; undated ones are counted in the sample
+  const { velocityHistory, sample: velocitySample, avgVelocity } =
+    weeklyCompletionSeries(checklistProgress, completionLedger, MODULE_IDS, now);
 
   // Milestones
-  const milestones = predictMilestones(completedChecklistItems, TOTAL_CHECKLIST_ITEMS, avgVelocity);
+  const milestones = predictMilestones(completedChecklistItems, TOTAL_CHECKLIST_ITEMS, avgVelocity, now);
 
   // Burndown
   const burnChart = generateBurnChart(velocityHistory, TOTAL_CHECKLIST_ITEMS);
@@ -471,7 +412,8 @@ export function computeProjectHealth(
     currentQualityScore,
     performanceScore,
     qualityTrend,
-    avgVelocity: Math.round(avgVelocity * 10) / 10,
+    avgVelocity,
+    velocitySample,
     moduleHealth,
     velocityHistory,
     qualityHistory,

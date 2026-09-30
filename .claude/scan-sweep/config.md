@@ -53,3 +53,11 @@ signal in the file.
   (test-harness/eval-harness at 390-410); read `game-production/unattended-build-loop`
   and `software-engineering/mcp-tools` as the governing subjects until the join is
   pinned.
+- 2026-09-27 — **`--challenge` with 4 builders in one checkout: layout-lab component tests
+  time out under the concurrent full-suite load** (`viewTransition`, `LayoutLab`, `chrome`,
+  `statusChips` at the 5 s default). `viewTransition` takes 3.3-3.5 s alone at both the base and
+  the head of the run, so a "NEW" failure there is load, not the change. Time the file alone at
+  base and at head in a throwaway worktree (junction `node_modules`, run
+  `node scripts/gen-pipeline-registry.mjs`, and `rmdir` the junction BEFORE `git worktree remove`)
+  instead of classifying it by hand. Also: every builder merged test+build into one commit because
+  a red test-only commit would break the tree's suite; that is the norm here, not a deviation.

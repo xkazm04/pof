@@ -16,6 +16,7 @@ export function GlobalSearchPanel() {
     open, setOpen,
     query, setQuery,
     results,
+    intents,
     loading,
     rebuilding,
     activeIndex, setActiveIndex,
@@ -24,6 +25,7 @@ export function GlobalSearchPanel() {
     resultsRef,
     handleRebuild,
     handleSelect,
+    handleRun,
     handleKeyDown,
     filterTypes,
     backdropMotion,
@@ -155,9 +157,11 @@ export function GlobalSearchPanel() {
                   <SearchResultRow
                     key={r.id}
                     result={r}
+                    intents={intents[i]}
                     active={i === activeIndex}
                     index={i}
                     onSelect={handleSelect}
+                    onRun={handleRun}
                     onHover={setActiveIndex}
                   />
                 ))
@@ -186,6 +190,10 @@ export function GlobalSearchPanel() {
                 <span className="flex items-center gap-1">
                   <kbd className="px-1 py-px bg-surface border border-border rounded font-mono">↵</kbd>
                   open
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-px bg-surface border border-border rounded font-mono">⇧↵</kbd>
+                  run action
                 </span>
               </div>
             </div>

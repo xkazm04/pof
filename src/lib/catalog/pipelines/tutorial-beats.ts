@@ -113,6 +113,13 @@ registerCatalogPipeline({
           },
         };
       },
+      contract: {
+        field: 'trigger',
+        grantedBy: 'AARPGTriggerBox::OnBeginOverlap delegates to BP_TutorialBeat_{slug}::BeginBeat',
+        activatedBy: 'the player pawn overlaps THIS beat’s declared tutorial trigger volume',
+        dependencies: ['characters player component used for THIS beat’s gameplay-tag conditions'],
+        verification: 'L2: AARPGTriggerBox compiles in Source/PoF/ and THIS beat’s DT_TutorialBeats row is seeded; L3: VSTutorialComprehensionTest verifies its declared gating tags prevent duplicate activation',
+      },
       accept: allOf(
         fieldsPopulated('trigger', 'Trigger event + condition + resetOn defined', ['event', 'condition', 'resetOn']),
         wiringContractSound('trigger'),
@@ -157,6 +164,13 @@ registerCatalogPipeline({
             },
           },
         };
+      },
+      contract: {
+        field: 'sandbox',
+        grantedBy: 'BP_TutorialBeat_{slug} calls UARPGInputSandboxSubsystem::LockInputs with THIS beat’s declared input scope',
+        activatedBy: 'THIS beat’s trigger calls BeginBeat and locks every input except the action being taught',
+        dependencies: ['input-schemes action asset for EACH input THIS beat locks or teaches'],
+        verification: 'L2: UARPGInputSandboxSubsystem compiles in Source/PoF/; L3: VSTutorialComprehensionTest verifies only THIS beat’s taught input remains active inside its sandbox',
       },
       accept: allOf(
         fieldsPopulated('sandbox', 'Locked inputs + sandbox scope + branching flag defined', [
@@ -216,6 +230,13 @@ registerCatalogPipeline({
           },
         };
       },
+      contract: {
+        field: 'sequence',
+        grantedBy: 'BP_TutorialBeat_{slug} advances its state machine when the GameplayTag emitted by THIS beat’s taught ability is added',
+        activatedBy: 'the player executes THIS beat’s taught ability, which broadcasts its declared tutorial progress tag',
+        dependencies: ['spellbook::<id> for EACH ability THIS beat teaches'],
+        verification: 'L2: every taught ability compiles in Source/PoF/ and broadcasts the declared tag; L3: VSTutorialComprehensionTest verifies THIS beat advances through its sequence within the authored timeout',
+      },
       accept: allOf(
         fieldsPopulated('sequence', 'Steps + advanceOn + timeoutPerStep defined', [
           'steps',
@@ -272,6 +293,13 @@ registerCatalogPipeline({
           },
         };
       },
+      contract: {
+        field: 'outcomes',
+        grantedBy: 'BP_TutorialBeat_{slug} grants and removes THIS beat’s declared outcome tags through UAbilitySystemComponent',
+        activatedBy: 'THIS beat’s state machine evaluates the authored outcome condition at each step transition',
+        dependencies: ['characters player UAbilitySystemComponent used for THIS beat’s tag grants'],
+        verification: 'L2: THIS beat’s tutorial tags are declared in GameplayTags.ini; L3: VSTutorialComprehensionTest verifies its success, skip, and fail outcomes grant the matching tags and events',
+      },
       accept: allOf(
         fieldsPopulated('outcomes', 'Success + skip + fail paths defined', ['success', 'skip', 'fail']),
         wiringContractSound('outcomes'),
@@ -320,6 +348,12 @@ registerCatalogPipeline({
           ],
           ueAssets: [`/Game/UI/Tutorial/T_${s}_Pointer`],
         };
+      },
+      contract: {
+        grantedBy: 'BP_TutorialBeat_{slug} activates THIS beat’s pointer overlay and highlights the icon for its taught input during the declared prompt step',
+        activatedBy: 'THIS beat’s prompt sequence step calls BP_TutorialBeat_{slug}::ShowPointerOverlay',
+        dependencies: ['hud-elements::<id> exposing THIS beat’s pointer slot', 'icon-sets::<id> containing THIS beat’s taught-input icon'],
+        verification: 'L2: the declared HUD widget exposes its pointer slot and the declared icon atlas is imported; L3: VSTutorialComprehensionTest verifies THIS beat’s pointer is visible during its prompt step',
       },
       accept: allOf(
         linksResolve(),
@@ -391,6 +425,12 @@ registerCatalogPipeline({
             { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'success-highlight' },
           ],
         };
+      },
+      contract: {
+        grantedBy: 'BP_TutorialBeat_{slug} spawns or plays every VFX and audio cue THIS beat declares on its matching sequence step',
+        activatedBy: 'THIS beat’s authored prompt, success, fail, or skip step activates the corresponding declared cue',
+        dependencies: ['vfx::<id> for EACH visual cue THIS beat uses', 'audio catalog::<id> for EACH sound cue THIS beat uses'],
+        verification: 'L2: every declared cue asset exists and its sequence binding is authored; L3: VSTutorialComprehensionTest verifies THIS beat fires each cue on the correct step',
       },
       accept: allOf(
         minCount('cues', '≥1 VFX or audio cue bound', 1),
@@ -483,6 +523,13 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        field: 'telemetry',
+        grantedBy: 'BP_TutorialBeat_{slug} calls UARPGTelemetrySubsystem::RecordBeatEvent for every outcome THIS beat declares',
+        activatedBy: 'THIS beat’s success, skip, and fail handlers record their matching telemetry events',
+        dependencies: ['characters player session context used to tag THIS beat’s telemetry'],
+        verification: 'L2: UARPGTelemetrySubsystem::RecordBeatEvent compiles in Source/PoF/; L3: VSTutorialComprehensionTest verifies every telemetry event THIS beat declares is recorded',
       },
       accept: allOf(
         fieldsPopulated('telemetry', 'Telemetry events + comprehension metric defined', [
@@ -609,6 +656,12 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Tutorial/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'BP_TutorialBeat_{slug} is placed in the tutorial area and reads THIS beat’s configuration from DT_TutorialBeats',
+        activatedBy: 'AARPGTriggerBox overlap starts THIS beat, locks its sandbox, advances its sequence, fires telemetry, and unlocks on the declared outcome',
+        dependencies: ['hud-elements::<id> for THIS beat’s pointer slot', 'icon-sets::<id> for its taught-input icon', 'vfx::<id> for EACH visual cue', 'input-schemes action for EACH locked or taught input', 'characters player components used by THIS beat'],
+        verification: 'L2: THIS beat’s DT_TutorialBeats row is seeded and BP_TutorialBeat_{slug} compiles; L3: VSTutorialComprehensionTest verifies its full trigger, sandbox, sequence, outcome, cue, and telemetry cycle',
       },
       accept: allOf(
         minCount('assets', 'All tutorial beat assets packaged', 2),

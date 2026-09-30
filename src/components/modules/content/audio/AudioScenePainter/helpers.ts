@@ -14,16 +14,3 @@ export function zoneCentroid(zone: AudioZone): { x: number; y: number } {
     ? { x: zone.x, y: zone.y }
     : { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 };
 }
-
-export function findContainingZone(x: number, y: number, zones: AudioZone[]): string | null {
-  for (const zone of zones) {
-    if (zone.shape === 'circle') {
-      const dx = x - zone.x;
-      const dy = y - zone.y;
-      if (dx * dx + dy * dy <= (zone.width / 2) * (zone.width / 2)) return zone.id;
-    } else {
-      if (x >= zone.x && x <= zone.x + zone.width && y >= zone.y && y <= zone.y + zone.height) return zone.id;
-    }
-  }
-  return null;
-}

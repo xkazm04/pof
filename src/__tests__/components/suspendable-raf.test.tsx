@@ -285,10 +285,12 @@ describe('recursive rAF audit under components/modules', () => {
 
   it('holds the measured callsite inventory (comment- and string-safe)', () => {
     const total = sites.reduce((s, x) => s + x.count, 0);
-    // 8 self-rescheduling loops (kickoff + re-entry = 2 sites each) + 12 one-shots.
-    expect(RECURSIVE_LOOPS.length * 2 + 12).toBe(28);
-    expect(total).toBe(28);
-    expect(sites.length).toBe(17);
+    // 8 self-rescheduling loops (kickoff + re-entry = 2 sites each) + 11 one-shots.
+    // (ProjectHealthDashboard's one-shot left 2026-09-28: its regressions are now
+    // derived from the scan history, not set from an effect behind a frame.)
+    expect(RECURSIVE_LOOPS.length * 2 + 11).toBe(27);
+    expect(total).toBe(27);
+    expect(sites.length).toBe(16);
   });
 
   it('every file with a recursive loop is accounted for in the classification', () => {

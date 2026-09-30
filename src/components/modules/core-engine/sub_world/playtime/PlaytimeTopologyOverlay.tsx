@@ -9,9 +9,9 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { computeCumulativePath, DEFAULT_PLAYTIME_COSTS, type WorldModel } from '@/lib/world/world-model';
 import {
-  TOPOLOGY_NODES, TOPOLOGY_EDGES, EDGE_STYLE_MAP,
-  CRITICAL_PATH, ALL_PATHS, formatPlaytime,
+  TOPOLOGY_NODES, TOPOLOGY_EDGES, EDGE_STYLE_MAP, formatPlaytime,
 } from '../_shared/data';
 import type { PlaytimePathMode } from '../_shared/data';
 
@@ -23,10 +23,12 @@ const TOPO_OY = 20;
 interface OverlayProps {
   mode: PlaytimePathMode;
   onModeChange: (m: PlaytimePathMode) => void;
+  /** The what-if scenario (the baseline itself when no lever is applied). */
+  world: WorldModel;
 }
 
-export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
-  const pathData = mode === 'critical' ? CRITICAL_PATH : ALL_PATHS;
+export function PlaytimeTopologyOverlay({ mode, onModeChange, world }: OverlayProps) {
+  const pathData = useMemo(() => computeCumulativePath(world, mode), [world, mode]);
   const cumByZone = useMemo(() => new Map(pathData.nodes.map(n => [n.zoneId, n])), [pathData]);
 
   return (
@@ -146,7 +148,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
           {pathData.segments.length} transitions
         </span>
         <span className="ml-auto text-xs font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">
-          Includes combat (enemy density x 8s/kill) + boss phases (90s/phase) + exploration
+          Includes combat (enemy density x {DEFAULT_PLAYTIME_COSTS.secPerEnemy}s/kill) + boss phases ({DEFAULT_PLAYTIME_COSTS.secPerBossPhase}s/phase) + exploration
         </span>
       </div>
     </BlueprintPanel>

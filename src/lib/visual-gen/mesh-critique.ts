@@ -158,7 +158,13 @@ export interface CritiqueThresholds {
   maxFloatersFail: number;
 }
 
-const DEFAULT_THRESHOLDS: CritiqueThresholds = {
+/**
+ * Exported so the download door can DERIVE its admission ceiling from the number the
+ * grader actually judges by, instead of carrying a second copy of it. `face-budget.ts`
+ * exists because one polygon number lived in three layers that each meant something
+ * different by it; a fourth copy at the door would be the same defect again.
+ */
+export const DEFAULT_THRESHOLDS: CritiqueThresholds = {
   minVerts: 100, maxComponentsFail: 8, maxFacesWarn: 200_000, minExtent: 1e-4, maxFloatersFail: 4,
 };
 
@@ -432,6 +438,12 @@ export interface CritiqueDeps {
    * whether it is condemning a defect or an un-finished input (see `critique-stage.ts`).
    */
   stage?: MeshStage;
+  /**
+   * Whether the subject should stand (see `expectsUprightFor`). Supplying it is what lets a
+   * lying character draw the `orientation-lying` WARN; absent, orientation stays `unmeasured`.
+   * Build it with `gateRequestFor` (`gate-request.ts`) rather than by hand.
+   */
+  orientation?: OrientationRequest;
 }
 
 /**
@@ -459,7 +471,7 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
     ok: true,
     metrics: parsed.metrics,
     ...(deps.stage ? { stage: deps.stage } : {}),
-    ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size),
+    ...scoreMesh(parsed.metrics, deps.thresholds, deps.budget, deps.size, deps.orientation),
   };
 }
 

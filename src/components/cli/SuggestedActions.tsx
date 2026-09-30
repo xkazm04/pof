@@ -2,140 +2,24 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Sparkles, Play, RefreshCw, Package, ChevronRight, X, Undo2 } from 'lucide-react';
+import { Sparkles, Play, RefreshCw, ChevronRight, Send, X, Undo2 } from 'lucide-react';
 import type { CLISessionState } from './store/cliPanelStore';
+import { generateSuggestions, type Suggestion, type SuggestionAction, type SuggestionIcon } from '@/components/cli/suggestionIntents';
 import { MODULE_COLORS, withOpacity, OPACITY_8, OPACITY_20 } from '@/lib/chart-colors';
 import { CLI_ANIM } from '@/lib/constants';
 
-// ── Suggestion types ──
+// ── Suggestions ──
+// Derived from the session's recorded run facts in suggestionIntents.ts (pure).
 
-export interface Suggestion {
-  id: string;
-  label: string;
-  description: string;
-  icon: typeof Play;
-  /** Event to dispatch — callers handle the action */
-  action: SuggestionAction;
-}
+export { generateSuggestions };
+export type { Suggestion, SuggestionAction };
 
-export type SuggestionAction =
-  | { type: 'prompt'; prompt: string }
-  | { type: 'navigate'; tab: string }
-  | { type: 'callback'; fn: () => void };
-
-// ── Suggestion generation ──
-
-function inferTaskType(sessionKey: string): 'checklist' | 'review' | 'fix' | 'quick' | 'unknown' {
-  if (sessionKey.endsWith('-cli')) return 'checklist';
-  if (sessionKey.endsWith('-review')) return 'review';
-  if (sessionKey.endsWith('-fix')) return 'fix';
-  if (sessionKey.endsWith('-quick')) return 'quick';
-  return 'unknown';
-}
-
-function extractModuleId(sessionKey: string): string {
-  // sessionKey format: "moduleId-cli" or "moduleId-review" etc.
-  const parts = sessionKey.split('-');
-  // Remove the last part (cli/review/fix/quick)
-  parts.pop();
-  return parts.join('-');
-}
-
-export function generateSuggestions(session: CLISessionState): Suggestion[] {
-  const { lastTaskSuccess, sessionKey } = session;
-  if (lastTaskSuccess === null) return [];
-
-  const taskType = inferTaskType(sessionKey ?? '');
-  const moduleId = extractModuleId(sessionKey ?? '');
-  const suggestions: Suggestion[] = [];
-
-  if (lastTaskSuccess) {
-    // ── SUCCESS paths ──
-    switch (taskType) {
-      case 'checklist':
-        suggestions.push({
-          id: 'next-item',
-          label: 'Run next checklist item',
-          description: 'Continue with the next incomplete item',
-          icon: ChevronRight,
-          action: { type: 'navigate', tab: 'roadmap' },
-        });
-        suggestions.push({
-          id: 'review-module',
-          label: 'Run feature review',
-          description: 'Scan all features for implementation status',
-          icon: RefreshCw,
-          action: { type: 'prompt', prompt: `__review:${moduleId}` },
-        });
-        break;
-
-      case 'review':
-        suggestions.push({
-          id: 'fix-missing',
-          label: 'Fix first missing feature',
-          description: 'Address the top-priority missing item',
-          icon: Play,
-          action: { type: 'navigate', tab: 'overview' },
-        });
-        suggestions.push({
-          id: 'start-checklist',
-          label: 'Start roadmap checklist',
-          description: 'Work through implementation tasks in order',
-          icon: ChevronRight,
-          action: { type: 'navigate', tab: 'roadmap' },
-        });
-        break;
-
-      case 'fix':
-        suggestions.push({
-          id: 're-review',
-          label: 'Re-run review',
-          description: 'Verify the fix improved feature status',
-          icon: RefreshCw,
-          action: { type: 'prompt', prompt: `__review:${moduleId}` },
-        });
-        suggestions.push({
-          id: 'next-fix',
-          label: 'Fix next issue',
-          description: 'Address the next feature needing attention',
-          icon: Play,
-          action: { type: 'navigate', tab: 'overview' },
-        });
-        break;
-
-      default:
-        suggestions.push({
-          id: 'review-module',
-          label: 'Run feature review',
-          description: 'Scan features for updated status',
-          icon: RefreshCw,
-          action: { type: 'prompt', prompt: `__review:${moduleId}` },
-        });
-        break;
-    }
-  } else {
-    // ── FAILURE paths ──
-    suggestions.push({
-      id: 'retry',
-      label: 'Retry task',
-      description: 'Run the same task again',
-      icon: RefreshCw,
-      action: { type: 'prompt', prompt: '__retry' },
-    });
-
-    if (taskType === 'checklist' || taskType === 'fix') {
-      suggestions.push({
-        id: 'skip-next',
-        label: 'Skip to next item',
-        description: 'Move on and come back to this later',
-        icon: ChevronRight,
-        action: { type: 'navigate', tab: 'roadmap' },
-      });
-    }
-  }
-
-  return suggestions.slice(0, 3);
-}
+const SUGGESTION_ICONS: Record<SuggestionIcon, typeof Play> = {
+  retry: RefreshCw,
+  next: ChevronRight,
+  play: Play,
+  callback: Send,
+};
 
 // ── Undo snackbar ──
 
@@ -234,7 +118,7 @@ export function SuggestedActions({ session, onAction, accentColor = MODULE_COLOR
 
             <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto">
               {suggestions.map((s) => {
-                const Icon = s.icon;
+                const Icon = SUGGESTION_ICONS[s.icon];
                 return (
                   <button
                     key={s.id}

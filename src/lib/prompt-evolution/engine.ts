@@ -2,6 +2,7 @@ import type { SubModuleId } from '@/types/modules';
 import type {
   PromptVariant,
   ABTest,
+  ABTestView,
   EvolutionStats,
   ModuleEvolutionStats,
   EvolutionSuggestion,
@@ -26,9 +27,10 @@ import {
   pickVariant,
   type JudgeScores,
 } from './ab-testing';
+import { toTestView } from './verdict';
 import { getPromptVariantFitness } from './judge-fitness';
 import { logger } from '@/lib/logger';
-import { type Result, err } from '@/types/result';
+import { type Result, ok, err } from '@/types/result';
 import {
   insertVariant,
   getVariantById,
@@ -253,15 +255,30 @@ export function mutateVariant(variantId: string, mutation: MutationType): Prompt
 
 // ── A/B Testing ─────────────────────────────────────────────────────────────
 
+/**
+ * Start an A/B test between two versions of one checklist item. Refuses — naming
+ * the running test — while another test is still running on the same (module,
+ * item): serving reads the NEWEST running test (`resolveDispatchVariant`) while
+ * trial booking takes the FIRST running test the served variant is an arm of
+ * (`recordTrialForServedVariant` / `recordTrialForVariantId`), so two concurrent
+ * tests sharing a baseline would be served by one and counted on the other, and
+ * the older challenger would never be served again.
+ */
 export function startABTest(
   moduleId: SubModuleId,
   checklistItemId: string,
   variantAId: string,
   variantBId: string,
-): ABTest {
+): Result<ABTest, string> {
+  const running = getABTestsForItem(moduleId, checklistItemId).find((t) => t.status === 'running');
+  if (running) {
+    return err(
+      `A/B test ${running.id} is already running on this item — conclude it before starting another (one running test per item).`,
+    );
+  }
   const test = createABTest(moduleId, checklistItemId, variantAId, variantBId);
   upsertABTest(test);
-  return test;
+  return ok(test);
 }
 
 export function getABTest(id: string): ABTest | null {
@@ -276,6 +293,24 @@ export function getActiveTests(moduleId?: SubModuleId): ABTest[] {
 
 export function getAllTests(): ABTest[] {
   return getAllABTests();
+}
+
+/**
+ * Persisted tests (optionally one module's) as the UI reads them: each row
+ * annotated with its verdict reading on the best basis available NOW. The reading
+ * is computed at read time from the judge scores — never stored — so a concluded
+ * test's basis is today's evidence, and there is no schema to migrate.
+ */
+export function getTestViews(moduleId?: SubModuleId): ABTestView[] {
+  const judged = judgeScoresByVariant();
+  return getAllABTests()
+    .filter((t) => !moduleId || t.moduleId === moduleId)
+    .map((t) => toTestView(t, judged));
+}
+
+/** One test annotated with its current verdict reading. */
+export function getTestView(test: ABTest): ABTestView {
+  return toTestView(test, judgeScoresByVariant());
 }
 
 /**
@@ -335,13 +370,14 @@ export function recordTestTrial(
 /**
  * Conclude a test on demand. Refuses — with a reason — while either variant is
  * still below `MIN_TRIALS_PER_VARIANT`, so a test that was never actually served
- * cannot crown a winner (see {@link forceConclude}).
+ * cannot crown a winner (see {@link forceConclude}). Crowns on the same judge
+ * scores auto-conclude reads, and returns the reading it crowned on.
  */
-export function concludeTest(testId: string): Result<ABTest, string> {
+export function concludeTest(testId: string): Result<ABTestView, string> {
   const test = getABTestById(testId);
   if (!test) return err('Test not found');
 
-  const result = forceConclude(test);
+  const result = forceConclude(test, judgeScoresByVariant());
   if (!result.ok) return result;
 
   upsertABTest(result.data);

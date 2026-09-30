@@ -4,6 +4,7 @@ import { TagAuditSection } from '@/components/modules/core-engine/sub_ability/ta
 import { SpellbookDataCtx } from '@/components/modules/core-engine/sub_ability/_shared/context';
 import type { SpellbookLiveData } from '@/components/modules/core-engine/sub_ability/_shared/types';
 import { computeTagAudit } from '@/lib/ability/tag-audit';
+import { buildSpellbookView } from '@/components/modules/core-engine/sub_ability/_shared/spellbookView';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
@@ -14,6 +15,7 @@ afterEach(cleanup);
 /** Minimal live-data context value; only the audit fields matter for this section. */
 function makeLiveData(over: Partial<SpellbookLiveData>): SpellbookLiveData {
   return {
+    ...buildSpellbookView({ live: null, appTags: [], entries: [] }),
     isLive: true, isSyncing: false, parsedAt: '2026-01-01T00:00:00Z', refresh: () => {},
     CORE_ATTRIBUTES: [], DERIVED_ATTRIBUTES: [], TAG_TREE: [], ABILITY_RADAR_DATA: [],
     TAG_DEP_NODES: [], TAG_DEP_EDGES: [], COOLDOWN_ABILITIES: [],

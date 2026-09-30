@@ -383,6 +383,8 @@ export type HarnessEvent =
   | { type: 'harness:area-failed'; areaId: string; iteration: number; reason: string }
   | { type: 'harness:checkpoint'; areaId: string; iteration: number; sha: string }
   | { type: 'harness:rollback'; areaId: string; iteration: number; toSha: string }
+  /** A fan-out point completed without a perceptual PASS: review it before its dependents are judged. */
+  | { type: 'harness:review-request'; areaId: string; iteration: number; dependents: string[]; reason: string }
   | { type: 'harness:guide-updated'; step: GuideStep }
   | { type: 'harness:learning'; learning: string }
   | { type: 'harness:completed'; plan: GamePlan; guide: GameBuildGuide }

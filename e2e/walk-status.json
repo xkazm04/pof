@@ -1,7 +1,8 @@
 {
-  "generatedAt": "2026-07-29T15:37:36.176Z",
+  "generatedAt": "2026-09-24T21:44:46.356Z",
   "walked": [
     "achievements",
+    "affixes",
     "ambient",
     "bestiary",
     "character-pipeline",
@@ -34,6 +35,6 @@
     "zone-map"
   ],
   "skipped": {
-    "items": "the lab renders the bespoke 13-step UI (not the 11-label registry pipeline); walked in depth by catalog-items-reference.spec.ts + linted by src/__tests__/catalog/items-spec-duality.test.ts"
+    "items": "the lab renders the UNION of both items specs (13 bespoke step UIs + the 5 registry-only labels), which the generic 11-label walk would not cover; walked in depth by catalog-items-reference.spec.ts + linted by src/__tests__/catalog/items-spec-duality.test.ts"
   }
 }

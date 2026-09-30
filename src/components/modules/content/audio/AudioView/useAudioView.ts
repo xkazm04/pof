@@ -137,12 +137,17 @@ export function useAudioView() {
   }, [newDocName, createDoc]);
 
   // ── Commit helpers ──
-  // These all use the THROWING `commitDoc`: their callers (the painter's gesture
+  // These all use the THROWING `commitDoc`: their callers (the painter tab's scene
   // buffer, the debounced text fields) hold the user's edit locally and must learn
   // that a write failed so they can keep it and offer a retry. `updateDoc` swallows
   // failures and is reserved for fire-and-forget bookkeeping (e.g. lastGeneratedAt).
 
-  /** One write for a whole painter gesture — zones and emitters together. */
+  /**
+   * The painter tab's ONE write — zones and emitters together. The canvas AND the
+   * property panels reach it through one op buffer (`useSceneBuffer`), which
+   * replays its ops onto the newest server copy, so the per-record patch writers
+   * that used to build from `activeDoc` (and revert a buffered drag) are gone.
+   */
   const commitScene = useCallback(async (next: { zones: AudioZone[]; emitters: SoundEmitter[] }) => {
     if (!activeDoc) return;
     await commitDoc({ id: activeDoc.id, zones: next.zones, emitters: next.emitters });
@@ -151,30 +156,6 @@ export function useAudioView() {
   const commitZones = useCallback(async (zones: AudioZone[]) => {
     if (!activeDoc) return;
     await commitDoc({ id: activeDoc.id, zones });
-  }, [activeDoc, commitDoc]);
-
-  const commitEmitters = useCallback(async (emitters: SoundEmitter[]) => {
-    if (!activeDoc) return;
-    await commitDoc({ id: activeDoc.id, emitters });
-  }, [activeDoc, commitDoc]);
-
-  /**
-   * One property-panel edit → one write of the whole zone array, through the
-   * THROWING path. Took a whole zone and `updateDoc` before, so every keystroke
-   * in the panel was a PUT whose failure vanished into `null`; the panel now
-   * buffers locally and hands over a patch on a real commit boundary, and needs
-   * the rejection to keep the user's value and offer a retry.
-   */
-  const commitZonePatch = useCallback(async (zoneId: string, patch: Partial<AudioZone>) => {
-    if (!activeDoc) return;
-    const zones = activeDoc.zones.map((z) => (z.id === zoneId ? { ...z, ...patch } : z));
-    await commitDoc({ id: activeDoc.id, zones });
-  }, [activeDoc, commitDoc]);
-
-  const commitEmitterPatch = useCallback(async (emitterId: string, patch: Partial<SoundEmitter>) => {
-    if (!activeDoc) return;
-    const emitters = activeDoc.emitters.map((e) => (e.id === emitterId ? { ...e, ...patch } : e));
-    await commitDoc({ id: activeDoc.id, emitters });
   }, [activeDoc, commitDoc]);
 
   const handleGenerateAll = useCallback(() => {
@@ -206,9 +187,6 @@ export function useAudioView() {
     if (!activeDoc) return;
     await commitDoc({ id: activeDoc.id, [key]: value });
   }, [activeDoc, commitDoc]);
-
-  const selectedZone = activeDoc?.zones.find((z) => z.id === selectedZoneId) ?? null;
-  const selectedEmitter = activeDoc?.emitters.find((e) => e.id === selectedEmitterId) ?? null;
 
   return {
     docs,
@@ -248,15 +226,10 @@ export function useAudioView() {
     handleCreateDoc,
     commitScene,
     commitZones,
-    commitEmitters,
-    commitZonePatch,
-    commitEmitterPatch,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,
     commitDescription,
     commitSetting,
-    selectedZone,
-    selectedEmitter,
   };
 }

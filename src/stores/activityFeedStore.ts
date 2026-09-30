@@ -44,6 +44,9 @@ interface ActivityFeedState {
   addEvent: (event: Omit<ActivityEvent, 'id' | 'timestamp' | 'dismissed'>) => void;
   dismissEvent: (id: string) => void;
   dismissAll: () => void;
+  /** Drop every event. Called by the project-flip owner (services/projectTransition):
+   *  events and their Fix prompts belong to the project that was open. */
+  clearEvents: () => void;
   toggleOpen: () => void;
   setOpen: (open: boolean) => void;
 }
@@ -80,6 +83,8 @@ export const useActivityFeedStore = create<ActivityFeedState>()(
         set((state) => ({
           events: state.events.map((e) => ({ ...e, dismissed: true })),
         })),
+
+      clearEvents: () => set({ events: [] }),
 
       toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
       setOpen: (open) => set({ isOpen: open }),

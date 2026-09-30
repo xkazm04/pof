@@ -1,5 +1,8 @@
 import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
+import { tagRequiredFields } from './requiredFields';
+import { REFERENCE_GAP, isDeclaredGap } from './markers';
+import { ELEMENTS_BY_PROFILE, elementsOf, resistanceKey } from '@/lib/catalog/canon/elements';
 
 /**
  * Resolve a field reference against a step's artifact data. A plain name (`gpuPct`) reads a
@@ -19,20 +22,99 @@ export function pickField(data: Record<string, unknown>, field: string): unknown
 }
 
 export function minLength(field: string, label: string, n: number): Checker {
-  return (data) => {
+  // Tagged so the produce prompt NAMES the text field it grades (`requiredFields.ts`).
+  return tagRequiredFields((data) => {
     const len = String(data[field] ?? '').length;
     const ok = len >= n;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${len} / ${n} chars`, ...(ok ? {} : { reason: `field "${field}" is ${len} characters, needs ≥ ${n}` }) };
-  };
+  }, { field, minChars: n });
 }
 
 export function fieldsPopulated(field: string, label: string, keys: string[]): Checker {
-  return (data) => {
+  // Tagged so the produce prompt can NAME the keys it will be graded on (`requiredFields.ts`).
+  return tagRequiredFields((data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
-    const missing = keys.filter((k) => obj[k] == null);
+    // A DECLARED gap ("not in the reference") is not a value — it must not read as populated.
+    const missing = keys.filter((k) => obj[k] == null || isDeclaredGap(obj[k]));
+    const gaps = missing.filter((k) => obj[k] != null);
     const ok = missing.length === 0;
-    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
-  };
+    const note = gaps.length ? ` (declared gap: ${gaps.join(', ')} — "${REFERENCE_GAP}")` : '';
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${keys.length - missing.length} / ${keys.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}${note}` }) };
+  }, { field, keys });
+}
+
+/**
+ * Each of `keys` inside `field` holds ONE number (/diablo W08, D27). Presence stays with {@link fieldsPopulated};
+ * this grades SHAPE only, so an absent key or a declared gap is left to it (one verdict per defect). Measured: five
+ * produced Stat Blocks held `damage` in three shapes (`damage.minimum`, `damage.standard.minimum`, …) and a
+ * consumer guessing the shape silently fell back to a C++ default.
+ */
+export function keysNumeric(field: string, label: string, keys: string[], canonical: Record<string, RegExp> = {}): Checker {
+  const names = Object.keys(canonical);
+  const shape = `each of ${keys.join(', ')} holds ONE number, or a range written exactly {minimum, maximum} (two numbers, minimum <= maximum) — no other object and no string; a value the source does not state is written "${REFERENCE_GAP}"`
+    + (names.length ? `; ${names.map((n) => `a ${n} value is named exactly "${n}" (one number)`).join('; ')}` : '');
+  return tagRequiredFields((data) => {
+    const obj = (data[field] ?? {}) as Record<string, unknown>;
+    const bad = keys.filter((k) => obj[k] != null && !isDeclaredGap(obj[k]) && statNumber(obj[k]) === undefined);
+    const misnamed = Object.keys(obj).flatMap((k) => names.filter((n) => k !== n && canonical[n].test(k)).map((n) => `${k} should be named "${n}"`));
+    const ok = bad.length === 0 && misnamed.length === 0;
+    const what = (v: unknown) => (Array.isArray(v) ? 'a list' : typeof v === 'object' ? 'an object' : `a ${typeof v}`);
+    const problems = [...bad.map((k) => `${k} is ${what(obj[k])}`), ...misnamed];
+    return {
+      label, tier: 'L0', status: ok ? 'pass' : 'pending',
+      detail: `${keys.length - bad.length} / ${keys.length} numeric${misnamed.length ? `, ${misnamed.length} misnamed` : ''}`,
+      ...(ok ? {} : { reason: `field "${field}": ${problems.join(', ')} — ${shape}` }),
+    };
+  }, { field, keys, shape });
+}
+
+/**
+ * Each present value in `field` names its UNIT in `field.units` (/diablo D30): an ingested monster's moveSpeed is
+ * 2.22 (tiles/s) and PoF's own is 300 (cm/s) — both bare numbers under one key until the unit travels with them.
+ * A declared gap or an absent value needs none. Composes with {@link keysNumeric} (shape) and fieldsPopulated.
+ */
+export function unitsDeclared(field: string, label: string, allowed: Record<string, readonly string[]>): Checker {
+  const keys = Object.keys(allowed);
+  const shape = `beside the values, "${field}.units" names each value's unit — ${keys.map((k) => `${k}: ${allowed[k].join(' | ')}`).join('; ')} (a value written "${REFERENCE_GAP}" needs no unit)`;
+  return tagRequiredFields((data) => {
+    const obj = (data[field] ?? {}) as Record<string, unknown>;
+    const units = (obj.units && typeof obj.units === 'object' ? obj.units : {}) as Record<string, unknown>;
+    const bad = keys.filter((k) => obj[k] != null && !isDeclaredGap(obj[k]) && !(typeof units[k] === 'string' && allowed[k].includes(units[k] as string)));
+    const ok = bad.length === 0;
+    return {
+      label, tier: 'L0', status: ok ? 'pass' : 'pending',
+      detail: `${keys.length - bad.length} / ${keys.length} units`,
+      ...(ok ? {} : { reason: `field "${field}": ${bad.map((k) => `${k} has ${units[k] == null ? 'no unit' : `unit "${String(units[k])}"`} (allowed: ${allowed[k].join(', ')})`).join('; ')} — ${shape}` }),
+    };
+  }, { field, keys, shape });
+}
+
+/**
+ * The ONE reader for a stat value (D27): a finite number, or the mean of a `{minimum, maximum}` range with no other
+ * keys. Anything else is `undefined` — a consumer must not guess a producer's invented nesting.
+ */
+export function statNumber(v: unknown): number | undefined {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length !== 2 || typeof o.minimum !== 'number' || typeof o.maximum !== 'number') return undefined;
+  if (!Number.isFinite(o.minimum) || !Number.isFinite(o.maximum) || o.minimum > o.maximum) return undefined;
+  return (o.minimum + o.maximum) / 2;
+}
+
+/**
+ * A per-element resistance profile, graded against the ELEMENT SET of the entity's canon profile
+ * (/diablo W03, D14): PoF's fire/ice/lightning/chaos, Diablo I's magic/fire/lightning. The keys are
+ * `<element>Res`; everything else behaves exactly like {@link fieldsPopulated}.
+ */
+export function resistancesPopulated(field: string, label: string): Checker {
+  const keysByProfile = Object.fromEntries(
+    Object.entries(ELEMENTS_BY_PROFILE).map(([p, els]) => [p, els.map(resistanceKey)]),
+  );
+  const checker: Checker = (data, ctx) =>
+    fieldsPopulated(field, label, elementsOf(ctx?.canonProfile).map(resistanceKey))(data, ctx);
+  return tagRequiredFields(checker, { field, keys: elementsOf().map(resistanceKey), keysByProfile });
 }
 
 /** Numeric ±% band. `field` may be a dot-path (see `pickField`) so a step can grade the very
@@ -125,7 +207,8 @@ export function selected(field: string, label: string): Checker {
  * missing field FAILS naming the offending index; the single-master path is unchanged.
  */
 export function materialShape(field: string, label: string): Checker {
-  return (data) => {
+  // Tagged with the single-master (default) shape's keys — a producer following them passes.
+  return tagRequiredFields((data) => {
     const obj = (data[field] ?? {}) as Record<string, unknown>;
     const masters = obj.parentMaterials;
     if (Array.isArray(masters)) {
@@ -147,7 +230,7 @@ export function materialShape(field: string, label: string): Checker {
     const missing = req.filter((k) => obj[k] == null);
     const ok = missing.length === 0;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${req.length - missing.length} / ${req.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
-  };
+  }, { field, keys: ['parentMaterial', 'textures'] });
 }
 
 /**
@@ -160,7 +243,7 @@ export function materialShape(field: string, label: string): Checker {
  * `pending` (nothing produced yet), never a false pass.
  */
 export function entriesHaveFields(field: string, label: string, keys: string[]): Checker {
-  return (data) => {
+  return tagRequiredFields((data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : null;
     if (arr == null) return { label, tier: 'L0', status: 'pending', detail: 'not an array', reason: `field "${field}" is not an array of entries` };
     if (arr.length === 0) return { label, tier: 'L0', status: 'pending', detail: '0 entries', reason: `field "${field}" is empty — nothing to check` };
@@ -174,8 +257,16 @@ export function entriesHaveFields(field: string, label: string, keys: string[]):
         return { label, tier: 'L0', status: 'fail', detail: `entry ${i} incomplete`, reason: `field "${field}"[${i}] missing: ${missing.join(', ')}` };
       }
     }
+    // A DECLARED gap ("not in the reference") is not a value — as in fieldsPopulated, it grades pending, never pass
+    // (/diablo W16: eight Skill Checks steps passed with every entry field written as the gap marker).
+    for (let i = 0; i < arr.length; i++) {
+      const gaps = keys.filter((k) => isDeclaredGap((arr[i] as Record<string, unknown>)[k]));
+      if (gaps.length) {
+        return { label, tier: 'L0', status: 'pending', detail: `entry ${i} declares gaps`, reason: `field "${field}"[${i}] missing: ${gaps.join(', ')} (declared gap — "${REFERENCE_GAP}")` };
+      }
+    }
     return { label, tier: 'L0', status: 'pass', detail: `${arr.length} entr${arr.length === 1 ? 'y' : 'ies'} × ${keys.length} field(s)` };
-  };
+  }, { field, shape: `every entry is an object with ${keys.join(', ')}` });
 }
 
 /**
@@ -222,9 +313,10 @@ export function maxWordsPerEntry(field: string, label: string, max: number): Che
 }
 
 export function minCount(field: string, label: string, n: number): Checker {
-  return (data) => {
+  // Tagged so the produce prompt NAMES the list it counts (`requiredFields.ts`).
+  return tagRequiredFields((data) => {
     const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
     const ok = arr.length >= n;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${arr.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${arr.length} item(s), needs ≥ ${n}` }) };
-  };
+  }, { field, minItems: n });
 }

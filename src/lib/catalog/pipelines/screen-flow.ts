@@ -220,6 +220,12 @@ registerCatalogPipeline({
           { catalogId: 'icon-sets',    entityId: 'iconset-abilities', role: 'screen-icon-family' },
         ],
       }),
+      contract: {
+        grantedBy: 'AARPGHUD owns THIS flow’s declared WBP_ widgets and manages them through UARPGHUDContext',
+        activatedBy: 'GameMode startup, THIS flow’s Enhanced Input actions, and declared game events call AARPGHUD push, pop, toggle, or show methods',
+        dependencies: ['hud-elements::<id> for EACH HUD widget embedded by THIS flow', 'input-schemes actions used by THIS flow’s transitions'],
+        verification: 'L2: every declared WBP_ asset exists under /Game/UI/ and UARPGHUDContext and UARPGInputModeComponent compile; L3: VSScreenFlowTest verifies every screen in THIS flow is reachable with the correct back stack',
+      },
       accept: allOf(
         graphValid('graph', 'Screens reachable + has a terminal/exit'),
         linksResolve(),
@@ -309,6 +315,12 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Input/IMC_Navigation'],
       }),
+      contract: {
+        grantedBy: 'UARPGInputModeComponent and AARPGHUD::HandleInput bind every Enhanced Input action THIS flow declares through its navigation mapping context',
+        activatedBy: 'each declared Enhanced Input action delegates through the player controller and UARPGInputModeComponent to the matching AARPGHUD transition',
+        dependencies: ['input-schemes action asset for EACH input THIS flow maps'],
+        verification: 'L2: THIS flow’s navigation mapping context exists and UARPGInputModeComponent compiles; L3: VSScreenFlowTest verifies every declared action triggers its matching transition',
+      },
       accept: allOf(
         minCount('inputMapping', '≥1 input mapping rule defined', 1),
         entriesHaveFields('inputMapping', 'every mapping carries action + binding + mode + transition', ['action', 'defaultBinding', 'inputMode', 'transition']),
@@ -445,6 +457,12 @@ registerCatalogPipeline({
           '/Game/UI/WBP_SettingsPanel',
         ],
       }),
+      contract: {
+        grantedBy: 'AARPGHUD and UARPGHUDContext create and stack every widget THIS flow declares from ProjectSettings ARPG HUDWidgetClasses references',
+        activatedBy: 'each declared game event or Enhanced Input action calls UARPGHUDContext::Push or Pop and creates the matching widget at its authored z-order',
+        dependencies: ['hud-elements::<id> for EACH HUD widget embedded by THIS flow', 'input-schemes actions that open or close THIS flow’s widgets'],
+        verification: 'L2: every declared WBP_ asset exists under /Game/UI/ and UARPGHUDContext compiles; L3: VSScreenFlowTest verifies each widget opens and closes with its declared z-order and input mode',
+      },
       accept: allOf(
         minCount('componentInventory', '≥1 screen widget component entry defined', 1),
         entriesHaveFields('componentInventory', 'every component carries screen + widget + zDepth + anchor', ['screen', 'widget', 'zDepth', 'anchor']),
@@ -716,6 +734,12 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/UI/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'AARPGHUD owns THIS flow’s root widget; UARPGHUDContext manages its declared screen stack and UARPGInputModeComponent applies the matching input mode',
+        activatedBy: 'GameMode startup and every declared input or game event push, pop, replace, or show the matching screen and restore game input when overlays close',
+        dependencies: ['hud-elements::<id> for EACH HUD widget embedded by THIS flow', 'input-schemes actions used by THIS flow’s transitions', 'icon-sets::<id> for THIS flow’s presentation icons'],
+        verification: 'L2: AARPGHUD, UARPGHUDContext, UARPGInputModeComponent, every declared WBP_ asset, and the navigation mapping context exist; L3: VSScreenFlowTest verifies THIS flow’s reachability, stack order, z-order, and input modes',
       },
       accept: allOf(
         minCount('assets', '≥3 UE screen flow assets packaged', 3),

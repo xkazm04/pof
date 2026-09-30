@@ -1,39 +1,28 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import {
-  CORE_ATTRIBUTES as STATIC_CORE_ATTRIBUTES,
-  DERIVED_ATTRIBUTES as STATIC_DERIVED_ATTRIBUTES,
-  TAG_TREE as STATIC_TAG_TREE,
-  ABILITY_RADAR_DATA as STATIC_ABILITY_RADAR_DATA,
-  TAG_DEP_NODES as STATIC_TAG_DEP_NODES,
-  TAG_DEP_EDGES as STATIC_TAG_DEP_EDGES,
-  COOLDOWN_ABILITIES as STATIC_COOLDOWN_ABILITIES,
-  TAG_AUDIT_CATEGORIES as STATIC_TAG_AUDIT_CATEGORIES,
-  TAG_USAGE_FREQUENCY as STATIC_TAG_USAGE_FREQUENCY,
-  TAG_DETAIL_MAP as STATIC_TAG_DETAIL_MAP,
-} from './data';
+import { seedSpellbookEntries } from '@/lib/catalog/seed-spellbook';
+import { buildSpellbookView } from './spellbookView';
 import type { SpellbookLiveData } from './types';
 
 export const SpellbookDataCtx = createContext<SpellbookLiveData | null>(null);
 
-export function useSpellbookData(): SpellbookLiveData {
-  const ctx = useContext(SpellbookDataCtx);
-  if (!ctx) {
-    return {
-      isLive: false, isSyncing: false, parsedAt: null, refresh: () => {},
-      CORE_ATTRIBUTES: STATIC_CORE_ATTRIBUTES,
-      DERIVED_ATTRIBUTES: STATIC_DERIVED_ATTRIBUTES,
-      TAG_TREE: STATIC_TAG_TREE,
-      ABILITY_RADAR_DATA: STATIC_ABILITY_RADAR_DATA,
-      TAG_DEP_NODES: STATIC_TAG_DEP_NODES,
-      TAG_DEP_EDGES: STATIC_TAG_DEP_EDGES,
-      COOLDOWN_ABILITIES: STATIC_COOLDOWN_ABILITIES,
-      TAG_AUDIT_CATEGORIES: STATIC_TAG_AUDIT_CATEGORIES,
-      TAG_USAGE_FREQUENCY: STATIC_TAG_USAGE_FREQUENCY,
-      TAG_AUDIT: null,
-      TAG_DETAIL_MAP: STATIC_TAG_DETAIL_MAP,
-    };
+const noop = () => {};
+let fallback: SpellbookLiveData | null = null;
+
+/**
+ * The ONE no-provider fallback: the same `buildSpellbookView` projection over the
+ * seeded catalog with no live source. Built once, on first use, so every consumer
+ * outside a provider gets the same object identity (stable memo deps).
+ */
+function staticFallback(): SpellbookLiveData {
+  if (!fallback) {
+    const view = buildSpellbookView({ live: null, appTags: [], entries: seedSpellbookEntries() });
+    fallback = { ...view, isSyncing: false, refresh: noop };
   }
-  return ctx;
+  return fallback;
+}
+
+export function useSpellbookData(): SpellbookLiveData {
+  return useContext(SpellbookDataCtx) ?? staticFallback();
 }

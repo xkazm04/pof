@@ -1,7 +1,7 @@
 import {
   STATUS_ERROR, ACCENT_EMERALD, ACCENT_PURPLE, RARITY_COLORS,
 } from '@/lib/chart-colors';
-import { Package, FlaskConical, TrendingUp, ListFilter } from 'lucide-react';
+import { Package, FlaskConical, TrendingUp, ListFilter, Activity } from 'lucide-react';
 import type { LoadoutSlot } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
 import { EXPANDED_ITEMS } from './data-items';
@@ -9,8 +9,6 @@ import { EXPANDED_ITEMS } from './data-items';
 /* ── Re-exports from split data files ─────────────────────────────────── */
 
 export { RARITY_COLORS };
-export { COMPARABLE_ITEMS, computeEffectiveDPS } from './data-comparison';
-export type { ComparableItem, ComparisonStat } from './data-comparison';
 export {
   SAMPLE_RECIPE, CRYSTAL_STAFF_SOURCES,
   INVENTORY_GROUPS, INVENTORY_TOTAL, INVENTORY_USED, INVENTORY_GOLD_VALUE,
@@ -31,7 +29,7 @@ export const ACCENT = ACCENT_EMERALD;
 
 /* ── Subtab types & definitions ──────────────────────────────────────── */
 
-export type ItemCatalogSubtab = 'features' | 'catalog-gear' | 'economy-sourcing' | 'mechanics-scaling' | 'loot-filter';
+export type ItemCatalogSubtab = 'features' | 'catalog-gear' | 'economy-sourcing' | 'mechanics-scaling' | 'economy-sim' | 'loot-filter';
 
 export interface ItemCatalogSubtabDef {
   key: ItemCatalogSubtab;
@@ -45,6 +43,7 @@ export const SUBTABS: ItemCatalogSubtabDef[] = [
   { key: 'catalog-gear', label: 'Catalog & Gear', icon: Package, narrative: 'Browse Items', subtitle: 'Item grid, gear loadout, affix slots & trading card preview' },
   { key: 'economy-sourcing', label: 'Economy & Sourcing', icon: FlaskConical, narrative: 'Track Economy', subtitle: 'Crafting recipes, drop sources, inventory breakdown & rarity distribution' },
   { key: 'mechanics-scaling', label: 'Mechanics & Scaling', icon: TrendingUp, narrative: 'Understand Scaling', subtitle: 'Power budgets, affix probability trees & stat scaling curves' },
+  { key: 'economy-sim', label: 'Economy Sim', icon: Activity, narrative: 'Stress-test Loot', subtitle: 'Monte Carlo loot economy: power, rarity, affix-pool and upgrade verdicts with endgame coverage' },
   { key: 'loot-filter', label: 'Loot Filter', icon: ListFilter, narrative: 'Filter Drops', subtitle: 'Author Show/Hide/Highlight rules, preview them live, and export to a UE DataTable' },
 ];
 

@@ -1,100 +1,24 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/constants';
-import { useSuspendableEffect } from '@/hooks/useSuspend';
 import {
   Play, Square, Loader2, RotateCcw, Zap, ChevronDown, ChevronRight,
 } from 'lucide-react';
-import { useProjectStore } from '@/stores/projectStore';
-import { apiFetch } from '@/lib/api-utils';
+import { useBatchReview } from '@/hooks/useBatchReview';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, statusBg, statusBorder, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
 import { formatDurationBetween } from '@/lib/format';
-import type { BatchReviewState } from '@/types/batch-review';
 import { ACCENT } from './constants';
 import { ModuleRow } from './ModuleRow';
 
 export function BatchReviewPanel() {
-  const projectPath = useProjectStore((s) => s.projectPath);
-  const projectName = useProjectStore((s) => s.projectName);
-  const ueVersion = useProjectStore((s) => s.ueVersion);
-  const [batch, setBatch] = useState<BatchReviewState | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Poll / start / abort / clear live in the shared hook: the Quality tab's scoped
+  // stale review observes the same in-memory batch through it.
+  const { batch, isRunning, isStarting, error, start, abort: abortBatch, clear: clearBatch } = useBatchReview();
   const [expanded, setExpanded] = useState(true);
-  // Monotonic poll token: under a slow server an earlier poll can resolve after
-  // a later one — only the newest issued poll may commit its snapshot.
-  const pollTokenRef = useRef(0);
-
-  // Poll batch status
-  const pollStatus = useCallback(async () => {
-    const token = ++pollTokenRef.current;
-    try {
-      const data = await apiFetch<{ batch: BatchReviewState | null }>('/api/feature-matrix/batch-review');
-      if (token !== pollTokenRef.current) return; // a newer poll already resolved
-      setBatch(data.batch);
-    } catch { /* silent */ }
-  }, []);
-
-  const isRunning = batch?.status === 'running';
-
-  // Initial fetch (+ refetch on resume). Suspend-aware.
-  useSuspendableEffect(() => { pollStatus(); }, [pollStatus]);
-
-  // Own the poll interval from the OBSERVED running state, not the start
-  // action. Previously the interval was created only inside startBatch, so a
-  // tab switch / remount / page reload during a running batch left the panel
-  // frozen at the last-seen percent forever. Driving it off batch.status means
-  // the poll always resumes when a running batch is observed.
-  useSuspendableEffect(() => {
-    if (!isRunning) return;
-    const id = setInterval(pollStatus, 3000);
-    return () => clearInterval(id);
-  }, [isRunning, pollStatus]);
-
-  const startBatch = useCallback(async () => {
-    setIsStarting(true);
-    setError(null);
-    try {
-      const appOrigin = window.location.origin;
-      await apiFetch('/api/feature-matrix/batch-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appOrigin, projectPath, projectName, ueVersion }),
-      });
-      // Fetch the now-running batch; the interval effect arms itself off the
-      // resulting `running` status.
-      await pollStatus();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start');
-    } finally {
-      setIsStarting(false);
-    }
-  }, [pollStatus]);
-
-  const abortBatch = useCallback(async () => {
-    try {
-      await apiFetch('/api/feature-matrix/batch-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'abort' }),
-      });
-    } catch {
-      // The batch may have finished server-side between render and click (the
-      // abort then 400s). Fall through to pollStatus so the UI still refreshes
-      // instead of staying stuck on a stale "Reviewing…".
-    } finally {
-      await pollStatus();
-    }
-  }, [pollStatus]);
-
-  const clearBatch = useCallback(async () => {
-    try {
-      await apiFetch('/api/feature-matrix/batch-review', { method: 'DELETE' });
-      setBatch(null);
-    } catch { /* silent */ }
-  }, []);
+  // "Review All Modules" = no moduleIds: every module with definitions.
+  const startBatch = () => { void start(); };
 
   // Compute progress
   const completed = batch?.modules.filter(m => m.status === 'completed').length ?? 0;

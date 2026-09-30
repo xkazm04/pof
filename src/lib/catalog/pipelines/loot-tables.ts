@@ -208,6 +208,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'magicFind',
+        grantedBy: 'UARPGLootDropComponent reads the quantity and rarity modifiers THIS table supports from UARPGAttributeSet when resolving a drop',
+        activatedBy: 'the declared modifiers are queried at the moment THIS table’s post-kill drop roll runs',
+        dependencies: ['characters (the player attribute set)', 'items (the affix pool used for any declared smart weighting)'],
+        verification: 'L2: UARPGAttributeSet declares every drop modifier THIS table uses; L3: VSLootDistributionTest — each declared modifier changes the relevant distribution in the declared direction over the test roll count',
+      },
       accept: allOf(
         fieldsPopulated('magicFind', 'IIQ / IIR / pity / smartWeight populated', [
           'iiq',
@@ -321,6 +328,16 @@ registerCatalogPipeline({
       },
       // Grade the displayed manifest (`pools`) as well as the link count — the View shows the
       // currency + unique pools, so both must be authored, not just a resolvable link.
+      contract: {
+        field: 'pools',
+        grantedBy: 'UARPGLootDropComponent reads THIS table’s FARPGLootTableRow currencyPool and uniquePool from DT_LootTables row "{slug}"',
+        activatedBy: 'AARPGEnemyCharacter::OnDeath broadcasts to the drop component, which resolves EACH pool THIS table declares',
+        dependencies: [
+          'currencies::<id> for EACH currency in THIS table’s currency pool',
+          'items::<id> for EACH item in THIS table’s unique pool',
+        ],
+        verification: 'L2: FARPGLootTableRow compiled in Source/PoF/, DT_LootTables row "{slug}" seeded, and every linked currency or item id resolves; L3: VSLootDistributionTest — THIS table resolves every declared pool over the test kill count',
+      },
       accept: allOf(
         fieldsPopulated('pools', 'Currency pool + unique pool authored', ['currencyPool', 'uniquePool']),
         minCount('links', '≥1 currency or item pool link declared', 1),
@@ -387,6 +404,12 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Items/DT_Items'],
       }),
+      contract: {
+        grantedBy: 'UARPGLootDropComponent selects a base from THIS table’s FARPGLootTableRow.itemBases using its declared eligibility and weight rules',
+        activatedBy: 'THIS table’s on-death drop roll selects an eligible item base before its rarity and affix rolls',
+        dependencies: ['items::<id> for EACH item base THIS loot table can select'],
+        verification: 'L2: every linked item base resolves in DT_Items; L3: VSLootDistributionTest — every dropped base belongs to THIS table’s eligible set for the rolled item level',
+      },
       accept: allOf(
         minCount('bases', '≥1 item base linked from the items catalog', 1),
         linksResolve(),
@@ -542,6 +565,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/LootSystem/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGLootDropComponent on the owning drop source reads FARPGLootTableRow from DT_LootTables row "{slug}"',
+        activatedBy: 'the owning drop source’s declared completion or death event calls UARPGLootDropComponent::ExecuteDrop, which resolves THIS table’s bases, rarity, affixes, currencies, and uniques',
+        dependencies: [
+          'items::<id> for EACH item base or unique pool entry THIS table declares',
+          'currencies::<id> for EACH currency pool entry THIS table declares',
+          '<catalog>::<id> for EACH source entity bound to THIS loot table',
+        ],
+        verification: 'L2: FARPGLootTableRow and UARPGLootDropComponent compile in Source/PoF/, DT_LootTables row "{slug}" is seeded, and every linked id resolves; L3: VSLootDistributionTest — THIS table’s observed distribution matches its declared odds within the test tolerance',
       },
       accept: allOf(
         minCount('assets', '≥2 UE assets packaged', 2),

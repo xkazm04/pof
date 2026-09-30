@@ -149,6 +149,16 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/Economy/DT_Currencies'],
       }),
+      contract: {
+        field: 'rules',
+        grantedBy: 'UARPGWalletComponent::AddCurrency on the player pawn is called by every faucet THIS currency declares; SpendCurrency is called by every declared sink',
+        activatedBy: 'each kill, quest, sale, item use, vendor purchase, repair, crafting operation, or other event declared for THIS currency invokes its corresponding wallet transaction',
+        dependencies: [
+          '<catalog>::<id> for EACH faucet or sink entity THIS currency names',
+          'loot-tables for any drop source and crafting-recipes or vendors for any declared spend path',
+        ],
+        verification: 'L2: FARPGCurrencyDef and UARPGWalletComponent::AddCurrency and SpendCurrency compile in Source/PoF/; L3: VSCurrencyWalletTest — every faucet and sink declared by {name} changes its balance correctly and its cap is enforced when present',
+      },
       accept: allOf(
         fieldsPopulated('rules', 'kind / faucets / sinks / cap / conversionNote populated', [
           'kind',
@@ -265,6 +275,15 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_Wallet'],
       }),
+      contract: {
+        field: 'ui',
+        grantedBy: 'AARPGHUD spawns WBP_Wallet on player pawn possession and binds its slot for THIS currency',
+        activatedBy: 'UARPGWalletComponent::OnCurrencyChanged calls WBP_Wallet::UpdateDisplay after every AddCurrency or SpendCurrency transaction for THIS currency',
+        dependencies: [
+          'hud-elements (the HUD anchor and slot contract used by WBP_Wallet)',
+        ],
+        verification: 'L2: WBP_Wallet exists, AARPGHUD spawns it, and UARPGWalletComponent::OnCurrencyChanged compiles; L3: VSCurrencyWalletTest — earning and spending {name} updates its displayed balance in PIE',
+      },
       accept: allOf(
         fieldsPopulated('ui', 'Wallet widget + format + position + hudBinding populated', [
           'widget',
@@ -343,6 +362,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Economy/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGWalletComponent reads this currency’s FARPGCurrencyDef row from DT_Currencies and exposes AddCurrency and SpendCurrency to every declared faucet and sink',
+        activatedBy: 'each source and spend event THIS currency declares performs its wallet transaction and emits OnCurrencyChanged for WBP_Wallet',
+        dependencies: [
+          '<catalog>::<id> for EACH faucet or sink entity THIS currency declares',
+          'loot-tables for declared drop weights',
+          'vendors and crafting-recipes for declared transaction paths',
+        ],
+        verification: 'L2: FARPGCurrencyDef and UARPGWalletComponent compile in Source/PoF/ and this currency’s DT_Currencies row is seeded; L3: VSCurrencyWalletTest — {name} can be earned, spent, capped when declared, and reflected in the wallet UI',
       },
       accept: allOf(
         minCount('assets', 'All UE assets packaged (≥4)', 4),

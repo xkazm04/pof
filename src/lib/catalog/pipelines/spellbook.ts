@@ -1,11 +1,19 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, entriesHaveFields } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
-import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
+import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
-import { powerWithinTierTarget, sumReconciles, arithmeticReconciles } from '../acceptance/invariants';
+import { powerWithinTierTarget } from '../acceptance/invariants';
+import { cooldownOrResourceGate, hitRateFromLimiter } from '../acceptance/cadenceCheckers';
+import {
+  declaredComponentsReconcile,
+  entryFieldsRequiredWhen,
+  fieldsRequiredWhen,
+  whenFieldIs,
+  whenListIncludes,
+} from '@/lib/catalog/acceptance/conditionalCheckers';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
@@ -151,16 +159,13 @@ registerCatalogPipeline({
       label: 'Effect Logic',
       view: {
         kind: 'table',
-        field: 'effect',
+        field: 'effects',
         columns: [
+          { key: 'kind' },
+          { key: 'target' },
+          { key: 'value' },
           { key: 'damageType' },
-          { key: 'baseDamage' },
-          { key: 'manaCost' },
-          { key: 'cooldown', unit: 's' },
-          { key: 'critChancePct', label: 'critChance', unit: '%' },
-          { key: 'critMulti', unit: '×' },
-          { key: 'stackingBucket' },
-          { key: 'onHitIgnite' },
+          { key: 'statusId' },
         ],
       },
       produce: (e: LabEntity) => {
@@ -189,23 +194,10 @@ registerCatalogPipeline({
         return {
           data: {
             effect: {
-              damageType: 'Fire',             // real enum: Fire / Ice / Lightning / Physical / Chaos
-              baseDamage,                     // 35 flat fire added — the base+added bucket (§3)
-              stackingBucket: 'added',        // feeds the "Base + Added" layer before increased/more
+              abilityId: `GA_${s}`,
+              activation: 'active cast via granted ability tag',
               manaCost,                       // 20 mana on activation
               cooldown,                       // 3.0 s
-              critChancePct,                  // 5% base crit
-              critMulti,                      // ×2.5 on crit (§3: base = +150%)
-              onHitIgnite: {
-                // Routed through GE_<slug>_ApplyBurning → GE_Gen_Burning (status-effects::status-burning)
-                linkedEffect: 'status-effects::status-burning',
-                state_tag: 'State.Burning',
-                tickDamage: igniteTickDmg,    // ≈ -3.9375 fire / 0.5 s
-                period: ignitePeriod,
-                duration: igniteDuration,
-                stacking: 'highest',          // §5c: strongest instance only, refresh on re-apply
-                sourceDamageType: 'Fire',
-              },
               applicationType: 'Instant',     // impact hit is instant; ignite is periodic via GE_Gen_Burning
               targetingShape: 'single-target-projectile',
               neverMisses: true,              // spells skip accuracy/evasion (§3)
@@ -231,16 +223,40 @@ registerCatalogPipeline({
                   `L3: VSGen${s}EffectTest — GA activates, Health delta ≈ -35 fire, ` +
                   'State.Burning applied, Mana reduced by 20, cooldown blocks re-activation < 3s',
               },
-              // Formula annotation (audit trail for balance review)
-              formulaAnnotation: {
-                model: 'added → increased → more (ARPG-LAWS §3)',
-                baseAddedDamage: baseDamage,
-                increasedLayer: 'Σ(increasedFireDamage%) sums into one multiplier — gear/passive contributions',
-                moreLayer: 'each support gem/conditional "more%" is its own multiplier',
-                critFormula: 'effectiveCrit = baseCrit × (1 + increasedCritChance%), capped 95%; on crit ×2.5',
+            },
+            effects: [
+              {
+                kind: 'damage',
+                target: 'hit-target',
+                value: baseDamage,
+                damageType: 'Fire',
+                stackingBucket: 'added',
+                critChancePct,
+                critMulti,
+                neverMisses: true,
+                formulaAnnotation: {
+                  model: 'added → increased → more (ARPG-LAWS §3)',
+                  baseAddedDamage: baseDamage,
+                  increasedLayer: 'Σ(increasedFireDamage%) sums into one multiplier — gear/passive contributions',
+                  moreLayer: 'each support gem/conditional "more%" is its own multiplier',
+                  critFormula: 'effectiveCrit = baseCrit × (1 + increasedCritChance%), capped 95%; on crit ×2.5',
+                },
+              },
+              {
+                kind: 'status',
+                target: 'hit-target',
+                value: igniteTickDmg,
+                statusId: 'status-effects::status-burning',
+                linkedEffect: 'status-effects::status-burning',
+                state_tag: 'State.Burning',
+                tickDamage: igniteTickDmg,    // ≈ -3.9375 fire / 0.5 s
+                period: ignitePeriod,
+                duration: igniteDuration,
+                stacking: 'highest',          // §5c: strongest instance only, refresh on re-apply
+                sourceDamageType: 'Fire',
                 igniteFormula: `tickDmg = -(baseDamage × ${igniteRatio} / ${igniteTicks}) ≈ ${igniteTickDmg.toFixed(4)} fire/tick`,
               },
-            },
+            ],
             // top-level baseDamage for balance checker
             baseDamage,
             links: [
@@ -260,12 +276,26 @@ registerCatalogPipeline({
           ],
         };
       },
+      contract: {
+        field: 'effect',
+        grantedBy: 'UAbilitySystemComponent::GiveAbility grants GA_{slug} during AARPGCharacterBase::InitAbilitySystemComponent, with its slot assigned from DT_GeneratedAbilities',
+        activatedBy: 'THIS ability’s declared Enhanced Input action calls UARPGAbilityInputComponent::TryActivateAbilityByTag; AI users pass GA_{slug} through BTTask_UseAbility',
+        dependencies: [
+          'UARPGAttributeSet attributes consumed or modified by THIS ability',
+          'ARPGDamageExecution when THIS ability deals damage',
+          'status-effects::<id> for each status THIS ability applies',
+          'vfx::<id> for each effect THIS ability triggers',
+        ],
+        verification: 'L2: GA_{slug} compiles in Source/PoF/Abilities/ and its DT_GeneratedAbilities row is seeded; L3: THIS ability’s functional test verifies activation, costs, effects, cooldown, and every declared dependency',
+      },
       accept: allOf(
-        fieldsPopulated(
-        'effect',
-        'Effect rules complete (damageType / baseDamage / manaCost / cooldown / critChancePct / critMulti / onHitIgnite)',
-        ['damageType', 'baseDamage', 'manaCost', 'cooldown', 'critChancePct', 'critMulti', 'onHitIgnite'],
-      ),
+        fieldsPopulated('effect', 'Ability identity and activation declared', ['abilityId', 'activation']),
+        minCount('effects', 'At least one ability effect is declared', 1),
+        entriesHaveFields('effects', 'Every effect carries kind / target / value', ['kind', 'target', 'value']),
+        entryFieldsRequiredWhen('effects', 'Damage effects declare their damage type', 'kind', ['damage'], ['damageType']),
+        entryFieldsRequiredWhen('effects', 'Status effects declare the applied status', 'kind', ['status'], ['statusId']),
+        // /diablo W12 (D4): a cooldown, or a DECLARED resource gate (Diablo I has no cooldowns — mana gates casting).
+        cooldownOrResourceGate('effect', 'Cast gate stated (cooldown, or gatedBy "resource" with a mana cost)'),
         linksResolve(),
         wiringContractSound('effect'),
       ),
@@ -308,9 +338,19 @@ registerCatalogPipeline({
           },
         },
       }),
-      accept: fieldsPopulated('targeting', 'Targeting complete (shape / range / requiresLoS / projectileSpeed)', [
-        'shape', 'range', 'requiresLoS', 'projectileSpeed',
-      ]),
+      accept: allOf(
+        fieldsPopulated('targeting', 'Targeting complete (shape / range / requiresLoS)', [
+          'shape', 'range', 'requiresLoS',
+        ]),
+        fieldsRequiredWhen(
+          'targeting',
+          'Projectile targeting declares projectileSpeed',
+          'shape',
+          ['projectile'],
+          ['projectileSpeed'],
+          'includes',
+        ),
+      ),
     },
 
     // ── 4. Balance ────────────────────────────────────────────────────────────
@@ -326,8 +366,8 @@ registerCatalogPipeline({
         kind: 'chart',
         variant: 'bars',
         field: 'balance',
-        rows: [{ key: 'sustainedDPS', label: 'Sustained' }, { key: 'tierTarget', label: 'Tier target' }, { key: 'hitDPS', label: 'Hit DPS' }],
-        highlightKey: 'sustainedDPS',
+        rows: [{ key: 'normalizedPower', label: 'Normalized power' }, { key: 'tierTarget', label: 'Tier target' }, { key: 'hitDPS', label: 'Hit DPS' }],
+        highlightKey: 'normalizedPower',
         max: 24,
       },
       produce: (e: LabEntity) => {
@@ -356,11 +396,13 @@ registerCatalogPipeline({
         return {
           data: {
             balance: {
+              kind: 'damage',
               baseDamage,
               cooldown,
               hitDPS: parseFloat(hitDPS.toFixed(3)),
               igniteDPS,
-              sustainedDPS: parseFloat(sustainedDPS.toFixed(3)),
+              components: ['hitDPS', 'igniteDPS'],
+              normalizedPower: parseFloat(sustainedDPS.toFixed(3)),
               tierTarget,
               note:
                 `Burst hit DPS = baseDamage(${baseDamage}) / cooldown(${cooldown}s) = ${hitDPS.toFixed(3)} fire DPS. ` +
@@ -372,20 +414,39 @@ registerCatalogPipeline({
                 `Within tier-100 power envelope per canon proj-balance.`,
               manaCostSustainNote: 'Int-build baseline: ~60–80 mana at level 20; 20 mana/cast is ~25–33% pool per cast — intentional pressure.',
             },
-            // top-level for withinPercent checker
-            sustainedDPS: parseFloat(sustainedDPS.toFixed(3)),
           },
         };
       },
-      // tier target 19.5, ±20% band = 15.6–23.4
       // Content invariants: the headline DPS must be the SUM of its declared components,
       // the burst component must equal baseDamage/cooldown, and the total must land on the
       // tier target the artifact declares (canon ±10%) — not just near a literal.
       accept: allOf(
-        sumReconciles('balance.sustainedDPS', 'balance', ['hitDPS', 'igniteDPS'], 'sustainedDPS = hitDPS + igniteDPS'),
-        arithmeticReconciles('balance', { result: 'hitDPS', op: 'quotient', operands: ['baseDamage', 'cooldown'] }, 'hitDPS = baseDamage / cooldown'),
-        powerWithinTierTarget('balance.sustainedDPS', 'Sustained DPS within canon ±10% of the declared tier target', 'balance.tierTarget'),
-        withinPercent('sustainedDPS', 'Combined fire DPS within ±20% of tier target (19.5)', 19.5, 20),
+        // tierTarget is proj-balance LAW (powerWithinTierTarget below falls back to the canon target): it is required only where
+        // that law is in force — a Diablo spell has no tier target and grades UNGRADED there, not pending (/diablo W20, D-B7).
+        fieldsPopulated('balance', 'Normalized balance score populated', ['kind', 'normalizedPower']),
+        fieldsRequiredWhen('balance', 'Damaging abilities declare their component equation', 'kind', ['damage'], ['components']),
+        whenFieldIs(
+          'balance',
+          'kind',
+          ['damage'],
+          declaredComponentsReconcile('balance', 'normalizedPower', 'components', 'Normalized power = declared damage components'),
+          'Damage component arithmetic',
+        ),
+        // /diablo W12 (D4): the binding limiter (longest of cooldown / castTime / manaCost÷regen) — cooldown-only is unchanged.
+        whenFieldIs(
+          'balance',
+          'kind',
+          ['damage'],
+          whenListIncludes(
+            'balance',
+            'components',
+            'hitDPS',
+            hitRateFromLimiter('balance', 'hitDPS = baseDamage / the binding cast interval'),
+            'Hit cadence applies only when hitDPS is declared',
+          ),
+          'Hit cadence applies only to damaging abilities',
+        ),
+        powerWithinTierTarget('balance.normalizedPower', 'Normalized power within canon ±10% of the declared tier target', 'balance.tierTarget'),
       ),
     },
 
@@ -481,32 +542,36 @@ registerCatalogPipeline({
         const s = slug(e.name);
         return {
           data: {
-            vfx: {
-              castGlow: {
+            vfx: [
+              {
+                node: 'castGlow',
                 asset: `NS_${s}_CastGlow`,
                 trigger: `AnimNotify_${s}CastStart (windup frame 0)`,
                 lod: 'full / medium-50% / culled at 3000cm',
                 note: 'Warm orange glow around caster hand during windup — restrained, no screen-wide bloom',
               },
-              projectile: {
+              {
+                node: 'projectile',
                 asset: `NS_${s}_Projectile`,
                 trigger: `AnimNotify_${s}Release → projectile actor attaches NS at spawn`,
                 lod: 'full / medium-50% / culled at 4000cm',
                 note: 'Rolling fire sphere with heat-shimmer; additive blend capped at vfx-budget ~0.48ms (canon vfx-budget)',
               },
-              impact: {
+              {
+                node: 'impact',
                 asset: 'NS_FireImpactBurst',  // shared presentation asset: vfx::vfx-fire-impact
                 trigger: 'Projectile OnHit → SpawnSystemAtLocation(NS_FireImpactBurst)',
                 catalogLink: 'vfx::vfx-fire-impact',
                 lod: 'full / medium-50% / culled at 2000cm',
                 note: 'Reuses the shared fire impact burst — not bespoke per ability (canon shared-vfx principle)',
               },
-              burningDoT: {
+              {
+                node: 'burningDoT',
                 asset: `NS_Burning_VFX`,    // keyed off State.Burning tag (canon arpg-status-tag-identity)
                 trigger: 'State.Burning tag applied — Ability System Component notifies the VFX component',
                 note: 'VFX keys off State.Burning, not the source ability. Lives in status-effects::status-burning packaging.',
               },
-            },
+            ],
             links: [
               { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'impact-vfx' },
             ],
@@ -522,9 +587,8 @@ registerCatalogPipeline({
         };
       },
       accept: allOf(
-        fieldsPopulated('vfx', 'VFX entries populated (castGlow / projectile / impact)', [
-        'castGlow', 'projectile', 'impact',
-      ]),
+        minCount('vfx', 'At least one VFX binding is declared', 1),
+        entriesHaveFields('vfx', 'Every VFX binding carries asset / trigger', ['asset', 'trigger']),
         linksResolve(),
       ),
     },
@@ -681,6 +745,18 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Abilities/Generated/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UAbilitySystemComponent::GiveAbility grants GA_{slug} during AARPGCharacterBase::InitAbilitySystemComponent, with data-driven slot assignment from DT_GeneratedAbilities',
+        activatedBy: 'THIS ability’s declared input action or AI BTTask_UseAbility activates GA_{slug} when its declared targeting, resource, and cooldown conditions pass',
+        dependencies: [
+          'UARPGAttributeSet attributes consumed or modified by THIS ability',
+          'ARPGDamageExecution when THIS ability deals damage',
+          'status-effects::<id> for each status THIS ability applies',
+          'vfx::<id> for each effect THIS ability triggers',
+          'icon-sets::<id> for THIS ability’s icon family',
+        ],
+        verification: 'L2: GA_{slug}, FARPGAbilityCatalogRow, and the Source/PoF/ ability framework compile and the DT_GeneratedAbilities row is seeded; L3: THIS ability’s functional test verifies its declared activation path, costs, effects, cooldown, and dependencies',
       },
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged (GA + GEs + icon + DT row)', 4),

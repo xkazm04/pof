@@ -8,6 +8,8 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
+import { useBatchReview } from '@/hooks/useBatchReview';
+import { selectStaleModuleIds } from '@/lib/evaluator/stale-review-plan';
 import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
 import { countAggregateRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
 import type { SubModuleId } from '@/types/modules';
@@ -66,6 +68,11 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
     refreshAggregates();
     fetchHistory();
   }, [refreshAggregates, fetchHistory]);
+
+  // The review actions default to the shared batch route (the only mount passes no
+  // props): scoped to the stale set or one module, observed live, and the roll-up is
+  // re-derived once when the batch settles.
+  const review = useBatchReview({ onSettled: fetchData });
 
   const isLoading = aggLoading || historyLoading;
   const error = aggError ?? historyError;
@@ -128,15 +135,11 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
     [cells],
   );
 
-  // Stale modules
-  const staleModules = useMemo(
-    () =>
-      cells.filter((c) => {
-        if (c.lastReviewedAt === null) return true; // never reviewed
-        return (c.daysSinceReview ?? Infinity) > customStaleDays;
-      }),
-    [cells, customStaleDays],
-  );
+  // Stale modules: never reviewed, or older than the threshold (heatmap order)
+  const staleModules = useMemo(() => {
+    const stale = new Set(selectStaleModuleIds(cells, customStaleDays, Date.now()));
+    return cells.filter((c) => stale.has(c.moduleId));
+  }, [cells, customStaleDays]);
 
   const overallQuality = useMemo(() => {
     const withQuality = cells.filter((c) => c.avgQuality !== null);
@@ -147,11 +150,15 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
   const overallPct = totals.total > 0 ? Math.round((totals.implemented / totals.total) * 100) : 0;
 
+  const reviewBusy = isBatchReviewing || review.isStarting || review.isRunning;
+  const reviewModule = onReviewModule ?? ((moduleId: SubModuleId) => { void review.start([moduleId]); });
+
   const handleBatchReview = async () => {
-    if (!onBatchReview || staleModules.length === 0) return;
+    if (reviewBusy || staleModules.length === 0) return;
+    const ids = staleModules.map((m) => m.moduleId);
     setIsBatchReviewing(true);
     try {
-      await onBatchReview(staleModules.map((m) => m.moduleId));
+      await (onBatchReview ? onBatchReview(ids) : review.start(ids));
     } finally {
       setIsBatchReviewing(false);
     }
@@ -272,6 +279,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
         selectedModule={selectedModule}
         customStaleDays={customStaleDays}
         playEntrance={playEntrance}
+        batch={review.batch}
         fetchData={fetchData}
         setHoveredModule={setHoveredModule}
         setSelectedModule={setSelectedModule}
@@ -280,7 +288,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
       <ModuleDetailPanel
         selected={selected}
         historyMap={historyMap}
-        onReviewModule={onReviewModule}
+        onReviewModule={reviewModule}
+        reviewDisabled={reviewBusy}
       />
 
       {worstModules.length > 0 && (
@@ -291,9 +300,9 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
         staleModules={staleModules}
         customStaleDays={customStaleDays}
         setCustomStaleDays={setCustomStaleDays}
-        onBatchReview={onBatchReview}
         handleBatchReview={handleBatchReview}
-        isBatchReviewing={isBatchReviewing}
+        isBatchReviewing={reviewBusy}
+        reviewError={review.error}
         setSelectedModule={setSelectedModule}
       />
     </div>

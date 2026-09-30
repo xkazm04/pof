@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
-import type { LifecycleState } from '@/lib/catalog/types';
+import type { EntityProvenance, LifecycleState } from '@/lib/catalog/types';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -94,6 +94,15 @@ export function describeDiscard(name: string, r: DiscardResult): string {
 const BROWSER_ONLY_TITLE =
   'This entity exists only in this browser — the server never accepted it, so nothing on the '
   + 'server can resolve it and NONE of its gates can run. Its acceptance is unknown, not passing.';
+
+/**
+ * An ingested entity's values came from another game's data tables, not from an author here.
+ * Say where — game, file, source row — and carry the licence note, so a reference entity can
+ * never pass for a designed one in the tree.
+ */
+function ingestTitle(p: EntityProvenance): string {
+  return `Ingested from ${p.sourceGame} — ${p.sourceFile} (${p.sourceRow}). ${p.licenceNote}`;
+}
 
 function lifecycleColor(status: StatusKind, t: LabTheme, isDraft: boolean): string {
   if (isDraft) return t.warn;
@@ -235,6 +244,19 @@ function CatalogRow({
                 }}
               >
                 BROWSER-ONLY
+              </span>
+            )}
+            {draft?.provenance?.kind === 'ingest' && (
+              <span
+                data-testid={`entity-ingested-${entity.id}`}
+                title={ingestTitle(draft.provenance)}
+                className={t.fontMono}
+                style={{
+                  flexShrink: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, marginRight: 8,
+                  color: t.muted, border: `1px solid ${t.muted}`, borderRadius: 3, padding: '0 3px',
+                }}
+              >
+                INGEST
               </span>
             )}
             {isDraft && (

@@ -8,6 +8,7 @@ import { allOf } from '../acceptance/combinators';
 import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
+import { SAVE_SCHEMA_VERSION, persistedFieldLines, ephemeralFieldLines } from '@/lib/save-schema/fields';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
@@ -93,22 +94,7 @@ registerCatalogPipeline({
               description:
                 'Only discrete world-state mutations that have FIRED and settled ' +
                 '(per canon state-graph-fsm-wiring). Never capture running/transient state.',
-              fields: [
-                'playerLevel: int — current character level (from DT_AttributeDefaults row)',
-                'playerAttributes: FARPGAttributeSnapshot — base Str/Dex/Int/Life/Mana at save time (not in-combat derived values)',
-                'inventoryItems: TArray<FARPGSavedItemEntry> — item id + affixes + socket state (from items catalog)',
-                'walletGold: int — committed Gold balance (UARPGWalletComponent::GetGold at save time)',
-                'walletOrbs: TMap<FName, int> — orb currency counts keyed by currency entity slug',
-                'defeatedEnemyTags: TArray<FGameplayTag> — each State.Enemy.Defeated.<EnemyId> that has fired',
-                'completedQuestStages: TArray<FARPGQuestSaveEntry> — {questId, stageIndex, outcome} for each terminal stage reached',
-                'unlockedZoneIds: TArray<FName> — zone catalog ids the player has entered at least once',
-                `checkpointActorTag: FGameplayTag — the State.Checkpoint.${slug(e.name)} tag marking this checkpoint activated`,
-                'repStandings: TMap<FName, int> — faction reputation points keyed by faction catalog id',
-                'passivePoints: int — total passive points spent',
-                'passiveAllocations: TArray<FName> — node ids of allocated passive tree nodes',
-                'activeSaveSlot: int — 0-indexed slot this save occupies (0–2)',
-                'saveTimestamp: FDateTime — wall-clock time of last save',
-              ],
+              fields: persistedFieldLines(slug(e.name)),
               persistenceRule:
                 'Written via UARPGSaveSubsystem::SaveToSlot → ' +
                 'UGameplayStatics::SaveGameToSlot("PoFSave_<slot>", 0, SaveObject). ' +
@@ -117,21 +103,12 @@ registerCatalogPipeline({
             ephemeral: {
               description:
                 'Discarded on session end; reconstructed from DT_AttributeDefaults + canonical data on load.',
-              fields: [
-                'currentAIStateTags — blackboard keys + running State.AI.* tags on all actors',
-                'inFlightGASEffects — active GE handles on the player (re-derived from saved attributes on respawn)',
-                'pendingSpawnPool — enemy actors spawned but not yet defeated (re-derived from defeatedEnemyTags)',
-                'navigationMeshCache — rebuilt by NavMesh on load',
-                'physicsSimState — Chaos physics body transforms (reset to blueprint defaults)',
-                'activeLevelStreaming — async-loaded sublevel states (re-streamed on zone restore)',
-                'currentCombatTarget — cleared on session end',
-                'unsettledCurrencyDrops — items mid-air on death that were never picked up',
-              ],
+              fields: ephemeralFieldLines(),
               ephemeralRule:
                 'These fields are intentionally ABSENT from UARPGSaveGame. ' +
                 'Attempting to serialize them is a bug; the subsystem asserts they are absent.',
             },
-            schemaVersion: 1,
+            schemaVersion: SAVE_SCHEMA_VERSION,
             fieldsNote:
               'UARPGSaveGame carries a SchemaVersion int. ' +
               'On load, UARPGSaveSubsystem::MigrateSaveGame(SaveGame) ' +
@@ -160,6 +137,19 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'stateSchema',
+        grantedBy: 'UARPGSaveSubsystem::SaveToSlot serializes THIS save point’s declared persistent player, world, inventory, and wallet state into UARPGSaveGame through UGameplayStatics::SaveGameToSlot',
+        activatedBy: 'BP_{slug} interaction through AARPGInteractableBase::OnInteracted or a declared autosave event calls UARPGSaveSubsystem::SaveToSlot',
+        dependencies: [
+          'characters data required to restore the player’s attribute baseline',
+          'quests save entries for each quest state THIS save schema persists',
+          'factions::<id> for each reputation standing persisted here',
+          'items::<id> for each saved inventory entry',
+          'currencies::<id> for each wallet balance persisted here',
+        ],
+        verification: 'L2: UARPGSaveGame and UARPGSaveSubsystem migration and validation symbols compile in Source/PoF/; L3: VSSaveLoadTest verifies THIS save point restores every declared persistent field and discards ephemeral state',
+      },
       accept: allOf(
         fieldsPopulated('stateSchema', 'persisted / ephemeral / schemaVersion / fieldsNote populated', [
           'persisted',
@@ -192,7 +182,7 @@ registerCatalogPipeline({
       produce: () => ({
         data: {
           versioning: {
-            currentVersion: 1,
+            currentVersion: SAVE_SCHEMA_VERSION,
             versionField:
               'UARPGSaveGame::SchemaVersion (int32). Bumped by 1 for every change to the ' +
               'persisted field set (add, remove, or rename a field). Matching ' +
@@ -306,6 +296,17 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'triggers',
+        grantedBy: 'BP_{slug}, a child of AARPGInteractableBase, and each autosave event THIS save point declares call UARPGSaveSubsystem::SaveToSlot or TriggerAutoSave',
+        activatedBy: 'Enhanced Input IA_Interact on BP_{slug}, plus THIS save point’s declared quest or zone events, trigger a save commit',
+        dependencies: [
+          'quests event for each quest-stage autosave trigger THIS save point declares',
+          'zone-map event for each zone-transition autosave trigger THIS save point declares',
+          'hud-elements::<id> for THIS save point’s save indicator',
+        ],
+        verification: 'L2: AARPGInteractableBase and UARPGSaveSubsystem::SaveToSlot compile in Source/PoF/; L3: VSSaveLoadTest verifies BP_{slug} interaction commits a save and activates THIS checkpoint’s state tag',
+      },
       accept: allOf(
         fieldsPopulated('triggers', 'manualTrigger / autosaveTriggers / triggerDebounce / cooldownMs populated', [
           'manualTrigger',
@@ -516,6 +517,13 @@ registerCatalogPipeline({
         },
         ueAssets: ['/Game/UI/HUD/WBP_SaveSlots', '/Game/UI/HUD/WBP_SaveIndicator'],
       }),
+      contract: {
+        field: 'slotsUI',
+        grantedBy: 'AARPGHUD::ShowSaveSlots pushes WBP_SaveSlots onto the HUD context stack and owns WBP_SaveIndicator hidden by default',
+        activatedBy: 'save or load UI actions open WBP_SaveSlots; UARPGSaveSubsystem::OnSaveCompleted makes WBP_SaveIndicator flash',
+        dependencies: ['hud-elements::<id> for THIS save flow’s indicator widget and HUD anchor'],
+        verification: 'L2: WBP_SaveSlots, WBP_SaveIndicator, and AARPGHUD::ShowSaveSlots exist; L3: VSSaveLoadTest verifies THIS save point’s slot UI displays the saved level and zone',
+      },
       accept: allOf(
         fieldsPopulated('slotsUI', 'widget / format / position / hudBinding populated', [
           'widget',
@@ -688,6 +696,19 @@ registerCatalogPipeline({
             `/Game/UI/HUD/WBP_SaveIndicator`,
           ],
         };
+      },
+      contract: {
+        grantedBy: 'BP_{slug}, a child of AARPGInteractableBase, calls UARPGSaveSubsystem::SaveToSlot to serialize UARPGSaveGame through UGameplayStatics',
+        activatedBy: 'Enhanced Input IA_Interact on BP_{slug}, plus every autosave event THIS save point declares, triggers the save subsystem',
+        dependencies: [
+          'characters data required to restore the player’s attribute baseline',
+          'quests save entries for each persisted quest state',
+          'currencies::<id> for every persisted wallet balance',
+          'items::<id> for every persisted inventory entry',
+          'hud-elements::<id> for THIS save point’s save indicator',
+          'zone-map event for each declared zone-transition autosave trigger',
+        ],
+        verification: 'L2: UARPGSaveGame, AARPGInteractableBase, and UARPGSaveSubsystem compile in Source/PoF/ and THIS save-point row is seeded; L3: VSSaveLoadTest verifies BP_{slug} saves and restores every declared dependency',
       },
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged', 4),

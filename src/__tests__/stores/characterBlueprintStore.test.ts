@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
-import { createBlankLayer, createLayerFromTemplate, LAYER_TEMPLATES } from '@/lib/feel-adjustment-layers';
+import { createBlankLayer, createLayerFromTemplate, LAYER_TEMPLATES, resolveStack } from '@/lib/feel-adjustment-layers';
+import { buildStackApplyPrompt } from '@/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt';
 
 const store = useCharacterBlueprintStore;
 
@@ -66,5 +67,56 @@ describe('characterBlueprintStore feel stack', () => {
     store.getState().addFeelLayer(createBlankLayer());
     store.getState().clearFeelLayers();
     expect(store.getState().feelLayers).toEqual([]);
+  });
+});
+
+describe('characterBlueprintStore inspector overrides', () => {
+  it('case 5: an inspector edit is persisted in feelLayers and reaches the Apply prompt', () => {
+    store.getState().setInspectorOverride('FOV', 95);
+    const { feelLayers } = store.getState();
+    const layer = feelLayers.find((l) => l.id === 'inspector-overrides');
+    expect(layer?.modifiers).toEqual([{ field: 'camera.fovBase', op: 'set', value: 95 }]);
+
+    const partialize = store.persist.getOptions().partialize!;
+    const persisted = partialize(store.getState()) as { feelLayers: typeof feelLayers };
+    expect(persisted.feelLayers.some((l) => l.id === 'inspector-overrides')).toBe(true);
+
+    const base = FEEL_PRESETS[0];
+    const prompt = buildStackApplyPrompt(base, feelLayers, resolveStack(base.profile, feelLayers));
+    expect(prompt).toContain('FieldOfView: 95');
+  });
+
+  it('clears only the inspector overrides layer', () => {
+    const other = createBlankLayer('Boss');
+    store.getState().addFeelLayer(other);
+    store.getState().setInspectorOverride('MaxWalkSpeed', 450);
+    expect(store.getState().feelLayers).toHaveLength(2);
+    store.getState().clearInspectorOverrides();
+    expect(store.getState().feelLayers.map((l) => l.id)).toEqual([other.id]);
+  });
+});
+
+describe('characterBlueprintStore binding overrides', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    store.setState({ bindingOverrides: {} });
+  });
+
+  it('case 4: a rebind persists, rehydration drops unknown actions and non-string keys, reset clears', async () => {
+    store.getState().setBindingOverride('IA_Dodge', 'Ctrl');
+    expect(store.getState().bindingOverrides).toEqual({ IA_Dodge: 'Ctrl' });
+    const partialize = store.persist.getOptions().partialize!;
+    expect((partialize(store.getState()) as { bindingOverrides: unknown }).bindingOverrides).toEqual({ IA_Dodge: 'Ctrl' });
+
+    store.setState({ bindingOverrides: {} });
+    localStorage.setItem('pof-character-feel-stack', JSON.stringify({
+      state: { bindingOverrides: { IA_Dodge: 'Ctrl', Bogus: 'X', IA_Sprint: 42 } },
+      version: 0,
+    }));
+    await store.persist.rehydrate();
+    expect(store.getState().bindingOverrides).toEqual({ IA_Dodge: 'Ctrl' });
+
+    store.getState().resetBindings();
+    expect(store.getState().bindingOverrides).toEqual({});
   });
 });

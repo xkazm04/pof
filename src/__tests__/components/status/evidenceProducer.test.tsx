@@ -10,6 +10,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { EvidenceModal } from '@/components/status/EvidenceModal';
 import type { StepCell } from '@/lib/status/statusModel';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
+import type { StatusVerdictRead } from '@/components/status/statusVerdictSource';
 
 // This suite has no auto-cleanup (see src/__tests__/setup.ts).
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -34,7 +36,13 @@ function stubArtifact(provenance: Record<string, unknown> | undefined) {
     })));
 }
 
-const open = () => render(<EvidenceModal catalogId="items" step="Economy" cell={cell} onClose={vi.fn()} />);
+/** The ledger row the shared blob-free /status read supplies; the proof is the per-entity GET. */
+const summaryRow: ArtifactVerdictRow = { catalogId: 'items', entityId: 'e1', step: 'Economy', status: 'pass', tier: 'L0' };
+const noVerdicts: StatusVerdictRead = { ok: true, all: [], byCatalog: new Map() };
+
+const open = () => render(
+  <EvidenceModal catalogId="items" step={{ label: 'Economy', engine: 'Code' }} cell={cell} rows={[summaryRow]} verdicts={noVerdicts} onClose={vi.fn()} />,
+);
 
 describe('EvidenceModal — the producer line', () => {
   it('renders a legacy unknown engine as an explicit "not recorded"', async () => {

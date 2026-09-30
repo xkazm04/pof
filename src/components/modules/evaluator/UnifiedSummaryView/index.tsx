@@ -9,8 +9,6 @@ import {
   RefreshCw,
   Shield,
   Sparkles,
-  TrendingDown,
-  TrendingUp,
   Zap,
 } from 'lucide-react';
 import { BriefView } from '@/components/modules/evaluator/BriefView';
@@ -19,6 +17,7 @@ import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
+import { WEIGHTS } from '@/lib/evaluator/combined-health';
 import type { Props } from './types';
 import { useUnifiedSummaryView } from './useUnifiedSummaryView';
 import { ViewModeToggle } from './ViewModeToggle';
@@ -27,6 +26,9 @@ import { DimensionBar } from './DimensionBar';
 import { SourceBadge } from './SourceBadge';
 import { ModuleHealthCell } from './ModuleHealthCell';
 import { QuickNavCard } from './QuickNavCard';
+import { ModuleLiftList, ProjectLeverStrip } from './ModuleLiftList';
+
+const pct = (w: number) => Math.round(w * 100);
 
 export type { TabId, Props, ViewMode } from './types';
 
@@ -43,7 +45,6 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
     setViewMode,
     lastScan,
     fetchAll,
-    correlation,
     insights,
     health,
     brief,
@@ -51,7 +52,14 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
     activeSources,
     scope,
     scopedRows,
-  } = useUnifiedSummaryView();
+    liftsByModule,
+    topLifts,
+    selectedModuleId,
+    selectedLifts,
+    toggleModule,
+    actOnLift,
+    isReviewing,
+  } = useUnifiedSummaryView(onNavigateTab);
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -66,6 +74,8 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
   const criticalInsights = insights.filter((i) => i.severity === 'critical');
   const warningInsights = insights.filter((i) => i.severity === 'warning');
   const positiveInsights = insights.filter((i) => i.severity === 'positive');
+  // A selection whose module left the scored set (after a refresh) shows nothing.
+  const selectedScore = health.moduleScores.find((ms) => ms.moduleId === selectedModuleId);
 
   return (
     <div className="space-y-5">
@@ -113,7 +123,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
             <h3 className="text-sm font-semibold text-text">Combined Project Health</h3>
           </div>
           <p className="text-xs text-text-muted leading-relaxed mb-3">
-            Weighted composite across quality ({Math.round(0.4 * 100)}%), dependencies ({Math.round(0.3 * 100)}%), coverage ({Math.round(0.2 * 100)}%), and activity ({Math.round(0.1 * 100)}%).
+            Weighted composite across quality ({pct(WEIGHTS.quality)}%), dependencies ({pct(WEIGHTS.dependencyHealth)}%), coverage ({pct(WEIGHTS.coverage)}%), and activity ({pct(WEIGHTS.activity)}%).
             {health.topWeakness && (
               <> Weakest area: <span className="font-medium" style={{ color: STATUS_WARNING }}>{health.topWeakness}</span>.</>
             )}
@@ -126,6 +136,8 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
             <DimensionBar label="Coverage" value={health.dimensionAverages.coverage} icon={Zap} color={STATUS_SUCCESS} />
             <DimensionBar label="Activity" value={health.dimensionAverages.activity} icon={BarChart3} color={ACCENT_VIOLET} />
           </div>
+
+          <ProjectLeverStrip lifts={topLifts} onAct={actOnLift} reviewBusy={isReviewing} />
         </div>
 
         {/* Refresh + source badges */}
@@ -166,10 +178,21 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
               label={ms.label}
               breakdown={ms.breakdown}
               index={i}
-              correlation={correlation.modules.find((c) => c.moduleId === ms.moduleId)}
+              topLift={liftsByModule.get(ms.moduleId)?.[0]}
+              selected={selectedModuleId === ms.moduleId}
+              onSelect={() => toggleModule(ms.moduleId)}
             />
           ))}
         </div>
+
+        {selectedScore && (
+          <ModuleLiftList
+            label={selectedScore.label}
+            lifts={selectedLifts}
+            onAct={actOnLift}
+            reviewBusy={isReviewing}
+          />
+        )}
       </div>
 
       {/* ── Correlated Insights ───────────────────────────────────────────── */}

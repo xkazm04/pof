@@ -20,6 +20,7 @@ import type { EditorEffect, TagRule } from '@/lib/ability/spec';
 import type { TestSuite } from '@/types/ai-testing';
 import type { LevelDesignDocument } from '@/types/level-design';
 import type { MaterialConfiguratorConfig } from '@/components/modules/content/materials/MaterialParameterConfigurator';
+import type { PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
 import { taskPromptHandlers } from '@/lib/cli-task-handlers';
 import { logger } from '@/lib/logger';
 
@@ -265,7 +266,8 @@ export type CLITaskType =
   | 'generate-gas-effects'
   | 'run-ai-tests'
   | 'detect-stimuli'
-  | 'material-configurator';
+  | 'material-configurator'
+  | 'post-process';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -571,6 +573,30 @@ export function materialConfiguratorVariantKey(config: MaterialConfiguratorConfi
     .join('|');
   const shape = `${config.outputType}|${config.surfaceType}|${[...config.features].sort().join(',')}|${params}`;
   return `material-configurator::${config.outputType}::${config.surfaceType}::${fnv1a(shape)}`;
+}
+
+/**
+ * Post-process task — Recipe Studio "Generate C++" and Materials "Compile".
+ * Same three-part move as {@link MaterialConfiguratorTask}: `config` is the
+ * stack's one spec (`toStackSpec`), the handler returns `buildPostProcessPrompt`
+ * VERBATIM (it emits its own header), so the rail adds no second header.
+ */
+export interface PostProcessTask extends CLITask {
+  type: 'post-process';
+  config: PostProcessStackSpec;
+}
+
+/**
+ * The prompt-evolution variant key for a post-process dispatch. The prompt
+ * embeds every enabled effect's live values, the resolution and the budget, so
+ * the digest covers exactly those inputs (cost + budget derive from them).
+ */
+export function postProcessVariantKey(spec: PostProcessStackSpec): string {
+  const effects = spec.effects
+    .map((e) => `${e.id}:${e.params.map((p) => `${p.ueProperty}=${p.value}[${p.min},${p.max}]`).join(',')}`)
+    .join('|');
+  const shape = `${spec.resolution}|${spec.presetName ?? ''}|${effects}|off:${[...spec.disabled].sort().join(',')}`;
+  return `post-process::${spec.resolution}::${fnv1a(shape)}`;
 }
 
 /**
@@ -880,6 +906,11 @@ export const TaskFactory = {
     label: string,
   ): MaterialConfiguratorTask {
     return { type: 'material-configurator', moduleId, prompt: '', label, config };
+  },
+
+  /** Create a post-process task from the stack's spec (`toStackSpec`); the handler composes the body. */
+  postProcess(moduleId: SubModuleId, config: PostProcessStackSpec, label: string): PostProcessTask {
+    return { type: 'post-process', moduleId, prompt: '', label, config };
   },
 
   /** Create a generation task for one recipe step of a catalog entity (folder-09). */

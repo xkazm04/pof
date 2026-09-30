@@ -10,21 +10,8 @@ import type { SubModuleId } from '@/types/modules';
 import {
   TabHeader, LoadingSpinner, SubTabNavigation, type SubTab,
 } from '../unique-tabs/_shared';
-import {
-  CORE_ATTRIBUTES as STATIC_CORE_ATTRIBUTES,
-  DERIVED_ATTRIBUTES as STATIC_DERIVED_ATTRIBUTES,
-  TAG_TREE as STATIC_TAG_TREE,
-  ABILITY_RADAR_DATA as STATIC_ABILITY_RADAR_DATA,
-  TAG_DEP_NODES as STATIC_TAG_DEP_NODES,
-  TAG_DEP_EDGES as STATIC_TAG_DEP_EDGES,
-  COOLDOWN_ABILITIES as STATIC_COOLDOWN_ABILITIES,
-  TAG_AUDIT_CATEGORIES as STATIC_TAG_AUDIT_CATEGORIES,
-  TAG_USAGE_FREQUENCY as STATIC_TAG_USAGE_FREQUENCY,
-  TAG_DETAIL_MAP as STATIC_TAG_DETAIL_MAP,
-  buildLiveTagTree, buildLiveCooldownAbilities, buildLiveAbilityRadar,
-  buildLiveTagDeps, buildLiveTagDetailMap, buildLiveTagUsageFrequency,
-  buildLiveTagAudit, buildLiveTagAuditCategories, buildLiveAttributes,
-} from './_shared/data';
+import { useSpellbookEntries } from '@/stores/catalogStore';
+import { buildSpellbookView } from './_shared/spellbookView';
 import { useAbilitySpecTags } from './_shared/useAbilitySpecTags';
 
 import { SpellbookDataCtx } from './_shared/context';
@@ -107,54 +94,19 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
     pendingScrollRafRef.current = requestAnimationFrame(tryScroll);
   }, [setActiveTab, cancelPendingScroll]);
 
-  /* ── Compute live-synced data (falls back to static when unavailable) ──
-     Heavy transforms depend only on [liveData, refresh]; the presentational
-     `isSyncing` flag is merged in separately below so a sync toggle never
-     re-runs the buildLive* derivations or recreates the derived identity. */
-  const derivedData = useMemo<Omit<SpellbookLiveData, 'isSyncing'>>(() => {
-    if (!liveData || liveData.tags.length === 0) {
-      return {
-        isLive: false, parsedAt: null, refresh,
-        CORE_ATTRIBUTES: STATIC_CORE_ATTRIBUTES,
-        DERIVED_ATTRIBUTES: STATIC_DERIVED_ATTRIBUTES,
-        TAG_TREE: STATIC_TAG_TREE,
-        ABILITY_RADAR_DATA: STATIC_ABILITY_RADAR_DATA,
-        TAG_DEP_NODES: STATIC_TAG_DEP_NODES,
-        TAG_DEP_EDGES: STATIC_TAG_DEP_EDGES,
-        COOLDOWN_ABILITIES: STATIC_COOLDOWN_ABILITIES,
-        TAG_AUDIT_CATEGORIES: STATIC_TAG_AUDIT_CATEGORIES,
-        TAG_USAGE_FREQUENCY: STATIC_TAG_USAGE_FREQUENCY,
-        TAG_AUDIT: null,
-        TAG_DETAIL_MAP: STATIC_TAG_DETAIL_MAP,
-      };
-    }
-
-    const attrs = buildLiveAttributes(liveData.tags);
-    const tagDeps = buildLiveTagDeps(liveData.abilities, liveData.tags);
-    const usageFreq = buildLiveTagUsageFrequency(liveData.abilities, liveData.tags);
-    // Real audit — UE-declared vs UE-referenced vs app-authored spec tags.
-    const audit = buildLiveTagAudit(liveData.abilities, liveData.tags, appTags);
-
-    return {
-      isLive: true, parsedAt: liveData.parsedAt, refresh,
-      CORE_ATTRIBUTES: attrs.core,
-      DERIVED_ATTRIBUTES: attrs.derived,
-      TAG_TREE: buildLiveTagTree(liveData.tags),
-      ABILITY_RADAR_DATA: buildLiveAbilityRadar(liveData.abilities),
-      TAG_DEP_NODES: tagDeps.nodes,
-      TAG_DEP_EDGES: tagDeps.edges,
-      COOLDOWN_ABILITIES: buildLiveCooldownAbilities(liveData.abilities),
-      // Derived from the real breakdown — never the static fiction when live.
-      TAG_AUDIT_CATEGORIES: buildLiveTagAuditCategories(audit),
-      TAG_USAGE_FREQUENCY: usageFreq,
-      TAG_AUDIT: audit,
-      TAG_DETAIL_MAP: buildLiveTagDetailMap(liveData.abilities, liveData.tags),
-    };
-  }, [liveData, appTags, refresh]);
+  /* ── One projection: catalog numbers + C++ vocabulary (see _shared/spellbookView.ts) ──
+     Heavy transforms depend only on [liveData, appTags, entries]; `refresh` and the
+     presentational `isSyncing` flag are merged in separately below so a sync toggle
+     never re-runs the derivation or recreates the derived identity. */
+  const entries = useSpellbookEntries();
+  const view = useMemo(
+    () => buildSpellbookView({ live: liveData, appTags, entries }),
+    [liveData, appTags, entries],
+  );
 
   const spellbookData = useMemo<SpellbookLiveData>(
-    () => ({ ...derivedData, isSyncing }),
-    [derivedData, isSyncing],
+    () => ({ ...view, isSyncing, refresh }),
+    [view, isSyncing, refresh],
   );
 
   const renderMetric = useGASFeatureMetrics(spellbookData);

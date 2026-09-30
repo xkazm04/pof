@@ -126,6 +126,17 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'interaction',
+        grantedBy: 'BP_{slug}, a child of AARPGDestructibleActor, owns the components required by EACH interaction THIS prop declares',
+        activatedBy: 'the Enhanced Input action, overlap, damage, animation notify, or other trigger THIS prop declares activates its interaction path',
+        dependencies: [
+          'AARPGDestructibleActor (C++ base class)',
+          'the component required by EACH interaction THIS prop declares',
+          '<catalog>::<id> for EACH external resource the interaction consumes',
+        ],
+        verification: 'L2: AARPGDestructibleActor and every declared interaction component compile in Source/PoF/; L3: VSPropInteractTest — EACH interaction declared by {name} activates through its named trigger',
+      },
       accept: allOf(
         fieldsPopulated('interaction', 'interactType / triggerCondition / prompt / healthThreshold populated', [
           'interactType',
@@ -238,6 +249,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'physics',
+        grantedBy: 'BP_{slug} ConstructionScript applies THIS prop’s collision settings and attaches its declared overlap or physics components; any Chaos component references GC_{slug}',
+        activatedBy: 'the damage, overlap, placement, or physics event THIS prop declares activates the corresponding collision or simulation behavior',
+        dependencies: ['AARPGDestructibleActor (C++ base class when THIS prop is destructible)', 'GC_{slug} when THIS prop declares a Chaos geometry collection'],
+        verification: 'L2: every declared physics class compiles in Source/PoF/ and GC_{slug} is packaged when required; L3: VSPropInteractTest — {name} exhibits its declared intact collision and post-trigger physics behavior',
+      },
       accept: allOf(
         fieldsPopulated('physics', 'collisionPreset / massKg / chaosEnabled populated', [
           'collisionPreset',
@@ -304,6 +322,13 @@ registerCatalogPipeline({
         ],
         ueAssets: [`/Game/Materials/MI_${slug(e.name)}`],
       }),
+      contract: {
+        field: 'material',
+        grantedBy: 'BP_{slug} assigns the material instance THIS prop declares to each required StaticMeshComponent or GeometryCollectionComponent slot',
+        activatedBy: 'the UE render pipeline resolves the assigned material slots at each draw',
+        dependencies: ['M_ARPG_Surface_Master (shared parent material)', 'materials::<id> for EACH material family THIS prop references'],
+        verification: 'L2: FARPGSurfaceMaterialDef compiles and every linked material id resolves; L3: VSMasterMaterialInstanceTest — the material instance declared by {name} compiles and every declared texture slot is non-null',
+      },
       accept: allOf(
         fieldsPopulated('material', 'instance / parentMaterial / parameters populated', [
         'instance',
@@ -385,6 +410,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'destructionStates',
+        grantedBy: 'BP_{slug} registers EACH destruction state, gameplay tag, component change, and follow-up action THIS prop declares',
+        activatedBy: 'AARPGDestructibleActor damage accumulation crosses the threshold declared for each transition',
+        dependencies: ['AARPGDestructibleActor (C++ base class)', 'GC_{slug} when THIS prop uses a Chaos geometry collection', 'the State.Prop.* gameplay tags THIS prop declares'],
+        verification: 'L2: AARPGDestructibleActor compiles, every declared gameplay tag is registered, and GC_{slug} is packaged when required; L3: VSPropInteractTest — {name} advances through every declared destruction state in order',
+      },
       accept: allOf(
         fieldsPopulated('destructionStates', 'intact / damaged / destroyed states defined', [
           'intact',
@@ -458,6 +490,13 @@ registerCatalogPipeline({
       }),
       // Grade the displayed drop spec (`lootOnDestroy`) as well as the link count — the View
       // shows the loot table, ilvl source and drop counts, so all three must be authored.
+      contract: {
+        field: 'lootOnDestroy',
+        grantedBy: 'UARPGLootDropComponent on BP_{slug} binds the loot-tables::<id> row THIS prop declares',
+        activatedBy: 'the destruction, opening, or animation-notify event THIS prop declares calls UARPGLootDropComponent::ExecuteDrop',
+        dependencies: ['loot-tables::<id> for EACH loot table THIS prop can drop from', 'UARPGLootDropComponent', 'DT_LootTables'],
+        verification: 'L2: UARPGLootDropComponent compiles in Source/PoF/ and every declared loot-table id resolves; L3: VSPropInteractTest — EACH declared loot trigger on {name} executes the bound table with the declared drop rules',
+      },
       accept: allOf(
         fieldsPopulated('lootOnDestroy', 'Loot table + ilvl source + drop counts authored', ['lootTable', 'ilvlSource', 'dropCount']),
         minCount('links', '≥1 loot-table link declared', 1),
@@ -533,6 +572,13 @@ registerCatalogPipeline({
           { catalogId: 'vfx', entityId: 'vfx-fire-impact', role: 'destruction-vfx' },
         ],
       }),
+      contract: {
+        field: 'vfxAudio',
+        grantedBy: 'BP_{slug} registers the VFX and audio assets THIS prop declares on its named Blueprint events or animation notifies',
+        activatedBy: 'the destruction, opening, impact, or other event THIS prop declares spawns the matching effect or sound',
+        dependencies: ['vfx::<id> for EACH catalogued effect THIS prop uses', 'AARPGDestructibleActor (event source when THIS prop is destructible)', 'the audio asset for EACH sound THIS prop declares'],
+        verification: 'L2: every declared event source compiles and every linked VFX id resolves; L3: VSPropInteractTest — each event on {name} spawns its declared effect and sound at the declared attachment or location',
+      },
       accept: allOf(
         fieldsPopulated('vfxAudio', 'destructionVfx / openAudio / impactAudio defined', [
         'destructionVfx',
@@ -637,6 +683,18 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/Props/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'BP_{slug} inherits the base class THIS prop requires and owns every mesh, physics, interaction, loot, material, VFX, and audio component declared by its earlier steps',
+        activatedBy: 'the input, overlap, damage, animation, or lifecycle event declared for EACH behavior on THIS prop activates its named component path',
+        dependencies: [
+          'AARPGDestructibleActor when THIS prop is destructible',
+          'UARPGLootDropComponent when THIS prop declares loot',
+          'loot-tables::<id> for EACH loot table THIS prop uses',
+          'materials::<id> for EACH material family THIS prop uses',
+          'vfx::<id> for EACH catalogued effect THIS prop uses',
+        ],
+        verification: 'L2: every declared class compiles in Source/PoF/, every linked id resolves, and BP_{slug} packages all declared assets; L3: VSPropInteractTest — {name} completes every declared interaction, physics, destruction, loot, VFX, and audio path',
       },
       accept: allOf(
         minCount('assets', '≥4 UE assets packaged', 4),

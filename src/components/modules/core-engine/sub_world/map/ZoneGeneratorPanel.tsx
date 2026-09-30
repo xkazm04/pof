@@ -9,6 +9,7 @@ import {
   generateZoneGraph, validateZoneGraph,
   type ZoneGraphParams, type ZoneTopology, type DifficultyCurve, type GeneratedZone,
 } from '@/lib/world/zone-graph-generator';
+import { worldFromZones, computeCumulativePath, formatPlaytime } from '@/lib/world/world-model';
 import { useCRUD } from '@/hooks/useCRUD';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { ZoneGraphPin } from '@/types/procgen';
@@ -26,6 +27,8 @@ export function ZoneGeneratorPanel() {
 
   const zones = useMemo(() => generateZoneGraph(params), [params]);
   const validation = useMemo(() => validateZoneGraph(zones), [zones]);
+  // What the candidate costs to play — priced by the same world model as the static world.
+  const playtime = useMemo(() => computeCumulativePath(worldFromZones(zones), 'critical'), [zones]);
   const selected: GeneratedZone = zones.find((z) => z.id === selectedId) ?? zones[0];
 
   const { data: pins, mutate, mutationError, clearMutationError } = useCRUD<ZoneGraphPin[]>('/api/procgen/zone-pins', []);
@@ -106,6 +109,9 @@ export function ZoneGeneratorPanel() {
           <div className="flex items-center gap-2 text-xs font-mono" style={{ color: statusColor }} data-testid="zone-gen-validation">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
             {validation.ok ? 'Progression-valid' : `${validation.errors} error(s)`} · {validation.warnings} warning(s)
+          </div>
+          <div className="text-xs font-mono text-text-muted" data-testid="zone-gen-playtime">
+            Est. critical path ~{formatPlaytime(playtime.totalSec)} over {playtime.nodes.length} zone(s) · combat not measured
           </div>
         </div>
       </div>

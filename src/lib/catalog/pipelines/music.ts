@@ -193,6 +193,13 @@ registerCatalogPipeline({
         },
         };
       },
+      contract: {
+        field: 'stemsLayers',
+        grantedBy: 'UARPGMusicManager reads DT_Music row "{slug}", instantiates SC_Music_{slug}, and registers EACH stem and layer THIS track declares',
+        activatedBy: 'the declared MusicEvent or intensity threshold for EACH layer updates the MetaSound layer parameter and stem blend',
+        dependencies: ['<catalog>::<id> for EACH zone or encounter that drives this track’s layer events'],
+        verification: 'L0: every declared stem and layer is present; L3: VSMusicTransitionTest — {name} changes to each layer within its declared synchronization window after the matching event',
+      },
       accept: allOf(
         fieldsPopulated('stemsLayers', 'stems / layers / mixRules / wiringContract populated', [
           'stems',
@@ -289,6 +296,13 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'transitions',
+        grantedBy: 'UARPGMusicManager reads THIS track’s DT_Music transition rules and builds one named MetaSound trigger for EACH transition it declares',
+        activatedBy: 'the zone, encounter, or gameplay event declared for a transition broadcasts its MusicEvent and dispatches the matching MetaSound trigger',
+        dependencies: ['<catalog>::<id> for EACH zone or encounter that broadcasts this track’s transition events'],
+        verification: 'L0: every transition declares its trigger, source layer, target layer, crossfade, and synchronization rule; L3: VSMusicTransitionTest — EACH transition begins at its declared boundary without an audible discontinuity',
+      },
       accept: allOf(
         fieldsPopulated('transitions', 'combatEnter / combatExit / beatSyncImplementation / wiringContract', [
           'combatEnter',
@@ -555,6 +569,13 @@ registerCatalogPipeline({
         ],
         };
       },
+      contract: {
+        field: 'triggerBinding',
+        grantedBy: 'UARPGMusicManager reads DT_Music row "{slug}" on the declared host’s load event and owns THIS track’s playback lifecycle',
+        activatedBy: 'EACH zone, encounter, or gameplay event THIS track declares broadcasts its MusicEvent to start or transition playback',
+        dependencies: ['<catalog>::<id> for EACH zone or encounter bound to THIS track'],
+        verification: 'L0: every declared trigger binding and catalog link is populated; L2: DT_Music row "{slug}" is seeded and UARPGMusicManager compiles in Source/PoF/; L3: VSMusicTransitionTest — every declared host event starts or transitions {name} as specified',
+      },
       accept: allOf(
         fieldsPopulated('triggerBinding', 'zoneTrigger / arenaTrigger / wiringContract populated', [
         'zoneTrigger',
@@ -730,6 +751,15 @@ registerCatalogPipeline({
             { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'icon-family' },
           ],
         };
+      },
+      contract: {
+        grantedBy: 'UARPGMusicManager reads FARPGMusicRow from DT_Music row "{slug}", instantiates SC_Music_{slug}, and registers every stem, layer, and transition THIS track declares',
+        activatedBy: 'the declared host load event starts THIS track; subsequent MusicEvent.* events declared by its bindings control its layer transitions',
+        dependencies: [
+          '<catalog>::<id> for EACH zone or encounter bound to THIS track',
+          'icon-sets::<id> when THIS track declares a UI icon family',
+        ],
+        verification: 'L2: SC_Music_{slug}, DT_Music row "{slug}", every declared stem, and UARPGMusicManager are packaged or compiled; L3: VSMusicTransitionTest — {name} passes every declared playback and transition check',
       },
       accept: allOf(
         minCount('assets', '≥8 UE assets packaged (MetaSound + DT row + 6 stems)', 8),

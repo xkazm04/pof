@@ -95,7 +95,7 @@ export function InputTab({ moduleId, featureMap }: Props) {
         </BlueprintPanel>
 
         {/* ── Existing key bindings + keyboard ───────────────────────── */}
-        <InputBindingsTable featureMap={featureMap} />
+        <InputBindingsTable moduleId={moduleId} featureMap={featureMap} />
         <KeyboardVisualization />
         <AbilityQuickPicker />
       </div>

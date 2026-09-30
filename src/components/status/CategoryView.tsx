@@ -8,20 +8,24 @@
  * weakest links" overview — max 20 rows per page.
  *
  * With no catalog selected it shows a picker of every pipeline catalog.
+ *
+ * Evidence comes from the two SHARED /status reads — `useStatusArtifacts` (blob-free summary
+ * rows via `labArtifactCache`) and `useStatusVerdicts` (the lab's verdict cache) — never a
+ * private fetch. A FAILED READ IS NOT A GRADE: a failed artifact read renders every row
+ * UNKNOWN (never R0 / 0%), and a failed verdict read says PARTIAL above rows that then show
+ * checker status only.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines, getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
-import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
-import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { StepMeta } from '@/lib/status/statusModel';
-import { buildCategoryNodes, type SwimlaneCtx } from '@/lib/status/itemFocusModel';
-import { MiniSwimlane } from './MiniSwimlane';
+import { buildCategoryNodes, unknownRead, type SwimlaneCtx } from '@/lib/status/itemFocusModel';
+import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusVerdicts } from './statusVerdictSource';
+import { MiniSwimlane, EvidenceReadNotice } from './MiniSwimlane';
 
 const PAGE_SIZE = 20;
 
@@ -110,40 +114,33 @@ export function CategoryView({
   onPickCatalog: (catalogId: string) => void;
 }) {
   const entitiesByCatalog = useCatalogStore(useShallow((s) => s.entitiesByCatalog));
-  const [artifacts, setArtifacts] = useState<PipelineArtifact[]>([]);
-  const [verdicts, setVerdicts] = useState<JudgeVerdict[]>([]);
+  const scope = useMemo(() => (catalogId ? [catalogId] : []), [catalogId]);
+  const { catalogs, retryCatalog } = useStatusArtifacts(scope);
+  const { verdicts, reload: reloadVerdicts } = useStatusVerdicts();
   const [page, setPage] = useState(0);
-  // Until the artifacts + verdicts land, every swimlane would grade as unwired/0% — which
-  // is a lie, not a blank. Hold the rows behind a loading state instead of showing it.
-  // (StatusDashboard keys this component by catalog, so a catalog switch remounts and this
-  // starts true again — no synchronous set-state-in-effect reset needed.)
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    if (!catalogId) return;
-    (async () => {
-      const [art, verdictRes] = await Promise.all([
-        fetchArtifacts(catalogId),
-        tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts'),
-      ]);
-      if (!alive) return;
-      setArtifacts(art);
-      setVerdicts((verdictRes.ok ? verdictRes.data : []).filter((v) => v.catalogId === catalogId));
-      setLoading(false);
-    })();
-    return () => { alive = false; };
-  }, [catalogId]);
+  const read = catalogs?.[0] ?? null;
+  // Until the artifacts + verdicts land there is nothing to grade: the rows stay up (names are
+  // store-local) but read as UNKNOWN / pending, never as a graded 0%.
+  const loading = !!catalogId && (read === null || verdicts === null);
 
   const nodes = useMemo(() => {
     if (!catalogId) return [];
     const ctx: SwimlaneCtx = {
       stepsFor,
-      artifactsFor: (c) => (c === catalogId ? artifacts : []),
-      verdictsFor: (c) => (c === catalogId ? verdicts : []),
+      // Both reads must settle before anything grades — a row graded before its verdicts
+      // land would flash a grade the verdicts then change (Pipelines waits the same way).
+      artifactsFor: (c) => {
+        if (c !== catalogId) return [];
+        if (!read || !verdicts) return unknownRead('evidence still loading');
+        return read.error !== null ? unknownRead(read.error) : read.rows;
+      },
+      verdictsFor: (c) => {
+        if (verdicts && !verdicts.ok) return unknownRead(verdicts.error);
+        return verdicts?.byCatalog.get(c) ?? [];
+      },
     };
     return buildCategoryNodes(catalogId, entitiesByCatalog, ctx);
-  }, [catalogId, entitiesByCatalog, artifacts, verdicts]);
+  }, [catalogId, entitiesByCatalog, read, verdicts]);
 
   if (!catalogId) return <CatalogPicker onPick={onPickCatalog} />;
 
@@ -182,6 +179,14 @@ export function CategoryView({
         {loading && 'Loading gate evidence — the grades below are not final yet…'}
         {!loading && nodes.length === 0 && 'No entities seeded in this catalog — nothing to rank yet.'}
       </div>
+
+      {/* A failed read is SAID, never graded around (same wording family as Pipelines). */}
+      {read && read.error !== null && (
+        <EvidenceReadNotice kind="artifacts" subject={catalogLabel(catalogId)} error={read.error} onRetry={() => retryCatalog(catalogId)} />
+      )}
+      {verdicts && !verdicts.ok && (
+        <EvidenceReadNotice kind="verdicts" error={verdicts.error} onRetry={reloadVerdicts} />
+      )}
 
       {/* Entity names are store-local and correct immediately; only the cells/percentages
           wait on the fetch, so the list stays up but reads as provisional until it lands.

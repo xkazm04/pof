@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 
 vi.mock('next/font/google', () => {
   const f = () => ({ className: 'font-mock' });
@@ -104,5 +104,38 @@ describe('OneShotPanel', () => {
     useOneShotLabStore.setState({ panelOpen: true });
     render(<OneShotPanel t={LIGHT} />);
     expect(screen.getByText('uncommon')).toBeTruthy();
+  });
+
+  // -- image-generation/B: terminal phases are not dead ends --
+  it('completed offers Start over, which returns to the catalog picker', () => {
+    useOneShotJobStore.setState({
+      phase: 'completed', catalogId: 'items', draftEntityId: 'draft-items-1', totalSteps: 1,
+      stepResults: [{ step: 'Concept Brief', outcome: 'pass' }],
+      lastSummary: { ran: 1, passed: 1, failed: 0, skipped: 0, deferred: 0 },
+    });
+    useOneShotLabStore.setState({ panelOpen: true });
+    render(<OneShotPanel t={LIGHT} />);
+    fireEvent.click(screen.getByRole('button', { name: /start over/i }));
+    expect(useOneShotJobStore.getState().phase).toBe('idle');
+    expect(screen.getByLabelText(/catalog/i)).toBeTruthy();
+  });
+
+  it('an interrupted run names the reason and offers Resume from the first unrecorded step', () => {
+    useOneShotJobStore.setState({
+      phase: 'failed', failureReason: 'reload-interrupted', catalogId: 'items', draftEntityId: 'draft-items-1',
+      totalSteps: 5, stepResults: [{ step: 'Brief', outcome: 'pass' }, { step: 'Attributes', outcome: 'pass' }],
+    });
+    useOneShotLabStore.setState({ panelOpen: true });
+    render(<OneShotPanel t={LIGHT} />);
+    expect(screen.getByText(/reload-interrupted/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /resume from step 3/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /start over/i })).toBeTruthy();
+  });
+
+  it('an in-flight analyze offers Cancel', () => {
+    useOneShotJobStore.setState({ phase: 'analyzing', catalogId: 'items' });
+    useOneShotLabStore.setState({ panelOpen: true });
+    render(<OneShotPanel t={LIGHT} />);
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeTruthy();
   });
 });

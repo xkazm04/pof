@@ -1,21 +1,21 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { getTriposrJob } from '@/lib/visual-gen/triposr-job-store';
-import { getHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
-import { getTripoJob } from '@/lib/visual-gen/tripo-job-store';
+import { resolveRunnerJob } from '@/lib/visual-gen/runner-dispatch';
 import { projectCritique } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+import { remedyFor } from '@/lib/visual-gen/delivery-remedy';
 
 /**
  * GET /api/visual-gen/generate/status?jobId=...
- * Polls a 3D-gen job — local Hunyuan3D (official) / TripoSR fallback, or cloud Tripo3D
- * (resolved by trying each store): { status, meshPath?, verts?, faces?, previewPath?,
- * critique?, error? }.
+ * Polls a 3D-gen job started by any runner in `RUNNER_DISPATCH` (local Hunyuan3D /
+ * TripoSR / TRELLIS.2, cloud Tripo3D) — resolved through the same table POST /generate
+ * starts jobs with, so a provider the route can start is a provider this can find:
+ * { status, meshPath?, verts?, faces?, previewPath?, critique?, error? }.
  */
 export async function GET(req: NextRequest) {
   try {
     const jobId = req.nextUrl.searchParams.get('jobId');
     if (!jobId) return apiError('jobId is required', 400);
-    const job = getHunyuanJob(jobId) ?? getTriposrJob(jobId) ?? getTripoJob(jobId);
+    const job = resolveRunnerJob(jobId)?.job;
     if (!job) return apiError('generation job not found', 404);
     // TripoSR and Hunyuan results share most fields; the few that differ (device/clipMax
     // vs vramGb) are read loosely so one shape serves both providers.
@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     // gate ran on and rejected, and the class budget in force was invisible.
     const gate = job as unknown as {
       attempts?: number; accepted?: boolean; ungated?: boolean; gateReason?: string; gradedAs?: string;
+      requestedFaceLimit?: number; spec?: { assetClass?: string };
     };
     return apiSuccess({
       status: job.status,
@@ -69,6 +70,15 @@ export async function GET(req: NextRequest) {
       // What the mesh is actually graded against: the class budget, or the STATED
       // class-blind default when the submit carried no `assetClass`.
       gradedAs: gate.gradedAs,
+      // The face budget actually SENT to the generator (TRELLIS.2's native
+      // `decimation_target`); absent for providers that take no budget input.
+      requestedFaceLimit: gate.requestedFaceLimit,
+      // The delivery's next step ($0 finish / paid reroll / none, with why), derived HERE
+      // from the store-side findings the projected critique deliberately drops. Only a
+      // delivered mesh has one; it never changes `accepted`.
+      remedy: job.status === 'done'
+        ? remedyFor({ critique: job.critique, assetClass: gate.spec?.assetClass, meshPath: r?.meshPath })
+        : undefined,
       error: job.error,
     });
   } catch (e) {

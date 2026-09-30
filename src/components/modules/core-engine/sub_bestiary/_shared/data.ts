@@ -34,6 +34,27 @@ export const BESTIARY_SUBTABS: BestiarySubtabDef[] = [
 
 /* ── Archetype definitions ─────────────────────────────────────────────── */
 
+/**
+ * Archetype icons are referenced by KEY. `ArchetypeConfig` used to carry the lucide component
+ * itself, and a catalog entity is persisted with `JSON.stringify` — which reduced the component
+ * to `{}`, a hollow value that kept the key alive and so passed every presence check (measured
+ * 2026-09-22: 13 keys in, 13 out, one hollow). A string survives persistence; the component is
+ * looked up at render time.
+ */
+export type ArchetypeIconKey = 'skull' | 'crosshair' | 'shield' | 'swords' | 'brain';
+
+export const ARCHETYPE_ICONS: Record<ArchetypeIconKey, LucideIcon> = {
+  skull: Skull, crosshair: Crosshair, shield: Shield, swords: Swords, brain: Brain,
+};
+
+/**
+ * The icon for an archetype — including one read back from storage or ingested, whose key
+ * may be absent or unknown. Falls back to the generic enemy glyph rather than rendering nothing.
+ */
+export function archetypeIcon(a: { iconKey?: string }): LucideIcon {
+  return (a.iconKey && ARCHETYPE_ICONS[a.iconKey as ArchetypeIconKey]) || Skull;
+}
+
 export type EnemyRole = 'melee' | 'ranged' | 'tank' | 'healer' | 'caster' | 'swarm';
 export type EnemyCategory = 'Humanoid' | 'Beast' | 'Droid' | 'Force-sensitive' | 'Undead';
 export type EnemyTier = 'minion' | 'standard' | 'elite' | 'boss' | 'raid-boss';
@@ -41,7 +62,8 @@ export type EnemyTier = 'minion' | 'standard' | 'elite' | 'boss' | 'raid-boss';
 export interface ArchetypeConfig {
   id: string;
   label: string;
-  icon: typeof Skull;
+  /** A key into `ARCHETYPE_ICONS`, never the component: this payload is persisted as JSON. */
+  iconKey: ArchetypeIconKey;
   color: string;
   class: string;
   role: EnemyRole;
@@ -59,7 +81,7 @@ export type GroupBy = 'none' | 'class' | 'role' | 'category' | 'tier' | 'area';
 /* ── UI metadata per combat archetype ID ─────────────────────────────── */
 
 interface ArchetypeUIMeta {
-  icon: typeof Skull;
+  iconKey: ArchetypeIconKey;
   color: string;
   class: string;
   role: EnemyRole;
@@ -72,25 +94,25 @@ interface ArchetypeUIMeta {
 
 const UI_META: Record<string, ArchetypeUIMeta> = {
   'melee-grunt': {
-    icon: Skull, color: ACCENT_RED, class: 'Warrior', role: 'melee',
+    iconKey: 'skull', color: ACCENT_RED, class: 'Warrior', role: 'melee',
     category: 'Humanoid', tier: 'minion', area: 'Whisper Woods',
     btSummary: { Idle: 'Stand and look around', Patrol: 'Walk waypoint path', Chase: 'Sprint to player', Attack: 'Melee combo swing' },
     featureName: 'Enemy archetypes',
   },
   'ranged-caster': {
-    icon: Crosshair, color: ACCENT_PURPLE_BOLD, class: 'Mage', role: 'ranged',
+    iconKey: 'crosshair', color: ACCENT_PURPLE_BOLD, class: 'Mage', role: 'ranged',
     category: 'Humanoid', tier: 'standard', area: 'Crystal Caves',
     btSummary: { Idle: 'Scan for threats', Patrol: 'Float between positions', Chase: 'Maintain safe distance', Attack: 'Cast ranged projectile' },
     featureName: 'Enemy archetypes',
   },
   'brute': {
-    icon: Shield, color: MODULE_COLORS.content, class: 'Tank', role: 'tank',
+    iconKey: 'shield', color: MODULE_COLORS.content, class: 'Tank', role: 'tank',
     category: 'Humanoid', tier: 'elite', area: 'Bandit Camp',
     btSummary: { Idle: 'Guard assigned area', Patrol: 'Slow stomp circuit', Chase: 'Charge with knockback', Attack: 'Ground slam AoE' },
     featureName: 'Enemy archetypes',
   },
   'elite-knight': {
-    icon: Swords, color: MODULE_COLORS.core, class: 'Elite', role: 'melee',
+    iconKey: 'swords', color: MODULE_COLORS.core, class: 'Elite', role: 'melee',
     category: 'Humanoid', tier: 'elite', area: 'Ruined Keep',
     btSummary: { Idle: 'Guard post vigilantly', Patrol: 'Precise patrol route', Chase: 'Measured pursuit', Attack: 'Slash and shield bash' },
     featureName: 'Enemy archetypes',
@@ -141,7 +163,7 @@ const DERIVED_ARCHETYPES: ArchetypeConfig[] = ENEMY_ARCHETYPES
     return {
       id: arch.id,
       label: arch.name,
-      icon: meta.icon,
+      iconKey: meta.iconKey,
       color: meta.color,
       class: meta.class,
       role: meta.role,
@@ -159,7 +181,7 @@ const DERIVED_ARCHETYPES: ArchetypeConfig[] = ENEMY_ARCHETYPES
 
 const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
   {
-    id: 'rakghoul', label: 'Rakghoul', icon: Skull, color: STATUS_SUCCESS,
+    id: 'rakghoul', label: 'Rakghoul', iconKey: 'skull', color: STATUS_SUCCESS,
     class: 'AARPGEnemy_Rakghoul', role: 'swarm', category: 'Beast', tier: 'minion', area: 'Taris',
     stats: [{ label: 'HP', value: 20 }, { label: 'ATK', value: 25 }, { label: 'DEF', value: 15 }, { label: 'SPD', value: 65 }, { label: 'INT', value: 8 }],
     abilities: ['Claw Slash', 'Plague Bite'],
@@ -167,7 +189,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Rakghoul Enemy',
   },
   {
-    id: 'kinrath', label: 'Kinrath', icon: Skull, color: ACCENT_EMERALD,
+    id: 'kinrath', label: 'Kinrath', iconKey: 'skull', color: ACCENT_EMERALD,
     class: 'AARPGEnemy_Kinrath', role: 'melee', category: 'Beast', tier: 'standard', area: 'Kashyyyk',
     stats: [{ label: 'HP', value: 35 }, { label: 'ATK', value: 30 }, { label: 'DEF', value: 20 }, { label: 'SPD', value: 70 }, { label: 'INT', value: 10 }],
     abilities: ['Venomous Sting', 'Burrow Ambush'],
@@ -175,7 +197,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Kinrath Enemy',
   },
   {
-    id: 'kath-hound', label: 'Kath Hound', icon: Skull, color: STATUS_WARNING,
+    id: 'kath-hound', label: 'Kath Hound', iconKey: 'skull', color: STATUS_WARNING,
     class: 'AARPGEnemy_KathHound', role: 'swarm', category: 'Beast', tier: 'minion', area: 'Dantooine',
     stats: [{ label: 'HP', value: 18 }, { label: 'ATK', value: 20 }, { label: 'DEF', value: 12 }, { label: 'SPD', value: 75 }, { label: 'INT', value: 5 }],
     abilities: ['Bite', 'Pack Howl'],
@@ -183,7 +205,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Kath Hound Enemy',
   },
   {
-    id: 'mandalorian-warrior', label: 'Mandalorian Warrior', icon: Shield, color: ACCENT_CYAN,
+    id: 'mandalorian-warrior', label: 'Mandalorian Warrior', iconKey: 'shield', color: ACCENT_CYAN,
     class: 'AARPGEnemy_MandalorianWarrior', role: 'ranged', category: 'Humanoid', tier: 'elite', area: 'Dxun',
     stats: [{ label: 'HP', value: 60 }, { label: 'ATK', value: 55 }, { label: 'DEF', value: 55 }, { label: 'SPD', value: 45 }, { label: 'INT', value: 50 }],
     abilities: ['Blaster Volley', 'Wrist Rocket', 'Power Shield'],
@@ -191,7 +213,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Mandalorian Warrior Enemy',
   },
   {
-    id: 'sith-assassin', label: 'Sith Assassin', icon: Swords, color: ACCENT_PURPLE_BOLD,
+    id: 'sith-assassin', label: 'Sith Assassin', iconKey: 'swords', color: ACCENT_PURPLE_BOLD,
     class: 'AARPGEnemy_SithAssassin', role: 'melee', category: 'Force-sensitive', tier: 'elite', area: 'Korriban',
     stats: [{ label: 'HP', value: 55 }, { label: 'ATK', value: 65 }, { label: 'DEF', value: 35 }, { label: 'SPD', value: 60 }, { label: 'INT', value: 55 }],
     abilities: ['Double-Bladed Strike', 'Force Cloak', 'Sneak Attack'],
@@ -199,7 +221,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Sith Assassin Enemy',
   },
   {
-    id: 'terentatek', label: 'Terentatek', icon: Skull, color: ACCENT_RED,
+    id: 'terentatek', label: 'Terentatek', iconKey: 'skull', color: ACCENT_RED,
     class: 'AARPGEnemy_Terentatek', role: 'tank', category: 'Beast', tier: 'boss', area: 'Korriban',
     stats: [{ label: 'HP', value: 90 }, { label: 'ATK', value: 75 }, { label: 'DEF', value: 80 }, { label: 'SPD', value: 30 }, { label: 'INT', value: 15 }],
     abilities: ['Crushing Slam', 'Venomous Claw', 'Force Resistance'],
@@ -207,7 +229,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Terentatek Boss',
   },
   {
-    id: 'war-droid', label: 'War Droid', icon: Shield, color: STATUS_INFO,
+    id: 'war-droid', label: 'War Droid', iconKey: 'shield', color: STATUS_INFO,
     class: 'AARPGEnemy_WarDroid', role: 'ranged', category: 'Droid', tier: 'standard', area: 'Nar Shaddaa',
     stats: [{ label: 'HP', value: 45 }, { label: 'ATK', value: 40 }, { label: 'DEF', value: 50 }, { label: 'SPD', value: 35 }, { label: 'INT', value: 20 }],
     abilities: ['Blaster Barrage', 'Shield Generator', 'Flamethrower'],
@@ -215,7 +237,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'War Droid Enemy',
   },
   {
-    id: 'wookiee-berserker', label: 'Wookiee Berserker', icon: Swords, color: ACCENT_ORANGE,
+    id: 'wookiee-berserker', label: 'Wookiee Berserker', iconKey: 'swords', color: ACCENT_ORANGE,
     class: 'AARPGEnemy_WookieeBerserker', role: 'melee', category: 'Humanoid', tier: 'elite', area: 'Kashyyyk',
     stats: [{ label: 'HP', value: 65 }, { label: 'ATK', value: 70 }, { label: 'DEF', value: 45 }, { label: 'SPD', value: 40 }, { label: 'INT', value: 20 }],
     abilities: ['Bowcaster Shot', 'Wookiee Rage', 'Crushing Grip'],
@@ -223,7 +245,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Wookiee Berserker Enemy',
   },
   {
-    id: 'hssiss', label: 'Hssiss', icon: Skull, color: ACCENT_PURPLE,
+    id: 'hssiss', label: 'Hssiss', iconKey: 'skull', color: ACCENT_PURPLE,
     class: 'AARPGEnemy_Hssiss', role: 'melee', category: 'Beast', tier: 'elite', area: 'Malachor V',
     stats: [{ label: 'HP', value: 55 }, { label: 'ATK', value: 50 }, { label: 'DEF', value: 40 }, { label: 'SPD', value: 55 }, { label: 'INT', value: 30 }],
     abilities: ['Dark Side Bite', 'Force Camouflage', 'Tail Sweep'],
@@ -231,7 +253,7 @@ const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
     featureName: 'Hssiss Enemy',
   },
   {
-    id: 'darth-malak', label: 'Darth Malak', icon: Swords, color: ACCENT_PINK,
+    id: 'darth-malak', label: 'Darth Malak', iconKey: 'swords', color: ACCENT_PINK,
     class: 'AARPGEnemy_DarthMalak', role: 'melee', category: 'Force-sensitive', tier: 'raid-boss', area: 'Star Forge',
     stats: [{ label: 'HP', value: 100 }, { label: 'ATK', value: 95 }, { label: 'DEF', value: 85 }, { label: 'SPD', value: 50 }, { label: 'INT', value: 95 }],
     abilities: ['Lightsaber Flurry', 'Force Lightning', 'Force Drain', 'Stasis Field'],

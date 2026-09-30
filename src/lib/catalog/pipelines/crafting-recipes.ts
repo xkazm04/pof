@@ -162,6 +162,16 @@ registerCatalogPipeline({
         ],
         ueAssets: ['/Game/Crafting/DT_Recipes'],
       }),
+      contract: {
+        field: 'io',
+        grantedBy: 'UARPGCraftingComponent reads this recipe’s FARPGRecipeRow from DT_Recipes, validates every declared input, and writes its declared output through UARPGInventoryComponent',
+        activatedBy: 'the player confirms THIS recipe in WBP_CraftingStation, causing ExecuteRecipe to consume its inputs and currency costs before granting its output',
+        dependencies: [
+          'items::<id> for EACH input or output item THIS recipe declares',
+          'currencies::<id> for EACH currency cost THIS recipe declares',
+        ],
+        verification: 'L2: FARPGRecipeRow and UARPGCraftingComponent compile in Source/PoF/ and this recipe’s DT_Recipes row is seeded; L3: VSCraftingTest — {name} consumes exactly its declared inputs and produces exactly its declared output',
+      },
       accept: allOf(
         fieldsPopulated('io', 'inputs / output / deterministic populated', [
         'inputs',
@@ -232,6 +242,16 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'stationSkill',
+        grantedBy: 'UARPGCraftingComponent reads THIS recipe’s station type and minimum skill from FARPGRecipeRow and reads its skill attribute from UARPGAttributeSet',
+        activatedBy: 'opening WBP_CraftingStation at the declared station calls CanCraft and enables THIS recipe only when its station and skill requirements pass',
+        dependencies: [
+          'characters (the UARPGAttributeSet skill attribute THIS recipe requires)',
+          'the AARPGInteractable station class or blueprint THIS recipe requires',
+        ],
+        verification: 'L2: UARPGAttributeSet declares this recipe’s skill attribute and UARPGCraftingComponent::CanCraft compiles; L3: VSCraftingTest — {name} fails outside its declared station or below its skill gate and succeeds when both match',
+      },
       accept: allOf(
         fieldsPopulated('stationSkill', 'station + skillLevel + gating defined', [
           'station',
@@ -323,6 +343,15 @@ registerCatalogPipeline({
           ueAssets: ['/Game/Economy/DT_Currencies'],
         };
       },
+      contract: {
+        field: 'costYield',
+        grantedBy: 'UARPGCraftingComponent::ExecuteRecipe atomically deducts every currency cost THIS recipe declares through UARPGCurrencySubsystem before granting its output',
+        activatedBy: 'craft confirmation checks each declared balance, deducts the recipe’s costs, consumes its item inputs, and grants its output',
+        dependencies: [
+          'currencies::<id> for EACH currency cost THIS recipe declares',
+        ],
+        verification: 'L2: UARPGCurrencySubsystem::Transact compiles and every declared currency id resolves in DT_Currencies; L3: VSCraftingTest — a successful {name} craft deducts exactly its declared costs and an insufficient balance prevents the transaction',
+      },
       accept: allOf(
         priceRatioWithinBand(
         'costRatio',
@@ -385,6 +414,16 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        field: 'discovery',
+        grantedBy: 'the gameplay system named by THIS recipe’s discovery method emits its Crafting.RecipeUnlocked.{slug} event and a GameplayAbility grants Crafting.KnownRecipe.{slug}',
+        activatedBy: 'the NPC interaction, item use, quest stage, or other trigger THIS recipe declares broadcasts its unlock event to the player ability system component',
+        dependencies: [
+          'characters (the player ability system component that stores the known-recipe tag)',
+          '<catalog>::<id> for EACH NPC, item, quest, or other entity used by THIS recipe’s discovery trigger',
+        ],
+        verification: 'L2: the unlock GameplayAbility and Crafting.KnownRecipe.{slug} tag are registered; L3: VSCraftingTest — {name} becomes visible after its declared discovery trigger and is not granted twice',
       },
       accept: allOf(
         fieldsPopulated('discovery', 'method + trigger + persistenceTag defined', [
@@ -461,6 +500,16 @@ registerCatalogPipeline({
           `/Game/Audio/Crafting/SC_Craft_${slug(e.name)}_Success`,
         ],
       }),
+      contract: {
+        field: 'craftFx',
+        grantedBy: 'THIS recipe’s station animation blueprint fires the declared AnimNotifies, drives its named Niagara asset, and plays each named SoundCue',
+        activatedBy: 'UARPGCraftingComponent::ExecuteRecipe starts the crafting montage whose declared notification sequence triggers this recipe’s VFX and audio',
+        dependencies: [
+          'the station animation blueprint and montage THIS recipe uses',
+          'one Niagara asset and each SoundCue THIS recipe declares (name each)',
+        ],
+        verification: 'L2: this recipe’s VFX and SFX paths are referenced by FARPGRecipeRow and all named assets exist; L4: visual smoke test — {name}’s declared particles and sounds fire at their declared montage notifications',
+      },
       accept: allOf(
         fieldsPopulated('craftFx', 'vfx + sfxLoop + sfxSuccess defined', [
           'vfx',
@@ -518,6 +567,16 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'recipeUi',
+        grantedBy: 'UARPGCraftingComponent opens WBP_CraftingStation, filters DT_Recipes by the active station and player known-recipe tags, and binds THIS recipe’s declared display fields',
+        activatedBy: 'the player interacts with this recipe’s declared station and OpenCraftingUI pushes WBP_CraftingStation to the HUD',
+        dependencies: [
+          'proj-hud-binding (WBP_CraftingStation registration and its declared HUD anchor)',
+          'characters (the player ability system component known-recipe tags)',
+        ],
+        verification: 'L2: WBP_CraftingStation exists under Content/UI/Crafting/ and exposes this recipe’s declared fields; L3: VSCraftingTest — after discovery, {name} appears at its station with the declared inputs, cost, output, and gating state',
+      },
       accept: allOf(
         fieldsPopulated('recipeUi', 'widget + displayFormat + hudAnchor defined', [
           'widget',
@@ -664,6 +723,17 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/Crafting/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'UARPGCraftingComponent reads this recipe’s FARPGRecipeRow from DT_Recipes; UARPGCurrencySubsystem handles its declared currency sinks and UARPGInventoryComponent consumes and grants its declared items',
+        activatedBy: 'interaction with this recipe’s declared station opens WBP_CraftingStation; craft confirmation runs its station, skill, cost, and input checks, performs the transaction, and triggers its declared presentation assets',
+        dependencies: [
+          'items::<id> for EACH input and output item THIS recipe declares',
+          'currencies::<id> for EACH cost THIS recipe declares',
+          'characters (the UARPGAttributeSet skill and known-recipe tag used by THIS recipe)',
+          'proj-hud-binding (WBP_CraftingStation registration)',
+        ],
+        verification: 'L2: FARPGRecipeRow, UARPGCraftingComponent, and UARPGCurrencySubsystem compile in Source/PoF/, this recipe’s row is seeded, and WBP_CraftingStation exists; L3: VSCraftingTest — {name}’s complete discovery and craft cycle succeeds in PIE',
       },
       accept: allOf(
         minCount('assets', '≥2 UE assets packaged', 2),

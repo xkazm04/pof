@@ -1,5 +1,6 @@
 'use client';
 
+import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import { useMemo } from 'react';
 import { useEntitySteps, type LabStepArtifact } from '../../labPipelineStore';
 import { buildLabCheckerContext } from '../../labCheckerContext';
@@ -48,9 +49,14 @@ export function useStepAcceptance({ catalogId, entityId, step, art, accept }: {
   // just re-run their raw shape checkers. The Items Test Gate is the reference consumer.
   const catalogVerdicts = useCatalogJudgeVerdicts(catalogId || undefined);
 
+  // The entity's canon profile — a Diablo entity's canon-law invariants grade as UNGRADED, the
+  // same verdict the server stores (one spine: banner and row must agree).
+  const canonProfile = useCatalogStore((s) => canonProfileOf(
+    (s.draftEntitiesByCatalog[catalogId]?.[entityId] ?? s.entitiesByCatalog[catalogId]?.[entityId]) as
+      { provenance?: { canonProfile?: string } } | undefined));
   const ctx = useMemo<CheckerContext>(
-    () => buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog, { entityId, verdicts: catalogVerdicts }),
-    [catalogId, entitySteps, entitiesByCatalog, entityId, catalogVerdicts],
+    () => buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog, { entityId, verdicts: catalogVerdicts }, canonProfile),
+    [catalogId, entitySteps, entitiesByCatalog, entityId, catalogVerdicts, canonProfile],
   );
 
   return useMemo(() => {

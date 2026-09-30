@@ -135,6 +135,17 @@ registerCatalogPipeline({
         ],
       });
       },
+      contract: {
+        field: 'dataBinding',
+        grantedBy: 'AARPGHUD::BeginPlay creates WBP_Hud{slug} and adds it to the viewport; the GameMode uses AARPGHUD as its HUD class',
+        activatedBy: 'the UARPGAttributeSet change delegate for EACH value this HUD element displays calls the corresponding WBP_Hud{slug} update callback',
+        dependencies: [
+          'UARPGAttributeSet (the attributes THIS HUD element displays — name each)',
+          'AARPGHUD (creates and owns the widget)',
+          'UARPGAbilitySystemComponent (attribute source)',
+        ],
+        verification: 'L2: the declared attributes and delegates compile in Source/PoF/, AARPGHUD creates WBP_Hud{slug}, and its DT_HUDElements row is seeded; L3: VSHUDElementTest — {name} renders and reads the correct values at each tested resolution',
+      },
       accept: allOf(
         fieldsPopulated('dataBinding', 'source / format / anchor populated', [
         'source',
@@ -425,6 +436,17 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/UI/HUD/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'AARPGHUD::BeginPlay creates this entity’s declared widget and adds it to the viewport; the GameMode uses AARPGHUD as its HUD class',
+        activatedBy: 'the source delegate for EACH value THIS HUD element displays updates WBP_Hud{slug}; its declared state transitions run on those callbacks',
+        dependencies: [
+          'UARPGAttributeSet (the attributes THIS HUD element displays — name each)',
+          'AARPGHUD (creates and owns the widget)',
+          'UARPGAbilitySystemComponent (attribute source when this element displays an ability-system attribute)',
+          'icon-sets::<id> for the icon family THIS HUD element uses',
+        ],
+        verification: 'L2: all declared source symbols compile in Source/PoF/, WBP_Hud{slug} is seeded in DT_HUDElements, and every linked icon-set id resolves; L3: VSHUDElementTest — {name} renders and responds to its declared source events at each tested resolution',
       },
       accept: allOf(
         minCount('assets', '≥2 UE assets packaged', 2),

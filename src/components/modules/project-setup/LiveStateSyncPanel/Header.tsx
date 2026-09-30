@@ -1,5 +1,5 @@
 import {
-  Radio, Wifi, WifiOff, Eye, RefreshCw, Activity, Gauge,
+  Radio, Wifi, WifiOff, Eye, RefreshCw, Activity, Gauge, Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConnectionStatusBadge } from '@/components/ui/ConnectionStatusBadge';
@@ -101,7 +101,20 @@ export function Header({
               <Gauge className="w-3 h-3" />
             </button>
           </Tooltip>
-          {!isLive ? (
+          {wsStatus === 'connecting' ? (
+            // The handshake is in flight: a second connect() would call
+            // cleanup() first and tear it down, so there is nothing to click.
+            <button
+              type="button"
+              disabled
+              aria-busy="true"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border cursor-wait"
+              style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}${OPACITY_10}`, color: ACCENT_CYAN }}
+            >
+              <Loader2 className="w-3 h-3 animate-spin motion-reduce:animate-none" />
+              Connecting…
+            </button>
+          ) : !isLive ? (
             <button
               type="button"
               onClick={connectWs}

@@ -9,10 +9,7 @@ import {
 } from '@/lib/implementation-planner/layout-engine';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { useModuleCLI } from '@/hooks/useModuleCLI';
-import { useProjectStore } from '@/stores/projectStore';
-import { buildProjectContextHeader } from '@/lib/prompt-context';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import type { SubModuleId } from '@/types/modules';
 
 export function usePlanMatrixMap(initialModuleId?: string) {
@@ -25,15 +22,11 @@ export function usePlanMatrixMap(initialModuleId?: string) {
   const { transform, startPan, onPointerMove, endPan, zoomToFit, zoomToCenter, reset, setTransform } = useCanvasTransform();
   const [isPanningState, setIsPanningState] = useState(false);
 
-  const projectName = useProjectStore((s) => s.projectName);
-  const projectPath = useProjectStore((s) => s.projectPath);
-  const ueVersion = useProjectStore((s) => s.ueVersion);
-
-  const { sendPrompt } = useModuleCLI({
-    moduleId: 'core-engine' as SubModuleId,
+  // The ONE plan dispatch door (gated, feature-fix task, refresh on land) —
+  // the same door as the plan table; no prompt is built here.
+  const { dispatch } = usePlanDispatch({
     sessionKey: 'plan-matrix-map',
     label: 'Plan Map',
-    accentColor: MODULE_COLORS.core,
   });
 
   // --- UI State ---
@@ -200,13 +193,8 @@ export function usePlanMatrixMap(initialModuleId?: string) {
   }, []);
 
   const handleExecute = useCallback((item: PlanItem) => {
-    const header = buildProjectContextHeader({ projectName, projectPath, ueVersion });
-    const depsSection = item.dependsOn.length > 0
-      ? `\n\n## Dependencies (already implemented)\n${item.dependsOn.map((d) => `- ${d.replace('::', ' / ')}`).join('\n')}`
-      : '';
-    sendPrompt(`${header}${depsSection}\n\n## Task: Implement "${item.featureName}" (${getModuleLabel(item.moduleId)})\n\n${item.description}\n\nImplement this feature from scratch. Follow UE5 C++ conventions. Read any existing related files first, then create/modify files as needed.`);
-    setSelectedKey(null);
-  }, [sendPrompt, projectName, projectPath, ueVersion]);
+    if (dispatch(item).ok) setSelectedKey(null);
+  }, [dispatch]);
 
   const nodeOpacity = useCallback((node: CanvasNode): number => {
     if (filterModuleId && node.item.moduleId !== filterModuleId) return 0.08;

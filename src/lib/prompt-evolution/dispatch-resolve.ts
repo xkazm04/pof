@@ -23,6 +23,8 @@ import {
   type EvaluateTrackTask,
   type MaterialConfiguratorTask,
   materialConfiguratorVariantKey,
+  type PostProcessTask,
+  postProcessVariantKey,
 } from '@/lib/cli-task';
 import { taskVariantBody } from '@/lib/cli-task-handlers';
 import type { ProjectContext } from '@/lib/prompt-context';
@@ -76,6 +78,10 @@ export function variantKeyForTask(
   if (task.type === 'material-configurator') {
     const mt = task as MaterialConfiguratorTask;
     return { moduleId: task.moduleId, checklistItemId: materialConfiguratorVariantKey(mt.config) };
+  }
+  // Phase 2: post-process — the key digests the stack spec (see `postProcessVariantKey`).
+  if (task.type === 'post-process') {
+    return { moduleId: task.moduleId, checklistItemId: postProcessVariantKey((task as PostProcessTask).config) };
   }
   return null;
 }

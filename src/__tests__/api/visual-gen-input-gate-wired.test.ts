@@ -51,7 +51,7 @@ const started = () =>
   startTriposrJob.mock.calls.length + startHunyuanJob.mock.calls.length + startTripoJob.mock.calls.length;
 
 const card = (verdict: 'pass' | 'warn' | 'fail', score: number, reasons: string[] = []) => ({
-  ok: true as const, verdict, score, reasons, raw: `SCORE=${score / 10}`,
+  ok: true as const, verdict, score, reasons, raw: `SCORE=${score / 10}`, thresholdsFrom: 'default' as const,
 });
 
 beforeEach(() => {

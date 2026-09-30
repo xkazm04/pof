@@ -9,6 +9,11 @@ import { useModuleCLI } from '@/hooks/useModuleCLI';
 import type { SubModuleId } from '@/types/modules';
 import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
 import { deriveDefaultSpec } from '@/lib/ability/spec';
+import type { EditorEffect } from '@/lib/gas-codegen';
+import {
+  preflightGenerate, applyPreflightFix, applyAllPreflightFixes,
+  type GeneratePreflight, type PreflightFix,
+} from '@/lib/ability/generate-preflight';
 import type { EditorState } from './types';
 import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import { useAbilitySpecStore } from '@/stores/abilitySpecStore';
@@ -63,7 +68,21 @@ export interface SpecBinding {
   error: string | null;
   save: () => Promise<void>;
   draftSpec: () => void;
+  /** Dispatch the generate run immediately (no preflight). */
   generateEffects: () => void;
+  /**
+   * The "Generate GAS effects" click: a clean spec dispatches at once; otherwise
+   * the run is held and {@link preflight} lists what it would override/TODO.
+   */
+  reviewGenerate: () => void;
+  /** Live preflight of the CURRENT editor state while a review is open, else null. */
+  preflight: GeneratePreflight | null;
+  /** Dispatch the held run — with every one-click fix applied to the editor first, or as-is. Never when blocked. */
+  confirmGenerate: (opts: { applyFixes: boolean }) => void;
+  /** Close the review without dispatching. */
+  dismissPreflight: () => void;
+  /** Apply one finding's fix to the editor (the review stays open and re-derives). */
+  applyFix: (fix: PreflightFix) => void;
   isRunning: boolean;
   /** Reported outcome of the last "Generate GAS effects" run (dispatched → confirmed/failed). */
   codegen: CodegenStatus;
@@ -199,27 +218,68 @@ export function useAbilitySpecBinding({ moduleId, state, onHydrate }: Args): Spe
     void cli.execute(task);
   }, [ability, moduleId, entityId, cli]);
 
-  const generateEffects = useCallback(() => {
+  const scalars = useMemo(
+    () => (ability ? { manaCost: ability.manaCost, cooldown: ability.cooldown, damage: ability.damage } : undefined),
+    [ability],
+  );
+
+  const dispatchGenerate = useCallback((effs: EditorEffect[]) => {
     if (!ability) return;
     const task = TaskFactory.generateGasEffects(
       moduleId,
-      {
-        ref: toAbilityRef(ability),
-        effects,
-        tagRules,
-        scalars: { manaCost: ability.manaCost, cooldown: ability.cooldown, damage: ability.damage },
-        catalogId: SPEC_CATALOG_ID,
-        entityId,
-      },
+      { ref: toAbilityRef(ability), effects: effs, tagRules, scalars, catalogId: SPEC_CATALOG_ID, entityId },
       getAppOrigin(),
       `Generate GAS effects — ${ability.name}`,
     );
     codegen.markDispatched();
     void cli.execute(task);
-  }, [ability, moduleId, entityId, effects, tagRules, cli, codegen]);
+  }, [ability, moduleId, entityId, tagRules, scalars, cli, codegen]);
+
+  const generateEffects = useCallback(() => dispatchGenerate(effects), [dispatchGenerate, effects]);
+
+  // The review is keyed to the entity it was opened for, so switching ability
+  // closes it; the findings themselves are DERIVED from the live editor state,
+  // so a per-finding Fix (via onHydrate) re-derives the list with no sync step.
+  const [reviewFor, setReviewFor] = useState<string | null>(null);
+  const preflight = useMemo(
+    () => (reviewFor === entityId ? preflightGenerate({ scalars, effects, attributes }) : null),
+    [reviewFor, entityId, scalars, effects, attributes],
+  );
+
+  const reviewGenerate = useCallback(() => {
+    if (!ability) return;
+    if (preflightGenerate({ scalars, effects, attributes }).findings.length === 0) {
+      setReviewFor(null);
+      dispatchGenerate(effects);
+      return;
+    }
+    setReviewFor(entityId);
+  }, [ability, scalars, effects, attributes, entityId, dispatchGenerate]);
+
+  const confirmGenerate = useCallback(({ applyFixes }: { applyFixes: boolean }) => {
+    const pf = preflightGenerate({ scalars, effects, attributes });
+    if (!pf.canGenerate) return;
+    setReviewFor(null);
+    if (!applyFixes) { dispatchGenerate(effects); return; }
+    const fixed = applyAllPreflightFixes({ effects, attributes }, pf.findings);
+    const patch = {
+      ...(fixed.effects !== effects ? { effects: fixed.effects } : {}),
+      ...(fixed.attributes !== attributes ? { attributes: fixed.attributes } : {}),
+    };
+    if (Object.keys(patch).length) onHydrateRef.current(patch);
+    dispatchGenerate(fixed.effects);
+  }, [scalars, effects, attributes, dispatchGenerate]);
+
+  const dismissPreflight = useCallback(() => setReviewFor(null), []);
+
+  const applyFix = useCallback((fix: PreflightFix) => {
+    const fixed = applyPreflightFix({ effects, attributes }, fix);
+    onHydrateRef.current({ effects: fixed.effects, attributes: fixed.attributes });
+  }, [effects, attributes]);
 
   return {
     entityId, setEntityId, ability, hydrating, saveState: effectiveSaveState, error,
-    save, draftSpec, generateEffects, isRunning: cli.isRunning, codegen,
+    save, draftSpec, generateEffects, reviewGenerate, preflight, confirmGenerate, dismissPreflight, applyFix,
+    isRunning: cli.isRunning, codegen,
   };
 }

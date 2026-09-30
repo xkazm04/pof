@@ -1,12 +1,14 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
-import { upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { describeUngraded } from '@/lib/catalog/acceptance/stepGradability';
 import { stampPromptVersion } from '@/lib/prompt-evolution/judge-fitness';
 import { seededEntities } from '@/lib/catalog/seed';
+import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { withProduceDirection } from '@/lib/catalog/produceDirection';
+import { stampTemplate } from '@/lib/catalog/produceTemplate';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { listRules } from '@/lib/project-rules-db';
 import { engineProvenance, withProvenance, LAB_PRODUCE_ENGINE } from '@/lib/provenance';
@@ -15,6 +17,7 @@ import { resolveDispatchModelChoice, claudeProvenance } from '@/lib/model-policy
 import { ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { labIdentityOf } from '@/lib/catalog/canon/profiles';
 import type { StepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
 import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
@@ -69,8 +72,17 @@ function readLibrary(v: unknown): LibraryAsset[] {
 /** Used only when the caller supplies no direction of its own. */
 export const DEFAULT_DIRECTION = 'derive from approved design; minimal commentary';
 
-function entityToLab(e: { id: string; name: string; lifecycle: string; data?: unknown }): LabEntity {
-  return { id: e.id, name: e.name, lifecycle: e.lifecycle as LabEntity['lifecycle'], data: e.data };
+type StoredLike = { id: string; name: string; lifecycle: string; data?: unknown } & Parameters<typeof labIdentityOf>[0];
+
+function entityToLab(e: NonNullable<StoredLike>): LabEntity {
+  return {
+    id: e.id,
+    name: e.name,
+    lifecycle: e.lifecycle as LabEntity['lifecycle'],
+    data: e.data,
+    links: (e as StoredCatalogEntity).links,
+    ...labIdentityOf(e),
+  };
 }
 
 interface StepGrade {
@@ -192,7 +204,9 @@ export async function POST(req: NextRequest) {
     if (mode === 'deterministic') {
       // No CLI prompt drove a deterministic produce — the stamp records that honestly
       // (empty `prompt`) rather than fabricating one.
-      const out = withProduceDirection(step.produce(entity, direction), { direction, prompt: '' });
+      // A data-blind body written for a non-exemplar entity is the exemplar's TEMPLATE: the stamp
+      // is part of what is graded, so the registration guard holds its would-be pass at pending.
+      const out = stampTemplate(catalogId, step, entity, withProduceDirection(step.produce(entity, direction), { direction, prompt: '' }), direction);
       const data = (out.data ?? {}) as Record<string, unknown>;
       const grade = gradeStep(catalogId, entityId, stepLabel, data);
       // Grade the SUBMITTED data untouched; the provenance stamp is added only to what is
@@ -233,9 +247,9 @@ export async function POST(req: NextRequest) {
     // CLI mode — the ONE produce path that spends money, so it dispatches the step's REAL
     // prompt. This used to be a third, thinnest builder (entity JSON + direction), which
     // meant the panel listed a quality pack, the canon, the step's wiring contract, the
-    // cited evidence and the library licenses as "📎 Attached to this prompt" and then sent
-    // none of them. `buildStepProducePrompt` is now the single source the panel preview, the
-    // headless recipe and this route all read.
+    // cited evidence, sibling artifacts and the library licenses as "📎 Attached to this
+    // prompt" and then sent none of them. `buildStepProducePrompt` is now the single source
+    // the panel preview, the headless recipe and this route all read.
     //
     // The client sends INPUTS, never a prompt string: a prompt is not client input, and
     // accepting one would let the preview and the persisted row disagree forever. Only the
@@ -244,6 +258,8 @@ export async function POST(req: NextRequest) {
     const promptText = buildStepProducePrompt(step, entity, direction, {
       catalogId,
       rules: listRules(),
+      siblings: Object.fromEntries(listArtifacts(catalogId, entityId).map((artifact) => [artifact.step, artifact.data])),
+      linkedEntities: CATALOG_SECTIONS.flatMap((section) => seededEntities(section.catalogId)),
       evidence: readEvidence(body.evidence),
       library: readLibrary(body.library),
       callback: true,

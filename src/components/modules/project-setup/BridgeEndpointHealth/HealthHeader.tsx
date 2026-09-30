@@ -5,11 +5,16 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD,
   OPACITY_10,
 } from '@/lib/chart-colors';
+import { POF_ROUTES, planRouteProbe } from '@/lib/pof-bridge/routes';
+
+/** Declared routes Ping All deliberately leaves alone (a property of the table, not of a run). */
+const NOT_PROBED_COUNT = POF_ROUTES.filter((r) => planRouteProbe(r).kind === 'not-probed').length;
 
 interface HealthHeaderProps {
   connectionStatus: string;
   pofPort: number;
   rcPort: number;
+  /** Routes actually probed in the last run (not-probed rows are never counted). */
   checkedCount: number;
   healthyCount: number;
   showSettings: boolean;
@@ -43,8 +48,9 @@ export function HealthHeader({
           <span className="font-mono ml-1" style={{ color: ACCENT_CYAN }}>:{rcPort}</span>
           <span className="mx-1">/remote</span>
           {checkedCount > 0 && (
-            <span className="ml-1">
-              &middot; <span style={{ color: healthyCount === checkedCount ? STATUS_SUCCESS : STATUS_WARNING }}>{healthyCount}/{checkedCount} healthy</span>
+            <span className="ml-1" data-testid="bridge-health-counts">
+              &middot; <span style={{ color: healthyCount === checkedCount ? STATUS_SUCCESS : STATUS_WARNING }}>{healthyCount}/{checkedCount} probed healthy</span>
+              {NOT_PROBED_COUNT > 0 && <> &middot; {NOT_PROBED_COUNT} not probed</>}
             </span>
           )}
         </p>
@@ -65,6 +71,7 @@ export function HealthHeader({
                    border border-border/40 transition-colors
                    enabled:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
         style={{ color: ACCENT_CYAN }}
+        title="GET-only health probes; routes that change the editor are never called"
         data-testid="bridge-ping-all-btn"
       >
         {pinging ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}

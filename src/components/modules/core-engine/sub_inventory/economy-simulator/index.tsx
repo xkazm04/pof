@@ -15,6 +15,7 @@ import {
   runItemEconomySim, DEFAULT_ITEM_ECON_CONFIG,
   type ItemEconomyConfig, type ItemEconomyResult,
 } from '@/lib/economy/item-economy-engine';
+import { economyVerdicts, summarizeRun, runToCoverage, HORIZON_LADDER } from '@/lib/economy/item-economy-verdicts';
 import { ACCENT } from './constants';
 import { ConfigInput } from './ConfigInput';
 import { SimulationSkeleton } from './SimulationSkeleton';
@@ -34,15 +35,36 @@ export function ItemEconomySimulator({ moduleId }: Props) {
   const [result, setResult] = useState<ItemEconomyResult | null>(null);
   const [activeTab, setActiveTab] = useState('power');
   const [isRunning, setIsRunning] = useState(false);
+  const [extendNote, setExtendNote] = useState<string | null>(null);
 
-  const runSim = useCallback(() => {
+  // One deferred-work site (the rAF callsite inventory in suspendable-raf.test pins it):
+  // paint the skeleton first, then run the synchronous Monte Carlo work.
+  const runDeferred = useCallback((work: () => void) => {
     setIsRunning(true);
     requestAnimationFrame(() => {
-      const r = runItemEconomySim(config);
-      setResult(r);
+      work();
       setIsRunning(false);
     });
-  }, [config]);
+  }, []);
+
+  const runSim = useCallback(() => {
+    setExtendNote(null);
+    runDeferred(() => setResult(runItemEconomySim(config)));
+  }, [config, runDeferred]);
+
+  // Walk the horizon ladder at the same seed; adopt the smallest horizon that samples the endgame.
+  const extendHorizon = useCallback(() => {
+    runDeferred(() => {
+      const covered = runToCoverage(config);
+      if (covered) {
+        setConfig(covered.result.config);
+        setResult(covered.result);
+        setExtendNote(`extended to ${covered.horizon} h, the first rung that samples the endgame`);
+      } else {
+        setExtendNote(`endgame not reached within ${HORIZON_LADDER[HORIZON_LADDER.length - 1]} h; lower Max Level`);
+      }
+    });
+  }, [config, runDeferred]);
 
   const updateConfig = useCallback(
     <K extends keyof ItemEconomyConfig>(key: K, value: ItemEconomyConfig[K]) => {
@@ -50,20 +72,8 @@ export function ItemEconomySimulator({ moduleId }: Props) {
     }, [],
   );
 
-  const summary = useMemo(() => {
-    if (!result) return null;
-    const endgame = result.brackets[result.brackets.length - 1];
-    const mid = result.brackets[Math.floor(result.brackets.length / 2)];
-    return {
-      peakPower: Math.max(...result.powerCurve.map((d) => d.avgPower)),
-      endgamePower: endgame?.avgItemPower ?? 0,
-      midPower: mid?.avgItemPower ?? 0,
-      alertCount: result.alerts.length,
-      criticalCount: result.alerts.filter((a) => a.severity === 'critical').length,
-      rarityInflation: result.rarityInflation,
-      simTime: result.durationMs,
-    };
-  }, [result]);
+  const summary = useMemo(() => (result ? summarizeRun(result) : null), [result]);
+  const verdicts = useMemo(() => (result ? economyVerdicts(result) : []), [result]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 p-2">
@@ -102,7 +112,7 @@ export function ItemEconomySimulator({ moduleId }: Props) {
           <ConfigInput label="Max Level" value={config.maxLevel}
             onChange={(v) => updateConfig('maxLevel', v)} min={5} max={100} step={5} />
           <ConfigInput label="Hours" value={config.maxHours}
-            onChange={(v) => updateConfig('maxHours', v)} min={10} max={500} step={10} />
+            onChange={(v) => updateConfig('maxHours', v)} min={10} max={1280} step={10} />
           <ConfigInput label="Drops/Hr" value={config.dropsPerHour}
             onChange={(v) => updateConfig('dropsPerHour', v)} min={1} max={30} step={1} />
           <ConfigInput label="Seed" value={config.seed}
@@ -147,7 +157,10 @@ export function ItemEconomySimulator({ moduleId }: Props) {
             <SimulationResults
               summary={summary}
               result={result}
+              verdicts={verdicts}
               config={config}
+              onExtend={extendHorizon}
+              extendNote={extendNote}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
             />

@@ -20,6 +20,9 @@ import type { StepSpec } from '@/lib/catalog/stepSpec';
 
 const ENTITY: LabEntity = { id: 'jinx', name: 'Jinx', lifecycle: 'planned', data: {} };
 
+/** A mesh generated FOR character-pipeline 3D Generation (its name re-encodes the step identity) — an unrelated .glb never fills a 3D slot. */
+const OWN_MESH = { name: 'character_pipeline_3d_generation', url: '/api/visual-gen/asset/character_pipeline_3d_generation.glb', slug: 'character_pipeline_3d_generation' };
+
 function step(catalogId: string, label: string): StepSpec {
   const p = allCatalogPipelines().find((x) => x.catalogId === catalogId);
   const s = p?.steps.find((x) => x.label === label);
@@ -33,7 +36,7 @@ function selectNth(spec: StepSpec, n: number): Record<string, unknown> {
   const field = (spec.view as { field: string }).field;
   const count = (spec.view as { candidates: number }).candidates;
   const raw = spec.genCandidates
-    ? spec.genCandidates.build('lint direction', 0, [{ name: 'a.glb', url: '/api/visual-gen/asset/a.glb' }])
+    ? spec.genCandidates.build('lint direction', 0, [OWN_MESH])
     : genericGalleryCandidates(field, count, 'lint direction', 0);
   let history = appendBatch(emptyHistory(), makeBatch({ seq: 0, at: '2026-07-27T00:00:00.000Z', direction: 'lint direction', prompt: 'p', candidates: raw }));
   history = selectCandidate(history, allCandidates(history)[n].id);
@@ -80,6 +83,6 @@ describe('gallery selection projection (character-pipeline regression)', () => {
   it('the 3D gallery still carries a real .glb url onto the artifact', () => {
     const spec = step('character-pipeline', '3D Generation');
     const after = selectNth(spec, 0);
-    expect(after.glbUrl).toBe('/api/visual-gen/asset/a.glb');
+    expect(after.glbUrl).toBe(OWN_MESH.url);
   });
 });

@@ -1,16 +1,45 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, resistancesPopulated, keysNumeric, unitsDeclared } from '../acceptance/dataCheckers';
 import { powerWithinTierTarget, monsterRarityWithinBands } from '../acceptance/invariants';
 import { allOf } from '../acceptance/combinators';
-import { entityRuntimeDeferred } from '../acceptance/deferred';
+import { automationNameDeclared, entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 import { riggedMeshSelected } from '@/lib/catalog/acceptance/rigArtifact';
+import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/acceptance/visualBrief';
+import { SPRITE_PROJECTION, spriteSetRendered } from '@/lib/catalog/acceptance/spriteCheckers';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+
+const BESTIARY_GATE_TEST_BY_ENTITY: Record<string, string> = {
+  'bestiary-brute': 'PoF.Bestiary.BruteArchetypeConfig',
+};
+
+function bestiaryGateTestName(entityId: string, s: string): string {
+  return BESTIARY_GATE_TEST_BY_ENTITY[entityId] ?? `PoF.Bestiary.${s}.ArchetypeConfig`;
+}
+
+function bestiaryGateChecks(entityId: string): string[] {
+  if (entityId === 'bestiary-brute') {
+    return [
+      'spawns + possesses',
+      'ability fires (Ground Slam shockwave + Heavy Attack)',
+      'dies + drops loot (lt-Brute table)',
+      'rarity modifier GE applied on Magic/Rare spawn',
+      'resistance profile reduces elemental hits correctly',
+    ];
+  }
+  return [
+    'archetype spawns and is possessed by its declared controller',
+    'each declared ability fires with its configured targeting behavior',
+    'death resolves every declared loot binding',
+    'each declared rarity modifier GE is applied on the matching rarity',
+    'the declared resistance profile modifies elemental hits correctly',
+  ];
+}
 
 /**
  * Bestiary pipeline (catalogId: 'bestiary').
@@ -52,9 +81,14 @@ registerCatalogPipeline({
             `Role in the encounter flow: front-line pressure unit, pair with Ranged Casters to force ` +
             `the player into melee range against their will. Archetype anchor: AARPGEnemyCharacter ` +
             `BP child with one DT_AttributeDefaults stat row; no new C++ per canon char-config-not-cpp.`,
+          visualBrief:
+            'A hulking, broad-shouldered brute stooped forward under its own weight. Grey stone-like hide covers ' +
+            'the whole body; thick arms end in heavy fists, legs are short and heavy, and the small head sits sunk ' +
+            'between the shoulders. A ragged hide loincloth. No bone is exposed.',
         },
       }),
-      accept: minLength('brief', 'Brief ≥ 300 characters', 300),
+      criteria: VISUAL_BRIEF_CRITERIA, // the image steps draw from `visualBrief` (D15/D19)
+      accept: allOf(minLength('brief', 'Brief ≥ 300 characters', 300), visualBriefWritten()),
     },
 
     // ── 2. Lore / Codex ───────────────────────────────────────────────────────
@@ -104,6 +138,8 @@ registerCatalogPipeline({
             monsterLevel: 20,
             // dangerRank: legibility metric (telegraph clarity × burst potential), not a raw stat.
             dangerRank: 3,
+            // D30 (/diablo W10): each value names its unit — an ingested monster's speed is in tiles/s.
+            units: { health: 'points', damage: 'points', armor: 'points', moveSpeed: 'cm/s' },
             wiringContract: {
               grantedBy:
                 `DT_AttributeDefaults row "${s}" (keyed by archetype slug); read by UARPGAttributeSet on BeginPlay`,
@@ -121,8 +157,22 @@ registerCatalogPipeline({
         },
         });
       },
+      contract: {
+        field: 'stats',
+        grantedBy: 'DT_AttributeDefaults row "{slug}" (keyed by the archetype slug), read by UARPGAttributeSet on BeginPlay',
+        activatedBy: 'BP_{slug} inherits AARPGEnemyCharacter; this entity’s stats are applied via GE_InitStats at spawn',
+        dependencies: [
+          'AARPGEnemyCharacter (C++ base class)',
+          'UARPGAttributeSet (the attributes THIS stat block writes — name each one)',
+        ],
+        verification: 'L2: AARPGEnemyCharacter compiled in Source/PoF/; L3: VSBestiarySpawnTest — {name} spawns and its attributes match its DT_AttributeDefaults row',
+      },
       accept: allOf(
         fieldsPopulated('stats', 'Stat block populated', ['health', 'damage', 'armor', 'moveSpeed']),
+        // D27 (/diablo W08): the SHAPE of each value — one number or a {minimum, maximum} range; XP named `experience`.
+        keysNumeric('stats', 'Stat values are numbers', ['health', 'damage', 'armor', 'moveSpeed'], { experience: /^(xp|exp\w*|experience\w+)$/i }),
+        // D30: the unit travels with the value (PoF's moveSpeed is cm/s, an ingested monster's tiles/s).
+        unitsDeclared('stats', 'Stat units declared', { health: ['points'], damage: ['points'], armor: ['points'], moveSpeed: ['cm/s', 'tiles/s'] }),
         wiringContractSound('stats'),
       ),
       staticChecks: () => [cppSymbolExists('AARPGEnemyCharacter', 'Enemy actor class present in UE Source')],
@@ -169,10 +219,19 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'resists',
+        grantedBy: 'GE_InitResistances on BP_{slug} (child of AARPGEnemyCharacter), applied at spawn from DT_AttributeDefaults',
+        activatedBy: 'BeginPlay spawn initialisation',
+        dependencies: [
+          'UARPGAttributeSet (one resistance attribute per element of this project’s element set)',
+          'ARPGDamageExecution (reads the resistance attributes for elemental mitigation)',
+        ],
+        verification: 'L2: UARPGAttributeSet declares the per-element resistance attributes and GE_InitResistances compiles; L3: VSBestiarySpawnTest — a hit of one element on {name} is mitigated by exactly its declared resistance',
+      },
       accept: allOf(
-        fieldsPopulated('resists', 'Per-type resistance profile populated', [
-          'fireRes', 'iceRes', 'lightningRes', 'chaosRes',
-        ]),
+        // Keys follow the entity's canon-profile element set (fire/ice/lightning/chaos for PoF).
+        resistancesPopulated('resists', 'Per-type resistance profile populated'),
         wiringContractSound('resists'),
       ),
     },
@@ -233,6 +292,17 @@ registerCatalogPipeline({
       }),
       // Content invariant (arpg-monster-rarity): per-tier life multipliers must sit within
       // the canon ×bands (Magic 1.5–2, Rare 4–6, Unique 6–10), not just be present.
+      contract: {
+        field: 'rarity',
+        grantedBy: 'AARPGEnemyCharacter::BeginPlay reads the rarity tier from the spawn context and grants the modifier GameplayEffects THIS entity declares, as self-applied auras',
+        activatedBy: 'BeginPlay spawn — the spawner passes the rolled rarity tier via FARPGSpawnRequest',
+        dependencies: [
+          'FARPGSpawnRequest (rarity field on the spawn request)',
+          'one GameplayEffect per modifier this entity declares (name each)',
+          'UARPGAttributeSet (the attributes those modifiers change)',
+        ],
+        verification: 'L2: each declared modifier GameplayEffect compiled in Source/PoF/; L3: VSBestiarySpawnTest — spawning {name} at a non-Normal tier grants its declared modifiers and moves the modified attribute by the declared delta',
+      },
       accept: allOf(
         fieldsPopulated('rarity', 'Rarity tier + multipliers + at least one modifier declared', [
           'rarityTier', 'lifeMultiplier', 'modifiers',
@@ -291,6 +361,15 @@ registerCatalogPipeline({
           { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'situational-aoe' },
         ],
       }),
+      contract: {
+        grantedBy: 'UARPGAbilitySystemComponent on AARPGEnemyCharacter; one ability grant per ability THIS entity uses, on BeginPlay',
+        activatedBy: 'the BehaviorTree tasks that use each of this entity’s abilities; abilities fire through UGameplayAbility::ActivateAbility',
+        dependencies: [
+          'spellbook::<id> for EACH ability this entity uses — only abilities it really has (a monster with a single attack lists one)',
+          'UARPGAbilitySystemComponent (GAS component on AARPGEnemyCharacter)',
+        ],
+        verification: 'L2: every listed spellbook id resolves in the spellbook catalog; L3: VSBestiarySpawnTest — {name}’s ability fires and GE_Damage applies on the hit target',
+      },
       accept: allOf(
         minCount('abilities', '≥1 ability linked from the abilities catalog', 1),
         linksResolve(),
@@ -379,6 +458,34 @@ registerCatalogPipeline({
       accept: riggedMeshSelected('mesh', 'A rigged mesh candidate is selected'),
     },
 
+    // ── 10b. Sprite Render (diablo1 only) ─────────────────────────────────────
+    // A PRERENDERED-sprite game renders its rigged model from one fixed camera into 8 directions
+    // (/diablo W05, D16). Meaningless for PoF's in-engine 3D monsters, so it is scoped to the canon
+    // profiles whose presentation is sprites (D18) — PoF entities do not have this step at all.
+    {
+      archetype: 'manifest', label: 'Sprite Render',
+      engine: 'Blender',
+      profiles: ['diablo1'],
+      view: { kind: 'manifest', field: 'sprites' },
+      // The direction is the render REQUEST: a frame size ("64px") and the pose/frame to render
+      // ("walk frame 12"); scripts/diablo/render.ts reads both back off this artifact. The render
+      // itself runs outside the lab (Blender headless), so the stub's empty set grades DEFERRED.
+      produce: (_e: LabEntity, direction?: string) => {
+        const px = /(\d{2,3})\s*px/i.exec(direction ?? '');
+        return {
+          data: {
+            sprites: {
+              directions: [],
+              camera: { ...SPRITE_PROJECTION },
+              frameSize: px ? Number(px[1]) : 96,
+              requestedPose: direction?.trim() || 'rest pose',
+            },
+          },
+        };
+      },
+      accept: spriteSetRendered('sprites', 'An 8-direction sprite set rendered from the fixed camera'),
+    },
+
     // ── 11. Test Gate ─────────────────────────────────────────────────────────
     {
       archetype: 'checklist', label: 'Test Gate',
@@ -387,19 +494,21 @@ registerCatalogPipeline({
       // the same call the fleet already made on 7 identically-shaped Test Gate steps.
       engine: 'Hand-authored',
       view: { kind: 'checklist', field: 'checks' },
-      produce: () => ({
-        data: {
-          checks: [
-            'spawns + possesses',
-            'ability fires (Ground Slam shockwave + Heavy Attack)',
-            'dies + drops loot (lt-Brute table)',
-            'rarity modifier GE applied on Magic/Rare spawn',
-            'resistance profile reduces elemental hits correctly',
-          ],
-        },
-      }),
-      // Registered automation name (enumerated from UE): the bestiary archetype gate.
-      accept: entityRuntimeDeferred('PoF.Bestiary.BruteArchetypeConfig', 'Brute archetype config validated in UE'),
+      produce: (e: LabEntity) => {
+        const s = slug(e.name);
+        return {
+          data: {
+            checks: bestiaryGateChecks(e.id),
+            automationName: bestiaryGateTestName(e.id, s),
+          },
+        };
+      },
+      // The artifact's per-entity name wins. The neutral fallback is deliberately unregistered,
+      // so an artifact that declares no name can never borrow the Brute's proof.
+      accept: allOf(
+        automationNameDeclared(),
+        entityRuntimeDeferred('PoF.Bestiary.Unspecified.ArchetypeConfig', 'Bestiary archetype config validated in UE'),
+      ),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────
@@ -449,6 +558,17 @@ registerCatalogPipeline({
           ],
           ueAssets: assets.map((a) => `/Game/Bestiary/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'BP_{slug} (child of AARPGEnemyCharacter) + DT_AttributeDefaults row "{slug}", with the GameplayEffects this entity’s earlier steps declared, compiled in Source/PoF/',
+        activatedBy: 'AARPGEnemyCharacter::BeginPlay → GE_InitStats + GE_InitResistances; rarity modifier GEs granted from the spawn-context rarity tier',
+        dependencies: [
+          'spellbook::<id> for each ability from THIS entity’s Abilities step',
+          'loot-tables::<id> of the table THIS entity drops from',
+          'UARPGAttributeSet (stat + resistance attributes)',
+          'ARPGDamageExecution (resistance + armour mitigation)',
+        ],
+        verification: 'L2: AARPGEnemyCharacter and the declared GameplayEffects compiled, the DT_Bestiary row seeded, every linked spellbook/loot-tables id present; L3: VSBestiarySpawnTest — {name} spawns, uses its abilities, dies, and drops from its loot table',
       },
       accept: allOf(
         minCount('assets', 'All assets packaged', 3),

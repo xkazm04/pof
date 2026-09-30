@@ -2,13 +2,23 @@ import { motion } from 'framer-motion';
 import { Activity, AlertTriangle, Clock, RefreshCw, Star } from 'lucide-react';
 import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
 import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS,
+  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, STATUS_INFO, STATUS_NEUTRAL, MODULE_COLORS,
   QUALITY_HEATMAP_LOW, QUALITY_HEATMAP_MID, QUALITY_HEATMAP_HIGH, RATING_EMPTY,
-  qualityCellColor, qualityAccentColor,
+  qualityCellColor, qualityAccentColor, statusBg,
 } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
+import type { BatchReviewState } from '@/types/batch-review';
+import { cellReviewState, type CellReviewState } from '@/lib/evaluator/stale-review-plan';
 import { Sparkline } from './Sparkline';
 import type { CellData } from './types';
+
+/** Per-cell badge colour for the module's state in the current batch review. */
+const REVIEW_STATE_COLOR: Record<CellReviewState, string> = {
+  queued: STATUS_NEUTRAL,
+  reviewing: STATUS_INFO,
+  reviewed: STATUS_SUCCESS,
+  failed: STATUS_ERROR,
+};
 
 interface HeatmapGridProps {
   cells: CellData[];
@@ -17,6 +27,8 @@ interface HeatmapGridProps {
   selectedModule: string | null;
   customStaleDays: number;
   playEntrance: boolean;
+  /** The shared batch review (running or last finished): drives each cell's badge. */
+  batch?: BatchReviewState | null;
   fetchData: () => void;
   setHoveredModule: (v: string | null) => void;
   setSelectedModule: (v: string | null) => void;
@@ -29,6 +41,7 @@ export function HeatmapGrid({
   selectedModule,
   customStaleDays,
   playEntrance,
+  batch = null,
   fetchData,
   setHoveredModule,
   setSelectedModule,
@@ -82,10 +95,12 @@ export function HeatmapGrid({
             cell.avgQuality !== null && cell.avgQuality < 3 && cell.pctReviewed > 0;
           const isStale =
             cell.lastReviewedAt === null || (cell.daysSinceReview ?? Infinity) > customStaleDays;
+          const reviewState = cellReviewState(batch, cell.moduleId);
 
           return (
             <motion.button
               key={cell.moduleId}
+              data-testid={`heatmap-cell-${cell.moduleId}`}
               initial={playEntrance ? { opacity: 0, scale: 0.95 } : false}
               animate={{ opacity: 1, scale: 1 }}
               transition={
@@ -157,6 +172,13 @@ export function HeatmapGrid({
                   <span className="text-xs text-text-muted italic">
                     Not reviewed
                   </span>
+                )}
+                {reviewState && (
+                  <span
+                    data-testid={`review-state-${cell.moduleId}`}
+                    className="ml-auto px-1.5 rounded text-2xs font-medium"
+                    style={{ color: REVIEW_STATE_COLOR[reviewState], backgroundColor: statusBg(REVIEW_STATE_COLOR[reviewState]) }}
+                  >{reviewState}</span>
                 )}
               </div>
 

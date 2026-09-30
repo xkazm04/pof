@@ -11,10 +11,12 @@
  *
  * (Distinct from `recipe.ts`, which holds the legacy generation-engine recipes.)
  */
+import { canonProfileOf, labIdentityOf } from '@/lib/catalog/canon/profiles';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { seededEntities } from '@/lib/catalog/seed';
+import { stepAppliesTo, stepsForProfile } from '@/lib/catalog/stepScope';
 import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { deriveEntityLifecycle, type DerivedLifecycle } from '@/lib/catalog/lifecycle';
 import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
@@ -141,10 +143,13 @@ function serverCheckerContext(catalogId: string, entityId?: string): CheckerCont
   if (entityId) {
     for (const a of listArtifacts(catalogId, entityId)) siblings[a.step] = a.data;
   }
+  // The entity's canon profile: canon-law invariants grade only where their law is in force.
+  const entity = entityId ? seededEntities(catalogId).find((x) => x.id === entityId) : undefined;
   return {
     catalog: catalogId,
     siblings,
     has: (c, e) => seededEntities(c).some((x) => x.id === e),
+    canonProfile: canonProfileOf(entity),
   };
 }
 
@@ -205,7 +210,7 @@ export function gradeArtifact(
 
 /** Map a seeded entity to the `LabEntity` shape the step `produce`/`accept` expect. */
 function toLabEntity(e: StoredCatalogEntity) {
-  return { id: e.id, name: e.name, lifecycle: e.lifecycle, data: e.data };
+  return { id: e.id, name: e.name, lifecycle: e.lifecycle, data: e.data, links: e.links, ...labIdentityOf(e) };
 }
 
 /** Every catalog the lab shows, with its ordered steps + seeded entity count. */
@@ -268,10 +273,13 @@ export interface EntityLifecycleView extends DerivedLifecycle {
   lastVerifiedAt?: string;
 }
 
-/** Steps a catalog declares; falls back to the distinct step labels actually persisted. */
-function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>): number {
+/**
+ * Steps an entity of `canonProfile` has in a catalog (profile-scoped steps, D18); falls back to the
+ * distinct step labels actually persisted when the catalog has no pipeline.
+ */
+function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>, canonProfile?: string): number {
   const pipeline = getCatalogPipeline(catalogId);
-  if (pipeline) return pipeline.steps.length;
+  if (pipeline) return stepsForProfile(pipeline, canonProfile).length;
   return new Set(arts.map((a) => a.step)).size;
 }
 
@@ -282,7 +290,8 @@ function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>
  */
 function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
   const allArts = listArtifacts(catalogId);
-  const totalSteps = totalStepsFor(catalogId, allArts);
+  // An entity's total depends on its canon profile (a diablo1-only step is not part of a PoF entity's pipeline).
+  const profileOf = new Map(seededEntities(catalogId).map((e) => [e.id, canonProfileOf(e)]));
   const byEntity = new Map<string, typeof allArts>();
   for (const a of allArts) {
     const arr = byEntity.get(a.entityId) ?? [];
@@ -290,7 +299,7 @@ function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
     byEntity.set(a.entityId, arr);
   }
   const out = new Map<string, DerivedLifecycle>();
-  for (const [id, arts] of byEntity) out.set(id, deriveEntityLifecycle(arts, totalSteps));
+  for (const [id, arts] of byEntity) out.set(id, deriveEntityLifecycle(arts, totalStepsFor(catalogId, allArts, profileOf.get(id))));
   return out;
 }
 
@@ -392,8 +401,8 @@ export function buildStepRecipe(
   const labEntity = toLabEntity(entity);
 
   // The SAME builder the `/layout` panel previews and the one-shot route dispatches
-  // (`buildStepProducePrompt`) — quality pack, canon scoping, and the step's own authored
-  // wiring contract, the thing its L2 checker grades it against.
+  // (`buildStepProducePrompt`) — quality pack, canon scoping, persisted sibling artifacts,
+  // and the step's own authored wiring contract, the thing its L2 checker grades it against.
   //
   // The old comment here claimed a headless step "receives the IDENTICAL prompt" while this
   // builder omitted the quality pack and the evidence — a claim about single-sourcing that
@@ -444,6 +453,8 @@ export function buildStepRecipe(
   const prompt = buildStepProducePrompt(spec, labEntity, direction, {
     catalogId,
     rules,
+    siblings: ctx.siblings,
+    linkedEntities: CATALOG_SECTIONS.flatMap((section) => seededEntities(section.catalogId)),
     evidence: collectStepEvidence(cur?.data as Record<string, unknown> | undefined),
   });
 
@@ -504,7 +515,15 @@ export function submitStepArtifact(
   ueAssets: string[],
 ): SubmitResult {
   const spec = resolveStep(catalogId, step); // throws CatalogNotFoundError for unknown catalog/step
-  const res = safeAccept(spec.accept, data, serverCheckerContext(catalogId, entityId));
+  const ctx = serverCheckerContext(catalogId, entityId);
+  // A step scoped to other canon profiles is not part of this entity's pipeline (D18): writing a row
+  // for it would put a step the entity does not have into its lifecycle and /status.
+  if (!stepAppliesTo(spec, ctx.canonProfile)) {
+    throw new CatalogNotFoundError(
+      `Step "${step}" of ${catalogId} applies only to canon profile(s) ${spec.profiles!.join(', ')}; ${entityId} is "${ctx.canonProfile ?? 'pof'}"`,
+    );
+  }
+  const res = safeAccept(spec.accept, data, ctx);
   const status = res?.status ?? 'pending';
   const tier = res?.tier ?? 'L0';
   const reason = res?.reason;

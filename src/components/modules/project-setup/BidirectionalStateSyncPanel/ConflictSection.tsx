@@ -8,6 +8,16 @@ import {
 import { truncate } from './helpers';
 import type { SyncConflict } from './types';
 
+/** A ledger value as a short literal ('—' when the side was never known). */
+function show(v: unknown): string {
+  return v === undefined ? '—' : truncate(JSON.stringify(v) ?? String(v), 20);
+}
+
+/**
+ * Diverged writes only: UE's read-back after our write is neither the value it
+ * had when we wrote (base) nor the value we sent. A read-back equal to what we
+ * sent is convergence and never shows here.
+ */
 export function ConflictSection({
   showConflicts,
   setShowConflicts,
@@ -48,19 +58,24 @@ export function ConflictSection({
             <div className="px-4 pb-3 space-y-1">
               {conflicts.map((c) => (
                 <div
-                  key={c.watchId}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg border text-xs"
+                  key={c.key}
+                  data-testid={`sync-conflict-${c.key}`}
+                  className="flex flex-wrap items-center gap-2 px-2 py-1.5 rounded-lg border text-xs"
                   style={{ borderColor: `${STATUS_ERROR}30`, backgroundColor: `${STATUS_ERROR}${OPACITY_8}` }}
                 >
                   <AlertTriangle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} />
                   <span className="font-mono font-bold text-text">{c.propertyName}</span>
-                  <span className="text-text-muted">—</span>
-                  <span className="font-mono text-2xs">
-                    UE5: <span style={{ color: ACCENT_CYAN }}>{truncate(JSON.stringify(c.inbound), 20)}</span>
+                  <span className="font-mono text-2xs text-text-muted truncate max-w-[12rem]" title={c.objectPath}>
+                    {c.objectPath}
                   </span>
-                  <span className="text-text-muted">vs</span>
                   <span className="font-mono text-2xs">
-                    Sent: <span style={{ color: ACCENT_ORANGE }}>{truncate(c.outbound, 20)}</span>
+                    Base: <span className="text-text" data-testid="sync-conflict-base">{show(c.base)}</span>
+                  </span>
+                  <span className="font-mono text-2xs">
+                    Sent: <span style={{ color: ACCENT_ORANGE }} data-testid="sync-conflict-written">{show(c.written)}</span>
+                  </span>
+                  <span className="font-mono text-2xs">
+                    UE5: <span style={{ color: ACCENT_CYAN }} data-testid="sync-conflict-inbound">{show(c.inbound)}</span>
                   </span>
                 </div>
               ))}

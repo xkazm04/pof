@@ -8,25 +8,27 @@
  * realization and is clickable to walk the graph.
  *
  * All aggregation is the pure resolveItemFocus(); this component only wires the client
- * data sources: catalog-store entities (with links), per-catalog artifacts, judge verdicts.
+ * data sources: catalog-store entities (with links), and the two SHARED /status reads —
+ * blob-free artifact rows (`useStatusArtifacts`, scoped to the involved catalogs) and judge
+ * verdicts (`useStatusVerdicts`). A FAILED READ IS NOT A GRADE: a catalog that could not be
+ * read renders its nodes UNKNOWN (never R0 / 0%), and failed verdicts say PARTIAL.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import '@/lib/catalog/pipelines/registry.generated';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { useCatalogStore } from '@/stores/catalogStore';
-import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
-import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { StepMeta } from '@/lib/status/statusModel';
 import {
   buildDependencyIndex,
   resolveItemFocus,
   entityKey,
+  unknownRead,
   type ItemFocusCtx,
 } from '@/lib/status/itemFocusModel';
-import { MiniSwimlane } from './MiniSwimlane';
+import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusVerdicts } from './statusVerdictSource';
+import { MiniSwimlane, EvidenceReadNotice } from './MiniSwimlane';
 import { EntitySearch } from './EntitySearch';
 
 function stepsFor(catalogId: string): StepMeta[] {
@@ -76,51 +78,40 @@ export function ItemFocusView({
     return [...set].sort();
   }, [focus, index]);
 
-  const [artifacts, setArtifacts] = useState<Record<string, PipelineArtifact[]>>({});
-  const [verdicts, setVerdicts] = useState<Record<string, JudgeVerdict[]>>({});
-  // Which catalog set the loaded artifacts/verdicts actually cover. Compared against the
-  // current set during render to derive `loading` — no set-state-in-effect reset needed
-  // (this component is NOT remounted when the focus changes, unlike CategoryView).
-  const [loadedKey, setLoadedKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    if (involvedCatalogs.length === 0) return;
-    (async () => {
-      const [artResults, verdictRes] = await Promise.all([
-        Promise.all(involvedCatalogs.map((c) => fetchArtifacts(c))),
-        tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts'),
-      ]);
-      if (!alive) return;
-      const artMap: Record<string, PipelineArtifact[]> = {};
-      involvedCatalogs.forEach((c, i) => { artMap[c] = artResults[i]; });
-      setArtifacts(artMap);
-      const vMap: Record<string, JudgeVerdict[]> = {};
-      for (const v of verdictRes.ok ? verdictRes.data : []) {
-        (vMap[v.catalogId] ??= []).push(v);
-      }
-      setVerdicts(vMap);
-      setLoadedKey(involvedCatalogs.join('|'));
-    })();
-    return () => { alive = false; };
-  }, [involvedCatalogs]);
+  // The shared reads, scoped to exactly the catalogs this focus grades. The artifact source
+  // re-keys on the scope synchronously, so a focus change can never grade the new nodes
+  // against the previous focus's rows.
+  const { catalogs, retryCatalog } = useStatusArtifacts(involvedCatalogs);
+  const { verdicts, reload: reloadVerdicts } = useStatusVerdicts();
+  const settled = catalogs !== null && verdicts !== null;
+  const failedCatalogs = useMemo(() => (catalogs ?? []).filter((c) => c.error !== null), [catalogs]);
 
   const result = useMemo(() => {
     if (!focus) return null;
+    const reads = new Map((catalogs ?? []).map((c) => [c.catalogId, c]));
     const ctx: ItemFocusCtx = {
       entitiesByCatalog,
       index,
       stepsFor,
-      artifactsFor: (c) => artifacts[c] ?? [],
-      verdictsFor: (c) => verdicts[c] ?? [],
+      // Nothing grades until BOTH reads settle; a catalog outside the read is not "empty".
+      artifactsFor: (c) => {
+        if (!catalogs || !verdicts) return unknownRead('evidence still loading');
+        const read = reads.get(c);
+        if (!read) return unknownRead('not read');
+        return read.error !== null ? unknownRead(read.error) : read.rows;
+      },
+      verdictsFor: (c) => {
+        if (verdicts && !verdicts.ok) return unknownRead(verdicts.error);
+        return (verdicts && verdicts.ok && verdicts.byCatalog.get(c)) || [];
+      },
     };
     return resolveItemFocus(focus.catalogId, focus.entityId, ctx);
-  }, [focus, entitiesByCatalog, index, artifacts, verdicts]);
+  }, [focus, entitiesByCatalog, index, catalogs, verdicts]);
 
-  // Until this focus's artifacts + verdicts land, every cell would grade as unwired/0% —
-  // a lie, not a blank. Names/links are store-local and correct immediately, so the rows
-  // stay up but read as provisional (dimmed + aria-busy) until the evidence arrives.
-  const loading = result !== null && loadedKey !== involvedCatalogs.join('|');
+  // Until this focus's artifacts + verdicts land, nodes are UNKNOWN / pending, never a graded
+  // 0%. Names/links are store-local and correct immediately, so the rows stay up but read as
+  // provisional (dimmed + aria-busy) until the evidence arrives.
+  const loading = result !== null && !settled;
 
   return (
     <div>
@@ -148,6 +139,14 @@ export function ItemFocusView({
           </div>
         )}
       </div>
+
+      {/* A failed read is SAID, never graded around (same wording family as Pipelines). */}
+      {result && failedCatalogs.map((c) => (
+        <EvidenceReadNotice key={c.catalogId} kind="artifacts" subject={c.catalogId} error={c.error ?? ''} onRetry={() => retryCatalog(c.catalogId)} />
+      ))}
+      {result && verdicts && !verdicts.ok && (
+        <EvidenceReadNotice kind="verdicts" error={verdicts.error} onRetry={reloadVerdicts} />
+      )}
 
       {result && (
         <div

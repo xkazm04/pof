@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
-import { GENERATED_ASSETS_ENDPOINT, type GeneratedAsset } from '@/lib/visual-gen/generated-assets';
+import { GENERATED_ASSETS_ENDPOINT, meshSlug, type GeneratedAsset } from '@/lib/visual-gen/generated-assets';
 import type { GenAssetRef } from '@/lib/catalog/stepSpec';
 
 /**
@@ -19,7 +19,10 @@ import type { GenAssetRef } from '@/lib/catalog/stepSpec';
  * selecting a candidate renders the real mesh in the interactive GlbViewer.
  *
  * The name keeps its provider tag so two same-named meshes from different providers are
- * distinguishable in the gallery caption, and a retry attempt (`_a2`) reads as one.
+ * distinguishable in the gallery caption, and a retry attempt (`_a2`) reads as one. Each
+ * ref is stamped with `slug` — the artifact identity its RAW basename encodes (`meshSlug`,
+ * the icon library's rule, retry suffix dropped) — because this manifest is every mesh on
+ * disk: `meshGalleryCandidates` slots only the refs whose slug re-encodes its own step.
  *
  * When the dir is empty the route returns `{ assets: [] }`, so this resolves to `[]`
  * and the generator falls back to the honest deterministic swatch (no fake 3D preview).
@@ -39,6 +42,7 @@ export function useGeneratedMeshAssets(enabled: boolean): GenAssetRef[] {
         res.data.assets.map((a) => ({
           name: `${a.name.replace(/\.glb$/i, '')} · ${a.provider ?? 'unknown source'}`,
           url: a.url,
+          slug: meshSlug(a.name),
         })),
       );
     })();

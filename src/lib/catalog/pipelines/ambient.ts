@@ -242,6 +242,16 @@ registerCatalogPipeline({
         ],
         });
       },
+      contract: {
+        field: 'layers.bed',
+        grantedBy: 'the AmbientSound actor placed in THIS soundscape’s bound level plays SC_{slug}Bed on BeginPlay and reads the DT_Ambient row "{slug}"',
+        activatedBy: 'level BeginPlay auto-activates the bed; the time-of-day RTPC crossfades to any variant THIS soundscape declares',
+        dependencies: [
+          'zone-map::<id> for the level that hosts THIS soundscape’s AmbientSound actor',
+          'DT_Ambient row "{slug}" (drives the ambient sound selection)',
+        ],
+        verification: 'L0: the DT_Ambient row for {name} is seeded; L2: SC_{slug}Bed exists under Content/Audio/Ambient/{slug}/; L3: VSAmbientTest — the bed plays on its bound level load at its declared gain',
+      },
       accept: allOf(
         fieldsPopulated('layers', 'Bed + detail loops + one-shots + wiring contract declared', [
         'bed',
@@ -335,6 +345,17 @@ registerCatalogPipeline({
           },
         },
         });
+      },
+      contract: {
+        field: 'spatialization',
+        grantedBy: 'UAudioComponent on each declared source actor reads ATT_{slug}_Mid; the Wwise AkComponent handles binaural rendering and obstruction',
+        activatedBy: 'source actors bind their audio components on BeginPlay, the bed starts on level load, and THIS soundscape’s MetaSound patch schedules its one-shots',
+        dependencies: [
+          'zone-map::<id> for the level containing THIS soundscape’s emitter actors',
+          'ATT_{slug}_Mid (the attenuation preset for this soundscape)',
+          'Wwise project binaural and geometry configuration',
+        ],
+        verification: 'L0: ATT_{slug}_Mid fields are populated; L2: UAudioComponent is present on every declared source actor; L3: VSAmbientTest — {name}’s 3D emitters follow their declared inner and outer radii',
       },
       accept: allOf(
         fieldsPopulated('spatialization', 'Bed strategy + emitter contract + attenuation preset declared', [
@@ -441,6 +462,16 @@ registerCatalogPipeline({
         },
         });
       },
+      contract: {
+        field: 'variants',
+        grantedBy: 'the Wwise TimeOfDay RTPC drives THIS soundscape’s declared variant crossfade; its MetaSound patch owns the random interval and variant-selection nodes',
+        activatedBy: 'UARPGTimeOfDayComponent sets the RTPC value, while the active AmbientSound actor advances the MetaSound interval scheduler',
+        dependencies: [
+          'zone-map::<id> whose level load activates THIS soundscape’s MetaSound patch',
+          'UARPGTimeOfDayComponent when this soundscape declares time-of-day variants',
+        ],
+        verification: 'L0: every variant and randomization rule declared by {name} is populated; L3: VSAmbientTest — repeated one-shots obey this soundscape’s anti-repeat rule and its declared RTPC crossfade works in PIE',
+      },
       accept: allOf(
         fieldsPopulated('variants', 'Day/night + randomization + anti-repetition rules declared', [
           'dayNight',
@@ -541,6 +572,16 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        field: 'occlusion',
+        grantedBy: 'Wwise Spatial Audio uses AkGeometry and AkRoom volumes to drive per-emitter obstruction, occlusion, and the reverb bus declared for THIS soundscape',
+        activatedBy: 'player overlap with the AkRoom volumes placed in this soundscape’s bound level triggers the declared room-enter and room-exit transitions',
+        dependencies: [
+          'zone-map::<id> for the level containing THIS soundscape’s AkRoom volumes',
+          'Wwise Spatial Audio plugin with AkGeometry and AkRoom enabled',
+        ],
+        verification: 'L0: this soundscape’s occlusion presets contain their declared values; L3: VSAmbientTest — geometry attenuates an occluded emitter and room overlap changes to the declared reverb preset within its transition time',
+      },
       accept: allOf(
         fieldsPopulated('occlusion', 'Outdoor + indoor presets + transition rules declared', [
           'outdoorPreset',
@@ -700,6 +741,18 @@ registerCatalogPipeline({
         ],
         });
       },
+      contract: {
+        field: 'zoneBinding',
+        grantedBy: 'the AmbientSound actor in THIS soundscape’s bound level plays its declared bed; the Wwise CombatState RTPC controls its ambient-bus ducking',
+        activatedBy: 'level BeginPlay auto-activates THIS soundscape, while UARPGAbilitySystemComponent combat start and end events drive its declared duck and recovery behavior',
+        dependencies: [
+          'zone-map::<id> for THIS soundscape’s primary zone',
+          'music::<id> for each music state referenced by this soundscape',
+          'UARPGAbilitySystemComponent combat events',
+          'the Wwise RTPCs THIS soundscape uses',
+        ],
+        verification: 'L0: this soundscape’s primary zone link resolves and its activation events are populated; L3: VSAmbientTest — {name} plays on its bound level load and follows its declared combat transitions',
+      },
       accept: allOf(
         fieldsPopulated('zoneBinding', 'Primary zone + activation events + wiring contract declared', [
         'primaryZone',
@@ -842,6 +895,19 @@ registerCatalogPipeline({
             `/Game/Audio/Ambient/${s}/${a}`
           ),
         };
+      },
+      contract: {
+        grantedBy: 'MS_{slug}Patch orchestrates every layer declared by THIS soundscape, DT_Ambient row "{slug}" selects its assets and gains, and ATT_{slug}_Mid supplies its 3D attenuation',
+        activatedBy: 'the AmbientSound actor in this soundscape’s bound level references MS_{slug}Patch and auto-activates on BeginPlay; its declared Wwise RTPCs drive variants and mixing states',
+        dependencies: [
+          'zone-map::<id> for THIS soundscape’s bound level',
+          'icon-sets::<id> for THIS soundscape’s icon family when declared',
+          'DT_Ambient row "{slug}"',
+          'ATT_{slug}_Mid attenuation asset',
+          'MS_{slug}Patch MetaSound asset',
+          'the Wwise geometry, room, and RTPC configuration THIS soundscape declares',
+        ],
+        verification: 'L2: every sound, MetaSound, DT_Ambient row, and attenuation asset declared by {name} exists and its actor/component placement is valid; L3: VSAmbientTest — all of this soundscape’s Test Gate checks pass in PIE',
       },
       accept: allOf(
         minCount('assets', '≥3 UE assets packaged', 3),

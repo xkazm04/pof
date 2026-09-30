@@ -15,6 +15,7 @@ import type {
   UE5EditorSnapshot,
   PropertyWatchRequest,
   PropertyWatchUpdate,
+  WriteReceipt,
 } from '@/types/ue5-bridge';
 
 interface UseLiveStateSyncResult {
@@ -36,8 +37,8 @@ interface UseLiveStateSyncResult {
   watchProperty: (req: PropertyWatchRequest) => void;
   /** Unsubscribe from a property watch. */
   unwatchProperty: (watchId: string) => void;
-  /** Write a property value via WebSocket. */
-  setProperty: (objectPath: string, propertyName: string, value: unknown) => void;
+  /** Write a property value via WebSocket; the receipt says whether the frame went out. */
+  setProperty: (objectPath: string, propertyName: string, value: unknown) => WriteReceipt;
   /** Request a fresh full snapshot. */
   requestSnapshot: () => void;
 }
@@ -78,9 +79,11 @@ export function useLiveStateSync(): UseLiveStateSyncResult {
     ue5LiveState.unwatchProperty(watchId);
   }, []);
 
-  const setProperty = useCallback((objectPath: string, propertyName: string, value: unknown) => {
-    ue5LiveState.setProperty(objectPath, propertyName, value);
-  }, []);
+  const setProperty = useCallback(
+    (objectPath: string, propertyName: string, value: unknown) =>
+      ue5LiveState.setProperty(objectPath, propertyName, value),
+    [],
+  );
 
   const requestSnapshot = useCallback(() => {
     ue5LiveState.requestSnapshot();

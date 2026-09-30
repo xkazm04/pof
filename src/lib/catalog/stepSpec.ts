@@ -12,6 +12,8 @@ export interface GenAssetRef {
   name: string;
   /** Served URL under /api/visual-gen/asset/… */
   url: string;
+  /** Identity its filename encodes (`meshSlug`); a 3D gallery slots only refs re-encoding its own step. */
+  slug?: string;
 }
 
 /**
@@ -134,6 +136,30 @@ export interface StepFixCopy {
   fixDirection?: string;
 }
 
+/**
+ * A step's WIRING CONTRACT as a world-neutral declaration (/diablo W03, decision D12).
+ *
+ * The produce prompt used to extract the contract by RUNNING the step's produce stub, so one PoF
+ * entity's content (e.g. a bestiary stub's `spellbook::off-phy-04 Ground Slam`) was injected into
+ * EVERY entity's live prompt — three Diablo zombies were produced with an ability they do not have,
+ * and the checker (shape-only) passed it. A declaration says WHAT the producer must name, never
+ * which entity's answer: engine framework symbols shared by every entity are fine
+ * (`AARPGEnemyCharacter`, `UARPGAttributeSet`); another entity's ids, names or tuned numbers are not
+ * (guarded by `src/__tests__/catalog/contract-declarations-neutral.test.ts`).
+ *
+ * `{slug}` is replaced by the entity's name with non-alphanumerics removed (the `BP_<slug>` rule the
+ * produce bodies use) and `{name}` by its display name. Prompt INPUT only — grading is unchanged.
+ */
+export interface StepContractDecl {
+  /** Where the graded `wiringContract` sits (`'stats'` → `data.stats.wiringContract`); omit for the root. */
+  field?: string;
+  grantedBy: string;
+  activatedBy: string;
+  /** Dependency KINDS to name for this entity (`spellbook::<id> for each ability it uses`), never another entity's ids. */
+  dependencies: string[];
+  verification: string;
+}
+
 export interface StepSpec {
   archetype: ArchetypeId;
   label: string;
@@ -164,6 +190,24 @@ export interface StepSpec {
   readsDirection?: boolean;
   /** Derives the acceptance result from the persisted artifact data. */
   accept: Checker;
+  /** The step's wiring contract as a world-neutral declaration — the ONLY contract a produce prompt injects. */
+  contract?: StepContractDecl;
+  /**
+   * The UE type and fields this step's data realizes (/diablo W10, D6): `{ type, fields: { '<data dot-path>': '<UE field>' } }`.
+   * Checked against the schema-down snapshot (`ue-schema.generated.json`) by `ue-schema-parity.test.ts`, so an app field
+   * that claims a UE home which does not exist is a failing test, not a comment. Schema flows down from UE.
+   */
+  ue?: { type: string; fields: Readonly<Record<string, string>> };
+  /** Step acceptance criteria stated in the produce prompt — world-neutral, like `contract` (never read from the stub). */
+  criteria?: string[];
+  /**
+   * The canon profiles this step applies to (/diablo W05, decision D18); omitted = every profile.
+   * A presentation step such as a prerendered-sprite render means nothing for a 3D game's entities,
+   * and the chassis has no "not applicable" status — so the step is simply not part of their
+   * pipeline. Resolved in ONE place (`stepScope.ts`): the lab rail, lifecycle totals, the e2e walker
+   * and the server's submit all go through it, and a submit to an inapplicable step is refused.
+   */
+  profiles?: readonly string[];
   /**
    * RETIRED — do not author. Enforced by spec-linter rule (l).
    *

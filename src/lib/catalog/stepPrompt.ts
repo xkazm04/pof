@@ -26,6 +26,10 @@
  */
 
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
+import { DEFAULT_CANON_PROFILE, rulesForProfile } from '@/lib/catalog/canon/profiles';
+import { entityValuesBlock } from '@/lib/catalog/referenceValues';
+import { siblingStepsBlock } from '@/lib/catalog/siblingSteps';
+import { linkedReferencesBlock } from '@/lib/catalog/reference/linkedReferences';
 import { stepContractBlock, canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { qualityPack } from '@/lib/prompts/quality';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
@@ -36,6 +40,7 @@ import type { LibraryAsset } from '@/types/asset-library';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 import type { StepSpec } from '@/lib/catalog/stepSpec';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 /**
  * Everything the prompt needs that is NOT derivable from `(spec, entity, direction)`.
@@ -54,6 +59,10 @@ export interface StepPromptInputs {
   evidence?: readonly StepEvidence[];
   /** Asset-library picks for this produce — session state in the panel, never artifact data. */
   library?: readonly LibraryAsset[];
+  /** Persisted artifacts for this entity's other pipeline steps, keyed by step label. */
+  siblings?: Record<string, Record<string, unknown>>;
+  /** Catalog entities available for resolving this entity's recorded cross-catalog links. */
+  linkedEntities?: readonly StoredCatalogEntity[];
   /**
    * Ask the session for its output as a `@@CALLBACK` block. Only a real dispatch consumes
    * one, so a stub-mode preview leaves it off rather than showing an envelope nobody reads.
@@ -88,9 +97,9 @@ function callbackBlock(callbackId: string): string {
  * Build the produce prompt for one pipeline step.
  *
  * Section order (stable — the goldens and the preview/dispatch equality test pin it):
- * quality pack → project canon → this step's acceptance contract → what is on screen now →
- * referenced library assets → the produce instruction + the operator's direction → output
- * contract.
+ * quality pack → project canon → entity/reference values → sibling steps → linked references
+ * → this step's acceptance contract → what is on screen now → referenced library assets →
+ * the produce instruction + the operator's direction → output contract.
  *
  * The direction falls back to `spec.defaultDirection` when the operator typed nothing, which
  * is what the panel seeds the textarea with — so an empty steer produces the step's own
@@ -102,12 +111,15 @@ export function buildStepProducePrompt(
   direction: string | undefined,
   inputs: StepPromptInputs = {},
 ): string {
-  const { catalogId, rules, evidence, library, callback } = inputs;
+  const { catalogId, rules, evidence, library, siblings, linkedEntities, callback } = inputs;
 
   // Canon scope: a content-invariant step (a wrong NUMBER fails it) gets the FULL in-scope
   // canon so the threshold it will be graded by is visible; shape-only steps keep their
   // archetype slice.
-  const canon = canonContextFor([...(rules ?? [])], catalogId, canonCategoriesForStep(spec));
+  // Canon PROFILE first: an ingested Diablo entity gets Diablo's world and art direction, never
+  // PoF's — and a PoF entity's canon is exactly what it was (`rulesForProfile('pof')`).
+  const inForce = rulesForProfile([...(rules ?? [])], entity.canonProfile ?? DEFAULT_CANON_PROFILE);
+  const canon = canonContextFor(inForce, catalogId, canonCategoriesForStep(spec));
   // Quality Program WS1: the professional-grade pack for this deliverable class (the judge's
   // own craft checklist), so production aims at the bar the judge enforces.
   const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, spec.label)?.deliverable ?? '', catalogId) : null;
@@ -123,5 +135,12 @@ export function buildStepProducePrompt(
   const task = `Produce ${spec.label} for ${entity.name}. ${dir}`.trim();
   const out = callback && catalogId ? callbackBlock(stepCallbackId(catalogId, entity.id, spec.label)) : '';
 
-  return [pack, canon, contract, cited, picked, task, out].filter(Boolean).join('\n\n');
+  // The entity's own values: REFERENCE VALUES for an ingested entity (reproduce), ENTITY VALUES for an
+  // authored one (stay consistent) — /diablo W02c-1 + W03 (D11). Empty when the entity records nothing.
+  const reference = entityValuesBlock(entity);
+  const siblingSteps = siblingStepsBlock(catalogId, spec.label, siblings);
+  const linkedReferences = catalogId && linkedEntities
+    ? linkedReferencesBlock({ id: entity.id, catalogId, links: entity.links }, linkedEntities)
+    : '';
+  return [pack, canon, reference, siblingSteps, linkedReferences, contract, cited, picked, task, out].filter(Boolean).join('\n\n');
 }

@@ -199,6 +199,16 @@ registerCatalogPipeline({
         ],
         };
       },
+      contract: {
+        grantedBy: 'UARPGCinematicComponent on the PlayerController or GameMode loads LS_{slug}; its EventTrack markers bind to UARPGCinematicComponent::NotifyBeat',
+        activatedBy: 'THIS cutscene’s declared start event calls PlayCutscene with its id, starts LS_{slug}, and dispatches every declared beat marker at its timecode',
+        dependencies: [
+          'characters::<id> for EACH character animated or referenced by THIS cutscene',
+          'music::<id> for EACH music track THIS cutscene uses',
+          'vfx::<id> for EACH catalog VFX THIS cutscene uses',
+        ],
+        verification: 'L2: LS_{slug} is registered and UARPGCinematicComponent compiles; L3: VSCutsceneTimingTest — {name} starts from its declared trigger and every beat event fires at its declared timecode',
+      },
       accept: allOf(
         minCount('beats', '≥1 beat with tc/shot/event defined', 1),
         entriesHaveFields('beats', 'every beat carries tc in/out + shot + event', ['index', 'tcIn', 'tcOut', 'shot', 'event']),
@@ -391,6 +401,16 @@ registerCatalogPipeline({
         ],
         };
       },
+      contract: {
+        field: 'vfx',
+        grantedBy: 'the LevelSequence actor tracks or declared AnimNotifies spawn every named Niagara system THIS cutscene uses',
+        activatedBy: 'Sequencer playback enables each effect at its declared timecode; effects assigned to AnimNotifies fire from their named notification rather than BeginPlay',
+        dependencies: [
+          'vfx::<id> for EACH catalog Niagara system THIS cutscene reuses',
+          'one named Niagara asset for EACH original effect THIS cutscene declares',
+        ],
+        verification: 'L2: every named Niagara asset exists and every linked vfx id resolves; L3: VSCutsceneTimingTest — each effect in {name} fires at its declared timecode',
+      },
       accept: allOf(
         fieldsPopulated('vfx', 'VFX systems and wiring contract defined', [
         'systems',
@@ -468,6 +488,16 @@ registerCatalogPipeline({
           { catalogId: 'music', entityId: 'music-combat-a', role: 'underscoring-music' },
         ],
         };
+      },
+      contract: {
+        field: 'musicSfx',
+        grantedBy: 'UARPGMusicComponent owns each linked music track; Sequencer audio tracks own every ambience loop and one-shot cue THIS cutscene declares',
+        activatedBy: 'PlayCutscene starts the declared music state and Sequencer plays each SFX cue or music transition at its declared beat or timecode',
+        dependencies: [
+          'music::<id> for EACH track THIS cutscene uses',
+          'one SoundCue for EACH ambience or SFX asset THIS cutscene declares (name each)',
+        ],
+        verification: 'L2: every linked music id resolves and every declared SoundCue exists under /Game/Audio/Cinematics/; L3: VSCutsceneTimingTest — {name}’s music states and SFX cues play at their declared timecodes',
       },
       accept: allOf(
         fieldsPopulated('musicSfx', 'music / ambience / sfxCues / wiring contract defined', [
@@ -588,6 +618,17 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        field: 'skipReplay',
+        grantedBy: 'UARPGCinematicComponent handles this cutscene’s skip and replay state, and WBP_CinematicSkipPrompt is added to the viewport after its declared grace window',
+        activatedBy: 'IA_Skip invokes OnSkipInput after the grace window; the gallery replay action invokes ReplayCutscene with THIS cutscene’s id',
+        dependencies: [
+          'UARPGCinematicComponent',
+          'IA_Skip in IMC_Cinematic',
+          'WBP_CinematicSkipPrompt',
+        ],
+        verification: 'L2: UARPGCinematicComponent compiles, IA_Skip is mapped, and WBP_CinematicSkipPrompt exists; L3: VSCutsceneTimingTest — skipping {name} applies its declared end state and replay suppresses its declared world-state mutations',
       },
       accept: allOf(
         fieldsPopulated('skipReplay', 'skip/replay rules defined', [
@@ -721,6 +762,17 @@ registerCatalogPipeline({
             `/Game/UI/Cinematics/WBP_CinematicSkipPrompt`,
           ],
         };
+      },
+      contract: {
+        grantedBy: 'UARPGCinematicComponent references LS_{slug} and owns this cutscene’s event-track, skip, and replay wiring; WBP_CinematicSkipPrompt is spawned after its grace window',
+        activatedBy: 'THIS cutscene’s start trigger calls PlayCutscene, its EventTrack dispatches declared beats, IA_Skip invokes SkipCutscene, and the gallery invokes ReplayCutscene',
+        dependencies: [
+          'characters::<id> for EACH actor THIS cutscene references',
+          'music::<id> for EACH music track THIS cutscene uses',
+          'vfx::<id> for EACH catalog VFX THIS cutscene reuses',
+          'icon-sets::<id> for THIS cutscene’s icon family when declared',
+        ],
+        verification: 'L2: LS_{slug}, UARPGCinematicComponent, WBP_CinematicSkipPrompt, and every declared presentation asset exist, and all catalog links resolve; L3: VSCutsceneTimingTest — {name} plays, dispatches its beats, skips, and replays as declared',
       },
       accept: allOf(
         minCount('assets', '≥3 UE cinematic assets packaged', 3),

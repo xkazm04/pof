@@ -168,6 +168,12 @@ registerCatalogPipeline({
         },
         };
       },
+      contract: {
+        grantedBy: 'UARPGFactionSubsystem::EvaluateTier(factionId, repPoints) computes this faction’s tier by scanning FARPGFactionRow.tierThresholds from DT_Factions row "{slug}"',
+        activatedBy: 'OnRepPointsChanged after every reputation change, and session start when this faction’s saved standing is restored from DT_FactionReputation',
+        dependencies: ['currencies::<id> for EACH currency this faction grants as a tier reward'],
+        verification: 'L2: FARPGFactionRow declared in Source/PoF/, DT_Factions row "{slug}" seeded, and UARPGFactionSubsystem::EvaluateTier compiled; L3: VSFactionRepTest — representative points resolve to the tiers THIS faction declares',
+      },
       accept: allOf(
         minCount('tiers', '≥6 standing tiers declared', 6),
         entriesHaveFields('tiers', 'every tier carries its point band + label', ['tier', 'minPoints', 'maxPoints', 'label']),
@@ -235,6 +241,12 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        grantedBy: 'UARPGFactionSubsystem::AddRepPoints(factionId, delta, playerId), called by each quest reward, kill-credit callback, trade callback, or other reputation source THIS faction declares',
+        activatedBy: 'the gameplay event for EACH action this faction declares; name the event path that calls AddRepPoints for that action',
+        dependencies: [],
+        verification: 'L2: UARPGFactionSubsystem::AddRepPoints compiled and EvaluateTier called after each addition; L3: VSFactionRepTest — EACH declared action event applies its declared reputation delta for {name}',
       },
       accept: allOf(
         minCount('actionDeltas', '≥8 action→rep deltas declared', 8),
@@ -328,6 +340,16 @@ registerCatalogPipeline({
         ],
         };
       },
+      contract: {
+        grantedBy: 'UARPGFactionSubsystem::GetRepTier returns this faction’s tier; each reward or vendor effect THIS faction declares is granted by its named GameplayEffect or consumer component',
+        activatedBy: 'RepTierChanged(factionId, newTier); subscribed consumers refresh, and the reward for the reached tier is granted on that transition',
+        dependencies: [
+          'currencies::<id> for EACH currency reward THIS faction grants',
+          'items::<id> for EACH item or stock unlock THIS faction grants',
+          'vendors::<id> for EACH vendor that consumes this faction’s discount',
+        ],
+        verification: 'L2: one GameplayEffect or named grant path per reward THIS faction declares is compiled and DT_Factions row "{slug}" contains its reward lookup; L3: VSFactionRepTest — every tier transition grants its declared reward and applies its declared vendor effect',
+      },
       accept: allOf(
         minCount('tierRewards', '≥4 tier reward rows defined', 4),
         entriesHaveFields('tierRewards', 'every reward row carries tier + discount + reward', ['tier', 'discount', 'reward']),
@@ -403,6 +425,12 @@ registerCatalogPipeline({
         links: [{ catalogId: 'characters', entityId: 'char-captain-vael', role: 'faction-leader' }],
         };
       },
+      contract: {
+        grantedBy: 'Each declared member actor (AARPGNPCActor + UARPGDialogComponent) reads UARPGFactionSubsystem::GetRepTier for THIS faction and applies the dialogue or hostility behavior declared for that member',
+        activatedBy: 'TalkTo or approach begins dialogue; RepTierChanged broadcasts standing changes to this faction’s member actors and activates any declared hostility transition',
+        dependencies: ['characters::<id> for EACH catalogued NPC member THIS faction declares'],
+        verification: 'L2: AARPGNPCActor, UARPGDialogComponent, and UARPGFactionSubsystem::GetRepTier compiled and every linked character id resolves; L3: VSFactionRepTest — {name} member dialogue and disposition switch on the declared tier change',
+      },
       accept: allOf(
         minCount('members', '≥1 NPC member declared', 1),
         entriesHaveFields('members', 'every member carries role + npcId + name', ['role', 'npcId', 'name']),
@@ -456,6 +484,12 @@ registerCatalogPipeline({
           },
         },
         };
+      },
+      contract: {
+        grantedBy: 'UARPGDialogComponent::SelectGreeting reads UARPGFactionSubsystem::GetRepTier and returns this faction’s matching FARPGDialogueSet row from DT_FactionDialogue',
+        activatedBy: 'Player enters a member’s TalkTo trigger volume, then UARPGDialogComponent::BeginDialog calls SelectGreeting(repTier)',
+        dependencies: [],
+        verification: 'L2: FARPGDialogueSet and UARPGDialogComponent::SelectGreeting compiled and DT_FactionDialogue contains the tier rows for "{slug}"; L3: VSFactionRepTest — the selected dialogue key matches each tier THIS faction declares',
       },
       accept: allOf(
         minCount('greetingHooks', '≥5 greeting hooks declared', 5),
@@ -633,6 +667,18 @@ registerCatalogPipeline({
             { catalogId: 'icon-sets', entityId: 'iconset-abilities', role: 'heraldry-icon-family' },
           ],
         };
+      },
+      contract: {
+        grantedBy: 'UARPGFactionSubsystem reads FARPGFactionRow from DT_Factions row "{slug}", with this faction’s reputation, dialogue, icon, reward, member, and consumer assets named by their owning steps',
+        activatedBy: 'UGameInstanceSubsystem::Initialize restores reputation; this faction’s declared reputation events call AddRepPoints, then EvaluateTier broadcasts RepTierChanged',
+        dependencies: [
+          'currencies::<id> for EACH currency reward THIS faction declares',
+          'items::<id> for EACH item reward or stock unlock THIS faction declares',
+          'vendors::<id> for EACH discount consumer THIS faction declares',
+          'characters::<id> for EACH catalogued member THIS faction declares',
+          'icon-sets::<id> for this faction’s heraldry family',
+        ],
+        verification: 'L2: UARPGFactionSubsystem, FARPGFactionRow, and FARPGFactionReputationRow compiled in Source/PoF/, all linked ids resolve, and row "{slug}" is seeded in the faction tables; L3: VSFactionRepTest — {name} completes its declared tier-transition, reward, dialogue, and discount loop',
       },
       accept: allOf(
         minCount('assets', '≥5 UE assets packaged', 5),

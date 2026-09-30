@@ -12,6 +12,7 @@ import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { parseHeader, checkExpectations, type SemanticResult } from '@/lib/cpp-semantic-parser';
 import { getExpectationsForItem, type ChecklistExpectation } from '@/lib/checklist-expectations';
+import { collectHeaders } from '@/lib/ue-source/collect-headers';
 
 interface VerifyRequest {
   projectPath: string;
@@ -153,34 +154,4 @@ function findBestMatch(
     isStub: false,
     status: 'missing',
   };
-}
-
-async function collectHeaders(sourceDir: string, maxDepth = 6): Promise<string[]> {
-  const headers: string[] = [];
-
-  try {
-    await fsPromises.access(sourceDir);
-  } catch {
-    return headers;
-  }
-
-  async function walk(dir: string, depth: number) {
-    if (depth > maxDepth) return;
-    try {
-      const entries = await fsPromises.readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          // Skip common non-source directories
-          if (entry.name === 'ThirdParty' || entry.name === 'Intermediate' || entry.name === 'Binaries') continue;
-          await walk(fullPath, depth + 1);
-        } else if (entry.name.endsWith('.h')) {
-          headers.push(fullPath);
-        }
-      }
-    } catch { /* skip unreadable dirs */ }
-  }
-
-  await walk(sourceDir, 0);
-  return headers;
 }

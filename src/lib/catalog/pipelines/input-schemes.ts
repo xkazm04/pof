@@ -110,6 +110,13 @@ registerCatalogPipeline({
         ueAssets: [`/Game/Input/DA_InputSchemes_${s}`, `/Game/Input/IMC_Gameplay_${s}`],
       });
       },
+      contract: {
+        field: 'mapping',
+        grantedBy: 'AARPGPlayerController::SetupInputComponent binds EACH IA_* action this scheme declares and pushes IMC_Gameplay_{slug} to the Enhanced Input subsystem on possess',
+        activatedBy: 'a physical device input event is routed through the active IMC to the callback declared for that action',
+        dependencies: ['AARPGPlayerController (C++ owner of DA_InputSchemes_{slug})'],
+        verification: 'L2: AARPGPlayerController compiled in Source/PoF/ and DA_InputSchemes_{slug} exists in Content/Input/; L3: VSInputBindTest — EACH declared action fires its expected callback',
+      },
       accept: allOf(
         fieldsPopulated('mapping', 'Move/attack/dodge/interact + ability1–4 bindings defined', [
           'move',
@@ -231,6 +238,13 @@ registerCatalogPipeline({
         ueAssets: ['/Game/UI/WBP_InputRebind', `/Game/Input/DA_InputSchemes_${s}`],
       });
       },
+      contract: {
+        field: 'rebinding',
+        grantedBy: 'the rebinding widget THIS scheme declares, opened from the settings screen',
+        activatedBy: 'Player opens Settings → Controls; each confirmed remap checks for conflicts, applies the mapping, and writes it to UARPGSaveGame',
+        dependencies: ['AARPGPlayerController', 'UARPGSaveGame', 'the rebinding widget THIS scheme declares'],
+        verification: 'L2: AARPGPlayerController and UARPGSaveGame compile in Source/PoF/ and the declared rebinding widget is packaged; L3: VSInputRebindTest — a remap persists across reload and every declared conflict or reserved-input rule is enforced',
+      },
       accept: allOf(
         fieldsPopulated('rebinding', 'Widget / conflictCheck / reservedButtons / reset defined', [
           'widget',
@@ -322,6 +336,12 @@ registerCatalogPipeline({
           },
         },
       }),
+      contract: {
+        grantedBy: 'the accessibility settings widget THIS scheme declares writes its options to UARPGSaveGame',
+        activatedBy: 'AARPGPlayerController::BeginPlay reads the saved accessibility preferences and applies EACH declared option to the active input mapping context',
+        dependencies: ['UARPGSaveGame', 'AARPGPlayerController', 'the accessibility settings widget THIS scheme declares'],
+        verification: 'L2: UARPGSaveGame, AARPGPlayerController, and the declared settings widget compile; L3: VSInputA11yTest — EACH accessibility option this scheme declares takes effect and persists as specified',
+      },
       accept: allOf(
         minCount('checks', '≥3 accessibility checks per input-a11y canon', 3),
         wiringContractSound(),
@@ -513,6 +533,16 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/Input/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'AARPGPlayerController::SetupInputComponent reads DA_InputSchemes_{slug}, pushes this scheme’s mapping contexts, and commits remaps through UEnhancedInputLocalPlayerSubsystem after conflict checks',
+        activatedBy: 'possess and unpossess push or pop the mapping contexts; settings interactions apply this scheme’s rebinding and accessibility changes',
+        dependencies: [
+          'AARPGPlayerController (Enhanced Input owner)',
+          'UARPGSaveGame (remap and accessibility persistence)',
+          'the rebinding and accessibility widgets THIS scheme declares',
+        ],
+        verification: 'L2: AARPGPlayerController and UARPGSaveGame compile in Source/PoF/ and DA_InputSchemes_{slug}, every declared mapping context, and T_{slug}_Glyphs_Atlas are packaged; L3: VSInputRebindTest — {name} completes its bind, remap, persistence, and accessibility cycle',
       },
       accept: allOf(
         minCount('assets', 'All input assets packaged', 2),

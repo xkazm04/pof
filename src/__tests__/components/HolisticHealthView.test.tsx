@@ -34,6 +34,7 @@ const SUMMARY: ProjectHealthSummary = {
   performanceScore: 82,
   qualityTrend: 'improving',
   avgVelocity: 3,
+  velocitySample: { datedCompletions: 9, undated: 0, weeks: 3 },
   moduleHealth: [],
   velocityHistory: [],
   qualityHistory: [],
@@ -104,5 +105,36 @@ describe('HolisticHealthView — fused performance + crash signals', () => {
     expect(screen.queryByRole('button', { name: 'Open Performance Profiling' })).toBeNull();
     // The signal content still renders.
     expect(screen.getByText('Performance Profiling')).toBeTruthy();
+  });
+});
+
+describe('HolisticHealthView — velocity carries its sample (case 5)', () => {
+  beforeEach(() => {
+    motionState.reduced = false;
+    seed();
+  });
+
+  function velocityCard(): string {
+    return screen.getByText('Avg Velocity').parentElement?.textContent ?? '';
+  }
+
+  it('renders the dated-completion provenance next to the velocity', () => {
+    useProjectHealthStore.setState({
+      summary: { ...SUMMARY, avgVelocity: 0.3, velocitySample: { datedCompletions: 1, undated: 2, weeks: 3 } },
+    });
+    render(<HolisticHealthView />);
+    expect(velocityCard()).toContain('0.3');
+    expect(screen.getByText('from 1 dated completion over 3 weeks (2 undated)')).toBeTruthy();
+  });
+
+  it('renders a dash, not a number, when no dated completion supports a velocity', () => {
+    useProjectHealthStore.setState({
+      summary: { ...SUMMARY, avgVelocity: null, velocitySample: { datedCompletions: 0, undated: 3, weeks: 0 } },
+    });
+    render(<HolisticHealthView />);
+    const card = velocityCard();
+    expect(card).toContain('—');
+    expect(card).not.toMatch(/\d+(\.\d+)?\s*items\/week/);
+    expect(screen.getByText('no dated completions yet (3 undated)')).toBeTruthy();
   });
 });

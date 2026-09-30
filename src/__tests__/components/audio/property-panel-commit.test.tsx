@@ -205,24 +205,20 @@ describe('EmitterPropertyPanel — commits, not keystrokes', () => {
 });
 
 describe('PainterTab — routes panel patches to the throwing commit path', () => {
-  it('hands the zone id + patch to commitZonePatch, not a whole-zone updateDoc', async () => {
-    const commitZonePatch = vi.fn().mockResolvedValue(undefined);
-    const commitEmitterPatch = vi.fn().mockResolvedValue(undefined);
+  // The panel now writes through the tab's ONE scene buffer (see
+  // scene-buffer.test.tsx): the per-record `commitZonePatch` that built its write
+  // from the server copy is gone, and the whole rebased scene goes to commitScene.
+  it('hands the patched scene to commitScene, once, after the typing pause', async () => {
+    const commitScene = vi.fn().mockResolvedValue(undefined);
     const d = doc();
     render(
       <PainterTab
         activeDoc={d}
-        commitScene={vi.fn().mockResolvedValue(undefined)}
-        commitZones={vi.fn().mockResolvedValue(undefined)}
-        commitEmitters={vi.fn().mockResolvedValue(undefined)}
+        commitScene={commitScene}
         setSelectedZoneId={vi.fn()}
         setSelectedEmitterId={vi.fn()}
         selectedZoneId="z1"
         selectedEmitterId={null}
-        selectedZone={d.zones[0]}
-        selectedEmitter={null}
-        commitZonePatch={commitZonePatch}
-        commitEmitterPatch={commitEmitterPatch}
         handleGenerateZoneCode={vi.fn()}
         handleGenerateSoundscape={vi.fn()}
         audioCli={noopCli}
@@ -230,10 +226,11 @@ describe('PainterTab — routes panel patches to the throwing commit path', () =
     );
 
     typeInto(screen.getByLabelText('Zone name'), 'Sunken');
-    expect(commitZonePatch).toHaveBeenCalledTimes(0);
+    expect(commitScene).toHaveBeenCalledTimes(0);
 
     await settle();
-    expect(commitZonePatch).toHaveBeenCalledTimes(1);
-    expect(commitZonePatch).toHaveBeenCalledWith('z1', { name: 'Sunken' });
+    expect(commitScene).toHaveBeenCalledTimes(1);
+    expect(commitScene.mock.calls[0][0].zones[0]).toMatchObject({ id: 'z1', name: 'Sunken' });
+    expect(commitScene.mock.calls[0][0].emitters).toEqual(d.emitters);
   });
 });

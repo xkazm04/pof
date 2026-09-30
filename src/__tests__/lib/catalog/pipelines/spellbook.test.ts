@@ -43,17 +43,19 @@ describe('spellbook pipeline', () => {
     expect(logic.accept(logicOut.data ?? {}).status).toBe('pass');
 
     const effect = logicOut.data!.effect as Record<string, unknown>;
+    const effects = logicOut.data!.effects as Array<Record<string, unknown>>;
+    const damage = effects.find((entry) => entry.kind === 'damage')!;
     // Damage type must be one of the code enum values (Fire/Ice/Lightning/Physical/Chaos)
-    expect(effect.damageType).toBe('Fire');
+    expect(damage.damageType).toBe('Fire');
     // Concrete in-envelope numbers per plan.md entity data
-    expect(effect.baseDamage).toBe(35);
+    expect(damage.value).toBe(35);
     expect(effect.manaCost).toBe(20);
     expect(effect.cooldown).toBe(3.0);
     // Crit: base 5% + ×2.5 multiplier per ARPG-LAWS §3
-    expect(effect.critChancePct).toBe(5);
-    expect(effect.critMulti).toBe(2.5);
+    expect(damage.critChancePct).toBe(5);
+    expect(damage.critMulti).toBe(2.5);
     // On-hit ignite declared
-    const ignite = effect.onHitIgnite as Record<string, unknown>;
+    const ignite = effects.find((entry) => entry.kind === 'status')!;
     expect(ignite.linkedEffect).toBe('status-effects::status-burning');
     expect(ignite.state_tag).toBe('State.Burning');
     expect(ignite.stacking).toBe('highest');
@@ -95,11 +97,12 @@ describe('spellbook pipeline', () => {
     expect(tgt.shape).toBe('single-target-projectile');
     expect(tgt.requiresLoS).toBe(true);
 
-    // ── Balance: sustainedDPS within ±20% of tier target 19.5 ────────────────
+    // ── Balance: normalized power retains the exemplar's sustained DPS value ─
     const balance = p!.steps.find((s) => s.label === 'Balance')!;
     const balOut = balance.produce(entity);
     expect(balance.accept(balOut.data ?? {}).status).toBe('pass');
-    const dps = balOut.data!.sustainedDPS as number;
+    const balanceData = balOut.data!.balance as Record<string, unknown>;
+    const dps = balanceData.normalizedPower as number;
     // Must sit within 15.6–23.4 (19.5 ±20%)
     expect(dps).toBeGreaterThanOrEqual(15.6);
     expect(dps).toBeLessThanOrEqual(23.4);

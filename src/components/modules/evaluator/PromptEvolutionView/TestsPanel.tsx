@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlaskConical, Play, Trophy } from 'lucide-react';
 import { StatTerm } from '@/components/ui/StatTerm';
-import type { PromptVariant, ABTest } from '@/types/prompt-evolution';
+import type { PromptVariant, ABTest, ABTestView } from '@/types/prompt-evolution';
+import type { ConcludeOutcome } from '@/stores/promptEvolutionStore';
 import { STATUS_COLORS, type ViewMode } from './constants';
 import { ABTestCard } from './ABTestCard';
 import { EmptyState } from './EmptyState';
@@ -16,11 +17,11 @@ export function TestsPanel({
   concludeTest,
   mode,
 }: {
-  abTests: ABTest[];
+  abTests: Array<ABTest | ABTestView>;
   variants: PromptVariant[];
   expandedTestId: string | null;
   setExpandedTestId: (id: string | null) => void;
-  concludeTest: (id: string) => Promise<ABTest | null>;
+  concludeTest: (id: string) => Promise<ConcludeOutcome | null>;
   mode: ViewMode;
 }) {
   const variantMap = useMemo(() => {
@@ -28,6 +29,18 @@ export function TestsPanel({
     for (const v of variants) m.set(v.id, v);
     return m;
   }, [variants]);
+
+  // A refused decide-now is shown on its own card, never as a view-wide error.
+  const [refusals, setRefusals] = useState<Record<string, string>>({});
+  const handleConclude = useCallback(async (id: string) => {
+    const outcome = await concludeTest(id);
+    setRefusals((prev) => {
+      const next = { ...prev };
+      if (outcome && !outcome.ok) next[id] = outcome.reason;
+      else delete next[id];
+      return next;
+    });
+  }, [concludeTest]);
 
   if (abTests.length === 0) {
     return (
@@ -68,7 +81,8 @@ export function TestsPanel({
               variantB={variantMap.get(test.variantBId)}
               isExpanded={expandedTestId === test.id}
               onToggle={() => setExpandedTestId(expandedTestId === test.id ? null : test.id)}
-              onConclude={() => concludeTest(test.id)}
+              onConclude={() => void handleConclude(test.id)}
+              concludeRefusal={refusals[test.id]}
               mode={mode}
             />
           ))}

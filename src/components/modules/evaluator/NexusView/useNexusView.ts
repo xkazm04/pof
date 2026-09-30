@@ -1,18 +1,17 @@
 import { useState, useMemo } from 'react';
-import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { buildModuleTopology, TOPOLOGY_ROOMY } from '@/lib/topology/moduleGraph';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
-import { MODULE_LABELS, SUB_MODULE_MAP } from '@/lib/module-registry';
+import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import { countChecklist } from '@/lib/checklist-progress';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import type { ImplementationPattern } from '@/types/pattern-library';
-import type { SubModuleId } from '@/types/modules';
-import { EMPTY_PATTERNS, EMPTY_HISTORY, COL_WIDTH, ROW_HEIGHT, NODE_W, NODE_H, PAD_X, PAD_Y } from './constants';
+import { EMPTY_PATTERNS, EMPTY_HISTORY } from './constants';
 import type { LayerId } from './constants';
-import type { NexusNode, NexusEdge } from './types';
-import { getNodeCenter, computeGenreCoverage } from './helpers';
+import type { NexusNode } from './types';
+import { computeGenreCoverage } from './helpers';
 
 export function useNexusView() {
   // Feature statuses come from the ONE shared all-statuses path (this view and
@@ -35,11 +34,11 @@ export function useNexusView() {
   const lastScan = useEvaluatorStore((s) => s.lastScan);
   const sessions = useCLIPanelStore((s) => s.sessions);
 
-  // Build dep map
-  const depMap = useMemo(() => {
-    const base = buildDependencyMap();
-    return computeBlockers(base, statusMap);
-  }, [statusMap]);
+  // Nodes (counts + placement), cross-module edges and viewport: the ONE
+  // module-topology projection shared with DependencyGraph. This view layers its
+  // pattern / build / session / genre overlays onto the same nodes.
+  const topology = useMemo(() => buildModuleTopology(statusMap, TOPOLOGY_ROOMY), [statusMap]);
+  const { edges } = topology;
 
   // Genre coverage
   const genreCoverage = useMemo(() => computeGenreCoverage(), []);
@@ -79,24 +78,12 @@ export function useNexusView() {
 
   // Build nodes
   const nodes: NexusNode[] = useMemo(() => {
-    return Object.keys(MODULE_FEATURE_DEFINITIONS).map((moduleId) => {
-      const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
-      const center = getNodeCenter(moduleId as SubModuleId);
-      let blockedCount = 0;
-      let implementedCount = 0;
-
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const status = statusMap.get(key) ?? 'unknown';
-        if (status === 'implemented') implementedCount++;
-        const info = depMap.get(key);
-        if (info?.isBlocked && status !== 'implemented') blockedCount++;
-      }
-
+    return topology.nodes.map((t) => {
+      const { moduleId } = t;
       const ps = patternStats[moduleId];
       const ss = sessionStats[moduleId];
       const health = moduleHealth[moduleId];
-      const moduleDef = SUB_MODULE_MAP[moduleId as SubModuleId];
+      const moduleDef = SUB_MODULE_MAP[moduleId];
       const { done: checklistDone, total: checklistTotal } = countChecklist(
         moduleDef ?? {},
         checklistProgress[moduleId],
@@ -114,13 +101,13 @@ export function useNexusView() {
         : 0;
 
       return {
-        moduleId: moduleId as SubModuleId,
-        label: MODULE_LABELS[moduleId] ?? moduleId,
-        cx: center.x,
-        cy: center.y,
-        featureCount: features.length,
-        implementedCount,
-        blockedCount,
+        moduleId,
+        label: t.label,
+        cx: t.cx,
+        cy: t.cy,
+        featureCount: t.featureCount,
+        implementedCount: t.implementedCount,
+        blockedCount: t.blockedCount,
         patternSuccessRate: ps?.rate ?? null,
         patternCount: ps?.count ?? 0,
         hasBuildFailure,
@@ -134,35 +121,7 @@ export function useNexusView() {
         healthStatus: health?.status ?? 'not-started',
       };
     });
-  }, [depMap, statusMap, patternStats, sessionStats, moduleHealth, checklistProgress, moduleHistory, lastScan, genreCoverage]);
-
-  // Build edges
-  const edges: NexusEdge[] = useMemo(() => {
-    const edgeMap = new Map<string, { count: number; hasBlockers: boolean }>();
-    for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
-      for (const feat of features) {
-        const key = `${moduleId}::${feat.featureName}`;
-        const info = depMap.get(key);
-        if (!info) continue;
-        for (const dep of info.deps) {
-          if (dep.moduleId === moduleId) continue;
-          const edgeKey = `${dep.moduleId}->${moduleId}`;
-          const existing = edgeMap.get(edgeKey);
-          const isBlocker = info.blockers.some((b) => b.key === dep.key);
-          if (existing) {
-            existing.count++;
-            if (isBlocker) existing.hasBlockers = true;
-          } else {
-            edgeMap.set(edgeKey, { count: 1, hasBlockers: isBlocker });
-          }
-        }
-      }
-    }
-    return Array.from(edgeMap.entries()).map(([key, val]) => {
-      const [from, to] = key.split('->');
-      return { from, to, count: val.count, hasBlockers: val.hasBlockers };
-    });
-  }, [depMap]);
+  }, [topology, patternStats, sessionStats, moduleHealth, checklistProgress, moduleHistory, lastScan, genreCoverage]);
 
   // Layer toggle
   const toggleLayer = (id: LayerId) => {
@@ -173,8 +132,7 @@ export function useNexusView() {
     });
   };
 
-  const svgWidth = PAD_X * 2 + 3 * COL_WIDTH + NODE_W;
-  const svgHeight = PAD_Y * 2 + 2 * ROW_HEIGHT + NODE_H;
+  const { width: svgWidth, height: svgHeight } = topology;
   const highlightModule = hoveredModule ?? selectedModule;
 
   // Selected module data for deep-dive

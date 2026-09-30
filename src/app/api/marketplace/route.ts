@@ -1,29 +1,38 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { buildFeatureGaps, generateRecommendations } from '@/lib/marketplace/recommendation-engine';
+import { partitionFeatureMatrix, generateRecommendations } from '@/lib/marketplace/recommendation-engine';
 import { generateIntegration } from '@/lib/marketplace/integration-generator';
-import type { FeatureStatus } from '@/types/feature-matrix';
+import { ASSET_CATALOG } from '@/lib/marketplace/asset-catalog';
+import { FEATURE_STATUSES, type FeatureStatus } from '@/types/feature-matrix';
+
+/** A caller-supplied gap filter, keeping only real statuses; undefined → engine default. */
+function parseStatusFilter(raw: unknown): FeatureStatus[] | undefined {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : null;
+  if (!list) return undefined;
+  const known = list.filter((v): v is FeatureStatus => (FEATURE_STATUSES as readonly unknown[]).includes(v));
+  return known.length > 0 ? known : undefined;
+}
+
+/** Gaps (missing|partial by default) + unreviewed features, then recommendations for the gaps. */
+function recommend(statusMap: Map<string, string>, moduleId: string | undefined, statusFilter: FeatureStatus[] | undefined) {
+  const { gaps, unreviewed } = partitionFeatureMatrix(statusMap, moduleId, statusFilter);
+  return generateRecommendations(gaps, ASSET_CATALOG, unreviewed);
+}
 
 /**
  * GET /api/marketplace?moduleId=arpg-combat&status=missing,partial
- * Returns asset recommendations based on feature gaps.
+ * Returns asset recommendations based on feature gaps (default gap filter:
+ * missing,partial; unknown features are returned as `unreviewed`).
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const moduleId = searchParams.get('moduleId') ?? undefined;
-    const statusParam = searchParams.get('status');
-    const statusFilter = statusParam
-      ? (statusParam.split(',') as FeatureStatus[])
-      : ['missing', 'partial', 'unknown'] as FeatureStatus[];
+    const statusFilter = parseStatusFilter(searchParams.get('status'));
 
-    // Build feature gaps from definitions (status comes from client-side feature matrix)
-    // For the API, we treat all features as "unknown" unless the client provides status
-    const statusMap = new Map<string, FeatureStatus>();
-    const gaps = buildFeatureGaps(statusMap, moduleId, statusFilter);
-    const result = generateRecommendations(gaps);
-
-    return apiSuccess(result);
+    // No status map on a GET: every feature is unreviewed (not a gap) unless the
+    // caller explicitly filters 'unknown' in. Clients with statuses POST them.
+    return apiSuccess(recommend(new Map(), moduleId, statusFilter));
   } catch (err) {
     return apiError(
       err instanceof Error ? err.message : 'Failed to generate recommendations',
@@ -34,7 +43,9 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/marketplace
- * Body: { action: 'recommend', statusMap, moduleId?, statusFilter? }
+ * Body: { action: 'recommend', statusMap, moduleId?, statusFilter? } → gaps are
+ *   statusMap's missing|partial features (or statusFilter's), `unreviewed` the rest
+ *   with no verdict, grouped by module
  *    or { action: 'integrate', assetId, moduleId, projectName, apiMacro, existingClasses }
  */
 export async function POST(req: NextRequest) {
@@ -45,21 +56,15 @@ export async function POST(req: NextRequest) {
     if (action === 'recommend') {
       const { statusMap: rawMap, moduleId, statusFilter } = body;
 
-      // Reconstruct status map
-      const statusMap = new Map<string, FeatureStatus>();
+      // Reconstruct status map (the engine reads an unrecognised status as 'unknown')
+      const statusMap = new Map<string, string>();
       if (rawMap && typeof rawMap === 'object') {
         for (const [key, val] of Object.entries(rawMap)) {
-          statusMap.set(key, val as FeatureStatus);
+          if (typeof val === 'string') statusMap.set(key, val);
         }
       }
 
-      const gaps = buildFeatureGaps(
-        statusMap,
-        moduleId,
-        statusFilter ?? ['missing', 'partial', 'unknown'],
-      );
-      const result = generateRecommendations(gaps);
-      return apiSuccess(result);
+      return apiSuccess(recommend(statusMap, moduleId, parseStatusFilter(statusFilter)));
     }
 
     if (action === 'integrate') {

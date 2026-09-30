@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { useCRUD } from '@/hooks/useCRUD';
 import type { AudioAsset, AudioSet } from '@/types/audio-asset';
 import type { AudioImportResult } from '@/types/audio-import';
+import type { AuditionClip, AuditionLibrary } from '@/lib/audio-scene-audition';
 
 /** One generated audio set, with the two facts a binding decision needs. */
 export interface AudioSetOption {
@@ -21,9 +22,13 @@ export interface AudioSetOption {
   cuePath: string | null;
 }
 
-interface LibraryData { options: AudioSetOption[] }
+interface LibraryData {
+  options: AudioSetOption[];
+  /** setId -> its clips (relPath + favorite): what the painter LISTEN mode plays. */
+  clipsBySet: AuditionLibrary;
+}
 
-const EMPTY: LibraryData = { options: [] };
+const EMPTY: LibraryData = { options: [], clipsBySet: {} };
 
 /**
  * The generated-asset library as an emitter binding sees it: every set, its clip
@@ -42,14 +47,16 @@ export function useAudioSetLibrary(enabled: boolean) {
       apiFetch<{ sets: AudioSet[]; assets: AudioAsset[] }>('/api/audio-gen'),
       apiFetch<{ bySet: Record<string, AudioImportResult> }>('/api/audio/import-result'),
     ]);
-    const clips = new Map<string, number>();
-    for (const a of lib.assets ?? []) clips.set(a.setId, (clips.get(a.setId) ?? 0) + 1);
+    const clipsBySet: Record<string, AuditionClip[]> = {};
+    for (const s of lib.sets ?? []) clipsBySet[s.id] = [];
+    for (const a of lib.assets ?? []) clipsBySet[a.setId]?.push({ relPath: a.relPath, favorite: a.favorite });
     return {
+      clipsBySet,
       options: (lib.sets ?? []).map((s) => ({
         id: s.id,
         name: s.name,
         kind: s.kind,
-        clipCount: clips.get(s.id) ?? 0,
+        clipCount: clipsBySet[s.id].length,
         cuePath: imports.bySet?.[s.name]?.cuePath ?? null,
       })),
     };
@@ -61,5 +68,5 @@ export function useAudioSetLibrary(enabled: boolean) {
     { fetcher, skipInitialFetch: !enabled, errorMessage: 'Could not read the audio library' },
   );
 
-  return { options: data.options, isLoading, error, retry };
+  return { options: data.options, clipsBySet: data.clipsBySet, isLoading, error, retry };
 }

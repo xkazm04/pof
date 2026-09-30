@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiError, respondFromResult, withRoute } from '@/lib/api-utils';
 import { getService } from '@/lib/blender-mcp/service';
+import { ledger } from '@/lib/blender-mcp/generation-ledger';
 import type { GenerationProvider } from '@/lib/blender-mcp/types';
 
 // POST /api/blender-mcp/generate — { provider, prompt }
@@ -17,6 +18,10 @@ export const POST = withRoute(async (req: NextRequest) => {
     provider === 'hyper3d'
       ? await svc.generateHyper3D(prompt)
       : await svc.generateHunyuan3D(prompt);
+
+  // The provider accepted (and billed) this job: the server keeps its id so a reloaded
+  // forge queue can re-adopt it via GET /generate/jobs instead of paying again.
+  if (result.ok) ledger.record({ jobId: result.data.jobId, provider, prompt });
 
   return respondFromResult(result, 201);
 }, 'Blender generate failed');

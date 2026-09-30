@@ -5,7 +5,7 @@ import { PersonStanding } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
-import { RIG_PRESETS, type RigPreset } from '@/lib/visual-gen/rig-presets';
+import { RIG_PRESETS, checkPresetBinding, type RigPreset } from '@/lib/visual-gen/rig-presets';
 import { createArmatureScript } from '@/lib/blender-mcp/scripts/create-armature';
 import { tryApiFetch } from '@/lib/api-utils';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
@@ -110,6 +110,21 @@ function RigTab() {
           </li>
         </ol>
       </div>
+
+      {/* What this target owes, and whether it has it. Never hidden: an empty mapping
+          table is the correct final state on a conform target and a broken chain on a
+          remap target, and hiding the section made those two look identical. */}
+      {activePreset && (() => {
+        const check = checkPresetBinding(activePreset);
+        return (
+          <div className={`rounded-lg border p-4 ${check.ok ? 'border-border' : 'border-rose-500'}`}>
+            <h3 className="text-sm font-medium text-text mb-1">
+              {check.kind === 'conform' ? 'Conform target — no bone mapping' : `Mixamo → ${activePreset.name} Bone Mapping`}
+            </h3>
+            <p className={`text-xs mb-2 ${check.ok ? 'text-text-muted' : 'text-rose-500'}`}>{check.reason}</p>
+          </div>
+        );
+      })()}
 
       {/* Bone mapping preview */}
       {activePreset && activePreset.mixamoMapping.length > 0 && (

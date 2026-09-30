@@ -4,14 +4,23 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_5, statusBorder } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
+import { BuildChip } from './UnblockCallout';
 import type { SelectedFeatureDetail } from './types';
 
 interface SelectedModuleDetailProps {
   selectedModule: string | null;
   selectedDetails: SelectedFeatureDetail[] | null;
+  /** Dispatch a feature-fix build of a frontier feature. */
+  onBuild: (key: string) => void;
+  /** Preview (key) / end the preview (null) of what a build clears. */
+  onPreview: (key: string | null) => void;
+  /** A build is already running in the Dependencies CLI session. */
+  isBuilding: boolean;
 }
 
-export function SelectedModuleDetail({ selectedModule, selectedDetails }: SelectedModuleDetailProps) {
+export function SelectedModuleDetail({
+  selectedModule, selectedDetails, onBuild, onPreview, isBuilding,
+}: SelectedModuleDetailProps) {
   return (
     <AnimatePresence>
       {selectedModule && selectedDetails && (
@@ -38,6 +47,8 @@ export function SelectedModuleDetail({ selectedModule, selectedDetails }: Select
                 .map((feat) => (
                   <div
                     key={feat.featureName}
+                    role="group"
+                    aria-label={feat.featureName}
                     className="flex items-start gap-2 px-2 py-1.5 rounded-md hover:bg-surface-hover transition-colors"
                   >
                     {/* Status indicator */}
@@ -90,6 +101,23 @@ export function SelectedModuleDetail({ selectedModule, selectedDetails }: Select
                           );
                         })}
                       </div>
+
+                      {/* Build frontier: what is buildable now to move this feature */}
+                      {feat.frontier.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          <span className="text-2xs text-text-muted">Build first:</span>
+                          {feat.frontier.map((target) => (
+                            <BuildChip
+                              key={target.key}
+                              target={target}
+                              showModule={target.moduleId !== selectedModule}
+                              onBuild={onBuild}
+                              onPreview={onPreview}
+                              disabled={isBuilding}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -10,4 +10,6 @@ export interface ProjectRule {
   body: string;
   refs?: string[];
   updatedAt?: string;
+  /** The canon profile this rule belongs to (`profiles.ts`). Absent = `pof`, PoF's own world. */
+  profile?: string;
 }

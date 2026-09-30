@@ -6,8 +6,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { StatTerm } from '@/components/ui/StatTerm';
-import type { PromptVariant, ABTest } from '@/types/prompt-evolution';
+import type { PromptVariant, ABTest, ABTestView, ABTestVerdict } from '@/types/prompt-evolution';
 import { explainTestVerdict, type PlainVerdict } from '@/lib/prompt-evolution/plain-language';
+import { verdictOf } from '@/lib/prompt-evolution/verdict';
 import { STATUS_WARNING, STATUS_SUCCESS, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { toast } from 'sonner';
 import { ACCENT, STATUS_COLORS, type ViewMode } from './constants';
@@ -21,23 +22,26 @@ export function ABTestCard({
   isExpanded,
   onToggle,
   onConclude,
+  concludeRefusal,
   mode,
 }: {
-  test: ABTest;
+  test: ABTest | ABTestView;
   variantA?: PromptVariant;
   variantB?: PromptVariant;
   isExpanded: boolean;
   onToggle: () => void;
   onConclude?: () => void;
+  /** Why the last decide-now press was refused, shown next to the test. */
+  concludeRefusal?: string;
   mode: ViewMode;
 }) {
-  const rateA = test.variantATrials > 0 ? test.variantASuccesses / test.variantATrials : 0;
-  const rateB = test.variantBTrials > 0 ? test.variantBSuccesses / test.variantBTrials : 0;
+  // The ONE reading (verdict.ts): the server's when it sent one, else self-reported.
+  const reading = verdictOf(test);
   const totalTrials = test.variantATrials + test.variantBTrials;
   const statusColor = STATUS_COLORS[test.status];
 
   // Plain-language verdict — the single human-readable answer.
-  const verdict = explainTestVerdict(test, variantA?.label, variantB?.label);
+  const verdict = explainTestVerdict(test, variantA?.label, variantB?.label, reading);
   const winnerVariant = verdict.winnerSlot === 'A' ? variantA : verdict.winnerSlot === 'B' ? variantB : undefined;
 
   const handleUseWording = useCallback(async () => {
@@ -87,6 +91,7 @@ export function ABTestCard({
                 canUseWording={Boolean(winnerVariant)}
                 onUseWording={handleUseWording}
               />
+              <VerdictBasisLine reading={reading} mode={mode} />
 
               {/* Advanced-only statistical breakdown */}
               {mode === 'advanced' && (
@@ -98,7 +103,8 @@ export function ABTestCard({
                       trials={test.variantATrials}
                       successes={test.variantASuccesses}
                       totalDurationMs={test.variantATotalDurationMs}
-                      rate={rateA}
+                      rate={reading.rateA}
+                      judgedVerdicts={reading.basis === 'judge' ? reading.trialsA : null}
                       isWinner={test.winnerId === test.variantAId}
                     />
                     <VariantSlotCard
@@ -107,7 +113,8 @@ export function ABTestCard({
                       trials={test.variantBTrials}
                       successes={test.variantBSuccesses}
                       totalDurationMs={test.variantBTotalDurationMs}
-                      rate={rateB}
+                      rate={reading.rateB}
+                      judgedVerdicts={reading.basis === 'judge' ? reading.trialsB : null}
                       isWinner={test.winnerId === test.variantBId}
                     />
                   </div>
@@ -127,8 +134,18 @@ export function ABTestCard({
                 </>
               )}
 
-              {/* Conclude button */}
-              {test.status === 'running' && onConclude && totalTrials >= 2 && (
+              {/* Conclude button — offered only when the server's per-arm floor is met */}
+              {test.status === 'running' && !reading.canConclude && (
+                <p className="text-xs text-text-muted" data-testid="conclude-shortfall">
+                  {shortfallText(reading.shortfall)}
+                </p>
+              )}
+              {concludeRefusal && (
+                <p className="text-xs text-text-muted" role="status" data-testid="conclude-refusal">
+                  {concludeRefusal}
+                </p>
+              )}
+              {test.status === 'running' && onConclude && reading.canConclude && (
                 <button
                   onClick={onConclude}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors focus-ring"
@@ -143,6 +160,30 @@ export function ABTestCard({
         )}
       </AnimatePresence>
     </SurfaceCard>
+  );
+}
+
+/** "Needs 1 more run of A and 2 more runs of B before a winner can be picked." */
+function shortfallText(shortfall: ABTestVerdict['shortfall']): string {
+  const parts = (['A', 'B'] as const)
+    .filter((slot) => shortfall[slot] > 0)
+    .map((slot) => `${shortfall[slot]} more run${shortfall[slot] === 1 ? '' : 's'} of ${slot}`);
+  return `Needs ${parts.join(' and ')} before a winner can be picked.`;
+}
+
+/**
+ * What the verdict rests on — a score without its basis is not a measurement.
+ * The band is the z-test band of the evidence as it stands NOW (read time), which
+ * can differ from the confidence stored when the test was decided.
+ */
+function VerdictBasisLine({ reading, mode }: { reading: ABTestVerdict; mode: ViewMode }) {
+  const basis = reading.basis === 'judge' ? 'judge verdicts' : 'self-reported run results';
+  return (
+    <p className="text-2xs text-text-muted" data-testid="verdict-basis" title={reading.note}>
+      {mode === 'simple'
+        ? `Based on ${basis}.`
+        : `Basis: ${basis} (${reading.trialsA} vs ${reading.trialsB}) · current band: ${reading.band}`}
+    </p>
   );
 }
 
@@ -205,6 +246,7 @@ function VariantSlotCard({
   successes,
   totalDurationMs,
   rate,
+  judgedVerdicts,
   isWinner,
 }: {
   label: string;
@@ -212,7 +254,10 @@ function VariantSlotCard({
   trials: number;
   successes: number;
   totalDurationMs: number;
+  /** The arm's rate on the verdict's basis. */
   rate: number;
+  /** Verdict count when the rate is judged; `null` on the self-reported basis. */
+  judgedVerdicts: number | null;
   isWinner: boolean;
 }) {
   const avgDur = trials > 0 ? Math.round(totalDurationMs / trials / 1000) : 0;
@@ -230,8 +275,11 @@ function VariantSlotCard({
         <span className="text-text">
           {Math.round(rate * 100)}%
         </span>
+        {judgedVerdicts !== null && (
+          <span className="text-text-muted">of {judgedVerdicts} verdicts ·</span>
+        )}
         <span className="text-text-muted">
-          {successes}/{trials}
+          {successes}/{trials}{judgedVerdicts !== null ? ' runs' : ''}
         </span>
         {avgDur > 0 && (
           <span className="text-text-muted flex items-center gap-0.5">

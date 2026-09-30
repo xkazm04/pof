@@ -269,11 +269,23 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
                       </span>
                     </button>
                   </td>
-                  {steps.map((s, i) => {
+                  {steps.map((s) => {
+                    // A step scoped to other canon profiles is not part of this entity's pipeline
+                    // (D18): say so, never paint it "pending" as if it were owed.
+                    if (!r.applies(s)) {
+                      return (
+                        <td key={s} style={stepTd}>
+                          <span data-cell={`${r.id}::${s}`} data-status="not-applicable"
+                            aria-label={`${r.name} · ${s}: not part of this entity's pipeline`}
+                            title={`${r.name} · ${s}: not part of this entity's pipeline (canon profile)`}
+                            style={{ color: t.muted }}>·</span>
+                        </td>
+                      );
+                    }
                     const status = r.statusByStep(s);
                     return (
                       <td key={s} style={stepTd}>
-                        <button onClick={() => onOpenStep(catalogId, r.id, i)}
+                        <button onClick={() => onOpenStep(catalogId, r.id, r.stepIndex(s))}
                           data-cell={`${r.id}::${s}`} data-status={status}
                           aria-label={`${r.name} · ${s}: ${wordOf(status)}`}
                           title={`${r.name} · ${s}: ${wordOf(status)}`}

@@ -56,7 +56,9 @@ function createBridgeSubscriptions(): () => void {
           }
         }
 
-        // Detect running → stopped transition
+        // Detect running → stopped transition. The only writer of this edge is the
+        // run door's endRun (cliPanelStore), which records the run's outcome in the
+        // SAME store write — so lastTaskSuccess here is this run's, never the last one's.
         if (prevRunning[tabId] === true && !session.isRunning) {
           eventBus.emit('cli.task.completed', {
             tabId,

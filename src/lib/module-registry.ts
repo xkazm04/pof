@@ -16,6 +16,20 @@ import {
   UserPlus, Users, Volume2, Workflow, Wrench, Zap,
 } from 'lucide-react';
 import type { CategoryDefinition, SubModuleDefinition, SubModuleId, ChecklistItem, QuickAction } from '@/types/modules';
+import {
+  SAVE_GAME_CLASS, SAVE_SCHEMA_VERSION, SAVE_VERSION_FIELD, SAVE_PERSISTED_FIELDS, SAVE_EPHEMERAL_FIELDS,
+  saveGamePropertyDeclarations,
+} from '@/lib/save-schema/fields';
+
+// as-1 generates the class the as-1 verifier (checklist-expectations) and the save-points
+// State Schema describe — all three read the one field authority, @/lib/save-schema/fields.
+const SAVE_HELPER_STRUCTS = [...new Set(SAVE_PERSISTED_FIELDS.flatMap((f) => f.ueType.match(/FARPG\w+/g) ?? []))];
+const AS1_SAVE_GAME_PROMPT =
+  `Create a ${SAVE_GAME_CLASS} class extending USaveGame. Declare UPROPERTY(SaveGame) int32 ${SAVE_VERSION_FIELD.ueName} = ${SAVE_SCHEMA_VERSION}, ` +
+  `then exactly these UPROPERTY(SaveGame) fields, in this order (the save-points State Schema): ${saveGamePropertyDeclarations().join('; ')}. ` +
+  `Declare the USTRUCT(BlueprintType) types these fields use (${SAVE_HELPER_STRUCTS.join(', ')}) with UPROPERTY members if they do not exist yet. ` +
+  `Persist only settled, discrete state: ephemeral runtime state (${SAVE_EPHEMERAL_FIELDS.map((f) => f.key).join(', ')}) stays out of the class. ` +
+  `Any later add/remove/rename of a field bumps ${SAVE_VERSION_FIELD.ueName} and needs a migration in UARPGSaveSubsystem::MigrateSaveGame.`;
 
 // ─── Checklist data per aRPG sub-module ───────────────────────────────────────
 
@@ -284,7 +298,7 @@ Create a character stats panel for my aRPG. Show all attributes from the Attribu
     { id: 'aw-8', label: 'Verify NavMesh and AI pathing', description: 'Place NavMesh bounds, verify AI can path through all zones, fix gaps and problem areas.', prompt: 'Set up and verify navigation for my aRPG zones. Place NavMesh Bounds Volumes covering all playable areas. Run the NavMesh build, check for gaps (especially around stairs, ramps, narrow passages). Verify enemies can path from their spawn points to the player. Check that EQS queries find valid points in each zone. Fix any navigation issues with Nav Modifiers or Nav Link Proxies.' },
   ],
   'arpg-save': [
-    { id: 'as-1', label: 'Create USaveGame subclass', description: 'Define save data structure with fields for all persistent state: character, inventory, world.', prompt: 'Create a UARPGSaveGame class extending USaveGame. Define UPROPERTY(SaveGame) fields for: player position/rotation, character level, current XP, attribute allocations, inventory contents (serialized item instances with affixes), equipped items, learned abilities, ability loadout, world state flags (TMap<FName,bool> for chest opened, boss killed, etc.), current zone, and play time.' },
+    { id: 'as-1', label: 'Create USaveGame subclass', description: 'Define save data structure with fields for all persistent state: character, inventory, world.', prompt: AS1_SAVE_GAME_PROMPT },
     { id: 'as-2', label: 'Implement custom serialization', description: 'Serialize complex objects (items with random affixes) that UPROPERTY alone cant handle.', prompt: 'Implement custom serialization for my aRPG save system. Items with random affixes need special handling: serialize each UARPGItemInstance as a struct with (ItemDefinition path, StackCount, ItemLevel, array of FItemAffix with tag and magnitude). Create helper functions SerializeInventory/DeserializeInventory that convert between runtime objects and save-friendly structs.' },
     { id: 'as-3', label: 'Implement Save function', description: 'Gather state from all systems (ASC, inventory, progression, world) into SaveGame object.', prompt: 'Implement the Save function for my aRPG. Create a GatherSaveData function that: gets player location from character, reads attributes from ASC (Level, XP, unspent points), serializes inventory and equipment from InventoryComponent, saves learned abilities from AbilityUnlockComponent, saves ability loadout, saves world state flags. Call UGameplayStatics::SaveGameToSlot.' },
     { id: 'as-4', label: 'Implement Load function', description: 'Read SaveGame, distribute data back to all systems, rebuild character state.', prompt: 'Implement the Load function for my aRPG. After reading the USaveGame from slot: set player location, restore attributes via Gameplay Effects, deserialize and rebuild inventory items, re-equip equipment (applying GE stat bonuses), restore learned abilities to ASC, restore ability loadout to hotbar, apply world state flags (mark chests as opened, etc.). Handle missing/corrupted save gracefully.' },

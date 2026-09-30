@@ -88,6 +88,12 @@ registerCatalogPipeline({
           },
         };
       },
+      contract: {
+        grantedBy: 'THIS effect’s ability montage hosts AnimNotify AN_{slug}, which activates Niagara system NS_{slug}',
+        activatedBy: 'AnimNotify AN_{slug} fires at the authored impact frame of the ability montage',
+        dependencies: ['spellbook::<id> for EACH ability montage that hosts THIS effect’s AnimNotify'],
+        verification: 'L2: NS_{slug} is authored with its declared LOD tiers and AN_{slug} is present in every declared montage; L3: VSVFXPerfTest verifies the notify fires THIS effect at the correct socket and its LOD transitions work',
+      },
       accept: allOf(
         fieldsPopulated('behavior', 'Emitters + lifetime + spawn rate + AnimNotify defined', ['emitters', 'lifetime', 'spawnRate']),
         wiringContractSound(),
@@ -205,6 +211,15 @@ registerCatalogPipeline({
           },
         };
       },
+      contract: {
+        grantedBy: 'THIS effect’s ability montage hosts AnimNotify AN_{slug}, which spawns Niagara system NS_{slug}',
+        activatedBy: 'AnimNotify AN_{slug}, never BeginPlay or a timer, is the single activation path for THIS effect',
+        dependencies: [
+          'spellbook::<id> for EACH ability montage that hosts THIS effect’s AnimNotify',
+          'vfx asset NS_{slug} with every LOD tier THIS effect declares',
+        ],
+        verification: 'L2: NS_{slug} exists with its declared emitter LODs and AN_{slug} is present in every declared montage; L3: VSVFXPerfTest verifies THIS effect remains within its authored GPU budget and transitions at its declared distances',
+      },
       // Grade the CHARTED bar (gpuBudget.gpuMs), not the duplicated top-level scalar — the
       // chart and the checker now read one and the same datum.
       // Content invariants: the peak cost must fit the class budget the artifact declares,
@@ -307,6 +322,15 @@ registerCatalogPipeline({
           },
           ueAssets: assets.map((a) => `/Game/VFX/${s}/${a}`),
         };
+      },
+      contract: {
+        grantedBy: 'THIS effect’s ability montage hosts AnimNotify AN_{slug}, which spawns NS_{slug} at the socket named by the montage notify track',
+        activatedBy: 'AnimNotify AN_{slug} fires at the authored impact frame and calls UNiagaraComponent::Activate for NS_{slug} using THIS effect’s declared LOD policy',
+        dependencies: [
+          'spellbook::<id> for EACH ability montage that hosts THIS effect’s AnimNotify',
+          'NS_{slug} and every material or mesh asset THIS effect declares under /Game/VFX/{slug}/',
+        ],
+        verification: 'L2: NS_{slug}, its declared LOD tiers, materials, seed row, and AN_{slug} montage bindings exist; L3: VSVFXPerfTest verifies THIS effect’s notify socket, GPU budget, and LOD thresholds',
       },
       accept: allOf(
         minCount('assets', 'All VFX assets packaged', 2),

@@ -47,6 +47,13 @@ function readTruth() {
       status: r.status as PipelineArtifact['status'],
       ...(r.tier ? { tier: r.tier as PipelineArtifact['tier'] } : {}),
       ...(r.reason ? { reason: r.reason as string } : {}),
+      // `updated_at` is LOAD-BEARING, not decoration: `verdictProvenance` needs it (with the
+      // verdict's `contentHash`) to confirm a verdict still speaks for the content on record.
+      // Omitting it degraded every binding to `unknown`, which blocks ELEVATION (deliberately
+      // stricter than condemnation) — so every judged >=90 pass reported R3 TRUSTED here while
+      // /status graded it R4 VERIFIED. The script's own contract is that it cannot disagree
+      // with the map, so this join must carry both columns.
+      ...(r.updated_at ? { updatedAt: r.updated_at as string } : {}),
     }),
   );
   let verdicts: JudgeVerdict[] = [];
@@ -62,6 +69,8 @@ function readTruth() {
           score: r.score as number,
           findings: (r.findings as string) ?? '',
           model: (r.model as string) ?? '',
+          // The other half of the binding — see the `updatedAt` note above.
+          ...(r.content_hash ? { contentHash: r.content_hash as string } : {}),
           ...(r.effort ? { effort: r.effort as string } : {}),
           ...(r.rubric_version != null ? { rubricVersion: r.rubric_version as number } : {}),
           ...(r.judged_at ? { judgedAt: r.judged_at as string } : {}),

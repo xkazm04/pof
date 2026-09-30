@@ -28,6 +28,7 @@ interface UseTaskQueueOpts {
   autoStart: boolean;
   enabledSkills: SkillId[];
   visible?: boolean;
+  /** Fired synchronously when a run is dispatched — the queued task id, or 'interactive' for submitPrompt runs. */
   onTaskStart?: (taskId: string) => void;
   /**
    * Fired exactly once per run when it terminates. `meta.callbackStatus` is
@@ -39,6 +40,18 @@ interface UseTaskQueueOpts {
   onQueueEmpty?: () => void;
   onStreamingChange?: (streaming: boolean) => void;
   onBatchFlushed?: (count: number) => void;
+  /**
+   * Fired synchronously when submitPrompt dispatches, with the RAW prompt (before
+   * skill injection) and its task type — the host's copy of what was sent, so a
+   * retry can replay it exactly.
+   */
+  onDispatch?: (dispatch: { prompt: string; taskType?: string }) => void;
+  /**
+   * Fired at most once per run, from the result path, with the run's `@@CALLBACK`
+   * markers whose POST failed — so the host can re-POST them without a new run.
+   * Never fired for a run a newer run has already replaced.
+   */
+  onCallbacksUnresolved?: (markers: { callbackId: string; payload: string }[]) => void;
   /**
    * Best-known spend attribution for the current session, threaded into the query
    * POST so the run's spend is recorded server-side (covers failed/aborted runs the
@@ -207,7 +220,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     instanceId, projectPath, taskQueue, autoStart, enabledSkills,
     visible = true,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange, onBatchFlushed,
-    resolveAttribution,
+    resolveAttribution, onDispatch, onCallbacksUnresolved,
   } = opts;
 
   const [state, dispatch] = useReducer(taskQueueReducer, INITIAL_STATE);
@@ -277,6 +290,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   // the dispatch callbacks when the resolver identity changes.
   const resolveAttributionRef = useRef(resolveAttribution);
   useEffect(() => { resolveAttributionRef.current = resolveAttribution; }, [resolveAttribution]);
+  const onDispatchRef = useRef(onDispatch);
+  useEffect(() => { onDispatchRef.current = onDispatch; }, [onDispatch]);
+  const onCallbacksUnresolvedRef = useRef(onCallbacksUnresolved);
+  useEffect(() => { onCallbacksUnresolvedRef.current = onCallbacksUnresolved; }, [onCallbacksUnresolved]);
+  /** Bumped on every dispatch — lets a late callback settle tell whether its run is still current. */
+  const runTokenRef = useRef(0);
 
   const flushLogBuffer = useCallback(() => {
     rafIdRef.current = null;
@@ -311,20 +330,36 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   }, []);
 
   /**
-   * Fire the one-shot completion for any NON-result terminal path (error, stream
-   * onerror, abort, stuck poller). Latched by `completedRef` so it runs at most
-   * once per run. The clean SSE `result` path does NOT go through here — it latches
-   * synchronously on result arrival and fires its own completion after the bounded
-   * callback-settle race, so it can carry the resolved `callbackStatus`.
+   * The ONE terminal transition of a run, used by every path that ends it (clean
+   * result, error SSE, stream onerror, abort, start failure, both stuck-poller
+   * verdicts). The caller must already hold the `completedRef` latch. It releases
+   * the dispatch latch, records the registry completion, and fires onTaskComplete —
+   * so no terminal path can forget one of them (the stuck-poller paths used to
+   * leave dispatchingRef set, silently dropping every later dispatch).
    */
-  const completeOnce = useCallback((success: boolean, callbackStatus?: CallbackStatus) => {
+  const finishRun = useCallback((
+    success: boolean,
+    opts?: { callbackStatus?: CallbackStatus; taskId?: string | null; register?: boolean },
+  ) => {
+    dispatchingRef.current = false; // run terminated — allow the next dispatch
+    const tid = opts?.taskId !== undefined ? opts.taskId : currentTaskIdRef.current;
+    if (tid && opts?.register !== false) registerTaskComplete(tid, instanceId, success);
+    const id = tid ?? INTERACTIVE_TASK_ID;
+    if (opts?.callbackStatus) onTaskComplete?.(id, success, { callbackStatus: opts.callbackStatus });
+    else onTaskComplete?.(id, success);
+  }, [instanceId, onTaskComplete]);
+
+  /**
+   * Latch-and-finish for the NON-result terminal paths (error, stream onerror,
+   * abort, submit start failure). The clean SSE `result` path latches
+   * synchronously on arrival and calls finishRun after the bounded callback-settle
+   * race, so it can carry the resolved `callbackStatus`.
+   */
+  const completeOnce = useCallback((success: boolean) => {
     if (completedRef.current) return;
     completedRef.current = true;
-    dispatchingRef.current = false; // run terminated — allow the next dispatch
-    const tid = currentTaskIdRef.current;
-    if (tid) registerTaskComplete(tid, instanceId, success);
-    onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, success, callbackStatus ? { callbackStatus } : undefined);
-  }, [instanceId, onTaskComplete]);
+    finishRun(success);
+  }, [finishRun]);
 
   // --- SSE event handling ---
 
@@ -397,6 +432,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         // the settle race — if the race times out first it stays undefined, i.e.
         // the callback simply did not confirm in time (treated as unconfirmed).
         const cbMarkers = extractAllCallbackPayloads(assistantOutputRef.current);
+        const runToken = runTokenRef.current;
         let callbackStatus: CallbackStatus | undefined = cbMarkers.length === 0 ? 'missing' : undefined;
         const cbPromise =
           cbMarkers.length === 0
@@ -414,6 +450,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
                 ),
               ).then((results) => {
                 callbackStatus = results.every(Boolean) ? 'confirmed' : 'failed';
+                // Hand the failed payloads to the host before the text is gone — the
+                // registry kept their entries, so they stay re-POSTable without a re-run.
+                const unresolved = cbMarkers.filter((_, i) => !results[i]);
+                if (unresolved.length > 0 && runTokenRef.current === runToken) {
+                  onCallbacksUnresolvedRef.current?.(unresolved);
+                }
               });
 
         assistantOutputRef.current = '';
@@ -431,10 +473,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           // the single completion firing for the clean-result path. Interactive
           // runs (submitPrompt) have no queued task id, but the completion signal
           // must still fire — it releases session.isRunning.
-          dispatchingRef.current = false; // run terminated — allow the next dispatch
-          const tid = currentTaskIdRef.current;
-          if (tid) registerTaskComplete(tid, instanceId, !data.isError);
-          onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, !data.isError, callbackStatus ? { callbackStatus } : undefined);
+          finishRun(!data.isError, { callbackStatus });
         });
 
         break;
@@ -449,7 +488,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         break;
       }
     }
-  }, [addLog, addFileChange, instanceId, onTaskComplete, clearHeartbeat, completeOnce]);
+  }, [addLog, addFileChange, instanceId, clearHeartbeat, completeOnce, finishRun]);
 
   const connectToStream = useCallback((streamUrl: string) => {
     if (eventSourceRef.current) eventSourceRef.current.close();
@@ -495,6 +534,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // dispatch in the same tick can't slip through and clobber the first.
     if (dispatchingRef.current) return;
     dispatchingRef.current = true;
+    runTokenRef.current++;
     dispatchedTaskIds.current.add(task.id);
 
     let startResult = await registerTaskStart(task.id, instanceId, task.label);
@@ -548,13 +588,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // directly (currentTaskIdRef may not have caught up to the TASK_START yet).
       if (!completedRef.current) {
         completedRef.current = true;
-        dispatchingRef.current = false; // failed to start — allow the next dispatch
-        registerTaskComplete(task.id, instanceId, false);
-        onTaskComplete?.(task.id, false);
+        finishRun(false, { taskId: task.id });
       }
       clearHeartbeat();
     }
-  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, onTaskComplete, enabledSkills, clearHeartbeat]);
+  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, finishRun, enabledSkills, clearHeartbeat]);
 
   // --- Manual submit (user input) ---
 
@@ -569,6 +607,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     assistantOutputRef.current = '';
     completedRef.current = false;
     dispatch({ type: 'SUBMIT_START' });
+    // Announce the run start synchronously — before any await — so the host's run
+    // door opens before any terminal path can fire (see store/sessionRun.ts).
+    onTaskStart?.(INTERACTIVE_TASK_ID);
+    runTokenRef.current++;
+    onDispatchRef.current?.({ prompt, taskType: opts?.taskType });
     // Echo the RAW user prompt to the log (no skills clutter); only the dispatched
     // prompt sent to the CLI carries the injected packs.
     addLog({ id: `user-${Date.now()}`, type: 'user', content: prompt, timestamp: Date.now() });
@@ -598,7 +641,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // Release session.isRunning for hosts that latched on SUBMIT_START.
       completeOnce(false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, enabledSkills]);
+  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, onTaskStart, enabledSkills]);
 
   // --- Abort ---
 
@@ -653,7 +696,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         completedRef.current = true;
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
         clearHeartbeat();
-        onTaskComplete?.(tid, status.status === 'completed');
+        // The registry already holds this verdict — do not re-register it.
+        finishRun(status.status === 'completed', { taskId: tid, register: false });
         dispatch({ type: 'STUCK_RESOLVED', success: status.status === 'completed' });
         return;
       }
@@ -661,13 +705,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         completedRef.current = true;
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
         clearHeartbeat();
-        registerTaskComplete(tid, instanceId, false);
-        onTaskComplete?.(tid, false);
+        finishRun(false, { taskId: tid });
         dispatch({ type: 'STUCK_RESOLVED', success: false });
       }
     }, UI_TIMEOUTS.stuckCheckInterval);
     return () => { if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; } };
-  }, [visible, autoStart, streaming, taskId, instanceId, onTaskComplete, clearHeartbeat]);
+  }, [visible, autoStart, streaming, taskId, finishRun, clearHeartbeat]);
 
   // --- Process task queue ---
 

@@ -4,28 +4,39 @@ import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { HealthBreakdown } from '@/lib/evaluator/combined-health';
+import { LIFT_DIMENSION_LABELS, type HealthLift } from '@/lib/evaluator/health-lifts';
 import { healthColor, healthBg } from './helpers';
 
 export function ModuleHealthCell({
   label,
   breakdown,
   index,
-  correlation,
+  topLift,
+  selected,
+  onSelect,
 }: {
   label: string;
   breakdown: HealthBreakdown;
   index: number;
-  correlation: import('@/lib/evaluator/correlation-engine').ModuleCorrelation | undefined;
+  /** The module's biggest lift (its first-ranked remedy), if it is losing points. */
+  topLift: HealthLift | undefined;
+  /** This cell's lift plan is open. */
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const color = healthColor(breakdown.combined);
   const bg = healthBg(breakdown.combined);
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onSelect}
+      aria-expanded={selected}
+      aria-label={`${label} health ${breakdown.combined} — ${selected ? 'hide' : 'show'} lift plan`}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: MOTION.base, delay: index * 0.03 }}
-      className="rounded-lg border border-border/60 p-3 transition-colors hover:border-border-bright"
+      className={`w-full text-left rounded-lg border p-3 transition-colors hover:border-border-bright focus-ring ${selected ? 'border-border-bright' : 'border-border/60'}`}
       style={{ backgroundColor: bg }}
     >
       {/* Module name + score */}
@@ -48,7 +59,13 @@ export function ModuleHealthCell({
         <MiniBar value={breakdown.coverage} color={STATUS_SUCCESS} label="C" />
         <MiniBar value={breakdown.activity} color={ACCENT_VIOLET} label="A" />
       </div>
-    </motion.div>
+
+      {topLift && (
+        <p className="mt-2 text-2xs text-text-muted truncate">
+          {LIFT_DIMENSION_LABELS[topLift.dimension]} <span className="font-semibold text-text">+{topLift.moduleGain}</span>
+        </p>
+      )}
+    </motion.button>
   );
 }
 

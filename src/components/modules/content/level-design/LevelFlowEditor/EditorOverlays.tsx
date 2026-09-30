@@ -1,6 +1,7 @@
-import { Plus, Unlink, Monitor, RotateCw, X } from 'lucide-react';
+import { Plus, Unlink, Monitor, RotateCw, X, Undo2, Redo2 } from 'lucide-react';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 import { Tooltip } from '@/components/ui/Tooltip';
+import type { EditorHistory } from './types';
 
 interface EditorOverlaysProps {
   readOnly: boolean;
@@ -15,6 +16,37 @@ interface EditorOverlaysProps {
   connectionsLength: number;
   blenderResult: { message: string; isError: boolean } | null;
   dismissBlenderResult: () => void;
+  history?: EditorHistory;
+}
+
+/** Undo/Redo — labelled with the step they would take, disabled when there is none. */
+function HistoryButtons({ history }: { history: EditorHistory }) {
+  const cls = 'focus-ring-outline flex items-center justify-center w-8 h-8 rounded-xl border border-violet-900/40 bg-surface-deep/80 text-violet-300 transition-all disabled:opacity-30';
+  const undoName = history.undoLabel ? `Undo: ${history.undoLabel}` : 'Undo';
+  const redoName = history.redoLabel ? `Redo: ${history.redoLabel}` : 'Redo';
+  return (
+    <>
+      <button
+        onClick={history.onUndo}
+        disabled={!history.canUndo}
+        aria-label={undoName}
+        title={history.canUndo ? `${undoName} (Ctrl+Z) - ${history.depth} ${history.depth === 1 ? 'step' : 'steps'}` : 'Nothing to undo'}
+        data-undo-depth={history.depth}
+        className={cls}
+      >
+        <Undo2 className="w-4 h-4" aria-hidden="true" />
+      </button>
+      <button
+        onClick={history.onRedo}
+        disabled={!history.canRedo}
+        aria-label={redoName}
+        title={history.canRedo ? `${redoName} (Ctrl+Shift+Z)` : 'Nothing to redo'}
+        className={cls}
+      >
+        <Redo2 className="w-4 h-4" aria-hidden="true" />
+      </button>
+    </>
+  );
 }
 
 export function EditorOverlays({
@@ -30,6 +62,7 @@ export function EditorOverlays({
   connectionsLength,
   blenderResult,
   dismissBlenderResult,
+  history,
 }: EditorOverlaysProps) {
   const blenderReason = !blenderConnected
     ? 'Blender is not connected — connect it first'
@@ -55,6 +88,7 @@ export function EditorOverlays({
             <Plus className="w-4 h-4" />
             Add Room
           </button>
+          {history && <HistoryButtons history={history} />}
           <Tooltip content={blenderReason} placement="bottom" multiline>
             <button
               onClick={handleBlockoutInBlender}

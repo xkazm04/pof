@@ -15,6 +15,8 @@
  */
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 import { markContentInvariant } from './contentInvariant';
+import { canonLawChecker } from './canonLaw';
+import { maxWordsPerEntry } from './dataCheckers';
 import type { AcceptanceResult, Checker } from './types';
 
 /* ── Canon threshold parsing (single source of truth = CANON_SEED) ─────────── */
@@ -97,7 +99,7 @@ const fail = (label: string, detail: string, reason: string, tier: AcceptanceRes
 
 /** proj-balance: a power value sits within ±POWER_TOL_PCT of its tier target (default 100). */
 export function powerWithinTierTarget(field: string, label: string, targetField?: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('proj-balance', label, (data) => {
     const power = numOf(pick(data, field));
     if (power == null) return pending(label, `${field} not set`);
     const target = (targetField != null ? numOf(pick(data, targetField)) : null) ?? POWER_TARGET;
@@ -111,7 +113,7 @@ export function powerWithinTierTarget(field: string, label: string, targetField?
 
 /** proj-balance: a precomputed price/power ratio sits within the 0.8–1.2× band. */
 export function priceRatioWithinBand(field: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('proj-balance', label, (data) => {
     const r = numOf(pick(data, field));
     if (r == null) return pending(label, `${field} not set`);
     return r >= PRICE_RATIO.min && r <= PRICE_RATIO.max
@@ -123,7 +125,7 @@ export function priceRatioWithinBand(field: string, label: string): Checker {
 
 /** proj-economy: per-hour faucet vs sink stay balanced within ±FAUCET_SINK_TOL_PCT. */
 export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('proj-economy', label, (data) => {
     const f = numOf(pick(data, `${objField}.${faucetKey}`));
     const s = numOf(pick(data, `${objField}.${sinkKey}`));
     if (f == null || s == null) return pending(label, `${objField}.${faucetKey}/${sinkKey} not set`);
@@ -136,9 +138,19 @@ export function faucetSinkBalanced(objField: string, faucetKey: string, sinkKey:
   });
 }
 
+// dialog-vo-line-length: "A spoken VO line is at most 10 words" — PoF's bark-length VO law. Diablo I's town speech is
+// scrolling monologue (15–54 words a line), so under the diablo1 profile this grades UNGRADED, not fail (/diablo W16).
+const _vo = parseCanon('dialog-vo-line-length', /at most (\d+) words/);
+export const VO_LINE_MAX_WORDS = Number(_vo[1]); // 10
+
+/** dialog-vo-line-length: every entry of `field` speaks at most the law's word count. */
+export function voLineLength(field: string, label: string): Checker {
+  return canonLawChecker('dialog-vo-line-length', label, maxWordsPerEntry(field, label, VO_LINE_MAX_WORDS));
+}
+
 /** arpg-item-level: requiredLevel is ~5..15 BELOW itemLevel (never above, never equal-high). */
 export function requiredLevelBand(objField: string, ilvlKey: string, reqKey: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-item-level', label, (data) => {
     const ilvl = numOf(pick(data, `${objField}.${ilvlKey}`));
     const req = numOf(pick(data, `${objField}.${reqKey}`));
     if (ilvl == null || req == null) return pending(label, `${objField}.${ilvlKey}/${reqKey} not set`);
@@ -152,7 +164,7 @@ export function requiredLevelBand(objField: string, ilvlKey: string, reqKey: str
 
 /** arpg-item-rarity: prefix/suffix counts stay within the rarity's affix budget. */
 export function rarityAffixBudget(objField: string, rarityKey: string, prefixKey: string, suffixKey: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-item-rarity', label, (data) => {
     const rarity = String(pick(data, `${objField}.${rarityKey}`) ?? '');
     const budget = AFFIX_BUDGET[rarity];
     const pfx = numOf(pick(data, `${objField}.${prefixKey}`));
@@ -167,7 +179,7 @@ export function rarityAffixBudget(objField: string, rarityKey: string, prefixKey
 
 /** arpg-monster-rarity: per-tier life multipliers sit within the canon bands. */
 export function monsterRarityWithinBands(objField: string, label: string): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-monster-rarity', label, (data) => {
     const scale = pick(data, `${objField}.rarityScale`);
     if (!scale || typeof scale !== 'object') return pending(label, `${objField}.rarityScale not set`);
     const s = scale as Record<string, { lifeMulti?: unknown }>;
@@ -186,7 +198,7 @@ export function monsterRarityWithinBands(objField: string, label: string): Check
 
 /** arpg-leveling: the XP curve growth exponent is ~XP_GROWTH (geometric), within tolPct. */
 export function xpGrowthWithinBand(objField: string, exponentKey: string, label: string, tolPct = 10): Checker {
-  return markContentInvariant((data) => {
+  return canonLawChecker('arpg-leveling', label, (data) => {
     const e = numOf(pick(data, `${objField}.${exponentKey}`));
     if (e == null) return pending(label, `${objField}.${exponentKey} not set`);
     const lo = XP_GROWTH * (1 - tolPct / 100), hi = XP_GROWTH * (1 + tolPct / 100);
@@ -201,26 +213,35 @@ export function xpGrowthWithinBand(objField: string, exponentKey: string, label:
  * status-effects Balance — an archetype-aware envelope that KNOWS a status can be either a
  * DAMAGING ailment or a CONTROL/CC status, dispatching on the artifact's own declaration:
  *
- *  - DoT ailment (ignite/bleed/poison): no `balance.controlBudget`, so `dps` is still gated
- *    within ±tolPct of the fixed per-tier target `dotTarget` (status-burning still gates on
- *    7.875 — the DoT path is byte-for-byte the old `withinPercent('dps', 7.875, 20)` law).
+ *  - DoT ailment: `balance.kind = "damage-over-time"`; its artifact-declared target is graded
+ *    separately with `powerWithinTierTarget`, so this envelope carries no exemplar value.
  *
  *  - CONTROL / CC status (knockback, stun-shape): a fixed DPS line is nonsensical, so instead
  *    it validates a CONTROL BUDGET declared under `balance.controlBudget`:
- *      · `magnitude`        > 0            — a real displacement (launch distance / impulse)
+ *      · `magnitude`        > 0            — a real declared control strength
  *      · `durationSec`      0 < d ≤ cap    — CC time within the canon control cap (CONTROL_CC_CAP_SEC,
  *                                            parsed from arpg-ailments "stun ≤3s")
  *      · `immunityTag` + `immunityWindowSec` > 0 — an immunity tag and a positive DR/immunity
  *                                            window so the CC cannot be chain-locked
- *      · `clearsOnLanding`  === true       — kinetic knockback ends when the target lands
+ *      · `terminationMode`  non-blank      — how this control ends
+ *      · kinetic controls additionally declare `clearsOnLanding === true`
  *
  * Dispatch is by declaration, so a control status can never satisfy the DoT line by accident,
  * and a DoT can never pass on an empty control budget. Every non-pass carries a specific reason.
  */
-export function statusBalanceEnvelope(dotTarget: number, tolPct: number, label: string): Checker {
-  return markContentInvariant((data) => {
+export function statusBalanceEnvelope(label: string): Checker {
+  return canonLawChecker('arpg-ailments', label, (data) => {
     const balance = pick(data, 'balance');
-    const cb = balance && typeof balance === 'object' ? (balance as Record<string, unknown>).controlBudget : undefined;
+    if (!balance || typeof balance !== 'object') return pending(label, 'balance not set');
+    const declaredKind = (balance as Record<string, unknown>).kind;
+    if (typeof declaredKind !== 'string' || !declaredKind.trim()) {
+      return fail(label, 'kind missing', 'balance.kind must declare "damage-over-time" or "control"');
+    }
+    if (declaredKind === 'damage-over-time') return pass(label, `${declaredKind} uses its declared power target`);
+    if (declaredKind !== 'control') {
+      return fail(label, `unsupported kind ${declaredKind}`, `balance.kind="${declaredKind}" is unsupported; declare "damage-over-time" or "control"`);
+    }
+    const cb = (balance as Record<string, unknown>).controlBudget;
 
     // ── Control / CC path ──────────────────────────────────────────────────
     if (cb && typeof cb === 'object') {
@@ -229,31 +250,27 @@ export function statusBalanceEnvelope(dotTarget: number, tolPct: number, label: 
       const duration = numOf(c.durationSec);             // airborne / CC time
       const immunityWindow = numOf(c.immunityWindowSec); // DR / immunity window
       const immunityTag = String(c.immunityTag ?? '');
+      const controlKind = String(c.controlKind ?? '');
+      const terminationMode = String(c.terminationMode ?? '');
       const clearsOnLanding = c.clearsOnLanding === true;
       if (magnitude == null || duration == null || immunityWindow == null)
         return { label, tier: 'L0', status: 'pending', detail: 'control budget incomplete',
           reason: `balance.controlBudget.magnitude/durationSec/immunityWindowSec not all set` };
       if (magnitude <= 0)
-        return fail(label, `magnitude ${magnitude}`, `control budget: displacement magnitude must be > 0, got ${magnitude}`);
+        return fail(label, `magnitude ${magnitude}`, `control budget: control magnitude must be > 0, got ${magnitude}`);
       if (duration <= 0 || duration > CONTROL_CC_CAP_SEC)
         return fail(label, `duration ${duration}s`, `arpg-ailments control cap: CC duration ${duration}s must be in (0, ${CONTROL_CC_CAP_SEC}s] (canon: control CC ≤${CONTROL_CC_CAP_SEC}s)`);
       if (!immunityTag || immunityWindow <= 0)
         return fail(label, 'no immunity window', `control budget: an immunity tag + positive immunityWindowSec are required (anti-chain-lock), got tag="${immunityTag}" window=${immunityWindow}`);
-      if (!clearsOnLanding)
-        return fail(label, 'not landing-clear', `control budget: kinetic knockback must clear on landing (clearsOnLanding=true)`);
-      return pass(label, `control CC: ${magnitude} launch · ${duration}s ≤ ${CONTROL_CC_CAP_SEC}s · immune ${immunityWindow}s (${immunityTag})`);
+      if (!controlKind)
+        return fail(label, 'control kind missing', 'balance.controlBudget.controlKind must declare the control shape (for example kinetic, stun, or slow)');
+      if (!terminationMode)
+        return fail(label, 'termination mode missing', 'balance.controlBudget.terminationMode must declare how the control ends');
+      if (controlKind === 'kinetic' && (terminationMode !== 'landing' || !clearsOnLanding))
+        return fail(label, 'not landing-clear', 'control budget: kinetic control must declare terminationMode="landing" and clearsOnLanding=true');
+      return pass(label, `control CC (${controlKind}): magnitude ${magnitude} · ${duration}s ≤ ${CONTROL_CC_CAP_SEC}s · ends by ${terminationMode} · immune ${immunityWindow}s (${immunityTag})`);
     }
-
-    // ── Damaging DoT path (unchanged: dps within ±tolPct of the fixed tier target) ──
-    const dps = numOf(pick(data, 'dps'));
-    if (dps == null)
-      return { label, tier: 'L0', status: 'pending', detail: 'not set',
-        reason: `DoT status: field "dps" not set (expected within ±${tolPct}% of ${dotTarget}); a control status must instead declare balance.controlBudget` };
-    const lo = dotTarget * (1 - tolPct / 100), hi = dotTarget * (1 + tolPct / 100);
-    return dps >= lo && dps <= hi
-      ? pass(label, `${dps} within ±${tolPct}% of ${dotTarget}`)
-      : fail(label, `${dps} vs ${dotTarget} ±${tolPct}%`,
-          `DoT status: ignite/bleed/poison DPS ${dps} is outside ±${tolPct}% of the tier target ${dotTarget} (allowed ${lo.toFixed(2)}–${hi.toFixed(2)})`);
+    return fail(label, 'control budget missing', 'balance.kind="control" requires balance.controlBudget');
   });
 }
 

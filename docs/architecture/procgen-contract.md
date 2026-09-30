@@ -24,7 +24,7 @@ The browser preview narrows further **per algorithm** through `algo-params.ts`: 
 `src/lib/level-design/procgen-connect.ts` is the fix: a **region-cull + tunnel-carve** pass.
 
 - **Opt-in.** It runs only when the spec's `constraints.ensureConnected` is on. A spec without it produces the byte-identical grid the generators produced before the pass existed — pinned by `procgen-connect.test.ts`.
-- **Cellular only, phase 1.** `ensureConnectedSupport()` in `algo-params.ts` is the single source; `bsp` / `wfc` / `perlin` carry a reason string, and `specFieldsIgnoredBy('browser-preview', …)` drops the field for them. `ue-arpg-generator` and `llm-codegen` do not implement it at all, so they list it as dropped for every algorithm — the wizard therefore never sends it into the C++ prompt.
+- **Cellular only, phase 1.** `ensureConnectedSupport()` in `algo-params.ts` is the single source; `bsp` / `wfc` / `perlin` carry a reason string, and `specFieldsIgnoredBy('browser-preview', …)` drops the field for them. `ue-arpg-generator` and `llm-codegen` do not implement it at all, so they list it as dropped for every algorithm — `buildProceduralLevelPrompt` therefore never renders it (enforced by test, §5), whatever the wizard's toggle says.
 - **It reports itself.** `PreviewStats.connectPass` carries `regionsBefore / regionsAfter / regionsCulled / cellsCulled / tunnelsCarved / cellsCarved / cellsChanged / rngDraws`, and `ProcgenPreviewCanvas` prints `describeConnectPass()` beside the verdict. **A connectivity of 100% produced by the pass can never be displayed without the sentence saying how it got there.**
 
 ### The RNG draw order is part of the seed contract
@@ -60,14 +60,30 @@ The artifact carries its provenance: `version`, `generatedBy`, algorithm, level 
 
 The field names are **pinned**: `PROCGEN_GRID_EXPORT_FIELDS` in TypeScript is compared against `REQUIRED_FIELDS` in `procgen_replay.py` by `procgen-grid-export.test.ts`, so renaming a field on either side fails the build instead of silently breaking a script nothing in CI runs.
 
+## 5. The wizard's state IS the spec, and codegen reads it through the matrix
+
+- **One owner, above the wizard.** `procgenSpecReducer` (`ProceduralLevelWizard/specState.ts`) is the only writer of the wizard's `ProcgenSpec`: `setAlgorithm`, `selectLevelType` (applies that type's `DEFAULT_SIZE`), `updateSize`, `toggleConstraint`, `setSeed` (resolves `seedValue = hashSeed(seedLabel)` in the same transition) and `shown`. `useLevelDesignView` holds it with `useReducer` and passes `{ state, dispatch }` as `specStore` to both wizard render sites (`EmptyState` and the Procgen tab). The wizard is unmounted on every tab switch, so its state must live above it; a wizard rendered without `specStore` keeps a private instance of the same reducer.
+- **The handoff is the same value, not a published copy.** `procgenSpec`, which `ProcGenDungeonPanel` receives as `handoffSpec`, is `state.spec` once `state.shown` (a wizard has been on screen). There is no publish effect, so a remount cannot write defaults over it; `procgen-spec-state.test.tsx` walks wizard → Dungeon (UE) → wizard in the real view.
+- **Codegen consumes the spec.** `onGenerate` receives the `ProcgenSpec` on screen, with no fields stripped at the call site. `buildProceduralLevelPrompt(spec, ctx)` renders only what `PROCGEN_ENGINES['llm-codegen'].reads` declares. It sends `seedValue`, the int32 the preview ran on (a blank seed is `DEFAULT_PREVIEW_SEED`, never "random"), with the label as provenance, and it takes its constraint bullets from `GAMEPLAY_CONSTRAINT_KEYS`. `procgen-codegen-prompt.test.ts` mutation-walks the matrix: each read field must change the prompt text, and each ignored field (`ensureConnected`) must leave it byte-identical.
+
+## 6. A fragmented preview offers measured fixes, not advice
+
+- **The question is answered by running the preview.** When the live preview has more than one region, the verdict still reads "Tweak params or reseed", and `LivePreview` now adds a **Find a fix** button under the canvas. The click calls `findLayoutRemedies(spec)` (`src/lib/level-design/layout-remedies.ts`). It is pure, deterministic and runs only on that click, never on a drag. It tries the next `REMEDY_SEED_SCAN` (64) seeds and, for each lever the browser preview reads for this algorithm, a few steps that stay inside the wizard's slider ranges (`REMEDY_SLIDER_BOUNDS`). It keeps only candidates whose preview has exactly one region, together with the stats they produced. All work runs at the preview cap and is limited to `REMEDY_PREVIEW_BUDGET` (96) `generatePreview` calls. When nothing in range connects, the panel says so in one line.
+- **Levers come from the matrix.** The live set is `PROCGEN_ENGINES['browser-preview'].reads` minus `specFieldsIgnoredBy('browser-preview', spec)`, so cellular and Perlin never get room-band or corridor fixes, and only cellular gets `ensureConnected`. The module names no algorithm (a test checks its source). For each lever it keeps the smallest step that connects: room band scaled x2, x0.5, x3, x4, x6; every corridor width, nearest first; grid scaled x2, x0.5, x1.5, x0.75; Ensure Connected on.
+- **Applying goes through the wizard's own dispatchers.** A seed row calls `setSeed`, and a lever row calls `updateSize` or `toggleConstraint` (§5). The reducer stays the only writer. Each row shows the old value beside the new one. A diagnosis belongs to the spec it was computed for, and any edit retires it.
+- **Measured at the defaults.** WFC 64x64 with band 8-15 stays fragmented on all 64 seeds after 1337 (the first connected seed is 1439) and at every corridor width. Its one working lever is the room band (8-15 → 24-45). A fragmented cellular cave is fixed by Ensure Connected, by a 128x128 grid, or by most nearby seeds. Perlin has no lever that connects it; only a few nearby seeds do.
+
 ## Where to look
 
 | Concern | File |
 |---|---|
 | The spec, engines, ignored-field matrix, `layoutAgreement` | `src/lib/level-design/procgen-spec.ts` |
+| The wizard's spec state (reducer, owned by `useLevelDesignView`) | `src/components/modules/content/level-design/ProceduralLevelWizard/specState.ts` |
+| The C++ codegen prompt built from the spec | `src/lib/prompts/level-design.ts` (`buildProceduralLevelPrompt`) |
 | Per-algorithm parameter support + `ensureConnectedSupport` | `src/lib/level-design/algo-params.ts` |
 | The generators | `src/lib/level-design/procgen-algorithms.ts` |
 | Preview + stats | `src/lib/level-design/procgen-preview.ts` |
+| "Find a fix": seed scan + one-lever remedies (§6) | `src/lib/level-design/layout-remedies.ts`, `ProceduralLevelWizard/LayoutRemedies.tsx` |
 | Connectivity repair pass | `src/lib/level-design/procgen-connect.ts` |
 | Grid export / import (the replay artifact) | `src/lib/level-design/procgen-grid-export.ts` |
 | UE replay script (authored, never run here) | `scripts/ue/procgen_replay.py` |

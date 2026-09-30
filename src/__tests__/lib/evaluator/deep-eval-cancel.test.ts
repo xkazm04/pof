@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { runDeepEval, cancelDeepEval } from '@/lib/evaluator/deep-eval-engine';
+import { describe, it, expect, vi } from 'vitest';
+import { runDeepEval } from '@/lib/evaluator/deep-eval-engine';
+import type { PassExecutor } from '@/lib/evaluator/deep-eval-engine';
 import { getEvaluableModuleIds } from '@/lib/evaluator/module-eval-prompts';
 
 /**
@@ -14,44 +15,41 @@ import { getEvaluableModuleIds } from '@/lib/evaluator/module-eval-prompts';
  *  - every module cut short by the abort appears in `failedModules`;
  *  - therefore scope = modulesEvaluated \ failedModules can never include an
  *    unfinished module, for any consumer — even one that forgets the subtraction.
+ *
+ * Cancellation arrives through the run's `signal` (the server deep-eval job aborts it
+ * and kills the in-flight CLI executions); passes go through an injected executor.
  */
 describe('runDeepEval — cancellation honesty', () => {
-  const realFetch = globalThis.fetch;
-
-  beforeEach(() => {
-    // Every eval pass hangs until its abort signal fires, then rejects with
-    // AbortError — simulating in-flight CLI passes at the moment of Cancel.
-    globalThis.fetch = vi.fn((_url: unknown, init?: RequestInit) =>
-      new Promise<Response>((_resolve, reject) => {
-        const signal = init?.signal;
-        if (signal?.aborted) {
-          reject(new DOMException('Evaluation cancelled', 'AbortError'));
-          return;
-        }
-        signal?.addEventListener('abort', () =>
-          reject(new DOMException('Evaluation cancelled', 'AbortError')),
-        );
-      }),
-    ) as unknown as typeof fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = realFetch;
-  });
+  // Every eval pass hangs until its abort signal fires, then rejects with
+  // AbortError — simulating in-flight CLI passes at the moment of Cancel.
+  const hangingExecutor: PassExecutor = vi.fn((_prompt: string, _path: string, signal: AbortSignal) =>
+    new Promise<string>((_resolve, reject) => {
+      if (signal.aborted) {
+        reject(new DOMException('Evaluation cancelled', 'AbortError'));
+        return;
+      }
+      signal.addEventListener('abort', () =>
+        reject(new DOMException('Evaluation cancelled', 'AbortError')),
+      );
+    }),
+  );
 
   it('a cancelled run claims no unfinished module as evaluated', async () => {
     const moduleIds = getEvaluableModuleIds().slice(0, 3);
     expect(moduleIds.length).toBeGreaterThan(0);
 
+    const controller = new AbortController();
     const resultPromise = runDeepEval({
       moduleIds,
       projectContext: { projectName: 'TestProj', projectPath: 'C:/tmp/test', ueVersion: '5.4' },
       projectPath: 'C:/tmp/test',
+      executePass: hangingExecutor,
+      signal: controller.signal,
     });
 
     // Let the worker pool dispatch its first in-flight passes, then cancel.
     await new Promise((r) => setTimeout(r, 10));
-    cancelDeepEval();
+    controller.abort();
 
     const result = await resultPromise;
 

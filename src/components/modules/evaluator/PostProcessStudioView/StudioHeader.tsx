@@ -23,7 +23,6 @@ export function StudioHeader({
   compareMode,
   toggleCompareMode,
   handleGenerate,
-  isGenerating,
   isRunning,
   enabledCount,
   budget,
@@ -38,7 +37,6 @@ export function StudioHeader({
   compareMode: boolean;
   toggleCompareMode: () => void;
   handleGenerate: () => void;
-  isGenerating: boolean;
   isRunning: boolean;
   enabledCount: number;
   budget: GPUBudgetReport | null;
@@ -115,7 +113,7 @@ export function StudioHeader({
           {/* Generate */}
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || isRunning || enabledCount === 0}
+            disabled={isRunning || enabledCount === 0}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
             style={{
               backgroundColor: `${ACCENT}15`,
@@ -123,11 +121,11 @@ export function StudioHeader({
               border: `1px solid ${ACCENT}40`,
             }}
           >
-            {isGenerating || isRunning
+            {isRunning
               ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               : <Play className="w-3.5 h-3.5" />
             }
-            {isGenerating ? 'Building...' : isRunning ? 'Generating...' : `Generate C++ (${enabledCount})`}
+            {isRunning ? 'Generating...' : `Generate C++ (${enabledCount})`}
           </button>
         </div>
       </div>

@@ -10,8 +10,9 @@ vi.mock('@/lib/leonardo', () => ({
 
 vi.mock('@/lib/db', () => ({ getDb: vi.fn(() => ({})) }));
 
+// The route resolves style per canon profile (/diablo W03, D13); with no profile it is the active one.
 vi.mock('@/lib/visual-gen/style-dna-db', () => ({
-  getActiveStyleDna: vi.fn(() => ({
+  styleDnaForProfile: vi.fn(() => ({
     id: 'dna-1',
     name: 'Alice gothic',
     dna: { palette: ['desaturated teal'], materials: ['aged brass'], mood: [], render: ['painterly'], motifs: [] },
@@ -125,11 +126,28 @@ describe('POST /api/leonardo', () => {
   });
 
   it('applyStyleDna with no active profile falls back to the untouched prompt', async () => {
-    const { getActiveStyleDna } = await import('@/lib/visual-gen/style-dna-db');
-    (getActiveStyleDna as ReturnType<typeof vi.fn>).mockReturnValueOnce(null);
+    const { styleDnaForProfile } = await import('@/lib/visual-gen/style-dna-db');
+    (styleDnaForProfile as ReturnType<typeof vi.fn>).mockReturnValueOnce(null);
     const res = await POST(req({ mode: 'image', prompt: 'a sword', applyStyleDna: true }));
     const json = await res.json();
     expect(leo.generateImage).toHaveBeenCalledWith('a sword', {});
     expect(json.data.styleDnaApplied ?? null).toBeNull();
+  });
+
+  it('resolves the style for the entity’s canon profile, and says why when none exists (D13)', async () => {
+    const { styleDnaForProfile } = await import('@/lib/visual-gen/style-dna-db');
+    const resolve = styleDnaForProfile as ReturnType<typeof vi.fn>;
+    resolve.mockReturnValueOnce(null);
+    const res = await POST(req({ mode: 'image', prompt: 'a zombie', applyStyleDna: true, canonProfile: 'diablo1' }));
+    const json = await res.json();
+    expect(resolve).toHaveBeenLastCalledWith(expect.anything(), 'diablo1', undefined);
+    expect(leo.generateImage).toHaveBeenCalledWith('a zombie', {});
+    expect(json.data.styleDnaWithheld).toMatch(/no Style DNA is bound to canon profile "diablo1"/);
+  });
+
+  it('passes the subject class of the catalog, so a creature gets its canon’s creature style (D15)', async () => {
+    const { styleDnaForProfile } = await import('@/lib/visual-gen/style-dna-db');
+    await POST(req({ mode: 'image', prompt: 'a zombie', applyStyleDna: true, canonProfile: 'diablo1', catalogId: 'bestiary' }));
+    expect(styleDnaForProfile).toHaveBeenLastCalledWith(expect.anything(), 'diablo1', 'creature');
   });
 });

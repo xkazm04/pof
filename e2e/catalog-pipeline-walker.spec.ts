@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
+import { stepsForProfile } from '@/lib/catalog/stepScope';
 import { WALKER_SKIP } from './helpers/pipeline-coverage';
 import { writeWalkStatus } from './helpers/walk-status';
 import {
@@ -37,7 +38,10 @@ test.afterAll(() => {
 });
 
 for (const pipeline of allCatalogPipelines()) {
-  const { catalogId, steps } = pipeline;
+  const { catalogId } = pipeline;
+  // The walker opens a PoF seed, so it walks the steps a PoF entity HAS — the lab rail filters the
+  // same way (profile-scoped steps, /diablo W05 D18); walking by index over the full list would drift.
+  const steps = stepsForProfile(pipeline);
 
   test.describe(`catalog pipeline: ${catalogId}`, () => {
     test.skip(WALKER_SKIP[catalogId] !== undefined, WALKER_SKIP[catalogId]);

@@ -12,6 +12,7 @@ import type {
   CrashHealthInput,
 } from '@/types/project-health';
 import type { EvaluatorReport } from '@/types/evaluator';
+import type { CompletionLedger } from '@/lib/roadmap/completion-ledger';
 
 /* ---- Stable empty constants (Zustand selector safety) ------------ */
 
@@ -42,6 +43,8 @@ interface ProjectHealthState {
     lastScan: EvaluatorReport | null,
     perfInput?: PerfHealthInput | null,
     crashInput?: CrashHealthInput | null,
+    /** Dated completions (`moduleStore.checklistCompletedAt`) — the only source of velocity. */
+    completionLedger?: CompletionLedger,
   ) => Promise<void>;
 }
 
@@ -59,13 +62,15 @@ export const useProjectHealthStore = create<ProjectHealthState>((set) => ({
   isLoading: false,
   error: null,
 
-  fetchHealth: async (checklistProgress, scanHistory, lastScan, perfInput = null, crashInput = null) => {
+  fetchHealth: async (
+    checklistProgress, scanHistory, lastScan, perfInput = null, crashInput = null, completionLedger = {},
+  ) => {
     set({ isLoading: true, error: null });
     try {
       const data = await apiFetch<ProjectHealthSummary>('/api/project-health', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput }),
+        body: JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger }),
       });
       set({
         summary: data,

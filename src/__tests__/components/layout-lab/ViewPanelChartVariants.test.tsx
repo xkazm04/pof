@@ -58,4 +58,60 @@ describe('ViewPanel — chart variants render through the generic path', () => {
     render(<ViewPanel t={t} view={view({ kind: 'chart', variant: 'bars', field: 'perf', rows: [{ key: 'a' }] })} data={{}} />);
     expect(screen.getByText(/run Produce/)).toBeTruthy();
   });
+
+  it('bookkeeping keys alone are still "nothing produced"', () => {
+    render(<ViewPanel t={t} view={view({ kind: 'chart', variant: 'bars', field: 'perf', rows: [{ key: 'a' }] })} data={{ _provenance: { engine: 'x' }, links: [] }} />);
+    expect(screen.getByText(/No data yet/)).toBeTruthy();
+    expect(screen.queryByTestId('view-shape-mismatch')).toBeNull();
+  });
+});
+
+/**
+ * A payload that ARRIVED but cannot be decoded is not "No data yet". Each case below is a
+ * shape found in stored artifacts (lib-0923 A/B): all rendered the empty state before.
+ */
+describe('ViewPanel — chart payloads that arrived but do not decode', () => {
+  afterEach(cleanup);
+  const bars = view({ kind: 'chart', variant: 'bars', field: 'balance', rows: [{ key: 'dps' }, { key: 'totalDamage' }] });
+
+  it('a record whose keys are none of the declared rows names both sides', () => {
+    render(<ViewPanel t={t} view={bars} data={{ balance: { controlBudget: { magnitude: 8 }, note: 'control status' } }} />);
+    const mm = screen.getByTestId('view-shape-mismatch');
+    expect(mm.textContent).toContain('dps, totalDamage');
+    expect(mm.textContent).toContain('controlBudget, note');
+    expect(screen.queryByText(/No (numeric )?data yet/)).toBeNull();
+  });
+
+  it('a produced payload without the chart field is a mismatch, not "run Produce"', () => {
+    render(<ViewPanel t={t} view={bars} data={{ derivedBalance: { threat: 103 }, brief: 'x', _provenance: {} }} />);
+    const mm = screen.getByTestId('view-shape-mismatch');
+    expect(mm.textContent).toContain('no “balance” field');
+    expect(mm.textContent).toContain('derivedBalance, brief');
+  });
+
+  it('a list or a primitive where a record belongs is a mismatch', () => {
+    const { rerender } = render(<ViewPanel t={t} view={bars} data={{ balance: [{ dps: 3 }] }} />);
+    expect(screen.getByTestId('view-shape-mismatch').textContent).toContain('a list');
+    rerender(<ViewPanel t={t} view={bars} data={{ balance: '180 of 200' }} />);
+    expect(screen.getByTestId('view-shape-mismatch').textContent).toContain('a string');
+  });
+
+  it('declared keys holding the wrong type are a mismatch; all-null declared keys stay empty', () => {
+    const { rerender } = render(<ViewPanel t={t} view={view({ kind: 'chart', variant: 'waveform', field: 'sig', samplesKey: 'samples' })} data={{ sig: { samples: '0.1,0.5' } }} />);
+    expect(screen.getByTestId('view-shape-mismatch').textContent).toContain('samples: a string');
+    rerender(<ViewPanel t={t} view={bars} data={{ balance: { dps: null } }} />);
+    expect(screen.getByText(/No numeric data yet/)).toBeTruthy();
+  });
+
+  it('a histogram with none of its keys no longer draws a row of zero bars', () => {
+    render(<ViewPanel t={t} view={view({ kind: 'chart', variant: 'histogram', field: 'dist', keys: ['x', 'y'] })} data={{ dist: { p: 1, q: 2 } }} />);
+    expect(screen.getByTestId('view-shape-mismatch')).toBeTruthy();
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('a partially-keyed record still charts what decodes', () => {
+    render(<ViewPanel t={t} view={bars} data={{ balance: { dps: 12, extra: 'x' } }} />);
+    expect(screen.getByRole('figure', { name: 'balance budget' })).toBeTruthy();
+    expect(screen.queryByTestId('view-shape-mismatch')).toBeNull();
+  });
 });

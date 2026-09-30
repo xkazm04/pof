@@ -1,5 +1,6 @@
 'use client';
 
+import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import { useLabPipelineStore, type LabStepArtifact } from './labPipelineStore';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { resolveAccept } from './labAcceptance';
@@ -44,6 +45,8 @@ export function buildLabCheckerContext(
   entitiesByCatalog: Record<string, Record<string, unknown>>,
   /** Supplying these turns on `siblingVerdict` (see below). Omit for the raw-data context. */
   resolve?: { entityId: string; verdicts?: JudgeVerdict[] },
+  /** The entity's canon profile (`LabEntity.canonProfile`). Absent = `pof`. */
+  canonProfile?: string,
 ): CheckerContext {
   const siblings: Record<string, Record<string, unknown>> = {};
   for (const [step, art] of Object.entries(entitySteps ?? {})) siblings[step] = art.data;
@@ -51,6 +54,7 @@ export function buildLabCheckerContext(
     catalog: catalogId,
     siblings,
     has: (c, e) => !!entitiesByCatalog[c]?.[e],
+    ...(canonProfile ? { canonProfile } : {}),
   };
   if (!resolve) return base;
   return { ...base, siblingVerdict: (step) => siblingVerdictOf(catalogId, step, entitySteps?.[step], base, resolve) };
@@ -90,12 +94,24 @@ function siblingVerdictOf(
 /** The same context, read from the live store snapshots — for callers outside render.
  *  `verdicts` is optional: pass the catalog's judge verdicts (they are fetched, so only a
  *  React caller has them) to make `siblingVerdict` judge-aware as well as drain-aware. */
+/**
+ * The canon profile of an entity as the lab knows it. Ingested entities live in the hydrated
+ * draft cache (`draftEntitiesByCatalog`) with their provenance; code seeds are PoF's.
+ */
+export function canonProfileInStore(catalogId: string, entityId: string): string {
+  const st = useCatalogStore.getState();
+  const e = (st.draftEntitiesByCatalog[catalogId]?.[entityId] ?? st.entitiesByCatalog[catalogId]?.[entityId]) as
+    { provenance?: { canonProfile?: string } } | undefined;
+  return canonProfileOf(e);
+}
+
 export function labCheckerContext(catalogId: string, entityId: string, verdicts?: JudgeVerdict[]): CheckerContext {
   return buildLabCheckerContext(
     catalogId,
     useLabPipelineStore.getState().byEntity[entityId],
     useCatalogStore.getState().entitiesByCatalog,
     { entityId, ...(verdicts ? { verdicts } : {}) },
+    canonProfileInStore(catalogId, entityId),
   );
 }
 

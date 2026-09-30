@@ -1,6 +1,5 @@
 import { MODULE_COLORS as CHART_MODULE_COLORS } from '@/lib/chart-colors';
-import type { SubModuleId } from '@/types/modules';
-import { TOPOLOGY_COMPACT, getNodeCenter as getCenter } from '@/components/modules/evaluator/_shared/moduleTopology';
+import { TOPOLOGY_COMPACT } from '@/lib/topology/moduleGraph';
 
 // ─── Module layout config ───────────────────────────────────────────────────
 
@@ -19,9 +18,5 @@ export const MODULE_COLORS: Record<string, string> = {
   'arpg-polish': CHART_MODULE_COLORS.core,
 };
 
-// Layout (positions + node sizes) shared with NexusView via _shared/moduleTopology.
-export const { colWidth: COL_WIDTH, rowHeight: ROW_HEIGHT, nodeW: NODE_W, nodeH: NODE_H, padX: PAD_X, padY: PAD_Y } = TOPOLOGY_COMPACT;
-
-export function getNodeCenter(moduleId: SubModuleId) {
-  return getCenter(moduleId, TOPOLOGY_COMPACT);
-}
+// Node size of the compact module topology (placement lives in @/lib/topology/moduleGraph).
+export const { nodeW: NODE_W, nodeH: NODE_H } = TOPOLOGY_COMPACT;

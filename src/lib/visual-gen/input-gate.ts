@@ -18,7 +18,8 @@
  * PoF's pattern, rather than the image-EDIT step other tools use.
  */
 import type { VisionImage } from '@/lib/anim-critique/critique';
-import { makeRoutedVisionText } from '@/lib/vision/seam';
+import type { VisionAnswer } from '@/lib/anim-critique/vision';
+import { makeRoutedVision } from '@/lib/vision/seam';
 import type { Scorecard } from './mesh-critique';
 
 /** One-line reply protocol shared with pof_vlm_critique.py: SCORE / DEFECTS / VERDICT. */
@@ -66,6 +67,37 @@ export interface GateThresholds {
 
 const DEFAULT_GATE: GateThresholds = { passAt: 7, failBelow: 5 };
 
+/**
+ * A threshold is fitted to its grader. DEFAULT_GATE was measured on the hosted Qwen chain
+ * (anim-critique/qwen.ts, 2026-08-22), but the router serves `recognize` from the local eye
+ * first, and each model spends the 0-10 scale differently: the local 27B scores clearly bad
+ * inputs 5-9 (a UI wireframe got 9), so at `failBelow: 5` it let through bad inputs the hosted
+ * chain refused. Each row is a line refitted on the arena's truth set for the model that
+ * answered; a model with no row keeps DEFAULT_GATE. Re-measure with
+ * `node scripts/vision-arena/input-gate/race.mjs` before adding or moving a row.
+ */
+export const GRADER_THRESHOLDS: Readonly<Record<string, GateThresholds>> = {
+  // 2026-09-22 arena: 88 hand-labelled images (19 good / 69 bad), 2 repeats at temp 0, 88/88
+  // identical. Bad inputs admitted: 21 at failBelow 5 -> 7 at 8, with 0/19 good refused. At 9
+  // it admits 5 but refuses a good one. The 7 it still admits are mostly chest-up crops on
+  // white, scored 9: cropping is this grader's blind spot, and no line below 10 fixes it.
+  'qwen3.8:27b': { passAt: 9, failBelow: 8 },
+  // No row for mimo-v2.6-distill-9b: at failBelow 8 it admits 6/69 with 0/19 refused, but 8
+  // of its 19 good scores sit exactly on the line (vs 1/19 here), so any drift refuses good inputs.
+};
+
+/** Which line applies: an explicit caller override, else the answering model's row, else the default. Pure. */
+export function thresholdsFor(
+  model: string | undefined,
+  override?: Partial<GateThresholds>,
+): { thresholds: GateThresholds; source: 'caller' | 'grader' | 'default' } {
+  const base = model !== undefined ? GRADER_THRESHOLDS[model] : undefined;
+  if (override && Object.keys(override).length > 0) {
+    return { thresholds: { ...(base ?? DEFAULT_GATE), ...override }, source: 'caller' };
+  }
+  return base ? { thresholds: base, source: 'grader' } : { thresholds: DEFAULT_GATE, source: 'default' };
+}
+
 /** Map a parsed reply to the shared pass/warn/fail scorecard shape. Pure. */
 export function scoreInputGate(reply: GateReply, thresholds: Partial<GateThresholds> = {}): Scorecard {
   const t = { ...DEFAULT_GATE, ...thresholds };
@@ -82,12 +114,23 @@ export function parseVisionImage(dataUrl: string): VisionImage | null {
   return m ? { mime: m[1], base64: m[2] } : null;
 }
 
-export type GateCard = Scorecard & { ok: true; raw: string };
+export type GateCard = Scorecard & {
+  ok: true;
+  raw: string;
+  /** The model that answered, when the seam reports one. */
+  model?: string;
+  /** Where the pass/fail line came from (see `thresholdsFor`). */
+  thresholdsFrom: 'caller' | 'grader' | 'default';
+};
 export type GateFailure = { ok: false; error: string; raw?: string; verdict?: undefined };
 
 export interface InputGateDeps {
-  /** Vision seam (images, prompt) => reply text; defaults to DashScope Qwen-VL. */
-  vision?: (images: VisionImage[], prompt: string) => Promise<string>;
+  /**
+   * Vision seam (images, prompt) => reply. Defaults to the routed, attributed seam, so the
+   * answering model's refitted line applies. A seam returning a bare string names no model and
+   * is graded on DEFAULT_GATE.
+   */
+  vision?: (images: VisionImage[], prompt: string) => Promise<string | VisionAnswer>;
   subject?: string;
   thresholds?: Partial<GateThresholds>;
 }
@@ -156,14 +199,18 @@ export function inputGateOverridden(outcome: InputGateOutcome): InputGateOutcome
 
 /** Gate one concept image. A vision/parse failure is ok:false with the reason — never a fake verdict. */
 export async function gateInputImage(image: VisionImage, deps: InputGateDeps = {}): Promise<GateCard | GateFailure> {
-  const vision = deps.vision ?? makeRoutedVisionText();
+  const vision = deps.vision ?? makeRoutedVision();
   let raw: string;
+  let model: string | undefined;
   try {
-    raw = await vision([image], buildInputGatePrompt(deps.subject));
+    const answer = await vision([image], buildInputGatePrompt(deps.subject));
+    if (typeof answer === 'string') raw = answer;
+    else ({ text: raw, model } = answer);
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
   const reply = parseGateReply(raw);
   if (!reply.ok) return { ok: false, error: reply.error ?? 'unparseable vision reply', raw };
-  return { ok: true, raw, ...scoreInputGate(reply, deps.thresholds) };
+  const { thresholds, source } = thresholdsFor(model, deps.thresholds);
+  return { ok: true, raw, ...(model !== undefined ? { model } : {}), thresholdsFrom: source, ...scoreInputGate(reply, thresholds) };
 }

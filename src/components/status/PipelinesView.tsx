@@ -26,8 +26,11 @@ import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusVerdicts } from './statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, getStepFact, type Swimlane, type StepCell } from '@/lib/status/statusModel';
+import { buildSwimlane, sortLanes, getStepFact, judgedContentOfRow, type Swimlane, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import {
   readinessOf,
   LADDER,
@@ -187,13 +190,27 @@ interface UnknownLane {
   error: string;
 }
 
+/** Stable empty row list for the evidence modal's ledger when a catalog has no rows. */
+const NO_ROWS: ArtifactVerdictRow[] = [];
+
+/** The registered step meta the evidence ledger re-derives each entity's rung with. */
+function evidenceStep(catalogId: string, label: string): StepMeta {
+  const s = allCatalogPipelines().find((p) => p.catalogId === catalogId)?.steps.find((x) => x.label === label);
+  return s ? { label: s.label, archetype: s.archetype, engine: s.engine } : { label };
+}
+
 /** Stable empty list, so `built === null` doesn't hand a fresh array to memo dependents. */
 const NO_UNKNOWN_LANES: UnknownLane[] = [];
+/** Stable empty verdict index for a FAILED judge read (flagged `verdictsDegraded`). */
+const NO_VERDICTS: ReadonlyMap<string, JudgeVerdict[]> = new Map();
+
+/** The craft half of {@link VerdictLoad}, fetched by this view alone. */
+type CraftLoad = Pick<VerdictLoad, 'craftByCatalog' | 'craftDegraded'>;
 
 /** The two whole-project verdict streams, settled together. `craftByCatalog` is null when
  *  the craft fetch FAILED — absent gauges must never paint as A0. */
 interface VerdictLoad {
-  byCatalog: Map<string, JudgeVerdict[]>;
+  byCatalog: ReadonlyMap<string, JudgeVerdict[]>;
   craftByCatalog: Map<string, CraftVerdictView[]> | null;
   verdictsDegraded: boolean;
   craftDegraded: boolean;
@@ -226,10 +243,13 @@ function RetryButton({ onClick, label = 'Retry' }: { onClick: () => void; label?
 
 export function PipelinesView({
   onFocusCatalog,
+  onFocusEntity,
   filterClass = null,
   onClearFilter,
 }: {
   onFocusCatalog: (catalogId: string) => void;
+  /** The evidence modal's per-entity hand-off to Item Focus. */
+  onFocusEntity?: (catalogId: string, entityId: string) => void;
   /** Optional capability-class filter (from the Capability tab): only steps whose
    *  deliverable maps to this class render, and lanes with zero matching steps hide. */
   filterClass?: string | null;
@@ -241,30 +261,32 @@ export function PipelinesView({
   /** Non-null when the map could not be loaded at all — the view must SAY so rather than
    *  sit on "Loading…" forever (an honesty dashboard cannot fail silently). */
   const [error, setError] = useState<string | null>(null);
+  /** Judge verdicts come from the SHARED /status verdict read (one deduped request across
+   *  every tab, on the lab's 60 s verdict cache); craft verdicts are this view's own read. */
+  const { verdicts: judge, reload: reloadJudge } = useStatusVerdicts();
+  const [craftLoad, setCraftLoad] = useState<CraftLoad | null>(null);
   /** The two verdict streams, settled together. Null until they have. */
-  const [verdicts, setVerdicts] = useState<VerdictLoad | null>(null);
+  const verdicts = useMemo<VerdictLoad | null>(
+    () =>
+      judge && craftLoad
+        ? { ...craftLoad, byCatalog: judge.ok ? judge.byCatalog : NO_VERDICTS, verdictsDegraded: !judge.ok }
+        : null,
+    [judge, craftLoad],
+  );
   const [reload, setReload] = useState(0);
   const [highlight, setHighlight] = useState<Highlight>(null);
   // Clicking a cell opens the evidence modal (the stored output the gate evaluated),
   // NOT Item Focus — so a verdict can be audited against its actual proof.
   const [evidence, setEvidence] = useState<{ catalogId: string; step: string; cell: StepCell } | null>(null);
+  const evidenceMeta = useMemo(() => (evidence ? evidenceStep(evidence.catalogId, evidence.step) : null), [evidence]);
 
-  // Judge + craft verdicts are two whole-project reads, unchanged: one request each, and
-  // neither is per-catalog, so there is nothing to fan out.
+  // Craft verdicts are one whole-project read (not per-catalog, so nothing to fan out). The
+  // judge half is the shared read above.
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [verdictRes, craftRes] = await Promise.all([
-          tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts'),
-          tryApiFetch<CraftVerdictView[]>('/api/craft-verdicts'),
-        ]);
-        const byCatalog = new Map<string, JudgeVerdict[]>();
-        for (const v of verdictRes.ok ? verdictRes.data : []) {
-          const list = byCatalog.get(v.catalogId) ?? [];
-          list.push(v);
-          byCatalog.set(v.catalogId, list);
-        }
+        const craftRes = await tryApiFetch<CraftVerdictView[]>('/api/craft-verdicts');
         const craftByCatalog = new Map<string, CraftVerdictView[]>();
         for (const v of craftRes.ok ? craftRes.data : []) {
           const list = craftByCatalog.get(v.catalogId) ?? [];
@@ -272,10 +294,8 @@ export function PipelinesView({
           craftByCatalog.set(v.catalogId, list);
         }
         if (alive) {
-          setVerdicts({
-            byCatalog,
+          setCraftLoad({
             craftByCatalog: craftRes.ok ? craftByCatalog : null,
-            verdictsDegraded: !verdictRes.ok,
             craftDegraded: !craftRes.ok,
           });
         }
@@ -310,22 +330,21 @@ export function PipelinesView({
       }
       const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
       if (craft && verdicts.craftByCatalog) {
-        // Per-step entity → current artifact updatedAt: the staleness anchor a
-        // craft gauge is projected against (a verdict older than a re-produce
-        // must read as stale, never current).
-        const updatedByStep = new Map<string, Map<string, string>>();
+        // Per-step entity → what the artifact holds NOW (content hash + updatedAt), via
+        // THE row-hash rule the judge path uses (`judgedContentOfRow`). A gauge whose
+        // content was re-produced reads stale; a drain re-upserting identical data does not.
+        const contentByStep = new Map<string, Map<string, JudgedContent>>();
         for (const a of c.rows) {
-          if (!a.updatedAt) continue;
-          const m = updatedByStep.get(a.step) ?? new Map<string, string>();
-          m.set(a.entityId, a.updatedAt);
-          updatedByStep.set(a.step, m);
+          const m = contentByStep.get(a.step) ?? new Map<string, JudgedContent>();
+          m.set(a.entityId, judgedContentOfRow(a));
+          contentByStep.set(a.step, m);
         }
         for (const s of p.steps) {
           const cc = craftForCell(
             c.catalogId,
             s.label,
             verdicts.craftByCatalog.get(c.catalogId) ?? [],
-            updatedByStep.get(s.label) ?? new Map(),
+            contentByStep.get(s.label) ?? new Map(),
           );
           if (cc) craft.set(`${c.catalogId} ${s.label}`, cc);
         }
@@ -352,7 +371,8 @@ export function PipelinesView({
    *  the hard way and bails out of `ensure` on a stored error for the same reason). */
   const retry = () => {
     setError(null);
-    setVerdicts(null);
+    setCraftLoad(null);
+    reloadJudge();
     reloadArtifacts();
     setReload((n) => n + 1);
   };
@@ -752,8 +772,17 @@ export function PipelinesView({
           </div>
         ))}
       </div>
-      {evidence && (
-        <EvidenceModal key={`${evidence.catalogId}::${evidence.step}`} catalogId={evidence.catalogId} step={evidence.step} cell={evidence.cell} onClose={() => setEvidence(null)} />
+      {evidence && evidenceMeta && (
+        <EvidenceModal
+          key={`${evidence.catalogId}::${evidence.step}`}
+          catalogId={evidence.catalogId}
+          step={evidenceMeta}
+          cell={evidence.cell}
+          rows={catalogs?.find((c) => c.catalogId === evidence.catalogId)?.rows ?? NO_ROWS}
+          verdicts={judge}
+          onClose={() => setEvidence(null)}
+          onFocusEntity={onFocusEntity}
+        />
       )}
     </>
   );

@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { CategoryView } from '@/components/status/CategoryView';
 import { useCatalogStore } from '@/stores/catalogStore';
+import { _resetArtifactCache } from '@/components/layout-lab/labArtifactCache';
+import { invalidateJudgeVerdicts } from '@/components/layout-lab/hooks/useStepJudgeVerdicts';
+import { toStepSummary } from '@/components/layout-lab/stepSummary';
 import type { CatalogEntityBase } from '@/lib/catalog/types';
+import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 vi.mock('next/font/google', () => {
   const f = () => ({ className: 'font-mock' });
@@ -11,16 +15,23 @@ vi.mock('next/font/google', () => {
 
 // 25 entities so pagination (20/page) kicks in. Only 'strong' has a gate-verified
 // (L3) pass → it must sort LAST; the rest tie at 0% and sort by name ascending.
-vi.mock('@/components/layout-lab/labArtifactClient', () => ({
-  fetchArtifacts: vi.fn(() =>
-    Promise.resolve([{ catalogId: 'items', entityId: 'strong', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L3' }]),
-  ),
-}));
+const ROWS: PipelineArtifact[] = [
+  { catalogId: 'items', entityId: 'strong', step: 'Economy', data: {}, ueAssets: [], status: 'pass', tier: 'L3' },
+];
 
-vi.mock('@/lib/api-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/api-utils')>();
-  return { ...actual, tryApiFetch: vi.fn().mockResolvedValue({ ok: true, data: [] }) };
-});
+/** The server, at the wire: every GET is recorded so a case can assert WHICH routes the view
+ *  paid for. The full-blob route and the blob-free summary route both answer the same rows
+ *  (the summary through the real `toStepSummary` projection). */
+let urls: string[] = [];
+let verdictsOk = true;
+function answer(url: string): unknown {
+  if (url.startsWith('/api/judge-verdicts')) {
+    return verdictsOk ? { success: true, data: [] } : { success: false, error: 'HTTP 500' };
+  }
+  if (url.startsWith('/api/pipeline-artifacts/summary')) return { success: true, data: ROWS.map(toStepSummary) };
+  if (url.startsWith('/api/pipeline-artifacts')) return { success: true, data: ROWS };
+  return { success: true, data: [] };
+}
 
 vi.mock('@/lib/catalog/pipeline-registry', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/catalog/pipeline-registry')>();
@@ -44,6 +55,15 @@ function ent(id: string, name: string): CatalogEntityBase {
 }
 
 beforeEach(() => {
+  urls = [];
+  verdictsOk = true;
+  // Both reads are MODULE-LEVEL shared caches that deliberately outlive an unmount.
+  _resetArtifactCache();
+  invalidateJudgeVerdicts();
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    urls.push(String(url));
+    return { ok: true, status: 200, json: async () => answer(String(url)) };
+  }));
   const byId: Record<string, CatalogEntityBase> = {};
   // 24 zero-coverage entities named Item 01..24, plus one gate-verified 'strong'.
   for (let i = 1; i <= 24; i += 1) {
@@ -54,7 +74,10 @@ beforeEach(() => {
   useCatalogStore.setState({ entitiesByCatalog: { items: byId } });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe('CategoryView', () => {
   it('lists 20 rows on the first page and paginates the remaining 5', async () => {
@@ -92,6 +115,29 @@ describe('CategoryView', () => {
     await waitFor(() => expect(container.textContent).toContain('Item 01'));
     fireEvent.click(getByText('Item 01'));
     expect(onFocusEntity).toHaveBeenCalledWith('items', 'e01');
+  });
+
+  it('reads rows only from the blob-free summary route, never the full-blob one', async () => {
+    const { container } = render(
+      <CategoryView catalogId="items" onFocusEntity={vi.fn()} onPickCatalog={vi.fn()} />,
+    );
+    await waitFor(() => expect(container.textContent).toContain('25 entities'));
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(urls).toContain('/api/pipeline-artifacts/summary?catalogId=items');
+    expect(urls.filter((u) => u.startsWith('/api/pipeline-artifacts?'))).toEqual([]);
+  });
+
+  it('says PARTIAL (judge verdicts did not load) instead of silently grading around the failure', async () => {
+    verdictsOk = false;
+    const { container } = render(
+      <CategoryView catalogId="items" onFocusEntity={vi.fn()} onPickCatalog={vi.fn()} />,
+    );
+    const notice = await waitFor(() => {
+      const n = [...container.querySelectorAll('[role="status"]')].find((el) => (el.textContent ?? '').includes('PARTIAL'));
+      expect(n).toBeTruthy();
+      return n!;
+    });
+    expect(notice.textContent).toContain('judge verdicts did not load');
   });
 
   it('shows the catalog picker when no catalog is selected', () => {
