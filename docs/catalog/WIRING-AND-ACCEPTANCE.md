@@ -29,7 +29,7 @@ The dividing line is **intent vs. realization**:
 |---|---|---|
 | Holds | The spec/intent + where we are: per-step produced artifacts, lifecycle, acceptance verdicts (per tier), the asset-path manifest, human selections, test/visual verdicts | What actually exists & runs: compiled C++ (`GA_/GE_`, structs), DataTable rows, assets (meshes/textures/Niagara/cues), GAS wiring |
 | Authority | Authoritative for *pipeline state* and *design intent* | Authoritative for *runtime data + schema* |
-| Example | "Iron Longsword: brief ✓, stats authored, icon `cand 0` selected, test deferred" | `DT_Items` row, `SM_IronLongsword`, `MI_IronLongsword`, `GE_Equip_IronLongsword` |
+| Example | "Iron Longsword: brief ✓, stats authored, icon `cand 0` selected, test deferred" | `DT_Items` row `IronLongsword`, `SM_IronLongsword_LOD0`, `MI_IronLongsword_Blade`, `A_IronLongsword_Equip` (one Items asset-path table: `src/lib/catalog/itemAssetPaths.ts`) |
 
 **Direction of truth — schema down, content up:**
 - **Schema + math flow UE → app** (validate, don't re-author). The attribute schema is `UARPGAttributeSet`; row shapes are the `F*Row` structs; the damage formula is `ARPGDamageExecution`. The app's Attributes/Economy steps read these and **validate** against them — they don't define them. (Matches the existing "UE is source of truth" rule.)
@@ -310,6 +310,20 @@ no `StepHistoryPanel` to restore from.
   `fixEffectOf` no-op withholding, `stampTemplate`, `StepHistoryPanel`, `PackageLedgerPanel` for UE
   Packaging). The 7 bespoke-only labels keep their bespoke UIs; the six bespoke components stay in
   the tree, unrouted (deleting them is a follow-up).
+- **One produce door for the 7 bespoke-only labels (2026-09-30)** — they share the generic door
+  (`steps/shared/useStepProduceDoor.ts`, lifted out of `ArchetypeStep`; `useStaticStep` calls it).
+  `itemsBespokeSpecs.ts` presents each as a `StepSpec`: `Animations` / `VFX` / `SFX` /
+  `Inventory UI Integration` are `rules` (a CLI session can author them: live mode, the shared
+  `buildStepProducePrompt` preview, the server's verdict), `Attributes` is `schema`, the two
+  generative steps `gallery` (stub/generator only). `accept` is the server's
+  `ITEMS_BESPOKE_CHECKERS` entry, now wrapped in `templateGuard`, and the four text steps declare
+  world-neutral `criteria` naming their graded keys (`clips`, `variants`/`cost`/`cap`, `cues`,
+  `slot`/`wired`) — the bespoke checkers are untagged, so a live prompt otherwise named none. The
+  one-shot route resolves an items label through `itemsStepSpec` (registered, else the adapter), so
+  these labels no longer 404 there. The adapter's `produce` is server-safe (the `ITEM_STEP_SPECS`
+  bodies read the browser catalog store) and pinned equal to it for every seeded item. A stub on a
+  non-exemplar item is stamped and held `pending` (TEMPLATE); the bespoke banner then shows the
+  reason-bearing copy and withholds "Produce fix" (a stub re-produce cannot move it).
 - **Grade** — `resolveAccept` is registered-first for items, with **no bespoke fallback** for a
   registry-owned label: the lab may only come down to the server's reading, never up. Parity over
   all 18 rendered labels (lab status === `serverCheckerFor` status) is pinned in
@@ -503,7 +517,9 @@ steered every later live produce through the sibling section ("stay consistent w
 - **Write sites** — the one-shot deterministic branch (`POST /api/one-shot/step`, stamp is part of the
   GRADED data) and the lab's stub Produce (`ArchetypeStep.dispatchProduce`). Live/CLI produce and
   galleries are never stamped; a later live produce replaces the row's data and clears the stamp.
-  Not yet covered: the bespoke Items step frames (`useStaticStep` / `populateItemDemo`).
+  The lab's stub write site is the shared door `useStepProduceDoor` (`ArchetypeStep` and the bespoke
+  Items `useStaticStep`), and `populateItemDemo` stamps every label through `produceItemStep`
+  (2026-09-30; the bespoke checkers are guarded in `ITEMS_BESPOKE_CHECKERS`).
 - **Guard** — `templateGuard` (`acceptance/template.ts`) is composed with `sourcedGuard` at
   `registerCatalogPipeline`, so every grading path reads it: a stamped would-be `pass` is held at
   `pending` with a greppable `TEMPLATE: <exemplar> template, not produced for this entity (<id>)`
