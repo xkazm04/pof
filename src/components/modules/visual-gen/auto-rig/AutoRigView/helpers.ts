@@ -1,5 +1,38 @@
 import { RIG_PRESETS, type RigPreset } from '@/lib/visual-gen/rig-presets';
 import type { BoneDefinition } from '@/lib/blender-mcp/scripts/create-armature';
+import type { ReceiptRead } from '@/lib/blender-mcp/receipt';
+
+export interface ArmatureOutcome {
+  status: 'success' | 'error';
+  message: string;
+}
+
+/**
+ * What to tell the operator after "Create in Blender", from the `'armature'` receipt
+ * Blender printed — never from a transport OK. `presetToBones` builds a simplified
+ * IK-chain stand-in (11 bones for the UE5 Mannequin), not the preset's full skeleton,
+ * so a confirmed build names BOTH the count Blender built and the count the preset
+ * declares. Only a confirmed receipt for every bone sent is a success.
+ */
+export function describeArmatureOutcome(
+  read: ReceiptRead,
+  sentBones: number,
+  declaredBones: number,
+): ArmatureOutcome {
+  if (read.state !== 'confirmed') {
+    return { status: 'error', message: `Armature not confirmed: ${read.reason}` };
+  }
+  const built = read.data.bones;
+  if (built !== sentBones) {
+    return { status: 'error', message: `Armature not confirmed: Blender reported ${String(built)} of ${sentBones} bones` };
+  }
+  const name = typeof read.data.name === 'string' ? `"${read.data.name}" ` : '';
+  const stub =
+    built === declaredBones
+      ? ''
+      : ` — a simplified IK-chain stand-in, not the full skeleton this preset declares (${declaredBones} bones)`;
+  return { status: 'success', message: `Blender built armature ${name}with ${built} bones${stub}.` };
+}
 
 /** Convert an IK chain from a rig preset into BoneDefinition[] for Blender. */
 export function presetToBones(preset: RigPreset): BoneDefinition[] {

@@ -1,4 +1,5 @@
 import { py } from '@/lib/blender-mcp/escape';
+import { pyReceipt, readReceipt } from '@/lib/blender-mcp/receipt';
 import type { DressPlan, DressRow } from '@/lib/visual-gen/scene-dress-plan';
 
 /**
@@ -16,10 +17,9 @@ import type { DressPlan, DressRow } from '@/lib/visual-gen/scene-dress-plan';
  * safe to run into a scene the operator is working in, and running it twice just leaves two
  * collections. Unplaced instances are not spawned (they have no transform).
  *
- * The last line prints a receipt; `readBlockoutReceipt` is what the UI believes, never a
- * bare transport OK (the export-scene pattern).
+ * The last line prints a `'blockout'` receipt on the shared POF_RESULT envelope
+ * (`receipt.ts`); `readBlockoutReceipt` is what the UI believes, never a bare transport OK.
  */
-export const BLOCKOUT_PLACED_MARKER = 'POF_BLOCKOUT_PLACED=';
 
 export const BLOCKOUT_COLLECTION = 'PoF Set Dressing';
 
@@ -79,7 +79,7 @@ for r in ROWS:
     coll.objects.link(obj)
     n += 1
 
-print('${BLOCKOUT_PLACED_MARKER}' + str(n))
+${pyReceipt('blockout', { placed: 'n' })}
 `.trim();
 }
 
@@ -88,17 +88,20 @@ export type BlockoutReceipt =
   | { state: 'unconfirmed'; reason: string }
   | { state: 'mismatch'; placed: number; expected: number; reason: string };
 
-/** Read what Blender printed. Only the marker with the expected count is `confirmed`. */
+/**
+ * Read what Blender printed. Only a `'blockout'` receipt carrying the expected count is
+ * `confirmed` — a missing receipt, or one without a numeric count, is `unconfirmed`.
+ */
 export function readBlockoutReceipt(output: string, expected: number): BlockoutReceipt {
-  const hit = new RegExp(`${BLOCKOUT_PLACED_MARKER}(\\d+)`).exec(output);
-  if (!hit) {
+  const read = readReceipt(output, 'blockout');
+  const placed = read.state === 'unconfirmed' ? undefined : read.data.placed;
+  if (typeof placed !== 'number') {
     return {
       state: 'unconfirmed',
       reason:
         'the script ran but Blender printed no blockout receipt, so the placed count could not be confirmed',
     };
   }
-  const placed = Number(hit[1]);
   if (placed === expected) return { state: 'confirmed', placed };
   return {
     state: 'mismatch',

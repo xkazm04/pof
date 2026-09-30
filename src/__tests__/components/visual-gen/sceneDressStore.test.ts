@@ -109,7 +109,7 @@ describe('buildBlockout', () => {
 
   it('dispatches once through executeViaMCP and refreshes the tree once on a confirmed receipt', async () => {
     await planned();
-    route({ [EXECUTE]: () => reply(200, { success: true, data: { output: 'POF_BLOCKOUT_PLACED=4\n' } }) });
+    route({ [EXECUTE]: () => reply(200, { success: true, data: { output: 'POF_RESULT={"kind": "blockout", "placed": 4}\n' } }) });
     await useSceneDressStore.getState().buildBlockout();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);

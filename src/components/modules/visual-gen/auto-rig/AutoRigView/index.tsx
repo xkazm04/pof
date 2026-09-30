@@ -7,15 +7,16 @@ import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView'
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { RIG_PRESETS, checkPresetBinding, type RigPreset } from '@/lib/visual-gen/rig-presets';
 import { createArmatureScript } from '@/lib/blender-mcp/scripts/create-armature';
-import { tryApiFetch } from '@/lib/api-utils';
+import { readReceipt } from '@/lib/blender-mcp/receipt';
+import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { RigPresetCard } from './RigPresetCard';
-import { presetToBones } from './helpers';
+import { presetToBones, describeArmatureOutcome, type ArmatureOutcome } from './helpers';
 
 function RigTab() {
   const [selectedPreset, setSelectedPreset] = useState<string>('ue5-mannequin');
   const [creatingPresetId, setCreatingPresetId] = useState<string | null>(null);
-  const [createResults, setCreateResults] = useState<Record<string, { status: 'success' | 'error'; message: string }>>({});
+  const [createResults, setCreateResults] = useState<Record<string, ArmatureOutcome>>({});
   const activePreset = RIG_PRESETS.find((p) => p.id === selectedPreset);
 
   const handleCreateInBlender = useCallback(async (preset: RigPreset) => {
@@ -32,17 +33,17 @@ function RigTab() {
       bones,
     });
 
-    const result = await tryApiFetch<unknown>('/api/blender-mcp/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
-
-    if (result.ok) {
-      setCreateResults((prev) => ({ ...prev, [preset.id]: { status: 'success', message: 'Armature created' } }));
-    } else {
-      setCreateResults((prev) => ({ ...prev, [preset.id]: { status: 'error', message: result.error } }));
-    }
+    // Through the one dispatcher, so the armature lands in Script History; and the
+    // outcome comes from the 'armature' receipt Blender printed, not the transport OK.
+    const result = await executeViaMCP(`Create armature: ${preset.name}`, code);
+    const outcome: ArmatureOutcome = result.ok
+      ? describeArmatureOutcome(
+          readReceipt(result.data, 'armature', { bones: bones.length }),
+          bones.length,
+          preset.boneCount,
+        )
+      : { status: 'error', message: result.error };
+    setCreateResults((prev) => ({ ...prev, [preset.id]: outcome }));
     setCreatingPresetId(null);
   }, []);
 
@@ -74,6 +75,16 @@ function RigTab() {
             />
           ))}
         </div>
+        {/* The card says "Armature created"; this says WHAT was built — the bone count
+            Blender reported next to the count the preset declares. */}
+        {RIG_PRESETS.map((preset) => {
+          const outcome = createResults[preset.id];
+          return outcome?.status === 'success' ? (
+            <p key={preset.id} role="status" className="text-xs text-text-muted mt-2">
+              {preset.name}: {outcome.message}
+            </p>
+          ) : null;
+        })}
       </div>
 
       {/* Mixamo workflow guide */}

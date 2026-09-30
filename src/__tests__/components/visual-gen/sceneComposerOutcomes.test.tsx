@@ -21,10 +21,8 @@ import {
   deleteObjectScript,
   duplicateObjectScript,
 } from '@/lib/blender-mcp/scripts/scene-objects';
-import {
-  exportSceneScript,
-  EXPORT_OK_MARKER,
-} from '@/lib/blender-mcp/scripts/export-scene';
+import { exportSceneScript } from '@/lib/blender-mcp/scripts/export-scene';
+import { RECEIPT_MARKER } from '@/lib/blender-mcp/receipt';
 
 const EXECUTE = '/api/blender-mcp/execute';
 
@@ -50,6 +48,9 @@ function mockExecute(reply: (code: string) => unknown) {
 }
 
 const okOutput = (output: string) => ({ success: true, data: { output } });
+/** What the export script prints once Blender's exporter reported FINISHED. */
+const exportReceipt = (path: string) =>
+  `${RECEIPT_MARKER}{"kind": "export", "path": "${path}", "format": "gltf"}\n`;
 const failure = (error: string) => ({ success: false, error });
 
 beforeEach(() => {
@@ -175,7 +176,7 @@ describe('SceneExporter stops claiming "Exported" from a bare transport OK', () 
   };
 
   it('reports Blender\'s own FINISHED confirmation when it is present', async () => {
-    mockExecute(() => okOutput(`${EXPORT_OK_MARKER}C:/out/scene.glb\n`));
+    mockExecute(() => okOutput(exportReceipt('C:/out/scene.glb')));
     setup();
     await waitFor(() =>
       expect(screen.getByRole('status').textContent).toMatch(
@@ -196,6 +197,33 @@ describe('SceneExporter stops claiming "Exported" from a bare transport OK', () 
     });
   });
 
+  it('the retired bespoke marker no longer counts as a confirmation', async () => {
+    mockExecute(() => okOutput('POF_EXPORT_FINISHED=C:/out/scene.glb\n'));
+    setup();
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/could not confirm/i));
+  });
+
+  it('an export receipt for a DIFFERENT path is not a confirmation of this one', async () => {
+    mockExecute(() => okOutput(exportReceipt('C:/elsewhere/other.glb')));
+    setup();
+    await waitFor(() => {
+      const text = screen.getByRole('status').textContent ?? '';
+      expect(text).not.toMatch(/export finished/i);
+      expect(text).toContain('C:/elsewhere/other.glb');
+    });
+  });
+
+  it('reads the receipts the service parsed when the route returns them', async () => {
+    mockExecute(() => ({
+      success: true,
+      data: { output: '', receipts: [{ kind: 'export', path: 'C:/out/scene.glb', format: 'gltf' }] },
+    }));
+    setup();
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toMatch(/Blender reported the export finished/i),
+    );
+  });
+
   it('reports the failure reason when the export raises', async () => {
     mockExecute(() => failure("Blender's exporter returned {'CANCELLED'}"));
     setup();
@@ -205,7 +233,7 @@ describe('SceneExporter stops claiming "Exported" from a bare transport OK', () 
   });
 
   it('records the export in the Script History panel', async () => {
-    mockExecute(() => okOutput(`${EXPORT_OK_MARKER}C:/out/scene.glb`));
+    mockExecute(() => okOutput(exportReceipt('C:/out/scene.glb')));
     setup();
     await waitFor(() =>
       expect(
@@ -218,6 +246,6 @@ describe('SceneExporter stops claiming "Exported" from a bare transport OK', () 
     const code = exportSceneScript({ outputPath: 'C:/out/scene.glb', format: 'gltf' });
     expect(code).toContain("if 'FINISHED' not in status:");
     expect(code).toContain('raise RuntimeError');
-    expect(code).toContain(EXPORT_OK_MARKER);
+    expect(code).toContain(RECEIPT_MARKER);
   });
 });

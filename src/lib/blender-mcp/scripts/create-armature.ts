@@ -1,4 +1,5 @@
 import { py } from '@/lib/blender-mcp/escape';
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
 
 export interface BoneDefinition {
   name: string;
@@ -36,6 +37,7 @@ amt.edit_bones.remove(amt.edit_bones[0])
 ${boneStatements}
 
 bpy.ops.object.mode_set(mode='OBJECT')
-print(f"Created armature: ${py(params.armatureName)} with {len(amt.bones)} bones")
+print("Created armature: " + armature_obj.name + " with " + str(len(amt.bones)) + " bones")
+${pyReceipt('armature', { name: 'armature_obj.name', bones: 'len(amt.bones)' })}
 `.trim();
 }

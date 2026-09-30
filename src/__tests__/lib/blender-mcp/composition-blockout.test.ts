@@ -13,7 +13,9 @@ import {
   compositionBlockoutScript,
   readBlockoutReceipt,
 } from '@/lib/blender-mcp/scripts/composition-blockout';
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
 import { DRESS_FIXTURE } from '../visual-gen/sceneDressFixture';
+import { printedReceipt } from './printedReceipt';
 
 const ROW = /^ {4}\{"name": "(.+?)", "dims": \(([^)]*)\), "loc": \(([^)]*)\), "yaw": ([-\d.e]+), "tags": "([^"]*)"\},$/gm;
 
@@ -68,9 +70,14 @@ describe('compositionBlockoutScript', () => {
     expect(code).not.toContain('bpy.ops.object.delete');
   });
 
-  it('ends with the placed-count receipt', () => {
+  it('ends with the placed-count receipt, on the shared POF_RESULT envelope', () => {
     const last = code.trim().split('\n').pop();
-    expect(last).toBe("print('POF_BLOCKOUT_PLACED=' + str(n))");
+    expect(last).toBe(pyReceipt('blockout', { placed: 'n' }));
+    expect(code).not.toContain('POF_BLOCKOUT_PLACED=');
+  });
+
+  it('[guard] what that line prints (n = 4) reads back as confirmed', () => {
+    expect(readBlockoutReceipt(printedReceipt(code, { n: 4 }), 4)).toEqual({ state: 'confirmed', placed: 4 });
   });
 
   it('escapes names so a quote cannot break out of the Python literal', () => {
@@ -89,7 +96,15 @@ describe('compositionBlockoutScript', () => {
 
 describe('readBlockoutReceipt', () => {
   it('confirms only the count Blender printed', () => {
-    expect(readBlockoutReceipt('POF_BLOCKOUT_PLACED=4', 4)).toEqual({ state: 'confirmed', placed: 4 });
+    expect(readBlockoutReceipt('POF_RESULT={"kind": "blockout", "placed": 4}', 4)).toEqual({ state: 'confirmed', placed: 4 });
+  });
+
+  it('the retired bespoke marker alone no longer confirms a build', () => {
+    expect(readBlockoutReceipt('POF_BLOCKOUT_PLACED=4', 4)).toMatchObject({ state: 'unconfirmed' });
+  });
+
+  it('a blockout receipt with no numeric count is unconfirmed, not built', () => {
+    expect(readBlockoutReceipt('POF_RESULT={"kind": "blockout"}', 4)).toMatchObject({ state: 'unconfirmed' });
   });
 
   it('a script that ran but printed no receipt is unconfirmed, not built', () => {
@@ -97,9 +112,10 @@ describe('readBlockoutReceipt', () => {
   });
 
   it('a short count is a mismatch that names both numbers', () => {
-    const r = readBlockoutReceipt('POF_BLOCKOUT_PLACED=3', 4);
+    const r = readBlockoutReceipt('POF_RESULT={"kind": "blockout", "placed": 3}', 4);
     expect(r.state).toBe('mismatch');
     if (r.state !== 'mismatch') throw new Error('unreachable');
     expect(r.reason).toMatch(/3 of 4/);
+    expect(r).toMatchObject({ placed: 3, expected: 4 });
   });
 });

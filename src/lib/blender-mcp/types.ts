@@ -78,8 +78,17 @@ export interface SceneInfo {
 
 // ─── Execution ──────────────────────────────────────────────────────────────
 
+/** One parsed `POF_RESULT=` line a script printed (see `receipt.ts`). */
+export interface Receipt {
+  kind: string;
+  [field: string]: unknown;
+}
+
 export interface ExecuteOutput {
+  /** What the script printed — the addon's `output` or `result` text, never a stringified reply. */
   output: string;
+  /** Every receipt in `output`, parsed once at the service edge. Read with `readReceipt`. */
+  receipts: Receipt[];
 }
 
 // ─── Assets ─────────────────────────────────────────────────────────────────
