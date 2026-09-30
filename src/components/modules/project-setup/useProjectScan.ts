@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
+import { missingRequirements } from '@/lib/project-setup/toolchain';
 
 export interface DetectedEngine {
   version: string;
@@ -223,9 +224,7 @@ export function useProjectScan(projectPath: string) {
 
   const hasProject = checklist.find((c) => c.id === 'uproject')?.ok ?? false;
   const okCount = checklist.filter((c) => c.ok).length;
-  const missingToolCount = checklist.filter(
-    (c) => !c.ok && (c.id === 'tool-vs' || c.id === 'tool-msvc' || c.id === 'tool-wsdk' || c.id === 'tool-dotnet' || c.id === 'engine'),
-  ).length;
+  const missingToolCount = missingRequirements(checklist).length;
 
   return {
     engines,

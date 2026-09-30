@@ -3,6 +3,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import {
+  toolRow,
+  buildBootstrapPlan,
+  buildEnvironmentManifest,
+  type DetectedEngine,
+  type DetectedTool,
+} from '@/lib/project-setup/toolchain';
 
 interface ListResponse {
   path: string;
@@ -24,21 +31,8 @@ interface DetectProjectsResponse {
   projects: DetectedProject[];
 }
 
-interface DetectedEngine {
-  version: string;
-  path: string;
-}
-
 interface DetectEnginesResponse {
   engines: DetectedEngine[];
-}
-
-interface DetectedTool {
-  id: string;
-  name: string;
-  ok: boolean;
-  detail: string;
-  path?: string;
 }
 
 interface DetectToolingResponse {
@@ -298,7 +292,7 @@ async function scanForTooling(): Promise<DetectedTool[]> {
   } catch {
     // VS root directory doesn't exist
   }
-  tools.push({ id: 'vs', name: 'Visual Studio', ok: vsFound, detail: vsDetail, path: vsPath || undefined });
+  tools.push({ id: 'vs', name: toolRow('vs').name, ok: vsFound, detail: vsDetail, path: vsPath || undefined });
 
   // 2. C++ Build Tools (MSVC) — needed for UE C++ compilation
   let msvcFound = false;
@@ -318,7 +312,7 @@ async function scanForTooling(): Promise<DetectedTool[]> {
       }
     }
   }
-  tools.push({ id: 'msvc', name: 'C++ Build Tools', ok: msvcFound, detail: msvcDetail });
+  tools.push({ id: 'msvc', name: toolRow('msvc').name, ok: msvcFound, detail: msvcDetail });
 
   // 3. Windows SDK
   let wsdkFound = false;
@@ -336,7 +330,7 @@ async function scanForTooling(): Promise<DetectedTool[]> {
       // Non-critical
     }
   }
-  tools.push({ id: 'wsdk', name: 'Windows SDK', ok: wsdkFound, detail: wsdkDetail });
+  tools.push({ id: 'wsdk', name: toolRow('wsdk').name, ok: wsdkFound, detail: wsdkDetail });
 
   // 4. .NET 8.0 Runtime — UE 5.x UnrealBuildTool targets .NET 8.0 specifically
   //    (.NET 10 or 6 do NOT satisfy this — .NET has no backward runtime compat)
@@ -363,7 +357,7 @@ async function scanForTooling(): Promise<DetectedTool[]> {
       }
     }
   }
-  tools.push({ id: 'dotnet', name: '.NET 8.0', ok: dotnetFound, detail: dotnetDetail });
+  tools.push({ id: 'dotnet', name: toolRow('dotnet').name, ok: dotnetFound, detail: dotnetDetail });
 
   return tools;
 }
@@ -478,132 +472,6 @@ async function handleList(requestedPath: string) {
   });
 }
 
-// ── Bootstrap command generation ──
-
-interface BootstrapResult {
-  missingTools: string[];
-  commands: string[];
-  prompt: string;
-  allInstalled: boolean;
-}
-
-function generateBootstrapCommands(tools: DetectedTool[], engines: DetectedEngine[]): BootstrapResult {
-  const missing: string[] = [];
-  const commands: string[] = [];
-
-  const vs = tools.find((t) => t.id === 'vs');
-  const msvc = tools.find((t) => t.id === 'msvc');
-  const wsdk = tools.find((t) => t.id === 'wsdk');
-  const dotnet = tools.find((t) => t.id === 'dotnet');
-
-  // VS + MSVC + Windows SDK are bundled via VS workload install
-  if (!vs?.ok || !msvc?.ok || !wsdk?.ok) {
-    if (!vs?.ok) {
-      missing.push('Visual Studio 2022');
-      commands.push(
-        'winget install Microsoft.VisualStudio.2022.Community --silent --override "--add Microsoft.VisualStudio.Workload.NativeDesktopDevelopment --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --includeRecommended"'
-      );
-    } else if (!msvc?.ok || !wsdk?.ok) {
-      // VS is installed but missing workloads — modify existing installation
-      const addParts: string[] = [];
-      if (!msvc?.ok) {
-        missing.push('C++ Build Tools (MSVC)');
-        addParts.push('--add Microsoft.VisualStudio.Workload.NativeDesktopDevelopment');
-        addParts.push('--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64');
-      }
-      if (!wsdk?.ok) {
-        missing.push('Windows SDK');
-        addParts.push('--add Microsoft.VisualStudio.Component.Windows11SDK.22621');
-      }
-      commands.push(
-        `"C:\\Program Files\\Microsoft Visual Studio\\Installer\\vs_installer.exe" modify --installPath "${vs.path}" ${addParts.join(' ')} --quiet`
-      );
-    }
-  }
-
-  if (!dotnet?.ok) {
-    missing.push('.NET 8.0 Runtime');
-    commands.push('winget install Microsoft.DotNet.Runtime.8 --silent');
-  }
-
-  if (engines.length === 0) {
-    missing.push('Unreal Engine');
-    // Can't install UE via winget — direct to Epic Games Launcher
-    commands.push('winget install EpicGames.EpicGamesLauncher --silent');
-  }
-
-  const allInstalled = missing.length === 0;
-
-  // Build CLI prompt
-  let prompt = '';
-  if (!allInstalled) {
-    const commandBlock = commands.map((cmd, i) => `${i + 1}. \`${cmd}\``).join('\n');
-    prompt = `Install the following missing developer tools for UE5 C++ development on this Windows machine.
-
-MISSING TOOLS: ${missing.join(', ')}
-
-Run these commands in sequence (each requires admin privileges — use PowerShell with elevation if needed):
-
-${commandBlock}
-
-INSTRUCTIONS:
-- Run each command one at a time and wait for it to complete before running the next.
-- If winget is not available, download and install from the direct URLs instead:
-  - Visual Studio 2022 Community: https://visualstudio.microsoft.com/downloads/
-  - .NET 8.0 Runtime: https://dotnet.microsoft.com/en-us/download/dotnet/8.0
-  - Epic Games Launcher: https://www.unrealengine.com/download
-- After all installs complete, report which tools were successfully installed.
-- Do NOT use TodoWrite.`;
-  }
-
-  return { missingTools: missing, commands, prompt, allInstalled };
-}
-
-// ── Environment manifest ──
-
-interface EnvironmentManifest {
-  version: 1;
-  platform: string;
-  generatedAt: string;
-  tools: {
-    id: string;
-    name: string;
-    installed: boolean;
-    detail: string;
-    installCommand?: string;
-  }[];
-  engines: {
-    version: string;
-    path: string;
-  }[];
-}
-
-function buildEnvironmentManifest(tools: DetectedTool[], engines: DetectedEngine[]): EnvironmentManifest {
-  const installCommands: Record<string, string> = {
-    vs: 'winget install Microsoft.VisualStudio.2022.Community --silent --override "--add Microsoft.VisualStudio.Workload.NativeDesktopDevelopment --includeRecommended"',
-    msvc: '(included with VS Desktop Development workload)',
-    wsdk: '(included with VS Desktop Development workload)',
-    dotnet: 'winget install Microsoft.DotNet.Runtime.8 --silent',
-  };
-
-  return {
-    version: 1,
-    platform: process.platform,
-    generatedAt: new Date().toISOString(),
-    tools: tools.map((t) => ({
-      id: t.id,
-      name: t.name,
-      installed: t.ok,
-      detail: t.detail,
-      installCommand: installCommands[t.id],
-    })),
-    engines: engines.map((e) => ({
-      version: e.version,
-      path: e.path,
-    })),
-  };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -649,14 +517,14 @@ export async function POST(request: NextRequest) {
       case 'generate-bootstrap': {
         const tools = await scanForTooling();
         const engines = await scanForEngines();
-        const bootstrap = generateBootstrapCommands(tools, engines);
+        const bootstrap = buildBootstrapPlan(tools, engines);
         return apiSuccess(bootstrap);
       }
 
       case 'export-manifest': {
         const manifestTools = await scanForTooling();
         const manifestEngines = await scanForEngines();
-        const manifest = buildEnvironmentManifest(manifestTools, manifestEngines);
+        const manifest = buildEnvironmentManifest(manifestTools, manifestEngines, { platform: process.platform });
         return apiSuccess({ manifest });
       }
 
