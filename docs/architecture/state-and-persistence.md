@@ -413,7 +413,7 @@ and leaked every audio test fixture into the operator's DB. Clip bytes follow th
 production and a temp dir under the vitest floor; asset rows keep paths relative to it. Ratchet:
 `db-containment.test.ts` pins `src/lib/db.ts` as the ONLY non-test `new Database(` site.
 
-**`headless_builds`** (queued/running/completed UBT build jobs) follows this same guard pattern but is
+**`headless_builds`** (the UBT build ledger: a row is written `queued` at enqueue, `running` before the spawn, then its result; history and health read settled rows only, see runtime-patterns "Headless UE builds") follows this same guard pattern but is
 owned by `src/lib/ue5-bridge/build-pipeline.ts` (`ensureHeadlessBuildsTable()`) — the sole reader/writer —
 **not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it to derive the
 **Build Health & Trends** dashboard (Evaluator → *Build Health* tab, served by
