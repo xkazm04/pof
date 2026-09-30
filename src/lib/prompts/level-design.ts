@@ -3,6 +3,7 @@ import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@
 import { GENERATE_ALL_DIRECTLY, GENERATE_THE_DIRECTLY } from '@/lib/prompts/_shared';
 import type { StreamingZonePlannerConfig } from '@/lib/level-design/streaming-plan';
 import { ZONE_TYPE_LABELS } from '@/lib/level-design/streaming-plan';
+import { zoneEnumIdentifier } from '@/lib/level-design/streaming-preflight';
 import { GAMEPLAY_CONSTRAINT_KEYS, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
 
@@ -250,7 +251,7 @@ ${streamedZones.length > 0
 ### Required Files (all under Source/${moduleName}/World/Streaming/)
 
 1. **EWorldZone** enum
-   - Values: ${config.zones.map((z) => z.name.replace(/[^a-zA-Z0-9]/g, '')).join(', ')}
+   - Values: ${config.zones.map((z) => zoneEnumIdentifier(z.name)).join(', ')}
    - Used to identify zones throughout the streaming system
 
 2. **FStreamingZoneDefinition** (USTRUCT)

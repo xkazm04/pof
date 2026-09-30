@@ -1,12 +1,16 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_ERROR } from '@/lib/chart-colors';
+import { preflightStreamingPlan, residency } from '@/lib/level-design/streaming-preflight';
 import { useStreamingZonePlanner } from './useStreamingZonePlanner';
 import { PaintPalette } from './PaintPalette';
 import { ZoneGrid } from './ZoneGrid';
 import { ZoneEditor } from './ZoneEditor';
 import { TransitionList } from './TransitionList';
+import { PreflightPanel } from './PreflightPanel';
 import type { StreamingZonePlannerConfig, StreamingPlanStore } from './types';
 
 export type {
@@ -57,6 +61,15 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
     stats,
   } = useStreamingZonePlanner(store);
 
+  // Preflight runs on the document only (config is stable across selection/mode changes).
+  const preflight = useMemo(() => preflightStreamingPlan(config), [config]);
+  const resident = useMemo(() => residency(config), [config]);
+  const residentIds = useMemo(
+    () => (selectedZoneId ? new Set(resident.byZone[selectedZoneId] ?? []) : null),
+    [resident, selectedZoneId],
+  );
+  const blocking = preflight.findings.filter((f) => f.blocksGenerate).length;
+
   return (
     <div className="p-6 space-y-6 overflow-y-auto w-full max-w-6xl mx-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
       {/* Paint palette */}
@@ -80,6 +93,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
           handleCellClick={handleCellClick}
           deleteTransition={deleteTransition}
           selectedZoneId={selectedZoneId}
+          residentIds={residentIds}
         />
 
         {/* Right Column (Editor & Transitions) */}
@@ -102,6 +116,14 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
             />
           )}
 
+          <PreflightPanel
+            preflight={preflight}
+            residency={resident}
+            zones={zones}
+            selectedZoneId={selectedZoneId}
+            dispatch={dispatch}
+          />
+
           {/* Summary & Generate */}
           <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4">
             <div className="flex items-center justify-between mb-3 text-[11px] font-mono tracking-widest uppercase text-violet-300">
@@ -113,7 +135,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
             </div>
             <button
               onClick={() => onGenerate(config)}
-              disabled={isGenerating || zones.length === 0}
+              disabled={isGenerating || zones.length === 0 || preflight.blocksGenerate}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg"
               style={{
                 backgroundColor: `${MODULE_COLORS.content}20`,
@@ -134,6 +156,11 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
                 </>
               )}
             </button>
+            {preflight.blocksGenerate && (
+              <p className="mt-2 text-xs font-mono" style={{ color: STATUS_ERROR }}>
+                Generate blocked: {blocking} EWorldZone error{blocking === 1 ? '' : 's'} would not compile. Fix them in Preflight.
+              </p>
+            )}
           </div>
         </div>
       </div>
