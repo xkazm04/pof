@@ -50,6 +50,18 @@ export interface AudioZone {
   priority: number;
   /** Accent color for visual display */
   color: string;
+  /**
+   * The level-design room this zone was generated from (level -> audio sync).
+   * Additive and optional: a hand-drawn zone has none, and rows written before
+   * the field existed read unchanged.
+   */
+  sourceRoomId?: string;
+  /**
+   * What the generator derived when it last wrote this zone. The sync compares
+   * the zone against it to tell a hand-tuned field (zone != stamp: kept) from a
+   * level edit (stamp != new derivation: updated). See `spatial-audio-sync.ts`.
+   */
+  derivedFrom?: ZoneDerivation;
   // NOTE: `linkedFiles` was DELETED 2026-08-19. It was a previous attempt at the
   // asset↔scene edge — written (`[]`, or copied off a level-design room) by the
   // painter and the spatial-audio generator, then never read by anything. The
@@ -94,6 +106,45 @@ export interface SoundEmitter {
   cooldownSeconds: number;
   /** Zone this emitter belongs to (optional) */
   zoneId: string | null;
+  /** The level-design room this emitter was generated from (level -> audio sync). */
+  sourceRoomId?: string;
+  /** What the generator derived when it last wrote this emitter (see AudioZone.derivedFrom). */
+  derivedFrom?: EmitterDerivation;
+}
+
+// ── Level -> audio sync (spatial-audio-sync.ts) ──
+
+/** Zone fields the level derives; everything else on a zone is the painter's alone. */
+export type SyncedZoneField =
+  | 'name' | 'shape' | 'x' | 'y' | 'width' | 'height' | 'soundscapeDescription'
+  | 'reverbPreset' | 'reverbDecayTime' | 'reverbDiffusion' | 'reverbWetDry'
+  | 'attenuationRadius' | 'occlusionMode' | 'priority' | 'color';
+/** Emitter fields the level derives (`assetSetId` and `zoneId` never are). */
+export type SyncedEmitterField =
+  | 'name' | 'type' | 'x' | 'y' | 'soundCueRef' | 'attenuationRadius' | 'volumeMultiplier'
+  | 'pitchMin' | 'pitchMax' | 'spawnChance' | 'cooldownSeconds';
+
+/** A zone's derivation stamp, plus the emitter ids generated with it (a deleted one stays deleted). */
+export type ZoneDerivation = Pick<AudioZone, SyncedZoneField> & { emitterIds: string[] };
+export type EmitterDerivation = Pick<SoundEmitter, SyncedEmitterField>;
+
+/**
+ * One room's fate in a sync: `new` (no zone yet), `unchanged` (in sync),
+ * `updated` (the level changed and the zone is untouched), `kept` (hand-tuned,
+ * left alone unless overwritten), `orphaned` (the room left the level; nothing
+ * is deleted).
+ */
+export type LevelAudioSyncStatus = 'new' | 'unchanged' | 'updated' | 'kept' | 'orphaned';
+
+export interface LevelAudioSyncRow {
+  roomId: string;
+  roomName: string;
+  zoneId: string;
+  status: LevelAudioSyncStatus;
+  /** `kept`: the hand-tuned fields. `updated`: the fields the level changed. */
+  fields: string[];
+  /** Hand-tuned (or deleted) emitters of this room that the sync leaves alone. */
+  keptEmitters: string[];
 }
 
 // ── Audio Scene Document ──
