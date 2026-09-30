@@ -35,7 +35,6 @@ const WRAPPER = ['components/modules/visual-gen/blender-pipeline/ScriptRunner.ts
  * the panel — and delete its line here.
  */
 const UNMIGRATED = [
-  'components/modules/visual-gen/procedural-engine/useProceduralStore.ts',
   'components/modules/visual-gen/material-lab/useMaterialStore.ts',
   'components/modules/visual-gen/auto-rig/AutoRigView/index.tsx',
   'components/modules/content/materials/PostProcessStackBuilder/index.tsx',
