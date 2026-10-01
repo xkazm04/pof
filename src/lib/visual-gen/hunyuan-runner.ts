@@ -13,7 +13,8 @@
  */
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { processFailureReason, readMarker, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 export interface HunyuanSpec {
   imagePath: string;
@@ -40,6 +41,10 @@ export interface HunyuanResult {
   vramGb?: number;
   /** Gray-shape preview render (for the critique tiers + UI). */
   previewPath?: string;
+  /** Why the preview render failed (it never blocks the mesh) — never a silent absence. */
+  previewError?: string;
+  /** Non-fatal script notes (load/gen seconds, preview error) and any undeclared marker. */
+  diagnostics?: Record<string, string>;
   durationMs: number;
 }
 
@@ -62,17 +67,20 @@ export interface ParsedHunyuan {
   faces?: number;
   vramGb?: number;
   previewPath?: string;
+  previewError?: string;
+  diagnostics?: Record<string, string>;
   error?: string;
 }
 
-/** Parse the script's `POF_HY3D_*` stdout markers. Pure. */
+/** Parse the script's `POF_HY3D_*` stdout markers (declared in `script-markers.ts`). Pure. */
 export function parseHunyuanOutput(stdout: string): ParsedHunyuan {
-  const get = (k: string): string | undefined => readMarker(stdout, k);
-  const done = get('POF_HY3D_DONE');
-  const error = get('POF_HY3D_ERROR');
-  const verts = get('POF_HY3D_VERTS');
-  const faces = get('POF_HY3D_FACES');
-  const vram = get('POF_HY3D_VRAM_GB');
+  const block = readMarkerBlock('hunyuan', stdout);
+  const get = block.get;
+  const done = get('DONE');
+  const error = get('ERROR');
+  const verts = get('VERTS');
+  const faces = get('FACES');
+  const vram = get('VRAM_GB');
   return {
     ok: done !== undefined && error === undefined,
     meshPath: done,
@@ -80,7 +88,9 @@ export function parseHunyuanOutput(stdout: string): ParsedHunyuan {
     verts: verts ? Number(verts) : undefined,
     faces: faces ? Number(faces) : undefined,
     vramGb: vram ? Number(vram) : undefined,
-    previewPath: get('POF_HY3D_PREVIEW'),
+    previewPath: get('PREVIEW'),
+    previewError: get('PREVIEW_ERROR'),
+    diagnostics: block.diagnostics,
   };
 }
 
@@ -133,6 +143,8 @@ export async function runHunyuan(spec: HunyuanSpec, deps: HunyuanDeps = {}): Pro
     faces: parsed.faces,
     vramGb: parsed.vramGb,
     previewPath: parsed.previewPath,
+    previewError: parsed.previewError,
+    diagnostics: parsed.diagnostics,
     durationMs: now() - start,
   };
 }

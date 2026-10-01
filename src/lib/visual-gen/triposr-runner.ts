@@ -10,7 +10,8 @@
  */
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { processFailureReason, readMarker, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 export interface TriposrSpec {
   imagePath: string;
@@ -45,6 +46,11 @@ export interface TriposrResult {
   clipMax?: number;
   clipMean?: number;
   previewPath?: string;
+  /** Why the requested Tier-2 fidelity pass produced no CLIP numbers (it never blocks the
+   *  mesh) — so an absent `clipMax` cannot read as "fidelity was not requested". */
+  fidelityError?: string;
+  /** Non-fatal script notes and any undeclared marker, verbatim (`script-markers.ts`). */
+  diagnostics?: Record<string, string>;
   durationMs: number;
 }
 
@@ -83,28 +89,33 @@ export interface ParsedTriposr {
   clipMax?: number;
   clipMean?: number;
   previewPath?: string;
+  fidelityError?: string;
+  diagnostics?: Record<string, string>;
   error?: string;
 }
 
-/** Parse the script's `POF_TRIPOSR_*` stdout markers. Pure. */
+/** Parse the script's `POF_TRIPOSR_*` stdout markers (declared in `script-markers.ts`). Pure. */
 export function parseTriposrOutput(stdout: string): ParsedTriposr {
-  const get = (k: string): string | undefined => readMarker(stdout, k);
-  const done = get('POF_TRIPOSR_DONE');
-  const error = get('POF_TRIPOSR_ERROR');
-  const verts = get('POF_TRIPOSR_VERTS');
-  const faces = get('POF_TRIPOSR_FACES');
-  const clipMax = get('POF_TRIPOSR_CLIP_MAX');
-  const clipMean = get('POF_TRIPOSR_CLIP_MEAN');
+  const block = readMarkerBlock('triposr', stdout);
+  const get = block.get;
+  const done = get('DONE');
+  const error = get('ERROR');
+  const verts = get('VERTS');
+  const faces = get('FACES');
+  const clipMax = get('CLIP_MAX');
+  const clipMean = get('CLIP_MEAN');
   return {
     ok: done !== undefined && error === undefined,
     meshPath: done,
     error,
     verts: verts ? Number(verts) : undefined,
     faces: faces ? Number(faces) : undefined,
-    device: get('POF_TRIPOSR_DEVICE'),
+    device: get('DEVICE'),
     clipMax: clipMax ? Number(clipMax) : undefined,
     clipMean: clipMean ? Number(clipMean) : undefined,
-    previewPath: get('POF_TRIPOSR_PREVIEW'),
+    previewPath: get('PREVIEW'),
+    fidelityError: get('CLIP_ERROR'),
+    diagnostics: block.diagnostics,
   };
 }
 
@@ -155,6 +166,8 @@ export async function runTriposr(spec: TriposrSpec, deps: TriposrDeps = {}): Pro
     clipMax: parsed.clipMax,
     clipMean: parsed.clipMean,
     previewPath: parsed.previewPath,
+    fidelityError: parsed.fidelityError,
+    diagnostics: parsed.diagnostics,
     durationMs: now() - start,
   };
 }

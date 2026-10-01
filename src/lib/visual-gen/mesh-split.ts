@@ -32,9 +32,11 @@
  *    "the mesh had 3 components".
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { BLENDER_CANDIDATES } from './mesh-finish';
 import { blenderNotFound, locateBlender, type BlenderSeams } from './blender-locate';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 /**
  * Components holding less than this share of the total faces are specks, not props.
@@ -106,6 +108,8 @@ export interface ParsedMeshSplit {
   capped?: number;
   /** Share of the input's faces the written parts account for, 0..1. */
   coverage?: number;
+  /** Any marker the declaration does not know, verbatim (`script-markers.ts`). */
+  diagnostics?: Record<string, string>;
   error?: string;
 }
 
@@ -131,32 +135,25 @@ export function buildMeshSplitArgs(scriptPath: string, spec: MeshSplitSpec): str
   return args;
 }
 
-/** Parse the script's `POF_MESHSPLIT_*` stdout markers. Pure. */
+/** Parse the script's `POF_MESHSPLIT_*` stdout markers (declared in `script-markers.ts`). Pure. */
 export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
-  const get = (k: string): string | undefined => {
-    const m = stdout.match(new RegExp(`^POF_MESHSPLIT_${k}=(.*)$`, 'm'));
-    return m ? m[1].trim() : undefined;
-  };
-  const num = (k: string): number | undefined => {
-    const v = get(k);
-    return v === undefined ? undefined : Number(v);
-  };
+  const block = readMarkerBlock('meshSplit', stdout);
+  const { get, num } = block;
 
   const error = get('ERROR');
   if (error) return { ok: false, parts: [], error };
 
   const parts: SplitPart[] = [];
-  for (const line of stdout.split(/\r?\n/)) {
-    const m = line.match(/^POF_MESHSPLIT_PART=(.*)$/);
-    if (!m) continue;
-    const [name, faces, share, path] = m[1].split('|');
+  for (const value of block.all('PART')) {
+    const [name, faces, share, path] = value.split('|');
     if (!name || !path) continue;
     parts.push({ name: name.trim(), path: path.trim(), faces: Number(faces), share: Number(share) });
   }
 
   // DONE with no part is not a success: the caller asked for assets and got none, and
   // "the script finished" is not the thing being reported.
-  const ok = get('DONE') !== undefined && parts.length > 0;
+  const done = get('DONE') !== undefined;
+  const ok = done && parts.length > 0;
   return {
     ok,
     facesIn: num('FACES_IN'),
@@ -166,11 +163,16 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
     discardedFaces: num('DISCARDED_FACES'),
     capped: num('CAPPED'),
     coverage: num('COVERAGE'),
-    error: ok || parts.length ? undefined : 'split produced no part above the speck threshold',
+    diagnostics: block.diagnostics,
+    // The speck reason is true only of a run that FINISHED; a run that never printed
+    // DONE (killed, crashed, never started) gets its process reason from runMeshSplit.
+    error: ok || parts.length
+      ? undefined
+      : done ? 'split produced no part above the speck threshold' : 'no POF_MESHSPLIT_DONE marker — the split did not finish',
   };
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
 export interface MeshSplitDeps extends BlenderSeams {
   run?: RunFn;
@@ -199,8 +201,15 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
   if (!fileExists(script)) return err(`pof_mesh_split.py not found at ${script}`);
 
   const start = now();
-  const { stdout } = await run(blender, buildMeshSplitArgs(script, spec), spec.timeoutMs ?? 600_000);
-  const parsed = parseMeshSplitOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 600_000;
+  const outcome = await run(blender, buildMeshSplitArgs(script, spec), timeoutMs);
+  const parsed = parseMeshSplitOutput(outcome.stdout);
+  // No DONE and no ERROR marker → Blender itself says why (crash, timeout, never started).
+  const ended = readMarkerBlock('meshSplit', outcome.stdout);
+  const markerless = ended.get('DONE') === undefined && ended.get('ERROR') === undefined;
+  const processError = markerless
+    ? processFailureReason(outcome, { tool: `Blender (${basename(script)})`, timeoutMs })
+    : undefined;
 
   // A part is only a part if the file is there. The script announcing one it did not
   // write would otherwise become an asset URL that 404s at the viewer.
@@ -211,22 +220,11 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
     ...parsed,
     ok: parsed.ok && written.length > 0 && missing.length === 0,
     parts: written,
-    error: parsed.error
+    error: processError ?? parsed.error
       ?? (missing.length ? `the split announced ${missing.length} part(s) that were not written: ${missing.join(', ')}` : undefined),
     durationMs: now() - start,
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live run) ────────────
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });

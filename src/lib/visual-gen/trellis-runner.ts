@@ -30,7 +30,8 @@
  */
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { processFailureReason, readMarker, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 export interface TrellisSpec {
   imagePath: string;
@@ -70,6 +71,11 @@ export interface TrellisResult {
   /** PBR-lit preview render (for the critique tiers + UI). A textured mesh judged on a
    *  gray shape render would hide exactly what this provider adds. */
   previewPath?: string;
+  /** Why no preview exists: the flat fallback's error (the PBR attempt's own error, if
+   *  any, is in `diagnostics.PREVIEW_PBR_ERROR`). Never blocks the mesh. */
+  previewError?: string;
+  /** Non-fatal script notes (preview errors, load/gen seconds) and any undeclared marker. */
+  diagnostics?: Record<string, string>;
   durationMs: number;
 }
 
@@ -107,21 +113,25 @@ export function buildTrellisArgs(script: string, spec: TrellisSpec, root: string
   return args;
 }
 
-/** Parse the POF_T2_* marker block out of the script's stdout. Pure. */
+/** Parse the POF_T2_* marker block (declared in `script-markers.ts`) out of the script's stdout. Pure. */
 export function parseTrellisOutput(stdout: string): Omit<TrellisResult, 'durationMs'> {
-  const get = (k: string): string | undefined => readMarker(stdout, k);
-  const done = get('POF_T2_DONE');
-  const error = get('POF_T2_ERROR');
+  const block = readMarkerBlock('trellis', stdout);
+  const get = block.get;
+  const done = get('DONE');
+  const error = get('ERROR');
   const num = (k: string) => { const v = get(k); return v ? Number(v) : undefined; };
+  const previewPath = get('PREVIEW');
   return {
     ok: done !== undefined && error === undefined,
     meshPath: done,
     error,
-    verts: num('POF_T2_VERTS'),
-    faces: num('POF_T2_FACES'),
-    vramGb: num('POF_T2_VRAM_GB'),
-    bakeSeconds: num('POF_T2_BAKE_S'),
-    previewPath: get('POF_T2_PREVIEW'),
+    verts: num('VERTS'),
+    faces: num('FACES'),
+    vramGb: num('VRAM_GB'),
+    bakeSeconds: num('BAKE_S'),
+    previewPath,
+    previewError: previewPath ? undefined : get('PREVIEW_ERROR'),
+    diagnostics: block.diagnostics,
   };
 }
 
@@ -212,6 +222,8 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
     vramGb: parsed.vramGb,
     bakeSeconds: parsed.bakeSeconds,
     previewPath: back(parsed.previewPath),
+    previewError: parsed.previewError,
+    diagnostics: parsed.diagnostics,
     durationMs: now() - start,
   };
 }

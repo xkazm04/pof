@@ -11,9 +11,12 @@
  * {@link processFailureReason} is the one sentence for those endings; a runner uses it as
  * `markerError ?? processFailureReason(outcome, …)`, so a script's own marker still wins.
  *
- * Server-only (node:child_process). The mesh-quality spawns (mesh-critique/-finish/-split/
- * -views) still carry their own copies and can adopt this later.
+ * Server-only (node:child_process). The headless-Blender spawns (mesh-finish/-split/-views)
+ * run through it too; mesh-critique still carries its own copy and can adopt it later.
+ * What a script's markers MEAN is declared per script in `script-markers.ts`.
  */
+
+export { readMarker } from '@/lib/visual-gen/script-markers';
 
 /** How a local process ended. `timedOut` / `spawnError` are optional so a runner's test
  *  fake that returns `{ stdout, code }` stays a valid outcome. */
@@ -82,12 +85,6 @@ export async function runLocalProcess(
     child.on('close', (c: number | null) => { if (code === null) code = c; settle(); });
     child.on('error', (e: Error) => settle({ code: null, spawnError: e.message }));
   });
-}
-
-/** Read a `KEY=value` stdout marker line (the runners' script protocol). Pure. */
-export function readMarker(stdout: string, key: string): string | undefined {
-  const m = stdout.match(new RegExp(`^${key}=(.*)$`, 'm'));
-  return m ? m[1].trim() : undefined;
 }
 
 const TAIL_CAP = 300;
