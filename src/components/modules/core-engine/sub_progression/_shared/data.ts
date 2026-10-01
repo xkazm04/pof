@@ -52,23 +52,12 @@ export const PROGRESSION_FEATURES = [
   'Skill point allocation UI',
 ];
 
-/* -- Milestone unlocks for the main chart --------------------------------- */
-
-export const ABILITY_UNLOCKS = [
-  { level: 5, name: 'Dodge Roll', class: 'Movement' },
-  { level: 10, name: 'Heavy Strike', class: 'Attack' },
-  { level: 25, name: 'Ultimate Power', class: 'Ultimate' },
-  { level: 40, name: 'Ascension', class: 'Passive' },
-];
-
 /* -- 8.1 Multi-Curve Overlay Data ----------------------------------------- */
 
+// Illustrative stat series only. The overlay's XP series is not data: it is
+// derived from the live curve by `xpOverlaySeries` (./curveModel.ts), and the
+// Curves-tab milestones are the live reward schedule (./rewardPacing.ts).
 export const MULTI_CURVE_SERIES: ChartSeries[] = [
-  {
-    id: 'xp', label: 'XP Required', color: STATUS_WARNING,
-    points: Array.from({ length: 11 }, (_, i) => ({ x: i * 5, y: Math.floor(100 * Math.pow(i * 5 || 1, 1.5)) })),
-    visible: true,
-  },
   {
     id: 'hp', label: 'HP', color: STATUS_SUCCESS,
     points: Array.from({ length: 11 }, (_, i) => ({ x: i * 5, y: 100 + i * 5 * 20 })),

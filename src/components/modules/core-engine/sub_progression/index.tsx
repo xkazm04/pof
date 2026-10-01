@@ -136,11 +136,11 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
             />
           </div>
 
-          <MultiCurveOverlay />
+          <MultiCurveOverlay baseXp={baseXp} curveExp={curveExp} />
 
           {/* Milestone timeline + feature grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <MilestoneTimeline />
+            <MilestoneTimeline baseXp={baseXp} curveExp={curveExp} schedule={rewardGroups} />
             <BlueprintPanel color={ACCENT} className="p-3">
               <SectionHeader label="System Integration Status" icon={Settings2} color={ACCENT} />
               <FeatureGrid

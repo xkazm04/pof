@@ -76,8 +76,6 @@ export function MainChartArea({
           </div>
 
           <CurveDeltaSummary
-            snapshotData={snapshotChartData}
-            liveData={chartData}
             snapshotBaseXp={snapshotBaseXp}
             snapshotCurveExp={snapshotCurveExp}
             liveBaseXp={baseXp}

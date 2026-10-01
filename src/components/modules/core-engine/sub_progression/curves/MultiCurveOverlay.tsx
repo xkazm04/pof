@@ -1,18 +1,32 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { STATUS_WARNING } from '@/lib/chart-colors';
+import type { ChartSeries } from '@/types/unique-tab-improvements';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { NormalizedLineChart } from '../../unique-tabs/_shared';
 import { ACCENT, MULTI_CURVE_SERIES } from '../_shared/data';
+import { xpOverlaySeries } from '@/components/modules/core-engine/sub_progression/_shared/curveModel';
 
-export const MultiCurveOverlay = memo(function MultiCurveOverlay() {
+interface MultiCurveOverlayProps {
+  /** Live curve parameters: the XP series follows the Curves-tab sliders. */
+  baseXp: number;
+  curveExp: number;
+}
+
+export const MultiCurveOverlay = memo(function MultiCurveOverlay({ baseXp, curveExp }: MultiCurveOverlayProps) {
+  const series = useMemo<ChartSeries[]>(() => [
+    { id: 'xp', label: 'XP Required', color: STATUS_WARNING, points: xpOverlaySeries(baseXp, curveExp), visible: true },
+    ...MULTI_CURVE_SERIES,
+  ], [baseXp, curveExp]);
+
   const [curveVisibility, setCurveVisibility] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(MULTI_CURVE_SERIES.map(s => [s.id, true]))
+    Object.fromEntries(series.map(s => [s.id, true]))
   );
 
-  const visibleSeries = MULTI_CURVE_SERIES.filter(s => curveVisibility[s.id]);
+  const visibleSeries = series.filter(s => curveVisibility[s.id]);
   const multiCurveMax = Math.max(...visibleSeries.flatMap(s => s.points.map(p => p.y)), 1);
 
   return (
@@ -20,7 +34,7 @@ export const MultiCurveOverlay = memo(function MultiCurveOverlay() {
       <div className="flex items-center justify-between mb-2.5">
         <SectionHeader icon={Layers} label="Multi-Curve Overlay" color={ACCENT} />
         <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Curve visibility controls">
-          {MULTI_CURVE_SERIES.map(s => (
+          {series.map(s => (
             <label key={s.id} className="flex items-center gap-1.5 cursor-pointer select-none">
               <input
                 type="checkbox"
