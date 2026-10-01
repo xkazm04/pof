@@ -1,5 +1,5 @@
 import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
 import type { DamageEvent, FeedbackEvent, ChoreographyAlert } from '@/lib/combat/choreography-sim';
@@ -100,6 +100,34 @@ export function nextId(): string {
   return `e${_nextId++}`;
 }
 
+// ── Finding lookup ─────────────────────────────────────────────────────────
+/** Range label for a ranged finding ("12.5–17s"), point label ("8s") otherwise. */
+export function findingTimeLabel(a: BalanceAlert): string {
+  return a.endTimeSec !== undefined ? `${a.timeSec}–${a.endTimeSec}s` : `${a.timeSec}s`;
+}
+
+/**
+ * The finding to show at `time`: the nearest point finding within 1s wins;
+ * otherwise the narrowest ranged finding that CONTAINS `time` (a 36s dead zone
+ * shows across its whole span, not only near its start).
+ */
+export function findAlertAt(time: number, alerts: BalanceAlert[]): BalanceAlert | null {
+  let point: BalanceAlert | null = null;
+  let pointDist = 1;
+  let range: BalanceAlert | null = null;
+  let rangeSpan = Infinity;
+  for (const a of alerts) {
+    if (a.endTimeSec !== undefined) {
+      const span = a.endTimeSec - a.timeSec;
+      if (time >= a.timeSec && time <= a.endTimeSec && span < rangeSpan) { range = a; rangeSpan = span; }
+      continue;
+    }
+    const d = Math.abs(a.timeSec - time);
+    if (d < pointDist) { point = a; pointDist = d; }
+  }
+  return point ?? range;
+}
+
 // ── Scrub Data Computation ─────────────────────────────────────────────────
 export function computeScrubData(
   time: number,
@@ -124,13 +152,7 @@ export function computeScrubData(
     }
   }
 
-  let closestAlert: BalanceAlert | null = null;
-  let closestAlertDist = 1;
-  for (const a of alerts) {
-    if (a.timeSec === undefined) continue;
-    const d = Math.abs(a.timeSec - time);
-    if (d < closestAlertDist) { closestAlert = a; closestAlertDist = d; }
-  }
+  const closestAlert = findAlertAt(time, alerts);
 
   let tension: number | null = null;
   if (tensionCurve && tensionCurve.samples.length > 0) {

@@ -2,15 +2,15 @@
 
 import { AlertTriangle } from 'lucide-react';
 import {
-  STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
+  STATUS_ERROR, STATUS_WARNING,
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
-  OVERLAY_WHITE, withOpacity, OPACITY_25, OPACITY_22, OPACITY_12, OPACITY_30, OPACITY_50, GLOW_SM,
+  withOpacity, OPACITY_25, OPACITY_22, OPACITY_12, OPACITY_30, OPACITY_50, GLOW_SM,
 } from '@/lib/chart-colors';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import type { DamageEvent, FeedbackEvent, WaveDef } from '@/lib/combat/choreography-sim';
 import type { TensionCurve } from '@/lib/combat/tension-curve';
 import {
-  FEEDBACK_CHANNELS,
+  FEEDBACK_CHANNELS, severityColor, findingTimeLabel,
   LANE_TENSION_H, LANE_PACING_H, LANE_DAMAGE_H, LANE_ALERT_H, LANE_FEEDBACK_H,
   type BalanceAlert,
 } from './types';
@@ -85,8 +85,15 @@ export function TimelineLanes({
       {hasAlerts && (
         <div className="relative bg-black/20 rounded border border-border/10" style={{ height: LANE_ALERT_H }}>
           {timelineAlerts.map((alert, i) => {
-            const color = alert.severity === 'critical' ? STATUS_ERROR : alert.severity === 'warning' ? STATUS_WARNING : STATUS_INFO;
-            const x = (alert.timeSec ?? 0) * pxPerSec;
+            const color = severityColor(alert.severity);
+            const x = alert.timeSec * pxPerSec;
+            if (alert.endTimeSec !== undefined) {
+              // Ranged finding (dead zone, flat pacing): a band across its whole span.
+              return (
+                <div key={i} className="absolute top-0.5 rounded-sm" title={`${findingTimeLabel(alert)}: ${alert.message}`}
+                  style={{ left: x, width: Math.max(3, (alert.endTimeSec - alert.timeSec) * pxPerSec), height: LANE_ALERT_H - 4, backgroundColor: `${withOpacity(color, OPACITY_12)}`, border: `1px dashed ${withOpacity(color, OPACITY_50)}` }} />
+              );
+            }
             return (
               <div key={i} className="absolute top-0 flex items-center justify-center" style={{ left: x - 8, width: 16, height: LANE_ALERT_H }}>
                 <div className="absolute top-0 h-full w-px opacity-30" style={{ backgroundColor: color }} />
