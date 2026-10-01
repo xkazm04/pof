@@ -172,7 +172,7 @@ export function compileMachine<S extends CompileStateLike, T extends CompileTran
   }
   if (entrySource === 'implicit' && fallback) {
     diagnostics.push(finding('implicit-fallback', 'warning', [fallback.id], [],
-      `No state is marked Default — ComputeAnimState() falls back to "${fallback.name}", the lowest-priority state. Mark the intended fallback Default; reachability and dead-end checks need it.`));
+      `No state is marked Default — ComputeAnimState() falls back to "${fallback.name}", the lowest-priority state. Reachability and dead-end checks run from it; mark the intended fallback Default.`));
   }
 
   const byId = new Map(states.map((s) => [s.id, s]));

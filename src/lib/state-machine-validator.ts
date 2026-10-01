@@ -96,10 +96,9 @@ export function validateStateMachine<S extends StateLike, T extends TransitionLi
   if (states.length === 0) return warnings;
 
   const knownFlagSet = new Set(knownFlags);
-  // Graph checks need a DECLARED entry. With no Default state the AnimBP's
-  // graph entry is unknown; compileMachine says so (implicit-fallback warning)
-  // instead of the linter judging reachability from an assumed state.
-  const entry = compiled.entrySource === 'declared' ? compiled.fallback : null;
+  // Graph checks run from the compiled entry: the state the generated
+  // ComputeAnimState() falls back to (declared or implicit), never array order.
+  const entry = compiled.fallback;
   const { forward, backward } = buildAdjacency(transitions);
 
   // 1. Unreachable states — no path from entry/default

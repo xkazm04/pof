@@ -43,15 +43,22 @@ const returnsOf = (code: string) =>
   code.split('\n').filter((l) => l.includes('return EARPGAnimState::')).map((l) => l.trim());
 
 describe('compileMachine — acceptance (card animation-state-machine-editor/A)', () => {
-  it('1. scan seed: entry is the state the C++ falls back to, and the linter raises no unreachable finding', () => {
+  it('1. scan seed: reachability runs FROM the state the C++ falls back to (SaberSlash), never from array order', () => {
     const seed = seedFromScan(SCAN)!;
     const compiled = compileMachine(seed.states, seed.transitions);
     expect(compiled.entryId).toBe('scanned-SaberSlash');
     expect(generateComputeAnimState(seed.states)).toContain('\treturn EARPGAnimState::SaberSlash;\n}');
 
     const warnings = validateStateMachine(seed.states, seed.transitions, KNOWN_FLAGS);
-    expect(warnings.filter((w) => w.kind === 'unreachable-state')).toEqual([]);
+    // The false finding is gone: SaberSlash is the entry, not "unreachable from Idle".
+    expect(warnings.some((w) => w.kind === 'unreachable-state' && w.stateIds.includes('scanned-SaberSlash'))).toBe(false);
     expect(warnings.some((w) => w.message.includes('no path from "Idle"'))).toBe(false);
+    // Coordinator review of d47d3e86: the graph check runs from the compiled entry
+    // and reports what it finds, unsuppressed. SaberSlash has no transitions at all
+    // in this scan, so Idle and Sprint have no path from it.
+    const unreachable = warnings.filter((w) => w.kind === 'unreachable-state');
+    expect(unreachable.map((w) => w.stateIds[0])).toEqual(['scanned-Idle', 'scanned-Sprint']);
+    expect(unreachable.every((w) => w.message.includes('no path from "SaberSlash"'))).toBe(true);
   });
 
   it('2. scan seed: an implicit-fallback WARNING names SaberSlash as the lowest-priority fallback', () => {
