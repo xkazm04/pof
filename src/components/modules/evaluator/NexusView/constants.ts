@@ -1,6 +1,6 @@
 import { AlertTriangle, Eye, BookOpen, BarChart3, Swords } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
-import type { ImplementationPattern } from '@/types/pattern-library';
+import type { NexusLayerId } from '@/lib/evaluator/nexus-signals';
 import { TOPOLOGY_ROOMY } from '@/lib/topology/moduleGraph';
 
 // ─── Node size of the roomy module topology (placement: @/lib/topology/moduleGraph) ──
@@ -9,7 +9,7 @@ export const { nodeW: NODE_W, nodeH: NODE_H } = TOPOLOGY_ROOMY;
 
 // ─── Data layer toggle ─────────────────────────────────────────────────────
 
-export type LayerId = 'patterns' | 'builds' | 'sessions' | 'genre';
+export type LayerId = NexusLayerId;
 
 export interface LayerConfig {
   id: LayerId;
@@ -20,15 +20,10 @@ export interface LayerConfig {
 
 export const LAYERS: LayerConfig[] = [
   { id: 'patterns', label: 'Pattern Success', color: STATUS_SUCCESS, icon: BookOpen },
-  { id: 'builds', label: 'Build Health', color: MODULE_COLORS.evaluator, icon: AlertTriangle },
+  { id: 'builds', label: 'Critical Findings', color: MODULE_COLORS.evaluator, icon: AlertTriangle },
   { id: 'sessions', label: 'Session Activity', color: STATUS_INFO, icon: BarChart3 },
   { id: 'genre', label: 'Genre Features', color: ACCENT_VIOLET, icon: Swords },
 ];
-
-// ─── Stable empty constants ────────────────────────────────────────────────
-
-export const EMPTY_PATTERNS: ImplementationPattern[] = [];
-export const EMPTY_HISTORY: { id: string; prompt: string; status: string; timestamp: number }[] = [];
 
 // ─── Genre item → module mapping ───────────────────────────────────────────
 

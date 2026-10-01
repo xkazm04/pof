@@ -81,9 +81,11 @@ export function NexusGraph({
           const isHighlighted = highlightModule === edge.from || highlightModule === edge.to;
           const opacity = highlightModule ? (isHighlighted ? 1 : 0.12) : 0.4;
 
-          // Layer 3: show avg duration on edge when sessions layer active
+          // Layer 3: show avg recorded-run duration on edge when sessions layer active
+          // (mean of the endpoints that HAVE recorded runs; none -> no annotation)
           const showSessionAnnotation = activeLayers.has('sessions') && isHighlighted;
-          const avgMs = (fromNode.avgDurationMs + toNode.avgDurationMs) / 2;
+          const durations = [fromNode.avgDurationMs, toNode.avgDurationMs].filter((d): d is number => d !== null);
+          const avgMs = durations.length ? durations.reduce((s, d) => s + d, 0) / durations.length : 0;
 
           return (
             <g key={`${edge.from}->${edge.to}`}>
@@ -129,14 +131,14 @@ export function NexusGraph({
             ? node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : node.patternSuccessRate >= 0.4 ? STATUS_WARNING : STATUS_ERROR
             : undefined;
 
-          // Layer 2: build failure glow
-          const showBuildGlow = activeLayers.has('builds') && node.hasBuildFailure;
+          // Layer 2: critical findings in the newest deep eval (null = never evaluated: no glow)
+          const showBuildGlow = activeLayers.has('builds') && (node.criticalFindings ?? 0) > 0;
 
           // Layer 4: genre glow
           const showGenreGlow = activeLayers.has('genre') && node.genreItemCount > 0;
 
           // Layer 3: session indicator
-          const showSessionBadge = activeLayers.has('sessions') && node.sessionCount > 0;
+          const showSessionBadge = activeLayers.has('sessions') && (node.sessionCount ?? 0) > 0;
 
           return (
             <g
@@ -148,7 +150,7 @@ export function NexusGraph({
               opacity={dimmed ? 0.2 : 1}
               style={{ transition: 'opacity 200ms' }}
             >
-              {/* Layer 2: Build failure pulsing glow */}
+              {/* Layer 2: Critical-findings pulsing glow */}
               {showBuildGlow && (
                 <rect
                   x={node.cx - NODE_W / 2 - 3}

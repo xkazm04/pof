@@ -1,8 +1,14 @@
 import type { SubModuleId } from '@/types/modules';
+import type { NexusSignal } from '@/lib/evaluator/nexus-signals';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-export interface NexusNode {
+/**
+ * One module on the map: topology placement + counts, checklist progress, genre
+ * coverage, and the durable overlay signals from `projectNexusSignals`
+ * (`null` = not measurable / source not ready � never drawn as 0).
+ */
+export interface NexusNode extends NexusSignal {
   moduleId: SubModuleId;
   label: string;
   cx: number;
@@ -10,23 +16,11 @@ export interface NexusNode {
   featureCount: number;
   implementedCount: number;
   blockedCount: number;
-  // Layer 1: pattern success
-  patternSuccessRate: number | null; // 0-1 or null if no patterns
-  patternCount: number;
-  // Layer 2: build health
-  hasBuildFailure: boolean;
-  // Layer 3: session activity
-  sessionCount: number;
-  avgDurationMs: number;
-  lastTaskSuccess: boolean | null;
   // Layer 4: genre coverage
   genreItemCount: number; // how many genre priority items belong to this module
   // Checklist
   checklistTotal: number;
   checklistDone: number;
-  // Health
-  healthScore: number;
-  healthStatus: string;
 }
 
 export interface NexusEdge {
