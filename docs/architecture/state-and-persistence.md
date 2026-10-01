@@ -445,7 +445,7 @@ nothing more can be claimed — a verdict-only write archives nothing, and the d
 rather than implying no change. `historyTruncated` marks a step at the `MAX_REVISIONS` cap, where the
 count is a floor, and the row says so. The baseline is `LabPrefs.lastVisitByCatalog`, frozen per page
 session by `hooks/useLastVisit.ts` so a visit cannot become its own baseline; a **missing baseline is
-refused with a 400**, never treated as "everything changed".
+refused with a 400**, never treated as "everything changed". Each row also carries **`priorStatus`** (2026-10-01): the verdict archived with the EARLIEST version superseded after `since`, i.e. what the step held right before its first content change since the baseline. It is absent when nothing was archived since, and absent at the `MAX_REVISIONS` cap when no surviving version predates `since` (the baseline-era version may have been pruned), so the value is never guessed. The response echoes `catalogId`.
 
 Read + restore go through **`GET/POST /api/pipeline-artifacts/revisions`**. A restore is *not* a raw
 copy: it re-runs the step's Checker via `gradeArtifact` exactly as the produce POST does, because an
