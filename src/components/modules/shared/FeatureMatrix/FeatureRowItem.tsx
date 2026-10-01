@@ -15,6 +15,7 @@ import { QualityStars } from './QualityStars';
 import { FeatureProvenanceBadge } from './FeatureProvenanceBadge';
 import { VerificationBadge } from './VerificationBadge';
 import { DependencyChain } from './DependencyChain';
+import { useRegressedFrom } from './ReviewDeltaStrip';
 
 export function FeatureRowItem({
   feature,
@@ -45,6 +46,8 @@ export function FeatureRowItem({
   const isBlocked = depInfo?.isBlocked ?? false;
   const hasDetails = feature.reviewNotes || feature.filePaths.length > 0 || feature.nextSteps || hasDeps;
   const [copied, setCopied] = useState(false);
+  // Set only when the newest review/fix moved this row DOWN a rung (measured delta).
+  const regressedFrom = useRegressedFrom(feature.featureName);
 
   const handleCopy = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -200,6 +203,18 @@ export function FeatureRowItem({
         {/* Verification badge — shown after auto-verify runs */}
         {verificationResult && (
           <VerificationBadge result={verificationResult} />
+        )}
+
+        {/* Regression badge — the status this row held before the last review. */}
+        {regressedFrom && (
+          <span
+            data-testid={`pof-feature-matrix-regressed-${testIdSlug}`}
+            className="text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
+            style={{ backgroundColor: statusBg(STATUS_ERROR), color: STATUS_ERROR, border: `1px solid ${statusBorder(STATUS_ERROR)}` }}
+            title={`The last review moved this feature from ${STATUS_CONFIG[regressedFrom].label} to ${cfg.label}`}
+          >
+            was {STATUS_CONFIG[regressedFrom].label.toLowerCase()}
+          </span>
         )}
 
         {/* Status badge */}

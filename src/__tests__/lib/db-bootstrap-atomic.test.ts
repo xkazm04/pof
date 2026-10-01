@@ -342,17 +342,17 @@ describe('the legacy session_analytics ISO-default rebuild', () => {
 });
 
 describe('an already-stamped DB is untouched', () => {
-  it('opens a database stamped at the current user_version (5) without altering one schema object', async () => {
+  it('opens a database stamped at the current user_version (6) without altering one schema object', async () => {
     // Build it the way the app itself would, then re-open: nothing may move.
     const file = newDbFile('stamped');
     const first = await openThroughApp(file);
-    expect(first.pragma('user_version', { simple: true })).toBe(5);
+    expect(first.pragma('user_version', { simple: true })).toBe(6);
     first.prepare("INSERT INTO settings (key, value) VALUES ('k','v')").run();
     const before = (first.prepare("SELECT type, name, sql FROM sqlite_master ORDER BY type, name").all());
     first.close();
 
     const again = await openThroughApp(file);
-    expect(again.pragma('user_version', { simple: true })).toBe(5);
+    expect(again.pragma('user_version', { simple: true })).toBe(6);
     expect(again.prepare("SELECT type, name, sql FROM sqlite_master ORDER BY type, name").all()).toEqual(before);
     expect(count(again, 'settings')).toBe(1);
   });

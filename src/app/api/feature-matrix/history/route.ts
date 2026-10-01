@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getReviewHistory, getAllReviewHistory, normalizeProjectId } from '@/lib/feature-matrix-db';
+import { getReviewHistory, getAllReviewHistory, getLatestReviewDelta, normalizeProjectId } from '@/lib/feature-matrix-db';
 import { apiSuccess, withRoute } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
 
@@ -11,6 +11,10 @@ import type { SubModuleId } from '@/types/modules';
  * so past 20 reviews a module's sparkline was frozen on ancient history while the
  * aggregate dashboard, reading the same table through the ROW_NUMBER sibling, showed
  * the current one — two views of one table that could not agree.
+ *
+ * The per-module branch also returns `delta`: WHICH features the newest
+ * review/fix event moved (the diff of the newest snapshot pair's per-feature
+ * states), or `measured: false` with a reason when that pair cannot say.
  */
 export const GET = withRoute(async (request: NextRequest) => {
   const params = request.nextUrl.searchParams;
@@ -23,7 +27,8 @@ export const GET = withRoute(async (request: NextRequest) => {
 
   if (moduleId) {
     const snapshots = getReviewHistory(moduleId as SubModuleId, safeLimit, projectId);
-    return apiSuccess({ snapshots, projectId });
+    const delta = getLatestReviewDelta(moduleId as SubModuleId, projectId);
+    return apiSuccess({ snapshots, projectId, delta });
   }
 
   // No moduleId → return all modules' history (for aggregate dashboard)

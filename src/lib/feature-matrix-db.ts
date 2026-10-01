@@ -4,6 +4,8 @@ import { normalizeProjectId, projectScopeSql } from '@/lib/project-id';
 import type { SubModuleId } from '@/types/modules';
 import { FEATURE_STATUSES, normalizeFeatureSource } from '@/types/feature-matrix';
 import type { FeatureRow, FeatureSource, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
+import { deriveReviewDelta, parseFeatureStates } from '@/lib/feature-review-delta';
+import type { FeatureStateEntry, ReviewDelta } from '@/lib/feature-review-delta';
 
 const VALID_STATUSES: Set<string> = new Set(FEATURE_STATUSES);
 
@@ -628,7 +630,8 @@ function mapSnapshotRow(r: SnapshotRow): ReviewSnapshot {
 export const MAX_SNAPSHOTS_PER_MODULE = 200;
 
 /**
- * Record the module's current counts as a point on its quality trend.
+ * Record the module's current counts — and its per-feature states — as a point on
+ * its quality trend.
  *
  * Two ways this used to write points that were not review events:
  *  - the timestamp is `MAX(last_reviewed_at)`, so re-importing a report (same
@@ -639,6 +642,11 @@ export const MAX_SNAPSHOTS_PER_MODULE = 200;
  * A capture at a timestamp the module's latest snapshot already holds now updates
  * that row in place instead of appending beside it: one point per reviewed instant,
  * carrying the newest counts for it.
+ *
+ * `feature_states` records WHICH feature held which status/quality at this point,
+ * so {@link getLatestReviewDelta} can say what the event moved. Counts and states
+ * come from the SAME shadowed read the matrix displays ({@link shadowedScopeSql}:
+ * an owned row hides its legacy twin), so a snapshot never counts a feature twice.
  */
 export function captureReviewSnapshot(moduleId: SubModuleId, projectId?: string): void {
   ensureTables();
@@ -649,6 +657,7 @@ export function captureReviewSnapshot(moduleId: SubModuleId, projectId?: string)
   // busy project's history evict a quiet one's only point.
   const pid = normalizeProjectId(projectId);
   const scope = projectScopeSql(pid);
+  const rowScope = shadowedScopeSql(pid);
   const row = db
     .prepare(
       `SELECT
@@ -656,16 +665,33 @@ export function captureReviewSnapshot(moduleId: SubModuleId, projectId?: string)
          ${STATUS_COUNT_COLUMNS},
          AVG(CASE WHEN quality_score IS NOT NULL THEN quality_score END) as avg_quality,
          MAX(last_reviewed_at) as last_reviewed
-       FROM feature_matrix
-       WHERE module_id = ? AND ${scope.sql}`,
+       FROM feature_matrix fm
+       WHERE fm.module_id = ? AND ${rowScope.sql}`,
     )
-    .get(moduleId, ...scope.params) as StatusCounts & {
+    .get(moduleId, ...rowScope.params) as StatusCounts & {
     total: number;
     avg_quality: number | null;
     last_reviewed: string | null;
   };
 
   if (!row || row.total === 0) return;
+
+  const stateRows = db
+    .prepare(
+      `SELECT fm.feature_name, fm.status, fm.quality_score, fm.source
+       FROM feature_matrix fm
+       WHERE fm.module_id = ? AND ${rowScope.sql}
+       ORDER BY fm.feature_name`,
+    )
+    .all(moduleId, ...rowScope.params) as { feature_name: string; status: string; quality_score: number | null; source: string | null }[];
+  const featureStates = JSON.stringify(
+    stateRows.map((r): FeatureStateEntry => ({
+      featureName: r.feature_name,
+      status: validateStatus(r.status),
+      quality: r.quality_score,
+      source: normalizeFeatureSource(r.source),
+    })),
+  );
 
   const reviewedAt = row.last_reviewed ?? new Date().toISOString();
 
@@ -686,18 +712,19 @@ export function captureReviewSnapshot(moduleId: SubModuleId, projectId?: string)
   if (latest && latest.reviewed_at === reviewedAt) {
     db.prepare(
       `UPDATE review_snapshots
-       SET total = ?, implemented = ?, improved = ?, partial = ?, missing = ?, unknown = ?, avg_quality = ?
+       SET total = ?, implemented = ?, improved = ?, partial = ?, missing = ?, unknown = ?, avg_quality = ?,
+           feature_states = ?
        WHERE id = ?`,
     ).run(
       row.total, row.implemented, row.improved, row.partial, row.missing, row.unknown,
-      row.avg_quality, latest.id,
+      row.avg_quality, featureStates, latest.id,
     );
     return;
   }
 
   db.prepare(
-    `INSERT INTO review_snapshots (module_id, reviewed_at, total, implemented, improved, partial, missing, unknown, avg_quality, project_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO review_snapshots (module_id, reviewed_at, total, implemented, improved, partial, missing, unknown, avg_quality, project_id, feature_states)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     moduleId,
     reviewedAt,
@@ -709,9 +736,33 @@ export function captureReviewSnapshot(moduleId: SubModuleId, projectId?: string)
     row.unknown,
     row.avg_quality,
     pid,
+    featureStates,
   );
 
   pruneReviewSnapshots(moduleId, pid);
+}
+
+/**
+ * What the newest review/fix event MOVED: the per-feature delta between the two
+ * most recent snapshots in the read scope (the pair the sparkline ends on).
+ * `measured: false` with a reason when there is no pair, or when either side was
+ * written before `feature_states` existed — never an empty diff standing in for
+ * "nothing changed".
+ */
+export function getLatestReviewDelta(moduleId: SubModuleId, projectId?: string): ReviewDelta {
+  ensureTables();
+  const scope = projectScopeSql(normalizeProjectId(projectId));
+  const rows = getDb()
+    .prepare(
+      `SELECT reviewed_at, feature_states FROM review_snapshots
+       WHERE module_id = ? AND ${scope.sql}
+       ORDER BY reviewed_at DESC, id DESC
+       LIMIT 2`,
+    )
+    .all(moduleId, ...scope.params) as { reviewed_at: string; feature_states: string | null }[];
+  const side = (r: (typeof rows)[number] | undefined) =>
+    r ? { reviewedAt: r.reviewed_at, featureStates: parseFeatureStates(r.feature_states) } : undefined;
+  return deriveReviewDelta(side(rows[1]), side(rows[0]));
 }
 
 /** Drop everything older than the newest {@link MAX_SNAPSHOTS_PER_MODULE} snapshots

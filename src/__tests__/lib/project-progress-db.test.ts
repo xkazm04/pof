@@ -154,7 +154,7 @@ describe('schema 5 is additive', () => {
       expect(JSON.parse(r.checklist_json)).toEqual({ 'arpg-combat': { 'acb-1': true } });
       expect(r.completed_json).toBe('{}');
       expect(r.folded_json).toBe('[]');
-      expect(db.pragma('user_version', { simple: true })).toBe(5);
+      expect(db.pragma('user_version', { simple: true })).toBe(6);
     } finally {
       db.close();
       process.env.POF_DB_PATH = prev;

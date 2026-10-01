@@ -21,6 +21,7 @@ import { VerifyPreviewPanel } from './VerifyPreviewPanel';
 import { QualityRangeFilter } from './QualityRangeFilter';
 import { SortButton } from './SortButton';
 import { FeatureList } from './FeatureList';
+import { ReviewDeltaStrip, RegressionContext } from './ReviewDeltaStrip';
 
 export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isReviewing, onFix, isFixing, onReviewFeature }: FeatureMatrixProps) {
   const state = useFeatureMatrixState({ moduleId, isReviewing, isFixing });
@@ -65,6 +66,10 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     neverReviewed,
     undatedReviewed,
     scope,
+    delta,
+    changedFilterActive,
+    toggleChangedOnly,
+    regressionMap,
   } = state;
 
   // Sticky offset for category headers: measure the filter toolbar so headers
@@ -233,6 +238,9 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
         </div>
       </div>
 
+      {/* What the newest review/fix moved — per feature, beside the count trend. */}
+      <ReviewDeltaStrip delta={delta} changedOnly={changedFilterActive} onToggleChanged={toggleChangedOnly} />
+
       {showWiring && wiringAssets.length > 0 && (
         <WiringAssetsPanel assets={wiringAssets} />
       )}
@@ -314,19 +322,21 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       </div>
 
       {/* Result count */}
-      {(searchQuery || qualityMin > 1 || qualityMax < 5) && (
+      {(searchQuery || qualityMin > 1 || qualityMax < 5 || changedFilterActive) && (
         <div className="text-xs text-text-muted">
           Showing {filtered.length} of {features.length} features
         </div>
       )}
 
-      <FeatureList
-        state={state}
-        accentColor={accentColor}
-        onFix={onFix}
-        isFixing={isFixing}
-        onReviewFeature={onReviewFeature}
-      />
+      <RegressionContext.Provider value={regressionMap}>
+        <FeatureList
+          state={state}
+          accentColor={accentColor}
+          onFix={onFix}
+          isFixing={isFixing}
+          onReviewFeature={onReviewFeature}
+        />
+      </RegressionContext.Provider>
     </div>
   );
 }

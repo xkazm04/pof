@@ -22,7 +22,8 @@ const DB_DIR = path.dirname(DB_PATH);
 // tables (all guards no-op) then stamps the version.
 // 4: eval_findings.resolved_at (durable scan-finding resolutions).
 // 5: project_progress.completed_json + folded_json (server-held completion ledger).
-const SCHEMA_VERSION = 5;
+// 6: review_snapshots.feature_states (per-feature states behind the review delta).
+const SCHEMA_VERSION = 6;
 
 let db: Database.Database | null = null;
 
@@ -154,7 +155,11 @@ function bootstrap(conn: Database.Database): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       -- Same reasoning as feature_matrix.project_id: migration-added, so a fresh DB
       -- that skips the probes must still get it — captureReviewSnapshot inserts it.
-      project_id TEXT NOT NULL DEFAULT ''
+      project_id TEXT NOT NULL DEFAULT '',
+      -- Per-feature states at this point ([{featureName, status, quality, source}],
+      -- JSON). NULL on rows written before schema 6 — readers treat that as
+      -- "not recorded" (the review delta reports measured:false), never as empty.
+      feature_states TEXT
     )
   `);
 
@@ -289,6 +294,10 @@ function bootstrap(conn: Database.Database): void {
   }
   if (!rsColNames.has('improved')) {
     conn.exec("ALTER TABLE review_snapshots ADD COLUMN improved INTEGER NOT NULL DEFAULT 0");
+  }
+  // Schema 6: additive and nullable — existing rows keep NULL (= not recorded).
+  if (!rsColNames.has('feature_states')) {
+    conn.exec('ALTER TABLE review_snapshots ADD COLUMN feature_states TEXT');
   }
 
   const bhCols = conn.prepare("PRAGMA table_info(build_history)").all() as { name: string }[];

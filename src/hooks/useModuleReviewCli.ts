@@ -6,12 +6,16 @@ import { useChecklistCLI, type UseChecklistCLIResult } from '@/hooks/useChecklis
 import { useProjectStore } from '@/stores/projectStore';
 import { TaskFactory } from '@/lib/cli-task';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { getAppOrigin } from '@/lib/constants';
+import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
+import { tryApiFetch } from '@/lib/api-utils';
+import { deltaToastType, summarizeDelta } from '@/lib/feature-review-delta';
+import type { ReviewDelta } from '@/lib/feature-review-delta';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
 
 /** Toast presentation is left to the caller — the hook only decides WHAT to say. */
-export type ModuleReviewToast = (message: string, type: 'success' | 'error') => void;
+export type ModuleReviewToastType = 'success' | 'error' | 'warning';
+export type ModuleReviewToast = (message: string, type: ModuleReviewToastType) => void;
 
 interface UseModuleReviewCliOptions {
   /** Module this review session belongs to (drives session keys + feature defs). */
@@ -20,8 +24,13 @@ interface UseModuleReviewCliOptions {
   moduleLabel: string;
   /** Accent color for the spawned CLI terminal tabs. */
   accentColor: string;
-  /** Called to surface a result message. The view decides how to render it. */
-  onToast: ModuleReviewToast;
+  /**
+   * Called to surface a result message. The view decides how to render it.
+   * Declared as a METHOD (bivariant parameters) so a view whose handler predates
+   * 'warning' still type-checks: such a view renders it through its non-success
+   * branch (the error style), so a regression is never shown as a success.
+   */
+  onToast(message: string, type: ModuleReviewToastType): void;
 }
 
 export interface UseModuleReviewCliResult {
@@ -47,8 +56,11 @@ export interface UseModuleReviewCliResult {
  * Shared "module feature-review" harness extracted from the multi-tab content
  * views (AudioView, LevelDesignView) that cannot use ReviewableModuleView.
  *
- * Encapsulates the four CLI sessions (review / fix / checklist) plus the
- * /api/feature-matrix/import flow and the refetch counter. Toast PRESENTATION
+ * Encapsulates the four CLI sessions (review / fix / checklist) plus the manual
+ * /api/feature-matrix/import sync and the refetch counter. A finished review does
+ * NOT import: its callback already POSTed the rows (the prompt forbids writing the
+ * disk file a disk-mode import would read), so completion only refetches and says
+ * what the review moved. Toast PRESENTATION
  * is intentionally NOT owned here — callers pass `onToast(message, type)` so
  * each view keeps its own mechanism (inline JSX vs sonner) while the messages,
  * session keys, request bodies, timings, and error strings stay identical.
@@ -75,27 +87,23 @@ export function useModuleReviewCli(
     onItemCompleted: handleItemCompleted,
   });
 
+  // The review's callback already wrote the rows (POST /api/feature-matrix/import,
+  // direct mode). Let the write settle, refetch, then report WHICH features the
+  // review moved — the history route's per-feature delta of the newest snapshots.
   const handleReviewComplete = useCallback(async (success: boolean) => {
     if (!success) return;
-    await new Promise((r) => setTimeout(r, 500));
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Import failed' }));
-        onToast(err.error ?? `Import failed (${res.status})`, 'error');
-        return;
-      }
-      const data = await res.json();
-      onToast(`Imported ${data.imported} features`, 'success');
-    } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Failed to import review results', 'error');
+    await new Promise((r) => setTimeout(r, UI_TIMEOUTS.dbSettle));
+    setRefetchKey((n) => n + 1);
+    const project = projectPath ? `&projectId=${encodeURIComponent(projectPath)}` : '';
+    const result = await tryApiFetch<{ delta?: ReviewDelta }>(
+      `/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}&limit=2${project}`,
+    );
+    if (!result.ok || !result.data.delta) {
+      onToast(`Review complete — could not read what it changed${result.ok ? '' : `: ${result.error}`}`, 'warning');
       return;
     }
-    setRefetchKey((n) => n + 1);
+    const { delta } = result.data;
+    onToast(`Review complete — ${summarizeDelta(delta)}`, deltaToastType(delta));
   }, [moduleId, projectPath, onToast]);
 
   const reviewCli = useModuleCLI({
