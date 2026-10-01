@@ -6,15 +6,36 @@ import {
   Crown,
   Copy,
   Check,
+  ScanSearch,
 } from 'lucide-react';
 import type { OverlapPair } from '@/lib/overlap-detection';
+import { splitTwinKey, type TwinStatus } from '@/lib/evaluator/overlap-twins';
 import { MOTION } from '@/lib/constants';
-import { STATUS_SUCCESS, OPACITY_30 } from '@/lib/chart-colors';
-import { REASON_CONFIG } from './constants';
+import { STATUS_SUCCESS, OPACITY_30, FEATURE_STATUS_COLORS } from '@/lib/chart-colors';
+import { REASON_CONFIG, TWIN_KIND_CONFIG } from './constants';
 import { moduleLabel, similarityColor } from './helpers';
 
-export function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
+/** One twin's matrix status as a dot (no row = 'no status', drawn as unknown). */
+function TwinDot({ status }: { status: string | null }) {
+  const color = FEATURE_STATUS_COLORS[(status ?? 'unknown') as keyof typeof FEATURE_STATUS_COLORS] ?? FEATURE_STATUS_COLORS.unknown;
+  return (
+    <span
+      className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
+      style={{ backgroundColor: color }}
+      title={status ?? 'no status'}
+      aria-hidden
+    />
+  );
+}
+
+export function OverlapRow({ overlap, twin, reviewKeys, reviewBusy, onReview, isExpanded, isCopied, onToggle, onCopy }: {
   overlap: OverlapPair;
+  /** null while statuses are unreadable (loading / failed): no dots, no kind, no review. */
+  twin: TwinStatus | null;
+  /** Twins this row can review (definition exists); empty for agreed pairs. */
+  reviewKeys: string[];
+  reviewBusy: boolean;
+  onReview: (key: string) => void;
   isExpanded: boolean;
   isCopied: boolean;
   onToggle: () => void;
@@ -23,8 +44,10 @@ export function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: 
   const cfg = REASON_CONFIG[overlap.reason];
   const simPct = Math.round(overlap.similarity * 100);
   const simColor = similarityColor(overlap.similarity);
+  const kind = twin ? TWIN_KIND_CONFIG[twin.kind] : null;
 
-  const toggleLabel = `${isExpanded ? 'Collapse' : 'Expand'} overlap between ${overlap.featureA} (${moduleLabel(overlap.moduleA)}) and ${overlap.featureB} (${moduleLabel(overlap.moduleB)}) — ${simPct}% ${cfg.label}`;
+  const twinLabel = twin && kind ? ` — ${kind.label}: ${twin.statusA ?? 'no status'} | ${twin.statusB ?? 'no status'}` : '';
+  const toggleLabel = `${isExpanded ? 'Collapse' : 'Expand'} overlap between ${overlap.featureA} (${moduleLabel(overlap.moduleA)}) and ${overlap.featureB} (${moduleLabel(overlap.moduleB)}) — ${simPct}% ${cfg.label}${twinLabel}`;
 
   return (
     <div className={`group rounded-lg overflow-hidden flex items-stretch transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-[#111130]' : ''}`}>
@@ -41,6 +64,7 @@ export function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: 
         <span className="text-xs text-text font-medium truncate min-w-0" style={{ maxWidth: '28%' }}>
           <span className="text-text-muted">{moduleLabel(overlap.moduleA)}</span>
           <span className="text-text-muted mx-1">/</span>
+          {twin && <TwinDot status={twin.statusA} />}
           {overlap.featureA}
         </span>
 
@@ -53,11 +77,22 @@ export function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: 
         <span className="text-xs text-text font-medium truncate min-w-0" style={{ maxWidth: '28%' }}>
           <span className="text-text-muted">{moduleLabel(overlap.moduleB)}</span>
           <span className="text-text-muted mx-1">/</span>
+          {twin && <TwinDot status={twin.statusB} />}
           {overlap.featureB}
         </span>
 
         {/* Spacer */}
         <span className="flex-1" />
+
+        {/* Twin status badge */}
+        {kind && (
+          <span
+            className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
+            style={{ backgroundColor: `${kind.color}18`, color: kind.color }}
+          >
+            {kind.label}
+          </span>
+        )}
 
         {/* Similarity badge */}
         <span
@@ -81,6 +116,24 @@ export function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: 
           : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
         }
       </button>
+
+      {/* Review the lagging (or unreviewed) twin - explicit click only */}
+      {reviewKeys.map((key) => {
+        const { moduleId, featureName } = splitTwinKey(key);
+        const label = moduleLabel(moduleId);
+        return (
+          <button
+            key={key}
+            onClick={() => onReview(key)}
+            disabled={reviewBusy}
+            title={`Review ${featureName} in ${label}`}
+            className="px-2 my-1 mr-1 rounded text-2xs font-medium text-text-muted hover:text-text hover:bg-border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-border-bright flex-shrink-0 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ScanSearch className="w-3 h-3" />
+            Review in {label}
+          </button>
+        );
+      })}
 
       {/* Copy button — sibling of toggle button to avoid nested interactive controls */}
       <button
