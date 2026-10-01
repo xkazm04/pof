@@ -4,6 +4,7 @@ import { buildSessionFromCSV } from '@/lib/profiling/csv-parser';
 import { generateSampleSession } from '@/lib/profiling/sample-generator';
 import { runTriage } from '@/lib/profiling/triage-engine';
 import { compareSessions, type ComparedSessionHead, type SessionComparisonResponse } from '@/lib/profiling/session-compare';
+import { gateCaptureCsvs } from '@/lib/profiling/perf-capture';
 import type { ProfilingSession, TriageResult } from '@/types/performance-profiling';
 
 // In-memory store for sessions (persists per server process)
@@ -115,6 +116,18 @@ export async function POST(req: NextRequest) {
         ...compareSessions(base.summary, head.summary, baseTriage.findings, headTriage.findings),
       };
       return apiSuccess(comparison);
+    }
+
+    // Stateless: N baseline captures vs M candidate captures of the same scripted scenario,
+    // gated against the baseline's own run-to-run spread (never a bare median difference).
+    if (action === 'perf-gate') {
+      const { baselineCsvs, candidateCsvs, expectedWindowFrames } = body;
+      const isCsvList = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 && v.every((c) => typeof c === 'string' && c.length > 0);
+      if (!isCsvList(baselineCsvs) || !isCsvList(candidateCsvs)) {
+        return apiError('baselineCsvs and candidateCsvs must be non-empty arrays of CSV text', 400);
+      }
+      const expected = typeof expectedWindowFrames === 'number' && expectedWindowFrames > 0 ? expectedWindowFrames : undefined;
+      return apiSuccess({ gate: gateCaptureCsvs(baselineCsvs, candidateCsvs, { expectedWindowFrames: expected }) });
     }
 
     if (action === 'delete-session') {

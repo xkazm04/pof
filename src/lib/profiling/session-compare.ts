@@ -35,7 +35,7 @@ export const COMPARED_METRICS: readonly MetricSpec[] = [
 ];
 
 /** A change within 1% of the larger magnitude is capture noise, not a verdict. */
-const NOISE_FRACTION = 0.01;
+export const NOISE_FRACTION = 0.01;
 
 export interface MetricDelta {
   key: MetricKey;

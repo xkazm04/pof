@@ -102,6 +102,10 @@ export function mapScenarioInputs(inputs: readonly ScenarioInput[]): Array<Recor
 
 // ── The scenario inbox JSON (the ONE writer for both launch paths) ─────────────
 
+/** Inbox defaults, named so the perf-capture plan below derives its phases from the same numbers. */
+export const SCENARIO_DEFAULT_TOTAL_SECONDS = 3;
+export const SCENARIO_DEFAULT_SETTLE_SECONDS = 1.5;
+
 export interface ScenarioInboxOptions {
   totalSeconds?: number;
   numSamples?: number;
@@ -122,9 +126,9 @@ export interface ScenarioInboxOptions {
 export function buildScenarioInbox(outDir: string, opts: ScenarioInboxOptions = {}): string {
   return JSON.stringify({
     out_dir: outDir,
-    total_seconds: opts.totalSeconds ?? 3,
+    total_seconds: opts.totalSeconds ?? SCENARIO_DEFAULT_TOTAL_SECONDS,
     num_samples: opts.numSamples ?? 1,
-    settle: opts.settle ?? 1.5,
+    settle: opts.settle ?? SCENARIO_DEFAULT_SETTLE_SECONDS,
     ...(opts.playAnim ? { play_anim: opts.playAnim } : {}),
     ...(opts.disableAI ? { disable_ai: true } : {}),
     inputs: mapScenarioInputs(opts.inputs ?? []),
@@ -139,6 +143,9 @@ export function buildScenarioInbox(outDir: string, opts: ScenarioInboxOptions = 
 // numerical noise. The ONLY difference is the render mode:
 //  - `nullrhi`  (L3): CPU-only pose/movement metrics + `-abslog` (frame capture is L4).
 //  - `offscreen` (L4): `-RenderOffScreen` at an explicit resolution so a real frame writes.
+
+/** The fixed step both launch paths run at (`-benchmark -fps=60`): one frame = 1/60 s of game time. */
+export const SCENARIO_FIXED_FPS = 60;
 
 export type ScenarioRender =
   | { mode: 'nullrhi'; abslog: string }
@@ -155,11 +162,81 @@ export interface ScenarioLaunchArgsOptions {
 /** Build the `UnrealEditor` args for a `-game -PoFScenario` scenario run. Pure. */
 export function buildScenarioLaunchArgs(o: ScenarioLaunchArgsOptions): string[] {
   const head = [o.uproject, o.map, '-game', `-PoFScenario=${o.scenarioPath}`];
-  const timing = ['-benchmark', '-fps=60', '-unattended', '-nopause', '-nosplash'];
+  const timing = ['-benchmark', `-fps=${SCENARIO_FIXED_FPS}`, '-unattended', '-nopause', '-nosplash'];
   if (o.render.mode === 'nullrhi') {
     return [...head, '-nullrhi', ...timing, '-log', `-abslog=${o.render.abslog}`];
   }
   return [...head, '-RenderOffScreen', `-ResX=${o.render.resX}`, `-ResY=${o.render.resY}`, ...timing, '-NoLiveCoding'];
+}
+
+// ── Perf-capture launch (its own boot, never the L3 drain's) ───────────────────
+//
+// A capture boot is the scenario launch plus the engine's CSV Profiler armed to record one
+// bracketed window. It composes `buildScenarioLaunchArgs`, so the fixed 1/60 s step cannot
+// drift from the scenario's: each run covers the same simulated frames and only the wall
+// time per frame varies. That is what lets two builds be compared frame for frame.
+//
+// Phases, in frames at the fixed step: a baseline phase first (the scenario's settle,
+// before any input), then the window (the scenario's totalSeconds). The CSV Profiler
+// starts on the baseline-start event, marks the window start, and stops on the window-end
+// event; the capture cap below bounds a run whose stop event never arrives.
+//
+// Provenance of the flags (UE 5.8 engine source, ProfilingDebugging/CsvProfiler.cpp, read
+// not guessed): `-csvStartOnEvent=`, `-csvStopOnEvent=`, `-csvCaptureOnEventFrameCount=`;
+// compiled out of Shipping builds (CSV_PROFILER_ALLOW_DEBUG_FEATURES = !UE_BUILD_SHIPPING).
+// Not exercised against a running engine from here.
+//
+// UNVERIFIED: that PoF's UScenarioController emits the events named below. It logs
+// "[scenario] BEGIN" / "FINISH" and holds no CSV_EVENT call today, so a real capture needs
+// that UE-side change first; until then a capture file carries no markers and the
+// window splitter (lib/profiling/perf-capture) reports `no-window-start`, never a guess.
+
+export const PERF_CAPTURE_EVENTS = {
+  baselineStart: 'PoFScenarioSettle',
+  windowStart: 'PoFScenarioBegin',
+  windowEnd: 'PoFScenarioFinish',
+} as const;
+
+/** Frames the capture may run past the nominal baseline + window before it is cut. */
+export const PERF_CAPTURE_SLACK_FRAMES = 30;
+
+export interface PerfCapturePlan {
+  fps: number;
+  /** Nominal frames of the baseline phase (settle). The splitter works from the recorded events. */
+  baselineFrames: number;
+  /** Frames of the capture window (the scenario's totalSeconds at the fixed step). */
+  windowFrames: number;
+  /** Upper bound handed to the profiler, so a missing stop event cannot capture forever. */
+  captureFrameCap: number;
+}
+
+/** Derive the capture phases from a scenario's own timing (inbox defaults when absent). Pure. */
+export function buildPerfCapturePlan(
+  s: Pick<ScenarioSpec, 'totalSeconds' | 'settle'> = {},
+  slackFrames: number = PERF_CAPTURE_SLACK_FRAMES,
+): PerfCapturePlan {
+  const fps = SCENARIO_FIXED_FPS;
+  const baselineFrames = Math.max(0, Math.round((s.settle ?? SCENARIO_DEFAULT_SETTLE_SECONDS) * fps));
+  const windowFrames = Math.round((s.totalSeconds ?? SCENARIO_DEFAULT_TOTAL_SECONDS) * fps);
+  if (!Number.isFinite(windowFrames) || windowFrames < 1) {
+    throw new RangeError(`perf-capture window must cover at least one frame (totalSeconds=${s.totalSeconds})`);
+  }
+  return { fps, baselineFrames, windowFrames, captureFrameCap: baselineFrames + windowFrames + Math.max(0, slackFrames) };
+}
+
+export interface PerfCaptureLaunchArgsOptions extends ScenarioLaunchArgsOptions {
+  plan: PerfCapturePlan;
+}
+
+/** Build the `UnrealEditor` args for a perf-capture boot: the scenario launch + CSV Profiler bracketing. Pure. */
+export function buildPerfCaptureLaunchArgs(o: PerfCaptureLaunchArgsOptions): string[] {
+  const { plan, ...scenario } = o;
+  return [
+    ...buildScenarioLaunchArgs(scenario),
+    `-csvStartOnEvent=${PERF_CAPTURE_EVENTS.baselineStart}`,
+    `-csvStopOnEvent=${PERF_CAPTURE_EVENTS.windowEnd}`,
+    `-csvCaptureOnEventFrameCount=${plan.captureFrameCap}`,
+  ];
 }
 
 // ── Deferred-reason coupling (single source for deferred.ts ↔ parse.ts) ────────
