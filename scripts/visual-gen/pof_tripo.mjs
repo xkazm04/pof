@@ -1,133 +1,53 @@
 #!/usr/bin/env node
 /**
- * PoF Tripo3D generator — the CLOUD 3D-gen smoke CLI (counterpart to the local
- * pof_triposr.py / pof_hunyuan.py). Drives Tripo's REST API: optional image upload →
- * create task → poll → download the .glb. Mirrors the server seam in
- * src/lib/visual-gen/tripo-runner.ts; this script is the quick live test that needs
- * no dev server. Emits POF_TRIPO_* markers. Needs TRIPO_API_KEY in env.
+ * PoF Tripo3D generator — the CLOUD 3D-gen operator CLI (counterpart to the local
+ * pof_triposr.py / pof_hunyuan.py). A thin door over the app's ONE Tripo client:
+ * src/lib/visual-gen/tripo-runner.ts (upload → create → poll → download, task recovery),
+ * tripo-models.ts (the audited model pin + the smart_low_poly verdict) and tripo-cli.ts
+ * (plan + execute). Node strips the types on import, so nothing here is a copy.
+ * Emits POF_TRIPO_* markers (declared in src/lib/visual-gen/script-markers.ts).
+ * Needs TRIPO_API_KEY in env for a paid run; --dry needs none.
  *
+ *   node pof_tripo.mjs --image ref.png --output out.glb          # pinned v3.1 + detailed
  *   node pof_tripo.mjs --prompt "a stylized fantasy warrior, full body" --output out.glb
- *   node pof_tripo.mjs --image ref.png --output out.glb
- *   # optional: --model v2.5-20250123 --pbr --quad --face-limit 40000
- *   # optional: --smart-low-poly (Tripo's "Smart Mesh" / marketed as P1-P2 mode
- *   #   -- a flag on the SAME model_version, not a separate model id; face_limit
- *   #   must be 1000-20000 when set, or 500-10000 if --quad is ALSO set)
+ *   node pof_tripo.mjs --image ref.png --output out.glb --dry    # print the exact paid body, spend nothing
+ *   node pof_tripo.mjs --resume <taskId> --output out.glb        # collect a paid task, never re-buy it
+ *   # optional: --pbr --quad --face-limit 40000 --texture-quality standard|detailed
+ *   #           --render preview.webp --max-ms 600000
+ *   #           --model <id>   (overrides the audited pin; warned as unaudited)
+ *   #           --smart-low-poly is REFUSED (benchmarked + rejected 2026-08-18) unless
+ *   #           --force-smart-low-poly is passed too
+ * A recoverable failure (poll window spent, unreadable polls, failed download) prints
+ * POF_TRIPO_RESUME=<the exact flags to collect it>; a terminal Tripo verdict does not.
  */
-import { writeFileSync, mkdirSync, readFileSync, existsSync, statSync } from 'fs';
-import { dirname, resolve, basename } from 'path';
+import { mkdirSync, statSync, writeFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import {
+  awaitTripoTask, buildCreateTaskBody, isRecoverableTripoFailure, isTripoTaskId, runTripo,
+} from '../../src/lib/visual-gen/tripo-runner.ts';
+import { SMART_LOW_POLY_VERDICT, tripoModelFor } from '../../src/lib/visual-gen/tripo-models.ts';
+import { executeTripoCli, parseTripoCliArgs, planTripoCli } from '../../src/lib/visual-gen/tripo-cli.ts';
 
-const API_KEY = process.env.TRIPO_API_KEY;
-const BASE = 'https://api.tripo3d.ai/v2/openapi';
-
-function parseArgs(argv) {
-  const o = {};
-  for (let i = 2; i < argv.length; i++) {
-    if (argv[i].startsWith('--')) {
-      const k = argv[i].slice(2), n = argv[i + 1];
-      if (n && !n.startsWith('--')) { o[k] = n; i++; } else o[k] = true;
-    }
-  }
-  return o;
-}
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const auth = () => ({ authorization: `Bearer ${API_KEY}` });
-const imgType = (p) => { const e = (p.split('.').pop() || '').toLowerCase(); return e === 'jpeg' ? 'jpg' : e || 'png'; };
-
-async function jsonReq(method, url, body) {
-  const opts = { method, headers: { ...auth() } };
-  if (body) { opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify(body); }
-  const res = await fetch(url, opts);
-  const txt = await res.text();
-  let j; try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
-  return j;
-}
-
-async function uploadImage(path) {
-  const bytes = readFileSync(path);
-  const form = new FormData();
-  form.append('file', new Blob([bytes]), basename(path));
-  const res = await fetch(`${BASE}/upload`, { method: 'POST', headers: { ...auth() }, body: form });
-  const j = await res.json().catch(() => ({}));
-  if (j.code !== 0 || !j.data?.image_token) throw new Error(`upload failed: ${JSON.stringify(j).slice(0, 200)}`);
-  return j.data.image_token;
+async function downloadFile(url, path) {
+  const res = await fetch(url);
+  if (!res.ok) return false;
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+  return true;
 }
 
 async function main() {
-  const a = parseArgs(process.argv);
-  if (!API_KEY) { console.log('POF_TRIPO_ERROR=no TRIPO_API_KEY in env'); { process.exitCode = 1; return; } }
-  if (!a.output || (!a.prompt && !a.image)) { console.log('POF_TRIPO_ERROR=need --output and one of --prompt / --image'); { process.exitCode = 1; return; } }
-
-  const opt = {};
-  if (a.model) opt.model_version = a.model;
-  if (a['face-limit']) opt.face_limit = parseInt(a['face-limit'], 10);
-  if (a.pbr) opt.pbr = true;
-  if (a.quad) opt.quad = true;
-  if (a['smart-low-poly']) opt.smart_low_poly = true;
-  if (a['texture-quality']) opt.texture_quality = a['texture-quality']; // standard | detailed
-
-  let body;
-  try {
-    if (a.image) {
-      if (!existsSync(a.image)) throw new Error(`image not found: ${a.image}`);
-      const token = await uploadImage(a.image);
-      console.log(`POF_TRIPO_UPLOAD=${token}`);
-      body = { type: 'image_to_model', file: { type: imgType(a.image), file_token: token }, ...opt };
-    } else {
-      body = { type: 'text_to_model', prompt: a.prompt, ...opt };
-    }
-
-    const created = await jsonReq('POST', `${BASE}/task`, body);
-    if (created.code !== 0 || !created.data?.task_id) {
-      console.log(`POF_TRIPO_ERROR=create ${created.code}: ${created.message || 'unknown'}${created.suggestion ? ' (' + created.suggestion + ')' : ''}`);
-      { process.exitCode = 1; return; }
-    }
-    const taskId = created.data.task_id;
-    console.log(`POF_TRIPO_TASK=${taskId}`);
-
-    const deadline = Date.now() + parseInt(a['max-ms'] || '600000', 10);
-    let out;
-    while (Date.now() < deadline) {
-      const s = await jsonReq('GET', `${BASE}/task/${taskId}`);
-      const d = s.data || {};
-      const status = String(d.status || '').toLowerCase();
-      console.log(`POF_TRIPO_STATUS=${status} progress=${d.progress ?? '?'}`);
-      if (status === 'success') { out = d.output || {}; break; }
-      if (['failed', 'cancelled', 'banned', 'expired', 'unknown'].includes(status)) {
-        console.log(`POF_TRIPO_ERROR=task ${status}`); { process.exitCode = 1; return; }
-      }
-      await sleep(4000);
-    }
-    if (!out) { console.log('POF_TRIPO_ERROR=timed out'); { process.exitCode = 1; return; } }
-
-    const url = out.pbr_model || out.model || out.base_model;
-    if (!url) { console.log('POF_TRIPO_ERROR=no model url in output'); { process.exitCode = 1; return; } }
-    const dl = await fetch(url);
-    if (!dl.ok) { console.log(`POF_TRIPO_ERROR=download ${dl.status}`); { process.exitCode = 1; return; } }
-    const outPath = resolve(a.output);
-    mkdirSync(dirname(outPath), { recursive: true });
-    writeFileSync(outPath, Buffer.from(await dl.arrayBuffer()));
-    console.log(`POF_TRIPO_BYTES=${statSync(outPath).size}`);
-    // Tripo returns a preview render of the model — surface it (and optionally download
-    // via --render <path>) so a VLM aesthetic gate can score the mesh without a local renderer.
-    const renderUrl = out.rendered_image || out.render_image || out.thumbnail;
-    if (renderUrl) {
-      console.log(`POF_TRIPO_RENDER=${renderUrl}`);
-      if (a.render) {
-        try {
-          const rr = await fetch(renderUrl);
-          if (rr.ok) {
-            const rPath = resolve(a.render);
-            mkdirSync(dirname(rPath), { recursive: true });
-            writeFileSync(rPath, Buffer.from(await rr.arrayBuffer()));
-            console.log(`POF_TRIPO_RENDER_FILE=${rPath}`);
-          }
-        } catch { /* render download is best-effort */ }
-      }
-    }
-    console.log(`POF_TRIPO_DONE=${outPath}`);
-  } catch (e) {
-    console.log(`POF_TRIPO_ERROR=${e instanceof Error ? e.message : String(e)}`);
-    { process.exitCode = 1; return; }
-  }
+  const args = { ...parseTripoCliArgs(process.argv.slice(2)) };
+  // Absolute paths, as the script always printed, so a POF_TRIPO_RESUME line is runnable from anywhere.
+  for (const k of ['output', 'render']) if (typeof args[k] === 'string') args[k] = resolve(args[k]);
+  const plan = planTripoCli(args, tripoModelFor(), { smartLowPoly: SMART_LOW_POLY_VERDICT, isTripoTaskId });
+  const { exitCode } = await executeTripoCli(plan, {
+    runTripo, awaitTripoTask, buildCreateTaskBody, isRecoverableTripoFailure,
+    fileSize: (p) => { try { return statSync(p).size; } catch { return undefined; } },
+    downloadFile,
+    ensureParentDir: (p) => mkdirSync(dirname(p), { recursive: true }),
+    print: (line) => process.stdout.write(`${line}\n`),
+  });
+  process.exitCode = exitCode;
 }
 main();

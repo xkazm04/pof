@@ -11,6 +11,9 @@
  * never printed; {@link MarkerBlock.get} throws on an undeclared key, so a reader cannot
  * name a key the script does not print.
  *
+ * Plus the operator's Tripo CLI (`pof_tripo.mjs`, run by hand and by the campaign skills,
+ * not spawned by the app), whose lines are printed by `tripo-cli.ts` (its `source`).
+ *
  * NOT the Blender-MCP receipt envelope (`src/lib/blender-mcp/receipt.ts`, `POF_RESULT=`
  * JSON), which covers code sent to the operator's LIVE Blender. This is the per-script
  * `KEY=value` vocabulary of subprocesses PoF spawns itself. Pure, client-safe.
@@ -30,6 +33,8 @@ export type MarkerKind = 'result' | 'error' | 'metric' | 'path' | 'reason' | 'di
 export interface ScriptMarkerContract {
   /** Basename under `scripts/visual-gen/`. */
   script: string;
+  /** Repo-relative file that prints the keys when the script delegates printing to it. */
+  source?: string;
   /** Line prefix every marker carries, e.g. `POF_T2_`. */
   prefix: string;
   keys: Readonly<Record<string, MarkerKind>>;
@@ -90,6 +95,16 @@ export const SCRIPT_MARKERS = {
     prefix: 'POF_VIEWS_',
     keys: { DONE: 'result', ERROR: 'error', PALETTE_SKIPPED: 'diagnostic' },
     templates: { '{n}': 'repeat' },
+  },
+  tripo: {
+    script: 'pof_tripo.mjs',
+    source: 'src/lib/visual-gen/tripo-cli.ts',
+    prefix: 'POF_TRIPO_',
+    keys: {
+      DONE: 'result', DRY: 'result', ERROR: 'error', TASK: 'metric', UPLOAD: 'metric',
+      BYTES: 'metric', RENDER: 'metric', RENDER_FILE: 'path', RESUME: 'reason',
+      STATUS: 'repeat', PLAN: 'repeat', WARN: 'repeat',
+    },
   },
 } as const satisfies Record<string, ScriptMarkerContract>;
 

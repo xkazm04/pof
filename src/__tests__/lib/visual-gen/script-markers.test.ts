@@ -24,9 +24,9 @@ const slot = (k: string) => k.replace(/%[sd]|\{[^}]*\}/g, '{}');
 /** Every marker key a script's SOURCE can print, as slot-normalised shapes. */
 function emittedKeys(src: string, prefix: string): Set<string> {
   const keys = new Set<string>();
-  // print("POF_X_KEY=" + v) / print(f"POF_X_KEY={v}") / print("POF_X_%d=..." % i).
+  // print("POF_X_KEY=" + v) / print(f"POF_X_KEY={v}") / print("POF_X_%d=..." % i) / out(`POF_X_KEY=${v}`).
   // Anchored on the opening quote so a docstring mention is not a print.
-  const printed = new RegExp(`(?:\\bf)?["']${escapeRe(prefix)}([A-Za-z0-9_%{}]+?)=`, 'g');
+  const printed = new RegExp(`(?:\\bf)?["'\\x60]${escapeRe(prefix)}([A-Za-z0-9_%{}]+?)=`, 'g');
   for (const line of src.split(/\r?\n/)) {
     if (/%\s*\(key,\s*value\)/.test(line)) continue; // the marker() helper itself
     for (const m of line.matchAll(printed)) keys.add(slot(m[1]));
@@ -43,16 +43,19 @@ function emittedKeys(src: string, prefix: string): Set<string> {
 describe('SCRIPT_MARKERS — declared vocabulary equals what each script prints', () => {
   const ids = Object.keys(SCRIPT_MARKERS) as ScriptId[];
 
-  it('declares the six locally spawned scripts', () => {
+  it('declares the six locally spawned scripts and the operator Tripo CLI', () => {
     expect(ids.map((id) => SCRIPT_MARKERS[id].script).sort()).toEqual([
       'pof_hunyuan.py', 'pof_mesh_finish.py', 'pof_mesh_split.py',
-      'pof_mesh_views.py', 'pof_trellis.py', 'pof_triposr.py',
+      'pof_mesh_views.py', 'pof_trellis.py', 'pof_tripo.mjs', 'pof_triposr.py',
     ]);
   });
 
   it.each(ids)('%s: printed keys == declared keys, both directions', (id) => {
     const c: ScriptMarkerContract = SCRIPT_MARKERS[id];
-    const src = readFileSync(join(SCRIPT_DIR, c.script), 'utf8');
+    const script = readFileSync(join(SCRIPT_DIR, c.script), 'utf8');
+    // A script that delegates its printing must actually load the declared source.
+    if (c.source) expect(script).toContain(c.source.split('/').pop());
+    const src = c.source ? readFileSync(join(process.cwd(), c.source), 'utf8') : script;
     // A script printing through a marker() helper must print the declared prefix there.
     if (/\bdef marker\(/.test(src)) expect(src).toContain(`"${c.prefix}%s=`);
     const emitted = emittedKeys(src, c.prefix);

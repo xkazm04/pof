@@ -447,6 +447,13 @@ export interface TripoDeps {
    * the paid handle while the job runs, not only once it ends.
    */
   onTaskCreated?: (taskId: string) => void;
+  /**
+   * Called after every poll with Tripo's status (`unreadable` for a response that could not
+   * be read) and progress, so an operator surface can show a run that is still alive.
+   */
+  onStatus?: (status: string, progress?: number) => void;
+  /** Called with the reusable image token after each image upload (multiview: per slot). */
+  onImageUploaded?: (token: string, view?: TripoView) => void;
 }
 
 /** How long to watch a task. Shared by a fresh run (from `TripoSpec`) and a recovery. */
@@ -471,6 +478,7 @@ interface PollCtx {
   fileExists: (p: string) => boolean;
   now: () => number;
   sleep: (ms: number) => Promise<void>;
+  onStatus?: (status: string, progress?: number) => void;
   start: number;
 }
 
@@ -480,6 +488,7 @@ function resolveCtx(deps: TripoDeps): Omit<PollCtx, 'auth' | 'start'> {
     fileExists: deps.fileExists ?? existsSync,
     now: deps.now ?? (() => Date.now()),
     sleep: deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms))),
+    onStatus: deps.onStatus,
   };
 }
 
@@ -515,6 +524,7 @@ async function pollTripoTask(taskId: string, outputPath: string, opts: TripoPoll
   for (let i = 0; i < maxPolls; i++) {
     const s = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth);
     const ps = parseTaskStatus(s.json);
+    ctx.onStatus?.(ps.state === 'transient' ? 'unreadable' : (ps.status ?? ps.state), ps.progress);
     if (ps.state === 'success') {
       if (!ps.modelUrl) return terr('task succeeded but no model URL in output', start, now, taskId, false);
       const ok = await http.download(ps.modelUrl, outputPath);
@@ -583,6 +593,7 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
       const up = await http.uploadImage(`${TRIPO_BASE}/upload`, auth, v.path);
       const pu = parseUpload(up.json);
       if (!pu.ok) return terr(`upload failed (${slot} view): ${pu.error}`, start, now);
+      deps.onImageUploaded?.(pu.imageToken!, slot);
       views[slot] = { ...v, token: pu.imageToken, type: v.type ?? imageTypeFromPath(v.path) };
     }
     resolved = { ...spec, views };
@@ -592,6 +603,7 @@ export async function runTripo(spec: TripoSpec, deps: TripoDeps = {}): Promise<T
     const up = await http.uploadImage(`${TRIPO_BASE}/upload`, auth, spec.imagePath);
     const pu = parseUpload(up.json);
     if (!pu.ok) return terr(`upload failed: ${pu.error}`, start, now);
+    deps.onImageUploaded?.(pu.imageToken!);
     resolved = { ...spec, imageToken: pu.imageToken, imageType: spec.imageType ?? imageTypeFromPath(spec.imagePath) };
   }
 
