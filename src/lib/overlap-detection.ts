@@ -169,6 +169,14 @@ function suggestOwner(
   return { owner: moduleB, reason: `${moduleB} has broader feature scope (${countB} features)` };
 }
 
+// ── Declared dependency edge ──
+
+/** True when one feature directly depends on the other: a declared edge, not a duplicate. */
+function directlyLinked(moduleA: string, fA: FeatureDefinition, moduleB: string, fB: FeatureDefinition): boolean {
+  return (fA.dependsOn?.includes(`${moduleB}::${fB.featureName}`) ?? false)
+    || (fB.dependsOn?.includes(`${moduleA}::${fA.featureName}`) ?? false);
+}
+
 // ── Main analysis ──
 
 const NAME_THRESHOLD = 0.4;
@@ -192,7 +200,7 @@ export function analyzeOverlaps(): OverlapReport {
 
         for (const fB of featuresB) {
           const pairKey = [moduleA, fA.featureName, moduleB, fB.featureName].sort().join('|');
-          if (seen.has(pairKey)) continue;
+          if (seen.has(pairKey) || directlyLinked(moduleA, fA, moduleB, fB)) continue;
 
           // Check name similarity
           const nameKwB = new Set(extractKeywords(fB.featureName));
