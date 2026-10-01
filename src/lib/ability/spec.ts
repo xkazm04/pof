@@ -90,6 +90,50 @@ export interface EnrichedAbilitySpec {
   codegen?: CodegenReport;
 }
 
+/**
+ * One spec WRITE (POST /api/ability-spec → upsertSpec). `effects`/`tagRules`
+ * are required and always replace. Every optional slice follows one rule:
+ * **absent key (or `undefined`) = keep** the stored slice, **explicit `null` =
+ * clear** it, an array/object = replace. `codegen` is not part of a write — it
+ * is owned solely by the generate-gas-effects callback (`setCodegenReport`).
+ */
+export interface SpecWrite {
+  catalogId: string;
+  entityId: string;
+  effects: EditorEffect[];
+  tagRules: TagRule[];
+  attributes?: EditorAttribute[] | null;
+  relationships?: AttrRelationship[] | null;
+  loadout?: GASLoadoutSlot[] | null;
+  provenance?: SpecProvenance | null;
+}
+
+/** The slices a write may omit (kept) or null (cleared). */
+export const KEEP_UNLESS_NAMED_SLICES = ['attributes', 'relationships', 'loadout', 'provenance'] as const;
+
+/**
+ * Merge a {@link SpecWrite} over the stored spec (null when the row is new).
+ * The single home of "a writer never destroys a slice it did not name": forge
+ * Adopt (no attributes/relationships/loadout), blueprint Save (no provenance)
+ * and the draft callback (provenance: null) all go through it. Pure.
+ */
+export function mergeSpecWrite(existing: EnrichedAbilitySpec | null, write: SpecWrite): EnrichedAbilitySpec {
+  const out: EnrichedAbilitySpec = {
+    catalogId: write.catalogId,
+    entityId: write.entityId,
+    effects: write.effects,
+    tagRules: write.tagRules,
+  };
+  const target = out as unknown as Record<string, unknown>;
+  for (const key of KEEP_UNLESS_NAMED_SLICES) {
+    const named = write[key];
+    const value = named === undefined ? existing?.[key] : named ?? undefined;
+    if (value !== undefined) target[key] = value;
+  }
+  if (existing?.codegen) out.codegen = existing.codegen;
+  return out;
+}
+
 /** The thin fields `deriveDefaultSpec` needs from a SpellbookAbility. */
 export interface AbilityLike {
   id: string;
