@@ -396,6 +396,15 @@ The Encounter Choreographer (`src/components/modules/core-engine/sub_combat/chor
 - Tension intensity sits on a fixed basis: window flux divided by the effective player max HP, clamped to 1, never by the fight's own peak. `curve.basis` declares `{ windowSec, sampleStepSec, intensityReference, observedPeakFlux }` (the observed peak is diagnostic only). A fixed basis can saturate, so the climax is the LAST sample at peak tension. Peak tension therefore compares across passes and encounters.
 - UI: `severityColor` (`choreography/types.ts`) is the only severity-to-colour map. A finding with `endTimeSec` renders as a band on the alert lane and carries a range label in Balance Alerts; the scrub tooltip (`findAlertAt`) matches it by containment, and a point finding within 1s wins over a containing range.
 
+## UE damage execution: one mirror, canon beside it
+
+`src/lib/combat/ue-damage-execution.ts` is the one home of what `UARPGDamageExecution::Execute_Implementation` computes as shipped C++. It holds `UeExecInputs`, `evaluateUeExecution(inputs)` (raw = BaseDamage + AttackPower x Scaling; crit when `critRoll < critChance` at x(1 + CriticalDamage), uncapped; armour through `legacyArmorMitigation`, the retired pre-canon curve; floor 0), the C++ `EXEC_SNIPPETS`, and `UE_EXECUTION_STEPS`, a declared 13-row step table (id, phase, label, snippet, optional calculator input, worked expression, value).
+
+- The Combat > Damage Pipeline tab (`COMBAT_SUBTABS` 'damage', gated by section `damage-pipeline`) mounts `DamagePipelineDiagram`. Its Execution breakdown renders one generic row per step (`exec-row-<id>`), so a new formula step is one table row, not a snippet plus a row block plus an id written three times.
+- The shipped curve is never the verdict. The panel labels the calc "UE C++ as shipped (pre-canon armour curve)" and marks the armour row retired. `compareWithCanon(inputs)` runs the same inputs through `computeHit` (one Physical bucket, the same pinned crit roll) and returns `delta`, `deltaPct` and `divergences` (`armour-curve`, `crit-cap`), shown as a Canon kernel row. Defaults: shipped 53.85, canon 64.47 (+19.7%).
+- The mirror models the documented formula. The open AttackPower-adds-zero defect (`docs/superpowers/specs/2026-09-22-combat-attackpower-adds-zero.md`) quotes the same expected hit (28.85), and the panel cites it.
+- Do not spell the retired curve anywhere else: `src/__tests__/lib/combat/ue-damage-execution.test.ts` fails on an inline armour-curve expression under `sub_combat/damage-pipeline/`.
+
 ## Asset Inventory: UE-declared edges over name guesses
 
 The Models Asset Inventory tab (`models/AssetInventory/`) scans Content/ through `POST /api/filesystem/scan-assets`. The route's `inferDependencies` only guesses edges from shared base names (mesh to material, material to texture). `useAssetInventory` reads the scan with `tryApiFetch<AssetScanResult>`, so the `{success, data}` envelope is unwrapped once and an error keeps its text. Before that, the hook stored the raw envelope and the first render after a scan threw.
