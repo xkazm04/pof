@@ -18,6 +18,7 @@ import {
   getTaskStatus, clearSessionTasks, attachTaskExecution,
 } from './taskRegistry';
 import { parseBuildOutput, type BuildParseResult } from './UE5BuildParser';
+import { arbitrateRunEnd, type RunObservation } from './runArbiter';
 
 // Sentinel task id for interactive (submitPrompt) runs, which never get a
 // queued-task id. onTaskComplete must fire for them too — hosts release
@@ -333,6 +334,41 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const declaredCallbacksRef = useRef<TaskCallback[]>([]);
   /** Resolves the clean-result path's wait with the server's `callbacks` verdict. */
   const callbacksWaiterRef = useRef<((status: CallbackStatus | undefined) => void) | null>(null);
+  /**
+   * Stream watch (runArbiter.ts). A dropped or silent stream never ends a run: after
+   * `streamReconnectDelay` (drop) or `streamSilenceMax` without a frame (silence) the tab
+   * asks the server — `consultServer` — and applies the arbitrated verdict.
+   */
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** One server consult in flight at a time (onerror, silence, stuck poll, hidden poll). */
+  const consultingRef = useRef(false);
+  /** Late-bound: consultServer needs connectToStream (reconnect) and the stream needs it back. */
+  const consultServerRef = useRef<(execId: string) => Promise<void>>(async () => {});
+  const visibleRef = useRef(visible);
+  useEffect(() => { visibleRef.current = visible; }, [visible]);
+
+  const clearStreamWatch = useCallback(() => {
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+  }, []);
+
+  /**
+   * (Re-)arm the visible silence watchdog: no frame at all (heartbeats included) for
+   * `streamSilenceMax` means the stream is presumed half-open — drop it and ask the server.
+   * A hidden terminal has no watchdog (the hidden poll consults instead).
+   */
+  const armSilenceWatchdog = useCallback(() => {
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (!visibleRef.current) return;
+    silenceTimerRef.current = setTimeout(() => {
+      silenceTimerRef.current = null;
+      const execId = executionIdRef.current;
+      if (completedRef.current || !execId) return;
+      if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
+      void consultServerRef.current(execId);
+    }, UI_TIMEOUTS.streamSilenceMax);
+  }, []);
 
   const flushLogBuffer = useCallback(() => {
     rafIdRef.current = null;
@@ -368,8 +404,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   /**
    * The ONE terminal transition of a run, used by every path that ends it (clean
-   * result, error SSE, stream onerror, abort, start failure, both stuck-poller
-   * verdicts). The caller must already hold the `completedRef` latch. It releases
+   * result, error SSE, abort, start failure, and the server-arbitrated verdict that
+   * stream onerror, silence, the stuck poller and the hidden poll can only request).
+   * The caller must already hold the `completedRef` latch. It releases
    * the dispatch latch, records the registry completion, and fires onTaskComplete —
    * so no terminal path can forget one of them (the stuck-poller paths used to
    * leave dispatchingRef set, silently dropping every later dispatch).
@@ -379,6 +416,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     opts?: { callbackStatus?: CallbackStatus; outcomeUnknown?: boolean; taskId?: string | null; register?: boolean },
   ) => {
     dispatchingRef.current = false; // run terminated — allow the next dispatch
+    clearStreamWatch();
     const tid = opts?.taskId !== undefined ? opts.taskId : currentTaskIdRef.current;
     if (tid && opts?.register !== false) registerTaskComplete(tid, instanceId, success);
     const id = tid ?? INTERACTIVE_TASK_ID;
@@ -387,7 +425,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     if (opts?.outcomeUnknown) meta.outcomeUnknown = true;
     if (meta.callbackStatus || meta.outcomeUnknown) onTaskComplete?.(id, success, meta);
     else onTaskComplete?.(id, success);
-  }, [instanceId, onTaskComplete]);
+  }, [instanceId, onTaskComplete, clearStreamWatch]);
 
   /**
    * Latch-and-finish for the NON-result terminal paths (error, stream onerror,
@@ -586,7 +624,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     completedRef.current = false;
     const eventSource = new EventSource(after > 0 ? `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}after=${after}` : streamUrl);
     eventSourceRef.current = eventSource;
+    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+    armSilenceWatchdog();
     eventSource.onmessage = (event) => {
+      armSilenceWatchdog(); // any frame — heartbeats included — proves the stream alive
       try {
         const data = JSON.parse(event.data) as CLISSEEvent;
         if (typeof data.seq === 'number') {
@@ -601,21 +642,75 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           eventSource.close();
           eventSourceRef.current = null;
           savedStreamUrlRef.current = null;
+          clearStreamWatch();
         }
       } catch (e) { console.error('Failed to parse SSE:', e); }
     };
     eventSource.onerror = () => {
       eventSource.close();
-      eventSourceRef.current = null;
-      // Abnormal stream termination — e.g. the Claude process exited non-zero
-      // without emitting a clean result/error SSE event. Complete the in-flight
-      // task as failed so onTaskComplete fires and session.isRunning is
-      // released; otherwise every same-module dispatch stays blocked behind a
-      // disabled "Claude" button (the SP-B chunk-1 37-minute hang). completeOnce
-      // no-ops if a result/error already latched completion.
-      completeOnce(false);
+      if (eventSourceRef.current === eventSource) eventSourceRef.current = null;
+      // A dropped stream (network blip, sleep/resume, proxy reset, or the process
+      // exiting without a result frame) is NOT a run end — only the server knows. Ask
+      // it after streamReconnectDelay (runArbiter.ts): a live run reconnects at the seq
+      // cursor keeping its Abort handle, a finished one ends with its real outcome, an
+      // unreachable server means wait and ask again — never a false failure, so Retry
+      // can no longer start a second process beside a live one.
+      if (completedRef.current) return;
+      const execId = executionIdRef.current;
+      if (!execId) { completeOnce(false, { outcomeUnknown: true }); return; }
+      clearStreamWatch();
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        void consultServerRef.current(execId);
+      }, UI_TIMEOUTS.streamReconnectDelay);
     };
-  }, [handleSSEEvent, completeOnce]);
+  }, [handleSSEEvent, completeOnce, armSilenceWatchdog, clearStreamWatch]);
+
+  /**
+   * Ask the server whether the current run is over and apply the arbitrated verdict
+   * (runArbiter.ts) — the ONLY way a non-positive observation (stream drop, silence,
+   * stuck poll, hidden poll) can end a run. `end` finishes it once; `reconnect` re-opens a
+   * closed stream at the cursor (visible only); `wait` re-arms the watchdog so the run is
+   * asked about again, never parked. It never POSTs a query or a callback.
+   */
+  const consultServer = useCallback(async (execId: string) => {
+    if (completedRef.current || consultingRef.current) return;
+    consultingRef.current = true;
+    let obs: RunObservation;
+    try {
+      const reply = await apiFetch<{ execution?: HiddenRunStatus }>(`/api/claude-terminal/query?executionId=${encodeURIComponent(execId)}`);
+      obs = reply?.execution ? { kind: 'status', status: reply.execution } : { kind: 'unreachable' };
+    } catch (e) {
+      obs = e instanceof Error && e.message === EXECUTION_NOT_FOUND ? { kind: 'not-found' } : { kind: 'unreachable' };
+    } finally {
+      consultingRef.current = false;
+    }
+    if (completedRef.current || executionIdRef.current !== execId) return;
+    const verdict = arbitrateRunEnd(obs, { declared: declaredCallbacksRef.current.length > 0 });
+    if (verdict.kind === 'end') {
+      if (verdict.outcomeUnknown) {
+        endLostRun();
+      } else {
+        completedRef.current = true;
+        savedStreamUrlRef.current = null; // settled: a re-show must not re-attach
+        if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
+        clearHeartbeat();
+        const { callbackStatus } = verdict;
+        if (callbackStatus && obs.kind === 'status') applyServerVerdict(callbackStatus, obs.status.callbacksFailed ?? [], runTokenRef.current);
+        finishRun(verdict.success, callbackStatus ? { callbackStatus } : undefined);
+      }
+      dispatch({ type: 'STUCK_RESOLVED', success: verdict.success });
+      return;
+    }
+    // An open stream keeps its own watch; a hidden terminal is re-consulted by its poll.
+    if (eventSourceRef.current || !visibleRef.current) return;
+    if (verdict.kind === 'reconnect') {
+      connectToStream(savedStreamUrlRef.current ?? `/api/claude-terminal/stream?executionId=${encodeURIComponent(execId)}`, true);
+    } else {
+      armSilenceWatchdog();
+    }
+  }, [connectToStream, armSilenceWatchdog, endLostRun, clearHeartbeat, applyServerVerdict, finishRun]);
+  useEffect(() => { consultServerRef.current = consultServer; }, [consultServer]);
 
   // --- Task execution ---
 
@@ -777,6 +872,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   const handleAbort = useCallback(async () => {
     if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
+    clearStreamWatch(); // Abort is a positive terminator: no server consult first
     clearHeartbeat();
     // Closing the SSE stream does NOT stop the spawned claude.cmd — it keeps editing files
     // and billing tokens until the 100-min timeout. Kill the server-side process by id.
@@ -789,7 +885,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     }
     completeOnce(false);
     dispatch({ type: 'ABORT' });
-  }, [completeOnce, clearHeartbeat]);
+  }, [completeOnce, clearHeartbeat, clearStreamWatch]);
 
   // --- Clear ---
 
@@ -802,9 +898,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     dispatchedTaskIds.current.clear();
     setBuildParseCache(new Map());
     clearHeartbeat();
+    clearStreamWatch();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
     dispatch({ type: 'CLEAR' });
-  }, [instanceId, clearHeartbeat]);
+  }, [instanceId, clearHeartbeat, clearStreamWatch]);
 
   // --- Stuck task detection ---
 
@@ -822,63 +919,26 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       if (!tid) return;
       const status = await getTaskStatus(tid);
       if (completedRef.current) return;
-      if (status.found && status.status !== 'running') {
-        completedRef.current = true;
-        if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
-        clearHeartbeat();
-        // The registry already holds this verdict — do not re-register it.
-        finishRun(status.status === 'completed', { taskId: tid, register: false });
-        dispatch({ type: 'STUCK_RESOLVED', success: status.status === 'completed' });
-        return;
-      }
-      if (status.isStale) {
-        completedRef.current = true;
-        if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
-        clearHeartbeat();
-        finishRun(false, { taskId: tid });
-        dispatch({ type: 'STUCK_RESOLVED', success: false });
-      }
+      // The registry record (written by this tab) and heartbeat staleness are weak,
+      // client-side evidence: they may TRIGGER a server check, never end the run.
+      const execId = executionIdRef.current;
+      if (execId && ((status.found && status.status !== 'running') || status.isStale)) void consultServer(execId);
     }, UI_TIMEOUTS.stuckCheckInterval);
     return () => { if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; } };
-  }, [visible, autoStart, streaming, taskId, finishRun, clearHeartbeat]);
+  }, [visible, autoStart, streaming, taskId, consultServer]);
 
   // --- Hidden-run settle: a hidden terminal still ends its run ---
   // Hiding closes the EventSource (below) — an attention cost — but the run's
-  // existence is the server's: poll its execution status and end the run from there,
-  // with the server's callback verdict, without waiting for the tab to be re-shown.
+  // existence is the server's: consult its execution status (runArbiter.ts) and end the
+  // run from there, with the server's callback verdict, without waiting for a re-show.
   useEffect(() => {
     if (visible || !streaming) return;
-    const poll = setInterval(async () => {
-      if (completedRef.current) return;
+    const poll = setInterval(() => {
       const execId = executionIdRef.current;
-      if (!execId) return;
-      let ex: HiddenRunStatus;
-      try {
-        ex = (await apiFetch<{ execution: HiddenRunStatus }>(`/api/claude-terminal/query?executionId=${encodeURIComponent(execId)}`)).execution;
-      } catch (e) {
-        // Gone from the server: nothing will ever end it — record it as unknown.
-        if (e instanceof Error && e.message === EXECUTION_NOT_FOUND && executionIdRef.current === execId) {
-          endLostRun();
-          dispatch({ type: 'STUCK_RESOLVED', success: false });
-        }
-        return; /* otherwise transient — the next poll (or a re-show) retries */
-      }
-      if (completedRef.current || executionIdRef.current !== execId || ex.status === 'running') return;
-      const clean = ex.status === 'completed';
-      const declared = declaredCallbacksRef.current.length > 0;
-      if (clean && declared && !ex.callbackStatus) return; // the server is still settling
-      completedRef.current = true;
-      savedStreamUrlRef.current = null; // settled: a re-show must not re-attach
-      if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
-      clearHeartbeat();
-      const callbackStatus = clean && declared ? ex.callbackStatus ?? undefined : undefined;
-      if (callbackStatus) applyServerVerdict(callbackStatus, ex.callbacksFailed ?? [], runTokenRef.current);
-      const success = clean && !ex.isError;
-      finishRun(success, callbackStatus ? { callbackStatus } : undefined);
-      dispatch({ type: 'STUCK_RESOLVED', success });
+      if (execId && !completedRef.current) void consultServer(execId);
     }, UI_TIMEOUTS.stuckCheckInterval);
     return () => clearInterval(poll);
-  }, [visible, streaming, finishRun, clearHeartbeat, applyServerVerdict, endLostRun]);
+  }, [visible, streaming, consultServer]);
 
   // --- Process task queue ---
 
@@ -923,11 +983,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+    clearStreamWatch(); // the hidden poll consults the server instead
     clearHeartbeat();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
     if (pendingNextTaskRef.current) { clearTimeout(pendingNextTaskRef.current); pendingNextTaskRef.current = null; }
     if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
-  }, [visible, streaming, connectToStream, clearHeartbeat]);
+  }, [visible, streaming, connectToStream, clearHeartbeat, clearStreamWatch]);
   // `currentTaskIdRef`/`heartbeatIntervalRef` are refs (stable) — intentionally
   // not in deps; the effect re-runs on visible/streaming change, which is when
   // the heartbeat must be re-armed or torn down.
@@ -942,8 +1003,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       if (stuckCheckIntervalRef.current) clearInterval(stuckCheckIntervalRef.current);
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+      clearStreamWatch();
     };
-  }, []);
+  }, [clearStreamWatch]);
 
   return {
     logs,

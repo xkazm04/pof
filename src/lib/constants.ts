@@ -105,6 +105,12 @@ export const UI_TIMEOUTS = {
   heartbeatInterval: 2 * 60 * 1000,
   /** Interval to check for stuck/stale tasks. */
   stuckCheckInterval: 30 * 1000,
+  /** Pause after a CLI run's stream drops before the tab asks the server whether the run
+   *  is still live (runArbiter.ts) — a drop reconnects or ends from the server's answer. */
+  streamReconnectDelay: 1000,
+  /** A visible run's stream with no frame at all (heartbeats included) for this long is
+   *  presumed half-open and the server is consulted — ~3x the stream route's 15 s heartbeat. */
+  streamSilenceMax: 45 * 1000,
   /** Delay before starting the next queued task. */
   nextTaskDelay: 3000,
   /** Hard ceiling on a single CLI child-process run before it's force-killed
