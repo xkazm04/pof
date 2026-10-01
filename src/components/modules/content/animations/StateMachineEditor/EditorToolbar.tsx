@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Plus, ArrowRight, Code2, Download, RotateCcw, Diff, Layers,
+  Plus, ArrowRight, Code2, Download, RotateCcw, Diff, Layers, Upload,
 } from 'lucide-react';
 import {
   ACCENT_ORANGE, ACCENT_CYAN,
@@ -12,7 +12,25 @@ import { EDITOR_ACCENT } from './constants';
 import { BlenderNLAExport } from './BlenderNLAExport';
 import type { StateMachineEditorApi } from './useStateMachineEditor';
 
-export function EditorToolbar({ editor }: { editor: StateMachineEditorApi }) {
+export interface EditorToolbarProps {
+  editor: StateMachineEditorApi;
+  /** Opens the Apply confirmation; absent when the host offers no CLI rail. */
+  onRequestApply?: () => void;
+  /** An apply CLI run is in flight. */
+  applyRunning?: boolean;
+}
+
+/** Why Apply is (un)available, as the button's tooltip. */
+function applyTitle(editor: StateMachineEditorApi, hasRail: boolean, running: boolean): string {
+  const plan = editor.applyPlan;
+  if (!hasRail) return 'Apply is not available here';
+  if (running) return 'Applying — the CLI is writing to the project';
+  if (plan.status === 'blocked') return plan.reasons.join(' ');
+  if (plan.status === 'no-changes') return `No changes vs ${plan.origin ?? 'the project'}`;
+  return `Review ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'} and write them to ${plan.target?.className ?? 'the project'}`;
+}
+
+export function EditorToolbar({ editor, onRequestApply, applyRunning = false }: EditorToolbarProps) {
   const {
     takeSnapshot,
     hasChanges,
@@ -26,9 +44,11 @@ export function EditorToolbar({ editor }: { editor: StateMachineEditorApi }) {
     handleExport,
     states,
     handleReset,
+    applyPlan,
   } = editor;
 
   const isEmpty = states.length === 0;
+  const canApply = !!onRequestApply && !applyRunning && applyPlan.status === 'ready';
 
   return (
     <div className="flex items-center justify-between">
@@ -142,6 +162,24 @@ export function EditorToolbar({ editor }: { editor: StateMachineEditorApi }) {
         >
           <Download className="w-3 h-3" />
           Export
+        </button>
+
+        {/* Apply — opens the named change list; the write needs a second, explicit confirm */}
+        <button
+          onClick={onRequestApply}
+          disabled={!canApply}
+          data-testid="pof-anim-sm-editor-apply"
+          data-status={applyPlan.status}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: `${STATUS_WARNING}${OPACITY_15}`,
+            color: STATUS_WARNING,
+            border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
+          }}
+          title={applyTitle(editor, !!onRequestApply, applyRunning)}
+        >
+          <Upload className="w-3 h-3" />
+          {applyRunning ? 'Applying…' : `Apply to ${applyPlan.target?.className ?? 'project'}`}
         </button>
 
         {/* Export to Blender NLA */}

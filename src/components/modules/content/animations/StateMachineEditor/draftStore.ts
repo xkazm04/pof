@@ -2,8 +2,11 @@
  * Session-scoped draft store for the visual state-machine editor.
  *
  * The editor holds unsaved canvas state (positions, renamed states, hand-drawn
- * transitions) that exists nowhere else — there is no write-to-project path by
- * design. Modules are LRU-cached: a hidden module is first SUSPENDED (still
+ * transitions) that exists nowhere else until it is applied — and the only
+ * write-to-project path is the Apply plan (applyPlan.ts) dispatched through the
+ * module CLI rail, never a direct file write. A draft is cleared only when the
+ * post-apply re-scan matches the canvas (useStateMachineEditor.markApplied).
+ * Modules are LRU-cached: a hidden module is first SUSPENDED (still
  * mounted, state intact) and then, once evicted, UNMOUNTED — which silently
  * threw those edits away. This module-scope cache is the flush target: every
  * edit writes through, and a remount after eviction restores the draft and says

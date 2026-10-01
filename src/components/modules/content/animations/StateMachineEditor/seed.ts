@@ -19,6 +19,16 @@ import type { EditorState, EditorTransition } from './types';
 
 export type SeedSource = 'scan' | 'bridge' | 'template';
 
+/**
+ * The C++ class an apply writes to. Only the AnimBP scan names one (class +
+ * header relative to Source/); the live bridge does not, so its seed carries
+ * `null` and the Apply plan says why it cannot write.
+ */
+export interface SeedTarget {
+  className: string;
+  headerPath: string;
+}
+
 export interface EditorSeed {
   states: EditorState[];
   transitions: EditorTransition[];
@@ -26,6 +36,11 @@ export interface EditorSeed {
   source: Exclude<SeedSource, 'template'>;
   /** Human sentence naming that source (class name, asset count, timestamp). */
   origin: string;
+  /**
+   * Where an apply writes (scan only). Deliberately NOT part of
+   * `seedSignature`: it names the destination, not the machine's content.
+   */
+  target?: SeedTarget | null;
 }
 
 /**
@@ -104,6 +119,9 @@ export function seedFromScan(scan: AnimBPScanResult | null | undefined): EditorS
     transitions: toEditorTransitions(scan.transitions ?? [], known),
     source: 'scan',
     origin: `${scan.animInstanceClass ?? 'your AnimInstance'}${scan.headerPath ? ` (${scan.headerPath})` : ''}`,
+    target: scan.animInstanceClass && scan.headerPath
+      ? { className: scan.animInstanceClass, headerPath: scan.headerPath }
+      : null,
   };
 }
 
@@ -137,5 +155,6 @@ export function seedFromBridge(
     transitions: toEditorTransitions(raw, known),
     source: 'bridge',
     origin: `the live UE bridge${assetName ? ` (${assetName})` : ''}`,
+    target: null,
   };
 }
