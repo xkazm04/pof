@@ -110,6 +110,9 @@ export interface AutomationVerdict {
  * `unverifiable` (the filter hit nothing — not a failure); this is the SAME zero-match fact
  * the runner surfaces as `unregistered`/`deferred` — see `ZERO_MATCH_DETAIL` in the shared
  * module for why the two contexts keep different words (UI reasons).
+ *
+ * A fatal marker with passes and no failures is `unverifiable` (the suite was cut short), not
+ * `pass`; with a failure it stays `fail`; with zero matched tests it keeps the zero-match reading.
  */
 export function parseAutomationLog(log: string): AutomationVerdict {
   const f = readAbslogFacts(log);
@@ -122,6 +125,19 @@ export function parseAutomationLog(log: string): AutomationVerdict {
   }
   if (failed > 0) {
     return { verdict: 'fail', total, passed, failed, reason: `${failed} of ${total} automation test(s) failed` };
+  }
+  // A fatal marker outranks a pass marker in the same log: a run that passed and then crashed did
+  // not cleanly pass. The suite was cut short, so the tests behind the cut were never observed -
+  // not a `pass` (that certifies tests nobody saw run) and not a `fail` (nothing was seen failing).
+  // Trade-off, taken knowingly: a clean run whose teardown also prints the marker reads the same.
+  if (f.fatal) {
+    return {
+      verdict: 'unverifiable',
+      total,
+      passed,
+      failed,
+      reason: `${passed} automation test(s) passed, then the run crashed (fatal error in the log) - the rest of the suite was never observed`,
+    };
   }
   return { verdict: 'pass', total, passed, failed, reason: `${passed} automation test(s) passed` };
 }
