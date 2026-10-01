@@ -79,7 +79,7 @@ promoted to production-ready).
 | Fact | Consumed by |
 |---|---|
 | `msvc` | `getRequiredMSVCVersion` → the header's `Required MSVC toolchain` line |
-| `substrate`, `substrateSlabHint` | `DOMAIN_CONTEXT.materials`, `material-configurator.ts` (per-surface shading model + best practices) |
+| `substrate`, `substrateSlabHint` | `DOMAIN_CONTEXT.materials`, `material-configurator.ts` (Substrate half of the shading-model line + best practices) |
 | `megaLights`, `pcg` | `DOMAIN_CONTEXT['level-design']` |
 | `stateTree` | `DOMAIN_CONTEXT['ai-behavior']` |
 | `iris` | `DOMAIN_CONTEXT.multiplayer` |
@@ -229,6 +229,25 @@ entity id. `MaterialsView` dispatches it via `useModuleCLI.execute`, never
 to `builder-material-configurator.md`) and
 `__tests__/lib/prompt-evolution/material-configurator-rail.test.ts`.
 
+**One surface spec behind the configurator.** `lib/materials/surface-spec.ts` is
+the single per-surface table (prompt label, Roughness/Metallic defaults, default
+features, base sampler/instruction cost, forced-vs-default shading path) plus
+`resolveShadingModel(surface, features)`, `shadingModelLabel` and
+`FORBIDDEN_COMBINATIONS` / `refusalFor` - the same table-plus-resolvers shape as
+`lib/visual-gen/material-boundary.ts`. The cost estimator (rendered by
+`MaterialBudgetBar`), the component's `SURFACES` / helpers and
+`buildMaterialConfiguratorPrompt` all read it, so the Shader Budget bar and the
+dispatched `Shading model:` line name the same UE model for all 512 surface x
+feature combinations (cloth names UE's `Cloth`), and the prompt carries a
+`### Shader Budget` section (samplers n of 16, x metal base, warnings with their
+cheaper swap) the way post-process carries its GPU budget. A forbidden
+combination (tessellation + parallax; the estimator's error rows read the same
+table) is refused in `useMaterialParameterConfigurator`: `onGenerate` is not
+called and Generate is disabled with the reason shown. The component's
+`types.ts` re-exports `SurfaceType` / `RenderFeature` from the spec. Pinned by
+`__tests__/lib/materials/surface-spec.test.ts` and
+`__tests__/components/materials/MaterialParameterConfigurator.spec.test.tsx`.
+
 Phase 2 converted **post-process** the same way: `TaskFactory.postProcess(spec)`,
 a verbatim `post-process` handler and `postProcessVariantKey(spec)`. The config
 is the stack's one spec — `toStackSpec(effects, resolution)` in
@@ -351,8 +370,9 @@ eventually dispatches it).
   gotchas (stamped with the project's engine version from `engine-facts.ts`).
   (`animation-checklist.ts:5`)
 
-- `buildMaterialConfiguratorPrompt(config, ctx)` — maps surface type to shading model
-  and render-feature instructions, generates a three-file task description (master
+- `buildMaterialConfiguratorPrompt(config, ctx)` — resolves the shading model from surface
+  + features via `lib/materials/surface-spec.ts`, adds render-feature instructions and
+  the estimator's Shader Budget section, generates a three-file task description (master
   material or MID variant), then calls `.withBestPractices()` with UMD / TSoftObjectPtr /
   Substrate 5.7+ tips. (`material-configurator.ts:36`)
 
