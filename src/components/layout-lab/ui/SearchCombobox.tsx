@@ -17,9 +17,15 @@
  *
  * The caller supplies only the domain: a pure `search(needle)` returning the FULL match
  * set (the cap is applied here) and what to do with the chosen hit.
+ *
+ * Opt-in `recall` (see `searchRecall.ts`): picks are remembered per `idPrefix`, in memory.
+ * A focused EMPTY query lists them under "Recent" (so summon-then-Enter switches back), and
+ * a typed query moves recent MATCHES first, before the cap — never adding a non-match.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRecallMatches } from './searchRecall';
+import { SearchOption } from './searchComboboxOption';
 
 export interface SearchHit<P = unknown> {
   /** Stable identity — React key + option id base. */
@@ -56,9 +62,15 @@ export interface SearchComboboxProps<P> {
   hintKeys?: string;
   /** Noun used in the empty-state copy ("entity", "result"). */
   noun?: string;
+  /** Opt-in recall: resolves a remembered `SearchHit.key` against the LIVE index (null =
+   *  gone, never rendered). Keep `resolve` referentially stable. */
+  recall?: { resolve: (key: string) => SearchHit<P> | null };
+  /** The input element — e.g. a `Modal`'s `initialFocusRef`, so focus lands in the search. */
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 const DEFAULT_MAX_HITS = 12;
+const NO_HITS: never[] = [];
 
 // Popup chrome shared by the listbox and the no-match message so both hang off the input
 // identically (one source of truth for the overlay's box).
@@ -86,26 +98,35 @@ export function SearchCombobox<P>({
   autoFocus,
   hintKeys = '↑↓ browse · ↵ open · esc close',
   noun = 'result',
+  recall,
+  inputRef,
 }: SearchComboboxProps<P>) {
   const [q, setQ] = useState('');
+  // The recall list shows only while the input is focused (an autoFocused one starts so).
+  const [recallOpen, setRecallOpen] = useState(!!autoFocus);
   // Highlighted option. Clamped during render (never reset from an effect) so the index
   // stays valid as the hit list shrinks under the user's typing.
   const [activeRaw, setActiveRaw] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
   const needle = q.trim().toLowerCase();
-  // Full match set first, capped list second — so the cap can be reported rather than hidden.
-  const matches = useMemo(() => (needle ? search(needle) : []), [needle, search]);
-  const hits = useMemo(() => matches.slice(0, maxHits), [matches, maxHits]);
+  // Full match set first (recall-ranked when opted in), capped list second — so the cap can
+  // be reported rather than hidden. An empty needle yields the recents (recall) or nothing.
+  const { matches, record } = useRecallMatches(idPrefix, recall?.resolve, needle, search);
+  const shown = needle || recallOpen ? matches : NO_HITS;
+  const hits = useMemo(() => shown.slice(0, maxHits) as SearchHit<P>[], [shown, maxHits]);
 
   const open = needle.length > 0;
   const hasHits = hits.length > 0;
+  const recalling = !open && hasHits;
   const hidden = matches.length - hits.length;
   const active = hasHits ? Math.min(activeRaw, hits.length - 1) : 0;
   const optionId = (i: number) => `${idPrefix}-option-${i}`;
   const listboxId = `${idPrefix}-listbox`;
 
-  const liveText = !open
+  const liveText = recalling
+    ? `${hits.length} recent`
+    : !open
     ? ''
     : hasHits
       ? `${matches.length} ${noun}${matches.length === 1 ? '' : 's'} match${hidden > 0 ? `, showing first ${hits.length}` : ''}`
@@ -120,9 +141,11 @@ export function SearchCombobox<P>({
   }, [active]);
 
   const select = (h: SearchHit<P>) => {
+    record(h.key);
     onSelect(h);
     setQ('');
     setActiveRaw(0);
+    setRecallOpen(false);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -131,10 +154,14 @@ export function SearchCombobox<P>({
       // A non-empty query "eats" the first Escape: stop it reaching an owning overlay
       // (Modal closes on Escape) so clearing the query never also closes the search.
       if (q) { e.stopPropagation(); setQ(''); setActiveRaw(0); return; }
+      setRecallOpen(false);
       onDismiss?.();
       return;
     }
-    if (!hits.length) return;
+    if (!hits.length) {
+      if (e.key === 'ArrowDown' && !q) setRecallOpen(true); // re-open a dismissed recall list
+      return;
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveRaw((i) => (Math.min(i, hits.length - 1) + 1) % hits.length);
@@ -156,11 +183,14 @@ export function SearchCombobox<P>({
   return (
     <div style={{ position: 'relative' }} data-testid={`${idPrefix}-root`}>
       <input
+        ref={inputRef}
         type="text"
         role="combobox"
         value={q}
         onChange={(e) => { setQ(e.target.value); setActiveRaw(0); }}
         onKeyDown={onKeyDown}
+        onFocus={() => setRecallOpen(true)}
+        onBlur={() => setRecallOpen(false)}
         placeholder={placeholder}
         aria-label={ariaLabel}
         aria-expanded={hasHits}
@@ -201,57 +231,26 @@ export function SearchCombobox<P>({
 
       {hasHits && (
         <div style={POPUP_SHELL}>
+          {recalling && (
+            <div aria-hidden style={{ padding: 'var(--lab-s1) var(--lab-s2) 0', fontSize: 'var(--lab-fs-xs)', color: 'var(--text-subtle)' }}>Recent</div>
+          )}
           <ul
             ref={listRef}
             id={listboxId}
             role="listbox"
-            aria-label={ariaLabel}
+            aria-label={recalling ? 'Recent' : ariaLabel}
             style={{ margin: 0, padding: 'var(--lab-s1)', listStyle: 'none', maxHeight: 320, overflowY: 'auto' }}
           >
             {hits.map((h, i) => (
-              <li
+              <SearchOption<P>
                 key={h.key}
+                hit={h}
                 id={optionId(i)}
-                role="option"
-                aria-selected={i === active}
-                data-testid={`${idPrefix}-option`}
-                // Keep focus in the input so aria-activedescendant stays authoritative.
-                onMouseDown={(e) => e.preventDefault()}
-                onMouseEnter={() => setActiveRaw(i)}
-                onClick={() => select(h)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  justifyContent: 'space-between',
-                  gap: 'var(--lab-s2)',
-                  padding: 'var(--lab-s1) var(--lab-s2)',
-                  borderRadius: 'var(--lab-r-sm)',
-                  cursor: 'pointer',
-                  color: 'var(--lab-text)',
-                  background: i === active ? 'color-mix(in srgb, var(--lab-ink) 14%, transparent)' : 'transparent',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--lab-s2)', minWidth: 0 }}>
-                  {h.badge && (
-                    <span
-                      style={{
-                        flexShrink: 0, fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)',
-                        textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-subtle)',
-                        border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)', padding: '0 4px',
-                      }}
-                    >
-                      {h.badge}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 'var(--lab-fs-sm)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.label}</span>
-                  {h.detail && (
-                    <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>{h.detail}</span>
-                  )}
-                </span>
-                {h.meta && (
-                  <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--text-subtle)', flexShrink: 0 }}>{h.meta}</span>
-                )}
-              </li>
+                active={i === active}
+                testId={`${idPrefix}-option`}
+                onHover={() => setActiveRaw(i)}
+                onPick={() => select(h)}
+              />
             ))}
           </ul>
 

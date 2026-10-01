@@ -22,9 +22,11 @@
  * is a full-page jump, so it says so in its badge and leaves the lab's own nav callbacks
  * untouched. Every legacy-shell module has an address too (`MODULE_DESTINATIONS`): a
  * `module` hit is the same full-page jump, to `/?legacy=1&module=<id>`.
+ * Recall is on (empty query = recent picks), so Ctrl+K then Enter returns to the last place;
+ * the Modal focuses the input itself — else focus lands on its close button a frame later.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
@@ -127,6 +129,12 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
     (needle: string) => index.filter((r) => r.hay.includes(needle)).map((r) => r.hit),
     [index],
   );
+  // Recall resolves remembered keys against the SAME lazy index (gone → never rendered).
+  const recall = useMemo(() => {
+    const byKey = new Map(index.map((r) => [r.hit.key, r.hit]));
+    return { resolve: (key: string) => byKey.get(key) ?? null };
+  }, [index]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const go = useCallback((hit: SearchHit<LabSearchTarget>) => {
     const t = hit.payload;
@@ -148,9 +156,11 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
   }, [entitiesByCatalog, currentEntityId, onSelectCatalog, onNavigate, onClose]);
 
   return (
-    <Modal open={open} onClose={onClose} title="Search the lab" className="max-w-xl">
+    <Modal open={open} onClose={onClose} title="Search the lab" className="max-w-xl" initialFocusRef={inputRef}>
       <SearchCombobox<LabSearchTarget>
         search={search}
+        recall={recall}
+        inputRef={inputRef}
         onSelect={go}
         onDismiss={onClose}
         autoFocus

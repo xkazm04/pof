@@ -48,11 +48,17 @@ export function EntitySearch({ onFocus }: { onFocus: (catalogId: string, entityI
     (needle: string) => all.filter((r) => r.hay.includes(needle)).map((r) => r.hit),
     [all],
   );
+  // Opt-in recall: a focused empty query lists recent picks, re-resolved by key.
+  const recall = useMemo(() => {
+    const byKey = new Map(all.map((r) => [r.hit.key, r.hit]));
+    return { resolve: (key: string) => byKey.get(key) ?? null };
+  }, [all]);
 
   return (
     <div style={{ maxWidth: 520, marginBottom: 'var(--lab-s4)' }}>
       <SearchCombobox<Hit>
         search={search}
+        recall={recall}
         onSelect={(h) => onFocus(h.payload.catalogId, h.payload.entityId)}
         idPrefix="status-entity-search"
         ariaLabel="Search entity to focus"
