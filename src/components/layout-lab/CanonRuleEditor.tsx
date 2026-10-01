@@ -55,22 +55,20 @@ export function CanonRuleEditor({ t, rule, onSave, onCancel }: {
     if (!r.ok) setError(`Not saved — ${r.error}`);
   };
 
-  const selectStyle = { width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: '9px 12px', fontSize: 15, outline: 'none' } as const;
+  const selectStyle = { width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: '9px 12px', fontSize: 15 } as const;
   return (
     <div role="group" aria-label="Canon rule editor" style={{ border: `1px solid ${t.ink}`, borderRadius: t.glass ? 10 : 0, padding: '14px 16px', background: t.panel, marginBottom: 10 }}>
-      <div style={{ marginBottom: 8 }}>
-        <Lbl t={t}>Title</Lbl>
-        <div style={{ marginTop: 4 }}><LabInput t={t} value={title} onChange={setTitle} placeholder="Rule title" /></div>
+      <div style={{ marginBottom: 8, display: 'grid', gap: 4 }}>
+        <LabInput t={t} label="Title" value={title} onChange={setTitle} placeholder="Rule title" />
       </div>
-      <div style={{ marginBottom: 8 }}>
-        <Lbl t={t}>Body</Lbl>
-        <div style={{ marginTop: 4 }}><LabTextarea t={t} value={body} onChange={setBody} rows={3} placeholder="Rule body / guidance" /></div>
+      <div style={{ marginBottom: 8, display: 'grid', gap: 4 }}>
+        <LabTextarea t={t} label="Body" value={body} onChange={setBody} rows={3} placeholder="Rule body / guidance" />
       </div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
         <div style={{ flex: 1 }}>
           <Lbl t={t}>Scope</Lbl>
           <div style={{ marginTop: 4 }}>
-            <select aria-label="Scope" value={scope} onChange={(e) => setScope(e.target.value)} className={t.fontBody} style={selectStyle}>
+            <select aria-label="Scope" value={scope} onChange={(e) => setScope(e.target.value)} className={`focus-ring-inset ${t.fontBody}`} style={selectStyle}>
               {scopes.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
@@ -78,7 +76,7 @@ export function CanonRuleEditor({ t, rule, onSave, onCancel }: {
         <div style={{ flex: 1 }}>
           <Lbl t={t}>Category</Lbl>
           <div style={{ marginTop: 4 }}>
-            <select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value as RuleCategory)} className={t.fontBody} style={selectStyle}>
+            <select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value as RuleCategory)} className={`focus-ring-inset ${t.fontBody}`} style={selectStyle}>
               {CANON_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>

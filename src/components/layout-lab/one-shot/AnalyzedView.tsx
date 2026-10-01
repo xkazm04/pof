@@ -92,9 +92,10 @@ export function AnalyzedView({ t, distribution, onPick, onPropose, onBack }: Ana
         value={hint}
         onChange={(e) => setHint(e.target.value)}
         placeholder="e.g. a caster that punishes stacking"
+        className="focus-ring-inset"
         style={{
           width: '100%', fontSize: 14, padding: '7px 10px', marginBottom: 10, boxSizing: 'border-box',
-          background: t.panel, color: t.text, border: `1px solid ${t.line}`, outline: 'none',
+          background: t.panel, color: t.text, border: `1px solid ${t.line}`,
         }}
       />
       <div style={{ display: 'flex', gap: 8 }}>

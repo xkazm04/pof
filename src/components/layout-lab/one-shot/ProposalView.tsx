@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { LabTheme } from '../theme';
 import { useOneShotJobStore, type OneShotProposal } from '@/stores/oneShotJobStore';
 import { planRun, stepRefsFor } from '@/lib/one-shot/runPlan';
@@ -42,6 +42,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
   const dispatch = useDispatchPlan(models > 0, ONE_SHOT_STEP_TASK_TYPE);
   const copy = dispatch ? describeDispatchPlan(dispatch) : null;
   const costCopy = copy ? `${copy.model} ${copy.cost}` : null;
+  const refineId = useId();
   const [refineInput, setRefineInput] = useState('');
   const [forceMore, setForceMore] = useState(false);
   const atCap = refinementTurns >= 3;
@@ -104,10 +105,12 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
 
       {/* refine textarea */}
       <div style={{ marginBottom: 8 }}>
-        <label className={t.fontMono} style={{ display: 'block', fontSize: 12, color: t.muted, marginBottom: 4 }}>
+        <label htmlFor={refineId} className={t.fontMono} style={{ display: 'block', fontSize: 12, color: t.muted, marginBottom: 4 }}>
           Refine direction {refinementTurns > 0 && `(${refinementTurns}/3 used)`}
         </label>
         <textarea
+          id={refineId}
+          className="focus-ring-inset"
           value={refineInput}
           onChange={(e) => setRefineInput(e.target.value)}
           disabled={refineDisabled}
@@ -121,7 +124,6 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
             background: t.panel,
             color: refineDisabled ? t.muted : t.text,
             border: `1px solid ${t.line}`,
-            outline: 'none',
             fontFamily: 'inherit',
             opacity: refineDisabled ? 0.5 : 1,
           }}

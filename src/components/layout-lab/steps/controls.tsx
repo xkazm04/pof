@@ -1,25 +1,48 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { Input, Textarea } from '@/components/layout-lab/ui/Field';
 import type { LabTheme } from '../theme';
 
+/**
+ * The lab's themed controls — the kit the Shared Component Manifest sends every step author to.
+ * LabInput / LabTextarea ride `ui/Field`'s Input / Textarea (which carry `focus-ring-inset`), so
+ * the keyboard focus ring is never killed, and a control cannot be rendered without a NAME:
+ * `label` renders an associated `<label htmlFor>` in Lbl's style; `ariaLabel` names a control
+ * whose caption lives elsewhere. A placeholder is not a name. `Lbl` stays for headings that
+ * name no control.
+ */
+export type ControlName = { label: string; ariaLabel?: never } | { ariaLabel: string; label?: never };
+
+const lblStyle = (t: LabTheme) => ({ fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.muted }) as const;
+/** Themed look over ui/Field's base. `fontFamily: undefined` lets the theme's font class win. */
+const controlStyle = (t: LabTheme) => ({ fontFamily: undefined, background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, fontSize: 15 });
+
 export function Lbl({ t, children }: { t: LabTheme; children: ReactNode }) {
-  return <span className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.muted }}>{children}</span>;
+  return <span className={t.fontMono} style={lblStyle(t)}>{children}</span>;
+}
+
+function ControlLabel({ t, htmlFor, label }: { t: LabTheme; htmlFor: string; label?: string }) {
+  return label ? <label htmlFor={htmlFor} className={t.fontMono} style={lblStyle(t)}>{label}</label> : null;
 }
 
 export function LabButton({ t, children, onClick, disabled, testId }: { t: LabTheme; children: ReactNode; onClick?: () => void; disabled?: boolean; testId?: string }) {
   return (
-    <button onClick={onClick} disabled={disabled} data-testid={testId} className={t.fontMono}
+    <button type="button" onClick={onClick} disabled={disabled} data-testid={testId} className={`focus-ring ${t.fontMono}`}
       style={{ padding: '10px 16px', fontSize: 14, letterSpacing: '0.03em', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1, background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 8 : 0, fontWeight: 600 }}>
       {children}
     </button>
   );
 }
 
-export function LabTextarea({ t, value, onChange, rows = 6, placeholder, testId }: { t: LabTheme; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string; testId?: string }) {
+export function LabTextarea({ t, value, onChange, rows = 6, placeholder, testId, label, ariaLabel }: { t: LabTheme; value: string; onChange: (v: string) => void; rows?: number; placeholder?: string; testId?: string } & ControlName) {
+  const id = useId();
   return (
-    <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} data-testid={testId} className={t.fontBody}
-      style={{ width: '100%', resize: 'vertical', background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: '10px 12px', fontSize: 15, lineHeight: 1.55, outline: 'none' }} />
+    <>
+      <ControlLabel t={t} htmlFor={id} label={label} />
+      <Textarea id={id} aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} rows={rows} placeholder={placeholder} data-testid={testId} className={t.fontBody}
+        style={{ ...controlStyle(t), padding: '10px 12px', lineHeight: 1.55 }} />
+    </>
   );
 }
 
@@ -46,9 +69,13 @@ export function LabToggle({ t, checked, onChange, label, hint, tone, testId }: {
   );
 }
 
-export function LabInput({ t, value, onChange, type = 'text', placeholder }: { t: LabTheme; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
+export function LabInput({ t, value, onChange, type = 'text', placeholder, label, ariaLabel }: { t: LabTheme; value: string; onChange: (v: string) => void; type?: string; placeholder?: string } & ControlName) {
+  const id = useId();
   return (
-    <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={t.fontBody}
-      style={{ width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: '9px 12px', fontSize: 15, outline: 'none' }} />
+    <>
+      <ControlLabel t={t} htmlFor={id} label={label} />
+      <Input id={id} aria-label={ariaLabel} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={t.fontBody}
+        style={{ ...controlStyle(t), padding: '9px 12px' }} />
+    </>
   );
 }

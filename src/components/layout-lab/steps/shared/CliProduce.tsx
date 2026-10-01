@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lbl, LabButton, LabTextarea, LabToggle } from '../controls';
+import { LabButton, LabTextarea, LabToggle } from '../controls';
 import { useLiveProduceMode, type ProduceOutcome } from '@/components/layout-lab/labProduceMode';
 import { useDispatchPlan } from './useDispatchPlan';
 import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
@@ -170,8 +170,7 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       {fields}
-      <Lbl t={t}>Direction (your input)</Lbl>
-      <LabTextarea t={t} value={direction} onChange={setDirection} rows={rows} testId="cli-produce-direction"
+      <LabTextarea t={t} label="Direction (your input)" value={direction} onChange={setDirection} rows={rows} testId="cli-produce-direction"
         placeholder={placeholder ?? 'Steer this step — tone, constraints, references…'} />
       {/* What the next produce will actually be looking at. Only real served artifacts
           reach this list, so an empty step shows nothing rather than a false promise. */}
@@ -198,7 +197,7 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
               hint={live ? 'runs a real Claude session — spends model budget' : 'writes locally · no model spend'} />
           </span>
         )}
-        <button onClick={() => setShowPrompt((v) => !v)} className={t.fontMono}
+        <button type="button" onClick={() => setShowPrompt((v) => !v)} aria-expanded={showPrompt} className={`focus-ring ${t.fontMono}`}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: t.muted, textDecoration: 'underline' }}>
           {showPrompt ? 'hide prompt' : 'view prompt'}
         </button>
@@ -229,13 +228,14 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           {buildPrompt(direction)}
         </pre>
       )}
+      {/* One persistent live region, present before any dispatch, so a result/refusal mounting in it is announced. */}
+      <div role="status" aria-live="polite" style={{ display: 'grid' }}>
       {dispatching ? (
         <div data-testid="cli-produce-dispatching" className={t.fontMono} style={{ fontSize: 14, color: t.muted, display: 'grid', gap: 2 }}>
           <span>Dispatching…</span>
           <span style={{ color: t.muted }}>CLI dispatch in flight…</span>
         </div>
       ) : (
-      <>
       <AnimatePresence mode="wait" initial={false}>
         {result ? (
           <motion.span
@@ -263,10 +263,12 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           </motion.span>
         ) : null}
       </AnimatePresence>
+      )}
+      </div>
       {/* Rule 4 — a failed DISPATCH can be retried with the EXACT prompt that failed.
           A server VERDICT is not a failed dispatch: the session already ran and was billed,
           and the same prompt would be graded the same way, so no retry is offered there. */}
-      {result && !result.ok && retryable && lastCtx && (
+      {!dispatching && result && !result.ok && retryable && lastCtx && (
         <button
           data-testid="cli-produce-retry"
           onClick={retry}
@@ -279,8 +281,6 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
         >
           ↻ Retry with same prompt
         </button>
-      )}
-      </>
       )}
     </div>
   );
