@@ -89,6 +89,25 @@ the URL, not `history.state`: Next's app-router patches `pushState`/`replaceStat
 destinations are derived from `SUB_MODULE_IDS`, so they vanish with the legacy shell
 (`docs/catalog/LEGACY-SALVAGE.md`).
 
+**Sub-location — the module's open tab is part of the navigation model.** `navigationStore` holds
+`moduleTabs: Record<moduleId, tab>` next to `activeCategory`/`activeSubModule` (persisted with them).
+`navigateToModule(id, { tab })` writes the module AND its tab in ONE `set` (no subscriber sees the
+module without its tab); `setModuleTab(id, tab)` moves one module's tab without changing the active
+module. Views read their own entry through `useModuleTab(moduleId, validTabs, fallback?)`
+(`src/hooks/useModuleTab.ts`): a primitive selector, validated against that module's tab ids, so a
+stale or foreign persisted tab falls back to the first valid one. `useReviewableModuleView` (the 23
+Reviewable module views) uses it for its tab bar, so a jump addressed to one module never moves
+another mounted LRU pane, and a jump written before the target pane mounts lands on its first
+render. Producers: InlineTerminal's `navigate` suggestion resolves its target with
+`tabJumpTarget(action, session.moduleId)` (`suggestionIntents.ts` — the action's module, else the
+session's own) and Material Lab's "apply to editor" calls `setModuleTab('material-lab', 'editor')`.
+This replaced the untargeted `window` `pof-navigate-tab` CustomEvent (it flipped every mounted pane
+with a matching tab id and dropped jumps fired before the listener mounted); a ratchet in
+`navigationStore.moduleTab.test.ts` keeps it out of `src/`. The remaining sub-tab vocabulary is
+`useTabParam` (`src/hooks/useTabParam.ts`): the core-engine authoring shells (`sub_ability`,
+`sub_character`, `sub_combat`) hold their inner sub-tab in a URL param, read once on mount — not yet
+part of this model.
+
 ### 2. Bridge + project gate — `NewHome` (`src/components/layout-lab/NewHome.tsx`)
 
 `NewHome` calls `usePofBridge()` at the correct React subtree root, then **gates on project
