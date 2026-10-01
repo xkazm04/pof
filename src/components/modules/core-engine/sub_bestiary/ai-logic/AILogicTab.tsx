@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Eye, Brain, ChevronRight } from 'lucide-react';
 import { MODULE_COLORS, ACCENT_CYAN, STATUS_SUCCESS,
@@ -9,19 +9,28 @@ import { MODULE_COLORS, ACCENT_CYAN, STATUS_SUCCESS,
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { STATUS_COLORS, PipelineFlow } from '../../unique-tabs/_shared';
-import { AI_PIPELINE, DETECTED_ENTITIES } from '../_shared/data';
+import { AI_PIPELINE, ARCHETYPES, DETECTED_ENTITIES } from '../_shared/data';
+import { DEFAULT_SENSE, detectEntities, senseProfileFor } from '@/lib/bestiary/sense-profile';
 import { BTFlowchart } from './BTFlowchart';
 import { PerceptionConeViz } from './PerceptionConeViz';
 import { DecisionDebugger } from './DecisionDebugger';
 import { AbilityQuickPicker } from '../../sub_character/input/AbilityQuickPicker';
 import { PerceptionLegend, BtDetailsPanel } from './AILogicSidePanels';
+import { BrainSubjectBar } from './BrainSubjectBar';
 
 interface AILogicTabProps {
   featureMap: Map<string, FeatureRow>;
   accent: string;
+  /** The enemy picked in the shell (brainSubject); null / omitted = generic view. */
+  subjectId?: string | null;
+  onSubjectChange?: (id: string | null) => void;
 }
 
-export function AILogicTab({ featureMap, accent }: AILogicTabProps) {
+export function AILogicTab({ featureMap, accent, subjectId = null, onSubjectChange }: AILogicTabProps) {
+  const subject = useMemo(() => ARCHETYPES.find(a => a.id === subjectId) ?? null, [subjectId]);
+  const profile = useMemo(() => (subject ? senseProfileFor(subject) : DEFAULT_SENSE), [subject]);
+  // Detection derived from each entity's position and the subject's reach.
+  const entities = useMemo(() => detectEntities(DETECTED_ENTITIES, profile), [profile]);
   const [spawnOpen, setSpawnOpen] = useState(false);
   const [btExpandedNode, setBtExpandedNode] = useState<string | null>(null);
 
@@ -35,6 +44,8 @@ export function AILogicTab({ featureMap, accent }: AILogicTabProps) {
     <motion.div key="ai-logic"
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.2 }} className="space-y-4">
+
+      <BrainSubjectBar subject={subject} profile={profile} onSubjectChange={onSubjectChange} accent={accent} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* AI Infrastructure pipeline */}
@@ -92,8 +103,8 @@ export function AILogicTab({ featureMap, accent }: AILogicTabProps) {
       <BlueprintPanel color={ACCENT_CYAN} className="p-3">
         <SectionHeader icon={Eye} label="Perception Cone Visualizer" color={ACCENT_CYAN} />
         <div className="mt-3 flex items-center gap-4 min-h-[200px]">
-          <PerceptionConeViz entities={DETECTED_ENTITIES} accent={ACCENT_CYAN} />
-          <PerceptionLegend />
+          <PerceptionConeViz entities={entities} profile={profile} accent={ACCENT_CYAN} />
+          <PerceptionLegend profile={profile} entities={entities} />
         </div>
       </BlueprintPanel>
 
