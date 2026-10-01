@@ -10,6 +10,7 @@ import {
 } from '@/lib/chart-colors';
 import { DEFAULT_THEME } from './constants';
 import { generateUE5Config } from './helpers';
+import { writeParam, type HudThemeParam } from './themeSchema';
 import { useAnimationLoop } from './useAnimationLoop';
 import { LivePreviewScene } from './LivePreviewScene';
 import { ParameterEditor } from './ParameterEditor';
@@ -26,15 +27,13 @@ export function HudThemeEditor() {
 
   const time = useAnimationLoop(playing);
 
-  const update = useCallback(<K extends keyof HudTheme>(key: K, value: HudTheme[K]) => {
-    setTheme(prev => ({ ...prev, [key]: value }));
+  const setParam = useCallback((p: HudThemeParam, value: number | RGBA) => {
+    setTheme(prev => writeParam(prev, p, value));
   }, []);
 
-  const updateElementColor = useCallback((element: string, color: RGBA) => {
-    setTheme(prev => ({
-      ...prev,
-      elementColors: { ...prev.elementColors, [element]: color },
-    }));
+  // A pasted .h (parseUE5Config, already clamped and reported) replaces the theme.
+  const handleImport = useCallback((next: HudTheme) => {
+    setTheme(next);
   }, []);
 
   const handleReset = useCallback(() => {
@@ -117,8 +116,7 @@ export function HudThemeEditor() {
         {/* ── Left: Parameter Editor ── */}
         <ParameterEditor
           theme={theme}
-          update={update}
-          updateElementColor={updateElementColor}
+          setParam={setParam}
           activeSection={activeSection}
           setActiveSection={setActiveSection}
           sections={sections}
@@ -126,10 +124,12 @@ export function HudThemeEditor() {
 
         {/* ── Right: UE5 Export ── */}
         <ExportPanel
+          theme={theme}
           exportConfig={exportConfig}
           copied={copied}
           handleCopy={handleCopy}
           handleDownload={handleDownload}
+          onImport={handleImport}
         />
       </div>
     </div>
