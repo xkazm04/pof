@@ -115,3 +115,38 @@ export function generateTagsHeader(rules: TagRule[], loadout: GASLoadoutSlot[]):
   lines.push('', 'private:', '    static FARPGGameplayTags GameplayTags;', '};');
   return lines.join('\n');
 }
+
+export interface ModifierInfoSpec {
+  /** UARPGAttributeSet field (`Get<attribute>Attribute()`); null = unknown attribute. */
+  attribute: string | null;
+  operation: 'add' | 'multiply';
+  /** The C++ float literal handed to FScalableFloat, e.g. `1.5f`. */
+  magnitude: string;
+  /** Appended to the TODO comment when the attribute is unknown. */
+  unknownNote?: string;
+}
+
+/**
+ * One `FGameplayModifierInfo` block inside a UGameplayEffect constructor, in the
+ * shape the generator contract (`src/lib/ability/effect-codegen-prompt.ts`)
+ * mandates: the accessor is spelled from UARPGAttributeSet, the op is
+ * `Additive` or `Multiplicitive`, the magnitude is wrapped in
+ * FGameplayEffectModifierMagnitude, and an unknown attribute becomes a
+ * `// TODO: unknown attribute` comment instead of an invented accessor.
+ * Shared by the GAS editor preview and the bestiary elite-modifier GEs.
+ */
+export function renderModifierInfo(spec: ModifierInfoSpec): string[] {
+  if (spec.attribute === null) {
+    return [`    // TODO: unknown attribute${spec.unknownNote ? ` (${spec.unknownNote})` : ''}`];
+  }
+  const op = spec.operation === 'add' ? 'Additive' : 'Multiplicitive';
+  return [
+    '    {',
+    '        FGameplayModifierInfo Mod;',
+    `        Mod.Attribute = UARPGAttributeSet::Get${spec.attribute}Attribute();`,
+    `        Mod.ModifierOp = EGameplayModOp::${op};`,
+    `        Mod.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(${spec.magnitude}));`,
+    '        Modifiers.Add(Mod);',
+    '    }',
+  ];
+}
