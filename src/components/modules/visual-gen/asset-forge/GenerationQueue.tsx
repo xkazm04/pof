@@ -125,6 +125,13 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
         </div>
         <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
           <span>{job.mode === 'text-to-3d' ? 'Text' : 'Image'} → 3D</span>
+          {/* Recorded at submit, never inferred: which forge 2D image this mesh came from. */}
+          {job.sourceImage && (
+            <>
+              <span>·</span>
+              <span data-testid="job-source-image">from 2D image {job.sourceImage}</span>
+            </>
+          )}
           <span>·</span>
           <span>{job.providerId}</span>
           <span>·</span>

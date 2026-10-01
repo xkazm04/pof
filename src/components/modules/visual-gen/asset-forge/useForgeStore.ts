@@ -91,6 +91,22 @@ export interface GenerationJob {
   providerTaskId?: string;
   /** The server's word on an errored job: may its paid task still deliver? */
   recoverable?: boolean;
+  /** The forge 2D image this image-to-3d job was made from (its served name), recorded at
+   *  submit and carried by `retryJob`. Client-side provenance: never sent in the request. */
+  sourceImage?: string;
+}
+
+/**
+ * The image-to-3D reference the Generate tab submits — in the store, not panel state, so a
+ * forge tab switch (which unmounts the panel) cannot drop it. Memory-only. `image-2d` is a
+ * 2D forge result staged by "Make 3D from this image" (`./referenceHandoff`); `upload` is a
+ * file the operator picked. `subject` seeds the prompt builder.
+ */
+export interface ForgeReference {
+  dataUrl: string;
+  source: 'upload' | 'image-2d';
+  sourceName: string;
+  subject?: string;
 }
 
 /** GET /api/visual-gen/ue-import/status — requested collision, its basis, and what was OBSERVED. */
@@ -149,6 +165,10 @@ interface ForgeState {
   activePolls: string[];
   /** The current (or last) Send to UE — see `startUeImport`. */
   ueImport: UeImportState;
+  /** The staged image-to-3D reference, or null. */
+  reference: ForgeReference | null;
+  stageReference: (reference: ForgeReference) => void;
+  clearReference: () => void;
 
   /** POST /api/visual-gen/ue-import, then follow its status on the tracked rail (listed in
    *  `activePolls`, stoppable, surviving the panel's unmount). One import at a time. */
@@ -205,13 +225,17 @@ interface ForgeState {
    *  `assetClass` is OPTIONAL and omitting it is legitimate: the route then grades
    *  class-blind and says so in the 202's `gradedAs`, which is stored on the job. It was
    *  never sent from the app at all until now, so class-aware grading — fully implemented
-   *  server-side — was unreachable exactly the way text-to-3d had been. */
+   *  server-side — was unreachable exactly the way text-to-3d had been.
+   *
+   *  `origin.sourceImage` names the 2D forge image the reference came from; it is stored
+   *  on the job only, so the request body is the same for an upload and a staged image. */
   submitLocalJob: (
     providerId: string,
     mode: GenerationMode,
     imageDataUrl?: string,
     prompt?: string,
     assetClass?: string,
+    origin?: { sourceImage?: string },
   ) => Promise<void>;
 }
 
@@ -315,6 +339,10 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   applyStyleDna: true,
   activePolls: [],
   ueImport: UE_IMPORT_IDLE,
+  reference: null,
+
+  stageReference: (reference) => set({ reference }),
+  clearReference: () => set({ reference: null }),
 
   startUeImport: async (request) => {
     const { status, trackId } = get().ueImport;
@@ -379,7 +407,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       // The `assetClass` rides along too: a retry graded against a different budget than
       // the original submission would report a verdict about a job nobody asked for.
       if (job.mode === 'image-to-3d' && job.imageUrl?.startsWith('data:')) {
-        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt, job.assetClass);
+        // The 2D origin rides along too, so the fresh card still says where its image came from.
+        const origin = job.sourceImage ? { sourceImage: job.sourceImage } : undefined;
+        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt, job.assetClass, origin);
       }
       // Runner-backed text-to-3D: the prompt is the whole input.
       if (job.mode === 'text-to-3d' && job.prompt.trim()) {
@@ -602,8 +632,11 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     trackRunnerJob(id, res.data.jobId);
   },
 
-  submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
-    const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass });
+  submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass, origin) => {
+    const localId = get().addJob({
+      mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass,
+      ...(origin?.sourceImage ? { sourceImage: origin.sourceImage } : {}),
+    });
 
     const submit = await tryApiFetch<{
       jobId: string;
