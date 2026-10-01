@@ -95,6 +95,7 @@ The following fields will be added automatically — do NOT include them:
 - `moduleId`: `"arpg-combat"`
 - `featureName`: `"Hit detection"`
 - `status`: `"improved"`
+- `projectId`: `"c:/proj/pof"`
 
 **Rules:**
 - Output valid JSON between the markers — no comments, no trailing commas

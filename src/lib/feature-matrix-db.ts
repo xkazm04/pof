@@ -230,12 +230,34 @@ function toFeatureRow(raw: RawRow): FeatureRow {
   };
 }
 
+/**
+ * {@link projectScopeSql} for a feature-matrix READ, with one refinement: a legacy
+ * (`''`) row is SHADOWED when the named project owns a row for the same
+ * (module, feature). Both rows can exist (the UNIQUE key includes the project), and
+ * reading `own OR ''` raw would list that feature twice — in two statuses at once —
+ * to the matrix, the summary, the NBA/dependency map and the aggregate roll-up.
+ * Nothing is deleted or adopted: the twin stays in the table, an unscoped read still
+ * returns it, and {@link getProjectScopeReport} still counts it as legacy.
+ *
+ * The query must alias `feature_matrix` as `fm`.
+ */
+function shadowedScopeSql(projectId: string): { sql: string; params: string[] } {
+  if (!projectId) return projectScopeSql(projectId, 'fm.project_id');
+  return {
+    sql:
+      `(fm.project_id = ? OR (fm.project_id = '' AND NOT EXISTS (` +
+      `SELECT 1 FROM feature_matrix own WHERE own.project_id = ? ` +
+      `AND own.module_id = fm.module_id AND own.feature_name = fm.feature_name)))`,
+    params: [projectId, projectId],
+  };
+}
+
 export function getFeaturesByModule(moduleId: SubModuleId, projectId?: string): FeatureRow[] {
   ensureTables();
-  const scope = projectScopeSql(normalizeProjectId(projectId));
+  const scope = shadowedScopeSql(normalizeProjectId(projectId));
   const rows = getDb()
     .prepare(
-      `SELECT * FROM feature_matrix WHERE module_id = ? AND ${scope.sql} ORDER BY category, feature_name`,
+      `SELECT fm.* FROM feature_matrix fm WHERE fm.module_id = ? AND ${scope.sql} ORDER BY fm.category, fm.feature_name`,
     )
     .all(moduleId, ...scope.params) as RawRow[];
   return rows.map(toFeatureRow);
@@ -243,10 +265,10 @@ export function getFeaturesByModule(moduleId: SubModuleId, projectId?: string): 
 
 export function getFeatureSummary(moduleId: SubModuleId, projectId?: string): FeatureSummary {
   ensureTables();
-  const scope = projectScopeSql(normalizeProjectId(projectId));
+  const scope = shadowedScopeSql(normalizeProjectId(projectId));
   const rows = getDb()
     .prepare(
-      `SELECT status, COUNT(*) as cnt FROM feature_matrix WHERE module_id = ? AND ${scope.sql} GROUP BY status`
+      `SELECT fm.status, COUNT(*) as cnt FROM feature_matrix fm WHERE fm.module_id = ? AND ${scope.sql} GROUP BY fm.status`
     )
     .all(moduleId, ...scope.params) as { status: string; cnt: number }[];
 
@@ -351,6 +373,15 @@ export function upsertFeatures(
     "SELECT id FROM feature_matrix WHERE module_id = ? AND feature_name = ? AND project_id = ''",
   );
   const adoptStmt = db.prepare('UPDATE feature_matrix SET project_id = ? WHERE id = ?');
+  // A polluted DB (CLI reviews written unattributed before their callbacks carried
+  // the project) can hold BOTH the project's own row and a legacy twin. Adopting the
+  // twin then would UPDATE it onto the key the own row already holds — a UNIQUE
+  // violation that aborts the whole batch. When an own row exists the twin is left
+  // where it is (reads shadow it, the scope report still counts it) and the upsert
+  // below writes the own row.
+  const ownStmt = db.prepare(
+    'SELECT 1 FROM feature_matrix WHERE module_id = ? AND feature_name = ? AND project_id = ?',
+  );
 
   // Count what the statements ACTUALLY wrote. A seedOnly batch is `DO NOTHING` on
   // every existing row, so the input array says nothing about whether the table
@@ -360,7 +391,7 @@ export function upsertFeatures(
     let written = 0;
     let adoptedLegacy = 0;
     for (const f of items) {
-      const legacy = projectId
+      const legacy = projectId && !ownStmt.get(moduleId, f.featureName, projectId)
         ? (legacyStmt.get(moduleId, f.featureName) as { id: number } | undefined)
         : undefined;
       if (legacy) {
@@ -773,9 +804,9 @@ export interface FeatureStatusEntry {
 
 export function getAllFeatureStatuses(projectId?: string): FeatureStatusEntry[] {
   ensureTables();
-  const scope = projectScopeSql(normalizeProjectId(projectId));
+  const scope = shadowedScopeSql(normalizeProjectId(projectId));
   const rows = getDb()
-    .prepare(`SELECT module_id, feature_name, status FROM feature_matrix WHERE ${scope.sql}`)
+    .prepare(`SELECT fm.module_id, fm.feature_name, fm.status FROM feature_matrix fm WHERE ${scope.sql}`)
     .all(...scope.params) as { module_id: string; feature_name: string; status: string }[];
   return rows.map((r) => ({
     moduleId: r.module_id as SubModuleId,
@@ -788,7 +819,7 @@ export function getAllFeatureStatuses(projectId?: string): FeatureStatusEntry[] 
 
 export function getAllModuleAggregates(projectId?: string): ModuleAggregate[] {
   ensureTables();
-  const scope = projectScopeSql(normalizeProjectId(projectId));
+  const scope = shadowedScopeSql(normalizeProjectId(projectId));
   const rows = getDb()
     .prepare(
       `SELECT
@@ -797,7 +828,7 @@ export function getAllModuleAggregates(projectId?: string): ModuleAggregate[] {
          ${STATUS_COUNT_COLUMNS},
          AVG(CASE WHEN quality_score IS NOT NULL THEN quality_score END) as avg_quality,
          MAX(last_reviewed_at) as last_reviewed_at
-       FROM feature_matrix
+       FROM feature_matrix fm
        WHERE ${scope.sql}
        GROUP BY module_id
        ORDER BY module_id`

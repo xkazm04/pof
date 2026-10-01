@@ -37,6 +37,7 @@ import {
   findAnimationChecklistStep,
 } from '@/lib/prompts/animation-checklist';
 import { logger } from '@/lib/logger';
+import { normalizeProjectId } from '@/lib/project-id';
 
 import {
   registerCallback,
@@ -276,6 +277,10 @@ const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wi
       moduleId: ft.moduleId,
       featureName: ft.featureName,
       status: 'improved',
+      // The route is project-scoped: without the run's project the PATCH resolves
+      // unscoped and 409s on the project's own row. Guarded by
+      // cli-callback-scope-guard.test.ts.
+      projectId: normalizeProjectId(ctx.projectPath),
     },
     schemaHint: '  "completed": true',
   });
@@ -303,6 +308,9 @@ const featureReview: TaskPromptHandler = (task, ctx, { isUE5, touchesBinaryAsset
     method: 'POST',
     staticFields: {
       moduleId: task.moduleId,
+      // The review is ABOUT the run's project: without it the import writes
+      // unattributed ('') rows that list beside the project's own.
+      projectId: normalizeProjectId(ctx.projectPath),
     },
     schemaHint: `  "reviewedAt": "<ISO timestamp>",
   "features": [

@@ -10,6 +10,7 @@ import { moduleCompletion, projectCompletionPct } from '@/lib/feature-done';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useModuleAggregates } from '@/hooks/useModuleAggregates';
 import { useBatchReview } from '@/hooks/useBatchReview';
+import { useProjectStore } from '@/stores/projectStore';
 import { selectStaleModuleIds } from '@/lib/evaluator/stale-review-plan';
 import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
 import { countAggregateRows } from '@/components/modules/shared/FeatureMatrix/matrixScope';
@@ -48,18 +49,23 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
   // The heatmap entrance stagger should play once (on first mount), not replay
   // on every data refresh while the grid stays mounted.
   const hasAnimatedRef = useRef(false);
+  const projectPath = useProjectStore((s) => s.projectPath);
 
+  // Scoped to the open project, like the roll-up beside it: CLI reviews now
+  // snapshot under the project, so an unscoped read would plot legacy points only.
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     const res = await tryApiFetch<{ history: Record<string, ReviewSnapshot[]> }>(
-      '/api/feature-matrix/history',
+      projectPath
+        ? `/api/feature-matrix/history?projectId=${encodeURIComponent(projectPath)}`
+        : '/api/feature-matrix/history',
     );
     // A failed history load is reported, never swallowed into "no reviews yet" —
     // an empty history reads as a never-reviewed project.
     setHistoryError(res.ok ? null : res.error);
     if (res.ok) setHistoryMap(res.data.history ?? {});
     setHistoryLoading(false);
-  }, []);
+  }, [projectPath]);
 
   useEffect(() => {
     fetchHistory();

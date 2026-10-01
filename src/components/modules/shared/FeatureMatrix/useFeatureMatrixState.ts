@@ -141,12 +141,15 @@ export function useFeatureMatrixState({
   // than off `data.data`. The list was therefore always empty and the sparkline —
   // gated on `snapshots.length >= 2` — has never rendered here. `tryApiFetch`
   // unwraps the envelope, so the trend line finally receives its points.
+  // Scoped to the open project: CLI reviews now snapshot under it, so an unscoped
+  // read would plot only the legacy points.
   const fetchHistory = useCallback(async () => {
+    const project = projectPath ? `&projectId=${encodeURIComponent(projectPath)}` : '';
     const result = await tryApiFetch<{ snapshots: ReviewSnapshot[] }>(
-      `/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}`,
+      `/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}${project}`,
     );
     if (result.ok) setSnapshots(result.data.snapshots ?? []);
-  }, [moduleId]);
+  }, [moduleId, projectPath]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing fetch-on-mount, preserved verbatim in extraction
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
