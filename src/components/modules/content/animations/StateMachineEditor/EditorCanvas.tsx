@@ -48,6 +48,8 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
     nudgeState,
     removeState,
     addState,
+    entryStateId,
+    entrySource,
   } = editor;
 
   return (
@@ -310,11 +312,19 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
         </div>
       )}
 
-      {/* Entry indicator */}
-      {states.length > 0 && (() => {
-        const defaultState = states.find((s) => s.isDefault) ?? states[0];
+      {/* Entry indicator — at the compiled fallback (the state the generated
+          ComputeAnimState() returns when no flag is set), not array order. */}
+      {(() => {
+        const defaultState = entryStateId ? stateMap.get(entryStateId) : undefined;
+        if (!defaultState) return null;
         return (
           <div
+            data-testid="pof-anim-sm-editor-entry"
+            data-entry-state={defaultState.id}
+            data-entry-source={entrySource}
+            title={entrySource === 'implicit'
+              ? `No state is marked Default: ComputeAnimState() falls back to ${defaultState.name} (lowest priority)`
+              : `ComputeAnimState() falls back to ${defaultState.name}`}
             className="absolute flex items-center gap-0.5"
             style={{ left: `${defaultState.x - 9}%`, top: `${defaultState.y}%`, transform: 'translate(-100%, -50%)', zIndex: 2 }}
           >

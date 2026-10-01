@@ -6,6 +6,7 @@ import {
   groupWarningsByState,
   type ValidationWarning,
 } from '@/lib/state-machine-validator';
+import { compileMachine } from '@/lib/state-machine-compile';
 import type { EditorState, EditorTransition, DiffResult } from './types';
 import { DEFAULT_STATES, DEFAULT_TRANSITIONS, KNOWN_FLAGS } from './constants';
 import { computeDiff, genId } from './helpers';
@@ -297,10 +298,13 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
   // Priority sorted for display
   const sortedByPriority = useMemo(() => [...states].sort((a, b) => a.priority - b.priority), [states]);
 
-  // ── Lint warnings ──
+  // ── Compiled model + lint warnings ──
+  // One model of entry/cascade/emit (state-machine-compile.ts): the linter
+  // checks it and the canvas draws Entry at its fallback, as codegen emits it.
+  const compiled = useMemo(() => compileMachine(states, transitions), [states, transitions]);
   const warnings = useMemo(
-    () => validateStateMachine(states, transitions, KNOWN_FLAGS),
-    [states, transitions],
+    () => validateStateMachine(states, transitions, KNOWN_FLAGS, compiled),
+    [states, transitions, compiled],
   );
   const warningsByState = useMemo(() => groupWarningsByState(warnings), [warnings]);
   const errorCount = warnings.filter((w) => w.severity === 'error').length;
@@ -365,6 +369,10 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     selectedState,
     selectedTransition,
     sortedByPriority,
+    /** The state ComputeAnimState() falls back to — the canvas Entry. */
+    entryStateId: compiled.entryId,
+    /** 'implicit' when no state is marked Default (lowest priority wins). */
+    entrySource: compiled.entrySource,
     warnings,
     warningsByState,
     errorCount,

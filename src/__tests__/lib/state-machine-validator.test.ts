@@ -191,3 +191,21 @@ describe('validateStateMachine — invalid identifiers (codegen syntax gate)', (
     expect(warnings.some((w) => w.kind === 'invalid-state-name' || w.kind === 'invalid-state-flag')).toBe(false);
   });
 });
+
+describe('validateStateMachine — entry comes from the compiled model', () => {
+  it('with no Default state, graph checks are paused and implicit-fallback says why', () => {
+    const { states, transitions } = makeBasic();
+    states[0] = { ...states[0], isDefault: false, flag: 'bShouldMove' };
+    const warnings = validateStateMachine(states, transitions, [...KNOWN_FLAGS, 'bShouldMove']);
+    expect(warnings.map((w) => w.kind)).toEqual(['implicit-fallback']);
+    expect(warnings[0].stateIds).toEqual(['s1']);
+  });
+
+  it('with two Defaults, reachability runs from the lowest-priority one (the C++ fallback)', () => {
+    const { states, transitions } = makeBasic();
+    states[2] = { ...states[2], isDefault: true };
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    expect(warnings.some((w) => w.kind === 'unreachable-state')).toBe(false);
+    expect(warnings.find((w) => w.kind === 'multiple-defaults')?.stateIds).toEqual(['s1', 's3']);
+  });
+});

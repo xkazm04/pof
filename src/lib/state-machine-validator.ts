@@ -1,3 +1,5 @@
+import { compileMachine, type CompiledMachine } from '@/lib/state-machine-compile';
+
 export type WarningSeverity = 'error' | 'warning' | 'info';
 
 export type WarningKind =
@@ -8,7 +10,12 @@ export type WarningKind =
   | 'invalid-state-name'
   | 'invalid-state-flag'
   | 'unknown-flag-in-rule'
-  | 'unknown-flag-in-state';
+  | 'unknown-flag-in-state'
+  // Emitted by compileMachine (state-machine-compile.ts) — the emitter's own findings.
+  | 'implicit-fallback'
+  | 'multiple-defaults'
+  | 'default-sentinel-mismatch'
+  | 'invalid-rule-expression';
 
 export interface ValidationWarning {
   kind: WarningKind;
@@ -42,10 +49,6 @@ export function extractFlagsFromRule(rule: string): string[] {
   return matches ? Array.from(new Set(matches)) : [];
 }
 
-function findEntryState<S extends StateLike>(states: S[]): S | undefined {
-  return states.find((s) => s.isDefault) ?? states[0];
-}
-
 function buildAdjacency<T extends TransitionLike>(transitions: T[]): {
   forward: Map<string, string[]>;
   backward: Map<string, string[]>;
@@ -77,16 +80,26 @@ function bfs(start: string, adj: Map<string, string[]>): Set<string> {
   return visited;
 }
 
+/**
+ * Lints the machine codegen will actually emit: the entry is compileMachine's
+ * fallback (never array order), and the compile diagnostics (identifier,
+ * sentinel, default and rule-expression checks) are merged in. Pass
+ * `compiled` when the caller already holds it for the same states/transitions.
+ */
 export function validateStateMachine<S extends StateLike, T extends TransitionLike>(
   states: S[],
   transitions: T[],
   knownFlags: readonly string[],
+  compiled: CompiledMachine<S> = compileMachine(states, transitions),
 ): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
   if (states.length === 0) return warnings;
 
   const knownFlagSet = new Set(knownFlags);
-  const entry = findEntryState(states);
+  // Graph checks need a DECLARED entry. With no Default state the AnimBP's
+  // graph entry is unknown; compileMachine says so (implicit-fallback warning)
+  // instead of the linter judging reachability from an assumed state.
+  const entry = compiled.entrySource === 'declared' ? compiled.fallback : null;
   const { forward, backward } = buildAdjacency(transitions);
 
   // 1. Unreachable states — no path from entry/default
@@ -199,39 +212,9 @@ export function validateStateMachine<S extends StateLike, T extends TransitionLi
     }
   }
 
-  // 7. Non-identifier state names — every name is emitted verbatim as a C++
-  // enumerator (EARPGAnimState::<name>) and into derived bCan<From>To<To>
-  // flag identifiers, so "Hit React", "2HandAttack", or an empty name passes
-  // the duplicate check (rule 6) clean and still emits uncompilable C++.
-  // Same failure class as the duplicate-name bug, different syntax gap.
-  const CPP_IDENTIFIER = /^[A-Za-z_]\w*$/;
-  for (const s of states) {
-    const name = s.name.trim();
-    if (!CPP_IDENTIFIER.test(name)) {
-      warnings.push({
-        kind: 'invalid-state-name',
-        severity: 'error',
-        stateIds: [s.id],
-        transitionIds: [],
-        message: name.length === 0
-          ? 'A state has an empty name — generated C++ would emit a bare enumerator and fail to compile.'
-          : `State name "${name}" is not a valid C++ identifier (letters/digits/underscore, no leading digit, no spaces) — EARPGAnimState::${name} would fail to compile.`,
-      });
-    }
-    // The free-text flag field is emitted verbatim inside `if (<flag>)`.
-    // '(default)' is the editor's sentinel for the entry state (see rule
-    // unknown-flag-in-state) — it never reaches codegen as a flag.
-    const flag = s.flag.trim();
-    if (flag.length > 0 && flag !== '(default)' && !CPP_IDENTIFIER.test(flag)) {
-      warnings.push({
-        kind: 'invalid-state-flag',
-        severity: 'error',
-        stateIds: [s.id],
-        transitionIds: [],
-        message: `State "${name || s.id}" has flag "${flag}", which is not a valid C++ identifier — the generated if (${flag}) would fail to compile.`,
-      });
-    }
-  }
+  // 7. Emit-level findings — identifiers, the (default) sentinel, the
+  // fallback rule and rule expressions — come from the compiled model.
+  warnings.push(...compiled.diagnostics);
 
   return warnings;
 }
