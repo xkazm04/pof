@@ -2,15 +2,16 @@
 
 import { useCallback } from 'react';
 import { Search, LayoutDashboard, FlaskConical, Boxes } from 'lucide-react';
-import { switchShell } from '@/lib/ecw/shell-pref';
+import { requestShellSwitch } from '@/hooks/useLeaveGuard';
 
 // --- New (Blueprint) shell switch ---
 // Mirror of the lab's "Legacy shell" button: names this entry legacy=1 (keeping its
 // module), stores 'ecw', pushes the lab entry, then fires popstate so page.tsx's shell
-// gate swaps live. Back returns to the module this was pressed on.
+// gate swaps live. Back returns to the module this was pressed on. Held panes (a cook, a
+// batch chain) are named first and the user may stay (`requestShellSwitch`).
 
 export function NewShellButton() {
-  const handleClick = useCallback(() => switchShell('ecw'), []);
+  const handleClick = useCallback(() => { requestShellSwitch('ecw'); }, []);
 
   return (
     <button

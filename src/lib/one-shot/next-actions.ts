@@ -3,14 +3,12 @@
  * end: idle can start, every in-flight phase can be cancelled, and every terminal phase can be
  * resumed (a draft with unrecorded steps), retried (failed steps) or started over.
  */
-import type { OneShotJobState, OneShotPhase } from '@/stores/oneShotJobStore';
+import { IN_FLIGHT_PHASES, type OneShotJobState } from '@/stores/oneShotJobStore';
 
 export type NextAction = 'start' | 'cancel' | 'resume' | 'retryFailed' | 'startOver';
 
 export type NextActionsInput = Pick<OneShotJobState, 'phase'> &
   Partial<Pick<OneShotJobState, 'stepResults' | 'draftEntityId' | 'totalSteps' | 'failureReason'>>;
-
-const IN_FLIGHT: readonly OneShotPhase[] = ['analyzing', 'proposing', 'refining', 'awaitingRun', 'running'];
 
 export function failedStepCount(s: NextActionsInput): number {
   return (s.stepResults ?? []).filter((r) => r.outcome === 'fail').length;
@@ -24,7 +22,7 @@ export function remainingStepCount(s: NextActionsInput): number | null {
 
 export function nextActions(s: NextActionsInput): NextAction[] {
   if (s.phase === 'idle') return ['start'];
-  if (IN_FLIGHT.includes(s.phase)) return ['cancel'];
+  if (IN_FLIGHT_PHASES.includes(s.phase)) return ['cancel'];
   if (s.phase === 'analyzed') return ['startOver'];
   const out: NextAction[] = [];
   const remaining = remainingStepCount(s);

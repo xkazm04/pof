@@ -20,7 +20,7 @@ import { OneShotPanel } from './one-shot/OneShotPanel';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { setupOneShotToastHandler } from './one-shot/toastHandler';
 import { useCanonStore } from './canonStore';
-import { switchShell } from '@/lib/ecw/shell-pref';
+import { requestShellSwitch } from '@/hooks/useLeaveGuard';
 import { useLabPrefs } from './hooks/useLabPrefs';
 import { useLabLocation } from './hooks/useLabLocation';
 import { useLabAddress } from './hooks/useLabRouteSync';
@@ -68,7 +68,7 @@ export function LayoutLab() {
   const workQueue = useLabWorkQueue(catalogId, entityId, nav.open); // Matrix queue: Next opens each stop like a cell
 
   // Names this entry as the lab (legacy=0) before pushing legacy=1, so Back returns here.
-  const switchToLegacy = useCallback(() => switchShell('legacy'), []);
+  const switchToLegacy = useCallback(() => { requestShellSwitch('legacy'); }, []);
 
   // `data-lab-entity` publishes the RESOLVED entity (the same id LabSearch resolves step hits
   // against and Baseline renders), so "what is rendered" and "what the location says" stay

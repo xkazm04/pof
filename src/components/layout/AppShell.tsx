@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useProjectStore } from '@/stores/projectStore';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
-import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { ModuleRenderer } from './ModuleRenderer';
@@ -60,18 +59,8 @@ export function AppShell() {
   // The open module lives in the address (?legacy=1&module=<id>): deep links, Back/Forward
   useShellRouteSync();
 
-  // Warn before closing/refreshing when CLI tasks are actively running
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      const sessions = useCLIPanelStore.getState().sessions;
-      const hasRunning = Object.values(sessions).some((s) => s.isRunning);
-      if (hasRunning) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, []);
+  // The close/reload guard is NOT here: it is root-hosted (`useLeaveGuard` in page.tsx,
+  // above the shell gate) so the default lab shell is guarded too.
 
   // Wait for Zustand persist to actually finish rehydrating from localStorage.
   // Subscribing to the persist middleware's onFinishHydration (and reading the
