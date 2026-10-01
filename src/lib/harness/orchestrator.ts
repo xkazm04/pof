@@ -34,6 +34,8 @@ import {
 } from './executor';
 import { spawnClaudeSession, wrapHarnessResult, killProcessTree, type TreeKillOutcome } from './claude-session';
 import { verify, formatVerificationSummary, detectGates, checkSuccessReachable } from './verifier';
+import { resolveUeEnv } from './ue-gates';
+import { formatChangeRoutingLines, visualSpecDiscoverable, type RouterEnv } from './change-router';
 import {
   createEmptyGuide,
   appendGuideStep,
@@ -1350,6 +1352,27 @@ export function createHarnessOrchestrator(
       // `fatal: false` — the API's wiring only flips status on a fatal error,
       // so this surfaces in the event feed without killing the run.
       emit({ type: 'harness:error', error: detail, fatal: false });
+    }
+
+    // Change-routing preflight (advisory, same channel as the warning above). Where
+    // `checkSuccessReachable` covers REQUIRED gates that cannot verify at all, this names
+    // the gates and areas it skips: advisory and runtime-determined gates, and a change
+    // class no configured gate reads. It changes no scheduling, `required` flag or
+    // pass-rate basis, and a probe failure can never block the run.
+    try {
+      const routingEnv: RouterEnv = { hasUeEnv: resolveUeEnv() !== null, hasStatePath: Boolean(config.statePath) };
+      if (hasVisualGate) {
+        routingEnv.devServer = await checkPort(3000);
+        let playwrightConfig: string | null = null;
+        try { playwrightConfig = fs.readFileSync(path.join(config.projectPath, 'playwright.config.ts'), 'utf-8'); } catch { /* absent: no claim */ }
+        routingEnv.visualSpecDiscoverable = visualSpecDiscoverable(playwrightConfig, config.projectPath, config.statePath);
+      }
+      for (const line of formatChangeRoutingLines(plan.areas, gates, routingEnv, { exclude: reachability.blockingGates })) {
+        logger.warn(`[harness] ${line}`);
+        emit({ type: 'harness:error', error: line, fatal: false });
+      }
+    } catch (err) {
+      logger.warn(`[harness] change-routing preflight skipped: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Establish the run's durable identity.
