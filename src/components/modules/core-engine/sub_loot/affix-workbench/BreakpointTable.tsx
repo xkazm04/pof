@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { STATUS_INFO, OPACITY_15, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import { BREAKPOINT_ILVLS } from './constants';
-import { AFFIX_POOL, RARITIES, getItemLevelScaling } from './data';
+import { AFFIX_POOL, getItemLevelScaling } from './data';
+import { eligiblePool } from './craftingKernel';
 import { BreakpointLegend } from './BreakpointLegend';
 import { BreakpointFilters } from './BreakpointFilters';
 import { BreakpointRow } from './BreakpointRow';
@@ -28,12 +29,8 @@ export function BreakpointTable({
   bpSearch, setBpSearch,
 }: BreakpointTableProps) {
   const breakpointData = useMemo(() => {
-    let filtered = AFFIX_POOL;
+    let filtered = bpRarityFilter === 'all' ? AFFIX_POOL : eligiblePool(AFFIX_POOL, bpRarityFilter);
     if (bpCategoryFilter !== 'all') filtered = filtered.filter(a => a.category === bpCategoryFilter);
-    if (bpRarityFilter !== 'all') {
-      const rarityIdx = RARITIES.indexOf(bpRarityFilter);
-      filtered = filtered.filter(a => RARITIES.indexOf(a.minRarity) <= rarityIdx);
-    }
     if (bpSearch.trim()) {
       const q = bpSearch.toLowerCase();
       filtered = filtered.filter(a => a.displayName.toLowerCase().includes(q) || a.stat.toLowerCase().includes(q) || a.tag.toLowerCase().includes(q));

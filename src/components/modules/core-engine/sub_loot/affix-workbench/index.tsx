@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { OPACITY_20, OPACITY_25, OPACITY_37, withOpacity } from '@/lib/chart-colors';
+import { OPACITY_20, OPACITY_37, withOpacity } from '@/lib/chart-colors';
 import { RARITY_COLORS } from './data';
 import type { AffixPoolEntry } from './data';
 import { ACCENT, getCategoryColor } from './constants';
@@ -19,7 +19,7 @@ import { PowerBudgetRadar } from '../_orphan/PowerBudgetRadar';
 import { SynergyDetector } from '../_orphan/SynergyDetector';
 import { ArchetypeSuggestionGrid } from '../_orphan/ArchetypeSuggestionGrid';
 import { AffixExportPanel } from '../_orphan/AffixExportPanel';
-import { generateExportCode } from './data';
+import { generateExportCode } from './codegen';
 import type { SubModuleId } from '@/types/modules';
 
 /* ── Drag ghost builder ──────────────────────────────────────────────── */
@@ -167,7 +167,7 @@ export function AffixCraftingWorkbench({ moduleId }: { moduleId: SubModuleId }) 
             rarity={wb.selectedBase.rarity} />
 
           <AffixExportPanel visible={wb.showExport}
-            exportCode={generateExportCode(wb.selectedBase, wb.craftedAffixes)}
+            exportCode={generateExportCode(wb.selectedBase, wb.craftedAffixes, wb.itemLevel)}
             onCopy={wb.handleCopy} onDownload={wb.handleExportFile}
             copied={wb.copiedExport} accentColor={ACCENT} />
         </motion.div>

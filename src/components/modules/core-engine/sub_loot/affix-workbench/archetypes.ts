@@ -3,7 +3,8 @@ import {
   ACCENT_EMERALD, ACCENT_CYAN,
 } from '@/lib/chart-colors';
 import type { AffixPoolEntry, Rarity, SynergyRule } from './data';
-import { RARITIES, RARITY_AFFIX_COUNTS, SYNERGY_RULES } from './data';
+import { RARITY_AFFIX_COUNTS, SYNERGY_RULES } from './data';
+import { eligiblePool } from './craftingKernel';
 
 /* ── Rarity Archetype Patterns ────────────────────────────────────── */
 
@@ -47,8 +48,7 @@ function buildSynergyGraph(eligibleTags: Set<string>) {
 
 /** Detect archetype patterns from pool for given rarity. */
 export function detectArchetypes(pool: AffixPoolEntry[], rarity: Rarity): RarityArchetype[] {
-  const rarityIdx = RARITIES.indexOf(rarity);
-  const eligible = pool.filter(a => RARITIES.indexOf(a.minRarity) <= rarityIdx);
+  const eligible = eligiblePool(pool, rarity);
   const eligibleTags = new Set(eligible.map(a => a.tag));
   const maxSlots = RARITY_AFFIX_COUNTS[rarity].max;
 

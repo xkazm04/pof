@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   AFFIX_POOL, RARITIES, RARITY_AFFIX_COUNTS, RARITY_BUDGET_MAX,
-  ITEM_BASES, detectArchetypes, getItemLevelScaling,
+  ITEM_BASES, detectArchetypes,
   buildAffixName, computePowerBudget,
   SYNERGY_RULES,
 } from './data';
@@ -12,6 +12,7 @@ import type { CurrencyId, PoolCategory, ViewMode } from './types';
 import { CURRENCIES } from './constants';
 import { useCraftingEngine } from './useCraftingEngine';
 import { useExportActions } from './useExportActions';
+import { addAffix as addAffixTo, eligiblePool, instantiateAffix, rollItem } from './craftingKernel';
 
 /* ── Main Hook ──────────────────────────────────────────────────────── */
 
@@ -49,9 +50,7 @@ export function useAffixWorkbench() {
 
   // Filtered pool
   const filteredPool = useMemo(() => {
-    let pool = AFFIX_POOL;
-    const rarityIdx = RARITIES.indexOf(selectedBase.rarity);
-    pool = pool.filter((a) => RARITIES.indexOf(a.minRarity) <= rarityIdx);
+    let pool = eligiblePool(AFFIX_POOL, selectedBase.rarity);
     if (poolFilter !== 'all') pool = pool.filter((a) => a.category === poolFilter);
     if (poolSearch) {
       const lower = poolSearch.toLowerCase();
@@ -120,40 +119,27 @@ export function useAffixWorkbench() {
 
   // Item actions
   const addAffix = useCallback((p: AffixPoolEntry) => {
-    if (!canAddMore || craftedAffixes.some((a) => a.tag === p.tag)) return;
-    setCraftedAffixes((prev) => [...prev, { poolEntryId: p.id, tag: p.tag, displayName: p.displayName, bIsPrefix: p.bIsPrefix, magnitude: (p.minValue + p.maxValue) / 2, stat: p.stat, category: p.category }]);
-  }, [canAddMore, craftedAffixes]);
+    setCraftedAffixes((prev) => addAffixTo({ affixes: prev }, p, maxAffixes).affixes);
+  }, [maxAffixes]);
 
   const removeAffix = useCallback((tag: string) => setCraftedAffixes((prev) => prev.filter((a) => a.tag !== tag)), []);
   const updateAffixMagnitude = useCallback((tag: string, mag: number) => setCraftedAffixes((prev) => prev.map((a) => a.tag === tag ? { ...a, magnitude: mag } : a)), []);
   const toggleAffixPlacement = useCallback((tag: string) => setCraftedAffixes((prev) => prev.map((a) => a.tag === tag ? { ...a, bIsPrefix: !a.bIsPrefix } : a)), []);
 
   const randomRoll = useCallback(() => {
-    const ri = RARITIES.indexOf(selectedBase.rarity);
-    const eligible = AFFIX_POOL.filter((a) => RARITIES.indexOf(a.minRarity) <= ri);
-    const { min, max } = RARITY_AFFIX_COUNTS[selectedBase.rarity];
-    const count = Math.floor(Math.random() * (max - min + 1)) + min;
-    const avail = [...eligible];
-    const rolled: CraftedAffix[] = [];
-    for (let i = 0; i < count && avail.length > 0; i++) {
-      const tw = avail.reduce((s, a) => s + a.weight, 0);
-      let roll = Math.random() * tw; let pick = avail[0];
-      for (const a of avail) { roll -= a.weight; if (roll <= 0) { pick = a; break; } }
-      rolled.push({ poolEntryId: pick.id, tag: pick.tag, displayName: pick.displayName, bIsPrefix: pick.bIsPrefix, magnitude: Math.round((pick.minValue + Math.random() * (pick.maxValue - pick.minValue)) * 10) / 10, stat: pick.stat, category: pick.category });
-      const idx = avail.indexOf(pick); if (idx >= 0) avail.splice(idx, 1);
-    }
-    setCraftedAffixes(rolled);
+    setCraftedAffixes(rollItem(AFFIX_POOL, selectedBase.rarity, Math.random));
   }, [selectedBase.rarity]);
 
   const clearAffixes = useCallback(() => setCraftedAffixes([]), []);
 
   const applyArchetype = useCallback((arch: RarityArchetype) => {
-    setCraftedAffixes(arch.affixTags.map(tag => { const p = AFFIX_POOL.find(a => a.tag === tag); if (!p) return null; return { poolEntryId: p.id, tag: p.tag, displayName: p.displayName, bIsPrefix: p.bIsPrefix, magnitude: Math.round(((p.minValue + p.maxValue) / 2) * 10) / 10, stat: p.stat, category: p.category }; }).filter(Boolean) as CraftedAffix[]);
+    setCraftedAffixes(arch.affixTags.flatMap((tag) => { const p = AFFIX_POOL.find((a) => a.tag === tag); return p ? [instantiateAffix(p)] : []; }));
   }, []);
 
   const selectBase = useCallback((base: ItemBase) => {
-    setSelectedBase(base); setItemLevel(base.itemLevel); setCraftedAffixes([]); crafting.resetLocks();
-  }, [crafting]);
+    // Clearing the affixes clears their locks too: the lock badges derive from them.
+    setSelectedBase(base); setItemLevel(base.itemLevel); setCraftedAffixes([]);
+  }, []);
 
   return {
     selectedBase, craftedAffixes, itemLevel, poolFilter, poolSearch,

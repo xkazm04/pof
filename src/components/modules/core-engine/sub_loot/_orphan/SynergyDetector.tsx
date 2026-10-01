@@ -9,9 +9,9 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
-import type { SynergyRule } from './data';
-import { SYNERGY_COLORS } from './data';
+import { ANIMATION_PRESETS } from '@/lib/motion';
+import type { SynergyRule } from '@/components/modules/core-engine/sub_loot/affix-workbench/data';
+import { SYNERGY_COLORS } from '@/components/modules/core-engine/sub_loot/affix-workbench/data';
 
 interface SynergyDetectorProps {
   activeSynergies: SynergyRule[];
