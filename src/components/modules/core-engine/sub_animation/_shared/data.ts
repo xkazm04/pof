@@ -445,11 +445,19 @@ export const COMBO_CHAIN_NODES: ComboNode[] = [
   { id: 'force-lightning', name: 'Force Lightning', montage: 'AM_ForceLightning', damage: 200, x: 700, y: 100 },
 ];
 
-export const COMBO_CHAIN_EDGES = [
+/** A template edge: one `window` label per link (the graph draws exactly this field). */
+export interface ComboEdge {
+  from: string;
+  to: string;
+  window: string;
+  label?: string;
+}
+
+export const COMBO_CHAIN_EDGES: ComboEdge[] = [
   { from: 'atk1', to: 'atk2', window: '0.4-0.6s' },
   { from: 'atk2', to: 'atk3', window: '0.35-0.55s' },
-  { from: 'atk3', to: 'force-push', label: 'combo → Force', inputWindow: '200ms' },
-  { from: 'force-push', to: 'saber-throw', label: 'Force → ranged', inputWindow: '300ms' },
+  { from: 'atk3', to: 'force-push', label: 'combo → Force', window: '200ms' },
+  { from: 'force-push', to: 'saber-throw', label: 'Force → ranged', window: '300ms' },
 ];
 
 /* ── Root Motion Trajectory data ───────────────────────────────────────────── */
@@ -635,6 +643,14 @@ export function stateFromMontageName(name: string): AnimStateName | null {
 /** A notify whose name marks the point a montage becomes cancellable. */
 const CANCEL_NOTIFY_RE = /combo|cancel/i;
 
+/**
+ * THE combo/cancel notify rule: timingsFromManifest opens a montage's cancel
+ * window on it, and lib/animation/combo-links opens a combo link's window on it.
+ */
+export function isComboWindowNotify(name: string): boolean {
+  return CANCEL_NOTIFY_RE.test(name);
+}
+
 export type ManifestMontage = Pick<AnimAssetEntry, 'path' | 'assetType' | 'duration' | 'notifies'>;
 
 export interface ManifestTimingRead {
@@ -671,7 +687,7 @@ export function timingsFromManifest(assets: ManifestMontage[] | null | undefined
       continue;
     }
     const cancel = (asset.notifies ?? [])
-      .filter((n) => CANCEL_NOTIFY_RE.test(n.name) && n.time >= 0 && n.time <= duration)
+      .filter((n) => isComboWindowNotify(n.name) && n.time >= 0 && n.time <= duration)
       .sort((a, b) => a.time - b.time)[0];
 
     timings.push({

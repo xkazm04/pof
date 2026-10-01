@@ -4,7 +4,7 @@ import { withOpacity, OPACITY_5, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/li
 import { HeatmapGrid, CollapsibleSection } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow } from '@/types/feature-matrix';
-import { ACCENT, HEATMAP_STATE_NAMES, HEATMAP_CELLS, COMBO_CHAIN_NODES } from './_shared/data';
+import { ACCENT, HEATMAP_STATE_NAMES, HEATMAP_CELLS } from './_shared/data';
 import { BlueprintPanel, SectionHeader } from '../unique-tabs/_design';
 import { StateMachinePanel } from './state-graph/StateMachinePanel';
 import { BlendSpacePanel } from './budget/BlendSpacePanel';
@@ -12,6 +12,7 @@ import { StateDurationPanel } from './budget/StateDurationPanel';
 import { ResponsivenessAnalyzer } from './state-graph/ResponsivenessAnalyzer';
 import { ComboTimelinePanel } from './combos-montages/ComboTimelinePanel';
 import { ComboChainPanel } from './combos-montages/ComboChainPanel';
+import { useComboChains, chainNodes } from './combos-montages/useComboChains';
 import { FrameScrubberPanel } from './combos-montages/FrameScrubberPanel';
 import { EventTimelinePanel } from './combos-montages/EventTimelinePanel';
 import { RetargetingTab } from './retargeting/RetargetingTab';
@@ -53,12 +54,15 @@ interface CombosMontagesTabContentProps {
 }
 
 export function CombosMontagesTabContent({ selectedComboNode, setSelectedComboNode }: CombosMontagesTabContentProps) {
+  // One read model: the chips list exactly the nodes the chain graph draws.
+  const combos = useComboChains();
+  const nodes = chainNodes(combos);
   return (
     <div className="space-y-4">
       {/* Combo node selector chips */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Select combo:</span>
-        {COMBO_CHAIN_NODES.map((node) => {
+        {nodes.map((node) => {
           const active = selectedComboNode === node.id;
           return (
             <button
@@ -77,21 +81,20 @@ export function CombosMontagesTabContent({ selectedComboNode, setSelectedComboNo
       </div>
 
       {selectedComboNode && (() => {
-        const node = COMBO_CHAIN_NODES.find(n => n.id === selectedComboNode);
+        const node = nodes.find(n => n.id === selectedComboNode);
         if (!node) return null;
         return (
           <div className="rounded-lg border p-3 text-xs font-mono space-y-1"
             style={{ borderColor: withOpacity(ACCENT, OPACITY_20), backgroundColor: withOpacity(ACCENT, OPACITY_5) }}>
             <div className="font-bold text-sm" style={{ color: ACCENT }}>{node.name}</div>
-            <div className="text-text-muted">Montage: <span className="text-text">{node.montage}</span></div>
-            <div className="text-text-muted">Damage: <span className="font-bold text-text">{node.damage}</span></div>
+            {node.detail.map((line) => <div key={line} className="text-text-muted break-all">{line}</div>)}
           </div>
         );
       })()}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <ComboTimelinePanel />
-        <ComboChainPanel selectedNodeId={selectedComboNode} onSelectNode={setSelectedComboNode} />
+        <ComboChainPanel view={combos} selectedNodeId={selectedComboNode} onSelectNode={setSelectedComboNode} />
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <FrameScrubberPanel />
