@@ -167,7 +167,7 @@ also maps the content modules `animations` / `ui-hud` / `level-design`). Because
 the routing is kind- and module-scoped, joining it typically makes a builder's
 prompt *shorter*: a materials prompt no longer hauls the GAS / Niagara /
 motion-matching pitfalls it can never hit. Builder→module mapping: `level-design`
-→ `level-design`; `inventory`, `menu-flow` → `ui-hud`; `material-configurator`,
+→ `level-design`; `inventory`, `menu-flow`, `hud-theme` → `ui-hud`; `material-configurator`,
 `material-patterns`, `post-process`, `style-transfer` → `materials`;
 `animation-checklist` → `animations`; `audio-scene`, `audio-events` → `audio`;
 `ai-testing` → `ai-behavior`. The rail
@@ -240,10 +240,12 @@ old server-side builder (`POST /api/post-process-studio`) is retired (400, GET
 presets stays). Pinned by `task-post-process.md` (byte-identical to
 `builder-post-process.md`) and `prompt-evolution/post-process-rail.test.ts`.
 
-**Remaining gap: 8 standalone builders still dispatch through raw `sendPrompt`**
+**Remaining gap: 9 standalone builders still dispatch through raw `sendPrompt`**
 and stay invisible to prompt evolution — `material-patterns`,
 `style-transfer` (`MaterialsView`), `audio-scene`, `audio-events`
-(`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `level-design`
+(`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `hud-theme`
+(`HudThemeEditor/ApplyToProjectBar`, which sends only the theme rows changed since
+the last successful apply; see `useHudDesignStore`), `level-design`
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
 (`AIBehaviorView`). Converting each is the same three-part move as above.
 
