@@ -2,7 +2,9 @@
  * AI behavior coverage (ECW Phase 10-B, idea acca239f lite). Checks an
  * archetype's `btSummary` (Record<string,string>) against the core behaviors a
  * combat enemy needs — aggro, attack, patrol, retreat — and reports which are
- * covered. Pure. Powers the BestiaryAiFacet's coverage view.
+ * covered. Pure. Powers the coverage strip of the bestiary AI Logic tab
+ * (sub_bestiary/ai-logic/BrainSubjectBar.tsx). A declared `Sense` line
+ * counts as detection.
  */
 
 export interface AiCoverageFinding {
@@ -14,7 +16,7 @@ export interface AiCoverageFinding {
 }
 
 const CORE_BEHAVIORS: Array<{ behavior: AiCoverageFinding['behavior']; label: string; keywords: string[] }> = [
-  { behavior: 'aggro', label: 'Aggro / detection', keywords: ['aggro', 'aggress', 'detect', 'perceive', 'sight', 'chase'] },
+  { behavior: 'aggro', label: 'Aggro / detection', keywords: ['aggro', 'aggress', 'detect', 'perceive', 'sight', 'sense', 'chase'] },
   { behavior: 'attack', label: 'Attack', keywords: ['attack', 'melee', 'ranged', 'strike', 'combo'] },
   { behavior: 'patrol', label: 'Patrol / idle', keywords: ['patrol', 'idle', 'wander', 'waypoint', 'guard'] },
   { behavior: 'retreat', label: 'Retreat / flee', keywords: ['retreat', 'flee', 'reposition', 'kite', 'escape'] },
