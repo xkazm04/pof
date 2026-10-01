@@ -8,7 +8,9 @@
  * per-test report via `-ReportOutputPath=<dir>` (`index.json`). This module groups a
  * drain pass's automation jobs into ONE boot and recovers a per-test verdict from that
  * report — falling back to the combined `-abslog` marker parse when the report is missing
- * or unparseable (judged by log content, not exit code, per project convention).
+ * or unparseable (judged by log content, not exit code, per project convention). A boot cut
+ * short by a crash or the watchdog is resumed for the tests it never reached (see
+ * `runBatchAutomation`) instead of leaving them starved behind the culprit.
  *
  * Pure parsers (`buildBatchAutomationArgs`, `parseAutomationReport`, `parseAbslogVerdict`)
  * are unit-tested; `runBatchAutomation` takes an injectable `spawn` so the boot-count is
@@ -19,7 +21,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { logger } from '@/lib/logger';
 import type { GateEvidence } from '@/types/observation';
-import { readAbslogFacts, scopeAbslogPerTest, ZERO_MATCH_DETAIL } from '@/lib/ue-automation/abslog';
+import {
+  readAbslogFacts,
+  readInterruption,
+  scopeAbslogPerTest,
+  testRunningAtCut,
+  ZERO_MATCH_DETAIL,
+  type BootInterruption,
+} from '@/lib/ue-automation/abslog';
 import { annotateZeroMatchDetail } from '@/lib/ue-test-scaffold/generate';
 import type { GateVerdict } from './types';
 
@@ -153,43 +162,67 @@ export interface BatchAutomationOptions {
   editor: string;
   uproject: string;
   testNames: readonly string[];
-  /** Injectable watchdog spawn (the boot). ONE call per batch — the whole point. */
+  /** Injectable watchdog spawn (the boot). One call per boot; a clean batch is exactly one. */
   spawn: SpawnFn;
   timeoutMs: number;
+  /**
+   * Extra boots allowed to resume the tests an interrupted boot (crash marker or watchdog)
+   * never reached. Default {@link DEFAULT_MAX_RESUMES}. Every resume must make progress - a new
+   * verdict or a newly identified culprit - or the loop stops: the crash-loop breaker.
+   */
+  maxResumes?: number;
+}
+
+export const DEFAULT_MAX_RESUMES = 3;
+
+/** One boot's judged outcome, plus what a resume needs to know about how it ended. */
+interface Boot {
+  verdicts: Map<string, GateVerdict>;
+  /** Set when the boot ended early and the log was readable. */
+  interrupted: BootInterruption | null;
+  /** The test the log shows running at the cut. Excluded from the resume: a verdict for it
+   *  needs a boot that survives it, and re-running it first would starve everything behind it. */
+  culprit: string | null;
+  /** Requested tests the cut left with no observation of their own - resumable. */
+  unreached: string[];
 }
 
 /**
- * Run MANY automation gates in ONE `UnrealEditor-Cmd` boot and return a per-test verdict
- * map (keyed by the requested test name). Prefers the `-ReportOutputPath` report JSON for
- * per-test verdicts; falls back to scoping the combined `-abslog` PER TEST when the report
- * is missing/unparseable — so a partial run (A completed, B crashed) never smears one
- * whole-batch verdict across every test. A test with no per-test observation in the combined
- * log stays `deferred`, never inheriting a sibling's pass. Never spawns more than once; the
- * caller (spawn executor `prepareBatch`) invokes this once per drain pass. `testNames` are
- * de-duplicated by the caller.
+ * A `deferred` verdict for a test an interrupted boot left unobserved. Same status as the
+ * zero-match wait (it is not a pass and not a fail), different REASON: this test is not
+ * planned, it exists and was never reached - so it carries no scaffold note and the drain
+ * must re-run it, not wait for someone to write it.
  */
-export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map<string, GateVerdict>> {
-  const out = new Map<string, GateVerdict>();
-  if (o.testNames.length === 0) return out;
+function interruptedVerdict(name: string, cause: BootInterruption, role: 'culprit' | 'unreached'): GateVerdict {
+  const what = cause === 'crash' ? 'the editor crashed (fatal error in the log)' : 'the watchdog killed a hung editor';
+  const detail = role === 'culprit'
+    ? `${name}: ${what} while this test was running - suspect, left out of this pass's resume`
+    : `${name}: not reached - ${what} before this test ran (interrupted boot, resumed when budget allows)`;
+  const evidence: GateEvidence = { kind: 'automation', at: new Date().toISOString(), markers: [detail] };
+  return { status: 'deferred', detail, evidence, raw: { source: 'abslog', interrupted: cause, role } };
+}
 
+/** Boot once for `names` and judge what came back. Never spawns more than once. */
+async function bootOnce(o: BatchAutomationOptions, names: readonly string[]): Promise<Boot> {
+  const out = new Map<string, GateVerdict>();
   const reportDir = join(tmpdir(), `pof-batch-${Date.now()}`);
   await mkdir(reportDir, { recursive: true });
   const reportDirFwd = reportDir.replace(/\\/g, '/');
   const abslog = join(reportDir, 'batch.log');
   const abslogFwd = abslog.replace(/\\/g, '/');
-  const args = buildBatchAutomationArgs(o.testNames, o.uproject, abslogFwd, reportDirFwd);
+  const args = buildBatchAutomationArgs(names, o.uproject, abslogFwd, reportDirFwd);
 
   const { timedOut } = await o.spawn(o.editor, args, o.timeoutMs);
 
   // Prefer the structured per-test report.
   const report = await readReport(reportDir);
   if (report) {
-    const parsed = parseAutomationReport(report, o.testNames);
-    for (const name of o.testNames) {
+    const parsed = parseAutomationReport(report, names);
+    for (const name of names) {
       const r = parsed.get(name) ?? { status: 'unregistered' as const, detail: 'absent from report (planned / not registered)' };
       out.set(name, toVerdict(name, r, 'report'));
     }
-    return out;
+    return { verdicts: out, interrupted: null, culprit: null, unreached: [] };
   }
 
   // Fallback: no structured report. Scope the combined abslog PER TEST (judged by markers, not
@@ -202,18 +235,64 @@ export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map
   if (!log) {
     // Nothing to judge from — every test stays an honest deferred wait (never a fabricated pass/fail).
     const detail = `no report and no abslog${timedOut ? ' (watchdog timeout)' : ''}`;
-    for (const name of o.testNames) out.set(name, toVerdict(name, { status: 'unregistered', detail }, 'abslog'));
-    return out;
+    for (const name of names) out.set(name, toVerdict(name, { status: 'unregistered', detail }, 'abslog'));
+    return { verdicts: out, interrupted: null, culprit: null, unreached: [] };
   }
-  const perTest = scopeAbslogPerTest(log, o.testNames);
-  for (const name of o.testNames) {
+  const perTest = scopeAbslogPerTest(log, names);
+  // A boot cut short (crash marker / watchdog) is a different fact from "nothing matched": an
+  // unobserved test after the cut EXISTS and was never reached. The enumeration line a clean
+  // zero-match also carries cannot tell the two apart - the cut can.
+  const cut = readInterruption(log, timedOut);
+  const candidate = cut ? testRunningAtCut(log, names, cut) : null;
+  const culprit = candidate && perTest.get(candidate)?.status === 'none' ? candidate : null;
+  const unreached: string[] = [];
+  for (const name of names) {
     const r = perTest.get(name)!;
+    if (cut && r.status === 'none') {
+      const isCulprit = name === culprit;
+      out.set(name, interruptedVerdict(name, cut, isCulprit ? 'culprit' : 'unreached'));
+      if (!isCulprit) unreached.push(name);
+      continue;
+    }
     // `none` (no per-test observation in the combined log) → unregistered → deferred (honest wait).
     const rv: ReportVerdict =
       r.status === 'none' ? { status: 'unregistered', detail: r.detail } : { status: r.status, detail: r.detail };
     out.set(name, toVerdict(name, rv, 'abslog'));
   }
-  return out;
+  return { verdicts: out, interrupted: cut, culprit, unreached };
+}
+
+/**
+ * Run MANY automation gates in ONE `UnrealEditor-Cmd` boot and return a per-test verdict
+ * map (keyed by the requested test name). Prefers the `-ReportOutputPath` report JSON for
+ * per-test verdicts; falls back to scoping the combined `-abslog` PER TEST when the report
+ * is missing/unparseable — so a partial run (A completed, B crashed) never smears one
+ * whole-batch verdict across every test. A test with no per-test observation in the combined
+ * log stays `deferred`, never inheriting a sibling's pass.
+ *
+ * A clean batch spawns exactly once. When a boot is cut short, the tests the cut left
+ * unobserved split into the culprit (the test running at the cut) and the unreached; the
+ * unreached are resumed in a fresh boot WITHOUT the culprit, up to `maxResumes` times, each
+ * resume having to make progress. Without that, one deterministic crasher near the front of
+ * the batch starves every test behind it on every drain pass. The caller (spawn executor
+ * `prepareBatch`) invokes this once per drain pass. `testNames` are de-duplicated by the caller.
+ */
+export async function runBatchAutomation(o: BatchAutomationOptions): Promise<Map<string, GateVerdict>> {
+  const out = new Map<string, GateVerdict>();
+  if (o.testNames.length === 0) return out;
+  const maxResumes = o.maxResumes ?? DEFAULT_MAX_RESUMES;
+
+  let pending: readonly string[] = o.testNames;
+  for (let resumes = 0; ; resumes++) {
+    const boot = await bootOnce(o, pending);
+    // A resume boot's verdicts replace the interrupted placeholders it was run to settle.
+    for (const [name, v] of boot.verdicts) out.set(name, v);
+    const progressed = boot.culprit !== null || [...boot.verdicts.values()].some((v) => v.status !== 'deferred');
+    if (!boot.interrupted || boot.unreached.length === 0 || resumes >= maxResumes || !progressed) return out;
+    logger.warn(`[test-gate-runner] batch automation: boot ${boot.interrupted === 'crash' ? 'crashed' : 'hung'}` +
+      `${boot.culprit ? ` while running ${boot.culprit}` : ''}; resuming ${boot.unreached.length} unreached test(s) (resume ${resumes + 1}/${maxResumes})`);
+    pending = boot.unreached;
+  }
 }
 
 /** Read + parse the automation report `index.json`; null on miss/unparseable. */

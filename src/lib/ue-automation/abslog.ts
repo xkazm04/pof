@@ -126,6 +126,47 @@ export function ambiguousMatchDetail(requested: string, ids: readonly string[]):
   return `${AMBIGUOUS_MATCH_DETAIL}: "${requested}" matches ${ids.length} recorded tests (${shown}${ids.length > 4 ? ', …' : ''})`;
 }
 
+/**
+ * How a boot ended EARLY, read from the log and the watchdog - never from the exit code (a
+ * healthy run can exit non-zero and a dead one can exit zero; see judge-by-log-markers).
+ * A fatal marker outranks the watchdog: a crash that also stalled is still a crash.
+ */
+export type BootInterruption = 'crash' | 'hang';
+
+export function readInterruption(log: string, timedOut: boolean): BootInterruption | null {
+  if (FATAL_RE.test(log ?? '')) return 'crash';
+  return timedOut ? 'hang' : null;
+}
+
+/**
+ * The requested test the log shows running when the boot was cut short: scan backwards from
+ * the first fatal line (crash) or from the end of the log (hang) for the nearest line that
+ * names exactly ONE requested test. A line naming several - the `RunTests A+B+C` echo, an
+ * enumeration - is not a start marker. The caller must still check the test has no result of
+ * its own (a completed test names itself on the line nearest the cut when the cut fell
+ * BETWEEN tests). Null = unidentified, which is safe: nothing is excluded from the resume and
+ * the resume's progress guard bounds the cost. Pure.
+ */
+export function testRunningAtCut(
+  log: string,
+  testNames: readonly string[],
+  cause: BootInterruption,
+): string | null {
+  const lines = (log ?? '').split(/\r?\n/);
+  let end = lines.length;
+  if (cause === 'crash') {
+    const fatalAt = lines.findIndex((l) => FATAL_RE.test(l));
+    if (fatalAt >= 0) end = fatalAt;
+  }
+  const lowered = testNames.map((n) => ({ name: n, lc: n.toLowerCase() }));
+  for (let i = end - 1; i >= 0; i--) {
+    const line = lines[i].toLowerCase();
+    const named = lowered.filter((t) => line.includes(t.lc));
+    if (named.length === 1) return named[0].name;
+  }
+  return null;
+}
+
 /** A per-test verdict scoped from a combined abslog. `none` = no per-test observation. */
 export type PerTestStatus = 'pass' | 'fail' | 'none';
 export interface PerTestAbslog {
