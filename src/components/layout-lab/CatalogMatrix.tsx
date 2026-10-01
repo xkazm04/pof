@@ -17,6 +17,7 @@ import { useCatalogJudgeVerdicts } from './hooks/useStepJudgeVerdicts';
 import { MatrixBatchDrain } from './MatrixBatchDrain';
 import { RefreshCatalogFromServer } from './RefreshCatalogFromServer';
 import { CatalogChangesDigest } from './CatalogChangesDigest';
+import { stepIndexResolver } from './labCatalogChanges';
 import { useBatchDrain } from './hooks/useBatchDrain';
 import { useCatalogRefresh } from './hooks/useCatalogRefresh';
 import { useCatalogChanges } from './hooks/useCatalogChanges';
@@ -126,13 +127,11 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   const catalogRefresh = useCatalogRefresh(catalogId, refreshEntities);
 
   // "What moved since I was last here" — computed from STORED rows + archived versions when
-  // this catalog is opened (never polled, never inferred). The board is where the question
-  // belongs: it is the surface that shows the whole catalog, and every row can jump to its step.
+  // this catalog is opened (never polled, never inferred). Every row jumps to the entity's OWN
+  // step index (MatrixRow.stepIndex) and the regressions open through the work-queue door.
   const changes = useCatalogChanges(catalogId);
-  const entityNameOf = useMemo(() => {
-    const names = new Map((detail?.entities ?? []).map((e) => [e.id, e.name]));
-    return (id: string) => names.get(id);
-  }, [detail?.entities]);
+  const entityNameOf = useMemo(() => { const names = new Map(rows.map((r) => [r.id, r.name])); return (id: string) => names.get(id); }, [rows]);
+  const stepIndexOf = useMemo(() => stepIndexResolver(rows), [rows]);
 
   const cellStyleFor = useMatrixCellStyle(t); // one style per status (matrixCellStyle.ts)
 
@@ -186,8 +185,8 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
       </div>
 
       {/* ── What moved since this catalog was last opened (stored facts only) ── */}
-      <CatalogChangesDigest t={t} state={changes.state} steps={steps} nameOf={entityNameOf} onRetry={changes.retry}
-        onOpenStep={(entityId, stepIdx) => onOpenStep(catalogId, entityId, stepIdx)} />
+      <CatalogChangesDigest t={t} state={changes.state} stepIndexOf={stepIndexOf} nameOf={entityNameOf} onRetry={changes.retry}
+        onOpenStep={(entityId, stepIdx) => onOpenStep(catalogId, entityId, stepIdx)} onOpenQueue={onOpenQueue} />
 
       {/* ── Numbered legend so the column numbers decode to step names ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 28px', borderBottom: `1px solid ${t.line}` }}>
