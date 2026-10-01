@@ -47,11 +47,21 @@ export interface FeedbackEvent {
 /** An encounter finding (balance or pacing) — owned by encounter-findings.ts. Match across passes by `kind`. */
 export type ChoreographyAlert = EncounterFinding;
 
+/** How the fight ended for the player — the facts a tuning pass is judged on first. */
+export interface EncounterOutcome {
+  playerDied: boolean;
+  /** Death time rounded to the sim tick label (0.1s); null when the player survives */
+  diedAtSec: number | null;
+  /** Player HP left at the end, as a 0–1 fraction of effective max HP (0 on death) */
+  playerHpEnd: number;
+}
+
 export interface ChoreographySimResult {
   damageEvents: DamageEvent[];
   feedbackEvents: FeedbackEvent[];
   alerts: ChoreographyAlert[];
   totalDurationSec: number;
+  outcome: EncounterOutcome;
   /** Continuous dramatic-pacing arc + detected story beats (fixed intensity basis) */
   tensionCurve: MeasuredTensionCurve;
 }
@@ -275,5 +285,11 @@ export function simulateEncounter(
     skippedEnemies,
   }, tensionCurve);
 
-  return { damageEvents, feedbackEvents, alerts, totalDurationSec: totalDuration, tensionCurve };
+  const outcome: EncounterOutcome = {
+    playerDied,
+    diedAtSec: playerDied ? Math.round(totalDuration * 10) / 10 : null,
+    playerHpEnd: Math.round(Math.max(0, playerHP / effectivePlayerHp) * 1000) / 1000,
+  };
+
+  return { damageEvents, feedbackEvents, alerts, totalDurationSec: totalDuration, outcome, tensionCurve };
 }
