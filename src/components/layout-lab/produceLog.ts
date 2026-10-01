@@ -22,6 +22,7 @@
 
 import { readProduceDirection } from '@/lib/catalog/produceDirection';
 import type { LabStepArtifact } from './labPipelineStore';
+import { contentOf, produceFailureOf } from './stepRecord';
 
 /** What the most recent recorded event on a step was. */
 export type ProduceLogOutcome = 'produced' | 'failed' | 'unsynced';
@@ -68,20 +69,21 @@ export function buildProduceLog(
   const entries: ProduceLogEntry[] = [];
 
   for (const [step, a] of Object.entries(byStep)) {
-    if (!a.done && !a.error) continue; // never ran
+    const failure = produceFailureOf(a); // decoded through the one step-record rule (stepRecord.ts)
+    if (!contentOf(a) && !failure) continue; // never ran
     // A produce failure outranks a sync failure: if the produce threw, whether its result
     // would have reached the server is not the operator's problem yet.
-    const outcome: ProduceLogOutcome = a.error ? 'failed' : a.syncError ? 'unsynced' : 'produced';
+    const outcome: ProduceLogOutcome = failure ? 'failed' : a.syncError ? 'unsynced' : 'produced';
     const dir = readProduceDirection(a.data);
     entries.push({
       step,
       index: indexOf.get(step) ?? -1,
-      at: (outcome === 'failed' ? a.errorAt ?? a.at : a.at) ?? '',
+      at: (failure ? failure.errorAt ?? a.at : a.at) ?? '',
       outcome,
-      reason: (outcome === 'failed' ? a.error : outcome === 'unsynced' ? a.syncError : '') ?? '',
+      reason: (failure ? failure.error : outcome === 'unsynced' ? a.syncError : '') ?? '',
       direction: dir?.direction ?? '',
       hadPrompt: !!dir?.prompt,
-      hasContent: !!a.done,
+      hasContent: !!contentOf(a),
       ...(a.status ? { status: a.status } : {}),
       ...(a.tier ? { tier: a.tier } : {}),
     });

@@ -9,6 +9,7 @@ import { useLabPipelineStore } from '../labPipelineStore';
 import { CatalogTree } from '../CatalogTree';
 import { useDerivedLifecycle } from '../useDerivedLifecycle';
 import { NextStepCoach } from '../NextStepCoach';
+import { coachVerdictOf } from '@/components/layout-lab/stepRecord';
 import { EntityDrainResult } from '@/components/layout-lab/EntityDrainResult';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
@@ -280,7 +281,7 @@ export function Baseline(props: Props) {
                     t={t}
                     steps={steps}
                     statusByStep={(s, i) => displayStatus(s, i)}
-                    verdictOf={(s) => artifactByStep.get(s)} stepSpecs={pipeline?.steps}
+                    verdictOf={(s) => coachVerdictOf(artifactByStep.get(s), entitySteps?.[s])} stepSpecs={pipeline?.steps}
                     driftByStep={driftByStep}
                     rollup={rollupSummary}
                     onJump={(i) => setStepIdx(i)}

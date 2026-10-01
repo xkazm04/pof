@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { contentDiverges } from './labContentDrift';
 import { labPersistOptions, observeServerRow, type PersistErrorApi } from './labPipelinePersistence';
+import { adoptOnto, contentOf, hasUnsyncedLocalWork, isServerDerived } from './stepRecord';
 import type { CatalogLinkRef } from '@/lib/catalog/acceptance/linkCheckers';
 
 /** The key under `data` holding a generative step's candidate-batch archive
@@ -155,7 +156,7 @@ interface LabPipelineState {
    *
    * `serverSteps` is the COMPLETE set of rows the server holds for the entity, so absence is
    * information: a step missing from it was deleted server-side. Rules, in order:
-   *  1. server has it, local doesn't → adopt it.
+   *  1. server has it, local holds no content (absent, or a failure marker) → adopt it.
    *  2. both have it, content+verdict identical → nothing (`unchanged`).
    *  3. both have it, but local holds work the server hasn't got (a recorded `syncError`,
    *     or a local produce STRICTLY newer than the server row) → keep local, report `kept`.
@@ -165,8 +166,8 @@ interface LabPipelineState {
    *  5. only local has it, and it is provably server-derived ({@link LabStepArtifact.serverSeen}
    *     with no newer local produce) → remove it, so a step deleted server-side stops reading
    *     green forever.
-   *  6. only local has it, and it is local work → keep it and stamp
-   *     {@link SERVER_MISSING_REASON} on it, so it is honest rather than destroyed.
+   *  6. only local has it, and it is local work → keep it and stamp {@link SERVER_MISSING_REASON}
+   *     on it. A failure marker is no work (no content): left as is, counted `unchanged`.
    *
    * Returns the {@link RefreshOutcome} so the caller can SHOW what happened.
    */
@@ -216,11 +217,10 @@ function reasonOf(e: unknown): string {
 }
 
 /**
- * Attach a produce failure to a step WITHOUT destroying what it had produced before:
- * an existing artifact keeps its `data`/`ueAssets`/`done`/`at` and only gains `error`,
- * so a re-produce that throws can never erase content that did land. When the step has
- * no artifact at all, a not-done failure marker is created so the failure is still
- * visible (and `clearError` removes it again).
+ * Attach a produce failure WITHOUT destroying what the step produced before (an existing artifact
+ * keeps `data`/`ueAssets`/`done`/`at` and only gains `error`). With no artifact at all, a not-done
+ * failure MARKER is created; every reader decodes it through `stepRecord` as a failed attempt,
+ * never content (`clearError` drops it).
  */
 function markFailure(
   s: { byEntity: Record<string, Record<string, LabStepArtifact>> },
@@ -236,31 +236,6 @@ function markFailure(
     ? { ...prev, error, errorAt }
     : { done: false, data: {}, ueAssets: [], at: errorAt, error, errorAt };
   return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: next } } };
-}
-
-/** Parse an ISO stamp defensively — an unparseable one must never look NEWER than the server. */
-function ms(at: string | undefined): number {
-  const n = at ? Date.parse(at) : NaN;
-  return Number.isNaN(n) ? 0 : n;
-}
-
-/**
- * Does this local artifact hold work the server has not got? True when its write-through is
- * on record as failed, or when it was produced STRICTLY after the server's row. Either way an
- * adoption would destroy something that exists nowhere else, so a refresh keeps it.
- */
-function hasUnsyncedLocalWork(cur: LabStepArtifact, server: LabStepArtifact | undefined): boolean {
-  if (cur.syncError !== undefined) return true;
-  return ms(cur.at) > ms(server?.at ?? cur.serverSeen);
-}
-
-/**
- * Is this local artifact provably a COPY of a server row (rather than local-only work)? Only
- * such a step may be reconciled away when the server drops it. An artifact from before
- * `serverSeen` existed has no proof either way, so it is never removed.
- */
-function isServerDerived(cur: LabStepArtifact): boolean {
-  return cur.serverSeen !== undefined && cur.syncError === undefined && ms(cur.at) <= ms(cur.serverSeen);
 }
 
 /** Take the server's artifact while preserving the local candidate archive (see `adoptServer`). */
@@ -370,11 +345,11 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           const merged = { ...existing };
           for (const { step, artifact } of steps) {
             const cur = merged[step];
-            // A first sighting is adopted whole, and STAMPED with the server row it came
-            // from (`serverSeen`) — that stamp is what later lets `refreshEntity` tell a
-            // server-derived step from local-only work when the server drops the row.
-            if (!cur) {
-              merged[step] = { ...artifact, serverSeen: artifact.at };
+            // A first sighting — or a failure marker, which holds no content — is adopted whole
+            // (the marker's failure trace kept) and STAMPED with the server row it came from
+            // (`serverSeen`), which later lets `refreshEntity` tell server-derived from local work.
+            if (!contentOf(cur)) {
+              merged[step] = adoptOnto(artifact, cur);
               observeServerRow(entityId, step, merged[step], artifact);
               changed = true;
               continue;
@@ -424,7 +399,7 @@ export const useLabPipelineStore = create<LabPipelineState>()(
 
           for (const { step, artifact } of serverSteps) {
             const cur = existing[step];
-            if (!cur) { next[step] = { ...artifact, serverSeen: artifact.at }; changed = true; outcome.adopted.push(step); continue; }
+            if (!contentOf(cur)) { next[step] = adoptOnto(artifact, cur); changed = true; outcome.adopted.push(step); continue; }
             const adopted = withLocalHistory(artifact, cur);
             const sameVerdict = cur.status === adopted.status && cur.tier === adopted.tier && cur.reason === adopted.reason;
             if (sameVerdict && !contentDiverges(cur, adopted)) {
@@ -452,6 +427,7 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           for (const step of Object.keys(existing)) {
             if (serverByStep.has(step)) continue;
             const cur = existing[step];
+            if (!contentOf(cur)) { next[step] = cur; outcome.unchanged += 1; continue; } // a failure trace, not unsaved work
             if (isServerDerived(cur)) { outcome.removed.push(step); changed = true; continue; }
             outcome.kept.push(step);
             next[step] = cur.syncError === SERVER_MISSING_REASON ? cur : { ...cur, syncError: SERVER_MISSING_REASON };

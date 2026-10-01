@@ -1,6 +1,7 @@
 import { deriveEntityArtifacts, gradeStepGuarded, type StepDisplayStatus, type StepDrift } from './hooks/useEntityArtifacts';
 import { COACH_PRIORITY_RANK, pickLadderIssue, type CoachPriority } from './coachLadder';
 import { settledLadder } from './coachSettlement';
+import { coachVerdictOf, contentOf, effectiveSteps, failureVerdictOf } from './stepRecord';
 import { buildLabCheckerContext } from './labCheckerContext';
 import { labContentHash } from './labContentDrift';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
@@ -76,11 +77,6 @@ export interface CoachCatalogInput {
   localByEntity: Record<string, Record<string, LabStepArtifact>>;
 }
 
-/** Project a server artifact into the local shape so it can seed the shared derivation (mirrors matrixRows). */
-function asLocal(a: PipelineArtifact): LabStepArtifact {
-  return { done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? '' };
-}
-
 /**
  * Rank candidates by the ladder, breaking ties by insertion order (a stable sort:
  * catalogs/entities keep the order they were fed in), and take the top N.
@@ -122,16 +118,12 @@ export function groupVerdictsByCatalog(verdicts: JudgeVerdict[]): Map<string, Ju
 export function buildCatalogCandidates(cin: CoachCatalogInput, verdicts: JudgeVerdict[] = []): CoachCandidate[] {
   const candidates: CoachCandidate[] = [];
   for (const e of cin.entities) {
-    const serverRow = cin.serverByEntity.get(e.id);
-    const serverArts: Record<string, PipelineArtifact> = {};
-    const serverAsLocal: Record<string, LabStepArtifact> = {};
-    if (serverRow) {
-      for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
-    }
-    const effective = { ...serverAsLocal, ...(cin.localByEntity[e.id] ?? {}) }; // add-only: local wins
+    // The ONE add-only merge (shared with matrixRows): local content wins; a failure marker never shadows the server.
+    const { serverArts, effective } = effectiveSteps(cin.serverByEntity.get(e.id), cin.localByEntity[e.id]);
     const own = entityStepList(cin.catalogId, e, cin.steps); // THIS entity's steps: stepIndex indexes the rail's list
     const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, own, effective, serverArts, {}, verdicts);
-    const candidate = assembleCandidate(cin.catalogId, cin.catalogLabel, e, own, displayStatus, driftByStep, (step) => artifactByStep.get(step)?.reason);
+    // A content-less failure reads `unproduced` and speaks through its verdict's reason (stepRecord).
+    const candidate = assembleCandidate(cin.catalogId, cin.catalogLabel, e, own, displayStatus, driftByStep, (step) => coachVerdictOf(artifactByStep.get(step), effective[step])?.reason);
     if (candidate) candidates.push(candidate);
   }
   return candidates;
@@ -237,9 +229,13 @@ export function deriveEntityFromSummary(
   const reasonByStep = new Map<string, string>();
 
   for (const step of steps) {
-    const local = localSteps?.[step];
+    const local = contentOf(localSteps?.[step]); // only content is graded; a failure marker never shadows `srv`
     const srv = summaryByStep?.get(step);
-    if (!local && !srv) continue; // never produced anywhere → `unproduced` (the default below)
+    if (!local && !srv) { // never produced anywhere → `unproduced` (the default below), naming a failed attempt
+      const failed = failureVerdictOf(localSteps?.[step])?.reason;
+      if (failed) reasonByStep.set(step, failed);
+      continue;
+    }
 
     let merged: AcceptanceResult;
     if (local) {

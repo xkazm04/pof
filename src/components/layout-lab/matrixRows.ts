@@ -7,6 +7,7 @@ import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { pickLadderIssue, type LadderIssue } from './coachLadder';
 import { settledLadder } from './coachSettlement';
+import { effectiveSteps } from './stepRecord';
 import { stepLabelsForProfile } from '@/lib/catalog/stepScope';
 
 export interface MatrixBlocker { step: string; reason: string }
@@ -24,16 +25,12 @@ export interface MatrixRow {
   issue: LadderIssue | null;
 }
 
-/** Project a server artifact into the local artifact shape so it can seed the shared derivation. */
-function asLocal(a: PipelineArtifact): LabStepArtifact {
-  return { done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? '' };
-}
-
 /**
  * Build the CatalogMatrix rows through the SAME `deriveEntityArtifacts` path the rail
  * uses — so the matrix and the rail can never disagree about a step's status. For each
  * entity the effective per-step input is the add-only merge of the local store OVER the
- * server artifacts (local wins, exactly as `hydrateEntity` does for the open entity), then
+ * server artifacts (`stepRecord.effectiveSteps`: local CONTENT wins, exactly as `hydrateEntity`
+ * does for the open entity; a failure marker never shadows a server row), then
  * `deriveEntityArtifacts` applies the shared accept-recompute + `deferred`→server overlay.
  *
  * Throw containment comes from that shared path too (`gradeStepGuarded`): a checker that
@@ -56,13 +53,7 @@ export function buildMatrixRows(
     // This entity's own steps: a step scoped to other canon profiles is not part of its pipeline.
     const own = stepLabelsForProfile(pipeline, steps, e.canonProfile);
     const ownSet = new Set(own);
-    const serverRow = serverByEntity.get(e.id);
-    const serverArts: Record<string, PipelineArtifact> = {};
-    const serverAsLocal: Record<string, LabStepArtifact> = {};
-    if (serverRow) {
-      for (const [step, art] of serverRow) { serverArts[step] = art; serverAsLocal[step] = asLocal(art); }
-    }
-    const effective = { ...serverAsLocal, ...(localByEntity[e.id] ?? {}) }; // add-only: local wins
+    const { serverArts, effective } = effectiveSteps(serverByEntity.get(e.id), localByEntity[e.id]);
 
     const { artifacts, artifactByStep, displayStatus, driftByStep } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
