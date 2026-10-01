@@ -686,6 +686,23 @@ bounded callback-settle race), and the poller re-checks the latch after its asyn
 fires `onTaskComplete` — no terminal path can skip one of them (the stuck-poller paths used
 to leave `dispatchingRef` set and silently drop every later dispatch).
 
+**The server decides when a run ends (`runArbiter.ts`).** The terminator set that ends a
+run directly is closed and positive: the `result` frame, the `error` frame (including
+`Execution not found`, which ends it as unknown), a start failure and user Abort. Every
+other observation only asks the server: stream `onerror` (after
+`UI_TIMEOUTS.streamReconnectDelay`), the visible silence watchdog (no frame at all,
+heartbeats included, for `UI_TIMEOUTS.streamSilenceMax`, about 3x the stream route's 15 s
+heartbeat), the stuck poller (registry verdict or heartbeat staleness) and the hidden poll.
+Each one goes through `useTaskQueue.consultServer`, which GETs `/api/claude-terminal/query`
+and applies the pure `arbitrateRunEnd(observation, { declared })`. The rule: `running` gives
+`reconnect` (a closed stream on a visible tab re-opens at the `after=<lastSeq>` cursor,
+keeping `executionIdRef`, so Abort still works); a completed run that declared callbacks
+with no verdict yet, or an unreachable server, gives `wait` (the watchdog re-arms, so the
+run is asked about again and never parked); `Execution not found` gives an end as unknown;
+anything else gives an end with the server's `status`/`isError`/`callbackStatus` through
+`finishRun`. A reconnect never re-POSTs a query or a callback. So a dropped stream no longer
+records a false failure, and Retry can no longer start a second process beside a live one.
+
 **One run-lifecycle door.** A run's session state is written ONLY through the sequenced
 door in `cliPanelStore`: `beginRun(id) → seq` (isRunning=true, clears the previous run's
 `lastTaskSuccess`/`lastCallbackStatus`, bumps `runSeq`), `settleRun(id, seq)` (stream
