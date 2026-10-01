@@ -703,6 +703,20 @@ anything else gives an end with the server's `status`/`isError`/`callbackStatus`
 `finishRun`. A reconnect never re-POSTs a query or a callback. So a dropped stream no longer
 records a false failure, and Retry can no longer start a second process beside a live one.
 
+**Build ledger: fix a build in one run, diff each rebuild (`buildLedger.ts`).** Every build
+tool_result is parsed into `useTaskQueue.buildParseCache` (an insertion-ordered Map), and
+both terminal render sites (single log rows and tool-pair rows) render the ONE
+`TerminalOutput/BuildBlock`: error cards, grouped warnings, `BuildSummaryCard`, plus a
+ledger row. `previousBuild(cache, logId)` finds the build before this one; the pure
+`diffBuildErrors(prev, next)` keys errors by content (`errorKey` = severity|file|code|message,
+never line/column or the Date.now-based diag id) into fixed / remaining / introduced, shown as
+"N fixed · N new · N remaining since previous build". Counts come only from two parsed
+builds, never from what a run claims. One "Fix all N" sends `buildFixAllPrompt` (distinct
+errors grouped by file, linker checklist only when present, ends with rebuild-and-verify)
+through the unchanged `onBuildFix(prompt)` host callback, on click only and disabled while a
+run streams. The single-error prompt has one builder, `buildFixPrompt` (ErrorCard's Fix;
+`UE5BuildParser.buildFixPromptFromError` re-exports it).
+
 **One run-lifecycle door.** A run's session state is written ONLY through the sequenced
 door in `cliPanelStore`: `beginRun(id) → seq` (isRunning=true, clears the previous run's
 `lastTaskSuccess`/`lastCallbackStatus`, bumps `runSeq`), `settleRun(id, seq)` (stream
