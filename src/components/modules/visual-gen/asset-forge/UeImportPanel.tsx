@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Boxes, Loader2 } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import type { CollisionPlan, CollisionUse } from '@/lib/visual-gen/ue-import';
 import type { CollisionPlanBasis } from '@/lib/visual-gen/ue-import-job-store';
 import type { ScalePlanBasis } from '@/lib/visual-gen/ue-import-plan';
@@ -41,6 +42,11 @@ import { ASSET_NAME_RE, importCandidates, suggestedAssetName, type CandidateVerd
  *  - **An assumed plan says so.** When the Tier-1 critic could not measure the mesh, the
  *    basis renders as a warning rather than being quietly folded into the plan.
  *
+ * The import itself lives in the forge store (`startUeImport` / `ueImport`), on the same
+ * tracked poll rail as a generation: a forge tab switch unmounts this panel, and the verdict —
+ * including the collision count read back from `body_setup` — must survive it. The panel only
+ * renders the slice; the queue's "Stop tracking" reaches the import like any other poll.
+ *
  * No live UE run happened in the session that built this; every state below is driven by
  * the routes' own envelopes.
  */
@@ -55,20 +61,6 @@ const USES: { id: CollisionUse; label: string; hint: string }[] = [
 ];
 
 const VERDICT_TAG: Record<CandidateVerdict, 'ok' | 'bad' | 'warn'> = { accepted: 'ok', rejected: 'bad', ungated: 'warn' };
-
-interface ImportStatus {
-  status: 'running' | 'done' | 'error';
-  glbPath: string;
-  use: CollisionUse;
-  assetPath?: string;
-  collision: CollisionPlan | null;
-  planBasis: CollisionPlanBasis | null;
-  shells: number | null;
-  collisionElements: number | null;
-  critiqueUnavailable?: boolean;
-  critiqueError?: string;
-  error?: string;
-}
 
 /** The previewed tuple — exactly what Send posts. */
 interface PlanRequest {
@@ -94,9 +86,6 @@ interface PlanPreview {
 
 type Preview = { key: string; request: PlanRequest } & ({ data: PlanPreview } | { error: string });
 
-/** The client's own patience, derived from the server's settle ceiling — never invented. */
-const POLL_BUDGET_MS = 180_000 + UI_TIMEOUTS.experimentBudgetMargin;
-
 export function UeImportPanel() {
   const jobs = useForgeStore((s) => s.jobs);
   const candidates = useMemo(() => importCandidates(jobs), [jobs]);
@@ -108,12 +97,11 @@ export function UeImportPanel() {
   const [preview, setPreview] = useState<Preview | null>(null);
   /** The preview key the operator ticked 'Replace' for — a new preview needs a new tick. */
   const [replaceKey, setReplaceKey] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [job, setJob] = useState<ImportStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const ueImport = useForgeStore((s) => s.ueImport);
+  const startUeImport = useForgeStore((s) => s.startUeImport);
+  const busy = ueImport.status === 'sending' || ueImport.trackId !== null;
+  const job = ueImport.result;
+  const error = ueImport.error;
 
   const name = assetName.trim();
   const request: PlanRequest | null =
@@ -124,7 +112,8 @@ export function UeImportPanel() {
 
   // Preview the plan for the current tuple (debounced for typing). A superseded answer is
   // dropped by the cleanup, and a preview only counts while its key is the current one.
-  useEffect(() => {
+  // Suspendable: a hidden pane asks for nothing, and re-asks for the same key on resume.
+  useSuspendableEffect(() => {
     if (!key) return;
     let cancelled = false;
     const t = setTimeout(async () => {
@@ -155,37 +144,10 @@ export function UeImportPanel() {
     setAssetClass(c.assetClass);
   };
 
-  const poll = (jobId: string, deadline: number) => {
-    timer.current = setTimeout(async () => {
-      const res = await tryApiFetch<ImportStatus>(`/api/visual-gen/ue-import/status?jobId=${jobId}`);
-      if (!res.ok) { setError(res.error); setBusy(false); return; }
-      setJob(res.data);
-      if (res.data.status === 'running') {
-        if (Date.now() >= deadline) {
-          setBusy(false);
-          setError('gave up polling — the editor is still running past the budget; the job may still finish');
-          return;
-        }
-        poll(jobId, deadline);
-        return;
-      }
-      setBusy(false);
-    }, UI_TIMEOUTS.experimentPoll);
-  };
-
-  const submit = async () => {
+  const submit = () => {
     if (!ready || !current || !plan) return;
-    setBusy(true);
-    setJob(null);
-    setError(null);
     // Exactly the previewed tuple, into the delivery's own folder.
-    const res = await tryApiFetch<{ jobId: string }>('/api/visual-gen/ue-import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...current.request, destPath: plan.destPath }),
-    });
-    if (!res.ok) { setError(res.error); setBusy(false); return; }
-    poll(res.data.jobId, Date.now() + POLL_BUDGET_MS);
+    void startUeImport({ ...current.request, destPath: plan.destPath });
   };
 
   const sendHint = !glbPath.trim()
@@ -312,7 +274,7 @@ export function UeImportPanel() {
       )}
 
       <button
-        onClick={() => void submit()}
+        onClick={submit}
         disabled={busy || !ready}
         data-testid="ue-import-submit"
         className="w-full rounded-lg border border-[var(--visual-gen)] bg-[var(--visual-gen)]/10 px-3 py-2 text-xs font-medium text-[var(--visual-gen)] transition-colors disabled:opacity-50"

@@ -10,15 +10,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { UeImportPanel } from '@/components/modules/visual-gen/asset-forge/UeImportPanel';
-import { useForgeStore, type GenerationJob } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
+import { useForgeStore, UE_IMPORT_IDLE, type GenerationJob } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
 
 const fetchMock = vi.fn();
+// The import lives in the store (it must outlive the panel), so every case starts from an idle slice.
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset();
-  useForgeStore.setState({ jobs: [] });
+  useForgeStore.setState({ jobs: [], ueImport: UE_IMPORT_IDLE });
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); useForgeStore.setState({ jobs: [] }); });
+afterEach(() => {
+  cleanup();
+  useForgeStore.getState().stopAllPolling();
+  vi.unstubAllGlobals();
+  useForgeStore.setState({ jobs: [], ueImport: UE_IMPORT_IDLE });
+});
 
 const ok = (data: unknown) => ({ ok: true, json: async () => ({ success: true, data }) });
 const fail = (error: string) => ({ ok: false, json: async () => ({ success: false, error }) });
