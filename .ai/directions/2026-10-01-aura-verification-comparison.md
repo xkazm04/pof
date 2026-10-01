@@ -5,7 +5,7 @@ raised_by: ai-registry intake 2026-10-01 (source: Aura documentation site, tryau
 source: ai-registry intake note librarian/sources/2026-10-01-aura-documentation.md
 stage: pof test-gate runner, spawn executor, verification primitives (src/lib/test-gate-runner/, src/lib/ue-automation/, e2e/helpers/)
 size: study; the ranked features below carry their own sizes
-status: proposed
+status: accepted
 ---
 
 # Aura verification stack against the pof test gate
