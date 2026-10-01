@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useReducer } from 'react';
 import { TrendingUp, Settings2, LayoutGrid } from 'lucide-react';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { BlueprintPanel, SectionHeader, UniqueTabHeader } from '../unique-tabs/_design';
@@ -14,6 +14,7 @@ import { MainChartArea } from './curves/MainChartArea';
 import { CurveParametersPanel } from './curves/CurveParametersPanel';
 import { MilestoneTimeline } from './curves/MilestoneTimeline';
 import { MultiCurveOverlay } from './curves/MultiCurveOverlay';
+import { PaceTargetsPanel } from './curves/PaceTargetsPanel';
 import { BuildPathComparison } from './builds/BuildPathComparison';
 import { XpSourceBreakdown } from './builds/XpSourceBreakdown';
 import { LevelUpRewardPreview } from './rewards/LevelUpRewardPreview';
@@ -31,6 +32,7 @@ import { XpTableGenerator } from './_internals/XpTableGenerator';
 import { DRCodeGenerator } from './_internals/DRCodeGenerator';
 import { DR_CONFIGS, type DRConfig } from '@/components/modules/core-engine/sub_progression/_shared/diminishingReturns';
 import { rewardSchedule, type RewardGroup } from '@/components/modules/core-engine/sub_progression/_shared/rewardPacing';
+import { curveTuningReducer, initialCurveTuning } from '@/components/modules/core-engine/sub_progression/_shared/curveFit';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 
@@ -54,14 +56,13 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
     { id: 'analysis', label: 'Analysis' },
   ], []);
 
-  /* Shared curve parameters */
-  const [baseXp, setBaseXp] = useState(100);
-  const [curveExp, setCurveExp] = useState(1.5);
-
-  /* Compare mode state */
-  const [compareMode, setCompareMode] = useState(false);
-  const [snapshotBaseXp, setSnapshotBaseXp] = useState(100);
-  const [snapshotCurveExp, setSnapshotCurveExp] = useState(1.5);
+  /* Shared curve parameters + compare snapshot + pace-fit preview (apply/revert only on click) */
+  const [tuning, dispatchTuning] = useReducer(curveTuningReducer, { baseXp: 100, curveExp: 1.5 }, initialCurveTuning);
+  const { live, snapshot, compareMode, previewing } = tuning;
+  const { baseXp, curveExp } = live;
+  const { baseXp: snapshotBaseXp, curveExp: snapshotCurveExp } = snapshot;
+  const setBaseXp = useCallback((v: number) => dispatchTuning({ type: 'setLive', params: { baseXp: v } }), []);
+  const setCurveExp = useCallback((v: number) => dispatchTuning({ type: 'setLive', params: { curveExp: v } }), []);
 
   /* Analysis tab: one DR config set feeds the visualizer and the C++ generator */
   const [drConfigs, setDRConfigs] = useState<DRConfig[]>(DR_CONFIGS);
@@ -79,15 +80,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
   const snapshotMaxXp = snapshotChartData[snapshotChartData.length - 1]?.xp ?? 10000;
   const sharedMaxXp = compareMode ? Math.max(maxXp, snapshotMaxXp) : maxXp;
 
-  const toggleCompare = useCallback(() => {
-    setCompareMode((prev) => {
-      if (!prev) {
-        setSnapshotBaseXp(baseXp);
-        setSnapshotCurveExp(curveExp);
-      }
-      return !prev;
-    });
-  }, [baseXp, curveExp]);
+  const toggleCompare = useCallback(() => dispatchTuning({ type: 'toggleCompare' }), []);
 
   const toggleAsset = useCallback((name: string) => {
     setExpandedAsset((prev) => (prev === name ? null : name));
@@ -123,17 +116,28 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
               snapshotChartData={snapshotChartData}
               snapshotBaseXp={snapshotBaseXp}
               snapshotCurveExp={snapshotCurveExp}
+              previewing={previewing}
             />
-            <CurveParametersPanel
-              baseXp={baseXp}
-              curveExp={curveExp}
-              compareMode={compareMode}
-              snapshotBaseXp={snapshotBaseXp}
-              snapshotCurveExp={snapshotCurveExp}
-              onBaseXpChange={setBaseXp}
-              onCurveExpChange={setCurveExp}
-              onToggleCompare={toggleCompare}
-            />
+            <div className="flex flex-col gap-4">
+              <CurveParametersPanel
+                baseXp={baseXp}
+                curveExp={curveExp}
+                compareMode={compareMode}
+                snapshotBaseXp={snapshotBaseXp}
+                snapshotCurveExp={snapshotCurveExp}
+                previewing={previewing}
+                onBaseXpChange={setBaseXp}
+                onCurveExpChange={setCurveExp}
+                onToggleCompare={toggleCompare}
+              />
+              <PaceTargetsPanel
+                live={live}
+                previewing={previewing}
+                onPreview={(params) => dispatchTuning({ type: 'previewFit', params })}
+                onApply={() => dispatchTuning({ type: 'apply' })}
+                onRevert={() => dispatchTuning({ type: 'revert' })}
+              />
+            </div>
           </div>
 
           <MultiCurveOverlay baseXp={baseXp} curveExp={curveExp} />
