@@ -555,37 +555,6 @@ export const ANIMATION_TIMELINE_EVENTS: TimelineEvent[] = [
 
 export type AnimStateName = 'Locomotion' | 'Attacking' | 'Dodging' | 'HitReact' | 'Death';
 
-export interface MontageTiming {
-  name: string;
-  state: AnimStateName;
-  totalFrames: number;
-  fps: number;
-  cancelWindowStart?: number;
-  cancelWindowEnd?: number;
-  blendInTime: number;
-}
-
-/**
- * FIXTURE — invented montage timings for the header metric tiles only.
- *
- * These numbers describe no project. They must never feed the Predictive
- * Responsiveness Analyzer again: that panel reads {@link DerivedMontageTiming}
- * values produced by {@link timingsFromManifest} from the PoF bridge manifest,
- * and a guard test asserts the analyzer does not import this array.
- */
-export const MONTAGE_TIMINGS: MontageTiming[] = [
-  { name: 'AM_Combo1', state: 'Attacking', totalFrames: 30, fps: 30, cancelWindowStart: 20, cancelWindowEnd: 30, blendInTime: 0.05 },
-  { name: 'AM_Combo2', state: 'Attacking', totalFrames: 36, fps: 30, cancelWindowStart: 24, cancelWindowEnd: 36, blendInTime: 0.05 },
-  { name: 'AM_Combo3', state: 'Attacking', totalFrames: 45, fps: 30, cancelWindowStart: 30, cancelWindowEnd: 45, blendInTime: 0.08 },
-  { name: 'AM_HeavyAttack', state: 'Attacking', totalFrames: 50, fps: 30, cancelWindowStart: 35, cancelWindowEnd: 50, blendInTime: 0.08 },
-  { name: 'AM_Dodge', state: 'Dodging', totalFrames: 15, fps: 30, cancelWindowStart: 10, cancelWindowEnd: 15, blendInTime: 0.03 },
-  { name: 'AM_HitReact', state: 'HitReact', totalFrames: 12, fps: 30, blendInTime: 0.0 },
-  { name: 'AM_ForcePush', state: 'Attacking' as AnimStateName, totalFrames: 25, fps: 30, cancelWindowStart: 15, cancelWindowEnd: 20, blendInTime: 0.1 },
-  { name: 'AM_SaberThrow', state: 'Attacking' as AnimStateName, totalFrames: 40, fps: 30, cancelWindowStart: 30, cancelWindowEnd: 35, blendInTime: 0.15 },
-  { name: 'AM_ForceLightning', state: 'Attacking' as AnimStateName, totalFrames: 60, fps: 30, blendInTime: 0.2 },
-  { name: 'AM_ForceHeal', state: 'Locomotion' as AnimStateName, totalFrames: 45, fps: 30, blendInTime: 0.25 },
-];
-
 export interface TransitionRule {
   from: AnimStateName;
   to: AnimStateName;
