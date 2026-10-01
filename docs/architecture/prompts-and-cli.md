@@ -248,6 +248,22 @@ called and Generate is disabled with the reason shown. The component's
 `__tests__/lib/materials/surface-spec.test.ts` and
 `__tests__/components/materials/MaterialParameterConfigurator.spec.test.tsx`.
 
+**A live UE master as the instance's parent.** With the bridge connected, the
+Configure tab lists the project's masters (`masterCandidates`: `parentMaterial
+=== null`, most-instanced first) as one-click "Instance this" buttons
+(`MaterialParameterConfigurator/LiveParentList.tsx`). `adoptParent(entry)` turns
+the manifest entry into a `ParentMaterialRef` (`liveParent.ts` `toParentRef`:
+scalars with a range that always contains the default, vectors / textures /
+static switches by name; a non-numeric scalar default stays `null` and is never
+dispatched as a value), forces `outputType: 'instance'` and makes the parent's
+scalars the sliders; Clear or choosing Master Material drops it. The optional
+`config.parentMaterial` makes `buildMaterialConfiguratorPrompt`'s instance branch
+name the parent asset and its exact parameter set ("override only"), and
+`materialConfiguratorVariantKey` digests it; with no parent both are
+byte-identical (golden + key pinned in `__tests__/materials/material-configurator.test.ts`).
+Pinned by `__tests__/components/materials/liveParent.test.ts` and
+`MaterialParameterConfigurator.parent.test.tsx` (manifest mocked).
+
 Phase 2 converted **post-process** the same way: `TaskFactory.postProcess(spec)`,
 a verbatim `post-process` handler and `postProcessVariantKey(spec)`. The config
 is the stack's one spec — `toStackSpec(effects, resolution)` in
