@@ -13,6 +13,7 @@ rollup strip.
 |------|------|
 | `src/app/page.tsx` | Root page; `useSyncExternalStore(popstate, readShellPref)` switches between `NewHome` and `AppShell` |
 | `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` / `switchShell(to)` — a URL that names its shell (`?legacy=1` / `?legacy=0`) wins, else `localStorage['pof.shell']` |
+| `src/lib/shell/leaveRisk.ts` + `src/hooks/useLeaveGuard.ts` | The leave guard (§1 "Leaving"): pure `leaveRisk(kind, sources)` / `describeLeaveRisk`; `useLeaveGuard()` (the one `beforeunload`, mounted in `page.tsx` above the gate) and `requestShellSwitch(to, { confirm })` (both shell-switch buttons) |
 | `src/lib/shell/shellRoute.ts` | The root page's ONE address codec (pure): `parseShellRoute(search, stored)` → `{ shell, moduleId }` (module validated against `SUB_MODULE_IDS` + the 3 special categories), `moduleHref(id)`, `shellUrl(href, shell, moduleId?)`, and the derived `MODULE_DESTINATIONS` (40 rows, registry labels) |
 | `src/hooks/useShellRouteSync.ts` | Mounted in `AppShell`: keeps the legacy shell's open module and the address (`?legacy=1&module=<id>`) in step — deep link in, one history entry per module move, popstate re-applies |
 | `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
@@ -76,6 +77,28 @@ legacy shell), then stores the preference, pushes the target entry and fires `po
 entry that names its shell beats the stored value in `parseShellRoute`, Back after a flip lands on
 the shell that entry was — before, the lab entry carried no flag, the stored `'legacy'` won, and
 Back was dead. A plain `/` still resolves by the stored preference (then `'ecw'`).
+
+**Leaving — one root guard over declared in-flight work.** `page.tsx` swaps whole shells, so
+neither shell outlives the other and a guard inside one (the old CLI-only `beforeunload` in
+`AppShell`) left the default lab unguarded. `useLeaveGuard()` (`src/hooks/useLeaveGuard.ts`) is
+mounted in `page.tsx` ABOVE the gate — the ONE `beforeunload` listener in `src/` — and reads its
+sources at the event (`getState()` / `getPaneHolds()`, no subscription). What counts is one pure
+read, `leaveRisk(kind, { sessions, holds, oneShotPhase })` (`src/lib/shell/leaveRisk.ts`):
+`'unload'` counts running CLI sessions, every pane hold (`usePaneHold` — a cook, a checklist batch,
+a batch fix, a predictive sweep / cell-tuner solve, paid icon-set sheets) and an in-flight one-shot
+phase (`IN_FLIGHT_PHASES`, exported from `oneShotJobStore` — the one list, also read by
+`next-actions.ts`; a reload rests such a run at `reload-interrupted`). `'shell-switch'` counts pane
+holds only: CLI state and the one-shot orchestrator are module-level and survive the unmount. Both
+switch buttons call `requestShellSwitch(to, { confirm })`, which names each reason
+(`UE cook running (Packaging)`) via `describeLeaveRisk` and returns `false` if the user stays; with
+nothing at risk it never asks and is exactly `switchShell`. Every reason is a warning with a way out
+(the browser prompt / the confirm), never a block: a UE cook is a server job (`cook-jobs.ts`) and a
+CLI run re-attaches, so leaving only detaches their console — they are still named, and the confirm
+says server jobs keep running. The drain lane is a server lease and is never a reason. Honest
+limits: a Back/Forward `popstate` across the shell boundary is not guarded (a popstate cannot be
+cancelled without re-pushing), and module work that declares no pane hold stays invisible. Holds
+exist only inside legacy `ModuleRenderer` panes (`PaneIdContext`), so today the lab → legacy switch
+never asks.
 
 Inside the legacy shell `useShellRouteSync` treats the address as the location's public face (the
 store stays the source of truth): on arrival a validated `module` param is applied through
