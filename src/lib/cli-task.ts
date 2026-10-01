@@ -606,7 +606,12 @@ export function materialConfiguratorVariantKey(config: MaterialConfiguratorConfi
       return `${k}=${p.name}:${p.defaultValue}:${p.min}:${p.max}:${p.step}`;
     })
     .join('|');
-  const shape = `${config.outputType}|${config.surfaceType}|${[...config.features].sort().join(',')}|${params}`;
+  // A live parent (absent = the key is unchanged) — its path and the parameter set the prompt names.
+  const pm = config.parentMaterial;
+  const parent = pm
+    ? `|parent=${pm.path}:${[pm.scalars.map((s) => s.name), pm.vectors, pm.textures, pm.switches].map((n) => n.join(',')).join(':')}`
+    : '';
+  const shape = `${config.outputType}|${config.surfaceType}|${[...config.features].sort().join(',')}|${params}${parent}`;
   return `material-configurator::${config.outputType}::${config.surfaceType}::${fnv1a(shape)}`;
 }
 

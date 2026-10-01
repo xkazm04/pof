@@ -1,12 +1,13 @@
 'use client';
 
-import { Zap, CircleDot, Plug, BookOpen, Info, Check, Ban } from 'lucide-react';
+import { Zap, CircleDot, BookOpen, Info, Check, Ban } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 import type { MaterialConfiguratorConfig } from './types';
 import { SURFACES, FEATURES, GLOSSARY } from './constants';
 import { useMaterialParameterConfigurator } from './useMaterialParameterConfigurator';
 import { ParametersSection } from './ParametersSection';
+import { LiveParentList } from './LiveParentList';
 import { MaterialBudgetBar } from '../MaterialBudgetBar';
 
 export type {
@@ -38,7 +39,11 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
     setShowGlossary,
     setOutputType,
     bridgeConnected,
-    bridgeMaterials,
+    bridgeMaterialCount,
+    liveMasters,
+    parent,
+    adoptParent,
+    clearParent,
     selectSurface,
     toggleFeature,
     setParam,
@@ -172,6 +177,7 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
         {outputType === 'instance' && (
           <p className="text-2xs px-1 py-1 rounded bg-status-amber-subtle border border-status-amber-medium text-[#f59e0bcc]">
             Recommended: Use Material Instances for per-object variation without recompiling shaders.
+            {!parent && bridgeConnected && liveMasters.length > 0 && ' Pick a live master below to instance it with its own parameters.'}
           </p>
         )}
       </div>
@@ -230,31 +236,14 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       />
 
       {/* ─── Live Material Data from Bridge ─── */}
-      {bridgeConnected && bridgeMaterials.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-text-muted uppercase tracking-widest flex items-center gap-1.5">
-            <Plug className="w-3 h-3 text-green-400" />
-            Live from Bridge
-            <span className="text-green-400 font-normal">({bridgeMaterials.length} materials)</span>
-          </h4>
-          <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
-            {bridgeMaterials.map((mat) => (
-              <div
-                key={mat.path}
-                className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-surface-deep border border-border hover:border-green-500/30 transition-colors"
-              >
-                <div className="min-w-0">
-                  <span className="text-2xs text-text block truncate font-mono">{mat.path.split('/').pop()}</span>
-                  <span className="text-2xs text-text-muted">{mat.domain} &middot; {mat.shadingModel}</span>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0 text-2xs text-text-muted">
-                  <span>{mat.paramCount} params</span>
-                  <span>{mat.instanceCount} inst</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {bridgeConnected && bridgeMaterialCount > 0 && (
+        <LiveParentList
+          masters={liveMasters}
+          materialCount={bridgeMaterialCount}
+          parent={parent}
+          onAdopt={adoptParent}
+          onClear={clearParent}
+        />
       )}
 
       {/* ─── Shader Budget — sampler + instruction cost estimator ─── */}

@@ -18,11 +18,31 @@ export interface ParameterRange {
   step: number;
 }
 
+/** One scalar a live UE master exposes; `defaultValue` is null when the manifest's is not a number. */
+export interface ParentScalar {
+  name: string;
+  min: number;
+  max: number;
+  defaultValue: number | null;
+  step: number;
+}
+
+/** A live UE master (from the bridge manifest) a generated instance is parented to. */
+export interface ParentMaterialRef {
+  path: string;
+  scalars: ParentScalar[];
+  vectors: string[];
+  textures: string[];
+  switches: string[];
+}
+
 export interface MaterialConfiguratorConfig {
   surfaceType: SurfaceType;
   features: RenderFeature[];
   outputType: MaterialOutputType;
   params: Record<string, ParameterRange>;
+  /** Present only when an instance targets a live master; absent = byte-identical legacy prompt. */
+  parentMaterial?: ParentMaterialRef;
 }
 
 export interface SurfaceDef {
