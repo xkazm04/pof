@@ -13,6 +13,7 @@ import { AffixPoolPanel } from './AffixPoolPanel';
 import { ItemBaseSelector } from './ItemBaseSelector';
 import { ItemPreviewCard } from './ItemPreviewCard';
 import { CraftingStation } from './CraftingStation';
+import { CraftGoalPanel } from './CraftGoalPanel';
 import { ItemStatsSummary } from './ItemStatsSummary';
 import { BreakpointTable } from './BreakpointTable';
 import { PowerBudgetRadar } from '../_orphan/PowerBudgetRadar';
@@ -130,6 +131,9 @@ export function AffixCraftingWorkbench({ moduleId }: { moduleId: SubModuleId }) 
                 onRemoveAffix={wb.removeAffix} onUpdateMagnitude={wb.updateAffixMagnitude}
                 onTogglePlacement={wb.toggleAffixPlacement}
                 onSetPreviewTag={wb.setPreviewTag} maxAffixes={wb.maxAffixes} />
+
+              <CraftGoalPanel report={wb.goalReport} onPrice={wb.priceCurrentItem}
+                disabled={wb.craftedAffixes.length === 0} />
 
               <CraftingStation showCraftPanel={wb.showCraftPanel}
                 onToggleCraftPanel={() => wb.setShowCraftPanel(!wb.showCraftPanel)}

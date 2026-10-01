@@ -12,7 +12,14 @@ import type { CurrencyId, PoolCategory, ViewMode } from './types';
 import { CURRENCIES } from './constants';
 import { useCraftingEngine } from './useCraftingEngine';
 import { useExportActions } from './useExportActions';
-import { addAffix as addAffixTo, eligiblePool, instantiateAffix, rollItem } from './craftingKernel';
+import { addAffix as addAffixTo, defaultWallet, eligiblePool, instantiateAffix, rollItem } from './craftingKernel';
+import { priceCraftGoal } from './craftGoal';
+import type { CraftGoalReport } from './craftGoal';
+import { createRNG } from '@/lib/seeded-rng';
+
+/** Fixed seed: the same item always gets the same price. */
+const PRICE_SEED = 7;
+const PRICE_RUNS = 400;
 
 /* ── Main Hook ──────────────────────────────────────────────────────── */
 
@@ -132,6 +139,18 @@ export function useAffixWorkbench() {
 
   const clearAffixes = useCallback(() => setCraftedAffixes([]), []);
 
+  // Price this item: a seeded Monte Carlo on a COPY of the default wallet. The
+  // report is shown only while the item and base it priced are still current.
+  const [priced, setPriced] = useState<{ report: CraftGoalReport; affixes: CraftedAffix[]; base: ItemBase } | null>(null);
+  const priceCurrentItem = useCallback(() => {
+    const report = priceCraftGoal({
+      rarity: selectedBase.rarity, targetTags: craftedAffixes.map((a) => a.tag), start: [],
+      wallet: defaultWallet(), runs: PRICE_RUNS, rng: createRNG(PRICE_SEED),
+    });
+    setPriced({ report, affixes: craftedAffixes, base: selectedBase });
+  }, [selectedBase, craftedAffixes]);
+  const goalReport = priced && priced.affixes === craftedAffixes && priced.base === selectedBase ? priced.report : null;
+
   const applyArchetype = useCallback((arch: RarityArchetype) => {
     setCraftedAffixes(arch.affixTags.flatMap((tag) => { const p = AFFIX_POOL.find((a) => a.tag === tag); return p ? [instantiateAffix(p)] : []; }));
   }, []);
@@ -158,7 +177,7 @@ export function useAffixWorkbench() {
     maxAffixes, canAddMore, fullItemName, powerBudget, budgetMax,
     budgetRatio, isOverBudget, filteredPool, maxWeight, totalWeight,
     activeSynergies, synergyGlow, newSynergyLabels, radarAxes,
-    radarValues, ghostRadarValues, suggestedArchetypes, avgCraftCost,
+    radarValues, ghostRadarValues, suggestedArchetypes, avgCraftCost, goalReport,
     // Setters
     setPoolFilter, setPoolSearch, setShowExport: exporting.setShowExport,
     setDragOverItem, setDraggingAffixId, setExpandedSynergies, setPreviewTag,
@@ -167,7 +186,7 @@ export function useAffixWorkbench() {
     // Actions
     addAffix, removeAffix, updateAffixMagnitude, toggleAffixPlacement,
     randomRoll, clearAffixes, executeCraft: crafting.executeCraft,
-    resetWallet: crafting.resetWallet, applyArchetype,
+    resetWallet: crafting.resetWallet, applyArchetype, priceCurrentItem,
     handleCopy: exporting.handleCopy, handleExportFile: exporting.handleExportFile,
     handleInjectToUE5: exporting.handleInjectToUE5, selectBase,
     canAfford: crafting.canAfford,
