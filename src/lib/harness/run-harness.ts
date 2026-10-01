@@ -412,6 +412,9 @@ async function main() {
       case 'harness:rollback':
         console.log(`[${ts}] ↩ ROLLBACK — ${event.areaId} → last green ${event.toSha.slice(0, 8)}`);
         break;
+      case 'harness:review-request':
+        console.log(`[${ts}] REVIEW NOW — ${event.areaId} (${event.reason}); ${event.dependents.length} dependent area(s) build on it next: ${event.dependents.join(', ')}`);
+        break;
       case 'harness:guide-updated':
         console.log(`[${ts}] GUIDE — Phase ${event.step.phase}: ${event.step.label}`);
         break;
