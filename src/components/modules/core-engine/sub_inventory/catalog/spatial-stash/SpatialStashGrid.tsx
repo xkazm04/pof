@@ -14,10 +14,8 @@ import {
   setDragIntent,
   subscribeDragIntent,
 } from './spatialDragState';
-import {
-  spatialItemLookup,
-  useSpatialInventoryStore,
-} from '@/stores/spatialInventoryStore';
+import { useSpatialInventoryStore } from '@/stores/spatialInventoryStore';
+import { useInventoryItemLookup } from '../../_shared/useInventoryItems';
 import { RARITY_COLORS } from '../../_shared/data';
 import {
   withOpacity, OPACITY_8, OPACITY_15, OPACITY_25, OPACITY_50,
@@ -191,7 +189,8 @@ interface TileProps {
 }
 
 function PlacedTile({ placement, tabId, onRotate, onRemove }: TileProps) {
-  const item = spatialItemLookup(placement.itemId);
+  // Reactive: the tile re-resolves when the catalog store gains or edits the item.
+  const item = useInventoryItemLookup()(placement.itemId);
   const color = item ? RARITY_COLORS[item.rarity] ?? STATUS_SUBDUED : STATUS_SUBDUED;
   const w = placement.w * CELL_PX + (placement.w - 1) * GAP_PX;
   const h = placement.h * CELL_PX + (placement.h - 1) * GAP_PX;
@@ -217,7 +216,10 @@ function PlacedTile({ placement, tabId, onRotate, onRemove }: TileProps) {
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className="absolute rounded-md border cursor-grab active:cursor-grabbing group flex flex-col items-center justify-center text-center px-1 transition-transform"
-      title={item ? `${item.name} — ${item.rarity} ${item.subtype} (${placement.w}×${placement.h})` : placement.itemId}
+      title={item
+        ? `${item.name} — ${item.rarity} ${item.subtype} (${placement.w}×${placement.h})`
+        : `Unresolved item "${placement.itemId}" — not in the item catalog`}
+      data-unresolved={item ? undefined : true}
       style={{
         left: placement.x * (CELL_PX + GAP_PX),
         top: placement.y * (CELL_PX + GAP_PX),

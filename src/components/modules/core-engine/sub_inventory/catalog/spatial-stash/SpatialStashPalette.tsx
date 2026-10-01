@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
-import { DUMMY_ITEMS, RARITY_COLORS, type ItemData } from '../../_shared/data';
+import { RARITY_COLORS, type ItemData } from '../../_shared/data';
+import { useInventoryItems } from '../../_shared/useInventoryItems';
 import { getItemFootprint } from '@/lib/spatial-inventory';
 import { setDragIntent } from './spatialDragState';
 import {
@@ -20,8 +21,9 @@ export function SpatialStashPalette({ accent }: Props) {
   const [q, setQ] = useState('');
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>('all');
 
+  const catalogItems = useInventoryItems();
   const items = useMemo(() => {
-    let pool: ItemData[] = DUMMY_ITEMS;
+    let pool: ItemData[] = catalogItems;
     if (type !== 'all') pool = pool.filter((i) => i.type === type);
     if (q) {
       const lower = q.toLowerCase();
@@ -32,7 +34,7 @@ export function SpatialStashPalette({ accent }: Props) {
       );
     }
     return pool.slice(0, 40);
-  }, [q, type]);
+  }, [catalogItems, q, type]);
 
   return (
     <div className="flex flex-col gap-2 w-full max-w-[280px]">

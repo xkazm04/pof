@@ -11,7 +11,7 @@ import { ItemDetailDrawer } from './ItemDetailDrawer';
 import { EquipmentLoadoutSection, SetBonusSection } from './GearSections';
 import { AffixSlotPanels } from './AffixSlotPanels';
 import { CatalogPagination } from './CatalogPagination';
-import { ACCENT, DUMMY_ITEMS, RARITY_ORDER, type ItemData } from '../_shared/data';
+import { ACCENT, RARITY_ORDER, type ItemData } from '../_shared/data';
 import { useCatalogStore, useItemEntries } from '@/stores/catalogStore';
 import { itemToEntry } from '@/lib/catalog/seed-items';
 import { useGeneration } from '@/hooks/useGeneration';
@@ -262,7 +262,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
       </div>
 
       <SetBonusSection />
-      <ItemComparisonPanel items={DUMMY_ITEMS} />
+      <ItemComparisonPanel />
     </motion.div>
   );
 }

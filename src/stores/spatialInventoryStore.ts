@@ -14,7 +14,11 @@ import {
   type StashTab,
   type PlacedItem,
 } from '@/lib/spatial-inventory';
-import { DUMMY_ITEMS, type ItemData } from '@/components/modules/core-engine/sub_inventory/_shared/data';
+import type { ItemData } from '@/components/modules/core-engine/sub_inventory/_shared/data';
+import {
+  getInventoryItems,
+  resolveInventoryItem,
+} from '@/components/modules/core-engine/sub_inventory/_shared/useInventoryItems';
 
 interface SpatialInventoryState {
   tabsById: Record<string, StashTab>;
@@ -36,23 +40,29 @@ interface SpatialInventoryState {
     y: number,
     rotated?: boolean,
   ) => boolean;
-  /** Re-pack the active tab from scratch using DUMMY_ITEMS — handy for resets. */
+  /** Re-pack the active tab from scratch with the first catalog items — handy for resets. */
   reseedActiveTab: () => void;
 }
 
 let _seq = 0;
 const uid = (prefix: string) => `${prefix}_${Date.now().toString(36)}_${(_seq++).toString(36)}`;
 
+/**
+ * Placement ids resolve against the catalog store (the system of record the
+ * Catalog & Gear grid writes to). An id it does not hold stays unresolved.
+ */
 function lookupItem(itemId: string): ItemData | undefined {
-  return DUMMY_ITEMS.find((i) => i.id === itemId);
+  return resolveInventoryItem(itemId);
 }
+
+const SEED_COUNT = 18;
 
 function createInitial(): Pick<SpatialInventoryState, 'tabsById' | 'order' | 'activeTabId'> {
   const main = packFirstFit(
     createStashTab(uid('tab'), 'Main'),
     // Seed the demo tab with a representative slice of the catalog so the
     // Capacity Planner has live data on first paint.
-    DUMMY_ITEMS.slice(0, 18),
+    getInventoryItems().slice(0, SEED_COUNT),
     () => uid('p'),
   );
   const stash = createStashTab(uid('tab'), 'Stash', 12, 6);
@@ -157,7 +167,7 @@ export const useSpatialInventoryStore = create<SpatialInventoryState>()(
           const tab = s.tabsById[s.activeTabId];
           if (!tab) return s;
           const fresh = createStashTab(tab.id, tab.name, tab.cols, tab.rows);
-          const packed = packFirstFit(fresh, DUMMY_ITEMS.slice(0, 18), () => uid('p'));
+          const packed = packFirstFit(fresh, getInventoryItems().slice(0, SEED_COUNT), () => uid('p'));
           return { tabsById: { ...s.tabsById, [tab.id]: packed } };
         }),
     }),
@@ -197,7 +207,10 @@ export function useAllStashTabs(): StashTab[] {
   return useSpatialInventoryStore(useShallow((s) => Object.values(s.tabsById)));
 }
 
-/** Resolve item metadata for the metrics computation. */
+/**
+ * Non-reactive item resolution for metrics (e.g. EconomySourcingTab). React
+ * renders that must follow catalog edits use `useInventoryItemLookup()`.
+ */
 export function spatialItemLookup(itemId: string): ItemData | undefined {
   return lookupItem(itemId);
 }

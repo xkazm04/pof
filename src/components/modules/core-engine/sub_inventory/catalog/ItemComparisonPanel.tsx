@@ -8,10 +8,14 @@ import { STATUS_SUCCESS, STATUS_ERROR, STATUS_MUTED,
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ACCENT, RARITY_COLORS, ALL_ITEM_TYPES, type ItemData } from '../_shared/data';
 import { buildComparison, formatDelta, describeDelta } from './itemComparison';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 
 /* ── Same-Type Item Comparison Panel (2-3 items) ────────────────────────── */
 
-export function ItemComparisonPanel({ items }: { items: ItemData[] }) {
+/** `items` defaults to the catalog store's items; an explicit list wins. */
+export function ItemComparisonPanel({ items: explicitItems }: { items?: ItemData[] }) {
+  const catalogItems = useInventoryItems();
+  const items = explicitItems ?? catalogItems;
   const availableCategories = useMemo(
     () => ALL_ITEM_TYPES.filter(c => items.some(i => i.type === c)),
     [items],
