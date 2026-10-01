@@ -139,6 +139,14 @@ export interface RigExpectation {
    * prop, a mount or a silent creature, whose faces legitimately never move.
    */
   facialDeformation?: boolean;
+  /**
+   * Id of the target skeleton preset (`rig-presets.ts`) this rig will be retargeted onto.
+   * When set, the gate binds the rig's actual joint names to that target's IK chains
+   * (`bindRigToPreset`, `rig-binding.ts`) and fails a rig that leaves a chain endpoint
+   * unbound — a limb that will not animate. An unknown id fails too. Unset keeps the
+   * verdict exactly as it was.
+   */
+  target?: string;
 }
 
 /** The verdict on a skeleton's anatomy. `verifiable: false` is neither pass nor fail. */
