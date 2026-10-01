@@ -15,12 +15,18 @@ import { useAnimationLoop } from './useAnimationLoop';
 import { LivePreviewScene } from './LivePreviewScene';
 import { ParameterEditor } from './ParameterEditor';
 import { ExportPanel } from './ExportPanel';
+import { ApplyToProjectBar } from './ApplyToProjectBar';
+import { useHudDesignStore } from '@/stores/hudDesignStore';
+import { useProjectStore } from '@/stores/projectStore';
 import type { HudTheme, RGBA } from './types';
 
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function HudThemeEditor() {
-  const [theme, setTheme] = useState<HudTheme>(() => structuredClone(DEFAULT_THEME));
+  // The draft lives per project in hudDesignStore: this tab unmounts on every tab switch.
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const theme = useHudDesignStore((s) => s.byProject[projectPath]?.themeDraft ?? DEFAULT_THEME);
+  const setThemeDraft = useHudDesignStore((s) => s.setThemeDraft);
   const [playing, setPlaying] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<'health' | 'damage' | 'enemy'>('health');
@@ -28,17 +34,18 @@ export function HudThemeEditor() {
   const time = useAnimationLoop(playing);
 
   const setParam = useCallback((p: HudThemeParam, value: number | RGBA) => {
-    setTheme(prev => writeParam(prev, p, value));
-  }, []);
+    const prev = useHudDesignStore.getState().getThemeDraft(projectPath);
+    setThemeDraft(projectPath, writeParam(prev, p, value));
+  }, [projectPath, setThemeDraft]);
 
   // A pasted .h (parseUE5Config, already clamped and reported) replaces the theme.
   const handleImport = useCallback((next: HudTheme) => {
-    setTheme(next);
-  }, []);
+    setThemeDraft(projectPath, next);
+  }, [projectPath, setThemeDraft]);
 
   const handleReset = useCallback(() => {
-    setTheme(structuredClone(DEFAULT_THEME));
-  }, []);
+    setThemeDraft(projectPath, structuredClone(DEFAULT_THEME));
+  }, [projectPath, setThemeDraft]);
 
   const exportConfig = useMemo(() => generateUE5Config(theme), [theme]);
 
@@ -132,6 +139,9 @@ export function HudThemeEditor() {
           onImport={handleImport}
         />
       </div>
+
+      {/* ── Apply the changed UPROPERTYs to the project ── */}
+      <ApplyToProjectBar projectPath={projectPath} theme={theme} />
     </div>
   );
 }

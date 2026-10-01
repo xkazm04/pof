@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type SetStateAction } from 'react';
 import type {
   InventoryConfig,
   InteractionMode,
@@ -14,6 +14,8 @@ import { SlotTypesSection } from './SlotTypesSection';
 import { EquipSection } from './EquipSection';
 import { InteractSection } from './InteractSection';
 import { SummaryBar } from './SummaryBar';
+import { useHudDesignStore } from '@/stores/hudDesignStore';
+import { useProjectStore } from '@/stores/projectStore';
 
 interface InventoryGridDesignerProps {
   onGenerate: (config: InventoryConfig) => void;
@@ -21,18 +23,26 @@ interface InventoryGridDesignerProps {
 }
 
 export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGridDesignerProps) {
-  const [config, setConfig] = useState<InventoryConfig>(() => structuredClone(DEFAULT_CONFIG));
+  // The draft lives per project in hudDesignStore: this tab unmounts on every tab
+  // switch, including the one made to watch the Inventory Gen run it started.
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const config = useHudDesignStore((s) => s.byProject[projectPath]?.inventoryDraft ?? DEFAULT_CONFIG);
+  const setInventoryDraft = useHudDesignStore((s) => s.setInventoryDraft);
+  const setConfig = useCallback((update: SetStateAction<InventoryConfig>) => {
+    const prev = useHudDesignStore.getState().getInventoryDraft(projectPath);
+    setInventoryDraft(projectPath, typeof update === 'function' ? update(prev) : update);
+  }, [projectPath, setInventoryDraft]);
   const [activeSection, setActiveSection] = useState<'grid' | 'slots' | 'equip' | 'interact'>('grid');
 
   // ── Grid dimension handlers ──
 
   const setCols = useCallback((v: number) => {
     setConfig((c) => ({ ...c, gridCols: Math.max(2, Math.min(12, v)) }));
-  }, []);
+  }, [setConfig]);
 
   const setRows = useCallback((v: number) => {
     setConfig((c) => ({ ...c, gridRows: Math.max(2, Math.min(8, v)) }));
-  }, []);
+  }, [setConfig]);
 
   // ── Slot type toggles ──
 
@@ -43,7 +53,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
         s.id === id ? { ...s, enabled: !s.enabled } : s
       ),
     }));
-  }, []);
+  }, [setConfig]);
 
   // ── Equipment slot toggles ──
 
@@ -54,7 +64,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
         s.id === id ? { ...s, enabled: !s.enabled } : s
       ),
     }));
-  }, []);
+  }, [setConfig]);
 
   // ── Interaction toggles ──
 
@@ -65,7 +75,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
         ? c.interactions.filter((i) => i !== id)
         : [...c.interactions, id],
     }));
-  }, []);
+  }, [setConfig]);
 
   const enabledSlots = config.slotTypes.filter((s) => s.enabled);
   const enabledEquip = config.equipmentSlots.filter((s) => s.enabled);

@@ -38,6 +38,8 @@ import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
 import { toStackSpec, type PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
 import { buildStyleTransferPrompt } from '@/lib/prompts/style-transfer';
 import { buildGenerateTestsPrompt } from '@/lib/prompts/ai-testing';
+import { buildHudThemeApplyPrompt } from '@/lib/prompts/hud-theme';
+import type { ThemeChange } from '@/components/modules/content/ui-hud/HudThemeEditor/themeDiff';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -295,6 +297,15 @@ const TEST_SUITE: TestSuite = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
+/** One moved HUD theme row (diffThemeExport output for FadeOutDelay 3.0 -> 4.5). */
+const HUD_THEME_CHANGES: ThemeChange[] = [{
+  name: 'FadeOutDelay',
+  widget: 'EnemyHealthBarWidget',
+  category: 'EnemyHP|Fade',
+  from: 'float FadeOutDelay = 3.0f;',
+  to: 'float FadeOutDelay = 4.5f;',
+}];
+
 // ── The table ───────────────────────────────────────────────────────────────
 
 /** One representative invocation of a standalone builder. */
@@ -323,4 +334,5 @@ export const STANDALONE_BUILDERS: StandaloneBuilderCase[] = [
   { name: 'post-process', module: 'materials', build: (ctx) => buildPostProcessPrompt(GOLDEN_PP_SPEC, ctx) },
   { name: 'style-transfer', module: 'materials', build: (ctx) => buildStyleTransferPrompt(STYLE_TRANSFER, ctx) },
   { name: 'ai-testing', module: 'ai-behavior', build: (ctx) => buildGenerateTestsPrompt(TEST_SUITE, ctx) },
+  { name: 'hud-theme', module: 'ui-hud', build: (ctx) => buildHudThemeApplyPrompt(HUD_THEME_CHANGES, ctx) },
 ];
