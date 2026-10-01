@@ -865,7 +865,10 @@ const draftAbilitySpec: TaskPromptHandler = (task, ctx) => {
   const cbId = registerCallback({
     url: `${dt.appOrigin}/api/ability-spec`,
     method: 'POST',
-    staticFields: { catalogId: dt.catalogId, entityId: dt.entityId },
+    // The POST is a slice-merge (absent = keep): a redraft keeps the authored
+    // attributes/relationships/loadout but must still drop the forge provenance
+    // its effects no longer come from — hence the explicit null.
+    staticFields: { catalogId: dt.catalogId, entityId: dt.entityId, provenance: null },
     schemaHint:
       '  "effects": [\n' +
       '    { "id": "<id>", "name": "GE_<Name>", "duration": "instant|duration|infinite", "durationSec": 0, "cooldownSec": 0, "color": "#rrggbb", "modifiers": [{ "attribute": "Health", "operation": "add|multiply", "magnitude": 0 }], "grantedTags": [] }\n' +

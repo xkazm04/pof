@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 import { TaskFactory } from '@/lib/cli-task';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import type { SubModuleId } from '@/types/modules';
-import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
+import type { EnrichedAbilitySpec, SpecWrite } from '@/lib/ability/spec';
 import { deriveDefaultSpec } from '@/lib/ability/spec';
 import type { EditorEffect } from '@/lib/gas-codegen';
 import {
@@ -175,14 +175,12 @@ export function useAbilitySpecBinding({ moduleId, state, onHydrate }: Args): Spe
     // Never save mid-hydration — the editor still holds the previous entity's
     // slices and would overwrite the row we are in the middle of loading.
     if (hydrating) return;
-    // Carry forward any adoption provenance the entity already holds — a manual
-    // slice tweak must not silently wipe the forged-C++ audit trail.
-    // (Provenance is only ever replaced by a new Adopt, never by Save.)
-    const existing = useAbilitySpecStore.getState().getSpec(SPEC_CATALOG_ID, entityId);
-    const record: EnrichedAbilitySpec = {
+    // No provenance key: the POST is a slice-merge (absent = keep), so the
+    // server keeps any adopted forged-C++ audit trail. Only a new Adopt replaces
+    // it and only an explicit null (a redraft) clears it.
+    const record: SpecWrite = {
       catalogId: SPEC_CATALOG_ID, entityId,
       effects, tagRules, attributes, relationships, loadout,
-      ...(existing?.provenance ? { provenance: existing.provenance } : {}),
     };
     const sigAtSave = stateSig;
     setSaveState('saving');

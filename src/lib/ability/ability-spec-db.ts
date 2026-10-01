@@ -1,7 +1,8 @@
 import { getDb } from '@/lib/db';
 import type {
-  AttrRelationship, CodegenReport, EnrichedAbilitySpec, SpecProvenance,
+  AttrRelationship, CodegenReport, EnrichedAbilitySpec, SpecProvenance, SpecWrite,
 } from '@/lib/ability/spec';
+import { mergeSpecWrite } from '@/lib/ability/spec';
 import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
 
 // DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
@@ -96,15 +97,18 @@ export function listSpecs(catalogId?: string): EnrichedAbilitySpec[] {
 }
 
 /**
- * Write all five editor slices + adoption provenance.
+ * Slice-merge write: read the stored row, apply {@link mergeSpecWrite} (absent
+ * slice = keep, explicit `null` = clear), write the merged row — all inside one
+ * transaction so a concurrent writer cannot interleave between read and write.
  *
  * Deliberately does NOT touch the `codegen` column: that audit trail is owned
  * solely by the generate-gas-effects callback, so a Save/Adopt can never clobber
  * it. Keep that property when extending this statement.
  */
-export function upsertSpec(rec: EnrichedAbilitySpec): EnrichedAbilitySpec {
+export function upsertSpec(write: SpecWrite): EnrichedAbilitySpec {
   ensureTable();
-  getDb().prepare(`
+  const db = getDb();
+  const stmt = db.prepare(`
     INSERT INTO ability_specs
       (catalog_id, entity_id, effects, tag_rules, attributes, relationships, loadout, provenance, updated_at)
     VALUES
@@ -113,17 +117,22 @@ export function upsertSpec(rec: EnrichedAbilitySpec): EnrichedAbilitySpec {
       effects=@effects, tag_rules=@tag_rules,
       attributes=@attributes, relationships=@relationships, loadout=@loadout,
       provenance=@provenance, updated_at=datetime('now')
-  `).run({
-    catalog_id: rec.catalogId,
-    entity_id: rec.entityId,
-    effects: JSON.stringify(rec.effects),
-    tag_rules: JSON.stringify(rec.tagRules),
-    attributes: rec.attributes ? JSON.stringify(rec.attributes) : null,
-    relationships: rec.relationships ? JSON.stringify(rec.relationships) : null,
-    loadout: rec.loadout ? JSON.stringify(rec.loadout) : null,
-    provenance: rec.provenance ? JSON.stringify(rec.provenance) : null,
-  });
-  return getSpec(rec.catalogId, rec.entityId)!;
+  `);
+  const json = (v: unknown) => (v === undefined ? null : JSON.stringify(v));
+  return db.transaction(() => {
+    const rec = mergeSpecWrite(getSpec(write.catalogId, write.entityId), write);
+    stmt.run({
+      catalog_id: rec.catalogId,
+      entity_id: rec.entityId,
+      effects: JSON.stringify(rec.effects),
+      tag_rules: JSON.stringify(rec.tagRules),
+      attributes: json(rec.attributes),
+      relationships: json(rec.relationships),
+      loadout: json(rec.loadout),
+      provenance: json(rec.provenance),
+    });
+    return getSpec(rec.catalogId, rec.entityId)!;
+  })();
 }
 
 /**

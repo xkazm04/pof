@@ -12,6 +12,8 @@ import { upsertSpec, getSpec, setCodegenReport } from '@/lib/ability/ability-spe
 import { getDb } from '@/lib/db';
 import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
+import { forgedAbilityToSpec } from '@/lib/ability/forge-adopt';
+import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 
 beforeEach(() => {
   try { getDb().exec('DELETE FROM ability_specs'); } catch { /* table not yet created */ }
@@ -40,9 +42,15 @@ describe('ability-spec-db — provenance round-trip', () => {
     expect(getSpec('spellbook', 'off-ice-01')?.provenance).toBeUndefined();
   });
 
-  it('re-upsert without provenance clears the prior provenance', () => {
+  it('re-upsert without a provenance key KEEPS the prior provenance (absent = keep)', () => {
     upsertSpec(withProv);
     upsertSpec({ catalogId: 'spellbook', entityId: 'off-fire-01', effects: [], tagRules: [] });
+    expect(getSpec('spellbook', 'off-fire-01')?.provenance?.className).toBe('GA_Fireball');
+  });
+
+  it('re-upsert with provenance: null clears the prior provenance (explicit null = clear)', () => {
+    upsertSpec(withProv);
+    upsertSpec({ catalogId: 'spellbook', entityId: 'off-fire-01', effects: [], tagRules: [], provenance: null });
     expect(getSpec('spellbook', 'off-fire-01')?.provenance).toBeUndefined();
   });
 });
@@ -94,5 +102,59 @@ describe('ability-spec-db — five-slice round-trip', () => {
     const back = getSpec('spellbook', 'off-arc-01');
     expect(back?.codegen?.status).toBe('confirmed');
     expect(back?.codegen?.filesWritten).toEqual(['GE_X.h']);
+  });
+});
+
+/* ── Slice-merge: a write never destroys a slice it did not name ────────── */
+
+const forged: ForgedAbility = {
+  className: 'GA_IceLance',
+  displayName: 'Ice Lance',
+  description: 'A lance of ice',
+  headerCode: '// ice h',
+  cppCode: '// ice cpp',
+  tags: { abilityTag: 'Ability.Ice.Lance', cooldownTag: 'Cooldown.IceLance', ownedTags: [], blockedTags: ['State.Dead'] },
+  stats: { baseDamage: 20, manaCost: 10, cooldownSec: 2, damageType: 'Ice' },
+  comboEntry: { animDuration: 1, damageWindow: [0.2, 0.5], recovery: 0.3, comboMultiplier: 1 },
+  radarValues: [0.5, 0.5, 0.5, 0.5, 0.5],
+};
+
+describe('ability-spec-db — slice merge', () => {
+  it('forge Adopt over an authored row keeps attributes / relationships / loadout', () => {
+    upsertSpec(allFive);
+    upsertSpec(forgedAbilityToSpec('spellbook', 'off-arc-01', forged, 'p'));
+    const back = getSpec('spellbook', 'off-arc-01');
+    expect(back?.attributes).toHaveLength(2);
+    expect(back?.relationships).toHaveLength(1);
+    expect(back?.loadout).toHaveLength(1);
+    expect(back?.provenance?.className).toBe('GA_IceLance');
+    expect(back?.effects.map((e) => e.id)).toEqual(['icelance-primary', 'icelance-mana']);
+  });
+
+  it('explicit null clears an additive editor slice; the others survive', () => {
+    upsertSpec(allFive);
+    upsertSpec({ catalogId: 'spellbook', entityId: 'off-arc-01', effects: [], tagRules: [], loadout: null });
+    const back = getSpec('spellbook', 'off-arc-01');
+    expect(back?.loadout).toBeUndefined();
+    expect(back?.attributes).toHaveLength(2);
+    expect(back?.provenance?.className).toBe('GA_Fireball');
+  });
+
+  it('[guard] codegen survives a full five-slice Save after the report landed', () => {
+    setCodegenReport('spellbook', 'off-arc-01', {
+      status: 'confirmed', filesWritten: [], buildOk: true, seedRan: true,
+      dataTableRows: 1, missingTags: [], reportedAt: '2026-07-29T00:00:00.000Z',
+    });
+    upsertSpec(allFive);
+    expect(getSpec('spellbook', 'off-arc-01')?.codegen?.status).toBe('confirmed');
+  });
+
+  it('[guard] a brand-new row with only effects/tagRules reads every optional slice back undefined', () => {
+    upsertSpec({ catalogId: 'spellbook', entityId: 'brand-new-01', effects: [], tagRules: [] });
+    const back = getSpec('spellbook', 'brand-new-01');
+    expect(back?.attributes).toBeUndefined();
+    expect(back?.relationships).toBeUndefined();
+    expect(back?.loadout).toBeUndefined();
+    expect(back?.provenance).toBeUndefined();
   });
 });
