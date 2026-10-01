@@ -405,6 +405,15 @@ The Encounter Choreographer (`src/components/modules/core-engine/sub_combat/chor
 - The mirror models the documented formula. The open AttackPower-adds-zero defect (`docs/superpowers/specs/2026-09-22-combat-attackpower-adds-zero.md`) quotes the same expected hit (28.85), and the panel cites it.
 - Do not spell the retired curve anywhere else: `src/__tests__/lib/combat/ue-damage-execution.test.ts` fails on an inline armour-curve expression under `sub_combat/damage-pipeline/`.
 
+## Combo builder: cooldown-legal schedule, burst vs sustained DPS
+
+`src/components/modules/core-engine/sub_combat/combos/schedule.ts` is the one timing model for the Spellbook's ComboChainBuilder. `scheduleCombo(ids, opts?)` starts each cast at max(previous cast end, its own cooldown ready time) and records the gap as `waited` / `waitedOn`. The opener rule (`comboMultiplierAt`: the first hit of a pass gets no combo bonus) is stated there once. Cast damage resolves through the canon kernel's `computeHit` (the combo multiplier is one "more" on the ability's typed bucket; `opts.defense` mitigates it), so no damage formula is restated.
+
+- Every DPS states its basis. Burst = one pass (`scheduleCombo(...).dps`). Sustained = `sustainedCycle(ids, cycles = 6)`: the chain looped (each loop re-opens), measured over the steady period, with `binding` = the ability whose cooldown waits most in that loop. `rankCombos(chains, 'burst' | 'sustained')` ranks on either. Dark Side Burst reads 177 burst but sustains 27.4 (bound by Death Field's 20s CD); Basic Melee Chain is fifth on burst and first on sustained.
+- `computeComboStats` (`helpers.ts`) is a rounded view of `scheduleCombo`. TimelineBlock, its `WaitGap` and CooldownOverlapChart render the schedule; none keeps a private `t += animDuration` copy.
+- To reuse the model (e.g. a weapon-DPS law), pass `opts.abilities` / `opts.defense`; do not copy the scheduler.
+- Tests: `src/__tests__/components/sub_combat/combo-schedule.test.ts` and `combo-chain-builder.test.tsx`.
+
 ## Asset Inventory: UE-declared edges over name guesses
 
 The Models Asset Inventory tab (`models/AssetInventory/`) scans Content/ through `POST /api/filesystem/scan-assets`. The route's `inferDependencies` only guesses edges from shared base names (mesh to material, material to texture). `useAssetInventory` reads the scan with `tryApiFetch<AssetScanResult>`, so the `{success, data}` envelope is unwrapped once and an error keeps its text. Before that, the hook stored the raw envelope and the first render after a scan threw.
