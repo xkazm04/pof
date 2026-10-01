@@ -69,6 +69,8 @@ export function LayoutLab() {
 
   // Names this entry as the lab (legacy=0) before pushing legacy=1, so Back returns here.
   const switchToLegacy = useCallback(() => { requestShellSwitch('legacy'); }, []);
+  // The header's drain lane opens a finished drain's catalog on the Matrix (drain runs live in labRunnerStore).
+  const openDrain = useCallback((c: string) => { if (c !== catalogId) nav.catalog(c); nav.view('matrix'); }, [catalogId, nav]);
 
   // `data-lab-entity` publishes the RESOLVED entity (the same id LabSearch resolves step hits
   // against and Baseline renders), so "what is rendered" and "what the location says" stay
@@ -130,7 +132,7 @@ export function LayoutLab() {
           {/* ONE affordance for "what is running right now" — the UE drain lease, the
               one-shot orchestrator and the forge's background polls in one vocabulary.
               (Replaces the old RunnerChip + LabJobsChip pair, which shared nothing.) */}
-          <ActivityChip t={theme} />
+          <ActivityChip t={theme} onOpenDrain={openDrain} />
           <LabBridgeStrip t={theme} />
           <ThemeToggle themeId={themeId} onToggle={() => setPrefs({ themeId: themeId === 'light' ? 'dark' : 'light' })} />
         </div>

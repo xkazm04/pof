@@ -16,11 +16,11 @@ import { entityDrainOutcome, type EntityDrainOutcome } from '@/components/layout
 export function useEntityDrain(catalogId: string | undefined, entityId: string | undefined, steps: readonly string[]) {
   // Drain state is keyed — NOT a single instance-scoped boolean — so switching entities
   // mid-drain neither blocks the new entity's drain nor attaches the "draining…" affordance
-  // to the wrong entity (the `draining` flag reflects only the SELECTED entity).
-  const [drainingKeys, setDrainingKeys] = useState<ReadonlySet<string>>(() => new Set());
+  // to the wrong entity (the `draining` flag reflects only the SELECTED entity). The live run is
+  // the lab runner store's (run id = the drain key), so it also survives a Baseline remount.
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, EntityDrainOutcome>>(() => new Map());
   const drainKey = catalogId && entityId ? `${catalogId}/${entityId}` : null;
-  const draining = drainKey ? drainingKeys.has(drainKey) : false;
+  const draining = useLabRunnerStore((s) => (drainKey ? s.runs[drainKey]?.phase === 'running' : false));
   const drainOutcome = drainKey ? outcomes.get(drainKey) ?? null : null;
 
   const recordOutcome = useCallback((key: string, outcome: EntityDrainOutcome | null) => {
@@ -34,13 +34,11 @@ export function useEntityDrain(catalogId: string | undefined, entityId: string |
   const runDrain = async () => {
     if (!catalogId || !entityId || !drainKey) return;
     const key = drainKey;
-    if (drainingKeys.has(key)) return;
-    setDrainingKeys((prev) => { const next = new Set(prev); next.add(key); return next; });
+    // Publish this session's drain as a keyed run so the header chip shows "draining …" (and never
+    // mistakes our own lease for another session's). Refused while this entity's drain is live.
+    if (!useLabRunnerStore.getState().beginRun({ id: key, kind: 'entity', catalogId, entityIds: [entityId], scope: key })) return;
     // A new run replaces the last one's result — a stale outcome must not sit beside "Running…".
     recordOutcome(key, null);
-    // Publish this session's drain scope so the header runner chip shows "draining …"
-    // (and never mistakes our own lease for another session's).
-    useLabRunnerStore.getState().setLocalDrain(key);
     try {
       // drainGates never throws; a thrown stub is still reported, never swallowed.
       const response = await Promise.resolve().then(() => drainGates(catalogId, entityId))
@@ -48,11 +46,8 @@ export function useEntityDrain(catalogId: string | undefined, entityId: string |
       recordOutcome(key, entityDrainOutcome(steps, response));
       invalidateArtifacts(catalogId, entityId);
     } finally {
-      setDrainingKeys((prev) => { const next = new Set(prev); next.delete(key); return next; });
-      // Only clear the header lease if it's still OURS (a later drain for another entity
-      // may have taken it over while this one was in flight).
-      const runner = useLabRunnerStore.getState();
-      if (runner.localDrain === key) runner.setLocalDrain(null);
+      // Ends THIS run only (keyed, so no ownership guard); its outcome renders in the coach.
+      useLabRunnerStore.getState().finishRun(key, null);
     }
   };
 

@@ -15,7 +15,8 @@ vi.mock('@/components/layout-lab/labArtifactClient', () => ({
 
 import { ActivityChip } from '@/components/layout-lab/ActivityChip';
 import { LIGHT } from '@/components/layout-lab/theme';
-import { useLabRunnerStore } from '@/components/layout-lab/labRunnerStore';
+import { useLabRunnerStore, batchRunId } from '@/components/layout-lab/labRunnerStore';
+import { emptyBatchSummary } from '@/components/layout-lab/batchDrainModel';
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
@@ -35,7 +36,7 @@ describe('ActivityChip — one place to see what is running', () => {
   beforeEach(() => {
     localStorage.clear();
     fetchDrainLease.mockReset();
-    useLabRunnerStore.setState({ localDrain: null });
+    useLabRunnerStore.setState({ runs: {}, localDrain: null });
     useOneShotJobStore.getState().reset();
     useOneShotLabStore.setState({ panelOpen: false, pendingNavigation: null });
     useForgeStore.setState({ activePolls: [] });
@@ -87,7 +88,7 @@ describe('ActivityChip — one place to see what is running', () => {
   });
 
   it("keeps MY drain distinguishable from another session's lease — and does not poll for its own", async () => {
-    useLabRunnerStore.setState({ localDrain: 'items · 3 sets' });
+    useLabRunnerStore.getState().beginRun({ id: batchRunId('items'), kind: 'batch', catalogId: 'items', entityIds: ['e1', 'e2', 'e3'], scope: 'items · 3 sets' });
     render(<ActivityChip t={LIGHT} />);
 
     expect(chip().getAttribute('data-state')).toBe('running-here');
@@ -148,5 +149,36 @@ describe('ActivityChip — one place to see what is running', () => {
     expect(fetchDrainLease).not.toHaveBeenCalled();
     // A suspended surface has not heard from the lease — it must say unknown, not idle.
     expect(chip().getAttribute('data-state')).toBe('unknown');
+  });
+
+  it('a finished drain is actionable: Open in Matrix routes to its catalog, Dismiss clears it', async () => {
+    fetchDrainLease.mockResolvedValue(FREE);
+    const id = batchRunId('items');
+    const runner = useLabRunnerStore.getState();
+    runner.beginRun({ id, kind: 'batch', catalogId: 'items', entityIds: ['e1', 'e2'], scope: 'items · 2 sets' });
+    runner.finishRun(id, { summary: { ...emptyBatchSummary(), entitiesRun: 2, ran: 2, passed: 1, failed: 1 }, cancelEffect: null });
+    const onOpenDrain = vi.fn();
+    render(<ActivityChip t={LIGHT} onOpenDrain={onOpenDrain} />);
+    await waitFor(() => expect(chip().getAttribute('data-state')).toBe('attention'));
+
+    await open();
+    expect(lane('drain').getAttribute('data-state')).toBe('attention');
+    fireEvent.click(screen.getByLabelText('open the items drain in the Matrix'));
+    expect(onOpenDrain).toHaveBeenCalledWith('items');
+
+    await open();
+    fireEvent.click(screen.getByLabelText('dismiss the items drain result'));
+    expect(useLabRunnerStore.getState().runs[id]).toBeUndefined();
+  });
+
+  it('a running batch drain can be cancelled from the header', async () => {
+    const id = batchRunId('items');
+    useLabRunnerStore.getState().beginRun({ id, kind: 'batch', catalogId: 'items', entityIds: ['e1', 'e2'], scope: 'items · 2 sets' });
+    render(<ActivityChip t={LIGHT} onOpenDrain={vi.fn()} />);
+    await open();
+    expect(lane('drain').getAttribute('data-state')).toBe('running-here');
+    fireEvent.click(screen.getByLabelText('cancel the items batch drain'));
+    expect(useLabRunnerStore.getState().runs[id].cancelRequested).toBe(true);
+    expect(lane('drain').textContent).toContain('cancel requested');
   });
 });

@@ -18,7 +18,10 @@
  */
 
 import type { OneShotPhase } from '@/stores/oneShotJobStore';
-import type { DrainLeaseState } from './labArtifactClient';
+import { drainLane, type DrainInput } from './drainLaneModel';
+
+// The drain lane reads this session's keyed drain runs + the server lease (see drainLaneModel).
+export { drainLane, drainProblem, drainSubject, type DrainInput } from './drainLaneModel';
 
 export type LaneId = 'drain' | 'one-shot' | 'forge';
 
@@ -87,13 +90,6 @@ export const LANE_WORD: Record<LaneState, string> = {
 /** Whether the lease status API has been heard from yet, and whether it answered. */
 export type LeaseProbe = 'unpolled' | 'ok' | 'failed';
 
-export interface DrainInput {
-  /** `labRunnerStore.localDrain` — the human scope THIS session is draining, else null. */
-  localDrain: string | null;
-  lease: DrainLeaseState | null;
-  leaseProbe: LeaseProbe;
-}
-
 export interface OneShotInput {
   phase: OneShotPhase;
   catalogId: string | null;
@@ -113,12 +109,6 @@ export interface ActivityInput {
   forge: ForgeInput;
 }
 
-const DRAIN_BLIND_SPOT =
-  'Reads the server lease, so it sees other sessions too — but only once a drain has TAKEN the lease. ' +
-  'A batch drain’s per-entity progress lives in the matrix and does not survive a reload; the lease does. ' +
-  'Executor mode: the lab drains through the UE BRIDGE (an already-running editor) and never spawns one, ' +
-  'so a free lease means the runner is available — never that an editor is.';
-
 const ONE_SHOT_BLIND_SPOT =
   'Client-side, THIS browser only: a one-shot running in another session or another tab is invisible here, ' +
   'and a reload marks an interrupted run as failed rather than following it.';
@@ -126,27 +116,6 @@ const ONE_SHOT_BLIND_SPOT =
 const FORGE_BLIND_SPOT =
   'Counts only generation polls this browser session started. A reload loses the poll while the remote job ' +
   'keeps running — nothing here can see it after that.';
-
-export function drainLane(d: DrainInput): ActivityLane {
-  const base = { id: 'drain' as const, title: 'UE drain', short: 'drain', blindSpot: DRAIN_BLIND_SPOT };
-  if (d.localDrain) {
-    // Not "one editor boot": the lab's drain is bridge-only and boots nothing. The label now
-    // names the mechanism it actually uses, so the chip cannot promise a capability the
-    // button does not have.
-    return { ...base, state: 'running-here', label: `draining ${d.localDrain} (via the UE bridge)` };
-  }
-  if (d.leaseProbe === 'unpolled') {
-    return { ...base, state: 'unknown', label: 'lease not checked yet — a drain started now could be refused' };
-  }
-  if (d.leaseProbe === 'failed') {
-    return { ...base, state: 'unknown', label: 'lease status unreachable — the last check failed' };
-  }
-  if (d.lease?.held) {
-    const scope = d.lease.scope ? ` · ${d.lease.scope}` : '';
-    return { ...base, state: 'running-elsewhere', label: `lease held by a drain this page did not start${scope}` };
-  }
-  return { ...base, state: 'idle', label: 'lease free — the UE editor is available' };
-}
 
 export function oneShotLane(o: OneShotInput): ActivityLane {
   const base = { id: 'one-shot' as const, title: 'One-shot', short: 'one-shot', blindSpot: ONE_SHOT_BLIND_SPOT };

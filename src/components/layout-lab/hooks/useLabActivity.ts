@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
@@ -22,7 +22,10 @@ import { summarizeActivity, type ActivitySummary, type LeaseProbe } from '../act
  * they are `unpolled` / `failed` and the model reports UNKNOWN.
  */
 export function useLabActivity(): ActivitySummary {
-  const localDrain = useLabRunnerStore((s) => s.localDrain);
+  // THIS session's keyed drain runs (live + finished) and the derived live scope the poll skips on.
+  const runMap = useLabRunnerStore((s) => s.runs);
+  const drainingHere = useLabRunnerStore((s) => s.localDrain !== null);
+  const runs = useMemo(() => Object.values(runMap), [runMap]);
   const [lease, setLease] = useState<DrainLeaseState | null>(null);
   const [leaseProbe, setLeaseProbe] = useState<LeaseProbe>('unpolled');
 
@@ -40,7 +43,7 @@ export function useLabActivity(): ActivitySummary {
 
   useSuspendableEffect(() => {
     // Our own drain is authoritative — no need to poll (and avoids racing our own lease).
-    if (localDrain) return;
+    if (drainingHere) return;
     let alive = true;
     const tick = async () => {
       const s = await fetchDrainLease();
@@ -54,10 +57,10 @@ export function useLabActivity(): ActivitySummary {
     void tick();
     const id = setInterval(() => void tick(), UI_TIMEOUTS.runnerLeasePoll);
     return () => { alive = false; clearInterval(id); };
-  }, [localDrain]);
+  }, [drainingHere]);
 
   return summarizeActivity({
-    drain: { localDrain, lease, leaseProbe },
+    drain: { runs, lease, leaseProbe },
     oneShot: { phase, catalogId: oneShotCatalog, currentStepIndex, totalSteps, refinementTurns },
     forge: { activePolls },
   });
