@@ -17,6 +17,7 @@ import { FeedbackTab } from './polish/FeedbackTab';
 import { MetricsTab } from './metrics/MetricsTab';
 import { renderCombatMetric } from './metrics';
 import { AttributeDefaultsTab } from './attributes/AttributeDefaultsTab';
+import { CombatChoreographyEditor } from './choreography';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { NarrativeBreadcrumb, CombatSubTabNav, getActiveSubtitle } from './CombatNav';
 
@@ -126,6 +127,11 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
             {activeTab === 'attributes' && (
               <VisibleSection moduleId={moduleId} sectionId="attribute-defaults">
                 <AttributeDefaultsTab />
+              </VisibleSection>
+            )}
+            {activeTab === 'encounter' && (
+              <VisibleSection moduleId={moduleId} sectionId="encounter-choreography">
+                <CombatChoreographyEditor />
               </VisibleSection>
             )}
           </motion.div>

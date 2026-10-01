@@ -4,14 +4,13 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Users } from 'lucide-react';
-import { ACCENT_CYAN } from '@/lib/chart-colors';
-import { DEFAULT_TUNING } from '@/lib/combat/definitions';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { simulateEncounter } from '@/lib/combat/choreography-sim';
-import type { PlacedEnemy, WaveDef } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { nextId, FEEDBACK_CHANNEL_COLORS } from './types';
+import { FEEDBACK_CHANNEL_COLORS } from './types';
+import { useEncounterDraftStore } from './encounterDraftStore';
+import { CompareStrip } from './CompareStrip';
 import { generateUE5Export } from './ue5-export';
 import { SpatialGrid } from './SpatialGrid';
 import { BalanceAlertsPanel } from './BalanceAlertsPanel';
@@ -22,28 +21,20 @@ import {
 import { TensionPanel } from './TensionPanel';
 
 export function CombatChoreographyEditor() {
-  const [enemies, setEnemies] = useState<PlacedEnemy[]>([
-    { id: nextId(), archetypeId: 'melee-grunt', gridX: 1, gridY: 1, waveIndex: 0, level: 5 },
-    { id: nextId(), archetypeId: 'melee-grunt', gridX: 4, gridY: 1, waveIndex: 0, level: 5 },
-    { id: nextId(), archetypeId: 'ranged-caster', gridX: 3, gridY: 3, waveIndex: 0, level: 5 },
-    { id: nextId(), archetypeId: 'brute', gridX: 2, gridY: 0, waveIndex: 1, level: 6 },
-    { id: nextId(), archetypeId: 'elite-knight', gridX: 3, gridY: 1, waveIndex: 2, level: 7 },
-  ]);
-
-  const [waves, setWaves] = useState<WaveDef[]>([
-    { spawnTimeSec: 0, label: 'Initial' },
-    { spawnTimeSec: 8, label: 'Reinforcement' },
-    { spawnTimeSec: 18, label: 'Boss Wave' },
-  ]);
-
-  const [selectedWave, setSelectedWave] = useState(0);
-  const [selectedArchetype, setSelectedArchetype] = useState('melee-grunt');
-  const [placeLevel, setPlaceLevel] = useState(5);
-  const [tuning, setTuning] = useState<TuningOverrides>({ ...DEFAULT_TUNING });
+  // The draft lives in a module-level store so it survives the Combat tab's
+  // AnimatePresence remount; playback/copy state is ephemeral and stays local.
+  const enemies = useEncounterDraftStore((s) => s.enemies);
+  const waves = useEncounterDraftStore((s) => s.waves);
+  const tuning = useEncounterDraftStore((s) => s.tuning);
+  const playerLevel = useEncounterDraftStore((s) => s.playerLevel);
+  const selectedWave = useEncounterDraftStore((s) => s.selectedWave);
+  const selectedArchetype = useEncounterDraftStore((s) => s.selectedArchetype);
+  const placeLevel = useEncounterDraftStore((s) => s.placeLevel);
+  const baseline = useEncounterDraftStore((s) => s.baseline);
+  const dispatch = useEncounterDraftStore((s) => s.dispatch);
   const [scrubTime, setScrubTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [playerLevel, setPlayerLevel] = useState(5);
 
   const playRef = useRef<number | null>(null);
   const lastFrameRef = useRef(0);
@@ -95,35 +86,14 @@ export function CombatChoreographyEditor() {
     // would restart playback from the current frame on every tuning edit.
   }, [isPlaying]);
 
-  const handlePlace = useCallback((x: number, y: number) => {
-    setEnemies((prev) => [...prev, { id: nextId(), archetypeId: selectedArchetype, gridX: x, gridY: y, waveIndex: selectedWave, level: placeLevel }]);
-  }, [selectedArchetype, selectedWave, placeLevel]);
-
-  const handleRemove = useCallback((id: string) => { setEnemies((prev) => prev.filter((e) => e.id !== id)); }, []);
-
-  const handleMove = useCallback((id: string, toX: number, toY: number, toWave?: number) => {
-    setEnemies((prev) => prev.map((e) => e.id === id ? { ...e, gridX: toX, gridY: toY, ...(toWave !== undefined ? { waveIndex: toWave } : {}) } : e));
-  }, []);
-
+  const handlePlace = useCallback((x: number, y: number) => dispatch({ type: 'placeEnemy', x, y }), [dispatch]);
+  const handleRemove = useCallback((id: string) => dispatch({ type: 'removeEnemy', id }), [dispatch]);
+  const handleMove = useCallback((id: string, x: number, y: number, wave?: number) => {
+    dispatch({ type: 'moveEnemy', id, x, y, wave });
+  }, [dispatch]);
   const updateTuning = useCallback(<K extends keyof TuningOverrides>(key: K, value: number) => {
-    setTuning((prev) => ({ ...prev, [key]: value }));
-  }, []);
-
-  const handleAddWave = useCallback(() => {
-    const lastTime = waves[waves.length - 1]?.spawnTimeSec ?? 0;
-    setWaves((prev) => [...prev, { spawnTimeSec: lastTime + 10, label: `Wave ${prev.length}` }]);
-  }, [waves]);
-
-  const handleRemoveWave = useCallback((idx: number) => {
-    if (waves.length <= 1) return;
-    setWaves((prev) => prev.filter((_, i) => i !== idx));
-    setEnemies((prev) => prev.filter((e) => e.waveIndex !== idx).map((e) => ({ ...e, waveIndex: e.waveIndex > idx ? e.waveIndex - 1 : e.waveIndex })));
-    if (selectedWave >= idx && selectedWave > 0) setSelectedWave(selectedWave - 1);
-  }, [waves.length, selectedWave]);
-
-  const handleUpdateWaveTime = useCallback((idx: number, time: number) => {
-    setWaves((prev) => prev.map((w, i) => i === idx ? { ...w, spawnTimeSec: time } : w));
-  }, []);
+    dispatch({ type: 'setTuning', key, value });
+  }, [dispatch]);
 
   const exportConfig = useMemo(() => generateUE5Export(enemies, waves, tuning), [enemies, waves, tuning]);
 
@@ -156,9 +126,9 @@ export function CombatChoreographyEditor() {
             <SpatialGrid enemies={enemies} selectedWave={selectedWave} totalWaves={waves.length}
               onPlace={handlePlace} onRemove={handleRemove} onMove={handleMove} />
             <ArchetypePalette
-              selectedArchetype={selectedArchetype} onSelectArchetype={setSelectedArchetype}
-              placeLevel={placeLevel} onPlaceLevel={setPlaceLevel}
-              playerLevel={playerLevel} onPlayerLevel={setPlayerLevel}
+              selectedArchetype={selectedArchetype} onSelectArchetype={(id) => dispatch({ type: 'selectArchetype', id })}
+              placeLevel={placeLevel} onPlaceLevel={(level) => dispatch({ type: 'setPlaceLevel', level })}
+              playerLevel={playerLevel} onPlayerLevel={(level) => dispatch({ type: 'setPlayerLevel', level })}
             />
           </div>
           <GhostLegend selectedWave={selectedWave} totalWaves={waves.length} />
@@ -167,8 +137,9 @@ export function CombatChoreographyEditor() {
         <WaveManager
           waves={waves} selectedWave={selectedWave} waveEnemyCounts={waveEnemyCounts}
           totalEnemies={totalEnemies} totalDuration={simResult.totalDurationSec}
-          onSelect={setSelectedWave} onAdd={handleAddWave} onRemove={handleRemoveWave}
-          onUpdateTime={handleUpdateWaveTime}
+          onSelect={(index) => dispatch({ type: 'selectWave', index })} onAdd={() => dispatch({ type: 'addWave' })}
+          onRemove={(index) => dispatch({ type: 'removeWave', index })}
+          onUpdateTime={(index, time) => dispatch({ type: 'setWaveTime', index, time })}
         />
       </div>
 
@@ -178,12 +149,17 @@ export function CombatChoreographyEditor() {
         onScrub={setScrubTime} onTogglePlay={() => setIsPlaying(!isPlaying)} onReset={handleReset}
       />
 
+      {/* Row 2a: this tuning pass vs a pinned baseline */}
+      <CompareStrip baseline={baseline} current={simResult}
+        onPin={() => dispatch({ type: 'pinBaseline' })} onRevert={() => dispatch({ type: 'revertToBaseline' })}
+        onClear={() => dispatch({ type: 'clearBaseline' })} />
+
       {/* Row 2b: Dramatic Arc beat sheet */}
       <TensionPanel tensionCurve={simResult.tensionCurve} onSeek={setScrubTime} />
 
       {/* Row 3: Tuning + Alerts + Stats + Export */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <TuningPanel tuning={tuning} onUpdate={updateTuning} onReset={() => setTuning({ ...DEFAULT_TUNING })} />
+        <TuningPanel tuning={tuning} onUpdate={updateTuning} onReset={() => dispatch({ type: 'resetTuning' })} />
         <BalanceAlertsPanel alerts={simResult.alerts} />
         <StatsPanel simResult={simResult} />
         <ExportPanel exportConfig={exportConfig} onCopy={handleCopy} copied={copied} />

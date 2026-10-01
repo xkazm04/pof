@@ -1,4 +1,4 @@
-import { Swords, Shield, Zap, GitBranch, Crosshair, Activity, Gauge, Table } from 'lucide-react';
+import { Swords, Shield, Zap, GitBranch, Crosshair, Activity, Gauge, Table, Clapperboard } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_RED,
@@ -11,7 +11,7 @@ export const ACCENT = ACCENT_RED;
 
 /* ── Combat Subtab definitions ────────────────────────────────────────── */
 
-export type CombatSubtab = 'features' | 'flow' | 'hits' | 'metrics' | 'feedback' | 'attributes';
+export type CombatSubtab = 'features' | 'flow' | 'hits' | 'metrics' | 'feedback' | 'attributes' | 'encounter';
 
 export interface CombatSubtabDef {
   key: CombatSubtab;
@@ -27,6 +27,7 @@ export const COMBAT_SUBTABS: CombatSubtabDef[] = [
   { key: 'metrics', label: 'Combat Metrics', icon: Activity, narrative: 'Measure Balance', subtitle: 'DPS comparison, combat flow sankey & KPI dashboards' },
   { key: 'feedback', label: 'Polish & Tuner', icon: Gauge, narrative: 'Polish Feel', subtitle: 'Feedback intensity tuning, hitstop timing & stagger pipeline' },
   { key: 'attributes', label: 'Attribute Defaults', icon: Table, narrative: 'Seed Stats', subtitle: 'DT_AttributeDefaults — per-archetype base attributes, emits a UE Python builder' },
+  { key: 'encounter', label: 'Encounter', icon: Clapperboard, narrative: 'Choreograph', subtitle: 'Waves, tension arc & balance findings — pin a baseline and read what each tuning pass changed' },
 ];
 
 /* ── Lane definitions ──────────────────────────────────────────────────── */

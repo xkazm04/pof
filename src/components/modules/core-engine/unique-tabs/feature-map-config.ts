@@ -96,6 +96,7 @@ const SECTIONS = {
     sub('Metrics', 'sankey', 'Sankey', 'dps'),
     sub('Metrics', 'kpis', 'KPIs', 'dps'),
     g('Attributes', 'attribute-defaults', 'Attribute Defaults', 'DT_AttributeDefaults per archetype'),
+    g('Encounter', 'encounter-choreography', 'Choreographer', 'Waves, tension arc & findings; baseline diff per tuning pass'),
   ],
   'arpg-enemy-ai': [
     g('Archetypes', 'cards', 'Cards', '6 enemy archetypes with variants'),
