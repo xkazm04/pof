@@ -935,15 +935,16 @@ All generic controls live in `src/components/layout-lab/ui/` and consume the tok
 |-----------|-------|
 | `Panel` | Bordered container; `glass` prop adds `backdrop-filter` |
 | `Button` | Ghost / solid / accent variants; `active` → `aria-pressed`; `mono` switches to mono font; `ariaLabel` prop and HTML `aria-label` attribute both work (prop wins) |
-| `IconButton` | Square variant of Button for icon-only actions (wraps `VisuallyHidden` label) |
+| `IconButton` | Square variant of Button for icon-only actions (required `ariaLabel` → `aria-label`) |
 | `Chip` | Inline status badge; color via token name |
 | `Stat` | Label+value pair used in the composition-screen header strip |
-| `Field` / `Input` / `Textarea` | Labeled form controls; min font-size `var(--lab-fs-sm)` (≥ 14 px) |
+| `Field` / `Input` / `Textarea` | Labeled form controls; min font-size `var(--lab-fs-sm)` (≥ 14 px). `Input`/`Textarea` carry `focus-ring-inset` and merge the caller's className, so `steps/controls.tsx` `LabInput`/`LabTextarea` ride them as the themed adapter (name required: `label` or `ariaLabel`) |
 | `Rail` | Titled scrollable column shell used by the catalog tree and pipeline timeline |
-| `VisuallyHidden` | SR-only text for icon buttons and decorative elements |
+| `VisuallyHidden` | SR-only text utility (no production importer today; `IconButton` names itself via `aria-label`) |
 
-Every primitive carries the `.focus-ring` class so keyboard focus is styled by the unified global
-token (`var(--focus-accent)` → `var(--lab-accent)` inside `[data-lab-root]`).
+Every interactive primitive carries `.focus-ring` (text controls: `.focus-ring-inset`) so keyboard focus is styled by the unified global
+token (`var(--focus-accent)` → `var(--lab-accent)` inside `[data-lab-root]`). No lab source may set `outline: 'none'` — the guard
+`src/__tests__/components/layout-lab/no-focus-outline-kill.test.ts` refuses it.
 
 ### Hooks
 
