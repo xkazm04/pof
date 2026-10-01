@@ -1,128 +1,26 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { BarChart3, Activity, Swords } from 'lucide-react';
+import { BarChart3, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT, KPI_CARDS } from '../_shared/data';
-import { WEAPONS, WEAPON_ROSTER, COMBO_SEQUENCES } from '../_shared/data-metrics';
-import type { WeaponCategory } from '../_shared/data-metrics';
-import { weaponDps } from '@/lib/combat/weapon-throughput';
+import { WEAPON_ROSTER } from '../_shared/data-metrics';
 import { StatInfluencePanel } from './StatInfluencePanel';
 import { AbilityQuickPicker } from '../../sub_character/input/AbilityQuickPicker';
 import { CumulativeDamageSvg } from './CumulativeDamageSvg';
 import { ProportionalSankey } from './ProportionalSankey';
 import { GroupedDpsBarChart } from './GroupedDpsBarChart';
-
-import { withOpacity, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
-
-const MAX_COMPARE = 4;
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
-const WEAPONS_BY_CATEGORY = WEAPON_CATEGORIES.map(cat => ({
-  category: cat,
-  weapons: WEAPONS.filter(w => w.category === cat),
-}));
+import { WeaponMatchupPanel } from './WeaponMatchupPanel';
 
 /** DPS Calculator rows: the roster's top 6 under the one weapon-DPS law (also plotted cumulatively). */
 const CALC_TOP = WEAPON_ROSTER.rows.slice(0, 6);
 const CALC_MAX = CALC_TOP[0]?.dps || 1;
-const RELATED_COMBOS_SHOWN = 8;
 
 export function MetricsTab() {
-  const [compareIds, setCompareIds] = useState<string[]>([]);
-
-  const toggleCompare = useCallback((id: string) => {
-    setCompareIds(prev => {
-      if (prev.includes(id)) return prev.filter(x => x !== id);
-      if (prev.length >= MAX_COMPARE) return prev;
-      return [...prev, id];
-    });
-  }, []);
-
-  const compared = useMemo(
-    () => compareIds.map(id => WEAPONS.find(w => w.id === id)!).filter(Boolean),
-    [compareIds],
-  );
-
-  const comparedDps = useMemo(
-    () => compared.map(w => ({ weapon: w, dps: weaponDps(w) })).sort((a, b) => b.dps - a.dps),
-    [compared],
-  );
-
-  const compareDpsMax = comparedDps.length > 0 ? comparedDps[0].dps : 1;
-
-  /** Combos for compared weapons (by category). */
-  const comparedCombos = useMemo(() => {
-    if (compared.length === 0) return [];
-    const cats = new Set(compared.map(w => w.category));
-    return COMBO_SEQUENCES.filter(c => cats.has(c.weaponCategory));
-  }, [compared]);
-
-  const shownCombos = comparedCombos.slice(0, RELATED_COMBOS_SHOWN);
-  const comboDpsMax = shownCombos.reduce((m, c) => Math.max(m, c.dps), 0) || 1;
-
   return (
     <motion.div key="metrics" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
-      {/* Weapon Comparison Selector */}
-      <BlueprintPanel color={ACCENT} className="p-3">
-        <SectionHeader label={`Weapon DPS Comparison (${compareIds.length}/${MAX_COMPARE})`} color={ACCENT} icon={Swords} />
-        <p className="text-xs text-text-muted font-mono mb-2">Select 2-4 weapons to compare DPS side-by-side.</p>
-        <div className="max-h-[220px] overflow-y-auto custom-scrollbar space-y-2">
-          {WEAPONS_BY_CATEGORY.map(({ category, weapons }) => (
-            <div key={category}>
-              <div className="text-2xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1 sticky top-0 bg-surface-deep/80 backdrop-blur-sm py-0.5 px-1">{category} ({weapons.length})</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
-                {weapons.map(w => {
-                  const sel = compareIds.includes(w.id);
-                  return (
-                    <button
-                      key={w.id}
-                      onClick={() => toggleCompare(w.id)}
-                      disabled={!sel && compareIds.length >= MAX_COMPARE}
-                      className="px-2 py-1.5 rounded border text-xs font-mono text-left transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110"
-                      style={{
-                        borderColor: sel ? withOpacity(w.color, OPACITY_30) : 'var(--border)',
-                        backgroundColor: sel ? withOpacity(w.color, OPACITY_10) : 'transparent',
-                        color: sel ? w.color : 'var(--text-muted)',
-                      }}
-                    >
-                      <div className="truncate font-bold" style={{ color: sel ? w.color : 'var(--text)' }}>{w.name}</div>
-                      <div className="text-2xs">{w.tier}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-        {comparedDps.length >= 2 && (
-          <div data-testid="weapon-compare-rows" className="mt-3 pt-3 border-t border-border/30 space-y-1.5">
-            {comparedDps.map(({ weapon, dps }) => (
-              <div key={weapon.id} className="flex items-center gap-2 px-1 py-0.5">
-                <span className="text-xs font-mono text-text w-[140px] flex-shrink-0 truncate">{weapon.name}</span>
-                <div className="flex-1"><NeonBar pct={(dps / compareDpsMax) * 100} color={weapon.color} /></div>
-                <span className="text-xs font-mono font-bold w-[60px] text-right" style={{ color: weapon.color }}>{dps.toFixed(0)} DPS</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {comparedCombos.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length}) · authored DPS</span>
-            <div className="space-y-1">
-              {shownCombos.map(c => (
-                <div key={c.id} className="flex items-center gap-2 text-xs font-mono px-1 py-0.5">
-                  <span className="text-text w-[130px] truncate">{c.name}</span>
-                  <span className="text-text-muted w-[60px]">{c.weaponCategory}</span>
-                  <span className="text-text-muted w-[40px]">{c.hits}h</span>
-                  <div className="flex-1"><NeonBar pct={(c.dps / comboDpsMax) * 100} color={ACCENT} /></div>
-                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }} title="Authored value, not derived from the weapon table">{c.dps} DPS</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </BlueprintPanel>
+      {/* Weapon Comparison: vs a target (time-to-kill + band) */}
+      <WeaponMatchupPanel />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* DPS Calculator */}
