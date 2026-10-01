@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { useModuleTab } from '@/hooks/useModuleTab';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { SubModuleId, ChecklistItem } from '@/types/modules';
@@ -40,27 +41,17 @@ export function useReviewableModuleView({
 
   // Memoized on the tab IDS, not on the `extraTabs` array identity: a host that
   // rebuilds its tab descriptors every render (most of them do — the render
-  // closures capture handlers) otherwise produced a new dep on every pass, so the
-  // `pof-navigate-tab` listener below was torn down and re-added on EVERY render
-  // of every one of the 23 consumers. Same ids → same array → one listener.
+  // closures capture handlers) would otherwise hand a new array to the tab
+  // validation on every pass of every one of the 23 consumers.
   const extraTabIdKey = extraTabs.map((t) => t.id).join('\u0000');
   const allTabIds = useMemo(
     () => ['overview', 'roadmap', ...(extraTabIdKey ? extraTabIdKey.split('\u0000') : [])],
     [extraTabIdKey],
   );
-  const [activeTab, setActiveTab] = useState(allTabIds[0]);
-
-  // Listen for suggested-action tab navigation events
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const tab = (e as CustomEvent).detail?.tab;
-      if (tab && allTabIds.includes(tab)) {
-        setActiveTab(tab);
-      }
-    };
-    window.addEventListener('pof-navigate-tab', handler);
-    return () => window.removeEventListener('pof-navigate-tab', handler);
-  }, [allTabIds]);
+  // The open tab is this module's entry in the navigation model
+  // (`navigationStore.moduleTabs`): a jump addressed to ANOTHER module never
+  // moves this pane, and one written before this pane mounted lands on mount.
+  const [activeTab, setActiveTab] = useModuleTab(moduleId, allTabIds);
 
   // --- Checklist CLI session ---
   const [activeItemId, setActiveItemId] = useState<string | null>(null);

@@ -26,12 +26,24 @@ interface NavigationState {
   toggleL1Expanded: () => void;
 
   /**
-   * Navigate to a specific module by its moduleId.
+   * The location INSIDE each module: the tab its view last showed, keyed by
+   * moduleId. Part of the navigation model (persisted with it) so a tab jump is
+   * addressed to ONE module and lands even when that module's pane mounts later.
+   * Read through `useModuleTab` (validated against the module's own tab ids).
+   */
+  moduleTabs: Record<string, string>;
+  /** Point `moduleId`'s view at `tab` without changing the active module. */
+  setModuleTab: (moduleId: string, tab: string) => void;
+
+  /**
+   * Navigate to a specific module by its moduleId — the one navigate door.
    * Resolves whether it's a special category or a sub-module
-   * and sets the correct activeCategory + activeSubModule.
+   * and sets the correct activeCategory + activeSubModule, plus
+   * `moduleTabs[moduleId]` when `opts.tab` is given — all in ONE `set`, so no
+   * subscriber sees the module without its tab. An unknown id is dropped.
    * Called from bottom bar, CLI panel, etc.
    */
-  navigateToModule: (moduleId: string) => void;
+  navigateToModule: (moduleId: string, opts?: { tab?: string }) => void;
 }
 
 export const useNavigationStore = create<NavigationState>()(
@@ -48,13 +60,21 @@ export const useNavigationStore = create<NavigationState>()(
       setL1Expanded: (expanded) => set({ l1Expanded: expanded }),
       toggleL1Expanded: () => set((s) => ({ l1Expanded: !s.l1Expanded })),
 
-      navigateToModule: (moduleId) => {
+      moduleTabs: {},
+      setModuleTab: (moduleId, tab) =>
+        set((s) => (s.moduleTabs[moduleId] === tab ? s : { moduleTabs: { ...s.moduleTabs, [moduleId]: tab } })),
+
+      navigateToModule: (moduleId, opts) => {
+        const withTab = (s: NavigationState) =>
+          opts?.tab ? { moduleTabs: { ...s.moduleTabs, [moduleId]: opts.tab } } : {};
+
         // Special categories like 'project-setup', 'evaluator'
         if (SPECIAL_CATEGORY_IDS.has(moduleId)) {
-          set({
+          set((s) => ({
             activeCategory: moduleId as CategoryId,
             activeSubModule: null,
-          });
+            ...withTab(s),
+          }));
           return;
         }
 
@@ -62,10 +82,11 @@ export const useNavigationStore = create<NavigationState>()(
         const subModuleId = moduleId as SubModuleId;
         const category = getCategoryForSubModule(subModuleId);
         if (category) {
-          set({
+          set((s) => ({
             activeCategory: category.id as CategoryId,
             activeSubModule: subModuleId,
-          });
+            ...withTab(s),
+          }));
         }
       },
     }),

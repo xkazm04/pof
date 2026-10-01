@@ -7,7 +7,7 @@ import { CompactTerminal } from './CompactTerminal';
 import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
 import { useCLIPanelStore, type DispatchRecord, type PendingCallback } from './store/cliPanelStore';
 import { bindSessionRun } from './store/sessionRun';
-import { resubmitPendingCallbacks } from '@/components/cli/suggestionIntents';
+import { resubmitPendingCallbacks, tabJumpTarget } from '@/components/cli/suggestionIntents';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
@@ -94,13 +94,10 @@ export function InlineTerminal({
         void resubmitPendingCallbacks(sessionId);
         break;
       case 'navigate': {
-        const nav = useNavigationStore.getState();
-        if (action.moduleId && nav.activeSubModule !== action.moduleId) nav.navigateToModule(action.moduleId);
-        window.dispatchEvent(
-          new CustomEvent('pof-navigate-tab', {
-            detail: { tab: action.tab, moduleId: action.moduleId },
-          })
-        );
+        // Addressed, not broadcast: the module + its tab land in ONE store write,
+        // so the target pane reads it even if it mounts after this call.
+        const target = tabJumpTarget(action, useCLIPanelStore.getState().sessions[sessionId]?.moduleId);
+        if (target) useNavigationStore.getState().navigateToModule(target.moduleId, { tab: target.tab });
         break;
       }
     }
