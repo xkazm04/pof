@@ -1,5 +1,6 @@
 import type { AbilityRef } from '@/lib/ability/logic-prompts';
 import type { EditorEffect, TagRule } from '@/lib/ability/spec';
+import { cppFloat } from '@/lib/genome/codegen';
 
 const POLICY: Record<EditorEffect['duration'], string> = {
   instant: 'Instant',
@@ -70,7 +71,7 @@ export function buildGenerateAbilityBundlePrompt(
     : 'No mana cost provided — leave a `// TODO: mana cost` comment.';
   const cooldownSec = resolveGenerateCooldown(effects, scalars);
   const cooldownNote = cooldownSec > 0
-    ? `Create a Cooldown GE \`UGE_Gen_<AbilityName>_Cooldown\` (HasDuration, \`DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(${cooldownSec}f))\`, granting the ability's cooldown tag) in \`Effects/Generated/\` and set it as the ability's \`CooldownGameplayEffectClass\`. Do NOT set \`Period\` on any damaging GE for this.`
+    ? `Create a Cooldown GE \`UGE_Gen_<AbilityName>_Cooldown\` (HasDuration, \`DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(${cppFloat(cooldownSec)}))\`, granting the ability's cooldown tag) in \`Effects/Generated/\` and set it as the ability's \`CooldownGameplayEffectClass\`. Do NOT set \`Period\` on any damaging GE for this.`
     : 'No cooldown provided — leave a `// TODO: cooldown GE` comment.';
   // Faithfulness guard: the catalog entity's `damage` is authoritative. Pin the
   // primary damaging effect to it so the generated asset can't drift from the

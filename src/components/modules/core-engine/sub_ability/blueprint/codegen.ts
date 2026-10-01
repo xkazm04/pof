@@ -25,6 +25,7 @@ export {
   generateTagsHeader,
 } from '@/lib/gas-codegen';
 import { renderModifierInfo, type EditorEffect } from '@/lib/gas-codegen';
+import { cppFloat } from '@/lib/genome/codegen';
 
 // ── Generated identity — the single source of truth ──────────────────────────
 
@@ -105,7 +106,7 @@ export function generateEffectsCode(effects: EditorEffect[], abilityName?: strin
       lines.push(...renderModifierInfo({
         attribute: sanitizeIdentifier(m.attribute) || 'Unknown',
         operation: m.operation,
-        magnitude: `${m.magnitude}f`,
+        magnitude: cppFloat(m.magnitude),
       }));
     }
 

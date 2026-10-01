@@ -8,6 +8,7 @@ import type { EditorAttribute, EditorEffect } from '@/lib/gas-codegen';
 import { MELEE_COMBO, GAS_TEMPLATES } from '@/components/modules/core-engine/sub_ability/blueprint/templates';
 import { SEED_ATTRIBUTES } from '@/components/modules/core-engine/sub_ability/blueprint/data';
 import { SPELLBOOK_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
+import { cppFloat } from '@/lib/genome/codegen';
 
 /** Fireball's catalog scalars — the ones the binding sends with every generate. */
 const FIREBALL_SCALARS = { damage: 35, manaCost: 20, cooldown: 3 };
@@ -87,7 +88,7 @@ describe('preflightGenerate — cooldown, TODO and no-op predictions', () => {
     const dot = GAS_TEMPLATES.find((t) => t.id === 'damage-over-time')!;
     for (const scalars of [{ cooldown: 3 }, {}, { cooldown: 7.5 }]) {
       const sec = resolveGenerateCooldown(dot.effects, scalars);
-      expect(buildGenerateAbilityBundlePrompt(ref, dot.effects, [], scalars)).toContain(`FScalableFloat(${sec}f)`);
+      expect(buildGenerateAbilityBundlePrompt(ref, dot.effects, [], scalars)).toContain(`FScalableFloat(${cppFloat(sec)})`);
     }
   });
 
