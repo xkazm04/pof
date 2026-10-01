@@ -428,6 +428,15 @@ not send, and the `draft-ability-spec` callback clears the forge provenance via
 writes the `codegen` column: that audit trail is owned solely by the codegen
 callback, so a Save/Adopt cannot clobber it.
 
+**Forge Adopt previews the merge.** The forge's Adopt bar never writes blind:
+`suggestAdoptTargets` (`@/lib/ability/adopt-preview`) ranks spellbook targets by
+element, then radar distance (the top one is preselected per forge result),
+`useForgeAdopt` GETs the target's stored spec into `abilitySpecStore`, and
+`previewAdopt(current, next)` reads the replaced/kept split off `mergeSpecWrite`
+itself: effects and tag rules removed, the prior forge provenance superseded, a
+confirmed `codegen` report invalidated, the authored slices kept. Anything real
+replaced (or an unread target) routes the write through `ConfirmDialog`.
+
 **One tag dialect.** UE5 spells every gameplay tag twice — a C++ identifier
 (`Ability_Fire_Fireball`) and a tag string (`Ability.Fire.Fireball`). The app
 speaks **dotted** everywhere: specs, spellbook data and the tag audit. The forge
