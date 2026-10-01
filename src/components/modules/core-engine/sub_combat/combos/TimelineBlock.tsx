@@ -4,25 +4,47 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, X } from 'lucide-react';
 import { ACCENT_GREEN, ACCENT_RED, OVERLAY_WHITE, OPACITY_25, OPACITY_30, OPACITY_50, GLOW_MD, withOpacity,
-  OPACITY_8, STATUS_WARNING,
+  OPACITY_8, OPACITY_10, OPACITY_20, STATUS_WARNING,
 } from '@/lib/chart-colors';
-import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { TIMELINE_PX_PER_SEC } from './helpers';
+import type { ScheduledCast } from './schedule';
 
 /* ── Timeline block ─────────────────────────────────────────────────── */
 
+/** A cooldown wait before a cast, drawn to time scale and named after the ability it waits on. */
+export function WaitGap({ cast }: { cast: ScheduledCast }) {
+  const hatch = withOpacity(STATUS_WARNING, OPACITY_20);
+  return (
+    <div
+      className="flex-shrink-0 h-14 rounded-lg border border-dashed flex items-center justify-center px-1 self-start"
+      style={{
+        width: cast.waited * TIMELINE_PX_PER_SEC, minWidth: 56,
+        borderColor: withOpacity(STATUS_WARNING, OPACITY_50),
+        backgroundColor: withOpacity(STATUS_WARNING, OPACITY_10),
+        backgroundImage: `repeating-linear-gradient(45deg,transparent 0px,transparent 4px,${hatch} 4px,${hatch} 8px)`,
+      }}
+      title={`${cast.ability.name} is on cooldown: waits ${cast.waited.toFixed(1)}s before it can begin`}
+    >
+      <span className="text-xs font-mono uppercase tracking-[0.1em] text-center leading-tight" style={{ color: STATUS_WARNING }}>
+        wait {cast.waited.toFixed(1)}s · {cast.ability.name} CD
+      </span>
+    </div>
+  );
+}
+
 export function TimelineBlock({
-  ability, index, total, onRemove,
+  cast, total, onRemove,
 }: {
-  ability: ComboAbility; index: number; total: number; onRemove: (i: number) => void;
+  cast: ScheduledCast; total: number; onRemove: (i: number) => void;
 }) {
+  const { ability, index } = cast;
   const w = ability.animDuration * TIMELINE_PX_PER_SEC;
   const dmgStart = ability.damageWindow[0] * TIMELINE_PX_PER_SEC;
   const dmgWidth = (ability.damageWindow[1] - ability.damageWindow[0]) * TIMELINE_PX_PER_SEC;
   const recoveryStart = ability.damageWindow[1] * TIMELINE_PX_PER_SEC;
   const recoveryWidth = ability.recovery * TIMELINE_PX_PER_SEC;
-  const comboMult = index === 0 ? 1.0 : ability.comboMultiplier;
-  const effectiveDmg = Math.round(ability.damage * comboMult);
+  const comboMult = cast.multiplier;
+  const effectiveDmg = Math.round(cast.damage);
 
   return (
     <motion.div
