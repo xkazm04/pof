@@ -2,10 +2,9 @@
 
 import { memo } from 'react';
 import { Loader2, ChevronDown, Terminal } from 'lucide-react';
-import { aggregateWarnings, type BuildParseResult } from '../UE5BuildParser';
-import { ErrorCard } from '../ErrorCard';
-import { WarningAggregator } from '../WarningAggregator';
-import { BuildSummaryCard } from '../BuildSummaryCard';
+import type { BuildParseResult } from '../UE5BuildParser';
+import { previousBuild } from '@/components/cli/buildLedger';
+import { BuildBlock } from '@/components/cli/TerminalOutput/BuildBlock';
 import { AssistantMessageContent, parseCodeBlocks } from '../CodeBlockHighlighter';
 import {
   MODULE_COLORS, withOpacity, OPACITY_5, OPACITY_15, OPACITY_20,
@@ -23,28 +22,21 @@ export type { TerminalOutputProps } from './types';
 
 // --- Rich rendering for a single (ungrouped) log entry ---
 
-function SingleLogEntry({ log, parsed, onBuildFix, isStreaming }: {
+function SingleLogEntry({ log, parsed, prevBuild, onBuildFix, isStreaming }: {
   log: LogEntry;
   parsed?: BuildParseResult;
+  prevBuild: BuildParseResult | null;
   onBuildFix: (prompt: string) => void;
   isStreaming: boolean;
 }) {
   if (parsed && parsed.isBuildOutput) {
-    const errors = parsed.diagnostics.filter((d) => d.severity === 'error');
-    const warningGroups = aggregateWarnings(parsed.diagnostics);
     return (
       <div>
         <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150">
           <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
           <span className={`text-xs leading-relaxed break-all ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
         </div>
-        {errors.map((d) => (
-          <ErrorCard key={d.id} diagnostic={d} onFix={onBuildFix} isRunning={isStreaming} />
-        ))}
-        {warningGroups.length > 0 && (
-          <WarningAggregator groups={warningGroups} onFix={onBuildFix} isRunning={isStreaming} />
-        )}
-        {parsed.summary && <BuildSummaryCard summary={parsed.summary} />}
+        <BuildBlock parsed={parsed} prev={prevBuild} onFix={onBuildFix} isRunning={isStreaming} />
       </div>
     );
   }
@@ -115,6 +107,8 @@ interface EntryRowProps {
   onBuildFix: (prompt: string) => void;
   /** Parse result for this row (single log or the pair's tool result). */
   buildParsed?: BuildParseResult;
+  /** The build parsed before this row's build (buildLedger.previousBuild), for the fixed/new/remaining ledger. */
+  buildPrev: BuildParseResult | null;
   /** Full cache, needed by batch rows for their inner pairs. */
   buildParseCache: Map<string, BuildParseResult>;
 }
@@ -134,14 +128,14 @@ function entryEqual(a: GroupedLogEntry, b: GroupedLogEntry): boolean {
 
 const GroupedEntryRow = memo(function GroupedEntryRow({
   entry, animClass, isStreaming, isExpanded, expandedPairs,
-  onToggleGroup, onTogglePair, onBuildFix, buildParsed, buildParseCache,
+  onToggleGroup, onTogglePair, onBuildFix, buildParsed, buildPrev, buildParseCache,
 }: EntryRowProps) {
   return (
     <div className={animClass} style={ENTRY_ROW_STYLE}>
       {entry.kind === 'single' ? (
-        <SingleLogEntry log={entry.log} parsed={buildParsed} onBuildFix={onBuildFix} isStreaming={isStreaming} />
+        <SingleLogEntry log={entry.log} parsed={buildParsed} prevBuild={buildPrev} onBuildFix={onBuildFix} isStreaming={isStreaming} />
       ) : entry.kind === 'tool_pair' ? (
-        <ToolPairRow toolUse={entry.toolUse} toolResult={entry.toolResult} isExpanded={isExpanded} onToggle={() => onTogglePair(entry.toolUse.id)} buildParsed={buildParsed} onBuildFix={onBuildFix} isStreaming={isStreaming} />
+        <ToolPairRow toolUse={entry.toolUse} toolResult={entry.toolResult} isExpanded={isExpanded} onToggle={() => onTogglePair(entry.toolUse.id)} buildParsed={buildParsed} buildPrev={buildPrev} onBuildFix={onBuildFix} isStreaming={isStreaming} />
       ) : (
         <ToolBatchRow pairs={entry.pairs} isExpanded={isExpanded} onToggle={() => onToggleGroup(entry.id)} expandedPairs={expandedPairs} onTogglePair={onTogglePair} buildCache={buildParseCache} onBuildFix={onBuildFix} isStreaming={isStreaming} />
       )}
@@ -153,6 +147,7 @@ const GroupedEntryRow = memo(function GroupedEntryRow({
   && prev.isStreaming === next.isStreaming
   && prev.isExpanded === next.isExpanded
   && prev.buildParsed === next.buildParsed
+  && prev.buildPrev === next.buildPrev
   // Batch rows render nested pairs from these; compare by reference so a
   // toggle or new parse re-renders them.
   && (prev.entry.kind !== 'tool_batch'
@@ -283,6 +278,10 @@ export function TerminalOutput({
           {/* Full log — every row rich-rendered; offscreen rows skip paint via content-visibility */}
           {groupedLogs.map((entry) => {
             const key = entry.kind === 'single' ? entry.log.id : entry.id;
+            const buildId = entry.kind === 'single' ? entry.log.id
+              : entry.kind === 'tool_pair' ? entry.toolResult.id
+                : null;
+            const buildParsed = buildId !== null ? buildParseCache.get(buildId) : undefined;
             return (
               <GroupedEntryRow
                 key={key}
@@ -298,11 +297,8 @@ export function TerminalOutput({
                 onToggleGroup={toggleGroup}
                 onTogglePair={togglePair}
                 onBuildFix={onBuildFix}
-                buildParsed={
-                  entry.kind === 'single' ? buildParseCache.get(entry.log.id)
-                    : entry.kind === 'tool_pair' ? buildParseCache.get(entry.toolResult.id)
-                      : undefined
-                }
+                buildParsed={buildParsed}
+                buildPrev={buildParsed && buildId !== null ? previousBuild(buildParseCache, buildId) : null}
                 buildParseCache={buildParseCache}
               />
             );

@@ -6,6 +6,7 @@ import {
   AlertCircle, AlertTriangle, FileCode, ChevronDown, ChevronRight, Zap, Copy, Check,
 } from 'lucide-react';
 import type { BuildDiagnostic } from './UE5BuildParser';
+import { buildFixPrompt } from '@/components/cli/buildLedger';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { MODULE_COLORS, CLI_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
@@ -182,7 +183,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
+                if (!isRunning) onFix(buildFixPrompt(diagnostic));
               }}
               disabled={isRunning}
               title={isRunning ? 'Wait for the current task to finish' : 'Ask Claude to fix this diagnostic'}
@@ -207,7 +208,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
+                if (!isRunning) onFix(buildFixPrompt(diagnostic));
               }}
               disabled={isRunning}
               title={isRunning ? 'Wait for the current task to finish' : 'Ask Claude to fix this diagnostic'}
@@ -221,24 +222,4 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
       )}
     </motion.div>
   );
-}
-
-function buildQuickFixPrompt(d: BuildDiagnostic): string {
-  const fileRef = d.file
-    ? `in file ${d.file}${d.line ? ` at line ${d.line}` : ''}`
-    : '';
-  const codeRef = d.code ? ` (${d.code})` : '';
-
-  let prompt = `Fix this compilation ${d.severity}${codeRef} ${fileRef}:\n\n${d.message}`;
-
-  if (d.file) {
-    prompt += `\n\nStart by reading ${d.file} to understand the context around ${d.line ? `line ${d.line}` : 'the issue'}.`;
-  }
-
-  if (d.category === 'linker') {
-    prompt += `\n\nThis is a linker error. Check for:\n- Missing #include directives\n- Missing module dependencies in Build.cs\n- Unimplemented declared functions\n- Incorrect UCLASS/UFUNCTION signatures`;
-  }
-
-  prompt += `\n\nAfter fixing, verify the build compiles successfully.`;
-  return prompt;
 }
