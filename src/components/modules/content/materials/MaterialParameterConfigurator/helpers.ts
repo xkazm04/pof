@@ -1,22 +1,20 @@
+import { SURFACE_SPEC } from '@/lib/materials/surface-spec';
 import type { SurfaceType, ParamDef } from './types';
 import { BASE_PARAMS } from './constants';
 
-// ── Helpers ──
+// ── Helpers ── (per-surface values come from the one surface spec)
 
 export function getDefaultMetallic(surface: SurfaceType): number {
-  return surface === 'metal' ? 1 : 0;
+  return SURFACE_SPEC[surface].defaults.Metallic;
 }
 
 export function getDefaultRoughness(surface: SurfaceType): number {
-  switch (surface) {
-    case 'metal': return 0.2;
-    case 'glass': return 0.05;
-    case 'water': return 0.02;
-    case 'skin': return 0.6;
-    case 'cloth': return 0.8;
-    case 'stone': return 0.7;
-    default: return 0.5;
-  }
+  return SURFACE_SPEC[surface].defaults.Roughness;
+}
+
+/** The slider values a freshly picked surface starts from (also the initial state). */
+export function surfaceParamDefaults(surface: SurfaceType): Record<string, number> {
+  return { Roughness: getDefaultRoughness(surface), Metallic: getDefaultMetallic(surface) };
 }
 
 export function getApplicableParams(surface: SurfaceType): ParamDef[] {

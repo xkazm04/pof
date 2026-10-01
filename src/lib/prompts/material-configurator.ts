@@ -2,41 +2,51 @@ import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { getEngineFacts, type EngineFacts } from '@/lib/engine-facts';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
-import type { MaterialConfiguratorConfig, SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
+import type { MaterialConfiguratorConfig } from '@/components/modules/content/materials/MaterialParameterConfigurator';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
-
-const SURFACE_LABELS: Record<SurfaceType, string> = {
-  metal: 'Metallic (PBR metal workflow)',
-  cloth: 'Cloth / Fabric (fuzz, anisotropy)',
-  skin: 'Skin (subsurface scattering profile)',
-  glass: 'Glass (translucent, refractive)',
-  water: 'Water (animated, depth-based)',
-  emissive: 'Emissive (self-illuminated)',
-  foliage: 'Foliage (two-sided, subsurface)',
-  stone: 'Stone / Rock (parallax detail)',
-};
+import {
+  SURFACE_SPEC, resolveShadingModel, shadingModelLabel, substrateQualifier, type RenderFeature,
+} from '@/lib/materials/surface-spec';
+import { estimateMaterialBudget, SAMPLER_HARD_LIMIT } from '@/lib/material-cost-estimator';
 
 /**
- * Shading-model guidance per surface. The Substrate half of each line comes from
- * the project's engine facts (`engine-facts.ts`) — never a hard-coded "5.7+".
+ * The dispatched shading model — the SAME `resolveShadingModel` the Shader Budget
+ * bar reports (surface + features, `lib/materials/surface-spec.ts`). The Substrate
+ * half comes from the project's engine facts (`engine-facts.ts`) — never a
+ * hard-coded "5.7+".
  */
-function surfaceShadingModel(f: EngineFacts): Record<SurfaceType, string> {
-  const slab = f.substrateSlabHint;
-  return {
-    metal: `Default Lit (${slab})`,
-    cloth: `Cloth (if available) or Subsurface (${slab}, with fuzz)`,
-    skin: `Subsurface Profile (${slab}, with subsurface)`,
-    glass: `Default Lit Translucent (${slab}, translucent)`,
-    water: `Default Lit Translucent (${slab}, translucent)`,
-    emissive: `Unlit or Default Lit with Emissive-only (${slab}, emissive)`,
-    foliage: `Two Sided Foliage or Subsurface (${slab}, two-sided)`,
-    stone: `Default Lit (${slab})`,
-  };
+function shadingModelLine(config: MaterialConfiguratorConfig, f: EngineFacts): string {
+  const model = resolveShadingModel(config.surfaceType, config.features);
+  const q = substrateQualifier(model);
+  return `${shadingModelLabel(model)} (${f.substrateSlabHint}${q ? `, ${q}` : ''})`;
+}
+
+/**
+ * The cost the designer tuned against in the Shader Budget bar, carried into the
+ * prompt (as post-process carries its GPU budget) so the generated material is
+ * held to it.
+ */
+function formatShaderBudget(config: MaterialConfiguratorConfig): string {
+  const r = estimateMaterialBudget({ surfaceType: config.surfaceType, features: config.features });
+  const { mapNotes } = SURFACE_SPEC[config.surfaceType].base;
+  const sources = r.samplerBreakdown
+    .map((b, i) => (i === 0 ? `${b.source} ${b.count} (${mapNotes})` : `${b.source} ${b.count}`))
+    .join(', ');
+  const warnings = r.warnings.length > 0
+    ? r.warnings
+      .map((w) => `- ${w.severity === 'error' ? 'Error' : 'Warning'}: ${w.message}${w.suggestion ? ` Cheaper: ${w.suggestion}` : ''}`)
+      .join('\n')
+    : '- No budget warnings.';
+  return `### Shader Budget\n\n` +
+    `**Samplers: ${r.samplers} of ${SAMPLER_HARD_LIMIT} · Instructions: ${r.instructionScore.toFixed(2)}× metal base**\n` +
+    `- Sampler sources: ${sources}\n` +
+    `${warnings}\n` +
+    '- Keep the generated material within this budget: pack maps (ORM) instead of adding samplers, and compile optional features out behind static switches.';
 }
 
 function featureDetails(f: EngineFacts): Record<RenderFeature, string> {
   return {
-    subsurface: 'Enable Subsurface Scattering: use a Subsurface Profile asset, set subsurface color and radius. Use Subsurface Profile shading model.',
+    subsurface: 'Enable Subsurface Scattering: use a Subsurface Profile asset, set subsurface color and radius. Use the shading model named in Surface Configuration above.',
     parallax: 'Enable Parallax Occlusion Mapping: use a heightmap texture, implement POM via Custom node or BumpOffset. Set min/max samples for quality vs performance.',
     emissive: 'Enable Emissive output: connect emissive color with intensity multiplier. Consider using a mask texture to control which regions glow.',
     refraction: 'Enable Refraction: set Blend Mode to Translucent, use Refraction input with IOR value. Consider using SceneColor for behind-surface sampling.',
@@ -49,7 +59,7 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
   const moduleName = getModuleName(ctx.projectName);
   const isMaster = config.outputType === 'master';
   const facts = getEngineFacts(ctx.ueVersion);
-  const shadingModels = surfaceShadingModel(facts);
+  const surfaceLabel = SURFACE_SPEC[config.surfaceType].promptLabel;
   const featureText = featureDetails(facts);
 
   const paramLines = Object.values(config.params)
@@ -106,13 +116,14 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
       ],
     })
     .withRawTask(
-      `## Task: Create ${isMaster ? 'Master Material' : 'Material Instance'} — ${SURFACE_LABELS[config.surfaceType]}\n\n` +
+      `## Task: Create ${isMaster ? 'Master Material' : 'Material Instance'} — ${surfaceLabel}\n\n` +
       `### Surface Configuration\n` +
-      `- Surface type: **${SURFACE_LABELS[config.surfaceType]}**\n` +
-      `- Shading model: **${shadingModels[config.surfaceType]}**\n` +
+      `- Surface type: **${surfaceLabel}**\n` +
+      `- Shading model: **${shadingModelLine(config, facts)}**\n` +
       `- Output type: **${isMaster ? 'Master Material (full shader)' : 'Material Instance (parameter-driven)'}**\n\n` +
       `### Parameter Defaults\n${paramLines}\n\n` +
       `### Rendering Features\n${featureLines}\n\n` +
+      `${formatShaderBudget(config)}\n\n` +
       filesSection,
     )
     .withBestPractices([

@@ -1,7 +1,8 @@
 'use client';
 
-import { Zap, CircleDot, Plug, BookOpen, Info, Check } from 'lucide-react';
+import { Zap, CircleDot, Plug, BookOpen, Info, Check, Ban } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_ERROR } from '@/lib/chart-colors';
 import type { MaterialConfiguratorConfig } from './types';
 import { SURFACES, FEATURES, GLOSSARY } from './constants';
 import { useMaterialParameterConfigurator } from './useMaterialParameterConfigurator';
@@ -17,6 +18,8 @@ export type {
 } from './types';
 
 // ── Component ──
+
+const REFUSAL_ID = 'material-generate-refusal';
 
 interface MaterialParameterConfiguratorProps {
   onGenerate: (config: MaterialConfiguratorConfig) => void;
@@ -41,6 +44,7 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
     setParam,
     applicableParams,
     surfaceDef,
+    refusal,
     handleGenerate,
   } = useMaterialParameterConfigurator(onGenerate);
 
@@ -260,7 +264,8 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       <button
         type="button"
         onClick={handleGenerate}
-        disabled={isGenerating}
+        disabled={isGenerating || refusal !== null}
+        aria-describedby={refusal ? REFUSAL_ID : undefined}
         className="focus-ring w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
         style={{
           backgroundColor: `${MODULE_COLORS.content}15`,
@@ -274,6 +279,13 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
           : `Generate ${outputType === 'master' ? 'Master Material' : 'Material Instance'} — ${surfaceDef.label}`
         }
       </button>
+      {/* A forbidden feature combination is refused, not dispatched — say why. */}
+      {refusal && (
+        <p id={REFUSAL_ID} role="status" className="flex items-start gap-1.5 text-2xs" style={{ color: STATUS_ERROR }}>
+          <Ban className="w-3 h-3 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <span>Can&apos;t generate: {refusal}</span>
+        </p>
+      )}
     </div>
   );
 }

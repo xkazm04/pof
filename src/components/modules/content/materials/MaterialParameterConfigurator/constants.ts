@@ -1,18 +1,19 @@
 import { Gem, Shirt, User, Droplets, Flame, Leaf, Blocks } from 'lucide-react';
 import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_MUTED, ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
+import { SURFACE_SPEC } from '@/lib/materials/surface-spec';
 import type { SurfaceDef, FeatureDef, ParamDef, GlossaryEntry } from './types';
 
-// ── Static Data ──
+// ── Static Data ── (defaultFeatures come from the one surface spec; colours, icons and copy stay here)
 
 export const SURFACES: SurfaceDef[] = [
-  { id: 'metal',    label: 'Metal',    icon: Gem,       color: STATUS_MUTED, description: 'PBR metallic: high metallic, low roughness, sharp reflections', defaultFeatures: [], plain: 'A shiny, reflective surface — think steel, gold, or polished armor.' },
-  { id: 'cloth',    label: 'Cloth',    icon: Shirt,     color: ACCENT_VIOLET, description: 'Fabric shading with fuzz, thread detail, anisotropy', defaultFeatures: ['subsurface'], plain: 'Fabric that looks soft and threaded — capes, banners, upholstery.' },
-  { id: 'skin',     label: 'Skin',     icon: User,      color: STATUS_BLOCKER, description: 'Subsurface skin: SSS profile, pore detail, translucency', defaultFeatures: ['subsurface'], plain: 'Skin that lets a little light pass through, the way a real face does.' },
-  { id: 'glass',    label: 'Glass',    icon: Droplets,  color: STATUS_IMPROVED, description: 'Translucent glass with refraction, IOR, tint color', defaultFeatures: ['refraction'], plain: 'Clear or tinted glass that bends what you see behind it.' },
-  { id: 'water',    label: 'Water',    icon: Droplets,  color: ACCENT_CYAN_LIGHT, description: 'Animated water surface with depth fade, caustics', defaultFeatures: ['refraction', 'worldPositionOffset'], plain: 'A living water surface — ripples, refraction, depth fade in the shallows.' },
-  { id: 'emissive', label: 'Emissive', icon: Flame,     color: ACCENT_ORANGE, description: 'Self-illuminating surfaces: neon, lava, magic effects', defaultFeatures: ['emissive'], plain: 'A surface that gives off its own light — runes, lava, magic, neon signs.' },
-  { id: 'foliage',  label: 'Foliage',  icon: Leaf,      color: STATUS_SUCCESS, description: 'Two-sided foliage with subsurface, wind animation', defaultFeatures: ['subsurface', 'worldPositionOffset'], plain: 'Leaves and grass that glow gently when the sun is behind them and sway in wind.' },
-  { id: 'stone',    label: 'Stone',    icon: Blocks,    color: '#78716c', description: 'Rock/brick with parallax occlusion depth detail', defaultFeatures: ['parallax'], plain: 'Rocky, chiseled surface with real-feeling cracks and depth.' },
+  { id: 'metal',    label: 'Metal',    icon: Gem,       color: STATUS_MUTED, description: 'PBR metallic: high metallic, low roughness, sharp reflections', defaultFeatures: SURFACE_SPEC.metal.defaultFeatures, plain: 'A shiny, reflective surface — think steel, gold, or polished armor.' },
+  { id: 'cloth',    label: 'Cloth',    icon: Shirt,     color: ACCENT_VIOLET, description: 'Fabric shading with fuzz, thread detail, anisotropy', defaultFeatures: SURFACE_SPEC.cloth.defaultFeatures, plain: 'Fabric that looks soft and threaded — capes, banners, upholstery.' },
+  { id: 'skin',     label: 'Skin',     icon: User,      color: STATUS_BLOCKER, description: 'Subsurface skin: SSS profile, pore detail, translucency', defaultFeatures: SURFACE_SPEC.skin.defaultFeatures, plain: 'Skin that lets a little light pass through, the way a real face does.' },
+  { id: 'glass',    label: 'Glass',    icon: Droplets,  color: STATUS_IMPROVED, description: 'Translucent glass with refraction, IOR, tint color', defaultFeatures: SURFACE_SPEC.glass.defaultFeatures, plain: 'Clear or tinted glass that bends what you see behind it.' },
+  { id: 'water',    label: 'Water',    icon: Droplets,  color: ACCENT_CYAN_LIGHT, description: 'Animated water surface with depth fade, caustics', defaultFeatures: SURFACE_SPEC.water.defaultFeatures, plain: 'A living water surface — ripples, refraction, depth fade in the shallows.' },
+  { id: 'emissive', label: 'Emissive', icon: Flame,     color: ACCENT_ORANGE, description: 'Self-illuminating surfaces: neon, lava, magic effects', defaultFeatures: SURFACE_SPEC.emissive.defaultFeatures, plain: 'A surface that gives off its own light — runes, lava, magic, neon signs.' },
+  { id: 'foliage',  label: 'Foliage',  icon: Leaf,      color: STATUS_SUCCESS, description: 'Two-sided foliage with subsurface, wind animation', defaultFeatures: SURFACE_SPEC.foliage.defaultFeatures, plain: 'Leaves and grass that glow gently when the sun is behind them and sway in wind.' },
+  { id: 'stone',    label: 'Stone',    icon: Blocks,    color: '#78716c', description: 'Rock/brick with parallax occlusion depth detail', defaultFeatures: SURFACE_SPEC.stone.defaultFeatures, plain: 'Rocky, chiseled surface with real-feeling cracks and depth.' },
 ];
 
 export const FEATURES: FeatureDef[] = [

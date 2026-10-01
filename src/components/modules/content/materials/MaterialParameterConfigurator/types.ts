@@ -3,8 +3,11 @@ import type { PPParamPlain } from '@/types/post-process-studio';
 
 // ── Types ──
 
-export type SurfaceType = 'metal' | 'cloth' | 'skin' | 'glass' | 'water' | 'emissive' | 'foliage' | 'stone';
-export type RenderFeature = 'subsurface' | 'parallax' | 'emissive' | 'refraction' | 'tessellation' | 'worldPositionOffset';
+// SurfaceType / RenderFeature are owned by the one surface spec (lib depends on
+// lib, not on this component folder); re-exported so no import site breaks.
+import type { SurfaceType, RenderFeature } from '@/lib/materials/surface-spec';
+export type { SurfaceType, RenderFeature };
+
 export type MaterialOutputType = 'master' | 'instance';
 
 export interface ParameterRange {

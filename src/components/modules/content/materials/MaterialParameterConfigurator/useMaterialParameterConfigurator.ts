@@ -3,14 +3,19 @@ import { useManifest } from '@/hooks/useManifest';
 import type {
   SurfaceType, RenderFeature, MaterialOutputType, ParameterRange, MaterialConfiguratorConfig,
 } from './types';
+import { SURFACE_SPEC, refusalFor } from '@/lib/materials/surface-spec';
 import { SURFACES } from './constants';
-import { getDefaultMetallic, getDefaultRoughness, getApplicableParams } from './helpers';
+import { surfaceParamDefaults, getApplicableParams } from './helpers';
+
+const INITIAL_SURFACE: SurfaceType = 'metal';
 
 export function useMaterialParameterConfigurator(onGenerate: (config: MaterialConfiguratorConfig) => void) {
-  const [surfaceType, setSurfaceType] = useState<SurfaceType>('metal');
-  const [features, setFeatures] = useState<RenderFeature[]>([]);
+  // The initial state is exactly what selectSurface(INITIAL_SURFACE) sets, so the
+  // first Generate ships a real metal (Metallic 1), not the BASE_PARAMS fallback.
+  const [surfaceType, setSurfaceType] = useState<SurfaceType>(INITIAL_SURFACE);
+  const [features, setFeatures] = useState<RenderFeature[]>(() => [...SURFACE_SPEC[INITIAL_SURFACE].defaultFeatures]);
   const [outputType, setOutputType] = useState<MaterialOutputType>('master');
-  const [paramValues, setParamValues] = useState<Record<string, number>>({});
+  const [paramValues, setParamValues] = useState<Record<string, number>>(() => surfaceParamDefaults(INITIAL_SURFACE));
   const [explainMode, setExplainMode] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
 
@@ -33,13 +38,9 @@ export function useMaterialParameterConfigurator(onGenerate: (config: MaterialCo
 
   const selectSurface = useCallback((s: SurfaceType) => {
     setSurfaceType(s);
-    const def = SURFACES.find((x) => x.id === s);
-    setFeatures(def?.defaultFeatures ?? []);
+    setFeatures([...SURFACE_SPEC[s].defaultFeatures]);
     // Reset params to surface defaults
-    setParamValues({
-      Roughness: getDefaultRoughness(s),
-      Metallic: getDefaultMetallic(s),
-    });
+    setParamValues(surfaceParamDefaults(s));
   }, []);
 
   const toggleFeature = useCallback((f: RenderFeature) => {
@@ -53,14 +54,18 @@ export function useMaterialParameterConfigurator(onGenerate: (config: MaterialCo
   const applicableParams = getApplicableParams(surfaceType);
   const surfaceDef = SURFACES.find((s) => s.id === surfaceType)!;
 
+  // A forbidden feature combination (the estimator's error rows) never dispatches.
+  const refusal = useMemo(() => refusalFor(features), [features]);
+
   const handleGenerate = useCallback(() => {
+    if (refusal) return;
     const params: Record<string, ParameterRange> = {};
     for (const p of applicableParams) {
       const val = paramValues[p.name] ?? p.defaultValue;
       params[p.name] = { name: p.name, min: p.min, max: p.max, defaultValue: val, step: p.step };
     }
     onGenerate({ surfaceType, features, outputType, params });
-  }, [surfaceType, features, outputType, paramValues, applicableParams, onGenerate]);
+  }, [refusal, surfaceType, features, outputType, paramValues, applicableParams, onGenerate]);
 
   return {
     surfaceType,
@@ -79,6 +84,7 @@ export function useMaterialParameterConfigurator(onGenerate: (config: MaterialCo
     setParam,
     applicableParams,
     surfaceDef,
+    refusal,
     handleGenerate,
   };
 }
