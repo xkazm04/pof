@@ -4,6 +4,7 @@ import {
 } from '@/lib/chart-colors';
 import type { EntityMetadata, EntityGrouping } from '@/types/game-metadata';
 import type { HeatmapCell, TimelineEvent, SankeyLink, SankeyColumn, PieSlice, GaugeMetric } from '@/types/unique-tab-improvements';
+import { parseDamageRange, weaponRoster } from '@/lib/combat/weapon-throughput';
 
 /* ── Weapon Categories & Tiers ─────────────────────────────────────────── */
 
@@ -184,33 +185,18 @@ export const COMBO_COUNT = COMBO_SEQUENCES.length;
 
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 
-/** Parse "lo-hi" damage string and return the midpoint. */
-export function parseDamageMidpoint(dmg: string): number {
-  const [lo, hi] = dmg.split('-').map(Number);
-  return (lo + hi) / 2;
+/**
+ * Midpoint of a "lo-hi" damage string, or null when it is not a range (never NaN).
+ * Weapon DPS does not use this — it is derived by `@/lib/combat/weapon-throughput`
+ * (`weaponDps` / `weaponRoster`), the one weapon-DPS law on the canon kernel.
+ */
+export function parseDamageMidpoint(dmg: string): number | null {
+  const r = parseDamageRange(dmg);
+  return r.ok ? (r.data.lo + r.data.hi) / 2 : null;
 }
 
-/* ── DPS Calculator data ───────────────────────────────────────────────── */
-
-export interface DPSStrategy {
-  name: string;
-  dps: number;
-  time: string;
-  color: string;
-}
-
-export const DPS_STRATEGIES: DPSStrategy[] = [
-  { name: 'SingleAttackSpam', dps: 180, time: 'Infinite', color: STATUS_NEUTRAL },
-  { name: 'Full3HitCombo', dps: 245, time: '1.55s', color: ACCENT_CYAN },
-  { name: 'CancelIntoAbility', dps: 310, time: '1.2s', color: ACCENT_EMERALD },
-  { name: 'Lightsaber Basic Combo', dps: 145, time: '1.8s per cycle', color: ACCENT_CYAN },
-  { name: 'Force Lightning Channel', dps: 200, time: '2.0s channel', color: ACCENT_VIOLET },
-  { name: 'Saber + Force Weave', dps: 280, time: '3.2s rotation', color: ACCENT_EMERALD },
-];
-
-export const DPS_MAX = 350;
-
-export const CUMULATIVE_POINTS = [0, 1, 2, 3, 4, 5];
+/** The weapon table ranked under the one weapon-DPS law (canon crit, no target). */
+export const WEAPON_ROSTER = weaponRoster(WEAPONS, { categoryOrder: WEAPON_GROUPINGS[0].order });
 
 /* ── Damage Type Effectiveness data ────────────────────────────────────── */
 

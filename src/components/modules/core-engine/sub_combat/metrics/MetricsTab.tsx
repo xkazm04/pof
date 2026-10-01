@@ -4,11 +4,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { BarChart3, Activity, Swords } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
-import {
-  ACCENT, DPS_STRATEGIES, DPS_MAX, KPI_CARDS,
-} from '../_shared/data';
-import { WEAPONS, COMBO_SEQUENCES, parseDamageMidpoint } from '../_shared/data-metrics';
-import type { Weapon, WeaponCategory } from '../_shared/data-metrics';
+import { ACCENT, KPI_CARDS } from '../_shared/data';
+import { WEAPONS, WEAPON_ROSTER, COMBO_SEQUENCES } from '../_shared/data-metrics';
+import type { WeaponCategory } from '../_shared/data-metrics';
+import { weaponDps } from '@/lib/combat/weapon-throughput';
 import { StatInfluencePanel } from './StatInfluencePanel';
 import { AbilityQuickPicker } from '../../sub_character/input/AbilityQuickPicker';
 import { CumulativeDamageSvg } from './CumulativeDamageSvg';
@@ -24,12 +23,10 @@ const WEAPONS_BY_CATEGORY = WEAPON_CATEGORIES.map(cat => ({
   weapons: WEAPONS.filter(w => w.category === cat),
 }));
 
-function weaponDps(w: Weapon): number {
-  const mid = parseDamageMidpoint(w.baseDamage);
-  const speed = parseFloat(w.attackSpeed);
-  const crit = parseInt(w.critChance);
-  return mid / speed * (1 + crit / 100);
-}
+/** DPS Calculator rows: the roster's top 6 under the one weapon-DPS law (also plotted cumulatively). */
+const CALC_TOP = WEAPON_ROSTER.rows.slice(0, 6);
+const CALC_MAX = CALC_TOP[0]?.dps || 1;
+const RELATED_COMBOS_SHOWN = 8;
 
 export function MetricsTab() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -60,6 +57,9 @@ export function MetricsTab() {
     const cats = new Set(compared.map(w => w.category));
     return COMBO_SEQUENCES.filter(c => cats.has(c.weaponCategory));
   }, [compared]);
+
+  const shownCombos = comparedCombos.slice(0, RELATED_COMBOS_SHOWN);
+  const comboDpsMax = shownCombos.reduce((m, c) => Math.max(m, c.dps), 0) || 1;
 
   return (
     <motion.div key="metrics" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
@@ -96,7 +96,7 @@ export function MetricsTab() {
           ))}
         </div>
         {comparedDps.length >= 2 && (
-          <div className="mt-3 pt-3 border-t border-border/30 space-y-1.5">
+          <div data-testid="weapon-compare-rows" className="mt-3 pt-3 border-t border-border/30 space-y-1.5">
             {comparedDps.map(({ weapon, dps }) => (
               <div key={weapon.id} className="flex items-center gap-2 px-1 py-0.5">
                 <span className="text-xs font-mono text-text w-[140px] flex-shrink-0 truncate">{weapon.name}</span>
@@ -108,15 +108,15 @@ export function MetricsTab() {
         )}
         {comparedCombos.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length})</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length}) · authored DPS</span>
             <div className="space-y-1">
-              {comparedCombos.slice(0, 8).map(c => (
+              {shownCombos.map(c => (
                 <div key={c.id} className="flex items-center gap-2 text-xs font-mono px-1 py-0.5">
                   <span className="text-text w-[130px] truncate">{c.name}</span>
                   <span className="text-text-muted w-[60px]">{c.weaponCategory}</span>
                   <span className="text-text-muted w-[40px]">{c.hits}h</span>
-                  <div className="flex-1"><NeonBar pct={(c.dps / DPS_MAX) * 100} color={ACCENT} /></div>
-                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }}>{c.dps} DPS</span>
+                  <div className="flex-1"><NeonBar pct={(c.dps / comboDpsMax) * 100} color={ACCENT} /></div>
+                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }} title="Authored value, not derived from the weapon table">{c.dps} DPS</span>
                 </div>
               ))}
             </div>
@@ -128,15 +128,16 @@ export function MetricsTab() {
         {/* DPS Calculator */}
         <BlueprintPanel color={ACCENT} className="p-3">
           <SectionHeader label="DPS Calculator" color={ACCENT} icon={BarChart3} />
-          <div className="mt-3 space-y-1.5">
-            {DPS_STRATEGIES.map((strat, idx) => (
-              <motion.div key={strat.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors">
-                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text w-[130px] flex-shrink-0 truncate">{strat.name}</span>
-                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[50px] flex-shrink-0">{strat.time}</span>
+          <p className="text-xs text-text-muted font-mono mt-1">Top {CALC_TOP.length} of {WEAPON_ROSTER.rows.length} weapons · expected hit (canon crit) / attack interval, no target armour.</p>
+          <div className="mt-2 space-y-1.5">
+            {CALC_TOP.map((row, idx) => (
+              <motion.div key={row.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors">
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text w-[130px] flex-shrink-0 truncate" title={row.name}>{row.name}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[50px] flex-shrink-0" title="Attack interval">{row.intervalSec}s</span>
                 <div className="flex-1">
-                  <NeonBar pct={(strat.dps / DPS_MAX) * 100} color={strat.color} />
+                  <NeonBar pct={(row.dps / CALC_MAX) * 100} color={row.weapon.color} />
                 </div>
-                <span className="text-xs font-mono font-bold w-[55px] text-right" style={{ color: strat.color }}>{strat.dps} DPS</span>
+                <span className="text-xs font-mono font-bold w-[55px] text-right" style={{ color: row.weapon.color }}>{row.dps.toFixed(1)} DPS</span>
               </motion.div>
             ))}
           </div>
