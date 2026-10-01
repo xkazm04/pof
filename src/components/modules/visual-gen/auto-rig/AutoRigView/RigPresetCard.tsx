@@ -2,17 +2,20 @@
 
 import { CheckCircle, Bone, Loader2, XCircle, CheckCircle2 } from 'lucide-react';
 import { type RigPreset } from '@/lib/visual-gen/rig-presets';
+import type { RigCheckRow } from '@/lib/visual-gen/rig-check';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import { MAX_BONE_COUNT, boneComplexityColor } from './helpers';
 
-export function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreating, createResult }: {
+export function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreating, createResult, check = null }: {
   preset: RigPreset;
   selected: boolean;
   onSelect: () => void;
   onCreateInBlender: () => void;
   isCreating: boolean;
   createResult: { status: 'success' | 'error'; message: string } | null;
+  /** This target's row from the last "Check a produced rig" — evidence, not a description. */
+  check?: RigCheckRow | null;
 }) {
   const connected = useBlenderMCPStore((s) => s.connection.connected);
   const barWidth = Math.max(4, (preset.boneCount / MAX_BONE_COUNT) * 100);
@@ -60,6 +63,14 @@ export function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, i
             </span>
           ))}
         </div>
+        {check && (
+          <div
+            data-testid={`rig-preset-check-${preset.id}`}
+            className={`mt-2 text-xs font-medium ${check.status === 'bound' ? 'text-emerald-400' : check.status === 'partial' ? 'text-rose-500' : 'text-text-muted'}`}
+          >
+            {check.kind === 'remap' ? `Checked rig binds ${check.bound}/${check.required}` : `Checked rig: ${check.status}`}
+          </div>
+        )}
       </button>
 
       {/* Create in Blender button */}

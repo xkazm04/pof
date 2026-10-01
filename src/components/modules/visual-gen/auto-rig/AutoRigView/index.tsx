@@ -10,13 +10,16 @@ import { createArmatureScript } from '@/lib/blender-mcp/scripts/create-armature'
 import { readReceipt } from '@/lib/blender-mcp/receipt';
 import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import type { RigCheckResponse } from '@/lib/visual-gen/rig-check';
 import { RigPresetCard } from './RigPresetCard';
+import { RigCheckPanel } from './RigCheckPanel';
 import { presetToBones, describeArmatureOutcome, type ArmatureOutcome } from './helpers';
 
 function RigTab() {
   const [selectedPreset, setSelectedPreset] = useState<string>('ue5-mannequin');
   const [creatingPresetId, setCreatingPresetId] = useState<string | null>(null);
   const [createResults, setCreateResults] = useState<Record<string, ArmatureOutcome>>({});
+  const [rigCheck, setRigCheck] = useState<RigCheckResponse | null>(null);
   const activePreset = RIG_PRESETS.find((p) => p.id === selectedPreset);
 
   const handleCreateInBlender = useCallback(async (preset: RigPreset) => {
@@ -59,6 +62,9 @@ function RigTab() {
         </p>
       </div>
 
+      {/* Check a produced rig — pick the target from evidence, not from the card text. */}
+      <RigCheckPanel onSelectPreset={setSelectedPreset} onChecked={setRigCheck} />
+
       {/* Rig preset selector */}
       <div>
         <label className="text-xs text-text-muted mb-2 block">Target Skeleton Preset</label>
@@ -72,6 +78,7 @@ function RigTab() {
               onCreateInBlender={() => handleCreateInBlender(preset)}
               isCreating={creatingPresetId === preset.id}
               createResult={createResults[preset.id] ?? null}
+              check={rigCheck?.rows.find((r) => r.presetId === preset.id) ?? null}
             />
           ))}
         </div>
