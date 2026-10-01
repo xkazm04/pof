@@ -201,6 +201,11 @@ not swap in `isServerDerived` as the admission rule: it is true for an adopt tha
 drifted content — all local-only work. The storage adapter (`quotaSafeLocalStorage`) never throws:
 a refused write (quota) used to escape `set()` and skip the produce write-through; it is now
 recorded in the non-persisted `persistError` and shown as one line in `ProduceLogPanel`.
+A failure MARKER (`done: false`, `data: {}`, `error`) holds no content: `stepRecord.ts` is the one
+decoder of the record for the store and every reader (`contentOf`, `hasUnsyncedLocalWork`,
+`isServerDerived`, `adoptOnto`). Hydrate/refresh adopt the server row onto a marker keeping
+`error`/`errorAt` (so it stays in the outbox — an `error` is never a proven copy), and a refresh
+never reports a marker as local work or stamps it `SERVER_MISSING_REASON`. Shape and version unchanged.
 
 #### `useCatalogStore` (`src/stores/catalogStore.ts`) — seed provenance
 

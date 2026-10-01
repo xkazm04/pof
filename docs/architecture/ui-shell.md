@@ -516,6 +516,13 @@ Two truth paths that used to dead-end:
   erase content that did land. The rail badges the step (`✕`) and the canvas renders
   `<ProduceErrorBanner>`; `clearError` dismisses it, dropping a failure-marker-only step
   entirely so it reads as honest `unproduced` again (and stays open to server hydration).
+  **While the marker exists it is not an artifact either (2026-10-01):** every reader decodes
+  the record through `stepRecord.ts` — `contentOf` (content iff `done`), `produceFailureOf`,
+  `effectiveSteps` (the one add-only server/local merge for the matrix and the global coach;
+  a marker never shadows a server row) and `coachVerdictOf`. The derivation, matrix and both
+  coaches grade only content, so a marker-only step reads `unproduced` (never a graded `{}`:
+  no fabricated pass, no phantom deferred gate), and its error reaches the coach through the
+  one hint channel (`settlementOf` → `coachActionFor`: "Produce — Last produce failed — …").
 - **Reset now means reset.** `resetEntity` clears LOCAL state only; because hydration is
   add-only, the surviving server rows were re-adopted on the next load and the reset silently
   un-did itself. `resetEntityEverywhere` (behind the shared `ConfirmDialog`, whose copy states
@@ -603,7 +610,8 @@ prompt so every generic step receives relevant project/game laws without bespoke
 
 ### `labPipelineStore` — add-only hydration invariant + drift reconciliation
 
-`hydrateEntity` checks `if (!merged[step])` before adding each step. This means server data can
+`hydrateEntity` adopts a server row whole only where the local record holds no content (absent,
+or a failure marker — `stepRecord.contentOf`; the marker's `error` is kept). This means server data can
 backfill steps a new browser session has not produced yet, but a locally-produced step is never
 silently overwritten by a stale server record. This is intentional — **the add-only default protects
 offline-produced work**.
@@ -660,12 +668,13 @@ are explicit (and pinned by `labPipelineStore.refresh.test.ts`):
 
 | local | server | result |
 |-------|--------|--------|
-| absent | present | adopt |
+| absent, or a failure marker (no content) | present | adopt (a marker's `error`/`errorAt` kept) |
 | present, identical | present | `unchanged` (only the provenance stamp refreshes) |
 | present, holds work the server has not got (`syncError`, or a produce strictly newer than the row) | present | **kept** — a refresh never overwrites unsaved produce output |
 | present, otherwise different | present | adopt (local `data.genHistory` preserved, as `adoptServer`) |
 | present, provably server-derived | absent | **removed** — a step deleted server-side stops reading green forever |
 | present, local-only work | absent | kept + stamped `SERVER_MISSING_REASON`, so the existing sync-error banner/badge/**Retry** (which re-POSTs it) becomes the recovery path |
+| failure marker only (no content) | absent | left as is, counted `unchanged` — an empty failure is not unsaved work |
 
 "Provably server-derived" is `LabStepArtifact.serverSeen` — the `at` of the newest server row the step
 has been reconciled against, written by `hydrateEntity`/`adoptServer`/`refreshEntity`. No timestamp
