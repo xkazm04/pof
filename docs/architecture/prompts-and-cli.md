@@ -416,9 +416,17 @@ An `ability_specs` row carries **all five** GAS Blueprint editor slices —
 `relationships` / `loadout` columns that feed `AttributeSet.h` and
 `GameplayTags.h` codegen — so an entity switch or reload restores the whole
 editor, not two of its five panels. Legacy rows read those three back as
-`undefined` and the editor keeps its own seed. `upsertSpec` writes every slice
-plus `provenance` but deliberately **never** the `codegen` column: that audit
-trail is owned solely by the codegen callback, so a Save/Adopt cannot clobber it.
+`undefined` and the editor keeps its own seed. A POST is a **slice-merge**, not
+a row replace: `upsertSpec` reads the row and applies `mergeSpecWrite`
+(`@/lib/ability/spec`, inside one `db.transaction`) — `effects` / `tagRules`
+replace, and each of `attributes` / `relationships` / `loadout` / `provenance`
+is **kept when the key is absent**, replaced when named, and cleared only by an
+explicit `null` (the route preserves absent vs `null`). So forge Adopt (no
+editor slices) and blueprint Save (no provenance) never destroy what they did
+not send, and the `draft-ability-spec` callback clears the forge provenance via
+`provenance: null` in its staticFields. `upsertSpec` deliberately **never**
+writes the `codegen` column: that audit trail is owned solely by the codegen
+callback, so a Save/Adopt cannot clobber it.
 
 **One tag dialect.** UE5 spells every gameplay tag twice — a C++ identifier
 (`Ability_Fire_Fireball`) and a tag string (`Ability.Fire.Fireball`). The app
