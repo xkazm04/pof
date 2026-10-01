@@ -9,7 +9,7 @@
  * Reads the PNGs on the same machine, like the visual route. Standard { success, data } envelope.
  */
 import { NextRequest } from 'next/server';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { critiqueAnimation, type VisionImage } from '@/lib/anim-critique/critique';
@@ -38,6 +38,13 @@ export async function POST(request: NextRequest) {
      * a caller assert a `pass` no measurement produced.
      */
     loopMarkers?: string;
+    /**
+     * Tier-1 from the CLIP: a local `.npz` motion archive (same local-path policy as
+     * `frameDir`/`framePaths`). The route reads its bytes and measures loop closure
+     * in-process, so the verdict is bound to the clip's sha256 and needs no pasted transcript.
+     * Wins over `loopMarkers` when both are sent.
+     */
+    motionPath?: string;
     /** 'oneshot' for a clip never meant to loop; it is graded `n/a`, never `pass`. */
     loopIntent?: string;
   };
@@ -50,6 +57,22 @@ export async function POST(request: NextRequest) {
   const { name, intent, frameDir, framePaths, durationSeconds, model } = body;
   if (!name || !intent) {
     return apiError('Missing "name" or "intent"', 400);
+  }
+
+  // The clip is read BEFORE anything else can reach for an eye: a bad path is the caller's
+  // error (400/404), never a silent fall-through to the paid tier with Tier-1 `not-run`.
+  let clip: { path: string; bytes: Uint8Array } | undefined;
+  if (body.motionPath !== undefined) {
+    const motionPath = body.motionPath;
+    if (typeof motionPath !== 'string' || !motionPath.toLowerCase().endsWith('.npz')) {
+      return apiError('"motionPath" must be a local .npz motion archive', 400);
+    }
+    if (!existsSync(motionPath)) return apiError(`motionPath not found: ${motionPath}`, 404);
+    try {
+      clip = { path: motionPath, bytes: readFileSync(motionPath) };
+    } catch (e) {
+      return apiError(`motionPath could not be read: ${motionPath} (${e instanceof Error ? e.message : 'unknown'})`, 400);
+    }
   }
 
   // Resolve the ordered filmstrip from explicit paths or a directory, and REPORT the
@@ -138,10 +161,10 @@ export async function POST(request: NextRequest) {
     },
     {
       callVision,
-      ...(typeof body.loopMarkers === 'string'
+      ...(clip || typeof body.loopMarkers === 'string'
         ? {
             tier1: {
-              markers: body.loopMarkers,
+              ...(clip ? { clip } : { markers: body.loopMarkers }),
               intent: (body.loopIntent === 'oneshot' ? 'oneshot' : 'loop') as LoopIntent,
             },
           }
@@ -173,8 +196,9 @@ export async function POST(request: NextRequest) {
   // attribution), and `provenance` is the new, routed half: which EYE the plan reached and
   // every eye that dropped out first. A judgement whose author is unrecorded is not evidence.
   // The Tier-2 card stays exactly where it was (flat), with the Tier-1 integrity verdict
-  // beside it. `tier1.status === 'not-run'` when the caller supplied no markers — an omitted
-  // gate reads as a passed one, so it is stated rather than dropped.
+  // beside it. `tier1.status === 'not-run'` when the caller supplied neither `motionPath` nor
+  // markers — an omitted gate reads as a passed one, so it is stated rather than dropped — and
+  // `tier1.source` says whether the verdict was measured from the clip or pasted by the caller.
   return apiSuccess({
     ...result.card,
     frames,
