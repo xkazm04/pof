@@ -439,6 +439,16 @@ The Models Asset Inventory tab (`models/AssetInventory/`) scans Content/ through
 - UI: DependencyGraph draws declared edges solid and guesses dashed, with a per-asset legend ("n UE-declared · m guessed from names"). Without a manifest it says every edge is a guess. AssetCard shows a `UE` / `not in UE manifest` badge, the summary bar splits the edge count by provenance, and BridgeManifestCard lists "Missing on disk (n)". A guess is never labelled declared. The route and its exported types are unchanged (the asset-code oracle reads them).
 - Tests: `src/__tests__/lib/asset-inventory/declared-edges.test.ts` (the design doc's example manifest: 10 declared edges, 1 unresolved) and `src/__tests__/components/content/useAssetInventory.test.tsx` (envelope, provenance, reconcile filter, render). `useManifest` is stubbed at the hook.
 
+## Weapon throughput: one law, canon crit and armour
+
+`src/lib/combat/weapon-throughput.ts` is the one weapon-DPS law. `parseWeaponStats(w)` is the only parser of a weapon row's display strings (`'8-14'`, `'1.4s'`, `'5%'`) and returns `Result<WeaponStats>`: a malformed field is an `err` naming it (`baseDamage: expected "lo-hi", got "12"`), never NaN. `expectedWeaponHit` puts the damage midpoint in one Physical bucket and resolves it through the canon kernel's `computeHit` twice (non-crit, forced crit), weighed by the crit chance clamped to `CRIT_CHANCE_CAP`. So the ×2.5 crit, the 95% cap and the armour soft-cap are read from `canon-kernel.ts`, never restated. `dps = expectedHit / interval`.
+
+- Options: `attributes: { str, dex }` applies `ATTRIBUTE_WEAPON_LAW` (+2 damage per STR over 10; −0.02 s per DEX over 10, floored at 0.3 s; +1% crit per 2 DEX over 10). `armour` is the target's armour rating on canon's curve (Titan Warhammer 18.82 → 17.55 DPS at armour 15). A target-aware readout (a weapon-vs-enemy matchup) passes `armour`; it does not write a fourth formula.
+- `weaponDps(w, opts)` is the number (0 for a malformed row; `weaponThroughput` carries the reason). `weaponRoster(weapons, opts)` returns the rows sorted by DPS, category `groups` (avg/max, in `categoryOrder`), `best`, `meanDps`, `globalMax` and the `invalid` rows with their reasons, excluded from every figure. `WEAPON_ROSTER` (`sub_combat/_shared/data-metrics.ts`) is the no-target, no-attribute roster.
+- Readers: the Combat Metrics tab (compare rows, the DPS Calculator's top 6 with their attack interval, `GroupedDpsBarChart`, `CumulativeDamageSvg`, `StatInfluencePanel`) and the Feature Map tiles (`DpsMetric`, `EffectivenessMetric`, `StatsMetric`). Soulreaper reads 38 DPS on every one of them. The hand-typed `DPS_STRATEGIES` / `DPS_MAX` table is gone. Related Combos keep `COMBO_SEQUENCES`' authored DPS, labelled authored and scaled to the shown combos.
+- Not the combo scheduler: a weapon's basic attack has no cooldown or chain, and `combos/schedule.ts` has no crit term, so the weapon law shares the kernel (`computeHit` + canon `Defense`), not the scheduler.
+- Tests: `src/__tests__/lib/combat/weapon-throughput.test.ts`, and `src/__tests__/components/sub_combat/combat-metrics-agreement.test.tsx`, whose source guard fails on `parseDamageMidpoint(` / `parseFloat(` / `parseInt(` or a private `weaponDps` / `computeDps` under `sub_combat/metrics/`.
+
 ---
 
 ## Coding conventions
