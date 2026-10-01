@@ -2,20 +2,103 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import {
-  STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_STALE,
+  STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_STALE, MODULE_COLORS,
   ACCENT_VIOLET, OPACITY_10, OPACITY_30,
   withOpacity, OPACITY_25, OPACITY_20,
 } from '@/lib/chart-colors';
 import { BlueprintPanel } from '@/components/modules/core-engine/unique-tabs/_design';
-import type { CalcInputs } from './types';
-import { DEFAULT_CALC, fmtNum } from './types';
+import {
+  DEFAULT_UE_EXEC_INPUTS, UE_EXECUTION_STEPS, UE_EXEC_PHASE_LABELS,
+  compareWithCanon, fmtExec,
+  type CanonComparison, type ExecDivergence, type UeExecInputs, type UeExecPhase, type UeExecStep, type UeExecStepCtx,
+} from '@/lib/combat/ue-damage-execution';
 import { CalcInput, ExecPhaseHeader, ExecPropRow } from './ExecComponents';
-import { EXEC_SNIPPETS } from './exec-snippets';
-import { ExecAttributePhase } from './ExecAttributePhase';
+
+const PHASE_COLOR: Record<UeExecPhase, string> = {
+  invuln: STATUS_WARNING,
+  capture: MODULE_COLORS.core,
+  setbycaller: ACCENT_VIOLET,
+  formula: STATUS_ERROR,
+  output: STATUS_SUCCESS,
+};
+
+const DIVERGENCE_LABEL: Record<ExecDivergence, string> = {
+  'armour-curve': 'canon armour soft-caps against hit size: armour / (armour + 5 x hit)',
+  'crit-cap': 'canon caps crit chance at 95%',
+};
+
+const MOD_OP_STYLE = {
+  Override: { backgroundColor: STATUS_STALE + OPACITY_10, color: ACCENT_VIOLET, border: `1px solid ${STATUS_STALE}${OPACITY_30}` },
+  Additive: { backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` },
+} as const;
+
+function valueStyle(s: UeExecStep, ctx: UeExecStepCtx): React.CSSProperties | undefined {
+  if (s.tone === 'retired') return { color: STATUS_WARNING };
+  if (s.tone === 'final') return { color: STATUS_ERROR };
+  if (s.tone === 'crit') return { color: ctx.result.isCrit ? STATUS_SUCCESS : STATUS_ERROR };
+  return undefined;
+}
+
+/** One generic row: every step is declared once, in UE_EXECUTION_STEPS. */
+function ExecStepRow({ s, even, ctx, calcActive, codeOpen, onToggleCode, onInput }: {
+  s: UeExecStep; even: boolean; ctx: UeExecStepCtx; calcActive: boolean; codeOpen: boolean;
+  onToggleCode: (id: string) => void; onInput: (key: keyof UeExecInputs, v: number) => void;
+}) {
+  const input = calcActive ? s.input : undefined;
+  return (
+    <div data-testid={`exec-row-${s.id}`}>
+      <ExecPropRow name={s.label} even={even} code={s.snippet} codeExpanded={codeOpen} onToggleCode={() => onToggleCode(s.id)}>
+        <div className="flex items-center gap-2">
+          {s.modOp && (
+            <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold" style={MOD_OP_STYLE[s.modOp]}>{s.modOp}</span>
+          )}
+          {input && (
+            <CalcInput value={ctx.inputs[input.key]} onChange={(v) => onInput(input.key, v)}
+              step={input.step} min={input.min} max={input.max} label={input.label} />
+          )}
+          {calcActive && s.expr && <span className="text-text-muted text-xs font-mono">{s.expr(ctx)}</span>}
+          {!(input && !s.expr) && (
+            <span className={`font-bold ${s.tone ? '' : 'text-text'} ${s.id === 'final' ? 'text-sm' : ''}`} style={valueStyle(s, ctx)}>
+              {s.value(ctx)}
+            </span>
+          )}
+          {s.note && (
+            <span className="text-xs font-mono uppercase tracking-[0.15em]"
+              style={{ color: s.tone === 'retired' ? STATUS_WARNING : 'var(--text-muted)' }}>{s.note}</span>
+          )}
+        </div>
+      </ExecPropRow>
+    </div>
+  );
+}
+
+/** Canon kernel for the same inputs, beside the shipped figure — the retired curve is never the verdict. */
+function CanonRow({ cmp }: { cmp: CanonComparison }) {
+  const sign = cmp.delta >= 0 ? '+' : '';
+  return (
+    <div data-testid="exec-canon-row" className="px-3 py-1.5 border-t border-border/20 text-xs font-mono"
+      style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}` }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-bold uppercase tracking-[0.15em]" style={{ color: STATUS_SUCCESS }}>Canon kernel (same inputs)</span>
+        <span className="flex items-center gap-2">
+          <span className="font-bold text-sm" style={{ color: STATUS_SUCCESS }}>{fmtExec(cmp.canon.total)}</span>
+          <span className="text-text-muted">
+            {sign}{fmtExec(cmp.delta)} ({sign}{cmp.deltaPct.toFixed(1)}%) vs shipped {fmtExec(cmp.shipped.finalDamage)}
+          </span>
+        </span>
+      </div>
+      {cmp.divergences.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-text-muted" aria-label="Where shipped C++ diverges from canon">
+          {cmp.divergences.map((d) => <li key={d}>{DIVERGENCE_LABEL[d]}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function ExecutionBreakdownPanel() {
   const [calcActive, setCalcActive] = useState(false);
-  const [inputs, setInputs] = useState<CalcInputs>(DEFAULT_CALC);
+  const [inputs, setInputs] = useState<UeExecInputs>(DEFAULT_UE_EXEC_INPUTS);
   const [expandedCode, setExpandedCode] = useState<Set<string>>(new Set());
 
   const toggleCode = useCallback((id: string) => {
@@ -26,24 +109,18 @@ export function ExecutionBreakdownPanel() {
     });
   }, []);
 
-  const upd = useCallback((key: keyof CalcInputs, v: number) => {
+  const upd = useCallback((key: keyof UeExecInputs, v: number) => {
     setInputs(prev => ({ ...prev, [key]: v }));
   }, []);
 
-  const c = useMemo(() => {
-    const rawDamage = inputs.baseDamage + inputs.attackPower * inputs.scaling;
-    const isCrit = inputs.critRoll < inputs.critChance;
-    const critMultiplier = isCrit ? (1 + inputs.critDamage) : 1;
-    const armorReduction = inputs.armor / (inputs.armor + 100);
-    const finalDamage = Math.max(rawDamage * critMultiplier * (1 - armorReduction), 0);
-    return { rawDamage, isCrit, critMultiplier, armorReduction, finalDamage };
-  }, [inputs]);
+  const cmp = useMemo(() => compareWithCanon(inputs), [inputs]);
+  const ctx: UeExecStepCtx = { inputs, result: cmp.shipped };
 
   return (
     <div data-testid="execution-breakdown-panel">
       <div className="flex items-center justify-between mb-2 gap-2">
         <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted leading-relaxed">
-          Step-by-step breakdown of{' '}
+          UE C++ as shipped (pre-canon armour curve):{' '}
           <code className="font-mono text-text">ARPGDamageExecution::Execute_Implementation</code>
         </p>
         <button onClick={() => setCalcActive(a => !a)}
@@ -65,122 +142,29 @@ export function ExecutionBreakdownPanel() {
           Calculator {calcActive ? 'ON' : 'OFF'}
         </button>
       </div>
+      <p className="text-xs font-mono text-text-muted mb-2 leading-relaxed">
+        Mirrors the documented formula. Open UE defect: AttackPower adds 0 in play today
+        (docs/superpowers/specs/2026-09-22-combat-attackpower-adds-zero.md).
+      </p>
 
       <BlueprintPanel className="overflow-hidden">
         <div data-testid="execution-steps">
-          <ExecPhaseHeader label="Invulnerability Check" color={STATUS_WARNING} />
-          <ExecPropRow name="State_Invulnerable" code={EXEC_SNIPPETS.invuln}
-            codeExpanded={expandedCode.has('invuln')} onToggleCode={() => toggleCode('invuln')}>
-            <span className="text-text-muted">{'→'} skip all damage</span>
-          </ExecPropRow>
-
-          <ExecAttributePhase
-            calcActive={calcActive} inputs={inputs} upd={upd}
-            expandedCode={expandedCode} toggleCode={toggleCode}
-          />
-
-          <ExecPhaseHeader label="2. SetByCaller Resolution" color={ACCENT_VIOLET} />
-          <ExecPropRow name="Data.Damage.Base" even code={EXEC_SNIPPETS.base}
-            codeExpanded={expandedCode.has('base')} onToggleCode={() => toggleCode('base')}>
-            <div className="flex items-center gap-2">
-              {calcActive
-                ? <CalcInput value={inputs.baseDamage} onChange={v => upd('baseDamage', v)} step={5} min={0} label="BaseDamage" />
-                : <span className="text-text">{fmtNum(inputs.baseDamage)}</span>}
-              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">(required)</span>
-            </div>
-          </ExecPropRow>
-          <ExecPropRow name="Data.Damage.Scaling" code={EXEC_SNIPPETS.scaling}
-            codeExpanded={expandedCode.has('scaling')} onToggleCode={() => toggleCode('scaling')}>
-            <div className="flex items-center gap-2">
-              {calcActive
-                ? <CalcInput value={inputs.scaling} onChange={v => upd('scaling', v)} step={0.1} min={0} label="Scaling" />
-                : <span className="text-text">{fmtNum(inputs.scaling)}</span>}
-              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">(default 1.0)</span>
-            </div>
-          </ExecPropRow>
-
-          <ExecPhaseHeader label="3. Damage Formula" color={STATUS_ERROR} />
-          <ExecPropRow name="Step 1 > RawDamage" even code={EXEC_SNIPPETS.raw}
-            codeExpanded={expandedCode.has('raw')} onToggleCode={() => toggleCode('raw')}>
-            <div className="flex items-center gap-1.5">
-              {calcActive && (
-                <span className="text-text-muted text-xs font-mono">
-                  {fmtNum(inputs.baseDamage)} + {fmtNum(inputs.attackPower)} x {fmtNum(inputs.scaling)} =
-                </span>
-              )}
-              <span className="font-bold text-text">{fmtNum(c.rawDamage)}</span>
-            </div>
-          </ExecPropRow>
-          <ExecPropRow name="Step 2 > CritRoll" code={EXEC_SNIPPETS.crit}
-            codeExpanded={expandedCode.has('crit')} onToggleCode={() => toggleCode('crit')}>
-            <div className="flex items-center gap-2">
-              {calcActive && (
-                <>
-                  <CalcInput value={inputs.critRoll} onChange={v => upd('critRoll', v)} step={0.05} min={0} max={1} label="CritRoll" />
-                  <span className="text-xs font-mono text-text-muted">{'<'} {fmtNum(inputs.critChance)}</span>
-                  <span className="text-xs font-mono font-bold" style={{ color: c.isCrit ? STATUS_SUCCESS : STATUS_ERROR }}>
-                    {c.isCrit ? 'CRIT' : 'miss'}
-                  </span>
-                </>
-              )}
-              <span className="font-bold text-text">x{fmtNum(c.critMultiplier)}</span>
-            </div>
-          </ExecPropRow>
-          <ExecPropRow name="Step 3 > ArmorReduction" even code={EXEC_SNIPPETS.ar}
-            codeExpanded={expandedCode.has('ar')} onToggleCode={() => toggleCode('ar')}>
-            <div className="flex items-center gap-1.5">
-              {calcActive && (
-                <span className="text-text-muted text-xs font-mono">
-                  {fmtNum(inputs.armor)} / ({fmtNum(inputs.armor)} + 100) =
-                </span>
-              )}
-              <span className="font-bold" style={{ color: STATUS_WARNING }}>
-                {(c.armorReduction * 100).toFixed(1)}% reduced
-              </span>
-            </div>
-          </ExecPropRow>
-          <ExecPropRow name="Step 4 > FinalDamage" code={EXEC_SNIPPETS.final}
-            codeExpanded={expandedCode.has('final')} onToggleCode={() => toggleCode('final')}>
-            <div className="flex items-center gap-1.5">
-              {calcActive && (
-                <span className="text-text-muted text-xs font-mono">
-                  {fmtNum(c.rawDamage)} x {fmtNum(c.critMultiplier)} x {(1 - c.armorReduction).toFixed(3)} =
-                </span>
-              )}
-              <span className="font-bold text-sm" style={{ color: STATUS_ERROR }}>
-                {fmtNum(c.finalDamage)}
-              </span>
-            </div>
-          </ExecPropRow>
-
-          <ExecPhaseHeader label="4. Meta Attribute Output" color={STATUS_SUCCESS} />
-          <ExecPropRow name="IncomingCrit" even code={EXEC_SNIPPETS.outcrit}
-            codeExpanded={expandedCode.has('outcrit')} onToggleCode={() => toggleCode('outcrit')}>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
-                style={{ backgroundColor: STATUS_STALE + OPACITY_10, color: ACCENT_VIOLET, border: `1px solid ${STATUS_STALE}${OPACITY_30}` }}>
-                Override
-              </span>
-              <span className="text-text font-bold">{c.isCrit ? '1.0' : '0.0'}</span>
-              <span className="text-xs font-mono font-bold" style={{ color: c.isCrit ? STATUS_SUCCESS : STATUS_ERROR }}>
-                ({c.isCrit ? 'crit' : 'no crit'})
-              </span>
-            </div>
-          </ExecPropRow>
-          <ExecPropRow name="IncomingDamage" code={EXEC_SNIPPETS.outdmg}
-            codeExpanded={expandedCode.has('outdmg')} onToggleCode={() => toggleCode('outdmg')}>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
-                style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` }}>
-                Additive
-              </span>
-              <span className="font-bold" style={{ color: STATUS_ERROR }}>{fmtNum(c.finalDamage)}</span>
-            </div>
-          </ExecPropRow>
+          {UE_EXECUTION_STEPS.map((s, i) => {
+            const prev = UE_EXECUTION_STEPS[i - 1];
+            const idxInPhase = UE_EXECUTION_STEPS.slice(0, i).filter((p) => p.phase === s.phase).length;
+            return (
+              <div key={s.id}>
+                {prev?.phase !== s.phase && <ExecPhaseHeader label={UE_EXEC_PHASE_LABELS[s.phase]} color={PHASE_COLOR[s.phase]} />}
+                <ExecStepRow s={s} even={s.phase !== 'invuln' && idxInPhase % 2 === 0} ctx={ctx} calcActive={calcActive}
+                  codeOpen={expandedCode.has(s.id)} onToggleCode={toggleCode} onInput={upd} />
+              </div>
+            );
+          })}
 
           <div className="px-3 py-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted border-t border-border/20">
             Output modifiers only applied when <code className="font-mono text-text">FinalDamage {'>'} 0</code>
           </div>
+          <CanonRow cmp={cmp} />
         </div>
       </BlueprintPanel>
     </div>

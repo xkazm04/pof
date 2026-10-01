@@ -90,6 +90,7 @@ const SECTIONS = {
     sub('Flow', 'sequences', 'Sequences', 'lanes'),
     g('Hits', 'traces', 'Traces', 'Sphere & capsule trace configs'),
     sub('Hits', 'stats', 'Stats', 'traces'),
+    g('Damage', 'damage-pipeline', 'Damage Pipeline', 'UE execution as shipped vs the canon kernel'),
     g('Polish', 'feedback-tuner', 'Feedback Tuner'),
     g('Metrics', 'dps', 'DPS', 'Per-ability DPS breakdown'),
     sub('Metrics', 'effectiveness', 'Effectiveness', 'dps'),

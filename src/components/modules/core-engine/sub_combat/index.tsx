@@ -18,6 +18,7 @@ import { MetricsTab } from './metrics/MetricsTab';
 import { renderCombatMetric } from './metrics';
 import { AttributeDefaultsTab } from './attributes/AttributeDefaultsTab';
 import { CombatChoreographyEditor } from './choreography';
+import { DamagePipelineDiagram } from './damage-pipeline';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { NarrativeBreadcrumb, CombatSubTabNav, getActiveSubtitle } from './CombatNav';
 
@@ -107,6 +108,11 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
             {activeTab === 'hits' && (
               <VisibleSection moduleId={moduleId} sectionId="traces">
                 <HitsTab />
+              </VisibleSection>
+            )}
+            {activeTab === 'damage' && (
+              <VisibleSection moduleId={moduleId} sectionId="damage-pipeline">
+                <DamagePipelineDiagram />
               </VisibleSection>
             )}
             {activeTab === 'metrics' && (
