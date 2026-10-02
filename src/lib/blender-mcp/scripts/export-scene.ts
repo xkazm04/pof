@@ -1,13 +1,13 @@
 import { py } from '@/lib/blender-mcp/escape';
+import { pyReceipt, pyStr } from '@/lib/blender-mcp/receipt';
 
 /**
- * The token the export script prints when Blender's own exporter reported
- * FINISHED. The UI keys off THIS, not off a bare transport OK: the bridge may
- * be on another machine, so PoF cannot stat the file, and a 200 from
+ * The export script ends in an `'export'` receipt carrying the path, printed only
+ * once Blender's own exporter reported FINISHED. The UI keys off THAT receipt
+ * (`readReceipt(result, 'export', { path })`), not off a bare transport OK: the
+ * bridge may be on another machine, so PoF cannot stat the file, and a 200 from
  * `/api/blender-mcp/execute` only means the addon accepted the script.
  */
-export const EXPORT_OK_MARKER = 'POF_EXPORT_FINISHED=';
-
 export function exportSceneScript(params: {
   outputPath: string;
   format: 'fbx' | 'gltf';
@@ -26,6 +26,6 @@ status = ${call}
 if 'FINISHED' not in status:
     raise RuntimeError("Blender's exporter returned " + str(status) + " instead of FINISHED")
 
-print("${EXPORT_OK_MARKER}${path}")
+${pyReceipt('export', { path: pyStr(params.outputPath), format: pyStr(params.format) })}
 `.trim();
 }

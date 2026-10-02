@@ -2,6 +2,7 @@ import type { Checker, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { CatalogPipeline } from '@/lib/catalog/stepSpec';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { ITEM_STEP_SPECS } from '@/components/layout-lab/steps/itemsSteps';
+import { itemsLabelOwner } from '@/components/layout-lab/itemsLabelOwner';
 
 /**
  * Per-pipeline `label → accept` index, built once per pipeline object and reused
@@ -27,19 +28,21 @@ function acceptIndexFor(pipeline: CatalogPipeline): Map<string, Checker> {
 }
 
 /**
- * Resolve the acceptance checker for a (catalog, step): a bespoke Items spec takes
- * precedence, and ANY step it does not define falls through to the registered `StepSpec`
- * pipeline of the same id.
+ * Resolve the acceptance checker for a (catalog, step) in the SERVER's order
+ * (`headless.serverCheckerFor`): the registered `StepSpec` pipeline owns every label it
+ * declares, and a bespoke Items spec grades only the labels the registry does not declare
+ * (`itemsLabelOwner`, the same owner that routes the step's component and its produce).
  *
- * The fallthrough is the point. Until 2026-08-19 the `items` branch returned `null` for
- * every label outside `ITEM_STEP_SPECS`, which is precedence AND a dead end: the 5
- * registry-only items labels (affix tier tables, base-type/GE wiring, DPS derivation,
- * material, 3D mesh) had no on-screen grader at all, so the 31 persisted rows they carry
- * could not be graded even once the lab started rendering them. Precedence never required
- * the dead end — bespoke still wins every shared label, byte-identically.
+ * Until 2026-09-29 this was bespoke-first — the opposite precedence — so the six labels both
+ * items specs declare had two graders: 15 of 36 live shared-label rows read differently in the
+ * lab than on the server. Mostly LOWER (a registry-shaped Tooltip the server passes read
+ * `pending`), but on bespoke-shaped data HIGHER (the unguarded bespoke Economy checker passed
+ * the exemplar stub `{power:102,…}` the server holds `pending`). The lab may only come DOWN to
+ * the server's reading, never up, so a registry-owned label has NO bespoke fallback. The
+ * registry-only fallthrough (2026-08-19: 5 labels, 31 rows that had no on-screen grader) stays.
  */
 export function resolveAccept(catalogId: string, step: string): Checker | null {
-  const spec = catalogId === 'items' ? ITEM_STEP_SPECS[step] : undefined;
+  const spec = catalogId === 'items' && itemsLabelOwner(step) === 'bespoke' ? ITEM_STEP_SPECS[step] : undefined;
   if (spec) {
     // ItemStepSpec.accept now shares the Checker signature (data, ctx?); normalize its
     // optional tier/reason to the AcceptanceResult shape the rollup expects, forwarding

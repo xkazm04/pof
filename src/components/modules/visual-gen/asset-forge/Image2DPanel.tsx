@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Image as ImageIcon, Loader2, Send } from 'lucide-react';
+import { Box, Image as ImageIcon, Loader2, Send } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useCRUD } from '@/hooks/useCRUD';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { StatusTag } from '@/components/ui/StatusTag';
 import type { ImageProviderCapability, TwoDGenerateResult } from '@/lib/visual-gen/image-providers';
+import type { StyleOutcome } from '@/lib/visual-gen/style-apply';
 import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
+import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
+import { stageImage2DForMesh } from '@/components/modules/visual-gen/asset-forge/referenceHandoff';
 
 /**
  * The app's 2D generation front — the first surface anywhere in PoF that turns a
@@ -21,6 +24,11 @@ import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
  *
  * Type-only imports from `image-providers` on purpose: the orchestration it also
  * exports reaches for `node:fs` and the provider SDKs and must not enter this bundle.
+ *
+ * Project style: with the forge's switch on and an active Style DNA, the submit carries
+ * `applyStyleDna: true` and the SERVER resolves and appends the style (style-apply.ts) — the
+ * prompt is sent raw, never pre-styled here. Off (or no style), the body is exactly
+ * `{ prompt, providerId }`. What the server applied, and any chip its caps dropped, is shown.
  */
 interface CapabilityPayload {
   providers: ImageProviderCapability[];
@@ -32,8 +40,15 @@ export function Image2DPanel() {
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [result, setResult] = useState<TwoDGenerateResult | null>(null);
+  const [result, setResult] = useState<(TwoDGenerateResult & Partial<StyleOutcome>) | null>(null);
+  // The prompt that produced `result` (the textarea may be edited after), and the 2D -> 3D
+  // handoff's own state: staging is a free GET of the served file, never a paid call.
+  const [resultPrompt, setResultPrompt] = useState('');
+  const [staging, setStaging] = useState(false);
+  const [handoffError, setHandoffError] = useState<string | null>(null);
   const isMounted = useIsMounted();
+  const activeStyleDna = useForgeStore((s) => s.activeStyleDna);
+  const styled = useForgeStore((s) => s.applyStyleDna) && activeStyleDna !== null;
 
   // The shared fetch hook, not a hand-rolled mount effect: it owns the loading /
   // error states and the mounted guard (and keeps this off the
@@ -79,16 +94,31 @@ export function Image2DPanel() {
     setGenerating(true);
     setGenError(null);
     setResult(null);
-    const res = await tryApiFetch<TwoDGenerateResult>('/api/visual-gen/generate-2d', {
+    setHandoffError(null);
+    const submitted = prompt.trim();
+    const res = await tryApiFetch<TwoDGenerateResult & Partial<StyleOutcome>>('/api/visual-gen/generate-2d', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt.trim(), providerId: selected.id }),
+      body: JSON.stringify({ prompt: submitted, providerId: selected.id, ...(styled ? { applyStyleDna: true } : {}) }),
     });
     if (!isMounted()) return;
     setGenerating(false);
     // The route's envelope carries the PROVIDER's own reason — surfaced verbatim.
     if (!res.ok) { setGenError(res.error); return; }
     setResult(res.data);
+    setResultPrompt(submitted);
+  };
+
+  /** "Make 3D from this image": stage this exact image as the image-to-3D reference and
+   *  open the Generate tab (which unmounts this panel). Nothing is paid here. */
+  const makeMesh = async () => {
+    if (!result?.url || !result.name || staging) return;
+    setStaging(true);
+    setHandoffError(null);
+    const staged = await stageImage2DForMesh({ url: result.url, name: result.name }, resultPrompt);
+    if (!isMounted()) return;
+    setStaging(false);
+    if (!staged.ok) setHandoffError(`Could not stage this image for 3D: ${staged.error}`);
   };
 
   return (
@@ -150,6 +180,11 @@ export function Image2DPanel() {
           className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-text
                      placeholder:text-text-muted focus:outline-none focus:border-[var(--visual-gen)]"
         />
+        {styled && (
+          <p className="text-2xs text-text-muted mt-1" data-testid="image2d-style-note">
+            Project style “{activeStyleDna?.name}” is appended on the server.
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -181,7 +216,7 @@ export function Image2DPanel() {
           {/* eslint-disable-next-line @next/next/no-img-element -- served by /api/visual-gen/image/:name */}
           <img
             src={result.url}
-            alt={`generated from: ${prompt.trim()}`}
+            alt={`generated from: ${resultPrompt}`}
             data-testid="image2d-image"
             className="w-full rounded-lg border border-border"
           />
@@ -191,6 +226,29 @@ export function Image2DPanel() {
             {result.model ? ` · ${result.model}` : ''} · saved as generated/images/{result.name} · served at{' '}
             {result.url}
           </p>
+          <button
+            type="button"
+            onClick={() => void makeMesh()}
+            disabled={staging || !result.name}
+            data-testid="image2d-make-3d"
+            title="Opens the Generate tab in Image to 3D with this image staged. Nothing is generated until you click Generate there."
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border
+                       border-[var(--visual-gen)] text-[var(--visual-gen)] hover:bg-[var(--visual-gen)]/10 transition-colors
+                       disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {staging ? <Loader2 size={12} className="animate-spin" /> : <Box size={12} />}
+            Make 3D from this image
+          </button>
+          {handoffError && (
+            <p className="text-2xs text-amber-400" data-testid="image2d-handoff-error">{handoffError}</p>
+          )}
+          {(result.styleDnaApplied || result.styleDnaWithheld) && (
+            <div className="text-2xs" data-testid="image2d-style-outcome">
+              {result.styleDnaApplied && <p className="text-text-muted">Styled with “{result.styleDnaApplied}”.</p>}
+              {result.styleDnaWithheld && <p className="text-amber-400">{result.styleDnaWithheld}</p>}
+              {result.styleDnaDropped?.map((d) => <p key={d} className="text-amber-400">{d}</p>)}
+            </div>
+          )}
         </div>
       )}
     </div>

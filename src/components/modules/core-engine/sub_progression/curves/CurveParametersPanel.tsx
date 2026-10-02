@@ -7,7 +7,8 @@ import { STATUS_INFO,
 } from '@/lib/chart-colors';
 import { RangeSlider } from '@/components/ui/RangeSlider';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { ACCENT, calculateXpForLevel, BASE_XP_RANGE, CURVE_EXP_RANGE } from '../_shared/data';
+import { ACCENT, calculateXpForLevel, BASE_XP_RANGE, CURVE_EXP_RANGE, MAX_LEVEL } from '../_shared/data';
+import { curveTotals } from '../_shared/curveModel';
 
 /* -- Curve Parameters Control Panel --------------------------------------- */
 
@@ -17,6 +18,8 @@ interface CurveParametersPanelProps {
   compareMode: boolean;
   snapshotBaseXp: number;
   snapshotCurveExp: number;
+  /** A pace fit is previewed: Compare/Exit is locked until Apply or Revert. */
+  previewing: boolean;
   onBaseXpChange: (v: number) => void;
   onCurveExpChange: (v: number) => void;
   onToggleCompare: () => void;
@@ -24,7 +27,7 @@ interface CurveParametersPanelProps {
 
 export function CurveParametersPanel({
   baseXp, curveExp, compareMode,
-  snapshotBaseXp, snapshotCurveExp,
+  snapshotBaseXp, snapshotCurveExp, previewing,
   onBaseXpChange, onCurveExpChange, onToggleCompare,
 }: CurveParametersPanelProps) {
   return (
@@ -33,7 +36,9 @@ export function CurveParametersPanel({
         <SectionHeader label="Curve Parameters" icon={SlidersHorizontal} color={ACCENT} />
         <button
           onClick={onToggleCompare}
-          className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] font-bold px-2.5 py-1 rounded-full border transition-all duration-200"
+          disabled={previewing}
+          title={previewing ? 'Apply or Revert the previewed fit first' : undefined}
+          className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] font-bold px-2.5 py-1 rounded-full border transition-all duration-200 disabled:opacity-40"
           style={{
             color: compareMode ? STATUS_INFO : 'var(--text-muted)',
             borderColor: compareMode ? `${withOpacity(STATUS_INFO, OPACITY_25)}` : 'var(--border)',
@@ -95,6 +100,10 @@ export function CurveParametersPanel({
               {Math.floor(calculateXpForLevel(11, baseXp, curveExp) - calculateXpForLevel(10, baseXp, curveExp)).toLocaleString()} XP
             </span>
           </div>
+          <div className="flex justify-between items-center text-xs mt-1">
+            <span className="text-text">Hours to L{MAX_LEVEL}</span>
+            <span className="font-mono" style={{ color: ACCENT }}>{curveTotals(baseXp, curveExp).hoursToMax.toFixed(2)}h</span>
+          </div>
         </div>
 
         <AnimatePresence>
@@ -107,7 +116,7 @@ export function CurveParametersPanel({
             >
               <div className="flex items-center gap-2 mb-2">
                 <Camera className="w-3 h-3" style={{ color: STATUS_INFO }} />
-                <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>Snapshot</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>{previewing ? 'Current (pre-fit)' : 'Snapshot'}</span>
               </div>
               <div className="flex justify-between items-center text-xs mb-1">
                 <span className="text-text-muted">Base XP</span>

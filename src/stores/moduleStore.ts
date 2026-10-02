@@ -13,6 +13,7 @@ import type { ScanFinding } from '@/types/scan';
 import {
   stampCompletion,
   pruneLedger,
+  mergeLedgers,
   type CompletionLedger,
 } from '@/lib/roadmap/completion-ledger';
 
@@ -274,6 +275,7 @@ export const useModuleStore = create<ModuleState>()(
         if (!projectPath) return;
         const {
           checklistProgress,
+          checklistCompletedAt,
           moduleHealth,
           checklistVerification,
           moduleHistory,
@@ -304,6 +306,7 @@ export const useModuleStore = create<ModuleState>()(
             body: JSON.stringify({
               projectPath,
               checklistProgress,
+              checklistCompletedAt,
               moduleHealth,
               checklistVerification,
               moduleHistory,
@@ -327,21 +330,27 @@ export const useModuleStore = create<ModuleState>()(
         try {
           const data = await apiFetch<{
             checklistProgress: Record<string, Record<string, boolean>>;
+            checklistCompletedAt?: CompletionLedger;
             moduleHealth: Record<string, ModuleHealth>;
             checklistVerification: Record<string, Record<string, VerificationInfo>>;
             moduleHistory: Record<string, TaskHistoryEntry[]>;
           }>(`/api/project-progress?path=${encodeURIComponent(projectPath)}`);
 
           const checklistProgress = data.checklistProgress ?? {};
-          // The ledger is client-held (the server row does not carry it yet). It
-          // may only date THIS project's marks: kept — minus items the loaded
-          // checklist says are not done — when the memory already belonged to
-          // this project, dropped when it belonged to another.
+          // The ledger is held by the project_progress row (a project switch clears
+          // the store, so a browser-only copy was erased on every switch). The
+          // server's stamps are adopted; local stamps may only date THIS project's
+          // marks, so they join (earliest wins) only when the memory already
+          // belonged to this project. Either way the result is pruned to the items
+          // the loaded checklist says are done.
           const { progressProjectPath: owner, checklistCompletedAt } = get();
+          const serverLedger = data.checklistCompletedAt ?? {};
           set({
             checklistProgress,
-            checklistCompletedAt:
-              owner === projectPath ? pruneLedger(checklistCompletedAt, checklistProgress) : {},
+            checklistCompletedAt: pruneLedger(
+              owner === projectPath ? mergeLedgers(serverLedger, checklistCompletedAt) : serverLedger,
+              checklistProgress,
+            ),
             moduleHealth: data.moduleHealth ?? {},
             checklistVerification: data.checklistVerification ?? {},
             moduleHistory: data.moduleHistory ?? {},

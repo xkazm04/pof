@@ -258,41 +258,10 @@ export function aggregateWarnings(diagnostics: BuildDiagnostic[]): WarningGroup[
 // ─── Fix prompt builder ──────────────────────────────────────────────────────
 
 /**
- * Build a targeted fix prompt from a compilation error.
+ * Build a targeted fix prompt from a compilation error. One builder: the text
+ * lives in buildLedger.buildFixPrompt (also what ErrorCard's Fix sends).
  */
-export function buildFixPromptFromError(diagnostic: BuildDiagnostic): string {
-  const fileRef = diagnostic.file
-    ? `in file ${diagnostic.file}${diagnostic.line ? ` at line ${diagnostic.line}` : ''}`
-    : '';
-
-  const codeRef = diagnostic.code ? ` (${diagnostic.code})` : '';
-
-  let prompt = `Fix this compilation ${diagnostic.severity}${codeRef} ${fileRef}:
-
-${diagnostic.message}`;
-
-  if (diagnostic.file) {
-    prompt += `
-
-Start by reading ${diagnostic.file} to understand the context around ${diagnostic.line ? `line ${diagnostic.line}` : 'the issue'}.`;
-  }
-
-  if (diagnostic.category === 'linker') {
-    prompt += `
-
-This is a linker error. Check for:
-- Missing #include directives
-- Missing module dependencies in Build.cs
-- Unimplemented declared functions
-- Incorrect UCLASS/UFUNCTION signatures`;
-  }
-
-  prompt += `
-
-After fixing, verify the build compiles successfully.`;
-
-  return prompt;
-}
+export { buildFixPrompt as buildFixPromptFromError } from '@/components/cli/buildLedger';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

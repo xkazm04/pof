@@ -7,7 +7,7 @@ import { CompactTerminal } from './CompactTerminal';
 import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
 import { useCLIPanelStore, type DispatchRecord, type PendingCallback } from './store/cliPanelStore';
 import { bindSessionRun } from './store/sessionRun';
-import { resubmitPendingCallbacks } from '@/components/cli/suggestionIntents';
+import { resubmitPendingCallbacks, tabJumpTarget } from '@/components/cli/suggestionIntents';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
@@ -35,6 +35,12 @@ export function InlineTerminal({
   const runFacts = useMemo(() => ({
     onDispatch: (dispatch: DispatchRecord) => useCLIPanelStore.getState().recordDispatch(sessionId, dispatch),
     onCallbacksUnresolved: (markers: PendingCallback[]) => useCLIPanelStore.getState().setPendingCallbacks(sessionId, markers),
+    // The server run this session owns — persisted, so a reload re-attaches to it
+    // (CompactTerminal); endRun clears it. Only a run still open may claim it.
+    onExecutionStarted: (executionId: string) => {
+      const store = useCLIPanelStore.getState();
+      if (store.sessions[sessionId]?.isRunning) store.setCurrentExecution(sessionId, executionId, null);
+    },
   }), [sessionId]);
   const height = useCLIPanelStore((s) => s.inlineTerminalHeight);
   const setInlineTerminalHeight = useCLIPanelStore((s) => s.setInlineTerminalHeight);
@@ -88,13 +94,10 @@ export function InlineTerminal({
         void resubmitPendingCallbacks(sessionId);
         break;
       case 'navigate': {
-        const nav = useNavigationStore.getState();
-        if (action.moduleId && nav.activeSubModule !== action.moduleId) nav.navigateToModule(action.moduleId);
-        window.dispatchEvent(
-          new CustomEvent('pof-navigate-tab', {
-            detail: { tab: action.tab, moduleId: action.moduleId },
-          })
-        );
+        // Addressed, not broadcast: the module + its tab land in ONE store write,
+        // so the target pane reads it even if it mounts after this call.
+        const target = tabJumpTarget(action, useCLIPanelStore.getState().sessions[sessionId]?.moduleId);
+        if (target) useNavigationStore.getState().navigateToModule(target.moduleId, { tab: target.tab });
         break;
       }
     }
@@ -179,6 +182,7 @@ export function InlineTerminal({
           onTaskComplete={run.onTaskComplete}
           onDispatch={runFacts.onDispatch}
           onCallbacksUnresolved={runFacts.onCallbacksUnresolved}
+          onExecutionStarted={runFacts.onExecutionStarted}
           visible={visible}
         />
       </div>

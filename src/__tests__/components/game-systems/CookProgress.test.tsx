@@ -53,18 +53,32 @@ import {
 
 const REQUEST = { profileId: 'p1', projectPath: 'C:\\PoF', projectName: 'PoF', ueVersion: '5.7.0' };
 
-/** Build a fetch mock whose response body streams the given cook events as SSE. */
-function streamingFetch(events: object[]) {
+/**
+ * Build a fetch mock whose response body streams the given cook events as SSE.
+ *
+ * By default the stream CLOSES after the last event: a finished (or broken) cook.
+ * `keepOpen` models a cook that is STILL RUNNING: the events arrive and the stream
+ * stays open, as the server's does until the job settles. Since cb9cdbac a stream
+ * that closes without a terminal event settles the cook as failed, so a case that
+ * asserts the running state must use `keepOpen`: a closed stream is not a running
+ * cook. The open stream errors when the hook aborts its fetch (unmount).
+ */
+function streamingFetch(events: object[], opts: { keepOpen?: boolean } = {}) {
   const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const ev of events) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`));
-      }
-      controller.close();
-    },
+  return vi.fn(async (_url: unknown, init?: RequestInit) => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const ev of events) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`));
+        }
+        if (!opts.keepOpen) { controller.close(); return; }
+        init?.signal?.addEventListener('abort', () => {
+          try { controller.error(new DOMException('aborted', 'AbortError')); } catch { /* closed */ }
+        });
+      },
+    });
+    return { ok: true, status: 200, body: stream };
   });
-  return vi.fn().mockResolvedValue({ ok: true, status: 200, body: stream });
 }
 
 beforeEach(() => {
@@ -302,7 +316,7 @@ describe('CookProgress — structured console', () => {
     globalThis.fetch = streamingFetch([
       { type: 'phase', phase: 'cook' },
       { type: 'progress', percent: 45 },
-    ]) as unknown as typeof fetch;
+    ], { keepOpen: true }) as unknown as typeof fetch;
 
     render(<CookProgress request={REQUEST} />);
 
@@ -326,7 +340,7 @@ describe('CookProgress — structured console', () => {
   });
 
   it('shimmers the active phase label while running and stops once finished', async () => {
-    globalThis.fetch = streamingFetch([{ type: 'phase', phase: 'cook' }]) as unknown as typeof fetch;
+    globalThis.fetch = streamingFetch([{ type: 'phase', phase: 'cook' }], { keepOpen: true }) as unknown as typeof fetch;
     const { unmount } = render(<CookProgress request={REQUEST} />);
 
     const phaseEl = await screen.findByTestId('pof-cook-progress-phase');
@@ -341,5 +355,130 @@ describe('CookProgress — structured console', () => {
 
     await screen.findByTestId('pof-cook-progress-result');
     expect(screen.getByTestId('pof-cook-progress-phase').className).not.toContain('cook-phase-shimmer');
+  });
+});
+
+// ── Reattach: the cook is a server job the console SUBSCRIBES to ─────────────────
+
+const JOB = {
+  jobId: 'j1', projectPath: 'C:\PoF', profileId: 'p1', kind: 'nightly',
+  startedAt: Date.now() - 5000, lastSeq: 1, settled: false, finishedAt: null, outcome: null,
+};
+
+const jsonResponse = (data: unknown) =>
+  new Response(JSON.stringify({ success: true, data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+/** An SSE response the test drives: push events, then close (or leave open). */
+function controlledStream() {
+  const encoder = new TextEncoder();
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const body = new ReadableStream<Uint8Array>({ start(c) { controller = c; } });
+  return {
+    response: new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
+    send: (ev: object) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`)),
+    close: () => controller.close(),
+  };
+}
+
+/** Route fetch by URL substring; each route answers once per call (a factory). */
+function routedFetch(routes: Array<[string, () => Response]>) {
+  return vi.fn(async (url: string | URL) => {
+    const u = String(url);
+    const hit = routes.find(([frag]) => u.includes(frag));
+    if (!hit) throw new Error(`unrouted fetch ${u}`);
+    return hit[1]();
+  });
+}
+
+describe('CookProgress — reattaches to a running cook job', () => {
+  it('with no request, attaches to the open project\'s active job from seq 0 and shows its console', async () => {
+    const s = controlledStream();
+    const fetchMock = routedFetch([
+      ['cook-jobs?projectPath=', () => jsonResponse({ job: JOB })],
+      ['cook-jobs?attach=j1&from=0', () => s.response],
+    ]);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<CookProgress request={null} projectPath="C:\PoF" />);
+    s.send({ type: 'phase', phase: 'cook', t: 0, seq: 0 });
+    s.send({ type: 'log', line: 'LogCook: Display: cooking package A', t: 1000, seq: 1 });
+
+    await waitFor(() => expect(screen.getByTestId('pof-cook-progress-phase').textContent).toBe('Cooking'));
+    await waitFor(() => expect(screen.getByTestId('pof-cook-progress-log').querySelectorAll('[data-severity]').length).toBe(1));
+    expect(screen.getByTestId('pof-cook-progress-attached').textContent).toMatch(/nightly/i);
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes('attach=j1') && u.includes('from=0'))).toBe(true);
+    expect(urls.some((u) => u.includes('/api/packaging/execute'))).toBe(false);
+  });
+
+  it('renders nothing when the open project has no active job', async () => {
+    const fetchMock = routedFetch([['cook-jobs?projectPath=', () => jsonResponse({ job: null })]]);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    render(<CookProgress request={null} projectPath="C:\PoF" />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('pof-cook-progress')).toBeNull();
+  });
+
+  it('an attach stream that closes with no terminal event re-queries the job and resumes, never guessing', async () => {
+    const first = controlledStream();
+    const second = controlledStream();
+    const fetchMock = routedFetch([
+      ['cook-jobs?projectPath=', () => jsonResponse({ job: JOB })],
+      ['cook-jobs?attach=j1&from=0', () => first.response],
+      ['cook-jobs?jobId=j1', () => jsonResponse({ job: { ...JOB, lastSeq: 3 } })],
+      ['cook-jobs?attach=j1&from=2', () => second.response],
+    ]);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const onComplete = vi.fn();
+
+    render(<CookProgress request={null} projectPath="C:\PoF" onComplete={onComplete} />);
+    first.send({ type: 'phase', phase: 'cook', t: 0, seq: 0 });
+    first.send({ type: 'log', line: 'LogCook: Display: cooking', t: 1, seq: 1 });
+    first.close(); // the connection dropped; the cook did not end
+
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('attach=j1&from=2'))).toBe(true));
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('cook-jobs?jobId=j1'))).toBe(true);
+    expect(screen.queryByTestId('pof-cook-progress-result')).toBeNull();
+
+    second.send({ type: 'progress', percent: 100, t: 2, seq: 2 });
+    second.send({ type: 'done', exePath: 'C:\out\PoF.exe', durationMs: 3, sizeBytes: null, status: 'success', t: 3, seq: 3 });
+    second.send({ type: 'recorded', buildId: 9, version: '0.1.2', seq: 4 });
+    second.close();
+
+    const result = await screen.findByTestId('pof-cook-progress-result');
+    expect(result.getAttribute('data-status')).toBe('success');
+    expect(result.textContent).not.toMatch(/may still be running/);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete.mock.calls[0][0]).toMatchObject({ status: 'success', buildId: 9, kind: 'nightly' });
+  });
+
+  it('Cancel asks the server to cancel the job and shows the cook as cancelled, not failed or passed', async () => {
+    const s = controlledStream();
+    const fetchMock = routedFetch([
+      ['cook-jobs?projectPath=', () => jsonResponse({ job: JOB })],
+      ['cook-jobs?attach=j1&from=0', () => s.response],
+      ['cook-jobs?jobId=j1', () => jsonResponse({ job: { ...JOB, settled: false } })],
+    ]);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<CookProgress request={null} projectPath="C:\PoF" />);
+    s.send({ type: 'phase', phase: 'cook', t: 0, seq: 0 });
+    fireEvent.click(await screen.findByTestId('pof-cook-progress-cancel'));
+
+    await waitFor(() => {
+      const del = fetchMock.mock.calls.find((c) => String(c[0]).includes('cook-jobs?jobId=j1'));
+      expect(del).toBeTruthy();
+    });
+    const delCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('cook-jobs?jobId=j1')) as unknown as [string, RequestInit];
+    expect(delCall[1]?.method).toBe('DELETE');
+
+    s.send({ type: 'error', message: 'cook cancelled — process tree terminated', status: 'cancelled', t: 4, seq: 1 });
+    s.send({ type: 'recorded', buildId: 10, version: null, seq: 2 });
+    s.close();
+
+    const result = await screen.findByTestId('pof-cook-progress-result');
+    expect(result.getAttribute('data-status')).toBe('cancelled');
+    expect(result.textContent).toMatch(/Cook cancelled/);
+    expect(result.textContent).not.toMatch(/Cook failed|Cook succeeded/);
   });
 });

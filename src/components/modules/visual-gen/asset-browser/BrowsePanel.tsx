@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { useAssetBrowserStore } from './useAssetBrowserStore';
-import { useAssetLibraryStore } from './useAssetLibraryStore';
 import { AssetCard } from './AssetCard';
+import { VariantPicker } from './VariantPicker';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { AssetSearchResult, AssetSource, AssetCategory } from '@/lib/visual-gen/asset-sources';
@@ -45,19 +45,15 @@ export function BrowsePanel() {
   const search = useAssetBrowserStore((s) => s.search);
   const importToBlender = useAssetBrowserStore((s) => s.importToBlender);
   const clearImportError = useAssetBrowserStore((s) => s.clearImportError);
-  const recordDownload = useAssetLibraryStore((s) => s.recordDownload);
+  const [pickTarget, setPickTarget] = useState<AssetSearchResult | null>(null);
 
   const handleSearch = useCallback(() => { void search(); }, [search]);
 
-  const handleDownload = useCallback((asset: AssetSearchResult) => {
-    // Track every download in the local library (source/category/license/tags +
-    // thumbnail), then open the download URL. Recording is fire-and-forget so a
-    // persistence hiccup never blocks the actual download.
-    void recordDownload(asset);
-    if (asset.downloadUrl) {
-      window.open(asset.downloadUrl, '_blank');
-    }
-  }, [recordDownload]);
+  // Download opens the file picker. It used to `window.open(asset.downloadUrl)` — for Poly Haven
+  // a JSON listing (api.polyhaven.com/files/<id>) that the library then recorded as the asset.
+  // The picker saves the chosen variant and records THAT file.
+  const handleDownload = useCallback((asset: AssetSearchResult) => setPickTarget(asset), []);
+  const closePicker = useCallback(() => setPickTarget(null), []);
 
   const handleRetryImport = useCallback(() => {
     if (importError) void importToBlender(importError.source, importError.assetId);
@@ -159,6 +155,8 @@ export function BrowsePanel() {
           </p>
         </div>
       )}
+
+      <VariantPicker target={pickTarget} onClose={closePicker} />
     </div>
   );
 }

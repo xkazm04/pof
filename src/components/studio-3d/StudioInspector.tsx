@@ -8,6 +8,7 @@ import { formatNumber, formatMeters } from '@/components/modules/visual-gen/asse
 import {
   gradeViewerAsset,
   DRAW_CALLS_PROXY_NOTE,
+  type RowSeverity,
 } from '@/components/modules/visual-gen/asset-viewer/assetGrade';
 import { POLYCOUNT_PRESETS, type AssetClass } from '@/lib/visual-gen/polycount-presets';
 
@@ -23,21 +24,26 @@ const heading = {
 
 const note = { ...mono, color: 'var(--lab-muted)', lineHeight: 1.6 };
 
-/** Colourblind-safe: glyph + word, never hue alone (WCAG 1.4.1). */
-const VERDICT_TAG: Record<string, { glyph: string; word: string; tone: string }> = {
-  honored: { glyph: '✓', word: 'WITHIN CEILING', tone: 'var(--lab-ok)' },
-  over: { glyph: '✕', word: 'OVER CEILING', tone: 'var(--lab-bad)' },
-  matches: { glyph: '✓', word: 'SIZE MATCHES', tone: 'var(--lab-ok)' },
-  off: { glyph: '✕', word: 'SIZE OFF', tone: 'var(--lab-bad)' },
-  unmeasured: { glyph: '?', word: 'UNMEASURED', tone: 'var(--lab-warn)' },
+/** What each grade says, in words. How BAD it is comes from the gate's severity, not here. */
+const VERDICT_WORD: Record<string, string> = {
+  honored: 'WITHIN CEILING', over: 'OVER CEILING', matches: 'SIZE MATCHES', off: 'SIZE OFF',
+  upright: 'STANDS UPRIGHT', lying: 'LYING ON ITS SIDE', unmeasured: 'UNMEASURED',
 };
 
-function VerdictRow({ verdict, line }: { verdict: string; line: string }) {
-  const tag = VERDICT_TAG[verdict] ?? VERDICT_TAG.unmeasured;
+/** Colourblind-safe: glyph + word, never hue alone (WCAG 1.4.1). Keyed by the gate's severity. */
+const SEVERITY_TAG: Record<RowSeverity, { glyph: string; tone: string }> = {
+  fail: { glyph: '✕', tone: 'var(--lab-bad)' },
+  warn: { glyph: '!', tone: 'var(--lab-warn)' },
+  pass: { glyph: '✓', tone: 'var(--lab-ok)' },
+  unmeasured: { glyph: '?', tone: 'var(--lab-warn)' },
+};
+
+function VerdictRow({ verdict, severity, line }: { verdict: string; severity: RowSeverity; line: string }) {
+  const tag = SEVERITY_TAG[severity];
   return (
-    <div data-testid={`verdict-${verdict}`} style={{ ...mono, lineHeight: 1.6 }}>
+    <div data-testid={`verdict-${verdict}`} data-severity={severity} style={{ ...mono, lineHeight: 1.6 }}>
       <div style={{ color: tag.tone, letterSpacing: '0.06em' }}>
-        {tag.glyph} {tag.word}
+        {tag.glyph} {VERDICT_WORD[verdict] ?? VERDICT_WORD.unmeasured}
       </div>
       <div style={{ color: 'var(--lab-muted)' }}>{line}</div>
     </div>
@@ -137,7 +143,7 @@ export function StudioInspector({ modelName }: { modelName: string | null }) {
             {/* ── Triangle ceiling, from polycount-presets ─────────────────────── */}
             <div>
               <div style={heading}>Triangle ceiling</div>
-              <VerdictRow verdict={grade.budget.verdict} line={grade.budgetLine} />
+              <VerdictRow verdict={grade.budget.verdict} severity={grade.severity.budget} line={grade.budgetLine} />
             </div>
 
             {/* ── Size, from world-scale. NOT a bare number under a metres heading ─ */}
@@ -145,7 +151,7 @@ export function StudioInspector({ modelName }: { modelName: string | null }) {
               <div style={heading}>
                 Bounding box (glTF units{grade.generatorNormalized ? ' · generator-normalised' : ''})
               </div>
-              <VerdictRow verdict={grade.scale.verdict} line={grade.scaleLine} />
+              <VerdictRow verdict={grade.scale.verdict} severity={grade.severity.scale} line={grade.scaleLine} />
               {grade.scale.importUniformScale !== undefined && (
                 <p style={{ ...mono, color: 'var(--lab-ink)', marginTop: 'var(--lab-s1)' }}>
                   Import uniform scale ×{grade.scale.importUniformScale.toFixed(2)}
@@ -156,6 +162,27 @@ export function StudioInspector({ modelName }: { modelName: string | null }) {
                 <Stat label="Height" value={formatMeters(stats.boundingBox.height)} />
                 <Stat label="Depth" value={formatMeters(stats.boundingBox.depth)} />
               </div>
+            </div>
+
+            {/* ── Orientation, from world-scale via the gate's orientation-lying rule ─ */}
+            <div>
+              <div style={heading}>Orientation (glTF +Y up)</div>
+              <VerdictRow verdict={grade.orientation.verdict} severity={grade.severity.orientation} line={grade.orientationLine} />
+            </div>
+
+            {/* ── The gate's verdict on what this viewer CAN measure, and what it cannot ─ */}
+            <div data-testid="geometry-rollup" data-verdict={grade.verdict}>
+              <div style={heading}>Tier-1 gate · geometry only</div>
+              <div style={{ ...mono, color: SEVERITY_TAG[grade.verdict].tone, letterSpacing: '0.06em' }}>
+                {SEVERITY_TAG[grade.verdict].glyph} GEOMETRY {grade.verdict.toUpperCase()}
+                {grade.verdict === 'unmeasured' ? ' — no asset class stated' : ''}
+              </div>
+              {grade.findings.map((f) => (
+                <div key={f.code} style={{ ...mono, color: SEVERITY_TAG[f.severity].tone }}>{f.code} · {f.severity}</div>
+              ))}
+              <p style={{ ...note, marginTop: 'var(--lab-s1)' }}>
+                Measured only by the Tier-1 gate (trimesh), not by this viewer: {grade.gateOnly.join(', ')}.
+              </p>
             </div>
           </>
         )}

@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Activity, Wrench, Terminal, LayoutGrid } from 'lucide-react';
-import { OPACITY_10, OPACITY_30,
+import {
   withOpacity, OPACITY_90, OPACITY_25, OPACITY_12, OPACITY_5, OPACITY_80, GLOW_MD,
-  ACCENT_EMERALD_DARK,
+  ACCENT_EMERALD_DARK, STATUS_SUBDUED,
 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { SectionHeader, BlueprintPanel } from '../unique-tabs/_design';
-import { STATUS_COLORS, FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
+import { FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import { CircularGauge, CopyButton } from './system/CircularGauge';
 import { SystemHealthMatrix, FrameTimeWaterfall } from './system/SystemHealthSection';
 import { MemorySection } from './performance/MemorySection';
@@ -17,43 +16,32 @@ import { ConsoleSection } from './console/ConsoleSection';
 import { NetworkSection } from './network/NetworkSection';
 import { GCTimelineSection } from './performance/GCTimelineSection';
 import { DrawCallSection } from './performance/DrawCallSection';
+import { OptimizationQueue } from './performance/OptimizationQueue';
 import { StatDashboardSection } from './crashes/StatDashboardSection';
 import { CrashPredictionSection } from './crashes/CrashPredictionSection';
 import { RegressionSection } from './crashes/RegressionSection';
 import {
-  ACCENT, INITIAL_BUDGETS, DEBUG_COMMANDS, OPTIMIZATIONS,
-  EFFORT_COLORS, IMPACT_COLORS, FEATURE_NAMES,
+  ACCENT, DEBUG_COMMANDS, FEATURE_NAMES,
 } from './_shared/data';
 import type { SubModuleId } from '@/types/modules';
-import type { FeatureStatus } from '@/types/feature-matrix';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
+import { useDebugSnapshot } from '@/components/modules/core-engine/sub_debug/_shared/useDebugSnapshot';
+import { provenanceLabel } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
 
 interface DebugDashboardProps { moduleId: SubModuleId }
 
 export function DebugDashboard({ moduleId }: DebugDashboardProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
-  const [budgets, setBudgets] = useState(INITIAL_BUDGETS);
+  // Every perf panel below is a projection of ONE ProfilingSession (newest capture, or the sample).
+  const { snapshot, provenance, latest } = useDebugSnapshot();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const tabs: SubTab[] = useMemo(() => [
     { id: 'features', label: 'Features', icon: LayoutGrid },
     { id: 'dashboard', label: 'Dashboard', icon: Activity },
   ], []);
-
-  useSuspendableEffect(() => {
-    const id = setInterval(() => {
-      setBudgets(prev => prev.map(b => {
-        const variance = (Math.random() - 0.5) * (b.current * 0.05);
-        let next = b.current + variance;
-        if (next < b.target * 0.1) next = b.target * 0.1;
-        if (next > b.target * 1.5) next = b.target * 1.5;
-        return { ...b, current: next };
-      }));
-    }, 800);
-    return () => clearInterval(id);
-  }, []);
 
   const toggleFeature = useCallback((name: string) => {
     setExpandedFeature(prev => (prev === name ? null : name));
@@ -73,7 +61,8 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             CORE_TELEMETRY.exe
           </span>
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: ACCENT_EMERALD_DARK }} /> LIVE STREAM ACTIVE
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: provenance.kind === 'session' && provenance.source !== 'manual' ? ACCENT_EMERALD_DARK : STATUS_SUBDUED }} />
+            <span>{provenanceLabel(provenance)}</span>
           </span>
         </div>
       </div>
@@ -87,7 +76,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
       <div>
         <SectionHeader label="SYSTEM_RESOURCES" color={ACCENT} icon={Terminal} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-          {budgets.map(g => <CircularGauge key={g.label} {...g} />)}
+          {snapshot.gauges.map(g => <CircularGauge key={g.label} {...g} />)}
         </div>
       </div>
 
@@ -125,49 +114,23 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
         </div>
       </div>
 
-      {/* Optimization queue */}
-      <div className="mt-2">
-        <SectionHeader label="PERF_OPTIMIZATION_QUEUE" color={ACCENT} icon={Activity} />
-        <div className="space-y-3 mt-2">
-          {OPTIMIZATIONS.map((opt, i) => {
-            const status: FeatureStatus = featureMap.get(opt.featureName)?.status ?? 'unknown';
-            const sc = STATUS_COLORS[status];
-            return (
-              <BlueprintPanel key={opt.title} color={ACCENT} className="px-3 py-3 group">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold font-mono border"
-                      style={{ backgroundColor: `${ACCENT}${OPACITY_10}`, color: ACCENT, borderColor: `${ACCENT}${OPACITY_30}` }}>{String(i + 1).padStart(2, '0')}</span>
-                    <span className="text-sm font-bold font-mono tracking-widest" style={{ color: `${withOpacity(ACCENT, OPACITY_90)}` }}>{opt.title}</span>
-                  </div>
-                  <div className="sm:ml-auto flex items-center gap-2 flex-wrap pl-9 sm:pl-0">
-                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
-                      style={{ backgroundColor: `${EFFORT_COLORS[opt.effort]}${OPACITY_10}`, color: EFFORT_COLORS[opt.effort], borderColor: `${EFFORT_COLORS[opt.effort]}${OPACITY_30}` }}>{opt.effort} EFFORT</span>
-                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
-                      style={{ backgroundColor: `${IMPACT_COLORS[opt.impact]}${OPACITY_10}`, color: IMPACT_COLORS[opt.impact], borderColor: `${IMPACT_COLORS[opt.impact]}${OPACITY_30}` }}>{opt.impact} IMPACT</span>
-                    <span className="flex items-center gap-1.5 px-2 py-[2px] rounded border bg-surface" style={{ borderColor: `${withOpacity(sc.dot, OPACITY_25)}` }}>
-                      <span className="w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: sc.dot, color: sc.dot }} />
-                      <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: sc.dot }}>{sc.label}</span>
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-text-muted leading-relaxed pl-9 font-mono border-l ml-[11px] mt-1 tracking-wide" style={{ borderColor: `${withOpacity(ACCENT, OPACITY_12)}` }}>{opt.description}</p>
-              </BlueprintPanel>
-            );
-          })}
-        </div>
-      </div>
+      {/* Optimization queue: the newest capture's triage, one-click Fix, verified by re-capture */}
+      <OptimizationQueue latest={latest} />
 
       {/* Section panels */}
-      <SystemHealthMatrix />
-      <FrameTimeWaterfall />
-      <MemorySection />
+      <FrameTimeWaterfall frame={snapshot.frame} />
+      <MemorySection memory={snapshot.memory} />
+      <GCTimelineSection gc={snapshot.gc} />
+      <DrawCallSection drawCalls={snapshot.drawCalls} />
+      <StatDashboardSection stats={snapshot.stats} />
+      <CrashPredictionSection crash={snapshot.crash} recommendations={snapshot.recommendations} />
       <ConsoleSection />
+      {/* Not projected from a profiler session yet — hand-typed illustrations. */}
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted border-t border-border pt-3">
+        Illustrative panels below are not read from any profiler session
+      </div>
+      <SystemHealthMatrix />
       <NetworkSection />
-      <GCTimelineSection />
-      <DrawCallSection />
-      <StatDashboardSection />
-      <CrashPredictionSection />
       <RegressionSection />
       </VisibleSection>}
     </div>

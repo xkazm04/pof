@@ -10,36 +10,42 @@ import {
 } from '@/lib/chart-colors';
 import { DEFAULT_THEME } from './constants';
 import { generateUE5Config } from './helpers';
+import { writeParam, type HudThemeParam } from './themeSchema';
 import { useAnimationLoop } from './useAnimationLoop';
 import { LivePreviewScene } from './LivePreviewScene';
 import { ParameterEditor } from './ParameterEditor';
 import { ExportPanel } from './ExportPanel';
+import { ApplyToProjectBar } from './ApplyToProjectBar';
+import { useHudDesignStore } from '@/stores/hudDesignStore';
+import { useProjectStore } from '@/stores/projectStore';
 import type { HudTheme, RGBA } from './types';
 
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function HudThemeEditor() {
-  const [theme, setTheme] = useState<HudTheme>(() => structuredClone(DEFAULT_THEME));
+  // The draft lives per project in hudDesignStore: this tab unmounts on every tab switch.
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const theme = useHudDesignStore((s) => s.byProject[projectPath]?.themeDraft ?? DEFAULT_THEME);
+  const setThemeDraft = useHudDesignStore((s) => s.setThemeDraft);
   const [playing, setPlaying] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<'health' | 'damage' | 'enemy'>('health');
 
   const time = useAnimationLoop(playing);
 
-  const update = useCallback(<K extends keyof HudTheme>(key: K, value: HudTheme[K]) => {
-    setTheme(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const setParam = useCallback((p: HudThemeParam, value: number | RGBA) => {
+    const prev = useHudDesignStore.getState().getThemeDraft(projectPath);
+    setThemeDraft(projectPath, writeParam(prev, p, value));
+  }, [projectPath, setThemeDraft]);
 
-  const updateElementColor = useCallback((element: string, color: RGBA) => {
-    setTheme(prev => ({
-      ...prev,
-      elementColors: { ...prev.elementColors, [element]: color },
-    }));
-  }, []);
+  // A pasted .h (parseUE5Config, already clamped and reported) replaces the theme.
+  const handleImport = useCallback((next: HudTheme) => {
+    setThemeDraft(projectPath, next);
+  }, [projectPath, setThemeDraft]);
 
   const handleReset = useCallback(() => {
-    setTheme(structuredClone(DEFAULT_THEME));
-  }, []);
+    setThemeDraft(projectPath, structuredClone(DEFAULT_THEME));
+  }, [projectPath, setThemeDraft]);
 
   const exportConfig = useMemo(() => generateUE5Config(theme), [theme]);
 
@@ -117,8 +123,7 @@ export function HudThemeEditor() {
         {/* ── Left: Parameter Editor ── */}
         <ParameterEditor
           theme={theme}
-          update={update}
-          updateElementColor={updateElementColor}
+          setParam={setParam}
           activeSection={activeSection}
           setActiveSection={setActiveSection}
           sections={sections}
@@ -126,12 +131,17 @@ export function HudThemeEditor() {
 
         {/* ── Right: UE5 Export ── */}
         <ExportPanel
+          theme={theme}
           exportConfig={exportConfig}
           copied={copied}
           handleCopy={handleCopy}
           handleDownload={handleDownload}
+          onImport={handleImport}
         />
       </div>
+
+      {/* ── Apply the changed UPROPERTYs to the project ── */}
+      <ApplyToProjectBar projectPath={projectPath} theme={theme} />
     </div>
   );
 }

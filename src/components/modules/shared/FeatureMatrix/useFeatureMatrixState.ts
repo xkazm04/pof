@@ -8,6 +8,8 @@ import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
+import { changedFeatureNames } from '@/lib/feature-review-delta';
+import type { ReviewDelta } from '@/lib/feature-review-delta';
 import { buildDependencyMap, computeBlockers, moduleNeedsBinaryContent, getWiringAssets } from '@/lib/feature-definitions';
 import type { VerificationResult } from '@/types/pof-bridge';
 import type { SubModuleId } from '@/types/modules';
@@ -27,7 +29,10 @@ export function useFeatureMatrixState({
   // `scope` is what the project scoping let this read SEE (owned / legacy / foreign
   // row counts). It is threaded through untouched so the view can tell an empty
   // module apart from one whose rows another project holds — see `matrixScope.ts`.
-  const { features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults, scope } = useFeatureMatrix(moduleId);
+  const {
+    features, summary, isLoading, error, retry, refetch, isVerifying, verificationResults, scope,
+    previewAutoVerify, applyAutoVerify, discardAutoVerify, verifyPlan, verifyError,
+  } = useFeatureMatrix(moduleId);
   const projectPath = useProjectStore((s) => s.projectPath);
   const bridgeConnected = usePofBridgeStore((s) => s.connectionStatus === 'connected');
   const needsBinaryContent = useMemo(() => moduleNeedsBinaryContent(moduleId), [moduleId]);
@@ -46,6 +51,10 @@ export function useFeatureMatrixState({
   const [isSyncing, setIsSyncing] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [snapshots, setSnapshots] = useState<ReviewSnapshot[]>([]);
+  // What the newest review/fix event moved (history route), and the "Show changed"
+  // filter the ReviewDeltaStrip toggles. Ignored while the delta is unmeasured.
+  const [delta, setDelta] = useState<ReviewDelta | null>(null);
+  const [changedOnly, setChangedOnly] = useState(false);
   // Cross-module statuses come from the shared, deduped cache so this view and
   // the NBA card share one fetch of /api/feature-matrix/all-statuses + one Map.
   const { statusMap: allStatuses } = useFeatureStatuses();
@@ -138,12 +147,26 @@ export function useFeatureMatrixState({
   // than off `data.data`. The list was therefore always empty and the sparkline —
   // gated on `snapshots.length >= 2` — has never rendered here. `tryApiFetch`
   // unwraps the envelope, so the trend line finally receives its points.
+  // Scoped to the open project: CLI reviews now snapshot under it, so an unscoped
+  // read would plot only the legacy points.
   const fetchHistory = useCallback(async () => {
-    const result = await tryApiFetch<{ snapshots: ReviewSnapshot[] }>(
-      `/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}`,
+    const project = projectPath ? `&projectId=${encodeURIComponent(projectPath)}` : '';
+    const result = await tryApiFetch<{ snapshots: ReviewSnapshot[]; delta?: ReviewDelta }>(
+      `/api/feature-matrix/history?moduleId=${encodeURIComponent(moduleId)}${project}`,
     );
-    if (result.ok) setSnapshots(result.data.snapshots ?? []);
-  }, [moduleId]);
+    if (result.ok) {
+      setSnapshots(result.data.snapshots ?? []);
+      setDelta(result.data.delta ?? null);
+    }
+  }, [moduleId, projectPath]);
+
+  const changedNames = useMemo(() => changedFeatureNames(delta), [delta]);
+  const regressionMap = useMemo(
+    () => new Map(delta?.measured ? delta.regressed.map((m) => [m.featureName, m.from] as const) : []),
+    [delta],
+  );
+  const toggleChangedOnly = useCallback(() => setChangedOnly((v) => !v), []);
+  const changedFilterActive = changedOnly && changedNames.size > 0;
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-existing fetch-on-mount, preserved verbatim in extraction
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
@@ -202,6 +225,7 @@ export function useFeatureMatrixState({
   // Filter features: status chips → text search → quality range
   const filtered = useMemo(() => {
     let list = features.filter((f) => activeFilters.has(f.status));
+    if (changedFilterActive) list = list.filter((f) => changedNames.has(f.featureName));
 
     // Text search across feature name, description, review notes, and file paths
     if (searchQuery) {
@@ -247,7 +271,7 @@ export function useFeatureMatrixState({
     });
 
     return list;
-  }, [features, activeFilters, searchQuery, qualityMin, qualityMax, sortKey, sortDir]);
+  }, [features, activeFilters, changedFilterActive, changedNames, searchQuery, qualityMin, qualityMax, sortKey, sortDir]);
 
   // Group by category
   const { grouped, categories } = useMemo(() => {
@@ -294,9 +318,11 @@ export function useFeatureMatrixState({
   }, [features]);
 
   return {
-    features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults, scope,
+    features, summary, isLoading, error, retry, refetch, isVerifying, verificationResults, scope,
+    previewAutoVerify, applyAutoVerify, discardAutoVerify, verifyPlan, verifyError,
     projectPath, bridgeConnected, needsBinaryContent, wiringAssets, showWiring, setShowWiring, verificationMap,
     expandedRows, isSyncing, setIsSyncing, collapsedCategories, snapshots, reviewProgress,
+    delta, changedFilterActive, toggleChangedOnly, regressionMap,
     searchQuery, setSearchQuery, qualityMin, setQualityMin, qualityMax, setQualityMax,
     sortKey, sortDir, activeFilters, viewMode, setViewMode, depMap,
     toggleRow, toggleCategory, toggleFilter, toggleSort,

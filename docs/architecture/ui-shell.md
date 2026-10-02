@@ -12,18 +12,23 @@ rollup strip.
 | File | Role |
 |------|------|
 | `src/app/page.tsx` | Root page; `useSyncExternalStore(popstate, readShellPref)` switches between `NewHome` and `AppShell` |
-| `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
+| `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` / `switchShell(to)` — a URL that names its shell (`?legacy=1` / `?legacy=0`) wins, else `localStorage['pof.shell']` |
+| `src/lib/shell/leaveRisk.ts` + `src/hooks/useLeaveGuard.ts` | The leave guard (§1 "Leaving"): pure `leaveRisk(kind, sources)` / `describeLeaveRisk`; `useLeaveGuard()` (the one `beforeunload`, mounted in `page.tsx` above the gate) and `requestShellSwitch(to, { confirm })` (both shell-switch buttons) |
+| `src/lib/shell/shellRoute.ts` | The root page's ONE address codec (pure): `parseShellRoute(search, stored)` → `{ shell, moduleId }` (module validated against `SUB_MODULE_IDS` + the 3 special categories), `moduleHref(id)`, `shellUrl(href, shell, moduleId?)`, and the derived `MODULE_DESTINATIONS` (40 rows, registry labels) |
+| `src/hooks/useShellRouteSync.ts` | Mounted in `AppShell`: keeps the legacy shell's open module and the address (`?legacy=1&module=<id>`) in step — deep link in, one history entry per module move, popstate re-applies |
 | `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
+| `src/components/layout-lab/labLocation.ts` (+ `hooks/useLabLocation.ts`) | The lab's ONE navigate door (pure): `LabLocation` (catalog · entity · step · view), `reduceLocation(loc, action)` → `{ loc, patch }` for `catalog`/`entity`/`step`/`view`/`open`, `resolveLocation` (phantom-entity reconcile + step clamp as a render derivation), `adoptPrefs` (the one-time restore). `useLabLocation()` holds it, adopts once, persists each action's patch, and consumes `pendingNavigation` |
+| `src/lib/shell/labRoute.ts` (+ `layout-lab/hooks/useLabRouteSync.ts`) | The lab's address codec (pure, the lab half of `shellRoute.ts`): `parseLabRoute(search)` → `{ catalogId, entityId?, step?, view? }` (catalog validated against `CATALOG_SECTIONS` — an unknown one refuses the whole address; an unknown view is dropped), `labHref(route)` (`/?legacy=0&c=&e=&s=<step LABEL>&v=`), `labUrl(href, route)` (keeps the pathname, so `/layout` stays `/layout`). `useLabRouteSync(location, apply, universe?)` keeps the location and the address in step; `useLabAddress(loc, detail, nav)` is LayoutLab's binding |
 | `src/components/layout-lab/Baseline/index.tsx` (+ `Baseline/useBaseline.ts`, `constants.ts`, `types.ts`) | 3-column composition screen: tree / pipeline timeline / work canvas. `index.tsx` is layout only; every produce→persist→render hook lives in `useBaseline.ts`. **Controlled** step position via `stepIdx` + `onSelectStep` (parent-owned so it survives view-toggle remounts); falls back to internal state when `onSelectStep` is omitted |
-| `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. **Controlled** catalog dropdown (`catalogId` + `onSelectCatalog` write-through — no private `selected` fork). Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`). **Catalog-wide freshness (2026-08-18):** a `Refresh catalog` action composes the existing `refreshArtifacts(catalogId)` with the per-entity `refreshEntity` — one fetch path, one merge rule — and reconciles ONLY entities holding local state (reconciling every server-only entity would copy a whole catalog's produce bodies into the persisted localStorage store: ~0.5 MB for `items` against a ~5 MB quota). It reports what it re-read — adopted / removed / kept, naming local-only steps with `SERVER_MISSING_REASON` — rather than claiming "nothing changed", which it is in no position to assert. **Changed-since digest (2026-08-18):** above the legend, `CatalogChangesDigest` lists steps that moved since your last visit to this board, sourced only from stored rows + archived versions (see `GET /api/pipeline-artifacts/changes`); it states its own blind spots — a truncated history reads "at least N", a first visit reads "no baseline yet", a failed read reads "unknown, not nothing" |
+| `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step. **Controlled** catalog dropdown (`catalogId` + `onSelectCatalog` write-through — no private `selected` fork). Header hosts the batch-drain action; every entity in the in-flight batch shows a left-accent + "draining…" badge (`drainState.activeEntityIds`). **Catalog-wide freshness (2026-08-18):** a `Refresh catalog` action composes the existing `refreshArtifacts(catalogId)` with the per-entity `refreshEntity` — one fetch path, one merge rule — and reconciles ONLY entities holding local state (reconciling every server-only entity would copy a whole catalog's produce bodies into the persisted localStorage store: ~0.5 MB for `items` against a ~5 MB quota). It reports what it re-read — adopted / removed / kept, naming local-only steps with `SERVER_MISSING_REASON` — rather than claiming "nothing changed", which it is in no position to assert. **Changed-since digest (2026-08-18):** above the legend, `CatalogChangesDigest` lists steps that moved since your last visit to this board, sourced only from stored rows + archived versions (see `GET /api/pipeline-artifacts/changes`); it states its own blind spots — a truncated history reads "at least N", a first visit reads "no baseline yet", a failed read reads "unknown, not nothing". **Regressions first (2026-10-01):** `labCatalogChanges.ts` classifies each row from the archived `priorStatus` only (`verdictShift`: regressed / improved / same / sideways / unknown) and ranks rows in that order (`rankChanges`). The headline counts "N stopped passing / N now pass", and each row states was/now in words with a glyph. "Work through N that stopped passing" opens `regressionQueue` through the board's `onOpenQueue` door. Jumps use the entity's OWN step index (`stepIndexResolver` over `MatrixRow.stepIndex`), never the catalog-wide list. The digest never changes a grade |
 | `src/components/layout-lab/MatrixBatchDrain.tsx` | Matrix header action — "drain all deferred gates in this catalog" (shown only when ≥1 entity is deferred). **Executor truth (2026-09-04):** the lab sends no `executor`/`allowSpawn`, so `buildExecutors` always builds the BRIDGE executor — the drain runs THROUGH a running UE editor and never boots one. The button therefore discloses that requirement BEFORE the click from `usePofBridgeStore.connectionStatus` (the same read `LabBridgeStrip` uses) without ever disabling itself, the progress/cancel copy names the request rather than a boot, and a run where nothing executed (`ranNothing`: `ran===0` with skipped gates, and no lock/error) renders a first-class "0 gates ran — no UE executor was available" line instead of hiding the cause in a hover `title`. Plus a flips summary (passed/failed/still-deferred/locked) with per-step fail reasons, and an honest Cancel (skips the retry only — the request already sent can't be recalled). `ranNothing` lives in `entityDrainOutcome.ts` and the captured-frame thumbnails in `DrainFrameLinks.tsx`, both shared with the per-entity coach drain |
-| `src/components/layout-lab/hooks/useBatchDrain.ts` | Batch-drain engine: sends the WHOLE deferred set in ONE request (`drainCatalogGates(catalogId, entityIds)`) — one server-side collection + one grouped runner pass over every gate (through the bridge executor — an already-running editor), not one request per entity. All-or-nothing lease: a 409 refuses the whole batch → retry once, then record every entity locked. Invalidates the whole-catalog cache on completion; cancel only skips the retry |
+| `src/components/layout-lab/hooks/useBatchDrain.ts` | Batch-drain engine: sends the WHOLE deferred set in ONE request (`drainCatalogGates(catalogId, entityIds)`) — one server-side collection + one grouped runner pass over every gate (through the bridge executor — an already-running editor), not one request per entity. All-or-nothing lease: a 409 refuses the whole batch → retry once, then record every entity locked. Invalidates the whole-catalog cache on completion; cancel only skips the retry. **Drain runs live in the lab, not the Matrix (2026-10-01):** the run is owned by `labRunnerStore` (`runs: Record<runId, DrainRun>` — kind batch|entity, catalogId, entityIds, phase running|done, cancelRequested, cancelEffect, summary; actions `beginRun` / `requestCancel` / `finishRun` / `dismissRun`; batch id `batchRunId(catalogId)`, entity id `${catalogId}/${entityId}`). `runBatchDrain` is a store-owned async that records its summary whether or not a Matrix is mounted; the hook is a view of `runs[batchRunId(catalogId)]` with the same return shape, so leaving the Matrix keeps the run, switching the catalog picker shows the new catalog's own run (never catalog A's run as B's), and a Drain on B is no longer ignored while A runs. `useEntityDrain` publishes through the same actions; both string-ownership guards are gone. Runs are in-memory: a reload still loses them |
 | `src/components/layout-lab/batchDrainModel.ts` | Pure batch-drain model: `DrainOutcome` (ok/locked/error) + `summarizeBatchDrain(entities, outcome)` — derives the catalog-wide flips summary from the single aggregate `DrainSummary` (groups per-step results back to their `job.entityId`; locked/error mark the whole set) |
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
-| `src/components/layout-lab/LabSearch.tsx` | Lab-wide search overlay (shared `ui/Modal`): finds any catalog, entity, or pipeline step by name/id and jumps via the EXISTING lifted nav callbacks (`selectCatalog` / `navigateTo`) — no parallel nav state. `useLabSearchShortcut()` binds ⌘/Ctrl+K and `/` (ignored while typing) |
-| `src/components/layout-lab/entityPipeline.ts` | The lab's ONE per-entity step door: `toLabEntity` (the single stored→`LabEntity` constructor, wrapping `labIdentityOf` so `canonProfile` / `reference` are never dropped), `entityStepList(catalogId, entity, catalogSteps?)` (`stepScope.stepLabelsForProfile` over the catalog list — the list the rail renders and every `stepIndex` indexes), `resolveStepJump` (a step named by LABEL → the target entity's own index). Read by `useLabDetail`, `useGlobalCoach` / `globalCoachModel`, `useBaseline`, `LabSearch`, and the `LayoutLab` step clamp |
-| `src/components/layout-lab/ui/SearchCombobox.tsx` | The shared type-ahead combobox behind BOTH lab search and `status/EntitySearch` (extracted from the latter): ARIA combobox + `aria-activedescendant`, ↓/↑ (wrapping) · Home/End · Enter · Escape, live-region hit count, stated `maxHits` cap, and "no match" vs "nothing loaded" empty states |
+| `src/components/layout-lab/LabSearch.tsx` | Lab-wide search overlay (shared `ui/Modal`): finds any catalog, entity, or pipeline step by name/id and jumps through the shell's ONE navigate door (`nav.catalog` / `nav.open`, see `labLocation.ts`) — no parallel nav state. `useLabSearchShortcut()` binds ⌘/Ctrl+K and `/` (ignored while typing) |
+| `src/components/layout-lab/entityPipeline.ts` | The lab's ONE per-entity step door: `toLabEntity` (the single stored→`LabEntity` constructor, wrapping `labIdentityOf` so `canonProfile` / `reference` are never dropped), `entityStepList(catalogId, entity, catalogSteps?)` (`stepScope.stepLabelsForProfile` over the catalog list — the list the rail renders and every `stepIndex` indexes), `resolveStepJump` (a step named by LABEL → the target entity's own index). Read by `useLabDetail`, `useGlobalCoach` / `globalCoachModel`, `useBaseline`, `LabSearch`, and the `resolveLocation` step clamp (`useLabLocation`) |
+| `src/components/layout-lab/ui/SearchCombobox.tsx` | The shared type-ahead combobox behind BOTH lab search and `status/EntitySearch` (extracted from the latter): ARIA combobox + `aria-activedescendant`, ↓/↑ (wrapping) · Home/End · Enter · Escape, live-region hit count, stated `maxHits` cap, and "no match" vs "nothing loaded" empty states. Opt-in `recall={{ resolve(key) }}` (`ui/searchRecall.ts`): picks are kept per `idPrefix` as `SearchHit.key`s in an in-memory zustand store (outlives the Modal unmounting its content, not a reload — nothing persisted) and re-resolved against the live index (a gone key never renders); a FOCUSED empty query lists them in a listbox named "Recent", and a typed query stably moves recent MATCHES first over the FULL match set before the cap — history never adds a non-match. Without `recall` behaviour is unchanged. Rows render via `ui/searchComboboxOption.tsx`; `inputRef` exposes the input |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance. **Fix honesty (2026-09-04):** `fixEffectOf` classifies what a one-click "⚡ Produce fix" can achieve (`reroll` / `first-produce` / `live-produce` / `no-op`) and the button is withheld for `no-op` — an already-produced step whose produce body is direction-blind and deterministic, where re-producing writes byte-identical data. The banner then carries `noopFixSuggestion`: what would change it, plus the derived direction as an input rather than an imminent dispatch. See docs/catalog/WIRING-AND-ACCEPTANCE.md |
 | `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary. Scoped to the OPEN entity, ranked by the SHARED `coachLadder.ts` (fed `driftByStep` so it has a drift rung). For a fail/deferred next step it shows the concrete checker `reason` (via `reasonForStep`) instead of a generic hint; no reason available → the generic hint stays (never invented) |
@@ -34,10 +39,11 @@ rollup strip.
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/produceFrom/fail/clearError/setSyncError/resetEntity/hydrateEntity/adoptServer`; module-level `_labSync` function pointer. `produce`/`produceFrom` call `fail` themselves when a dispatch throws (then re-raise), so a failed produce always leaves an artifact-level `error` — recorded NON-destructively (previously produced content survives). Also `refreshEntity` — the EXPLICIT reconciliation that may adopt server content and drop a step the server no longer has (see "Refresh from server"), and the `serverSeen` provenance stamp that makes that safe |
 | `src/components/layout-lab/ProduceErrorBanner.tsx` | Work-canvas banner for a step's recorded produce failure (`artifact.error`) + Dismiss (`clearError`). No retry button — the Produce panel below owns the prompt and already offers "Retry with same prompt" |
-| `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifactsResult` (`Result` — keeps the failure; what the cache reads), its lossy `fetchArtifacts` wrapper (`[]` on failure; NOT for /status — every /status tab reads the shared status evidence read instead: `status/statusArtifactSource.ts` `useStatusArtifacts([scope])`, blob-free summary rows via `labArtifactCache`, plus `status/statusVerdictSource.ts` `useStatusVerdicts`, one deduped judge-verdict read on the `useStepJudgeVerdicts` 60 s cache whose `readAllJudgeVerdicts` keeps the failure and never caches it; a failed read renders UNKNOWN / PARTIAL, never R0 or a verdict-less grade), `postArtifact`, `drainGates` (single entity, for the per-entity coach drain — returns the whole `DrainResponse`: `ok` with the full `DrainSummary`, `locked` carrying the server's 409 refusal reason, or `error`; it used to collapse every failure to `null`), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
+| `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifactsResult` (`Result` — keeps the failure; what the cache reads), its lossy `fetchArtifacts` wrapper (`[]` on failure; NOT for /status — every /status tab reads the shared status evidence read instead: `status/statusArtifactSource.ts` `useStatusArtifacts([scope])`, blob-free summary rows via `labArtifactCache`, plus `status/statusVerdictSource.ts` `useStatusVerdicts`, a subscription to the `useStepJudgeVerdicts` verdict store (`useSyncExternalStore`, stale-while-revalidate on a 60 s TTL: an expired or invalidated read keeps serving its rows marked `stale` while one deduped revalidation runs, and a lab-side `invalidateJudgeVerdicts` reaches a mounted tab without its reload; the latest read failing reaches the view as `{ ok: false }`, never a cached `[]`); a failed read renders UNKNOWN / PARTIAL, never R0 or a verdict-less grade), `postArtifact`, `drainGates` (single entity, for the per-entity coach drain — returns the whole `DrainResponse`: `ok` with the full `DrainSummary`, `locked` carrying the server's 409 refusal reason, or `error`; it used to collapse every failure to `null`), and `drainCatalogGates(catalogId, entityIds)` (409-aware whole-catalog BATCH drain returning ok/locked/error) — thin wrappers around `/api/pipeline-artifacts` |
 | `src/components/layout-lab/labArtifactCache.ts` | Shared artifact-fetch cache (`useCachedArtifacts`, `invalidateArtifacts`, `retryArtifacts`, `refreshArtifacts` — the user-initiated force-refetch that RETURNS the rows; nothing here polls) — one deduped fetch path + LOADING / EMPTY / **ERROR** states for Baseline + Matrix. A failed GET is stored as an explicit `error` (never as a successful empty load) and never auto-retries. Also exposes `getCachedArtifacts` (non-hook read) + `useArtifactCacheVersion` (change signal) for the cross-catalog coach aggregation. **Notifications are coalesced onto a microtask** (the store is still mutated synchronously, so a same-tick `getCachedArtifacts` sees the new truth) — the homepage fans out one fetch per catalog and each key emits at least twice, which used to wake every subscriber ~2N times per paint. All zero-data entries (empty / loading / error) share ONE `arts` array reference, so a consumer memoizing on `arts` pays nothing for the empty→loading flip, which carries no artifact news |
 | `src/components/layout-lab/catalogManifest.ts` | Single per-catalog resolver over section · steps · grader · bespoke-UI (`resolveCatalogSteps`, `isBespokeCatalog`) |
 | `src/components/layout-lab/matrixRows.ts` | `buildMatrixRows` — CatalogMatrix rows via the shared `deriveEntityArtifacts` path (one status code path with the rail). Blockers read the checker `reason` carried on each derived artifact (no second `resolveAccept` pass) |
+| `src/components/layout-lab/matrixTriage.ts` · `workQueue.ts` · `MatrixTriageBar.tsx` · `WorkQueueStrip.tsx` | Matrix triage + work queue (see *Matrix triage + work queue* below): rank rows by the coach ladder, filter to a rung / a column's status, and walk the filtered set from the canvas with Next |
 | `src/components/layout-lab/DriftBanner.tsx` | Server↔local drift banner + "adopt server truth" affordance (preserves `genHistory` unless confirmed) |
 | `src/components/layout-lab/canonStore.ts` | Zustand store for project canon rules; seeded from `CANON_SEED`, refreshed from `/api/project-rules` |
 | `src/components/layout-lab/theme.ts` | `LIGHT` (Blueprint) and `DARK` (Studio Dark) `LabTheme` tokens; `LAB_THEMES` array |
@@ -65,6 +71,66 @@ full navigation. The reverse trip is symmetric: the legacy `TopBar`'s **"Bluepri
 (`NewShellButton`) calls `writeShellPref('ecw')`, deletes the `legacy` param, and fires `popstate`
 to swap back to the lab.
 
+**Addresses + Back.** Both switches now go through `switchShell(to)`: it first `replaceState`s the
+CURRENT entry to name the shell it shows (`?legacy=0` in the lab; `?legacy=1&module=<id>` in the
+legacy shell), then stores the preference, pushes the target entry and fires `popstate`. Because an
+entry that names its shell beats the stored value in `parseShellRoute`, Back after a flip lands on
+the shell that entry was — before, the lab entry carried no flag, the stored `'legacy'` won, and
+Back was dead. A plain `/` still resolves by the stored preference (then `'ecw'`).
+
+**Leaving — one root guard over declared in-flight work.** `page.tsx` swaps whole shells, so
+neither shell outlives the other and a guard inside one (the old CLI-only `beforeunload` in
+`AppShell`) left the default lab unguarded. `useLeaveGuard()` (`src/hooks/useLeaveGuard.ts`) is
+mounted in `page.tsx` ABOVE the gate — the ONE `beforeunload` listener in `src/` — and reads its
+sources at the event (`getState()` / `getPaneHolds()`, no subscription). What counts is one pure
+read, `leaveRisk(kind, { sessions, holds, oneShotPhase })` (`src/lib/shell/leaveRisk.ts`):
+`'unload'` counts running CLI sessions, every pane hold (`usePaneHold` — a cook, a checklist batch,
+a batch fix, a predictive sweep / cell-tuner solve, paid icon-set sheets) and an in-flight one-shot
+phase (`IN_FLIGHT_PHASES`, exported from `oneShotJobStore` — the one list, also read by
+`next-actions.ts`; a reload rests such a run at `reload-interrupted`). `'shell-switch'` counts pane
+holds only: CLI state and the one-shot orchestrator are module-level and survive the unmount. Both
+switch buttons call `requestShellSwitch(to, { confirm })`, which names each reason
+(`UE cook running (Packaging)`) via `describeLeaveRisk` and returns `false` if the user stays; with
+nothing at risk it never asks and is exactly `switchShell`. Every reason is a warning with a way out
+(the browser prompt / the confirm), never a block: a UE cook is a server job (`cook-jobs.ts`) and a
+CLI run re-attaches, so leaving only detaches their console — they are still named, and the confirm
+says server jobs keep running. The drain lane is a server lease and is never a reason. Honest
+limits: a Back/Forward `popstate` across the shell boundary is not guarded (a popstate cannot be
+cancelled without re-pushing), and module work that declares no pane hold stays invisible. Holds
+exist only inside legacy `ModuleRenderer` panes (`PaneIdContext`), so today the lab → legacy switch
+never asks.
+
+Inside the legacy shell `useShellRouteSync` treats the address as the location's public face (the
+store stays the source of truth): on arrival a validated `module` param is applied through
+`navigateToModule` (the one navigate door; an unknown id is dropped and the persisted location
+stands), and the entry is `replaceState`d to name the visible module — arriving never pushes. A
+module-to-module move pushes ONE entry. `popstate` re-applies the entry's module, and a location
+that came FROM the address is never pushed back (the push is skipped whenever the address already
+names the visible module), so Back/Forward cannot grow or truncate history. The location rides in
+the URL, not `history.state`: Next's app-router patches `pushState`/`replaceState` to copy its own
+`__NA` internals into plain calls, and a framework replace would erase anything state-held. The
+destinations are derived from `SUB_MODULE_IDS`, so they vanish with the legacy shell
+(`docs/catalog/LEGACY-SALVAGE.md`).
+
+**Sub-location — the module's open tab is part of the navigation model.** `navigationStore` holds
+`moduleTabs: Record<moduleId, tab>` next to `activeCategory`/`activeSubModule` (persisted with them).
+`navigateToModule(id, { tab })` writes the module AND its tab in ONE `set` (no subscriber sees the
+module without its tab); `setModuleTab(id, tab)` moves one module's tab without changing the active
+module. Views read their own entry through `useModuleTab(moduleId, validTabs, fallback?)`
+(`src/hooks/useModuleTab.ts`): a primitive selector, validated against that module's tab ids, so a
+stale or foreign persisted tab falls back to the first valid one. `useReviewableModuleView` (the 23
+Reviewable module views) uses it for its tab bar, so a jump addressed to one module never moves
+another mounted LRU pane, and a jump written before the target pane mounts lands on its first
+render. Producers: InlineTerminal's `navigate` suggestion resolves its target with
+`tabJumpTarget(action, session.moduleId)` (`suggestionIntents.ts` — the action's module, else the
+session's own) and Material Lab's "apply to editor" calls `setModuleTab('material-lab', 'editor')`.
+This replaced the untargeted `window` `pof-navigate-tab` CustomEvent (it flipped every mounted pane
+with a matching tab id and dropped jumps fired before the listener mounted); a ratchet in
+`navigationStore.moduleTab.test.ts` keeps it out of `src/`. The remaining sub-tab vocabulary is
+`useTabParam` (`src/hooks/useTabParam.ts`): the core-engine authoring shells (`sub_ability`,
+`sub_character`, `sub_combat`) hold their inner sub-tab in a URL param, read once on mount — not yet
+part of this model.
+
 ### 2. Bridge + project gate — `NewHome` (`src/components/layout-lab/NewHome.tsx`)
 
 `NewHome` calls `usePofBridge()` at the correct React subtree root, then **gates on project
@@ -85,43 +151,79 @@ Renders a `100vh` flex column:
 - **Header bar**: a 3-zone flex (`flex:1` brand · `flex:0 0 auto` centered actions · `flex:1`
   right-aligned status) so the action group stays centered. Left zone: the `PoF·LAB sheet · <catalog>`
   brand label. Center zone: **Catalogs** / **Matrix** / **Canon** view toggle (local `view` state),
-  **+ One-shot**, and the **Legacy shell** switch. Right zone (corner): `<LabJobsChip>`,
-  `<RunnerChip t={theme} />` (drain-runner state, below), `<LabBridgeStrip t={theme} />`, and the
+  **+ One-shot**, and the **Legacy shell** switch. Right zone (corner): `<ActivityChip t={theme} />` (the ONE "what is running
+  right now" affordance — it replaced the old `RunnerChip` + `LabJobsChip` pair), `<LabBridgeStrip t={theme} />`, and the
   single-icon **theme toggle** (`ThemeToggle`, an `IconButton` showing Moon→Studio Dark /
   Sun→Blueprint; toggles `themeId`).
-- **Navigation is single-source (the lab never forgets)**: `LayoutLab` OWNS `catalogId`,
-  `entityId`, and the pipeline `stepIdx`. Because `AnimatePresence key={view}` remounts `Baseline`
-  on every catalogs↔matrix↔canon toggle, holding the step position in the parent is what makes it
-  survive the swap (a per-Baseline `stepIdx` used to reset to 0 on every toggle — navigation
-  amnesia). Every mutation flows through three memoized callbacks so persistence + step-reset are
-  identical on ALL paths: `selectCatalog(id)` (reset entity+step, persist `lastCatalogId`),
-  `selectEntity(id)` (reset step, persist `lastEntityId`), and `navigateTo(cid, eid, step)` (jump +
-  persist both). This also removes the old `focusStepIdx` "remount reads the initial focus" channel —
-  a jump is now a plain state write consumed exactly once, so nothing replays stale.
-  A restored `lastEntityId` that no longer exists (or a just-cleared selection) is **reconciled in
-  STATE**, not only at render: `Baseline` falls back to `entities[0]` for display, so without this
-  the app RENDERED one entity while every state consumer (`LabSearch`'s `currentEntityId`, and
-  therefore step-hit resolution) pointed at a phantom. The reconcile is a render-phase state
-  adjustment (React-sanctioned bail-out, StrictMode-safe), and the resolved id is published as
-  `data-lab-entity` on the lab root so render-truth and state-truth stay checkable.
+- **Navigation is ONE location behind ONE door (the lab never forgets)**: where the lab is —
+  `catalogId`, `entityId`, pipeline `stepIdx` and `view` — is one `LabLocation` value owned by
+  `useLabLocation()` (`hooks/useLabLocation.ts`) and changed only by dispatching a `LabNavAction`
+  through the pure reducer in `labLocation.ts`. `reduceLocation(loc, action)` returns the next
+  location AND the exact prefs patch that records it (`catalog` resets entity+step and persists
+  those three; `entity` resets the step; `step` persists only `lastStepIdx`; `view` only
+  `lastView`; `open` sets all four and lands on the Catalogs view). Because `AnimatePresence
+  key={view}` remounts `Baseline` on every catalogs↔matrix↔canon toggle, holding the location in
+  the shell is what makes it survive the swap. `open` is THE "take me to this entity's step"
+  action: matrix cell and row, LabSearch hit, work-queue stop, `GlobalCoach` jump and the one-shot
+  toast's "Open" all dispatch it, so none of them can move the location while leaving the Matrix
+  or Canon view on screen (the toast/coach path used to). A jump is a plain dispatch consumed
+  exactly once, so nothing replays stale. The stored location is adopted once after hydration
+  (`adoptPrefs`, the one remaining render-phase bail-out).
+  **Resolved, not reconciled:** `resolveLocation(loc, entities, stepCountOf)` derives in render
+  the entity and step the canvas actually shows — an `entityId` that names nothing (a removed
+  entity, or no pick yet) resolves to `entities[0]`, and a step index past the resolved entity's
+  own list (`entityStepList`) resolves to 0. It returns the same object when nothing changes and
+  never writes state or prefs (a render must not write localStorage). Every consumer — `Baseline`,
+  `LabSearch`'s `currentEntityId` (so step-hit resolution never targets a phantom), the work queue
+  and the `data-lab-entity` attribute on the lab root — reads the resolved location, so
+  render-truth and location-truth stay checkable. The rules are pinned at the unit rung in
+  `labLocation.test.ts`; the whole-shell suites (`LayoutLab.navigation` / `.openDoor` /
+  `.entityStepClamp`) pin the wiring.
 - **First paint tells the truth**: `GlobalCoach` renders from the FIRST paint. An empty candidate
   list is also the pre-fetch state, so returning `null` used to pop the bar in once data landed and
   shove the canvas down; `useGlobalCoach` now reports `loading` (any catalog neither loaded nor
   errored) and the bar reserves its row with the shared `ui/Skeleton` placeholder (`aria-busy`).
 - **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; when `view === 'matrix'`
-  renders `<CatalogMatrix … catalogId={catalogId} onSelectCatalog={selectCatalog} onOpenStep={openFromMatrix} />`
+  renders `<CatalogMatrix … catalogId={catalogId} onSelectCatalog={nav.catalog} onOpenStep={nav.open} />`
   (the matrix dropdown is **controlled** — it writes through `onSelectCatalog` to the single-source
   `catalogId` instead of forking a private `selected`, so switching catalog in the matrix and then
   opening the Catalogs tab lands on the SAME catalog); otherwise renders
-  `<Baseline … stepIdx={stepIdx} onSelectStep={setStepIdx} … />` (controlled step position; `Baseline`
+  `<Baseline … stepIdx={stepIdx} onSelectStep={nav.step} … />` (controlled step position; `Baseline`
   falls back to internal `stepIdx` only when `onSelectStep` is omitted, for direct-render tests),
   prefaced by `<GlobalCoach t={theme} />` (the cross-catalog next-step coach, catalogs view only).
-  A matrix cell click runs `openFromMatrix(catalogId, entityId, step)` → `navigateTo(...)` + switch
-  `view` back to `'catalogs'`.
+  A matrix cell click dispatches `open` (catalog + entity + step, and `view` back to `'catalogs'`). `Work these N` on the matrix hands a work queue to `useLabWorkQueue` (the shell's
+  one live queue, session state only); while it is active `<WorkQueueStrip>` sits under the coach.
 - **Cross-view navigation**: a one-shot `pendingNavigation` store subscription (`oneShotLabStore`)
   drives navigation from anywhere — used by the One-shot panel and by `GlobalCoach`. The payload
-  carries an optional `stepIndex`; LayoutLab feeds `catalogId`/`entityId`/`stepIndex ?? 0` straight
-  into `navigateTo` (consumed once, persisted the same way a tree click is).
+  carries an optional `stepIndex`; `useLabLocation` dispatches it as `open` with `stepIndex ?? 0`
+  (consumed once, persisted like any other move, and it lands on the Catalogs view — the toast
+  is global, so its "Open" may be pressed from the Matrix or Canon).
+- **Addresses + Back (lab)**: every lab location has an address,
+  `/?legacy=0&c=<catalog>&e=<entity>&s=<step LABEL>&v=<view>` (`labRoute.ts`). The step travels by
+  LABEL — an index means a different step per canon profile — and is resolved against the target
+  entity's own list on arrival (`entityStepList`; no entity named → `resolveStepJump`). `legacy=0`
+  is always named, so a lab link opens the lab whatever shell preference is stored. The prefs blob
+  stays the reload mechanism; the address is an additional door into the SAME location, and
+  `useLabAddress` applies it only through `nav` (`open`, then `view` when the address names
+  Matrix/Canon) — never a parallel setter. History classes (`useLabRouteSync`):
+  - **arrival**: a parsed address outranks the persisted location and is applied; the entry is
+    REPLACED once the location lands (arriving never pushes). No address, or an unparseable one,
+    leaves the persisted location and replaces the entry to name it (the defined fallback);
+  - **push**: a catalog, entity, `open` or view move adds ONE entry (so Back after a matrix-cell
+    jump returns to the Matrix instead of leaving the app);
+  - **replace**: a rail step move, the step clamp, and an entity reconcile (the resolved entity
+    changed in the same commit as the entity list — persisted entities landing, an entity removed)
+    rewrite the current entry, so the URL bar is always a link to what is on screen;
+  - **popstate** re-applies the entry's location through `nav` and pushes nothing, so Back/Forward
+    cannot grow history;
+  - the lab's params leave with the lab: on unmount (a shell switch) `c/e/s/v` are stripped from
+    the entry left behind, deferred a microtask and counted per mounted shell so a StrictMode
+    remount keeps them.
+  The sync writes `labUrl(window.location.href, …)`, which keeps the pathname (`/` or `/layout`)
+  and every param the lab does not own. First consumer: the `/status` evidence ledger's per-row
+  **Lab ↗** link (`EvidenceEntityLedger`, `labHref({ catalogId, entityId, step, view: 'catalogs' })`)
+  opens the entity AT the step being read — before, the only way back was the bare `/layout` link
+  to wherever the lab was last left.
 
 On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's project canon rules into
 `canonStore` (replaces the seed if the server responds).
@@ -129,24 +231,40 @@ On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's proj
 Default `catalogId` is `'items'`; `useLabCatalogData()` and `useLabDetail(catalogId)` supply the
 `LabGroup[]` and `LabDetail | null` props.
 
-#### Runner truth chip — `RunnerChip` (`src/components/layout-lab/RunnerChip.tsx`)
+#### Activity chip — `ActivityChip` (`src/components/layout-lab/ActivityChip.tsx` + `hooks/useLabActivity.ts`, `activityModel.ts`)
+
+(Corrected 2026-09-30: this section used to describe `RunnerChip.tsx`, which no longer exists.
+`ActivityChip` replaced the unrelated `RunnerChip` (drain lease) + `LabJobsChip` (one-shot) pair
+with ONE header answer to "is anything running right now?".)
+
+It is a unified READ, not a merged runtime: `useLabActivity()` subscribes to the stores each engine
+already publishes and `summarizeActivity` (pure, `activityModel.ts`) renders them as lanes in one
+state vocabulary — **drain** (the UE drain lease), **one-shot** (`oneShotJobStore`) and **forge**
+(asset-forge background polls). Every lane carries a `blindSpot` naming what it cannot see.
 
 The L3/L4 drain runner talks to a single, non-reentrant UE editor guarded by a **lease**. The
 lease registry lives in `src/lib/test-gate-runner/drain-lease.ts` (`acquireLeases` — all-or-nothing,
 `releaseLeases`, `getLeaseState`; keyed `catalog|entity`, `*|*` = global). `POST /api/pipeline-artifacts/drain`
 acquires it (409 on overlap) and `GET /api/pipeline-artifacts/drain/status` READS it (`{ held, scope,
-since, scopes }`, envelope via `apiSuccess`) — so a held lease is visible instead of only surfacing
-as a 409. The header chip shows three states:
+since, scopes }`, envelope via `apiSuccess`). The drain lane's states (`drainLane`):
 
-- **`draining <scope>`** — THIS session is draining. Read from `labRunnerStore.localDrain`, which the
-  coach drain (`useBaseline.runDrain`) and the batch drain (`useBatchDrain`) publish while running.
-  Authoritative for our own runner, so the chip does **not** poll while `localDrain` is set.
-- **`lease held · <scope>`** — the status API reports a lease we didn't take → another session holds
-  the editor (a batch drain here would 409). `MatrixBatchDrain`'s `locked` outcome points at this chip.
-- **`idle`** — no local drain and the API reports no lease.
+- **running here** (`draining <scope> (via the UE bridge)`) — THIS session has a live run in
+  `labRunnerStore.runs` (batch or coach drain; a registered cancel reads `· cancel requested` from the
+  run's own flag). `localDrain` is derived from the live runs; while it is set the lease is **not** polled.
+- **attention** (`drain <catalog> finished: … · failed`) — the newest finished batch run failed gates,
+  ran nothing (`ranNothing`), was refused by the lease or errored (`drainLaneModel.ts`, `drainProblem`).
+  Outranks unknown/idle within the lane (the label still says when the lease is unchecked); a lease held
+  elsewhere outranks it. The chip's drain lane acts on `drainSubject(runs)`: **Cancel** while a batch runs,
+  **Open in Matrix** (`onOpenDrain` -> `nav.catalog` + `nav.view('matrix')` in `LayoutLab`) and **Dismiss**
+  (`dismissRun`) once it has finished.
+- **running elsewhere** — the status API reports a lease this page did not take (a batch drain here
+  would 409).
+- **unknown** — before the first lease poll answers, and after one fails (`leaseProbe`
+  `unpolled` / `failed`). Never read as idle: a false idle invites a second editor boot.
+- **idle** — no local drain and the API reports the lease free.
 
-Polling is suspend-safe (`useSuspendableEffect`) on `UI_TIMEOUTS.runnerLeasePoll` (5 s) and does zero
-work while draining locally or hidden.
+The lease poll is suspend-safe (`useSuspendableEffect`) on `UI_TIMEOUTS.runnerLeasePoll` (5 s) and does
+zero work while draining locally or hidden. The chip also feeds the tab title (`useDynamicTitle`).
 
 ### 4. Category→Catalog→Entity tree — `CatalogTree` (`src/components/layout-lab/CatalogTree.tsx`)
 
@@ -180,8 +298,15 @@ kept, so reopening is instant.
   pipeline does — then `navigateTo(catalog, entity, <that entity's own index>)` (no entity has the
   step → the hit degrades to selecting the catalog). Every path runs the lifted callbacks, so
   last-location persistence is unchanged.
+- **Pages + modules**: `NAVIGABLE_SURFACES` rows (badge `page`) and one row per legacy-shell
+  module from `MODULE_DESTINATIONS` (badge `module`) both reuse the `route` hit kind — a
+  full-page jump (`window.location.href`), e.g. `packag` → `/?legacy=1&module=packaging`.
 - **Keyboard**: ↓/↑ (wrapping) · Home/End · Enter opens · Escape clears the query, then closes
   the overlay (the first Escape is `stopPropagation`'d so clearing never also closes the Modal).
+- **Recall** (`SearchCombobox` `recall`, also on `status/EntitySearch` under its own `idPrefix`):
+  the empty query lists recent picks, so `⌘/Ctrl+K` → Enter returns to the last place and ↓ Enter
+  to the one before, through the same jump paths above. The Modal's `initialFocusRef` is the
+  search input — without it focus landed on the dialog's close button one frame after open.
 
 Search+jump only — deliberately not a command palette with actions.
 
@@ -200,6 +325,60 @@ with actions. `searchIntents.ts` resolves each hit client-side, from its doc id 
 - **state** — checklist hits show Done/Open from `moduleStore.checklistProgress`.
 
 `searchIntents.test.ts` ratchets zero dead ends over every doc `rebuildSearchIndex` writes.
+
+### 4d. Keyboard door — one owner per chord, LIFO Escape, hidden panes inert (`src/lib/hotkeys/hotkeyRegistry.ts`, `src/hooks/useHotkey.ts`)
+
+The legacy shell's shortcuts go through ONE window keydown listener owned by `hotkeyRegistry`
+(pure of React; attached only while something is registered), not one listener per component:
+
+- **Chords** (`mod+k`, `ctrl+b`, `ctrl+1`; `mod` = Ctrl or Meta; listed modifiers are required,
+  unlisted ones unchecked; the key is compared to `KeyboardEvent.key`) have ONE owner per keypress:
+  the innermost active scope (`module:<id>` beats `shell`), last-registered within a scope. Two
+  owners of one chord in one scope is misuse: `collisions()` reports it and `logger.warn` fires
+  once (last wins). The door `preventDefault`s only what it handles. `allowInInput` defaults to
+  false; every migrated chord passes `true`, because the raw listeners it replaced never checked focus.
+- **Escape is a LIFO layer stack** (`pushLayer(id, close)`): one Escape pops and closes only the
+  top layer, so Escape over the search palette no longer also collapses the persisted
+  quick-actions panel or the drawer under it.
+- **Exclusive capture** (`captureNext`): capture phase + `stopPropagation`, one-shot, releasable
+  (the `InputBindingsTable` rebind).
+- **Hooks** — `useHotkey(chords, handler, opts)`, `useEscapeLayer(id, active, close)`,
+  `useCaptureNext(active, handler)` — register only while `SuspendContext` is false, so a pane
+  hidden in the keep-alive LRU is keyboard-inert: the `!isVisible` that sets `display:none` is the
+  condition that unregisters its keys (a half-finished rebind in a hidden pane releases its
+  capture). Scope defaults to `module:<PaneIdContext>` inside a pane and `shell` outside one.
+  Handlers are read through a ref, so a new handler identity never re-registers or re-orders a layer.
+
+Adopters: `useKeyboardShortcuts` (Ctrl+B / Ctrl+J / Ctrl+1–5, shell), `useGlobalSearchPanel`
+(`mod+k` shell + `global-search` layer), `SpellbookSearch` (`mod+k` in `module:arpg-ability` +
+`spellbook-search` layer), `useReviewableModuleView` (`quick-actions-panel` layer), `Sidebar`
+(`sidebar-drawer`), `ActivityFeedPanel` (`activity-feed`), `InputBindingsTable` (capture).
+Parity is pinned by `src/__tests__/hooks/hotkeyCallersParity.test.tsx`.
+
+Behaviour to know: **Ctrl+K inside the ability module opens the Spellbook palette only — global
+search no longer opens there** (one owner per chord); it opens global search again as soon as
+that pane is hidden. Still raw (13 listeners, deliberately untouched): `TopBar/useTopBar.ts` (the
+legacy-shell project dropdown's Escape is a `document` listener, so it still co-closes with the
+top door layer — LIFO holds among door layers only), the lab shell's `LabSearch` / `ActivityChip`
+/ `LabBridgeStrip` / `useBaseline` (page.tsx mounts one shell, so they never meet these), and
+local popovers / dev tools. New shortcuts use the hooks, not another window listener.
+
+### 4e. Tab title + favicon — outcome held until seen (`src/lib/shell/tabAttention.ts`, `src/hooks/useDynamicTitle.ts`)
+
+The browser tab is the operator's ambient signal while minutes-long work runs in another window.
+`tabAttention` is a pure reducer `(prev, signal, visible, now) -> { title, tone, latched }` fed by two
+adapters over consecutive snapshots: `fromCliSessions` (legacy shell, cliPanelStore: per-session
+`isRunning` edge + `lastTaskSuccess` + `lastCallbackStatus`) and `fromLabActivity` (lab shell,
+`activityModel` lanes: `running-here` -> `attention` is `(Failed)` for a lane whose label ends `· failed` (a failed one-shot, or a drain whose batch failed / ran
+nothing / was refused), else `(Needs you)`; -> `idle` is `(Done)`). A failed run is `(Failed)`, never `(Done)`; a run that exited 0
+but whose asked-for `@@CALLBACK` failed or went missing is `(Not landed)` (only when `lastDispatch`'s
+prompt carried callback ids — the `suggestionIntents` rule); one failure among running sessions reads
+`(Running · 1 failed)`. A first snapshot is never an edge. An outcome latches while
+`document.visibilityState` is hidden; the `UI_TIMEOUTS.tabOutcomeLinger` countdown starts only once
+the tab is visible. `useDynamicTitle()` (AppShell) keeps base `POF` and the `(N sessions)` /
+`(Running)` / `(N running)` strings; `useDynamicTitle(summary)` is called by `ActivityChip` (always
+mounted in the lab header) with the document's own title as base, left untouched while nothing runs
+or ends. The favicon (STATUS_* from chart-colors) repaints only when the tone changes.
 
 ### 5. Composition screen — `Baseline` (`src/components/layout-lab/Baseline/index.tsx` + `Baseline/useBaseline.ts`)
 
@@ -370,6 +549,13 @@ Two truth paths that used to dead-end:
   erase content that did land. The rail badges the step (`✕`) and the canvas renders
   `<ProduceErrorBanner>`; `clearError` dismisses it, dropping a failure-marker-only step
   entirely so it reads as honest `unproduced` again (and stays open to server hydration).
+  **While the marker exists it is not an artifact either (2026-10-01):** every reader decodes
+  the record through `stepRecord.ts` — `contentOf` (content iff `done`), `produceFailureOf`,
+  `effectiveSteps` (the one add-only server/local merge for the matrix and the global coach;
+  a marker never shadows a server row) and `coachVerdictOf`. The derivation, matrix and both
+  coaches grade only content, so a marker-only step reads `unproduced` (never a graded `{}`:
+  no fabricated pass, no phantom deferred gate), and its error reaches the coach through the
+  one hint channel (`settlementOf` → `coachActionFor`: "Produce — Last produce failed — …").
 - **Reset now means reset.** `resetEntity` clears LOCAL state only; because hydration is
   add-only, the surviving server rows were re-adopted on the next load and the reset silently
   un-did itself. `resetEntityEverywhere` (behind the shared `ConfirmDialog`, whose copy states
@@ -457,7 +643,8 @@ prompt so every generic step receives relevant project/game laws without bespoke
 
 ### `labPipelineStore` — add-only hydration invariant + drift reconciliation
 
-`hydrateEntity` checks `if (!merged[step])` before adding each step. This means server data can
+`hydrateEntity` adopts a server row whole only where the local record holds no content (absent,
+or a failure marker — `stepRecord.contentOf`; the marker's `error` is kept). This means server data can
 backfill steps a new browser session has not produced yet, but a locally-produced step is never
 silently overwritten by a stale server record. This is intentional — **the add-only default protects
 offline-produced work**.
@@ -514,12 +701,13 @@ are explicit (and pinned by `labPipelineStore.refresh.test.ts`):
 
 | local | server | result |
 |-------|--------|--------|
-| absent | present | adopt |
+| absent, or a failure marker (no content) | present | adopt (a marker's `error`/`errorAt` kept) |
 | present, identical | present | `unchanged` (only the provenance stamp refreshes) |
 | present, holds work the server has not got (`syncError`, or a produce strictly newer than the row) | present | **kept** — a refresh never overwrites unsaved produce output |
 | present, otherwise different | present | adopt (local `data.genHistory` preserved, as `adoptServer`) |
 | present, provably server-derived | absent | **removed** — a step deleted server-side stops reading green forever |
 | present, local-only work | absent | kept + stamped `SERVER_MISSING_REASON`, so the existing sync-error banner/badge/**Retry** (which re-POSTs it) becomes the recovery path |
+| failure marker only (no content) | absent | left as is, counted `unchanged` — an empty failure is not unsaved work |
 
 "Provably server-derived" is `LabStepArtifact.serverSeen` — the `at` of the newest server row the step
 has been reconciled against, written by `hydrateEntity`/`adoptServer`/`refreshEntity`. No timestamp
@@ -573,6 +761,22 @@ out-of-range clamp (bounded by the OPEN entity's own list) all read it, so the c
 matrix and search agree about an entity's steps by construction. Pinned by
 `entityPipeline.test.ts`, `globalCoach.profile.test.ts`, `LabSearch.profileStep.test.tsx` and
 `LayoutLab.entityStepClamp.test.tsx`.
+
+### Matrix triage + work queue (`matrixTriage.ts`, `workQueue.ts`)
+
+The Matrix ranks its rows by the ONE coach ladder: `buildMatrixRows` carries `row.issue` =
+`pickLadderIssue(own steps, displayStatus, driftByStep)` — the same pick both coaches make — and
+`rankMatrixRows` sorts by `COACH_PRIORITY_RANK`, then entity id (an immutable unique tiebreaker, so
+store order never leaks through and a refetch cannot reshuffle the board). `MatrixTriageBar` filters
+to one rung (`{kind:'rung'}`, `none` = every own step passes) with per-rung counts over the UNFILTERED
+board; a column header applies `{kind:'column', step, status}` (most urgent status present, click
+again for the next) and never matches a row whose own pipeline lacks the step. The filtered board is
+captioned with its predicate (`2 of 5 · deferred`). `Work these N` builds a `WorkQueue` of stops
+(entity, step by label, that row's OWN index) and `LayoutLab` opens each through `openFromMatrix`.
+`useLabWorkQueue` re-anchors the queue on the lab location during render (`reconcileQueue`): on a
+queued entity the cursor follows it; a tree / search / coach jump anywhere else ends the queue.
+Next/Prev never wrap (Next on the last stop reads Finish). Pinned by `matrixTriage.test.ts`,
+`workQueue.test.ts`, `CatalogMatrix.triage.test.tsx` and `LayoutLab.workQueue.test.tsx`.
 
 ### Concurrency
 
@@ -741,15 +945,16 @@ All generic controls live in `src/components/layout-lab/ui/` and consume the tok
 |-----------|-------|
 | `Panel` | Bordered container; `glass` prop adds `backdrop-filter` |
 | `Button` | Ghost / solid / accent variants; `active` → `aria-pressed`; `mono` switches to mono font; `ariaLabel` prop and HTML `aria-label` attribute both work (prop wins) |
-| `IconButton` | Square variant of Button for icon-only actions (wraps `VisuallyHidden` label) |
+| `IconButton` | Square variant of Button for icon-only actions (required `ariaLabel` → `aria-label`) |
 | `Chip` | Inline status badge; color via token name |
 | `Stat` | Label+value pair used in the composition-screen header strip |
-| `Field` / `Input` / `Textarea` | Labeled form controls; min font-size `var(--lab-fs-sm)` (≥ 14 px) |
+| `Field` / `Input` / `Textarea` | Labeled form controls; min font-size `var(--lab-fs-sm)` (≥ 14 px). `Input`/`Textarea` carry `focus-ring-inset` and merge the caller's className, so `steps/controls.tsx` `LabInput`/`LabTextarea` ride them as the themed adapter (name required: `label` or `ariaLabel`) |
 | `Rail` | Titled scrollable column shell used by the catalog tree and pipeline timeline |
-| `VisuallyHidden` | SR-only text for icon buttons and decorative elements |
+| `VisuallyHidden` | SR-only text utility (no production importer today; `IconButton` names itself via `aria-label`) |
 
-Every primitive carries the `.focus-ring` class so keyboard focus is styled by the unified global
-token (`var(--focus-accent)` → `var(--lab-accent)` inside `[data-lab-root]`).
+Every interactive primitive carries `.focus-ring` (text controls: `.focus-ring-inset`) so keyboard focus is styled by the unified global
+token (`var(--focus-accent)` → `var(--lab-accent)` inside `[data-lab-root]`). No lab source may set `outline: 'none'` — the guard
+`src/__tests__/components/layout-lab/no-focus-outline-kill.test.ts` refuses it.
 
 ### Hooks
 
@@ -830,6 +1035,16 @@ modified-edge blink in `AnimationStateMachine`).
   fallback, a Tab/Shift+Tab focus trap, initial focus into the dialog (`initialFocusRef` or the
   first focusable), Escape-to-close, backdrop-click-to-close, and focus restored to the trigger on
   close. First adopter: the evaluator's Author-Pattern modal (`PatternLibraryView`).
+- **Confirm dialogs own the outcome**: `ConfirmDialog` (`src/components/ui/ConfirmDialog.tsx`) takes
+  the confirmed operation itself - `onConfirm: () => void | Promise<unknown>`. The confirm disarms
+  synchronously on click (a ref, so a same-tick double click runs it once); while the promise runs the
+  button is busy (`aria-busy`, disabled, `busyLabel`) and Cancel / Escape / backdrop / header X are
+  inert; it closes (`onClose`) only when the operation resolves; a rejection or a resolved `Result` err
+  keeps it open with the reason in a `role="alert"` and turns Confirm into `retryLabel`, which re-runs
+  the SAME operation. Outcome rules are pure in `confirmOutcome.ts` (anything that is not a throw or a
+  `Result` err is success). A sync callback returning nothing closes in the same click, as before.
+  Consumers return their promise (never `void op()`) and do not keep a parallel delete-error/retry state;
+  a success-with-warning (e.g. audio rows deleted but files left on disk) stays a page banner.
 
 ---
 

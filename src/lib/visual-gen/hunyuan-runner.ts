@@ -12,7 +12,9 @@
  * POF_HUNYUAN_VENV overrides; the hy3dgen package is located via POF_HUNYUAN_ROOT.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 export interface HunyuanSpec {
   imagePath: string;
@@ -39,6 +41,10 @@ export interface HunyuanResult {
   vramGb?: number;
   /** Gray-shape preview render (for the critique tiers + UI). */
   previewPath?: string;
+  /** Why the preview render failed (it never blocks the mesh) — never a silent absence. */
+  previewError?: string;
+  /** Non-fatal script notes (load/gen seconds, preview error) and any undeclared marker. */
+  diagnostics?: Record<string, string>;
   durationMs: number;
 }
 
@@ -61,20 +67,20 @@ export interface ParsedHunyuan {
   faces?: number;
   vramGb?: number;
   previewPath?: string;
+  previewError?: string;
+  diagnostics?: Record<string, string>;
   error?: string;
 }
 
-/** Parse the script's `POF_HY3D_*` stdout markers. Pure. */
+/** Parse the script's `POF_HY3D_*` stdout markers (declared in `script-markers.ts`). Pure. */
 export function parseHunyuanOutput(stdout: string): ParsedHunyuan {
-  const get = (k: string): string | undefined => {
-    const m = stdout.match(new RegExp(`^${k}=(.*)$`, 'm'));
-    return m ? m[1].trim() : undefined;
-  };
-  const done = get('POF_HY3D_DONE');
-  const error = get('POF_HY3D_ERROR');
-  const verts = get('POF_HY3D_VERTS');
-  const faces = get('POF_HY3D_FACES');
-  const vram = get('POF_HY3D_VRAM_GB');
+  const block = readMarkerBlock('hunyuan', stdout);
+  const get = block.get;
+  const done = get('DONE');
+  const error = get('ERROR');
+  const verts = get('VERTS');
+  const faces = get('FACES');
+  const vram = get('VRAM_GB');
   return {
     ok: done !== undefined && error === undefined,
     meshPath: done,
@@ -82,11 +88,13 @@ export function parseHunyuanOutput(stdout: string): ParsedHunyuan {
     verts: verts ? Number(verts) : undefined,
     faces: faces ? Number(faces) : undefined,
     vramGb: vram ? Number(vram) : undefined,
-    previewPath: get('POF_HY3D_PREVIEW'),
+    previewPath: get('PREVIEW'),
+    previewError: get('PREVIEW_ERROR'),
+    diagnostics: block.diagnostics,
   };
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
 export interface HunyuanDeps {
   run?: RunFn;
@@ -119,32 +127,27 @@ export async function runHunyuan(spec: HunyuanSpec, deps: HunyuanDeps = {}): Pro
   const start = now();
   // Hunyuan is slower than TripoSR (model load + 31s flow-matching gen); the first run
   // also downloads the ~9GB model. Default to a generous 15-min ceiling.
-  const { stdout } = await run(py, args, spec.timeoutMs ?? 900_000);
-  const parsed = parseHunyuanOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 900_000;
+  const outcome = await run(py, args, timeoutMs);
+  const parsed = parseHunyuanOutput(outcome.stdout);
   const meshPath = parsed.meshPath && fileExists(parsed.meshPath) ? parsed.meshPath : undefined;
 
   return {
     ok: parsed.ok && !!meshPath,
-    error: parsed.error ?? (parsed.ok && !meshPath ? 'mesh file not written despite DONE marker' : undefined),
+    // No marker at all → the process itself says why (timeout, crash, could not start).
+    error: parsed.error ?? (parsed.ok
+      ? (meshPath ? undefined : 'mesh file not written despite DONE marker')
+      : processFailureReason(outcome, { tool: basename(script), timeoutMs })),
     meshPath,
     verts: parsed.verts,
     faces: parsed.faces,
     vramGb: parsed.vramGb,
     previewPath: parsed.previewPath,
+    previewError: parsed.previewError,
+    diagnostics: parsed.diagnostics,
     durationMs: now() - start,
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });

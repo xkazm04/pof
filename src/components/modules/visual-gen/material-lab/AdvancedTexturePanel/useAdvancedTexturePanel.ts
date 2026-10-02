@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
+import { useNavigationStore } from '@/stores/navigationStore';
 import { useMaterialStore, type TextureChannel } from '../useMaterialStore';
 import type { ScenarioResult, ImageResult } from './types';
 import { SEAMLESS_HINT, PBR_MAP_CHANNELS } from './constants';
@@ -62,8 +63,9 @@ export function useAdvancedTexturePanel() {
     flashTimer.current = window.setTimeout(() => setAppliedChannels([]), UI_TIMEOUTS.copyFeedback);
   };
 
+  // Addressed to Material Lab's own view — no other module's tab moves.
   const goToEditorTab = () => {
-    window.dispatchEvent(new CustomEvent('pof-navigate-tab', { detail: { tab: 'editor' } }));
+    useNavigationStore.getState().setModuleTab('material-lab', 'editor');
   };
 
   const applyMap = (channel: TextureChannel, url: string | undefined) => {

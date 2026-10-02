@@ -36,6 +36,9 @@ export interface CraftVerdictView {
   catalogId: string;
   entityId: string;
   step: string;
+  /** The lens the gauge was recorded under. A gauge under a lens other than the one the step
+   *  is gauged by projects A0. Optional so a hand-built view without it still projects. */
+  lens?: string;
   aLevel: GaugedCraftLevel;
   lensVersion: number;
   artifactUpdatedAt?: string;
@@ -228,6 +231,24 @@ export function ceilingFor(deliverable: DeliverableClass): CraftLevel {
 const factIndex = new Map<string, StepFact>();
 for (const f of FACTS) factIndex.set(`${f.catalogId}\u0000${f.step}`, f);
 
+/** What the server derives about how ONE step is gauged — its lens, deliverable and roof. */
+export interface CraftStep {
+  lens: LensId;
+  deliverable: DeliverableClass;
+  ceiling: CraftLevel;
+}
+
+/**
+ * The lens + roof of an audited step, or `undefined` for a step absent from the fleet audit.
+ * THE derivation both the write door (`./admission`) and the projection ({@link craftForCell})
+ * use, so a gauge is admitted under exactly the lens it will be projected under.
+ */
+export function craftStepOf(catalogId: string, step: string): CraftStep | undefined {
+  const fact = factIndex.get(`${catalogId}\u0000${step}`);
+  if (!fact) return undefined;
+  return { lens: lensForStep(fact.deliverable, catalogId), deliverable: fact.deliverable, ceiling: ceilingFor(fact.deliverable) };
+}
+
 export interface CellCraft {
   craft: Craft;
   lens: LensId;
@@ -261,10 +282,9 @@ export function craftForCell(
   verdicts: CraftVerdictView[],
   contentByEntity: ReadonlyMap<string, JudgedContent>,
 ): CellCraft | undefined {
-  const fact = factIndex.get(`${catalogId}\u0000${stepLabel}`);
-  if (!fact) return undefined;
-  const lens = lensForStep(fact.deliverable, catalogId);
-  const ceiling = ceilingFor(fact.deliverable);
+  const step = craftStepOf(catalogId, stepLabel);
+  if (!step) return undefined;
+  const { lens, ceiling, deliverable } = step;
   const currentLensVersion = LENS_VERSIONS[lens];
 
   const mine = verdicts.filter((v) => v.catalogId === catalogId && v.step === stepLabel);
@@ -272,19 +292,18 @@ export function craftForCell(
     return {
       craft: craftOf({ currentLensVersion, ceiling }),
       lens,
-      deliverable: fact.deliverable,
+      deliverable,
       ceiling,
     };
   }
   let worst: Craft | undefined;
   let worstVerdict: CraftVerdictView | undefined;
   for (const v of mine) {
-    const projected = craftOf({
-      verdict: v,
-      currentLensVersion,
-      ceiling,
-      artifact: contentByEntity.get(v.entityId),
-    });
+    // A gauge recorded under another lens scored a different rubric — it never projects as a
+    // gauge of this one (re-labelling must not dodge a lens).
+    const projected: Craft = v.lens !== undefined && v.lens !== lens
+      ? { level: 'A0', state: 'gauged', because: `gauged under the '${v.lens}' lens; this step is gauged by '${lens}'` }
+      : craftOf({ verdict: v, currentLensVersion, ceiling, artifact: contentByEntity.get(v.entityId) });
     if (
       !worst ||
       craftRank(projected.level) < craftRank(worst.level) ||
@@ -297,7 +316,7 @@ export function craftForCell(
   return {
     craft: worst!,
     lens,
-    deliverable: fact.deliverable,
+    deliverable,
     ceiling,
     ...(worstVerdict?.movement ? { movement: worstVerdict.movement } : {}),
   };

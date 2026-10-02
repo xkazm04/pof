@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, Command } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useHotkey, useEscapeLayer } from '@/hooks/useHotkey';
 import { useSpellbookSearchIndex, MAX_RESULTS } from './spellbook-search-index';
 import { SpellbookSearchPalette } from './SpellbookSearchPalette';
 
@@ -52,17 +53,12 @@ export function SpellbookSearch({ onNavigate }: SpellbookSearchProps) {
     }
   }
 
-  // Global Cmd+K / Ctrl+K
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setOpen(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
+  // Cmd+K / Ctrl+K — module scope, so while this pane is visible it is the ONE
+  // owner (global search does not also open); hidden in the LRU it is inert.
+  useHotkey('mod+k', () => setOpen(prev => !prev), {
+    scope: 'module:arpg-ability', allowInInput: true, id: 'ability.spellbook-search',
+  });
+  useEscapeLayer('spellbook-search', open, () => setOpen(false));
 
   return (
     <>

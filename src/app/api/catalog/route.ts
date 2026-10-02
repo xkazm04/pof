@@ -3,8 +3,9 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { generationCallbackSchema, lifecycleStateSchema } from '@/lib/catalog/validation';
-import { resolveTransition } from '@/lib/catalog/lifecycle';
-import type { LifecycleRecord } from '@/lib/catalog/types';
+import { syncEntityLifecycle } from '@/lib/catalog/headless';
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { transitionOutcome } from '@/lib/catalog/generationPlan';
 import { recordTrialForVariantId } from '@/lib/prompt-evolution/engine';
 import { STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
 import { logger } from '@/lib/logger';
@@ -23,7 +24,14 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/catalog
  *   { action: 'transition', catalogId, entityId, nextLifecycle, ueAssets?, testResult? }
- *   ↑ the generation @@CALLBACK target — applies the lifecycle gate server-side.
+ *   ↑ the generation @@CALLBACK target. It RECORDS evidence (the reported ueAssets)
+ *   and returns `{ ...record, requested, held?, trialRecorded }` — it does not walk a
+ *   lifecycle ladder. ONE lifecycle writer: the persisted lifecycle is the derivation
+ *   (`syncEntityLifecycle`, the same sync `commitArtifact` runs), so `nextLifecycle`
+ *   is only what the step ASKED for, and a session-reported testResult never writes
+ *   'verified' or lastVerifiedAt — only a drained L3/L4 gate does (lifecycle.ts).
+ *   `held` says why the derivation is below the request. An unregistered catalog
+ *   has nothing to derive from: lifecycle untouched (a new row starts 'planned').
  */
 export async function POST(req: NextRequest) {
   try {
@@ -44,23 +52,16 @@ export async function POST(req: NextRequest) {
     if (!payload.success) return apiError('Invalid callback payload', 400, payload.error.issues);
 
     const existing = getLifecycle(catalogId, entityId);
-    const currentState = existing?.lifecycle ?? 'planned';
-    const resolved = resolveTransition(currentState, next.data, payload.data.testResult);
-    if (!resolved) {
-      return apiError(
-        `Illegal lifecycle transition ${currentState} → ${next.data}` +
-          (next.data === 'verified' ? ' (verified requires a passing test)' : ''),
-        409,
-      );
-    }
-
     const merged = Array.from(new Set([...(existing?.ueAssets ?? []), ...payload.data.ueAssets]));
-    const record: LifecycleRecord = {
-      catalogId, entityId, lifecycle: resolved, ueAssets: merged,
-      ...(payload.data.testResult ? { lastTestResult: payload.data.testResult } : {}),
-      ...(resolved === 'verified' ? { lastVerifiedAt: new Date().toISOString() } : {}),
-    };
-    const saved = upsertLifecycle(record);
+    // Evidence first: the reported assets land on the row with its lifecycle untouched…
+    const recorded = upsertLifecycle({
+      ...(existing ?? {}), catalogId, entityId,
+      lifecycle: existing?.lifecycle ?? 'planned', ueAssets: merged,
+    });
+    // …then the derivation — the one lifecycle writer — decides the state.
+    const synced = getCatalogPipeline(catalogId) ? syncEntityLifecycle(catalogId, entityId) : null;
+    const saved = synced?.record ?? recorded;
+    const held = transitionOutcome(next.data, synced ? synced.derived : null);
 
     // ── Close the A/B loop for the RECIPE path ────────────────────────────────
     // The dispatch stamps the variant it was served into the callback's static
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return apiSuccess({ ...saved, trialRecorded });
+    return apiSuccess({ ...saved, requested: next.data, ...(held ? { held } : {}), trialRecorded });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Catalog POST failed', 500);
   }

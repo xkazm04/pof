@@ -24,7 +24,8 @@ export {
   generateAttributeSetHeader,
   generateTagsHeader,
 } from '@/lib/gas-codegen';
-import type { EditorEffect } from '@/lib/gas-codegen';
+import { renderModifierInfo, type EditorEffect } from '@/lib/gas-codegen';
+import { cppFloat } from '@/lib/genome/codegen';
 
 // ── Generated identity — the single source of truth ──────────────────────────
 
@@ -101,16 +102,12 @@ export function generateEffectsCode(effects: EditorEffect[], abilityName?: strin
     // Modifiers are real FGameplayModifierInfo wiring — the shape the contract
     // demands — not the comment list the old preview showed.
     for (const m of eff.modifiers) {
-      const attr = sanitizeIdentifier(m.attribute) || 'Unknown';
-      const op = m.operation === 'add' ? 'Additive' : 'Multiplicitive';
       lines.push('');
-      lines.push('    {');
-      lines.push('        FGameplayModifierInfo Mod;');
-      lines.push(`        Mod.Attribute = UARPGAttributeSet::Get${attr}Attribute();`);
-      lines.push(`        Mod.ModifierOp = EGameplayModOp::${op};`);
-      lines.push(`        Mod.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(${m.magnitude}f));`);
-      lines.push('        Modifiers.Add(Mod);');
-      lines.push('    }');
+      lines.push(...renderModifierInfo({
+        attribute: sanitizeIdentifier(m.attribute) || 'Unknown',
+        operation: m.operation,
+        magnitude: cppFloat(m.magnitude),
+      }));
     }
 
     // Granted tags use the UE 5.7 component idiom the contract pins.

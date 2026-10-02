@@ -1,4 +1,5 @@
 import type { MaterialTextureSources } from '@/lib/blender-mcp/scripts/create-material';
+import { MATERIAL_CHANNELS, resolveChannelSource } from '@/lib/visual-gen/material-boundary';
 import type { PBRParams, TextureChannel } from './useMaterialStore';
 
 /** One thing the lab holds that did NOT reach Blender, and the concrete reason. */
@@ -18,40 +19,17 @@ export interface MaterialTransferPlan {
 
 export type TextureMap = Record<TextureChannel, string | null>;
 
-const CHANNEL_LABEL: Record<TextureChannel, string> = {
-  albedo: 'Albedo map',
-  normal: 'Normal map',
-  metallic: 'Metallic map',
-  roughness: 'Roughness map',
-  ao: 'AO map',
-};
-
-/**
- * A blob: URL is an object-URL handle into THIS browser tab's memory. Blender is
- * a separate process reading files and URLs, so an uploaded map genuinely cannot
- * travel — the lab says so rather than reporting a success that dropped it.
- */
-const BLOB_REASON =
-  'uploaded into this browser tab only (blob: URL) — Blender cannot open it. Generate the map in the Advanced tab, or point the slot at a file on disk.';
-const DATA_REASON = 'an inline data: URL, not a file or address Blender can open.';
-
-/** Routes this app serves; anything else starting with "/" is treated as a filesystem path. */
-const APP_ROUTE_PREFIXES = ['/api/', '/generated/'];
-
 /**
  * Resolve one texture slot to something `bpy.data.images.load` (or the generated
  * `_load_image` downloader) can consume, or explain why it cannot be resolved.
+ * A thin alias of the lab's one resolver (`resolveChannelSource(url, 'blender')`)
+ * — a UE `/Game/` asset path is refused, never forwarded as a filesystem path.
  */
 export function resolveTextureSource(
   url: string | null,
   origin: string,
 ): { source: string } | { reason: string } | null {
-  if (!url) return null; // nothing loaded — nothing was dropped
-  if (url.startsWith('blob:')) return { reason: BLOB_REASON };
-  if (url.startsWith('data:')) return { reason: DATA_REASON };
-  if (url.startsWith('http://') || url.startsWith('https://')) return { source: url };
-  if (APP_ROUTE_PREFIXES.some((p) => url.startsWith(p))) return { source: `${origin}${url}` };
-  return { source: url }; // an absolute filesystem path
+  return resolveChannelSource(url, 'blender', origin);
 }
 
 /**
@@ -75,16 +53,15 @@ export function planMaterialTransfer(
   const notSent: DroppedParam[] = [];
   const resolved: MaterialTextureSources = {};
 
-  const channels: TextureChannel[] = ['albedo', 'normal', 'metallic', 'roughness', 'ao'];
-  for (const channel of channels) {
+  for (const { channel, label } of MATERIAL_CHANNELS) {
     const result = resolveTextureSource(textures[channel], origin);
     if (!result) continue;
     if ('reason' in result) {
-      notSent.push({ label: CHANNEL_LABEL[channel], reason: result.reason });
+      notSent.push({ label: `${label} map`, reason: result.reason });
       continue;
     }
     resolved[channel] = result.source;
-    sent.push(CHANNEL_LABEL[channel]);
+    sent.push(`${label} map`);
   }
 
   if (resolved.normal) {

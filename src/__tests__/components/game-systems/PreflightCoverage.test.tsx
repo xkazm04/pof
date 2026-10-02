@@ -1,9 +1,26 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { PreflightPanel, type PreflightStatusSummary } from '@/components/modules/game-systems/PreflightPanel';
 import type { PreflightCheckResult, PreflightStatus } from '@/lib/packaging/preflight';
+import { BuildConfigSelector } from '@/components/modules/game-systems/BuildConfigSelector';
+import { useProjectStore } from '@/stores/projectStore';
+import { createDefaultProfile } from '@/lib/packaging/build-profiles';
+
+// BuildConfigSelector render case: CookProgress is the component that POSTs
+// /api/packaging/execute, and it does so exactly when it receives a request — so
+// the captured request list IS the execute-POST record. Unrelated siblings stubbed.
+const cooks = vi.hoisted(() => ({ requests: [] as Array<Record<string, unknown>> }));
+vi.mock('@/components/modules/game-systems/CookProgress', () => ({
+  CookProgress: ({ request }: { request: Record<string, unknown> | null }) => {
+    if (request && !cooks.requests.includes(request)) cooks.requests.push(request);
+    return null;
+  },
+}));
+vi.mock('@/components/modules/game-systems/SmokeTest', () => ({ SmokeTest: () => null }));
+vi.mock('@/components/modules/game-systems/NightlyBuildScheduler', () => ({ NightlyBuildScheduler: () => null }));
+vi.mock('@/components/modules/game-systems/GateNotifySettings', () => ({ GateNotifySettings: () => null }));
 
 /**
  * The pre-flight verdict must name its own coverage: on mount only the FAST
@@ -86,5 +103,60 @@ describe('PreflightPanel — map plumbing drives a real check', () => {
       'utf-8',
     );
     expect(src).not.toContain('mapName');
+  });
+});
+
+describe('BuildConfigSelector — Package gates the profile you press', () => {
+  const FAST_PASS = {
+    results: [
+      { id: 'config-sanity', label: 'Config sanity', status: 'pass', detail: 'ok', issues: [] },
+      { id: 'with-editor-audit', label: 'Plugin WITH_EDITOR audit', status: 'pass', detail: 'ok', issues: [] },
+    ],
+    overall: 'pass',
+  };
+  const profileOf = (id: string, maps: string[], isDefault: boolean) => ({
+    ...createDefaultProfile('Win64'), id, name: `Profile ${id}`, isDefault,
+    cookSettings: { ...createDefaultProfile('Win64').cookSettings, mapsToInclude: maps },
+  });
+
+  it("press Package on profile B -> no cook until B's own gate settles, and the pre-flight measured B's maps", async () => {
+    cooks.requests = [];
+    useProjectStore.setState({ projectPath: 'C:/Proj/PoF', projectName: 'PoF', ueVersion: '5.8' });
+    const preflightMaps: string[][] = [];
+    let releaseB: (() => void) | null = null;
+    const ok = (data: unknown) => {
+      const body = { success: true, data };
+      return { ok: true, status: 200, json: () => Promise.resolve(body), text: () => Promise.resolve(JSON.stringify(body)) };
+    };
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (String(url).includes('/api/packaging/profiles')) {
+        return Promise.resolve(ok({ profiles: [profileOf('A', ['/Game/Maps/A'], true), profileOf('B', ['/Game/Maps/B'], false)] }));
+      }
+      if (String(url).includes('/api/packaging/preflight')) {
+        const maps = JSON.parse(String(init?.body)).mapsToInclude as string[];
+        preflightMaps.push(maps);
+        if (maps.includes('/Game/Maps/B')) {
+          return new Promise((resolve) => { releaseB = () => resolve(ok(FAST_PASS)); });
+        }
+        return Promise.resolve(ok(FAST_PASS));
+      }
+      return Promise.resolve(ok({}));
+    }) as unknown as typeof fetch;
+
+    render(<BuildConfigSelector />);
+    // The default profile A's gate has settled green before anything is pressed.
+    await waitFor(() => expect(preflightMaps.some((m) => m.includes('/Game/Maps/A'))).toBe(true));
+    await waitFor(() => expect(screen.getByTestId('pof-preflight-panel').getAttribute('data-overall')).toBe('pass'));
+    expect(preflightMaps.some((m) => m.includes('/Game/Maps/B'))).toBe(false);
+
+    fireEvent.click(await screen.findByTestId('pof-module-packaging-start-cook-B'));
+    await waitFor(() => expect(preflightMaps.some((m) => m.includes('/Game/Maps/B'))).toBe(true));
+    // A's green verdict does not release B's cook.
+    expect(cooks.requests).toEqual([]);
+
+    releaseB!();
+    await waitFor(() => expect(cooks.requests.length).toBe(1));
+    expect(cooks.requests[0]).toMatchObject({ profileId: 'B' });
+    expect(preflightMaps[preflightMaps.length - 1]).toEqual(['/Game/Maps/B']);
   });
 });

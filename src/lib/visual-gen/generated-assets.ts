@@ -52,6 +52,9 @@ export const ASSET_DIRS: readonly AssetDirSpec[] = [
   // the host allow-list, the mesh content-type check and the size cap — a refused fetch
   // writes no file, and this list is an allow-list, not a scan, so it lists nothing.
   { dir: 'mcp', label: 'Blender MCP (provider download)' },
+  // Operator FBX files converted to GLB by the headless FBX job (`visual-gen/fbx-convert.ts`).
+  // The route derives each name from the validated FBX basename; nothing else writes here.
+  { dir: 'converted', label: 'FBX conversion (headless Blender)' },
 ];
 
 /**

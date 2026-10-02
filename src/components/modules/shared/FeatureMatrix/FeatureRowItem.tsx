@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Check, ChevronRight, FileCode, Loader2, ArrowRight, AlertTriangle, Link2, Zap, Play, Copy, Eye } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { DependencyInfo } from '@/lib/feature-definitions';
+import { isFeatureDone } from '@/lib/feature-done';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { STATUS_ERROR, STATUS_BLOCKER, STATUS_SUCCESS, statusBg, statusBorder } from '@/lib/chart-colors';
@@ -14,6 +15,7 @@ import { QualityStars } from './QualityStars';
 import { FeatureProvenanceBadge } from './FeatureProvenanceBadge';
 import { VerificationBadge } from './VerificationBadge';
 import { DependencyChain } from './DependencyChain';
+import { useRegressedFrom } from './ReviewDeltaStrip';
 
 export function FeatureRowItem({
   feature,
@@ -44,6 +46,8 @@ export function FeatureRowItem({
   const isBlocked = depInfo?.isBlocked ?? false;
   const hasDetails = feature.reviewNotes || feature.filePaths.length > 0 || feature.nextSteps || hasDeps;
   const [copied, setCopied] = useState(false);
+  // Set only when the newest review/fix moved this row DOWN a rung (measured delta).
+  const regressedFrom = useRegressedFrom(feature.featureName);
 
   const handleCopy = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -152,7 +156,7 @@ export function FeatureRowItem({
         </span>
 
         {/* Blocked badge */}
-        {isBlocked && feature.status !== 'implemented' && (
+        {isBlocked && !isFeatureDone(feature.status) && (
           <span
             className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
             style={{ backgroundColor: statusBg(STATUS_ERROR), color: STATUS_BLOCKER }}
@@ -199,6 +203,18 @@ export function FeatureRowItem({
         {/* Verification badge — shown after auto-verify runs */}
         {verificationResult && (
           <VerificationBadge result={verificationResult} />
+        )}
+
+        {/* Regression badge — the status this row held before the last review. */}
+        {regressedFrom && (
+          <span
+            data-testid={`pof-feature-matrix-regressed-${testIdSlug}`}
+            className="text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
+            style={{ backgroundColor: statusBg(STATUS_ERROR), color: STATUS_ERROR, border: `1px solid ${statusBorder(STATUS_ERROR)}` }}
+            title={`The last review moved this feature from ${STATUS_CONFIG[regressedFrom].label} to ${cfg.label}`}
+          >
+            was {STATUS_CONFIG[regressedFrom].label.toLowerCase()}
+          </span>
         )}
 
         {/* Status badge */}
@@ -250,7 +266,7 @@ export function FeatureRowItem({
                     </span>
                   </div>
                   <MarkdownProse content={feature.nextSteps} className="leading-relaxed pl-[18px] text-text-muted-hover" />
-                  {onFix && feature.status !== 'improved' && !(feature.status === 'implemented' && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
+                  {onFix && feature.status !== 'improved' && !(isFeatureDone(feature.status) && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

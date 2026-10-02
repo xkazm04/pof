@@ -4,17 +4,18 @@
  * Both the PoF Bridge client (`pof-bridge/client.ts`) and the UE5 Remote
  * Control client (`ue5-bridge/remote-control-client.ts`) talk to a UE5
  * companion over HTTP with identical mechanics: build the URL, abort on a
- * timeout, JSON-encode the body, wrap the response in a `Result<T>`, and
+ * timeout, JSON-encode the body, wrap the response in a result, and
  * `logger.warn` on failure. `bridgeRequest` is the single source of that
  * plumbing — clients differ only in their base URL, timeout, error label,
- * log prefix, and any extra headers (e.g. the PoF auth token).
+ * log prefix, and any extra headers (e.g. the PoF auth token). The HTTP call and
+ * the failure verdict are the bridge transport kernel (`@/lib/bridge/transport`).
  */
 
-import { ok, err, type Result } from '@/types/result';
 import { logger } from '@/lib/logger';
+import { bridgeFetch, type BridgeFailureKind, type BridgeHttpMethod } from '@/lib/bridge/transport';
 
 /** HTTP verbs used across the UE5 bridges. */
-export type BridgeHttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type { BridgeHttpMethod };
 
 export interface BridgeRequestOptions {
   /** HTTP method. */
@@ -34,57 +35,76 @@ export interface BridgeRequestOptions {
 }
 
 /**
- * Perform a JSON HTTP request against a UE5 bridge, returning `Result<T>`.
+ * A failed {@link bridgeRequest}. `error` is the human sentence (what string
+ * consumers - connection state, API envelopes, logs - keep showing); the verdict
+ * travels as fields, so no caller re-parses the sentence:
+ * - `kind`          - the kernel's {@link BridgeFailureKind};
+ * - `reachable`     - the bridge answered (a live plugin with a broken reply is not a dead one);
+ * - `indeterminate` - a non-GET that timed out: it may already have taken effect;
+ * - `status`        - the upstream status, or the kernel's 502 / 504.
+ */
+export interface BridgeRequestErr {
+  ok: false;
+  error: string;
+  kind: BridgeFailureKind;
+  reachable: boolean;
+  indeterminate: boolean;
+  status: number;
+}
+
+/**
+ * Outcome of a {@link bridgeRequest}: assignable to `Result<T, string>`, so callers
+ * that only read `error` are unaffected, while the failure kind survives as a field.
+ */
+export type BridgeRequestResult<T> = { ok: true; data: T } | BridgeRequestErr;
+
+/**
+ * Perform a JSON HTTP request against a UE5 bridge.
  *
- * Never throws: timeouts, non-2xx responses, and network errors are all
- * folded into `err(message)` and logged via `logger.warn`.
+ * Never throws: timeouts, non-2xx responses, unparseable bodies and network
+ * errors are all folded into a {@link BridgeRequestErr} and logged via `logger.warn`.
  */
 export async function bridgeRequest<T>(
   baseUrl: string,
   opts: BridgeRequestOptions,
-): Promise<Result<T, string>> {
+): Promise<BridgeRequestResult<T>> {
   const { method, path, timeout, label, logPrefix, body, headers: extraHeaders } = opts;
-  const url = `${baseUrl}${path}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+  const where = `${label} ${method} ${path}`;
 
-  try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...extraHeaders,
-    };
+  const res = await bridgeFetch<T>(`${baseUrl}${path}`, {
+    method,
+    body,
+    timeoutMs: timeout,
+    label: where,
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+  });
+  if (res.ok) return { ok: true, data: res.data };
 
-    const init: RequestInit = {
-      method,
-      signal: controller.signal,
-      headers,
-    };
-
-    if (body !== undefined) {
-      init.body = JSON.stringify(body);
-    }
-
-    const res = await fetch(url, init);
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      const msg = `${label} ${method} ${path} returned ${res.status}: ${text.slice(0, 200)}`;
-      logger.warn(logPrefix, msg);
-      return err(msg);
-    }
-
-    const data = (await res.json()) as T;
-    return ok(data);
-  } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') {
-      const msg = `${label} ${method} ${path} timed out after ${timeout}ms`;
-      logger.warn(logPrefix, msg);
-      return err(msg);
-    }
-    const msg = e instanceof Error ? e.message : 'Unknown fetch error';
-    logger.warn(logPrefix, `${method} ${path} failed:`, msg);
-    return err(msg);
-  } finally {
-    clearTimeout(timer);
+  const unknownOutcome = res.indeterminate ? ' - outcome unknown, check it before retrying' : '';
+  let error: string;
+  switch (res.kind) {
+    case 'auth-rejected':
+    case 'http-error':
+      error = `${where} returned ${res.status}: ${res.detail}`;
+      break;
+    case 'timeout':
+      error = `${where} timed out after ${timeout}ms${unknownOutcome}`;
+      break;
+    default:
+      // unreachable: the raw connection error; malformed-body: the kernel's detail
+      // already names `where`, the received status and a snippet.
+      error = res.detail;
   }
+
+  if (res.kind === 'unreachable') logger.warn(logPrefix, `${method} ${path} failed:`, error);
+  else logger.warn(logPrefix, error);
+
+  return {
+    ok: false,
+    error,
+    kind: res.kind,
+    reachable: res.reachable,
+    indeterminate: res.indeterminate,
+    status: res.status,
+  };
 }

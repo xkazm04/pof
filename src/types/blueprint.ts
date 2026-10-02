@@ -98,6 +98,36 @@ export interface TranspileResult {
   functionCount: number;
   /** Replication scaffolding metadata (GetLifetimeReplicatedProps, RepNotify fields). */
   replication: ReplicationInfo;
+  /**
+   * What became of every node, in graph order (event graph, then functions) —
+   * written by the walker, so the fidelity readout counts dispositions rather
+   * than warnings. Optional only so an older payload still renders.
+   */
+  nodeLedger?: NodeLedgerEntry[];
+}
+
+/**
+ * What the transpiler did with one Blueprint node.
+ * - `emitted`    — became a C++ statement.
+ * - `consumed`   — a pure node (VariableGet) whose value an emitted statement reads.
+ * - `structural` — an event / function entry that became the member itself, not a statement.
+ * - `refused`    — reached, but left as a `// TODO` stub (or, for an unknown or duplicate
+ *                  event, not given a body) with the reason.
+ * - `unreached`  — never evaluated: behind a refused node or unknown event, disconnected,
+ *                  or a pure node no emitted statement reads. Not measured, never "translated".
+ */
+export type NodeDisposition = 'emitted' | 'consumed' | 'structural' | 'refused' | 'unreached';
+
+export interface NodeLedgerEntry {
+  nodeId: string;
+  nodeType: string;
+  name: string;
+  memberName?: string;
+  /** Name of the graph the node lives in. */
+  graph: string;
+  disposition: NodeDisposition;
+  /** Why it did not become code (refused / unreached only). */
+  reason?: string;
 }
 
 export interface TranspileWarning {
@@ -154,6 +184,17 @@ export interface SemanticDiffResult {
   /** Dimensions it did NOT inspect — surfaced so the empty state stays honest. */
   notCompared: string[];
 }
+
+// ─── Route responses (one request per action) ───────────────────────────────
+
+/** The parse a transpile/diff was computed from, returned with it so no action needs a second request. */
+export interface ParsedBlueprint {
+  asset: BlueprintAsset;
+  summary: string;
+}
+
+export type TranspileResponse = TranspileResult & ParsedBlueprint;
+export type DiffResponse = SemanticDiffResult & ParsedBlueprint;
 
 // ─── Session State ───────────────────────────────────────────────────────────
 

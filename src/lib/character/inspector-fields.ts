@@ -19,10 +19,15 @@ import {
   type FeelPreset,
   type FeelProfile,
 } from '@/lib/character-feel-optimizer';
-import { resolveStack, type AdjustmentLayer } from '@/lib/feel-adjustment-layers';
+import {
+  resolveStack,
+  upsertReservedSets,
+  type AdjustmentLayer,
+} from '@/lib/feel-adjustment-layers';
 
 export const INSPECTOR_LAYER_ID = 'inspector-overrides';
 export const INSPECTOR_LAYER_NAME = 'Inspector overrides';
+const INSPECTOR_LAYER = { id: INSPECTOR_LAYER_ID, name: INSPECTOR_LAYER_NAME };
 
 export type InspectorCategory = 'Movement' | 'Combat' | 'Camera';
 
@@ -106,17 +111,13 @@ export function inspectorRows(base: FeelProfile, layers: AdjustmentLayer[]): Ins
   return { rows: [...mapped, ...unmapped], unmappedCount: unmapped.length };
 }
 
-function clampToMeta(field: string, value: number): number {
-  const meta = META_BY_KEY.get(field);
-  return meta ? Math.min(Math.max(value, meta.min), meta.max) : value;
-}
-
 /**
- * Upsert the inspector's `set` modifier for `name`. One reserved layer holds
- * every inspector edit (appended on top on first use, re-enabled on edit); a
- * repeat edit replaces the field's modifier. Setting the value the stack would
- * produce beneath the inspector layer removes the modifier, and an emptied
- * layer is dropped. Unknown names return `layers` unchanged.
+ * Upsert the inspector's `set` modifier for `name` through the shared reserved-layer
+ * upsert (`upsertReservedSets`): one reserved layer holds every inspector edit
+ * (appended on top on first use, re-enabled on edit); a repeat edit replaces the
+ * field's modifier. Setting the value the stack would produce beneath the inspector
+ * layer removes the modifier, and an emptied layer is dropped. Unknown names return
+ * `layers` unchanged.
  */
 export function setInspectorOverride(
   layers: AdjustmentLayer[],
@@ -126,21 +127,7 @@ export function setInspectorOverride(
 ): AdjustmentLayer[] {
   const field = FIELD_BY_NAME.get(name);
   if (!field || !Number.isFinite(value)) return layers;
-  const next = clampToMeta(field, value);
-
-  const idx = layers.findIndex((l) => l.id === INSPECTOR_LAYER_ID);
-  const beneathLayers = idx === -1 ? layers : layers.slice(0, idx);
-  const beneath = getNestedValue(resolveStack(base, beneathLayers), field);
-
-  const existing = idx === -1 ? null : layers[idx];
-  const others = (existing?.modifiers ?? []).filter((m) => m.field !== field);
-  const modifiers = next === beneath ? others : [...others, { field, op: 'set' as const, value: next }];
-
-  if (modifiers.length === 0) return idx === -1 ? layers : layers.filter((_, i) => i !== idx);
-  const layer: AdjustmentLayer = existing
-    ? { ...existing, enabled: true, modifiers }
-    : { id: INSPECTOR_LAYER_ID, name: INSPECTOR_LAYER_NAME, enabled: true, modifiers };
-  return idx === -1 ? [...layers, layer] : layers.map((l, i) => (i === idx ? layer : l));
+  return upsertReservedSets(layers, INSPECTOR_LAYER, [{ field, value }], base);
 }
 
 /** Remove the inspector overrides layer (other layers untouched). */

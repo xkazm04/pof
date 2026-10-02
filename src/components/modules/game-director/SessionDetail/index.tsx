@@ -258,10 +258,11 @@ export function SessionDetail({
       <ConfirmDialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        onConfirm={() => { void onDelete(); }}
+        onConfirm={onDelete}
         title="Delete this playtest session?"
         description={`This permanently deletes "${session.name}" along with its ${session.findingsCount} finding${session.findingsCount !== 1 ? 's' : ''} and timeline events. This cannot be undone.`}
         confirmLabel="Delete session"
+        busyLabel="Deleting…"
       />
     </div>
   );

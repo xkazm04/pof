@@ -35,6 +35,13 @@ export function GameDirectorModule() {
     director.refresh();
   };
 
+  // An imported harness run (or the session a run already became) opens its
+  // SessionDetail directly — the hook has refreshed the list before resolving.
+  const handleOpenSession = (sessionId: string) => {
+    setActiveTab('overview');
+    setSelectedSessionId(sessionId);
+  };
+
   // Nav urgency pills: open critical+high findings, and undismissed regression alerts.
   const openCriticalHigh = director.stats?.openCriticalHigh ?? 0;
   const hasCriticals = (director.stats?.criticalFindings ?? 0) > 0;
@@ -107,7 +114,7 @@ export function GameDirectorModule() {
                 external harness. The header says so before any number does. */}
             <p className="text-xs text-text-muted">
               Playtest findings, triage and regression tracking — from the built-in
-              simulator, or from a real harness via the writer API
+              simulator, or imported from a stored harness run (New Session)
             </p>
           </div>
         </div>
@@ -137,7 +144,12 @@ export function GameDirectorModule() {
         )}
 
         {activeTab === 'new-session' && (
-          <NewSessionPanel onCreated={handleSessionCreated} createSession={director.createSession} />
+          <NewSessionPanel
+            onCreated={handleSessionCreated}
+            createSession={director.createSession}
+            harness={director}
+            onOpenSession={handleOpenSession}
+          />
         )}
 
         {activeTab === 'findings' && (

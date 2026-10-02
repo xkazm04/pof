@@ -8,7 +8,8 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
-import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL, OPACITY_10 } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, STATUS_NEUTRAL, OPACITY_10 } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
 import { describeVelocitySample } from '@/lib/roadmap/completion-ledger';
 import type { HolisticHealthViewProps } from './types';
 import { useHolisticHealthView } from './useHolisticHealthView';
@@ -118,7 +119,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
                   value={summary.overallCompletion}
                   size={48}
                   strokeWidth={5}
-                  color={summary.overallCompletion >= 70 ? ACCENT_EMERALD : summary.overallCompletion >= 40 ? STATUS_WARNING : STATUS_ERROR}
+                  color={scoreStatusToken(summary.overallCompletion).color}
                 />
                 <div>
                   <p className="text-2xs text-text-muted">Overall Completion</p>
@@ -138,11 +139,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
                   color={
                     summary.currentQualityScore === null
                       ? STATUS_NEUTRAL
-                      : summary.currentQualityScore >= 70
-                        ? ACCENT_EMERALD
-                        : summary.currentQualityScore >= 40
-                          ? STATUS_WARNING
-                          : STATUS_ERROR
+                      : scoreStatusToken(summary.currentQualityScore).color
                   }
                 />
                 <div>

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { resolveAccept } from '../labAcceptance';
 import { buildLabCheckerContext } from '../labCheckerContext';
 import { contentDiverges } from '../labContentDrift';
+import { contentOf } from '@/components/layout-lab/stepRecord';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { useCatalogJudgeVerdicts } from './useStepJudgeVerdicts';
 import { logger } from '@/lib/logger';
@@ -169,12 +170,11 @@ export function deriveEntityArtifacts(
    *  judge overlay, i.e. exactly the pre-consolidation behaviour, never a fabricated verdict. */
   verdicts: JudgeVerdict[] = [],
 ): EntityArtifacts {
-  // Real per-step production state for EVERY catalog: a step is "done" iff it was
-  // actually produced (has an artifact in the local store, hydrated add-only from
-  // the server). The old lifecycle-fraction heuristic — which fabricated pass/pending
-  // for non-Items entities that had never produced anything — is gone; entities with
-  // no artifact now read as honestly `unproduced` rather than fake progress.
-  const stepDone = (step: string) => !!entitySteps?.[step]?.done;
+  // Real per-step production state for EVERY catalog: a step is "done" iff it holds produced
+  // CONTENT — ONE rule, `stepRecord.contentOf`, so a failure marker (a failed attempt that wrote
+  // nothing) reads `unproduced` like a step that never ran, never graded on its empty data.
+  // (The old lifecycle-fraction heuristic that fabricated pass/pending progress is gone.)
+  const stepDone = (step: string) => !!contentOf(entitySteps?.[step]);
   const done = steps.filter((s) => stepDone(s)).length;
 
   // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
@@ -185,7 +185,7 @@ export function deriveEntityArtifacts(
   // against the live entity index instead of the old pessimistic `() => false`.
   const checkerCtx = catalogId ? buildLabCheckerContext(catalogId, entitySteps, entitiesByCatalog, undefined, entity?.canonProfile) : undefined;
   const artifacts: PipelineArtifact[] = catalogId
-    ? steps.filter((s) => entitySteps?.[s]).map((s) => {
+    ? steps.filter((s) => stepDone(s)).map((s) => { // only content is graded — a marker reads `unproduced`
         const art = entitySteps![s];
         const { result: res, ungraded } = gradeStepGuarded(catalogId, s, art.data, checkerCtx);
         const srv = serverArts[s];

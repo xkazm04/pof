@@ -5,7 +5,9 @@ import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
 import { ITEM_STEP_SPECS } from '@/components/layout-lab/steps/itemsSteps';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
-const entity: LabEntity = { id: 'e-static', name: 'Iron Longsword', lifecycle: 'planned', data: null };
+// The items EXEMPLAR (item-1): its stub is its own content, so the door writes it unstamped. A
+// non-exemplar's stub carries the TEMPLATE stamp — see stepProduceDoor.test.tsx.
+const entity: LabEntity = { id: 'item-1', name: 'Iron Longsword', lifecycle: 'planned', data: null };
 
 beforeEach(() => {
   localStorage.clear();

@@ -1,12 +1,13 @@
 // Server-only: persistence for the nightly-build schedule config + last-run
-// state, backed by the `settings` table. Plus an in-memory single-flight guard
-// so concurrent ticks (client poll + server cron) never start two cooks.
+// state, backed by the `settings` table. The single-flight guard (concurrent ticks,
+// client poll + server cron, never start two cooks) is the cook job registry.
 
 import {
   expectRecord, readSettingsBlob, updateSettingsBlob,
   type SettingsBlobRead, type SettingsBlobSpec,
 } from '@/lib/settings/settings-blob';
 import { DEFAULT_SCHEDULE, type BuildSchedule } from './build-scheduler';
+import { hasActiveCookJob } from './cook-jobs';
 
 const CONFIG_KEY = 'build_schedule';
 const STATE_KEY = 'build_schedule_state';
@@ -91,16 +92,20 @@ export function setScheduleState(patch: Partial<ScheduleState>): ScheduleState {
   }).value;
 }
 
-// ── In-memory single-flight guard ────────────────────────────────────────────
-// One cook at a time per server process. Not persisted: a process restart is a
-// natural reset (a half-finished cook is already dead).
+// ── Is a nightly running? ───────────────────────────────────────────────────
+// The single-flight lock is the cook job registry (`cook-jobs.ts`), ONE per project
+// and shared with the interactive Package button: `startScheduledRun` starts the
+// nightly as a `nightly` job, so "running" is "a nightly job is active". Not
+// persisted: a process restart is a natural reset (a half-finished cook is dead).
+// `setRunning` is a manual hold (maintenance / tests) OR'd on top; nothing in the
+// runner sets it any more.
 
-let running = false;
+let manualHold = false;
 
 export function isRunning(): boolean {
-  return running;
+  return manualHold || hasActiveCookJob('nightly');
 }
 
 export function setRunning(value: boolean): void {
-  running = value;
+  manualHold = value;
 }

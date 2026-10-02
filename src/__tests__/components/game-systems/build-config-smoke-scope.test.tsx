@@ -1,33 +1,39 @@
 /**
- * `BuildConfigSelector` is where the post-cook smoke request is built, and it had the
- * active `projectPath` in scope (line 34) yet did not put it in the request. The
- * server therefore chose the build to record against with an UNSCOPED query — with
- * the live DB's legacy rows that means build #6 from May.
+ * `BuildConfigSelector` is where the post-cook smoke request is built. It used to
+ * re-send the exe path, project name, platform and config the browser held, so the
+ * server re-identified the build after the fact (and launched whatever path it was
+ * given). The cook stream already names the row it recorded; that id is now the
+ * ONLY thing the smoke request carries. A cook that could not be recorded has
+ * nothing to condemn, so no smoke run starts and the panel says why.
  *
  * `CookProgress` is mocked to complete a Win64 cook immediately, and `SmokeTest` is
- * mocked to capture the request prop, so this asserts the WIRING without spawning
- * anything.
+ * mocked to capture its props, so this asserts the WIRING without spawning anything.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 
-const captured = vi.hoisted(() => ({ request: null as Record<string, unknown> | null }));
+const captured = vi.hoisted(() => ({
+  request: null as Record<string, unknown> | null,
+  skippedReason: null as string | null,
+  outcome: null as Record<string, unknown> | null,
+}));
 
 vi.mock('@/components/modules/game-systems/CookProgress', () => ({
   CookProgress: ({ request, onComplete }: {
     request: unknown;
-    onComplete: (r: { status: 'success' | 'failed'; exePath?: string }) => void;
+    onComplete: (r: Record<string, unknown>) => void;
   }) => {
     if (request) {
-      queueMicrotask(() => onComplete({ status: 'success', exePath: 'C:\\out\\PoF.exe' }));
+      queueMicrotask(() => onComplete(captured.outcome!));
     }
     return null;
   },
 }));
 
 vi.mock('@/components/modules/game-systems/SmokeTest', () => ({
-  SmokeTest: ({ request }: { request: Record<string, unknown> | null }) => {
+  SmokeTest: ({ request, skippedReason }: { request: Record<string, unknown> | null; skippedReason?: string | null }) => {
     if (request) captured.request = request;
+    if (skippedReason) captured.skippedReason = skippedReason;
     return null;
   },
 }));
@@ -40,9 +46,26 @@ vi.mock('@/components/modules/game-systems/NightlyBuildScheduler', () => ({
 vi.mock('@/components/modules/game-systems/GateNotifySettings', () => ({
   GateNotifySettings: () => null,
 }));
-vi.mock('@/components/modules/game-systems/PreflightPanel', () => ({
-  PreflightPanel: () => null,
-}));
+// The Package flow only cooks on a fast pre-flight verdict for the pressed profile's
+// maps, so the stub reports a measured, passing gate for whatever maps it is given.
+vi.mock('@/components/modules/game-systems/PreflightPanel', async () => {
+  const { useEffect } = await import('react');
+  return {
+    PreflightPanel: ({ cookMaps, onStatusChange }: {
+      cookMaps?: string[];
+      onStatusChange?: (s: Record<string, unknown>) => void;
+    }) => {
+      const mapsKey = (cookMaps ?? []).join('|');
+      useEffect(() => {
+        onStatusChange?.({
+          canCook: true, overall: 'pass', fullyCovered: true, notRunLabels: [], notRunKinds: [],
+          coverage: { ran: 4, total: 4 }, mapsKey, failing: [], failingKinds: [], running: [],
+        });
+      }, [mapsKey, onStatusChange]);
+      return null;
+    },
+  };
+});
 
 import { BuildConfigSelector } from '@/components/modules/game-systems/BuildConfigSelector';
 import { useProjectStore } from '@/stores/projectStore';
@@ -62,6 +85,8 @@ const PROFILE = {
 
 beforeEach(() => {
   captured.request = null;
+  captured.skippedReason = null;
+  captured.outcome = { status: 'success', exePath: 'C:\out\PoF.exe', buildId: 42 };
   useProjectStore.setState({ projectPath: PROJECT_PATH, projectName: 'PoF', ueVersion: '5.8' });
   globalThis.fetch = vi.fn().mockImplementation((url: string) => {
     const data = String(url).includes('/api/packaging/profiles') ? { profiles: [PROFILE] } : {};
@@ -75,16 +100,23 @@ beforeEach(() => {
   }) as unknown as typeof fetch;
 });
 
-describe('the post-cook smoke request is scoped to the open project', () => {
-  it('carries projectPath, so the verdict cannot land on another project\'s build', async () => {
-    render(<BuildConfigSelector />);
-    fireEvent.click(await screen.findByTestId(`pof-module-packaging-start-cook-${PROFILE.id}`));
+async function cookOnce() {
+  render(<BuildConfigSelector />);
+  fireEvent.click(await screen.findByTestId(`pof-module-packaging-start-cook-${PROFILE.id}`));
+}
 
+describe('the post-cook smoke request names the recorded build, nothing else', () => {
+  it('sends exactly { buildId } — no exe path, name, platform or config travels', async () => {
+    await cookOnce();
     await waitFor(() => expect(captured.request).not.toBeNull());
-    expect(captured.request!.projectPath).toBe(PROJECT_PATH);
-    // The fields it already carried are unchanged.
-    expect(captured.request!.platform).toBe('Win64');
-    expect(captured.request!.config).toBe('Shipping');
-    expect(captured.request!.exePath).toBe('C:\\out\\PoF.exe');
+    expect(captured.request).toEqual({ buildId: 42 });
+  });
+
+  it('a cook whose record failed starts no smoke run and says why', async () => {
+    captured.outcome = { status: 'success', exePath: 'C:\out\PoF.exe', recordError: 'SQLITE_BUSY' };
+    await cookOnce();
+    await waitFor(() => expect(captured.skippedReason).not.toBeNull());
+    expect(captured.skippedReason).toContain('SQLITE_BUSY');
+    expect(captured.request).toBeNull();
   });
 });

@@ -4,9 +4,10 @@ import type { PlaytestSession, PlaytestFinding, FindingSeverity, FindingCategory
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MeterBar } from '@/components/ui/MeterBar';
 import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  STATUS_SUCCESS, STATUS_ERROR,
   statusBg, statusBorder,
 } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
 import {
   SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface, NOT_MEASURED, resolveSessionSource,
 } from '@/lib/game-director-styles';
@@ -14,9 +15,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ProvenanceNotice } from '../ProvenanceNotice';
 import { ACCENT } from './constants';
 
-/** Coverage threshold coloring: green ≥80%, amber ≥50%, red below. */
-const coverageBand = (pct: number): string =>
-  pct >= 80 ? STATUS_SUCCESS : pct >= 50 ? STATUS_WARNING : STATUS_ERROR;
+/** Coverage threshold coloring (the `SCORE_BANDS` band): green ≥80%, amber ≥50%, red below. */
+const coverageBand = (pct: number): string => scoreStatusToken(pct).color;
 
 export function CoverageView({ session, findings, onSimulate }: { session: PlaytestSession; findings: PlaytestFinding[]; onSimulate?: () => Promise<void> }) {
   if (!session.summary) {

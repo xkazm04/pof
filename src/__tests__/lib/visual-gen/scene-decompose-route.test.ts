@@ -21,7 +21,16 @@ const vision = vi.fn();
 // asks `@/lib/vision` for the `recognize` capability and the plan decides who answers —
 // so the seam is the honest injection point and this stub stays valid whichever provider
 // the plan puts first.
-vi.mock('@/lib/vision/seam', () => ({ makeRoutedVisionText: () => vision }));
+// The decompose asks the TEXT seam; the per-crop Tier-0 gate asks the ATTRIBUTED one
+// (`makeRoutedVision`, input-gate.ts) and builds it BEFORE its own try. A mock that
+// provides only the text seam made that construction throw, the route relabelled the
+// throw 'crop gate skipped', and the two gating cases below failed for the wrong reason.
+// `makeRouted` is a spy so one case can make the seam itself blow up.
+const makeRouted = vi.fn(() => vision);
+vi.mock('@/lib/vision/seam', () => ({
+  makeRoutedVisionText: () => vision,
+  makeRoutedVision: () => makeRouted(),
+}));
 
 const { POST } = await import('@/app/api/visual-gen/scene-decompose/route');
 
@@ -59,6 +68,8 @@ function stubDecomposeThenGates() {
 
 beforeEach(() => {
   vision.mockReset();
+  makeRouted.mockReset();
+  makeRouted.mockImplementation(() => vision);
 });
 
 describe('POST /api/visual-gen/scene-decompose', () => {
@@ -169,6 +180,26 @@ describe('POST /api/visual-gen/scene-decompose', () => {
     const { data } = await res.json();
     expect(data.gate.every((g: { verdict: string }) => g.verdict === 'fail')).toBe(true);
     // The gate ADVISES; it must not silently delete props from the manifest.
+    expect(data.props).toHaveLength(3);
+  });
+
+  it("reports a crop gate that THROWS as an error, never under the opt-out word 'skipped'", async () => {
+    // input-gate.ts reserves 'skipped' for a caller that sent gateInput:false and marks a
+    // gate that could not run `unavailable: true`. A thrown crop or seam is the latter.
+    stubDecomposeThenGates();
+    makeRouted.mockImplementation(() => {
+      throw new Error('seam construction failed');
+    });
+    const res = await POST(req({ imageDataUrl: await sceneDataUrl(), gateCrops: true }));
+    const { data } = await res.json();
+    expect(data.gate).toHaveLength(3);
+    for (const g of data.gate as Array<{ ran: boolean; unavailable?: boolean; verdict?: string; note: string }>) {
+      expect(g).toMatchObject({ ran: false, unavailable: true });
+      expect(g.verdict).toBeUndefined();
+      expect(g.note).toMatch(/^crop gate error: seam construction failed/);
+      expect(g.note).not.toContain('skipped');
+    }
+    // Still advisory: the manifest keeps every prop.
     expect(data.props).toHaveLength(3);
   });
 

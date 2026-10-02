@@ -178,7 +178,8 @@ function ensureTables() {
       started_at TEXT,
       completed_at TEXT,
       source TEXT NOT NULL DEFAULT 'simulated'
-        CHECK(source IN ('simulated','external'))
+        CHECK(source IN ('simulated','external')),
+      regression_analyzed_at TEXT
     )
   `);
 
@@ -190,6 +191,13 @@ function ensureTables() {
     // No CHECK on the ALTER path: SQLite rejects adding a column with a
     // constraint that would have to be validated against existing rows.
     db.exec(`ALTER TABLE game_director_sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'simulated'`);
+  }
+  // When the regression tracker last analyzed this session (NULL = never).
+  // Additive and nullable. It lives ON the session row, not in a side ledger, so
+  // deleting a session takes its analyzed mark with it and no orphan can make a
+  // re-created id look analyzed.
+  if (!sessCols.some(c => c.name === 'regression_analyzed_at')) {
+    db.exec(`ALTER TABLE game_director_sessions ADD COLUMN regression_analyzed_at TEXT`);
   }
 
   db.exec(FINDINGS_TABLE_SQL('game_director_findings'));
@@ -260,6 +268,48 @@ function ensureTables() {
   initialized = true;
 }
 
+// ─── Session chronology ──────────────────────────────────────────────────────
+
+/**
+ * THE session clock, as an ORDER BY fragment (ascending = oldest first).
+ * `created_at` is `datetime('now')` — one-second resolution — so two sessions
+ * created in the same second tie; `rowid` breaks the tie by insertion order.
+ * Every chronological read of sessions uses this, so "newer" means one thing.
+ */
+export const SESSION_CHRONOLOGY_ASC = 'datetime(created_at) ASC, rowid ASC';
+/** {@link SESSION_CHRONOLOGY_ASC} reversed (newest first). */
+export const SESSION_CHRONOLOGY_DESC = 'datetime(created_at) DESC, rowid DESC';
+
+export interface SessionChronologyEntry {
+  id: string;
+  name: string;
+  createdAt: string;
+  /** When the regression tracker last analyzed the session; null = never. */
+  regressionAnalyzedAt: string | null;
+}
+
+/** Every session, oldest → newest, as the id/name projection the tracker needs. */
+export function sessionChronology(): SessionChronologyEntry[] {
+  ensureTables();
+  const rows = prepareCached(
+    `SELECT id, name, created_at, regression_analyzed_at FROM game_director_sessions ORDER BY ${SESSION_CHRONOLOGY_ASC}`
+  ).all() as Array<{ id: string; name: string; created_at: string; regression_analyzed_at: string | null }>;
+  return rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    createdAt: r.created_at,
+    regressionAnalyzedAt: r.regression_analyzed_at,
+  }));
+}
+
+/** Stamp a session as analyzed by the regression tracker. */
+export function markRegressionAnalyzed(id: string) {
+  ensureTables();
+  getDb().prepare(
+    "UPDATE game_director_sessions SET regression_analyzed_at = datetime('now') WHERE id = ?"
+  ).run(id);
+}
+
 // ─── Session CRUD ────────────────────────────────────────────────────────────
 
 export function createSession(
@@ -284,6 +334,21 @@ export function createSession(
   return session;
 }
 
+/**
+ * The session a stored harness run was imported as, or null. The run id lives
+ * in the session's config JSON (`config.harnessRunId`) — no schema change; old
+ * sessions simply have no such key. Oldest first, so a legacy duplicate (none can
+ * be written through the import door) resolves to the original.
+ */
+export function getSessionByHarnessRun(runId: string): PlaytestSession | null {
+  ensureTables();
+  if (!runId) return null;
+  const row = prepareCached(
+    `SELECT * FROM game_director_sessions WHERE json_extract(config, '$.harnessRunId') = ? ORDER BY ${SESSION_CHRONOLOGY_ASC} LIMIT 1`
+  ).get(runId) as SessionRow | undefined;
+  return row ? rowToSession(row) : null;
+}
+
 export function getSession(id: string): PlaytestSession | null {
   ensureTables();
   const row = prepareCached('SELECT * FROM game_director_sessions WHERE id = ?').get(id) as SessionRow | undefined;
@@ -300,8 +365,8 @@ export function getSession(id: string): PlaytestSession | null {
 export function listSessions(limit?: number): PlaytestSession[] {
   ensureTables();
   const sql = limit != null
-    ? 'SELECT * FROM game_director_sessions ORDER BY created_at DESC LIMIT ?'
-    : 'SELECT * FROM game_director_sessions ORDER BY created_at DESC';
+    ? `SELECT * FROM game_director_sessions ORDER BY ${SESSION_CHRONOLOGY_DESC} LIMIT ?`
+    : `SELECT * FROM game_director_sessions ORDER BY ${SESSION_CHRONOLOGY_DESC}`;
   const rows = (limit != null
     ? prepareCached(sql).all(limit)
     : prepareCached(sql).all()) as SessionRow[];
@@ -630,7 +695,7 @@ export function getDirectorStats(): DirectorStats {
           : 'mixed';
 
   const recentRows = db.prepare(
-    'SELECT * FROM game_director_sessions ORDER BY created_at DESC LIMIT 5'
+    `SELECT * FROM game_director_sessions ORDER BY ${SESSION_CHRONOLOGY_DESC} LIMIT 5`
   ).all() as SessionRow[];
 
   return {
@@ -648,8 +713,10 @@ export function getDirectorStats(): DirectorStats {
 }
 
 /**
- * Time-series of completed sessions ordered oldest → newest, for the health
- * trend chart in DirectorOverview. Each point carries the session's overall
+ * Time-series of the NEWEST `limit` completed sessions, returned oldest → newest,
+ * for the health trend chart in DirectorOverview. (It used to apply the LIMIT to
+ * an ascending scan, which kept the OLDEST `limit` sessions — after session 30
+ * the newest run never reached the chart.) Each point carries the session's overall
  * score, finding counts (filtered by triage), and the count of regression
  * alerts that fired in that session — rendered as deploy-style markers on the
  * chart.
@@ -663,11 +730,11 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
   ensureTables();
   const db = getDb();
 
-  const rows = db.prepare(`
+  const rows = (db.prepare(`
     SELECT id, name, created_at, summary, findings_count, source
     FROM game_director_sessions
     WHERE status = 'complete' AND summary IS NOT NULL
-    ORDER BY datetime(created_at) ASC
+    ORDER BY ${SESSION_CHRONOLOGY_DESC}
     LIMIT ?
   `).all(limit) as Array<{
     id: string;
@@ -676,7 +743,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
     summary: string;
     findings_count: number;
     source: string | null;
-  }>;
+  }>).reverse();
 
   if (rows.length === 0) return [];
 

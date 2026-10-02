@@ -44,7 +44,8 @@ const foldBox = <T,>(_prev: Boxed<T> | null, next: Boxed<T>): Boxed<T> => next;
  *
  * The draft has no identity of its own, so callers editing a *switchable* record
  * must key the component by that record's id (see `AudioView` keying the
- * Soundscapes/Settings tabs by `activeDoc.id`).
+ * Soundscapes/Settings tabs by `activeDoc.id`). Unmounting flushes: the pending
+ * draft is written to the record the component was keyed by.
  */
 export function useDebouncedCommit<T>(
   serverValue: T,
@@ -62,6 +63,9 @@ export function useDebouncedCommit<T>(
       fold: foldBox,
       commit: write,
       debounceMs: delay,
+      // A tab or scene switch unmounts the field inside its typing pause; the
+      // edit is written (to the record the field was keyed by), not dropped.
+      flushOnUnmount: true,
     });
 
   const onChange = useCallback((next: T) => { stageDebounced({ v: next }); }, [stageDebounced]);

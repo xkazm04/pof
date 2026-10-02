@@ -11,6 +11,8 @@ import {
 } from '@/lib/claude-terminal/cli-service';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { resolveDispatchModelChoice } from '@/lib/model-policy';
+import { getOriginFromRequest } from '@/lib/constants';
+import { sanitizeCallbackDescriptors } from '@/lib/claude-terminal/run-callbacks';
 
 interface QueryRequestBody {
   projectPath: string;
@@ -28,6 +30,12 @@ interface QueryRequestBody {
   moduleId?: string;
   taskLabel?: string | null;
   sessionKey?: string | null;
+  /**
+   * The run's declared `@@CALLBACK` descriptors (from the dispatching tab's registry).
+   * The execution settles them server-side when the run ends — POSTing only to their
+   * `/api/` path on this app's own origin (run-callbacks.ts).
+   */
+  callbacks?: unknown;
 }
 
 export async function POST(request: NextRequest) {
@@ -52,9 +60,12 @@ export async function POST(request: NextRequest) {
       taskType: body.taskType,
     });
 
+    const callbacks = sanitizeCallbackDescriptors(body.callbacks);
     const executionId = startExecution(projectPath, prompt, resumeSessionId, undefined, {
       model,
       effort,
+      // Settlement lives with the run: the server resolves its callbacks, not the tab.
+      ...(callbacks.length > 0 ? { callbacks, appOrigin: getOriginFromRequest(request) } : {}),
       // Attribute this run's spend to the dispatching session. Recorded server-side
       // for every outcome (completed/failed/aborted) — see cli-service recordExecutionSpend.
       attribution: {
@@ -129,6 +140,13 @@ export async function GET(request: NextRequest) {
         endTime: execution.endTime,
         eventCount: execution.events.length,
         logFilePath: execution.logFilePath,
+        // The server-side callback verdict (null: none declared, or still settling) and
+        // whether the CLI reported an error result — enough for a hidden terminal to
+        // end its run from here without re-attaching to the stream.
+        callbackStatus: execution.callbackStatus ?? null,
+        callbacksDeclared: (execution.callbacks?.length ?? 0) > 0,
+        callbacksFailed: execution.callbacksFailed ?? [],
+        isError: execution.events.some((e) => e.type === 'result' && e.data.isError === true),
       },
     });
   } catch (error) {

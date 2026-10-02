@@ -12,6 +12,8 @@ import { NextRequest } from 'next/server';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { buildClipNpz, seamClip } from '@/__tests__/fixtures/npz';
 
 const CARD = JSON.stringify({
   dimensions: { anticipation: 80, weight: 80, timing: 80, followThrough: 80, silhouette: 80, believability: 80 },
@@ -316,5 +318,72 @@ describe('POST /api/verify/animation — Tier-1 integrity gate', () => {
     expect(d.tier1.status).toBe('error');
     expect(d.tier1.error).toBe("missing key 'posed_joints' (have: a,b)");
     expect(d.tier2.status).toBe('ran');
+  });
+});
+
+/**
+ * `motionPath`: the route reads the clip itself. Tier-1 no longer depends on the caller
+ * pasting the extractor's stdout — and whenever the route CAN measure, the paid vision rung
+ * is never reached for a clip that provably does not loop.
+ */
+describe('POST /api/verify/animation — Tier-1 measured from motionPath', () => {
+  let npzDir: string;
+  beforeAll(() => {
+    npzDir = mkdtempSync(join(tmpdir(), 'lot-a-npz-'));
+  });
+  afterAll(() => rmSync(npzDir, { recursive: true, force: true }));
+
+  it('a 141.8 mm seam is gated from the clip bytes: no vision call, source bound by sha256', async () => {
+    reset();
+    const bytes = buildClipNpz({ ...seamClip(80, 27, 0.1418, 2.1), fps: 30 });
+    const p = join(npzDir, 'walk.npz');
+    writeFileSync(p, bytes);
+    const d = await data({ ...BASE, frameDir: dir, motionPath: p });
+    expect(seen.served).toHaveLength(0);
+    expect(seen.prompts).toHaveLength(0);
+    expect(d.gated).toBe(true);
+    expect(d.tier1.status).toBe('fail');
+    expect(d.tier1.card.worstAxis).toBe('poseGap');
+    expect(d.tier1.source).toEqual({
+      kind: 'measured', path: p, sha256: createHash('sha256').update(bytes).digest('hex'), frames: 80, fps: 30,
+    });
+    expect(d.tier2.status).toBe('not-run');
+  });
+
+  it('a clean clip passes Tier-1 and still gets the craft card', async () => {
+    reset();
+    const p = join(npzDir, 'clean.npz');
+    writeFileSync(p, buildClipNpz(seamClip(80, 27, 0.002)));
+    const d = await data({ ...BASE, frameDir: dir, motionPath: p });
+    expect(d.tier1.status).toBe('pass');
+    expect(d.tier1.source.kind).toBe('measured');
+    expect(seen.served).toHaveLength(1);
+    expect(d.verdict).toBe('pass');
+  });
+
+  it('a missing motionPath is a 404 naming the path; the vision seam is never invoked', async () => {
+    reset();
+    const p = join(npzDir, 'nope.npz');
+    const res = await POST(post({ ...BASE, frameDir: dir, motionPath: p }));
+    expect(res.status).toBe(404);
+    const env = await res.json();
+    expect(env.success).toBe(false);
+    expect(env.error).toContain(p);
+    expect(seen.served).toHaveLength(0);
+  });
+
+  it('a motionPath that is not a .npz is a 400; the vision seam is never invoked', async () => {
+    reset();
+    const p = join(npzDir, 'walk.bvh');
+    writeFileSync(p, 'HIERARCHY');
+    const res = await POST(post({ ...BASE, frameDir: dir, motionPath: p }));
+    expect(res.status).toBe(400);
+    expect(seen.served).toHaveLength(0);
+  });
+
+  it('pasted loopMarkers alone keep working, now labelled as caller-supplied', async () => {
+    const d = await data({ ...BASE, frameDir: dir, loopMarkers: loopMarkers() });
+    expect(d.tier1.status).toBe('pass');
+    expect(d.tier1.source.kind).toBe('caller-markers');
   });
 });

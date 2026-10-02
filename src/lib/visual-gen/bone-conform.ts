@@ -35,8 +35,11 @@
  * categorically different — such a rig needs joints identified from their POSITIONS in the
  * mesh, which is a geometric problem and out of scope here.
  *
- * ⚠ NO PRODUCTION CALLER YET. This is the pure core of an L-sized finding; the Blender
- * application half is specified, not built. Do not read its presence as "PoF conforms rigs".
+ * Production caller: `rig-binding.ts` — `bindRigToPreset` plans a semantic rig onto a
+ * target preset's vocabulary to decide whether every required IK chain endpoint binds, and
+ * the rig gate (`scoreRig` with `expect.target`) fails a rig that leaves one unbound. That
+ * caller only READS the plan. The Blender application half is still specified, not built:
+ * do not read this module's presence as "PoF conforms rigs".
  */
 import { classifyNaming, type BoneNaming } from './skeleton-profiles';
 

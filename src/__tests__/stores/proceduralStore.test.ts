@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useProceduralStore } from '@/components/modules/visual-gen/procedural-engine/useProceduralStore';
+import {
+  useProceduralStore,
+  selectRun,
+} from '@/components/modules/visual-gen/procedural-engine/useProceduralStore';
 import { DEFAULT_TERRAIN_CONFIG } from '@/lib/visual-gen/generators/terrain';
 import { DEFAULT_DUNGEON_CONFIG } from '@/lib/visual-gen/generators/dungeon';
 import { DEFAULT_VEGETATION_CONFIG } from '@/lib/visual-gen/generators/vegetation';
@@ -95,5 +98,41 @@ describe('useProceduralStore', () => {
     expect(state.terrainHeightmap).toBeNull();
     expect(state.dungeonResult).toBeNull();
     expect(state.vegetationPoints).toBeNull();
+  });
+});
+
+describe('a run keeps the config that produced it', () => {
+  beforeEach(() => {
+    useProceduralStore.setState({
+      terrainConfig: { ...DEFAULT_TERRAIN_CONFIG, size: 65, seed: 42 },
+      terrainHeightmap: null,
+      runs: { terrain: null, dungeon: null, vegetation: null },
+      exports: { terrain: null, dungeon: null, vegetation: null },
+    });
+  });
+
+  it("stale is a field comparison against the run's config, not a dirty flag", async () => {
+    await useProceduralStore.getState().generate('terrain');
+    expect(selectRun(useProceduralStore.getState(), 'terrain')).toMatchObject({
+      status: 'fresh',
+      staleBecause: [],
+    });
+    expect(useProceduralStore.getState().terrainHeightmap).toHaveLength(65);
+
+    useProceduralStore.getState().setTerrainConfig({ seed: 7 });
+    expect(selectRun(useProceduralStore.getState(), 'terrain')).toMatchObject({
+      status: 'stale',
+      staleBecause: ['seed'],
+    });
+
+    useProceduralStore.getState().setTerrainConfig({ seed: 42 });
+    expect(selectRun(useProceduralStore.getState(), 'terrain')).toMatchObject({
+      status: 'fresh',
+      staleBecause: [],
+    });
+  });
+
+  it('no run yet reads as none', () => {
+    expect(selectRun(useProceduralStore.getState(), 'dungeon')).toMatchObject({ status: 'none' });
   });
 });

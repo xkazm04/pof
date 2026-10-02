@@ -3,14 +3,14 @@
 import { useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { OVERLAY_WHITE, OPACITY_4, OPACITY_30, withOpacity } from '@/lib/chart-colors';
-import type { DerivedGenomeValues } from './types';
-import { invLerp } from './types';
+import { channelT, type CurveValues } from '@/lib/character/feel-curve-codec';
 import { drawGroundLine, drawStickFigure, drawSpeedHUD } from './canvas-draw';
 
 /* ── Stick Figure Preview ─────────────────────────────────────────────────── */
 
 interface StickFigureProps {
-  values: DerivedGenomeValues;
+  /** Decoded curve values keyed by FeelProfile path (see `decodeCurves`). */
+  values: CurveValues;
   isPlaying: boolean;
 }
 
@@ -33,11 +33,11 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
   const lastFrameRef = useRef(0);
   const snapshotRef = useRef<RunSnapshot | null>(null);
 
-  // Normalized feel parameters
-  const speedFactor = invLerp(200, 600, values.maxWalkSpeed);
-  const accelFactor = invLerp(800, 4500, values.acceleration);
-  const dodgeDistFactor = invLerp(150, 600, values.dodgeDistance);
-  const dodgeDurFactor = invLerp(0.15, 0.9, values.dodgeDuration);
+  // Normalized feel parameters — through the codec's FEEL_FIELD_META ranges.
+  const speedFactor = channelT('movement.maxWalkSpeed', values['movement.maxWalkSpeed']);
+  const accelFactor = channelT('movement.acceleration', values['movement.acceleration']);
+  const dodgeDistFactor = channelT('dodge.distance', values['dodge.distance']);
+  const dodgeDurFactor = channelT('dodge.duration', values['dodge.duration']);
 
   // Identifies the tuning this run belongs to. A snapshot is only restored when
   // the tuning is unchanged — i.e. the effect re-ran because the pane resumed,

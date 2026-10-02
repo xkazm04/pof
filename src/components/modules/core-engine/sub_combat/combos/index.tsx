@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, Plus, Timer, Flame, Shield,
+  Zap, Plus, Timer,
   RotateCcw, Copy,
 } from 'lucide-react';
 import {
@@ -14,14 +14,17 @@ import {
 import {
   COMBO_ABILITIES, COMBO_ABILITY_MAP, COMBO_EVENT_TAGS,
   PRESET_COMBOS,
-  type ComboAbility, type ComboChain,
+  type ComboChain,
 } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader, GlowStat } from './design';
 import { AbilityChip } from './AbilityChip';
-import { TimelineBlock, TimeRuler } from './TimelineBlock';
+import { TimelineBlock, TimeRuler, WaitGap } from './TimelineBlock';
 import { CooldownOverlapChart } from './CooldownOverlapChart';
-import { computeComboStats } from './helpers';
+import { scheduleCombo, sustainedCycle, rankCombos } from './schedule';
+
+/** Both DPS bases per preset (static data), so a preset pick is never blind. */
+const PRESET_DPS = new Map(rankCombos(PRESET_COMBOS, 'sustained').map(r => [r.id, r]));
 
 /* ── Main component ────────────────────────────────────────────────── */
 
@@ -49,12 +52,9 @@ export function ComboChainBuilder() {
     setActivePreset('');
   }, []);
 
-  const stats = useMemo(() => computeComboStats(chain), [chain]);
-
-  const chainAbilities = useMemo(() =>
-    chain.map(id => COMBO_ABILITY_MAP.get(id)).filter(Boolean) as ComboAbility[],
-    [chain],
-  );
+  const schedule = useMemo(() => scheduleCombo(chain), [chain]);
+  const cycle = useMemo(() => sustainedCycle(chain), [chain]);
+  const binding = cycle.binding ? COMBO_ABILITY_MAP.get(cycle.binding) : undefined;
 
   return (
     <div className="space-y-4">
@@ -99,7 +99,10 @@ export function ComboChainBuilder() {
                 ...focusRingStyle(ACCENT_PURPLE_BOLD),
               }}
             >
-              {preset.name}
+              {preset.name}{' '}
+              <span className="normal-case tracking-normal font-normal opacity-80">
+                {Math.round(PRESET_DPS.get(preset.id)?.burstDps ?? 0)} burst · {Math.round(PRESET_DPS.get(preset.id)?.sustainedDps ?? 0)} sustained
+              </span>
             </button>
           ))}
         </div>
@@ -130,33 +133,43 @@ export function ComboChainBuilder() {
         {/* Stats strip */}
         {chain.length > 0 && (
           <motion.div
-            className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1 mb-3"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-1 mb-3"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           >
-            <GlowStat label="Total DMG" value={stats.totalDamage} color={ACCENT_RED} delay={0} />
-            <GlowStat label="DPS" value={stats.dps} color={ACCENT_ORANGE} delay={0.05} />
-            <GlowStat label="Mana" value={stats.totalMana} color={MODULE_COLORS.core} delay={0.1} />
-            <GlowStat label="Duration" value={`${stats.totalDuration.toFixed(1)}`} unit="sec" color={ACCENT_CYAN} delay={0.15} />
-            {stats.maxCooldown > 0 && (
-              <GlowStat label="Max CD" value={stats.maxCooldown} unit="sec" color={STATUS_WARNING} delay={0.2} />
+            <GlowStat label="Total DMG" value={Math.round(schedule.totalDamage)} color={ACCENT_RED} delay={0} />
+            <GlowStat label="Burst DPS" value={Math.round(schedule.dps)} color={ACCENT_ORANGE} delay={0.05} />
+            <GlowStat label="Sustained DPS" value={Math.round(cycle.sustainedDps)} color={ACCENT_ORANGE} delay={0.05} />
+            <GlowStat label="Mana" value={schedule.totalMana} color={MODULE_COLORS.core} delay={0.1} />
+            <GlowStat label="Duration" value={`${schedule.totalDuration.toFixed(1)}`} unit="sec" color={ACCENT_CYAN} delay={0.15} />
+            {schedule.maxCooldown > 0 && (
+              <GlowStat label="Max CD" value={schedule.maxCooldown} unit="sec" color={STATUS_WARNING} delay={0.2} />
             )}
           </motion.div>
+        )}
+        {chain.length > 0 && binding && (
+          <div
+            className="inline-flex mb-3 px-2 py-0.5 rounded border text-xs font-mono"
+            style={{ color: STATUS_WARNING, borderColor: `${STATUS_WARNING}${OPACITY_30}`, backgroundColor: `${STATUS_WARNING}${OPACITY_15}` }}
+            title={`Looped, the chain repeats every ${cycle.period.toFixed(1)}s: burst DPS is one pass, sustained DPS is the steady loop`}
+          >
+            Loop bound by {binding.name} ({binding.cooldown}s CD)
+          </div>
         )}
 
         {/* Timeline lane */}
         <div className="mt-2 relative">
-          {chain.length > 0 && <TimeRuler totalDuration={stats.totalDuration} />}
+          {chain.length > 0 && <TimeRuler totalDuration={schedule.totalDuration} />}
           <div className="flex items-center gap-4 overflow-x-auto custom-scrollbar pb-2 pt-1 min-h-[80px]">
             <AnimatePresence mode="popLayout">
-              {chainAbilities.map((ab, i) => (
+              {schedule.casts.flatMap(cast => [
+                ...(cast.waited > 0 ? [<WaitGap key={`wait-${cast.ability.id}-${cast.index}`} cast={cast} />] : []),
                 <TimelineBlock
-                  key={`${ab.id}-${i}`}
-                  ability={ab}
-                  index={i}
-                  total={chainAbilities.length}
+                  key={`${cast.ability.id}-${cast.index}`}
+                  cast={cast}
+                  total={schedule.casts.length}
                   onRemove={removeAbility}
-                />
-              ))}
+                />,
+              ])}
             </AnimatePresence>
             {chain.length === 0 && (
               <div className="flex-1 flex items-center justify-center text-xs font-mono uppercase tracking-[0.15em] text-text-muted py-6">
@@ -168,7 +181,7 @@ export function ComboChainBuilder() {
       </BlueprintPanel>
 
       {/* Cooldown overlap analysis */}
-      {chain.length > 1 && <CooldownOverlapChart chain={chainAbilities} totalDuration={stats.totalDuration} />}
+      {chain.length > 1 && <CooldownOverlapChart schedule={schedule} binding={cycle.binding} />}
     </div>
   );
 }

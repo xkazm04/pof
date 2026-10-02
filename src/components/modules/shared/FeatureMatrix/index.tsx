@@ -17,9 +17,11 @@ import { StatusFilterChips } from './StatusFilterChips';
 import { QualitySparkline } from './QualitySparkline';
 import { ReviewProgressBar } from './ReviewProgressBar';
 import { VerificationSummaryBanner } from './VerificationSummaryBanner';
+import { VerifyPreviewPanel } from './VerifyPreviewPanel';
 import { QualityRangeFilter } from './QualityRangeFilter';
 import { SortButton } from './SortButton';
 import { FeatureList } from './FeatureList';
+import { ReviewDeltaStrip, RegressionContext } from './ReviewDeltaStrip';
 
 export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isReviewing, onFix, isFixing, onReviewFeature }: FeatureMatrixProps) {
   const state = useFeatureMatrixState({ moduleId, isReviewing, isFixing });
@@ -30,7 +32,11 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     error,
     retry,
     refetch,
-    runAutoVerify,
+    previewAutoVerify,
+    applyAutoVerify,
+    discardAutoVerify,
+    verifyPlan,
+    verifyError,
     isVerifying,
     verificationResults,
     bridgeConnected,
@@ -60,6 +66,10 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     neverReviewed,
     undatedReviewed,
     scope,
+    delta,
+    changedFilterActive,
+    toggleChangedOnly,
+    regressionMap,
   } = state;
 
   // Sticky offset for category headers: measure the filter toolbar so headers
@@ -189,7 +199,8 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           )}
           {bridgeConnected && (
             <button
-              onClick={runAutoVerify}
+              // Opens a PREVIEW of the proposed flips — nothing is written until Apply.
+              onClick={() => { void previewAutoVerify(); }}
               disabled={isVerifying}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
               style={{
@@ -197,7 +208,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                 color: STATUS_SUCCESS,
                 border: `1px solid ${statusBorder(STATUS_SUCCESS)}`,
               }}
-              title="Auto-verify features against UE5 asset manifest"
+              title="Preview status changes proposed by the UE5 asset manifest"
             >
               {isVerifying ? (
                 <>
@@ -227,6 +238,9 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
         </div>
       </div>
 
+      {/* What the newest review/fix moved — per feature, beside the count trend. */}
+      <ReviewDeltaStrip delta={delta} changedOnly={changedFilterActive} onToggleChanged={toggleChangedOnly} />
+
       {showWiring && wiringAssets.length > 0 && (
         <WiringAssetsPanel assets={wiringAssets} />
       )}
@@ -240,8 +254,23 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
         />
       )}
 
-      {/* Verification results summary — shown after auto-verify */}
-      {verificationResults.length > 0 && (
+      {/* Auto-Verify preview — the proposed flips with their evidence; writes only the picks */}
+      {verifyPlan && (
+        <VerifyPreviewPanel
+          plan={verifyPlan}
+          onApply={(names) => { void applyAutoVerify(names); }}
+          onClose={discardAutoVerify}
+          isApplying={isVerifying}
+        />
+      )}
+      {verifyError && !verifyPlan && (
+        <p data-testid="verify-error" className="text-xs" style={{ color: STATUS_WARNING }}>
+          Auto-Verify proposed nothing: {verifyError}
+        </p>
+      )}
+
+      {/* Verification results summary — shown after an apply */}
+      {!verifyPlan && verificationResults.length > 0 && (
         <VerificationSummaryBanner results={verificationResults} />
       )}
 
@@ -293,19 +322,21 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       </div>
 
       {/* Result count */}
-      {(searchQuery || qualityMin > 1 || qualityMax < 5) && (
+      {(searchQuery || qualityMin > 1 || qualityMax < 5 || changedFilterActive) && (
         <div className="text-xs text-text-muted">
           Showing {filtered.length} of {features.length} features
         </div>
       )}
 
-      <FeatureList
-        state={state}
-        accentColor={accentColor}
-        onFix={onFix}
-        isFixing={isFixing}
-        onReviewFeature={onReviewFeature}
-      />
+      <RegressionContext.Provider value={regressionMap}>
+        <FeatureList
+          state={state}
+          accentColor={accentColor}
+          onFix={onFix}
+          isFixing={isFixing}
+          onReviewFeature={onReviewFeature}
+        />
+      </RegressionContext.Provider>
     </div>
   );
 }

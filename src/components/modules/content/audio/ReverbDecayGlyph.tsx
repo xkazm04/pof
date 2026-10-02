@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReverbPreset } from '@/types/audio-scene';
+import { resolveZoneReverb } from '@/lib/audio-scene-acoustics';
 
 // ── Glyph geometry — a compact 28×14 inline SVG decay curve ──
 const GLYPH_W = 28;
@@ -23,21 +24,25 @@ export interface ReverbAcoustic {
 }
 
 /**
- * Per-preset acoustic signatures. Decay = how long the tail rings; ripple =
- * undulating/metallic resonance; jitter = scattered diffuse reflections.
+ * Per-preset visual TEXTURE only: ripple = undulating/metallic resonance;
+ * jitter = scattered diffuse reflections. The tail length is NOT here — it is
+ * derived from the seconds UE receives (`resolveZoneReverb`), see below.
  */
-const ACOUSTICS: Record<ReverbPreset, ReverbAcoustic> = {
-  'none': { decay: 0.05, initial: 1 },
-  'small-room': { decay: 0.2, initial: 1 },
-  'large-hall': { decay: 0.9, initial: 1 },
-  'cave': { decay: 1, initial: 1, rippleFreq: 1.5, rippleAmp: 0.12 },
-  'outdoor': { decay: 0.24, initial: 0.55 },
-  'underwater': { decay: 0.6, initial: 0.7, rippleFreq: 2.4, rippleAmp: 0.3 },
-  'metal-corridor': { decay: 0.72, initial: 0.95, rippleFreq: 6.5, rippleAmp: 0.42 },
-  'stone-chamber': { decay: 0.55, initial: 0.9, rippleFreq: 2, rippleAmp: 0.1 },
-  'forest': { decay: 0.42, initial: 0.6, jitter: 0.2 },
-  'custom': { decay: 0.5, initial: 0.85 },
+const TEXTURE: Record<ReverbPreset, Omit<ReverbAcoustic, 'decay'>> = {
+  'none': { initial: 1 },
+  'small-room': { initial: 1 },
+  'large-hall': { initial: 1 },
+  'cave': { initial: 1, rippleFreq: 1.5, rippleAmp: 0.12 },
+  'outdoor': { initial: 0.55 },
+  'underwater': { initial: 0.7, rippleFreq: 2.4, rippleAmp: 0.3 },
+  'metal-corridor': { initial: 0.95, rippleFreq: 6.5, rippleAmp: 0.42 },
+  'stone-chamber': { initial: 0.9, rippleFreq: 2, rippleAmp: 0.1 },
+  'forest': { initial: 0.6, jitter: 0.2 },
+  'custom': { initial: 0.85 },
 };
+
+/** Seconds that fill the glyph: the table's longest tail (underwater, 4 s). */
+const FULL_TAIL_SECONDS = 4;
 
 /** Deterministic pseudo-noise in [0,1) for stable diffuse scatter. */
 function noise(i: number): number {
@@ -46,15 +51,15 @@ function noise(i: number): number {
 }
 
 /**
- * Resolve a preset's acoustic signature. For 'custom', the zone's actual
- * decay time (seconds) maps onto the normalised tail length.
+ * Resolve a preset's acoustic signature. The tail length is the zone's
+ * RESOLVED decay time (`resolveZoneReverb`: the table row, or for 'custom' the
+ * zone's own seconds) on one scale for every preset, so the glyph ranks presets
+ * exactly as the seconds UE receives do.
  */
 export function reverbDecaySignature(preset: ReverbPreset, decayTimeSeconds?: number): ReverbAcoustic {
-  const base = ACOUSTICS[preset] ?? ACOUSTICS.custom;
-  if (preset === 'custom' && typeof decayTimeSeconds === 'number') {
-    return { ...base, decay: Math.min(1, Math.max(0.05, decayTimeSeconds / 8)) };
-  }
-  return base;
+  const texture = TEXTURE[preset] ?? TEXTURE.custom;
+  const { decayTime } = resolveZoneReverb({ reverbPreset: preset, reverbDecayTime: decayTimeSeconds });
+  return { ...texture, decay: Math.min(1, Math.max(0.05, decayTime / FULL_TAIL_SECONDS)) };
 }
 
 /** Amplitude envelope a(t) for t in [0,1], clamped to [0,1]. */
@@ -101,7 +106,7 @@ export function reverbDecayGeometry(sig: ReverbAcoustic): { line: string; area: 
 interface ReverbDecayGlyphProps {
   preset: ReverbPreset;
   color: string;
-  /** Zone decay time (seconds) — only consulted for the 'custom' preset. */
+  /** Zone decay time (seconds) — only consulted for the 'custom' preset (table presets use their row). */
   decayTimeSeconds?: number;
   className?: string;
 }

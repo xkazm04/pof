@@ -145,7 +145,7 @@ const rules: InsightRule[] = [
         category: 'strong-module',
         severity: 'positive',
         title: `${m.label} is in great shape`,
-        description: `Quality ${m.avgQuality}/5 with ${Math.round(m.pctComplete * 100)}% features implemented. Keep up the good work.`,
+        description: `Quality ${m.avgQuality}/5 with ${Math.round(m.pctComplete * 100)}% features done. Keep up the good work.`,
         sources: ['quality'],
         drillDownTab: 'quality',
         priority: 10,

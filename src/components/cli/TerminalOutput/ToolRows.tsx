@@ -1,21 +1,20 @@
 import { Wrench, ChevronDown, ChevronRight } from 'lucide-react';
 import type { LogEntry } from '../types';
-import { aggregateWarnings, type BuildParseResult } from '../UE5BuildParser';
-import { ErrorCard } from '../ErrorCard';
-import { WarningAggregator } from '../WarningAggregator';
-import { BuildSummaryCard } from '../BuildSummaryCard';
+import type { BuildParseResult } from '../UE5BuildParser';
+import { previousBuild } from '@/components/cli/buildLedger';
+import { BuildBlock } from '@/components/cli/TerminalOutput/BuildBlock';
 import { CLI_COLORS } from '@/lib/chart-colors';
-import { getLogIcon, formatLogContent, getLogTextClass } from './helpers';
+import { getLogIcon, formatLogContent } from './helpers';
 
 // --- Sub-row components ---
 
-export function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildParsed, onBuildFix, isStreaming }: {
+export function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildParsed, buildPrev = null, onBuildFix, isStreaming }: {
   toolUse: LogEntry; toolResult: LogEntry; isExpanded: boolean; onToggle: () => void;
-  buildParsed?: BuildParseResult | null; onBuildFix?: (prompt: string) => void; isStreaming?: boolean;
+  buildParsed?: BuildParseResult | null; buildPrev?: BuildParseResult | null;
+  onBuildFix?: (prompt: string) => void; isStreaming?: boolean;
 }) {
   const hasBuild = buildParsed?.isBuildOutput;
-  const errors = hasBuild ? buildParsed!.diagnostics.filter((d) => d.severity === 'error') : [];
-  const warningGroups = hasBuild ? aggregateWarnings(buildParsed!.diagnostics) : [];
+  const errorCount = hasBuild ? buildParsed!.diagnostics.filter((d) => d.severity === 'error').length : 0;
   return (
     <div>
       <button onClick={onToggle} aria-expanded={isExpanded} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left focus-ring-inset">
@@ -29,7 +28,7 @@ export function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildPa
           <span className={`ml-auto text-2xs px-1.5 py-px rounded flex-shrink-0 ${
             buildParsed!.summary?.success ? `${CLI_COLORS.buildOkBg} ${CLI_COLORS.success}` : `bg-status-red-medium ${CLI_COLORS.error}`
           }`}>
-            {buildParsed!.summary?.success ? 'Build OK' : `${errors.length} error(s)`}
+            {buildParsed!.summary?.success ? 'Build OK' : `${errorCount} error(s)`}
           </span>
         )}
       </button>
@@ -40,13 +39,7 @@ export function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildPa
               <span className="flex-shrink-0 mt-0.5">{getLogIcon('tool_result')}</span>
               <span className="text-xs leading-relaxed break-all text-text-muted font-mono">{toolResult.content}</span>
             </div>
-            {errors.map((d) => (
-              <ErrorCard key={d.id} diagnostic={d} onFix={onBuildFix} isRunning={isStreaming} />
-            ))}
-            {warningGroups.length > 0 && (
-              <WarningAggregator groups={warningGroups} onFix={onBuildFix} isRunning={isStreaming} />
-            )}
-            {buildParsed.summary && <BuildSummaryCard summary={buildParsed.summary} />}
+            <BuildBlock parsed={buildParsed} prev={buildPrev} onFix={onBuildFix} isRunning={isStreaming} />
           </div>
         ) : (
           <div className="pl-6 flex items-start gap-2 px-3 py-0.5 bg-surface-deep/60">
@@ -89,6 +82,7 @@ export function ToolBatchRow({ pairs, isExpanded, onToggle, expandedPairs, onTog
               isExpanded={expandedPairs.has(pair.toolUse.id)}
               onToggle={() => onTogglePair(pair.toolUse.id)}
               buildParsed={buildCache?.get(pair.toolResult.id)}
+              buildPrev={buildCache?.has(pair.toolResult.id) ? previousBuild(buildCache, pair.toolResult.id) : null}
               onBuildFix={onBuildFix}
               isStreaming={isStreaming}
             />

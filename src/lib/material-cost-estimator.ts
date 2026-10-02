@@ -14,7 +14,10 @@
  * "directionally correct" beats "deceptively precise" for a guardrail.
  */
 
-import type { SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
+import {
+  SURFACE_SPEC, resolveShadingModel, forbiddenCombinationsIn,
+  type SurfaceType, type RenderFeature, type ShadingModel,
+} from '@/lib/materials/surface-spec';
 
 export interface MaterialBudgetInput {
   surfaceType: SurfaceType;
@@ -40,7 +43,7 @@ export interface MaterialBudgetReport {
   /** Per-feature attribution of the instruction score. */
   instructionBreakdown: { source: string; cost: number }[];
   /** The shading model UE5 would compile (forced by some feature combos). */
-  shadingModel: 'DefaultLit' | 'SubsurfaceProfile' | 'Subsurface' | 'TwoSidedFoliage' | 'ThinTranslucent';
+  shadingModel: ShadingModel;
   /** True when the report tripped any error-severity warning. */
   overBudget: boolean;
   warnings: MaterialBudgetWarning[];
@@ -53,20 +56,9 @@ export const SAMPLER_WARN_LIMIT = 13;
 /** Above this instruction multiplier the material is meaningfully more expensive than baseline. */
 export const INSTRUCTION_WARN_THRESHOLD = 2.5;
 
-// ── Per-surface base allocations ───────────────────────────────────────────
-
-const SURFACE_BASE: Record<SurfaceType, { samplers: number; instructions: number; mapNotes: string }> = {
-  // Albedo + Normal + ORM (RoughMetalAO packed) ≈ 3.
-  metal:    { samplers: 3, instructions: 60,  mapNotes: 'Albedo + Normal + ORM' },
-  cloth:    { samplers: 4, instructions: 80,  mapNotes: 'Albedo + Normal + ORM + Sheen' },
-  // Skin: Albedo + Normal + ORM + SSS thickness + cavity.
-  skin:     { samplers: 5, instructions: 110, mapNotes: 'Albedo + Normal + ORM + SSS + Cavity' },
-  glass:    { samplers: 3, instructions: 90,  mapNotes: 'Albedo + Normal + Refraction normal' },
-  water:    { samplers: 4, instructions: 130, mapNotes: 'Normal A/B + Caustics + Mask' },
-  emissive: { samplers: 3, instructions: 50,  mapNotes: 'Emissive + Mask + Color ramp' },
-  foliage:  { samplers: 4, instructions: 95,  mapNotes: 'Albedo + Normal + ORM + SSS' },
-  stone:    { samplers: 4, instructions: 80,  mapNotes: 'Albedo + Normal + ORM + Height' },
-};
+// Per-surface base allocations (samplers, instructions, map notes) live in
+// SURFACE_SPEC (`lib/materials/surface-spec.ts`), the one table every
+// configurator consumer reads.
 
 // ── Per-feature deltas ─────────────────────────────────────────────────────
 
@@ -92,18 +84,9 @@ const FEATURE_COST: Record<RenderFeature, FeatureCost> = {
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
-function shadingModelFor(input: MaterialBudgetInput): MaterialBudgetReport['shadingModel'] {
-  if (input.surfaceType === 'foliage') return 'TwoSidedFoliage';
-  if (input.surfaceType === 'skin') return 'SubsurfaceProfile';
-  if (input.features.includes('subsurface')) return 'Subsurface';
-  if (input.features.includes('refraction') && input.surfaceType !== 'glass') return 'ThinTranslucent';
-  if (input.surfaceType === 'glass' || input.surfaceType === 'water') return 'ThinTranslucent';
-  return 'DefaultLit';
-}
-
 /** Pure estimator — no DOM, no UE coupling, deterministic for a given input. */
 export function estimateMaterialBudget(input: MaterialBudgetInput): MaterialBudgetReport {
-  const base = SURFACE_BASE[input.surfaceType];
+  const base = SURFACE_SPEC[input.surfaceType].base;
   const samplerBreakdown: MaterialBudgetReport['samplerBreakdown'] = [
     { source: `${input.surfaceType} base`, count: base.samplers },
   ];
@@ -149,7 +132,7 @@ export function estimateMaterialBudget(input: MaterialBudgetInput): MaterialBudg
   }
 
   // Feature combos that force an expensive shading model.
-  const sm = shadingModelFor(input);
+  const sm = resolveShadingModel(input.surfaceType, input.features);
   if (sm === 'Subsurface' || sm === 'SubsurfaceProfile') {
     warnings.push({
       kind: 'shading-model',
@@ -158,16 +141,12 @@ export function estimateMaterialBudget(input: MaterialBudgetInput): MaterialBudg
       suggestion: 'PreintegratedSkin works for many cases without a full subsurface pass.',
     });
   }
-  if (input.features.includes('tessellation') && input.features.includes('parallax')) {
-    warnings.push({
-      kind: 'feature-combo',
-      severity: 'error',
-      message: 'Tessellation + Parallax Occlusion give compounding cost without visible benefit.',
-      suggestion: 'Pick one — usually Tessellation/Nanite for hero meshes, BumpOffset for everything else.',
-    });
+  // Combinations the configurator refuses to dispatch (same table as `refusalFor`).
+  for (const combo of forbiddenCombinationsIn(input.features)) {
+    warnings.push({ kind: 'feature-combo', severity: 'error', message: combo.message, suggestion: combo.suggestion });
   }
 
-  const instructionScore = instructions / SURFACE_BASE.metal.instructions;
+  const instructionScore = instructions / SURFACE_SPEC.metal.base.instructions;
   if (instructionScore >= INSTRUCTION_WARN_THRESHOLD && !warnings.some((w) => w.kind === 'instruction-cost')) {
     warnings.push({
       kind: 'instruction-cost',

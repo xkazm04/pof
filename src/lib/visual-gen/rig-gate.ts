@@ -46,6 +46,8 @@
  * for something that is a few hundred bytes of buffer reading.
  */
 import { readFileSync } from 'node:fs';
+import { bindRigToPreset, type RigBinding } from './rig-binding';
+import { getRigPreset } from './rig-presets';
 import {
   checkBoneGroups,
   classifyNaming,
@@ -105,6 +107,8 @@ export interface RigVerdict {
   failures: string[];
   /** Real defects that do not make the rig unusable. */
   warnings: string[];
+  /** Present only when `expect.target` named a known preset — see `rig-binding.ts`. */
+  binding?: RigBinding;
 }
 
 export interface RigGateResult {
@@ -292,10 +296,16 @@ const THIN_SKELETON_JOINTS = 2;
  * required group with no matching bone FAILS, and an expectation that cannot be READ
  * (anonymous names, or names never captured) also fails, because the alternative is
  * reporting a pass on a question the gate could not answer.
+ *
+ * `expect.target` (a `rig-presets.ts` id) adds the binding question: the rig's actual
+ * joint names are bound to that skeleton's IK chains by `bindRigToPreset`, every chain
+ * with an unbound endpoint FAILS by name, and the verdict carries `binding`. Without a
+ * target the verdict has no `binding` key at all.
  */
 export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
   const failures: string[] = [];
   const warnings: string[] = [];
+  let binding: RigBinding | undefined;
 
   if (!facts.hasSkin) {
     return {
@@ -381,10 +391,40 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
         );
       }
     }
+
+    // ── Target binding ──────────────────────────────────────────────────────────
+    // An unbound required chain endpoint is a hard failure: that limb will not animate
+    // on the target. Unknown and unverifiable targets fail too — never an unread pass.
+    if (expect.target !== undefined) {
+      const preset = getRigPreset(expect.target);
+      if (!preset) {
+        failures.push(
+          `unknown target skeleton "${expect.target}" — no rig preset carries that id, so the ` +
+            'rig could not be bound to it',
+        );
+      } else {
+        binding = bindRigToPreset(facts.jointNames, preset);
+        if (binding.status === 'partial') {
+          const unbound = new Set(binding.unboundRequired);
+          for (const chain of preset.ikChains) {
+            const missing = [chain.startBone, chain.endBone].filter((b) => unbound.has(b));
+            if (missing.length === 0) continue;
+            failures.push(
+              `chain ${chain.name} cannot bind to ${preset.id}: ${missing.join(', ')} has no bone ` +
+                `in this rig (${binding.source} mapping) — that limb will not retarget`,
+            );
+          }
+        } else if (binding.status === 'unverifiable') {
+          failures.push(`the binding to ${preset.id} could not be checked: ${binding.reason}`);
+        } else if (binding.status === 'not-applicable') {
+          warnings.push(binding.reason);
+        }
+      }
+    }
   }
 
   const score = failures.length > 0 ? 0 : Math.max(0, 100 - warnings.length * 10);
-  return { pass: failures.length === 0, score, failures, warnings };
+  return { pass: failures.length === 0, score, failures, warnings, ...(binding ? { binding } : {}) };
 }
 
 /**

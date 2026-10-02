@@ -125,6 +125,48 @@ export function resolveStack(base: FeelProfile, layers: AdjustmentLayer[]): Feel
   return result;
 }
 
+/* ── Reserved `set` layers (Property Inspector, Feel Playground) ────────────── */
+
+/** A reserved layer a surface owns inside `feelLayers` (e.g. `inspector-overrides`). */
+export interface ReservedLayerRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * Upsert `set` modifiers into ONE reserved layer. The layer is appended on top on
+ * first use and re-enabled on edit; a repeat edit replaces the field's modifier.
+ * A value equal to what the stack produces beneath the reserved layer removes the
+ * field's modifier, and an emptied layer is dropped. Values are clamped to the
+ * field's FEEL_FIELD_META range; non-finite values are skipped.
+ */
+export function upsertReservedSets(
+  layers: AdjustmentLayer[],
+  reserved: ReservedLayerRef,
+  entries: ReadonlyArray<{ field: string; value: number }>,
+  base: FeelProfile,
+): AdjustmentLayer[] {
+  const idx = layers.findIndex((l) => l.id === reserved.id);
+  const beneath = resolveStack(base, idx === -1 ? layers : layers.slice(0, idx));
+  const existing = idx === -1 ? null : layers[idx];
+
+  let modifiers = existing?.modifiers ?? [];
+  for (const { field, value } of entries) {
+    if (!Number.isFinite(value)) continue;
+    const next = clampToMeta(field, value);
+    const others = modifiers.filter((m) => m.field !== field);
+    modifiers = next === getNestedValue(beneath, field)
+      ? others
+      : [...others, { field, op: 'set' as const, value: next }];
+  }
+
+  if (modifiers.length === 0) return idx === -1 ? layers : layers.filter((_, i) => i !== idx);
+  const layer: AdjustmentLayer = existing
+    ? { ...existing, enabled: true, modifiers }
+    : { id: reserved.id, name: reserved.name, enabled: true, modifiers };
+  return idx === -1 ? [...layers, layer] : layers.map((l, i) => (i === idx ? layer : l));
+}
+
 /** Count of enabled layers in a stack — handy for summary chips. */
 export function countActiveLayers(layers: AdjustmentLayer[]): number {
   return layers.reduce((n, l) => n + (l.enabled ? 1 : 0), 0);

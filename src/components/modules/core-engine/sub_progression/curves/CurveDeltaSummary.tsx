@@ -7,42 +7,39 @@ import { STATUS_INFO, STATUS_ERROR, STATUS_SUCCESS,
   withOpacity, OPACITY_10,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { ACCENT, MAX_LEVEL, calculateXpForLevel, COMPARISON_LEVELS } from '../_shared/data';
+import { ACCENT, MAX_LEVEL } from '../_shared/data';
+import { curveDelta } from '@/components/modules/core-engine/sub_progression/_shared/curveModel';
+import { DEFAULT_RATE } from '@/components/modules/core-engine/sub_progression/_shared/rewardPacing';
 
 /* -- Curve Delta Summary -------------------------------------------------- */
 
 interface CurveDeltaSummaryProps {
-  snapshotData: { level: number; xp: number }[];
-  liveData: { level: number; xp: number }[];
   snapshotBaseXp: number;
   snapshotCurveExp: number;
   liveBaseXp: number;
   liveCurveExp: number;
 }
 
+/**
+ * Snapshot-vs-live comparison. Every figure comes from the one curve model
+ * (curveModel.ts): totals are the export's XPTotal at the cap, time to max is
+ * the Rewards-tab clock.
+ */
 export function CurveDeltaSummary({
-  snapshotData, liveData,
   snapshotBaseXp, snapshotCurveExp,
   liveBaseXp, liveCurveExp,
 }: CurveDeltaSummaryProps) {
-  const deltas = useMemo(() => {
-    return COMPARISON_LEVELS.map((lvl) => {
-      const snapXp = calculateXpForLevel(lvl, snapshotBaseXp, snapshotCurveExp);
-      const liveXp = calculateXpForLevel(lvl, liveBaseXp, liveCurveExp);
-      const diff = liveXp - snapXp;
-      const pct = snapXp > 0 ? ((diff / snapXp) * 100) : 0;
-      return { level: lvl, snapXp, liveXp, diff, pct };
-    });
-  }, [snapshotBaseXp, snapshotCurveExp, liveBaseXp, liveCurveExp]);
-
-  const snapTotalXp = snapshotData.reduce((s, d) => s + d.xp, 0);
-  const liveTotalXp = liveData.reduce((s, d) => s + d.xp, 0);
+  const delta = useMemo(
+    () => curveDelta({ baseXp: snapshotBaseXp, curveExp: snapshotCurveExp }, { baseXp: liveBaseXp, curveExp: liveCurveExp }),
+    [snapshotBaseXp, snapshotCurveExp, liveBaseXp, liveCurveExp],
+  );
+  const deltas = delta.rows;
+  const snapTotalXp = delta.snapshot.totalXp;
+  const liveTotalXp = delta.live.totalXp;
   const totalDiff = liveTotalXp - snapTotalXp;
-  const totalPct = snapTotalXp > 0 ? ((totalDiff / snapTotalXp) * 100) : 0;
-
-  const XP_PER_MIN = 1000;
-  const snapTimeMax = calculateXpForLevel(MAX_LEVEL, snapshotBaseXp, snapshotCurveExp) / XP_PER_MIN;
-  const liveTimeMax = calculateXpForLevel(MAX_LEVEL, liveBaseXp, liveCurveExp) / XP_PER_MIN;
+  const totalPct = delta.totalPct;
+  const snapHours = delta.snapshot.hoursToMax;
+  const liveHours = delta.live.hoursToMax;
 
   return (
     <motion.div
@@ -77,7 +74,7 @@ export function CurveDeltaSummary({
         {/* Summary stats row */}
         <div className="grid grid-cols-3 gap-3 text-xs">
           <div className="bg-surface/30 rounded-lg p-2 border border-border/30">
-            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Total XP (sampled)</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Total XP to L{MAX_LEVEL}</div>
             <div className="flex justify-between items-center">
               <span className="font-mono" style={{ color: STATUS_INFO }}>{snapTotalXp.toLocaleString()}</span>
               <span className="font-mono" style={{ color: ACCENT }}>{liveTotalXp.toLocaleString()}</span>
@@ -87,13 +84,13 @@ export function CurveDeltaSummary({
             </div>
           </div>
           <div className="bg-surface/30 rounded-lg p-2 border border-border/30">
-            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Time to Max (est.)</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Time to max (h)</div>
             <div className="flex justify-between items-center">
-              <span className="font-mono" style={{ color: STATUS_INFO }}>{snapTimeMax.toFixed(0)}m</span>
-              <span className="font-mono" style={{ color: ACCENT }}>{liveTimeMax.toFixed(0)}m</span>
+              <span className="font-mono" style={{ color: STATUS_INFO }}>{snapHours.toFixed(2)}h</span>
+              <span className="font-mono" style={{ color: ACCENT }}>{liveHours.toFixed(2)}h</span>
             </div>
-            <div className="text-xs font-mono font-bold mt-0.5" style={{ color: liveTimeMax > snapTimeMax ? STATUS_ERROR : STATUS_SUCCESS }}>
-              {liveTimeMax > snapTimeMax ? '+' : ''}{(liveTimeMax - snapTimeMax).toFixed(0)}m
+            <div className="text-xs font-mono font-bold mt-0.5" style={{ color: delta.hoursDiff > 0 ? STATUS_ERROR : delta.hoursDiff < 0 ? STATUS_SUCCESS : 'var(--text-muted)' }}>
+              {delta.hoursDiff > 0 ? '+' : ''}{delta.hoursDiff.toFixed(2)}h
             </div>
           </div>
           <div className="bg-surface/30 rounded-lg p-2 border border-border/30">
@@ -112,6 +109,9 @@ export function CurveDeltaSummary({
             </div>
           </div>
         </div>
+        <p data-testid="delta-rate-basis" className="mt-2 text-2xs font-mono text-text-muted">
+          Totals = XPTotal at L{MAX_LEVEL} in the exported XP table. Time on the Rewards-tab clock: {DEFAULT_RATE.xpPerMinAtL1} XP/min at L1 x L^{DEFAULT_RATE.rateGrowth}.
+        </p>
       </BlueprintPanel>
     </motion.div>
   );

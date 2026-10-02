@@ -55,10 +55,26 @@ a new object reference and unnecessary re-renders — the canonical no-op set pa
 **Completion ledger (`checklistCompletedAt`).** `checklistProgress` records THAT an item is done, never
 WHEN, so it cannot drive a velocity. `setChecklistItem` / `toggleChecklistItem` stamp
 `checklistCompletedAt[module][item] = Date.now()` on the first transition to done and remove the stamp on
-un-done (pure helpers in `src/lib/roadmap/completion-ledger.ts`). It is persisted in the `pof-modules`
-partialize only — not yet in the `project_progress` row — and is emptied by `clearProgress`, by a failed
-foreign load, and by a successful load of a different project (a same-project load keeps it, pruned to the
-items the loaded checklist says are done). The health engine (`computeProjectHealth(..., ledger, now)`)
+un-done (pure helpers in `src/lib/roadmap/completion-ledger.ts`). It is held by the `project_progress` row
+(`completed_json`, schema 5) as well as the `pof-modules` partialize: `saveProgress` sends it, the server
+unions it with the stored ledger (`mergeLedgers`, earliest stamp wins) pruned to done items (un-done drops the
+date server-side too), and `/api/checklist/complete` stamps `Date.now()` on a CLI completion (an item already
+done keeps its first stamp or stays undated). `clearProgress` and a failed foreign load still empty the
+in-memory copy, but a load now ADOPTS the server's stamps — merged with the local ones only when the memory
+already belonged to this project — so a project switch no longer erases velocity history.
+
+**One progress ledger (`src/lib/project-progress-db.ts`).** The only owner of the `project_progress` row;
+`/api/project-progress`, `/api/checklist/complete` and `/api/recent-projects` are thin callers. The row id
+is `progressRowId(path) = sha256(normalizeProjectId(path)).slice(0,16)` — equal to the old per-route hash for
+every canonical spelling (no row is re-keyed), while `C:/x/PoF/` and `c:\x\pof` now share one row. A row
+stored under the legacy hash of a non-canonical spelling (`legacyProgressRowId`) is still returned for that
+spelling: `readProgress` projects it in, the next write copies it into the canonical row and records its id in
+`folded_json` so it folds exactly once. The fold is lossless (a `true` is never overwritten by `false`,
+earliest stamp wins) and the legacy row is never deleted or rewritten. `saveProgress` is the one merge
+(per-key checklist, orphan-key migration on every write, ledger union, keep-or-replace for
+health/verification/history); `markComplete` is the CLI's dated mark. The switcher's % is
+`countAllChecklists` over `readProgress` (declared items only); `recent_projects.checklist_json` is only the
+fallback for a project with no progress row. The health engine (`computeProjectHealth(..., ledger, now)`)
 derives weekly velocity, the burn-up and milestone ETAs from these stamps only; done items without a stamp
 are reported as `velocitySample.undated`, never bucketed, and with no dated completion `avgVelocity` and
 every `predictedDate` are `null`. No series is simulated (the former seeded RNG is gone).
@@ -116,11 +132,24 @@ Owns terminal session objects, `tabOrder`, `activeTabId`, `maximizedTabId`, and
 Persisted keys (via `partialize` at line 271):
 `sessions`, `tabOrder`, `activeTabId`, `maximizedTabId`, `inlineTerminalHeight`.
 
-**Custom `merge` resets transient session fields on rehydration** (line 278–289): after each page
-reload, every persisted session has `isRunning`, `lastTaskSuccess`, `currentExecutionId`, and
-`currentTaskId` reset to `false`/`null`. Sessions cannot be running after a page refresh — without
-this, a session stuck in `isRunning: true` would prevent any new dispatches. The transient
-run-door fields `runPhase`/`runSeq` are reset to `'idle'`/`0` there too.
+**Custom `merge` resets transient session fields on rehydration**: after each page
+reload, every persisted session has `isRunning`, `lastTaskSuccess` and `currentTaskId` reset to
+`false`/`null` (no run is observed by a fresh page — without this, a session stuck in
+`isRunning: true` would prevent any new dispatches), and the run-door fields `runPhase`/`runSeq`
+to `'idle'`/`0`. **`currentExecutionId` is kept**: it names the server execution the session's run
+lives in, which survives a reload (cli-service keeps it in a `globalThis` map, running up to 100 min
+and replayable for 1 h after it ends).
+
+**Re-attach contract** (`useTaskQueue.attachExecution`): `InlineTerminal` wires
+`onExecutionStarted` (fired when the query POST returns) to `setCurrentExecution`; `endRun` clears
+the id, so a settled run is never re-attached. On mount, `CompactTerminal` re-attaches a session
+that still holds an id: `onTaskStart` begins the run (Running, Abort DELETEs that execution), ONE
+stream replays its transcript, and it ends with its real outcome — never a second query POST, never
+a callback POST, and no callback verdict (`callbackStatus` undefined: the server settles the run's
+`@@CALLBACK`s). An id the server no longer holds (`Execution not found`) ends the run as unknown
+(`lastTaskSuccess: null` via `meta.outcomeUnknown`), not failed. Stream frames carry `seq` (1-based
+position in `execution.events`); a re-shown terminal reconnects with `&after=<last seq>`, so the
+transcript is never replayed on top of itself.
 
 **Run lifecycle is written through one door** (`beginRun` / `settleRun` / `endRun`, wired by
 `store/sessionRun.ts` `bindSessionRun`): `beginRun` clears the previous run's
@@ -138,7 +167,7 @@ line 86).
 
 Character Blueprint state under the `pof-character-feel-stack` key. Persisted keys (`partialize`):
 `baseFeelPresetId`, `feelLayers` (the feel adjustment-layer stack, incl. the Property Inspector's
-reserved `inspector-overrides` layer) and `bindingOverrides` — the Input tab's sparse
+reserved `inspector-overrides` layer and the Feel Playground's reserved `playground-curves` layer) and `bindingOverrides` — the Input tab's sparse
 `action -> key` rebinds over `INPUT_BINDINGS`. The custom `merge` sanitizes every key on rehydration
 (unknown preset -> default, `sanitizeLayers`, and `sanitizeBindingOverrides` drops unknown actions,
 non-string keys and overrides equal to the default); `activeSubTab` is not persisted. Rebinds go
@@ -147,6 +176,13 @@ never swap) and every input surface — table, keyboard caps, legend, mouse, abi
 Features `KeyboardMetric` — reads the one `useResolvedBindings()` value (pure
 `resolveBindings` in `src/lib/character/input-bindings.ts`). "Apply to IMC_Default" only dispatches
 a CLI task on an explicit click, gated off at defaults and while any key conflicts.
+Reserved layers are written through one upsert, `upsertReservedSets` (`src/lib/feel-adjustment-layers.ts`):
+`set` modifiers, a value equal to the stack beneath the reserved layer removes its modifier, an emptied
+layer is dropped. The Playground's curves are not state: `src/lib/character/feel-curve-codec.ts`
+(`CURVE_CHANNELS`, one coordinate per field, ranges = `FEEL_FIELD_META`) renders
+`encodeCurves(resolved stack)`, and a drag goes `applyPlaygroundCurve` -> `applyCurveEdit`, which writes
+only the fields whose decoded value changed. Playground Apply dispatches `buildStackApplyPrompt`, the same
+prompt as AI Feel. No store version bump: a `playground-curves` layer is an ordinary layer to `sanitizeLayers`.
 
 #### `useLabPipelineStore` (`src/components/layout-lab/labPipelineStore.ts`)
 
@@ -165,6 +201,55 @@ not swap in `isServerDerived` as the admission rule: it is true for an adopt tha
 drifted content — all local-only work. The storage adapter (`quotaSafeLocalStorage`) never throws:
 a refused write (quota) used to escape `set()` and skip the produce write-through; it is now
 recorded in the non-persisted `persistError` and shown as one line in `ProduceLogPanel`.
+A failure MARKER (`done: false`, `data: {}`, `error`) holds no content: `stepRecord.ts` is the one
+decoder of the record for the store and every reader (`contentOf`, `hasUnsyncedLocalWork`,
+`isServerDerived`, `adoptOnto`). Hydrate/refresh adopt the server row onto a marker keeping
+`error`/`errorAt` (so it stays in the outbox — an `error` is never a proven copy), and a refresh
+never reports a marker as local work or stamps it `SERVER_MISSING_REASON`. Shape and version unchanged.
+
+#### `useCatalogStore` (`src/stores/catalogStore.ts`) — seed provenance
+
+The lab's catalog entities under the `pof-catalog` key. **A persisted copy never shadows a code seed
+by default:** it used to mirror all ~503 seeded entities and let every persisted copy win forever,
+so a seed correction (Vael crit ×2.5, bestiary loot links 5→14) never reached a returning browser
+and the lab previewed/graded content the server (`seededEntities`) no longer holds. `partialize`
+(`persistableSeedState`, `src/lib/catalog/seedSync.ts`) writes only entities NOT byte-equal to
+their code seed (server overlays, edits, `user-<slug>` rows) plus `seedHashes` (`catalog/id` → the
+content hash of the seed each copy was written against; overlays `lifecycle`/`ueAssets`/
+`lastTestResult`/`lastVerifiedAt` excluded) and the drafts. `merge` runs `planSeedMerge` per
+entity in `canonSync`'s closed vocabulary: `fresh`/`follow` (untouched → code content, overlays
+kept), `edited` (kept, silent), `conflict`/`unrecorded` (kept, ask), `local` (kept), `orphaned`
+(untouched retired seed removed, edited one kept; both reported). Asking findings land in the
+non-persisted `seedDrift` and render as `SeedDriftNotice` atop `CatalogTree`, answered in bulk by
+`adoptShippedSeeds` (code wins, overlays kept) or `keepMine` (records the current seed hash, so the
+copy reads `edited` until the code moves again). **Persist version stays 0** — no bump, no
+`migrate`: a blob without `seedHashes` IS the legacy case (`unrecorded`, never auto-overwritten),
+and zustand 5 discards a version-mismatched blob that has no `migrate`, so a bump would make a
+revert silently drop local rows and browser-only drafts.
+
+#### Item resolution on the Catalog & Gear tab (`sub_inventory/_shared/useInventoryItems.ts`)
+
+Every item read on the Item Catalog's Catalog & Gear tab resolves against `useCatalogStore`'s `items` catalog, the store the grid and Add Item already write to. The store holds every built-in seed (`seedAllCatalogs` -> `DUMMY_ITEMS`) plus designer-authored rows, so it is read alone, and a catalog entry wins on an id collision (`mergeInventoryItems`). The stash, the comparison panel and the palette used to read the static `DUMMY_ITEMS` list, so an item a designer added appeared in the grid and nowhere below it, and `placeItem` refused it. One snapshot, memoized on the items-record identity, serves three readers: `useInventoryItems()` for React lists (palette, `ItemComparisonPanel`'s default `items`, Balance Advisor, loot filter), `useInventoryItemLookup()` for reactive per-id renders (stash tiles, packing metrics), and the non-hook `getInventoryItems()` / `resolveInventoryItem(id)` for `spatialInventoryStore` (`placeItem`, seed/Reseed, `spatialItemLookup`, which keeps its signature for `EconomySourcingTab`). **An id the store does not hold is unresolved and never falls back to `DUMMY_ITEMS`:** `placeItem` returns null, the tile shows `?` with an "Unresolved item" title, and packing metrics count its cells without inventing a type or rarity. Nothing persisted changed: `pof-spatial-inventory` still stores item-id strings.
+
+#### `useLootTuningStore` (`src/components/modules/core-engine/sub_loot/_shared/lootTuningStore.ts`)
+
+The loot module's one tuned enemy->loot roster and its one gold-per-rarity table. It lives in memory only and is never persisted, so a tune is a what-if that writes no catalog row, DB row or UE file. It is module-level rather than component state because `LootTabPanels` mounts each tab under `AnimatePresence` keyed by the tab, and tab-local state would be lost on every tab switch. All state changes go through `dispatch(action)` into the pure `tunerReducer` (`_shared/bindingTuner.ts`: select / setField / setWeight / setGold / goalSeek / undo / reset). Inputs are clamped, the history is capped at 50, and undo on an empty history returns the same state. Every Core-tab loot surface reads this store: the header Enemy Source picker (the 22 bindings in tier optgroups), `BindingTuner`, `EnemyLootBindingSection` (simulated drops plus the C++ export) and `EVCalculator`, whose sell-value inputs write the shared gold table. Goal-seek solves against that same table (`solveWeightsForTargetEV`, then one-point integer refinement if the rounded weights miss the target). `rosterFindings` lints each binding against the peers of its **untuned** tier (`lootTierOf` in `src/lib/loot/economy.ts`, the same rule the catalog seed uses), so a drop-chance edit never moves the binding into a different peer group.
+
+The store also holds the Pity tab's `pityThreshold` (`DEFAULT_PITY_THRESHOLD` 20; `setPityThreshold` rounds and floors at 1; `resetLootTuning` restores it with the roster). `sub_loot/index.tsx` reads it from the store and still passes it to `PityTimerSection`/`DroughtCalculator`, so `LootTabPanels` is unchanged. The loot Feature Map reads this store through ONE read model, `sub_loot/metrics/lootMetricsView.ts`: `renderLootMetric(id)` mounts a glyph that calls `useLootMetricsView()` (per-field selectors, memoised) over the pure `lootMetricsView({ tuning, pityThreshold })`, which returns one `MetricReading { value, unit, basis: 'live'|'tuned'|'fixture', label?, detail?, unpitied? }` per arpg-loot section (`satisfies Record<LootSectionId, MetricReading>`; set equality with `getAllSectionIds('arpg-loot')` is pinned by `loot-metrics-view.test.ts`). Timer is the live threshold; Drought is the Legendary p95 dry streak with that pity beside the unpitied p95 (`findPercentileKill`, the DroughtCalculator's default view); Impact is the summed `exactEV` per kill of the tuned roster minus the shipped one (0, labelled `untuned`, before any tune). The other eight readings are `fixture` and their glyphs carry a "sample data, not measured" title. The 0.7 affix hot-cell threshold lives in the view as `AFFIX_HOT_THRESHOLD`; `AffixRollSimulator` still restates it.
+
+#### `useEncounterDraftStore` (`src/components/modules/core-engine/sub_combat/choreography/encounterDraftStore.ts`)
+
+The Encounter Choreographer's one draft (enemies, waves, tuning, player level, plus the wave/archetype/level selection), mounted as the Combat module's **Encounter** sub-tab (`COMBAT_SUBTABS` key `encounter`, gated by section `encounter-choreography`). It follows the `useLootTuningStore` pattern for the same reason: `sub_combat/index.tsx` mounts each tab under `AnimatePresence` keyed by the tab, so a tab-local draft died on every switch. It is memory-only and never persisted. All changes go through `dispatch(action)` into the pure `encounterReducer` (placeEnemy / moveEnemy / removeEnemy / addWave / removeWave / setWaveTime / setTuning / resetTuning / setPlayerLevel / select* / pinBaseline / clearBaseline / revertToBaseline / undo). Draft edits push an undo snapshot (history capped at 50); selection changes and pinning do not. `removeWave` drops that wave's enemies, reindexes later waves and clamps the selection inside the reducer. `pinBaseline` freezes a copy of the draft that later edits never touch, and `revertToBaseline` restores it as one undoable edit. Playback and scrub state stay local to the editor. The `CompareStrip` diffs the baseline's sim against the current one with `diffEncounterRuns` (`src/lib/combat/encounter-compare.ts`). It compares the outcome (`ChoreographySimResult.outcome`: `playerDied`, `diedAtSec`, `playerHpEnd`), the duration delta, beats added, removed or moved (paired by type in time order, with a 0.25s tolerance), and findings resolved, new or persisting. Findings are matched by their `kind`, never by message text.
+
+#### `useItemGenomeStore` (`src/stores/itemGenomeStore.ts`)
+
+The Item DNA lab's genome library, mounted as the Item Catalog's **Item DNA** sub-tab (`sub_inventory/index.tsx` -> `dna-genome/ItemDNAGenomeEditor`) and also fed by the Genre Template Gallery's one-click imports. It persists to localStorage key `pof-item-genomes` (`genomes`, `selectedId`, `compareIds`, `breedParentA/B`; `merge` re-sanitizes every genome and drops stale ids). Breeding is the lab's one random operation, so it previews before it writes: `previewBreed()` rolls an offspring of the two parents into the **transient** `breedPreview` (excluded from `partialize`, so the persisted payload is unchanged) and touches neither `genomes` nor `selectedId`; `rerollBreed()` replaces it with a fresh roll; `keepBreed()` appends exactly the previewed genome and selects it; `discardBreed()` drops it. The child takes item type, rarity floor and mutation profile from the dominant parent `inheritGenomes` names (not `createGenome`'s `'Weapon'` default). A preview never outlives a parent it names: `deleteGenome` of a named parent, a parent change and `resetToPresets` all clear it. `breedSelected()` remains as preview + keep for callers that commit at once.
+
+#### `useHudDesignStore` (`src/stores/hudDesignStore.ts`)
+
+The UI/HUD module's two design drafts, kept per project (keyed by `projectPath`): the HUD Theme Editor's theme and the Inventory Designer's `InventoryConfig`. `ReviewableModuleView` renders an extra tab only while it is active, so both tools lost every edit on a tab switch while they kept their draft in component state. They now read and write the store. It persists to localStorage key `pof-hud-design` (`byProject`: `themeDraft`, `themeApplied`, `lastApplyError`, `inventoryDraft`). The persist `merge` loads each saved draft losslessly: every saved value is kept, and a field added since the save (a new `HUD_THEME_PARAMS` row, a new element colour, a new `InventoryConfig` key) comes from today's defaults.
+
+The theme also has an **applied baseline**, the values the last confirmed-successful "Apply to project" run wrote. `diffThemeExport(applied, draft)` (`HudThemeEditor/themeDiff.ts`) walks `HUD_THEME_PARAMS` and renders each side with the export's own `formatExportLine`. A row is a change when its export line differs, and a null baseline means every row. `ApplyToProjectBar` sends only those rows, through `buildHudThemeApplyPrompt` (`src/lib/prompts/hud-theme.ts`), to the `ui-hud-theme` CLI session, and only on an explicit click. At dispatch `beginApply` snapshots the draft together with the session's current `runSeq`. The pending apply settles from the session's run state, not from a callback held by the component, so a run that ends while the tab is away is settled when the bar mounts again. The first run with a higher `runSeq` decides: `lastTaskSuccess === true` calls `commitApply(true)`, which moves the baseline to the dispatch snapshot (never to a later edit). Anything else leaves the baseline and records `lastApplyError`, including a null outcome. `pendingApply` is never persisted, so after a reload the next apply resends those rows, which is idempotent.
 
 ---
 
@@ -237,12 +322,13 @@ the browser or edge runtime).
 | Table | Purpose |
 |-------|---------|
 | `settings` | Key/value app settings |
-| `feature_matrix` | Per-module/feature implementation status + quality scores. Every row carries `source` (`review` = CLI review import · `verify` = UE5 auto-verify · `fix` = CLI fix PATCH · `seed` · `unknown` for legacy rows) and `last_reviewed_at`, stamped by every write path — the compliance engine reads these as evidence provenance, and a PATCH stamps `last_reviewed_at = now` + `source='fix'` (a dated but weaker-class assertion, since the actor that made the change is the one reporting it). `reviewedAt` on import is validated as ISO-8601 before any write. |
-| `review_snapshots` | Point-in-time module health snapshots for trending. Captured only when a write actually changed rows; an identical-timestamp re-capture updates the row in place; retention bounded to 200/module (module-scoped prune, so a quiet module never loses its only point). `getReviewHistory` returns the RECENT window. |
-| `eval_findings` | Multi-pass deep-eval scan results |
+| `feature_matrix` | Per-module/feature implementation status + quality scores. Every row carries `source` (`review` = CLI review import · `verify` = UE5 auto-verify · `fix` = CLI fix PATCH · `seed` · `unknown` for legacy rows) and `last_reviewed_at`, stamped by every write path — the compliance engine reads these as evidence provenance, and a PATCH stamps `last_reviewed_at = now` + `source='fix'` (a dated but weaker-class assertion, since the actor that made the change is the one reporting it). `reviewedAt` on import is validated as ISO-8601 before any write. Under a named project an owned row SHADOWS its legacy (`''`) twin on read (`shadowedScopeSql` in `getFeaturesByModule`/`getFeatureSummary`/`getAllFeatureStatuses`/`getAllModuleAggregates`): nothing is deleted, an unscoped read and `getProjectScopeReport` still see the twin. `upsertFeatures` adopts a legacy row only when the project owns none (adopting beside an owned row violated the `(project_id, module_id, feature_name)` key). CLI callbacks into project-scoped routes stamp the run's project: feature-review/feature-fix `staticFields` carry `projectId: normalizeProjectId(ctx.projectPath)`, and `cli-callback-scope-guard.test.ts` fails any descriptor whose route uses `normalizeProjectId`/`projectScopeSql`/`isInProjectScope` without `projectId`/`projectPath`. |
+| `review_snapshots` | Point-in-time module health snapshots for trending. Captured only when a write actually changed rows; an identical-timestamp re-capture updates the row in place; retention bounded to 200/module (module-scoped prune, so a quiet module never loses its only point). `getReviewHistory` returns the RECENT window. Each point also carries `feature_states` (schema 6; nullable JSON `[{featureName, status, quality, source}]`, counted with the matrix's shadowed scope so an owned row hides its legacy twin); `getLatestReviewDelta` diffs the newest pair through `src/lib/feature-review-delta.ts` (missing < partial < implemented < improved; unknown -> X is `assessed`, X -> unknown is `cleared`) and the per-module history route returns it as `delta`, or `measured: false` with a reason when either side predates the column. The Feature Matrix shows it as `ReviewDeltaStrip` (Show changed filter, `was <status>` badge on regressed rows); `useModuleReviewCli` toasts it after a review instead of a disk-mode import. |
+| `eval_findings` | Module Scan findings. `resolved_at` (nullable, schema 4 — `SCHEMA_VERSION` bumped so existing DBs gain it) is the durable resolution: `PATCH /api/module-scan/import {moduleId, ids, resolved}` stamps or clears it (undo), and unknown ids come back in `missing`. `pass` is one of `EVAL_PASS_VOCABULARY` (`module-eval-prompts.ts`, the keys of `PASS_LABELS` — the only pass list; the route's zod enums, `ScanFinding.pass`, the callback hint and the Scan tab derive from it). db.ts still creates the older 3-pass `CHECK`, so the POST first runs `ensureEvalFindingsPassVocabulary` (`src/lib/evaluator/scan-findings-db.ts`, once per connection): a count-verified rebuild of the stored DDL with only the pass `CHECK` widened, which also re-creates the table's indexes/triggers (`DROP TABLE` drops them). `module_scans.finding_count` counts rows actually stored — `INSERT OR IGNORE` swallows a `CHECK` violation silently. |
+| `module_scans` | One row per Module Scan run, **including a clean one** (`finding_count 0`), written in the same transaction as its findings: `scan_id`, `module_id`, `passes_json` (every pass the scan RAN, from the callback's `passes` staticField — any `EvalPass`, so the 4-pass default incl. ground-truth is accepted), `created_at`. `GET ?view=delta` reconciles the newest scan against the findings still unresolved before it with the pure `reconcileScan` (`src/lib/evaluator/scan-reconcile.ts`): new / persisting / cleared / notRescanned — a pass that did not run clears nothing. |
 | `build_history` | Headless UBT build records |
-| `recent_projects` | Project switcher history |
-| `project_progress` | Full module state (checklist/health/verification/history) per project path |
+| `recent_projects` | Project switcher history. The listed % is counted from the project's `project_progress` row (see the progress ledger above); its own `checklist_json` snapshot is only the fallback when no row exists. A new path takes `progressRowId` as its id; an already-listed path keeps its id. |
+| `project_progress` | Full module state (checklist/health/verification/history) per project, keyed by `progressRowId`. Schema 5 added `completed_json` (the completion ledger, `{module: {item: epoch ms}}`) and `folded_json` (legacy non-canonical row ids already folded in) — additive, defaults `'{}'`/`'[]'`. Owned by `src/lib/project-progress-db.ts`. |
 | `session_log` | Audit trail linking CLI sessions to modules and projects |
 | `request_log` | Idempotency-key replay detection for import/mutation routes |
 | `session_analytics` | Per-CLI-session prompt/outcome telemetry (analytics dashboard, insights, suggestions, Weekly Digest, Project Wrapped). `completed_at` is stored as ISO UTC; reporting periods are cut from it by one authority (see the note below). |
@@ -250,6 +336,8 @@ the browser or edge runtime).
 | `genre_suggestions` | Detected sub-genre suggestions (pending/accepted/dismissed) |
 | `checklist_metadata` | Per-item priority and notes |
 | `milestone_deadlines` | User-set target dates for deliverables |
+
+> **Auto-Verify previews; it writes only the picks.** `source` is what protects a verdict. `planVerification(manifest, moduleId, currentRows)` (`src/lib/pof-bridge/verification-engine.ts`) is pure. It returns `{changes, unchanged, refused, results}`. Each change is `{featureName, from, to, evidence[], kind, selectedByDefault}`: `evidence` is the manifest asset paths the rule matched (rules return `{status, evidence}` via `matched()` / `tiered()` in `verification-rules.ts`). A downgrade of a `review` or `fix` row starts unpicked, because the manifest lists assets, not C++ classes, so a `missing` from it is absence, not proof. A rule whose feature is not declared in `MODULE_FEATURE_DEFINITIONS[moduleId]` is `refused` (`undeclared`) and never written, and a drift test pins 0 such rules. `applyVerification(plan, selectedNames, projectId)` sends ONE `source: 'verify'` POST holding only the picked proposals. The UI path is `useFeatureMatrix.previewAutoVerify()`: it reads the rows through the same project scope and plans, writing nothing. It needs a manifest from a CONNECTED editor; a failed row read builds no plan. `VerifyPreviewPanel` then shows the plan, `applyAutoVerify(names)` writes the picks, and the invalidate + refetch happen only after a write. `autoUpdateFeatureMatrix` stays as the headless plan + apply-defaults. When it cannot read the current rows it writes nothing.
 
 > **Reporting windows.** Every "which day / week / month is this row" decision for the session
 > ledger goes through `src/lib/analytics/report-window.ts`: `reportZone()` is the single declared
@@ -259,6 +347,14 @@ the browser or edge runtime).
 > calendar arithmetic runs on keys. `generateWeeklyDigest(ref?, zone?)` and
 > `aggregateProjectWrapped(rows, now, zone?)` read every key from it and echo `zone` on the result
 > (`periodEnd` is the exclusive next Monday). Nothing new is stored; tests pin an explicit zone.
+>
+> **Weekly review.** `GET /api/weekly-digest?weeksAgo=N` (integer 0-52, else 400; absent = the
+> current week) walks `previousWeek()` N times from `weekWindow(now, reportZone())`. The digest's
+> Checklist figure is client-side `weekLanded` (`WeeklyDigestView/weekLanded.ts`) over the completion
+> ledger: done items stamped in the digest's zone-cut `[start, end)`, a delta against the week before
+> that is `null` (not 0) when neither week has a dated stamp but undated completions exist, `doneByEnd`
+> counting only stamps before the end, and undated items disclosed but never bucketed. The server's
+> `checklistCompleted` / `checklistDelta` stay 0 placeholders that the view does not read.
 
 > `session_analytics` / `telemetry_snapshots` / `genre_suggestions` were previously
 > bootstrapped divergently (an unguarded per-call `CREATE TABLE` in `session-analytics-db.ts`
@@ -351,6 +447,18 @@ version signal and invalidation path. Known divergence, measured: a step existin
 reports the persisted verdict rather than a client re-grade — 786 of 817 rows identical, all 31
 differences in `items`, the one bespoke catalog the server cannot grade.
 
+**Stored content hash** (2026-09-29, the follow-up above, done): `pipeline_artifacts.content_hash` is a
+stored read model of `data` (`stepContentHash`). `upsertArtifact` stamps it in the same upsert; `ensureTable`
+adds the column to an old-DDL DB and backfills every NULL or foreign-`CONTENT_HASH_SCHEME` row in one
+transaction; the `artifacts_content_hash_invalidate` trigger NULLs the hash when a writer that bypasses the
+door changes `data` without restamping (it compares values, `NEW.data IS NOT OLD.data`, so identical drain /
+verify re-upserts keep the hash; the door restamps a hash the trigger NULLed on a `_provenance`-only
+rewrite). `listArtifactVerdicts` reads verdicts without selecting `data` and re-hashes only NULL /
+foreign-scheme rows (an unparseable blob yields no `contentHash`, never a hash of `{}`); `/summary` and
+`/changes` read through it, wire shapes unchanged. Measured on a 1,679-row DB copy: whole-project summary
+fan-out 212.6 ms -> 8.7 ms, 0 parity mismatches, one-time backfill 265 ms. Rollback:
+`DROP TRIGGER IF EXISTS artifacts_content_hash_invalidate` (the nullable column is inert to old code).
+
 **`GET /api/pipeline-artifacts/changes?catalogId&since`** (2026-08-18) answers "what moved since I was
 last here" from stored rows and archived versions ONLY. `revisionsSince > 0` is *proof* of a content
 change, since a version is archived only when content differed; `0` means the row was written and
@@ -358,7 +466,7 @@ nothing more can be claimed — a verdict-only write archives nothing, and the d
 rather than implying no change. `historyTruncated` marks a step at the `MAX_REVISIONS` cap, where the
 count is a floor, and the row says so. The baseline is `LabPrefs.lastVisitByCatalog`, frozen per page
 session by `hooks/useLastVisit.ts` so a visit cannot become its own baseline; a **missing baseline is
-refused with a 400**, never treated as "everything changed".
+refused with a 400**, never treated as "everything changed". Each row also carries **`priorStatus`** (2026-10-01): the verdict archived with the EARLIEST version superseded after `since`, i.e. what the step held right before its first content change since the baseline. It is absent when nothing was archived since, and absent at the `MAX_REVISIONS` cap when no surviving version predates `since` (the baseline-era version may have been pruned), so the value is never guessed. The response echoes `catalogId`.
 
 Read + restore go through **`GET/POST /api/pipeline-artifacts/revisions`**. A restore is *not* a raw
 copy: it re-runs the step's Checker via `gradeArtifact` exactly as the produce POST does, because an
@@ -379,14 +487,53 @@ unit-tested against an in-memory DB (`new Database(':memory:')`), and a thin ser
 `UNIQUE(source, assetId)` so re-downloads upsert), `asset_collections`, and `asset_collection_items`
 (many-to-many membership, `ON DELETE CASCADE`). Surfaced as the **Library** tab in `AssetBrowserView`
 (client store `useAssetLibraryStore`, instant search/filter via the pure `library-filter.ts`); every
-`BrowsePanel` download is recorded here instead of vanishing into a one-shot `window.open`.
+`BrowsePanel` download is recorded here instead of vanishing into a one-shot `window.open`. Download opens
+`VariantPicker`: the source's real format x resolution files with sizes (pure `download-variants.ts`;
+ambientCG variants ride on the search row, Poly Haven's come from `GET /api/visual-gen/browse/files`, cached
+per id). `downloadUrl` records the picked variant's main file, never the `api.polyhaven.com/files/<id>` JSON
+listing (`isListingUrl`; `recordDownload` refuses one), since `libraryReference.ts` cites it into prompts as
+already downloaded. Single files go to the browser as a direct download (a 1 GB zip never enters page memory);
+multi-file sets are fetched one file at a time, glTF saved flat via `flattenGltfUris`.
 
-**`headless_builds`** (queued/running/completed UBT build jobs) follows this same guard pattern but is
+**Audio persistence uses the same door** (`src/lib/audio-db-conn.ts`, 2026-09-30): `getAudioDb()` is
+`getDb()` plus a one-time guard for `audio_sets` / `audio_assets` / `audio_gen_usage` (`createAudioAssetDb`)
+and `audio_import_runs`; `audio-import-db.ts`, `api/audio-gen` and `api/audio-codegen` call it instead of
+the three private `new Database(~/.pof/pof.db)` blocks they used to carry, which walked past `POF_DB_PATH`
+and leaked every audio test fixture into the operator's DB. Clip bytes follow the DB: `resolveAudioDir(env)`
+= `POF_AUDIO_DIR` else `audio/` beside `resolveDbPath(env)` (exported from `db.ts`), i.e. `~/.pof/audio` in
+production and a temp dir under the vitest floor; asset rows keep paths relative to it. Ratchet:
+`db-containment.test.ts` pins `src/lib/db.ts` as the ONLY non-test `new Database(` site.
+
+**`headless_builds`** (the UBT build ledger: a row is written `queued` at enqueue, `running` before the spawn, then its result; history and health read settled rows only, see runtime-patterns "Headless UE builds") follows this same guard pattern but is
 owned by `src/lib/ue5-bridge/build-pipeline.ts` (`ensureHeadlessBuildsTable()`) — the sole reader/writer —
-**not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it (+ joins `error_memory`) to derive the
+**not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it to derive the
 **Build Health & Trends** dashboard (Evaluator → *Build Health* tab, served by
 `/api/ue5-bridge/build-health`): success rate, duration trend, slowest targets, recurring error
-fingerprints, and rolling-baseline regression alerts.
+fingerprints, and rolling-baseline regression alerts. Recurring errors come from the same project-scoped
+rows' own `diagnostics_json` (selected only where `error_count > 0`), fingerprinted by the pure
+`build-error-recurrence.ts` and judged resolved **per lane** (target | target type | configuration |
+platform: still failing while the latest finished, parseable build of any lane it hit carries it) — not
+from `error_memory`, which has no project column and which no build writes without a `moduleId`. When the
+builds counted errors that carried no parseable diagnostic, the card says so instead of an all-clear.
+
+**`ai_test_run_history`** (`src/lib/ai-testing-db.ts`, same `ensureAITestingTables()` guard, additive:
+no existing column or row is touched; `ON DELETE CASCADE` from `ai_test_scenarios`) retains the AI
+Testing Sandbox's per-scenario run outcomes, which every run used to overwrite in place. One row per
+**(scenario, runId)** — `status` (`passed | failed | error`), `ran_at`, `definition_hash` (FNV-1a of
+description + stimuli + expected actions as graded) and the head of the graded output. It is written by
+**one door only**, `recordRunVerdicts(runId, ranAt, verdicts)`, which `POST record-run-results` calls
+with the verdicts `deriveRunVerdicts` read from UE's `index.json` — so history holds report-graded
+outcomes, never the CLI's claim. Grading the same run twice (callback + view close) upserts one row.
+`updateScenario`, `bulkUpdateScenarioStatus` (dispatch `running`, the ungraded bulk `error` fallback) and a
+client-set `status` never record a run. `getAllSuites` / `getSuite` attach the 8 newest as
+`scenario.history` (`RUN_HISTORY_LIMIT`); the pure `src/lib/ai-testing/run-trend.ts` derives
+`classifyTrend` (never-run | steady-pass | steady-fail | regressed | fixed, plus `afterEdit` when the
+definition hash changed between the last two runs) and `summarizeTrends`, which drive the sandbox's
+"Since last run: N regressed / N fixed" header, the per-card Regressed / Fixed chip + outcome strip and
+the per-suite regression count. There is deliberately **no "flaky" kind**: the BT/C++ under test is not
+fingerprinted, so a pass/fail flip on an unchanged scenario is the designer's break/fix loop, not
+evidence of non-determinism. No `SCHEMA_VERSION` bump: that version gates `db.ts` migration probes, and
+this table is a lazy `CREATE TABLE IF NOT EXISTS` with no probe.
 
 **`cli_spend` + `cli_spend_budget`** (`src/lib/cli-spend-db.ts`, same guard pattern) capture the
 token/cost `result` event every Claude Code CLI run emits — previously parsed but thrown away.
@@ -408,6 +555,18 @@ per-task-type rollups, a daily trend, a daily/monthly **budget guard** (editable
 classifies expensive task types (live-editor runs + broad scans + the strict **judge** classes) and —
 only under genuine budget pressure — interrupts `useModuleCLI.execute` with the global
 `PreflightGuardDialog` (queued via `preflightStore`).
+
+The budget guard **echoes its enforced windows** (2026-09-29). `getBudgetStatus()` returns
+`periods: { zone: 'UTC', day, month }` (half-open ISO instants) built by `budgetPeriods` in
+`src/lib/cli-spend/budgetPreview.ts` from the same `report-window.ts` day/month keys it sums over, so the
+period the UI shows IS the one `/api/cli-spend`, `judge-run` and `judge-one` enforce (the enforcer
+dictates the zone: UTC, unlike the session ledger's reporting zone). The field is additive; no enforcement
+reads it. The Budget guard uses it, with the dashboard's existing `daily` rollup, for two pure
+derivations that store and send nothing: while editing, `previewDailyLimit` replays the typed daily limit
+over the recorded active days ("exceeded on N of the last M active days; worst …") and `projectPeriod`
+checks the typed monthly limit against this month's pace; in view mode `BudgetPace` shows the month
+projected at the current run rate (refused under one elapsed day), the date it reaches the limit, and
+the local time the UTC daily budget resets.
 
 The **judge fleet** (`scripts/judge-run.ts`, `scripts/judge-one.ts`) reaches the same seam. Those
 harnesses spawn the Claude CLI themselves (Opus/high per draw, one spawn per entity×step×median), so
@@ -439,10 +598,23 @@ human-labelled targets in `src/lib/judge/calibration.ts` without writing to `jud
 measuring the judge must not re-grade live content. Runs append to `~/.pof/judge-calibration.jsonl`
 (override with `POF_JUDGE_CALIBRATION_PATH`), and `calibrationDrift()` compares consecutive runs.
 `CALIBRATION_THRESHOLD` is 0.85 and enforcement is scoped to **non-provisional** labels only:
-`unrun` / `stale` / `unscored` / `provisional` are explicit not-proven standings, never a green. As
-shipped, all seeded targets are still `provisional`, so the standing reads UNCALIBRATED with 0
-confirmed targets backing any rate — the module, the harness output and the guard all say so out
-loud rather than implying an enforcement that no label yet supports.
+`unrun` / `stale` / `unscored` / `provisional` / `undersampled` (fewer than
+`CALIBRATION_MIN_CONFIRMED` = 10 confirmed) are explicit not-proven standings, never a green, and
+the guard fails the build only on `enforced-fail`. The seed targets in `CALIBRATION` stay
+`provisional`; a target is confirmed only through the **calibration bench**: the operator labels the
+artifact they are looking at (fail / placeholder / shippable) in the /status Evidence modal
+(`CalibrationLabelBar`), and `POST /api/judge-calibration` stores it in the additive
+`judge_calibration_labels` table (`src/lib/judge/calibration-labels-db.ts`, one row per
+catalog/entity/step) bound through `currentStepBinding` to the artifact's `stepContentHash` and the
+`RUBRIC_VERSION` in force — 400 when no artifact is on record, 409 when the content moved since the
+modal opened. `GET /api/judge-calibration` resolves the measured set with the pure
+`resolveCalibrationTargets` (`src/lib/judge/calibrationLabels.ts`): a label that still binds
+confirms its target, a label whose content or rubric moved is `excluded` with its reason and never
+counted, and `progress` counts confirmed labels by band toward the floor so a lopsided set shows.
+`judge-run --calibrate` reads that route through `calibrationTargetsFromResponse` — no fallback to
+the seed constant. The bar hides the judge's band for a target until a human label exists
+(anti-anchoring). Nothing in acceptance or `statusModel` reads the label table: labels measure the
+judge and never change a grade.
 
 `judge-run` also **plans before it spawns** (`src/lib/judge/fleetPlan.ts`, pure). It fetches the
 catalog's stored verdicts alongside its artifacts and, per (entity, step, judge class), asks
@@ -539,7 +711,18 @@ e.g. a session stuck `isRunning: true` after a crash blocks all future dispatche
 
 **`scanResults` is memory-only.** It is excluded from `moduleStore`'s `partialize` and rebuilt
 from the database on mount. Do not add it back to `partialize` — it can be large and is always
-authoritative in the DB.
+authoritative in the DB. That includes resolutions: `useScanTab`'s `fetchAndMergeFindings` REPLACES the
+module's findings with the server's (a merge kept a stale active copy over a server-side resolution),
+and every resolve path (row, Mark Selected, Resolve all, a verified fix, the ScanDelta
+"Resolve N no longer found") goes through one `PATCH`. A scan this view dispatched shows as
+`unrecorded` — never as an earlier scan's delta — when no scan newer than its dispatch was recorded.
+**Fix & verify** (`src/lib/evaluator/scan-fix-verify.ts`): a fix run exiting 0 resolves nothing.
+Batch and single-row Fix This both go through the fix session (a fix is not counted as a scan) and
+mark each target `fixed` / `fix-failed` in `useScanTab`'s `fixVerification` (hook state, never
+persisted). Only the operator's Verify click (`verifyFixes`) dispatches ONE module scan over the fixed
+targets' passes naming exactly them; when its delta is recorded, targets it `cleared` are PATCHed
+resolved, `persisting` ones stay open as `still-present`, and an `unrecorded` verification scan
+resolves nothing (`status: 'unverified'` with the reason).
 
 **`deepEvalStore` is the fast baseline cache; durable history lives in SQLite.**
 `src/stores/deepEvalStore.ts` (localStorage `pof-deep-eval`) keeps only the *most recent* deep-eval
@@ -590,8 +773,21 @@ once on mount; a changed `ownerEpoch` (remembered per tab in sessionStorage) is 
 restart rather than read as "nothing in flight". `reattachJob(id)` re-polls a transport-failed
 job's same provider id for free; `retryJob` still submits a new, paid generation.
 
+**A paid cloud Tripo task is recovered by its provider-side id, never re-bought.** Unlike the
+MCP ledger, the handle needs no server memory: `tripo-job-store` records `providerTaskId` through
+`runTripo`'s `onTaskCreated` hook the moment Tripo accepts the task, and `GET
+/api/visual-gen/generate/status` projects it (plus `recoverable`) on every poll, so the forge job
+keeps it even when a restart later 404s the job. An attempt whose task is still live (poll window
+spent, unreadable polls - `isRecoverableTripoFailure`, not a Tripo `failed` verdict) stops the
+best-of-N loop and errors `recoverable` instead of buying another task. `recoverJob(id)` (a click on
+a `runnerRecoverable` card) POSTs `/api/visual-gen/generate/recover` `{ providerId, taskId,
+assetClass }`; the dispatch entry's `recover` (tripo3d only - `RECOVERABLE_RUNNER_PROVIDERS` mirrors
+it) starts `startTripoRecoveryJob`, which runs `awaitTripoTask` (GET `/task/{id}` + download, no
+create, no upload) through the same Tier-1 gate and class face budget a fresh job gets, and 202s a
+`jobId` on the same status poller.
+
 **Feature done = `isFeatureDone`; plan dispatch = `usePlanDispatch`.** A feature-matrix status is
-done when `isFeatureDone(status)` (`src/lib/constellation/layout.ts`: implemented OR improved) - the
+done when `isFeatureDone(status)` (`src/lib/feature-done.ts`, re-exported unchanged by `src/lib/constellation/layout.ts`: implemented OR improved) - the
 one rule `generatePlan`, `unblockFrontier` and `moduleGraph` share, so the planner's `isReady` /
 `unmetDeps` / `implementedCount` agree with the Dependencies tab. The plan's own Build lands as
 `improved` (the feature-fix callback), so a planner counting only `implemented` could never advance.
@@ -600,7 +796,28 @@ Every plan dispatch (plan table, plan map, Dependencies Build) goes through `use
 (`plan-dispatch.ts`) refuses a not-ready item with `{ reason: 'blocked', unmet }` and creates no
 task; a ready item runs as a feature-fix task via `useModuleCLI.execute`; `onComplete(true,
 'confirmed')` calls `invalidateFeatureData()` so every plan view re-derives from fresh statuses
-(`onSettled(item, landed)` lets a sequencer advance). The other done-rule sites are not migrated yet.
+(`onSettled(item, landed)` lets a sequencer advance). The blocker and roll-up readers go through the
+same module: `computeBlockers` (every blocked badge, so a Built dependency stops blocking), the NBA
+engine's unblock claim, the Feature Matrix blocked chip, the Dependencies detail dot, and
+`moduleCompletion` / `projectCompletionPct` for the Features tab, the Quality tab headline and cells,
+and the Overview correlation `pctComplete` - one completion % across the three tabs. **Grade
+effect:** the Summary health `coverage` term (`pctComplete`) and `dependencyHealth` term (blocked
+count via `computeBlockers` -> `moduleGraph`) now count improved as done, so the gauge rises when a
+Build lands; 'improved' is the Build callback's self-report, not a review. `feature-done-rule.test.ts`
+pins the migrated files (no `=== 'implemented'` done-comparison, rule imported) and the re-export
+identity. Left alone: 14 hand-rolled sites that already agree (implemented || improved) and
+`gdd-synthesizer.ts` (implemented-only, out of that slice).
+
+**Build session = one budgeted run through the same door.** `planBuildSession(statusMap, { budgetMinutes,
+moduleId?, exclude? })` (`src/lib/implementation-planner/build-session.ts`) proposes steps greedily by
+impact per estimated minute among ready features, re-deriving readiness (`isFeatureDone`) after each
+pick so an in-session unlock (`unlockedBy`) is eligible; deselecting (`exclude`) drops a step and all
+that waited on it, and `projected` is recomputed over the hypothetical statuses, never summed.
+`useBuildSession` (ImplementationPlan) takes the page's `usePlanDispatch` door (relayed `onSettled`, so
+still ONE CLI session): nothing dispatches until Start; each emitted step is re-read from the refreshed
+statuses and dispatched only once ready; `advanceBuildSession` advances only on (success, 'confirmed')
+and otherwise stops naming the step and why (also on operator Stop, a step still blocked after
+`UI_TIMEOUTS.callbackSettleMax`, or a run not started within `callbackAwaitTimeout`).
 
 **UI_TIMEOUTS is the single source for all timing constants.** Inline `setTimeout(fn, 3000)` or
 similar literals are a lint target. Import `UI_TIMEOUTS` from `@/lib/constants`.

@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocalizationPipelineStore } from '@/stores/localizationPipelineStore';
+import { useProjectStore } from '@/stores/projectStore';
 import type { StringContext } from '@/types/localization-pipeline';
 import { LOW_CONFIDENCE } from '@/lib/localization/definitions';
+import { DEFAULT_PSEUDO_KNOBS } from '@/lib/localization/pseudo-locale';
+import type { PseudoKnobs } from '@/lib/localization/pseudo-locale';
+import { assessReadiness } from '@/lib/localization/readiness';
 import type { ViewTab, StringPreset, TranslationPreset } from './types';
 
 export function useLocalizationPipelineView() {
   const config = useLocalizationPipelineStore((s) => s.config);
   const scanResult = useLocalizationPipelineStore((s) => s.scanResult);
+  const scanProvenance = useLocalizationPipelineStore((s) => s.scanProvenance);
+  const projectPath = useProjectStore((s) => s.projectPath);
   const strings = useLocalizationPipelineStore((s) => s.strings);
   const hazards = useLocalizationPipelineStore((s) => s.hazards);
   const entries = useLocalizationPipelineStore((s) => s.entries);
@@ -28,14 +34,21 @@ export function useLocalizationPipelineView() {
   const [localeFilter, setLocaleFilter] = useState<string>('all');
   const [stringPresets, setStringPresets] = useState<Set<StringPreset>>(new Set());
   const [translationPresets, setTranslationPresets] = useState<Set<TranslationPreset>>(new Set());
+  // Pseudo-locale knobs are display-only view state: verdicts use the knob-free projected length.
+  const [pseudoKnobs, setPseudoKnobsState] = useState<PseudoKnobs>(DEFAULT_PSEUDO_KNOBS);
+  const setPseudoKnobs = useCallback(
+    (patch: Partial<PseudoKnobs>) => setPseudoKnobsState((k) => ({ ...k, ...patch })),
+    [],
+  );
 
   useEffect(() => {
     fetchDefaults();
   }, [fetchDefaults]);
 
+  // The configured UE project's Source/ is scanned; with none configured the route answers the demo corpus.
   const handleRunPipeline = useCallback(async () => {
-    await runFullPipeline();
-  }, [runFullPipeline]);
+    await runFullPipeline(undefined, projectPath || undefined);
+  }, [runFullPipeline, projectPath]);
 
   // Hazard string IDs for preset filtering
   const criticalHazardStringIds = useMemo(() => {
@@ -129,6 +142,9 @@ export function useLocalizationPipelineView() {
     return result;
   }, [entries, localeFilter, searchQuery, strings, translationPresets, qaFailedEntryKeys]);
 
+  // Pseudo-locale readiness over the scan's own strings/hazards (never a second extraction).
+  const readiness = useMemo(() => assessReadiness(strings, hazards, pseudoKnobs), [strings, hazards, pseudoKnobs]);
+
   // Summary stats
   const totalStrings = scanResult?.totalStringsFound ?? 0;
   const hardcoded = scanResult?.hardcodedCount ?? 0;
@@ -144,7 +160,7 @@ export function useLocalizationPipelineView() {
     : 0;
 
   return {
-    config, scanResult, strings, hazards, entries, reviewRequired, progress,
+    config, scanResult, scanProvenance, strings, hazards, entries, reviewRequired, progress,
     expansionIssues, qaFindings, qaByLocale, replacements, stringTables,
     isLoading, error,
     viewTab, setViewTab,
@@ -153,6 +169,7 @@ export function useLocalizationPipelineView() {
     localeFilter, setLocaleFilter,
     stringPresets, setStringPresets,
     translationPresets, setTranslationPresets,
+    pseudoKnobs, setPseudoKnobs, readiness,
     handleRunPipeline,
     stringsById, filteredStrings, filteredEntries,
     totalStrings, hardcoded, ftextCount, localizedCount, locReadiness,

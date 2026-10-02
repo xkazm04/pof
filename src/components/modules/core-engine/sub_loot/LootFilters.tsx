@@ -3,8 +3,9 @@
 import { Filter, Skull } from 'lucide-react';
 import { BlueprintPanel } from './_shared/design';
 import { RarityBadge } from './_shared/rarityBadge';
-import { ACCENT, RARITY_TIERS, enemyMap, rarityColorFor } from './_shared/data';
-import { ARCHETYPES } from '../sub_bestiary/_shared/data';
+import { ACCENT, RARITY_TIERS, rarityColorFor } from './_shared/data';
+import { useLootTuningStore } from './_shared/lootTuningStore';
+import { findBinding, tierGroups } from './_shared/bindingTuner';
 
 import { withOpacity, OPACITY_10, OPACITY_15, OPACITY_12, OPACITY_50, OPACITY_25 } from '@/lib/chart-colors';
 
@@ -14,14 +15,17 @@ type RarityFilter = (typeof RARITY_OPTIONS)[number];
 interface LootFiltersProps {
   rarityFilter: RarityFilter;
   setRarityFilter: (f: RarityFilter) => void;
-  enemyFilter: string;
-  setEnemyFilter: (f: string) => void;
   activeRarityColor: string;
+  /** Called after an enemy is picked, so the host can bring the Core-tab tuner into view. */
+  onEnemyPicked?: (id: string) => void;
 }
 
-export function LootFilters({ rarityFilter, setRarityFilter, enemyFilter, setEnemyFilter, activeRarityColor }: LootFiltersProps) {
-  const activeEnemy = enemyFilter !== 'all' ? enemyMap.get(enemyFilter) : undefined;
-  const enemyColor = enemyFilter !== 'all' ? (activeEnemy?.color ?? ACCENT) : ACCENT;
+export function LootFilters({ rarityFilter, setRarityFilter, activeRarityColor, onEnemyPicked }: LootFiltersProps) {
+  const baseline = useLootTuningStore((s) => s.baseline);
+  const selectedId = useLootTuningStore((s) => s.selectedId);
+  const dispatch = useLootTuningStore((s) => s.dispatch);
+  const activeEnemy = findBinding(baseline, selectedId);
+  const enemyColor = activeEnemy?.color ?? ACCENT;
   return (
     <div className="flex flex-col sm:flex-row gap-2">
       <BlueprintPanel className="p-3 flex-1">
@@ -40,7 +44,7 @@ export function LootFilters({ rarityFilter, setRarityFilter, enemyFilter, setEne
             const optColor = opt === 'All' ? ACCENT : rarityColorFor(opt);
             return (
               <button key={opt} onClick={() => setRarityFilter(opt)}
-                className="px-2.5 py-1 rounded text-[11px] font-mono font-medium transition-colors border cursor-pointer"
+                className="px-2.5 py-1 rounded text-xs font-mono font-medium transition-colors border cursor-pointer"
                 style={{
                   borderColor: isActive ? optColor : withOpacity(optColor, OPACITY_15),
                   backgroundColor: isActive ? withOpacity(optColor, OPACITY_12) : 'transparent',
@@ -62,25 +66,34 @@ export function LootFilters({ rarityFilter, setRarityFilter, enemyFilter, setEne
           </span>
         </div>
         <select
-          value={enemyFilter}
-          onChange={(e) => setEnemyFilter(e.target.value)}
-          className="w-full px-2 py-1.5 rounded text-[11px] font-mono bg-white/5 border border-white/10 text-text-primary appearance-none cursor-pointer focus:outline-none focus:border-white/25"
+          aria-label="Enemy Source"
+          value={selectedId ?? 'none'}
+          onChange={(e) => {
+            const id = e.target.value === 'none' ? null : e.target.value;
+            dispatch({ type: 'select', id });
+            if (id) onEnemyPicked?.(id);
+          }}
+          className="w-full px-2 py-1.5 rounded text-xs font-mono bg-white/5 border border-white/10 text-text-primary appearance-none cursor-pointer focus:outline-none focus:border-white/25"
           style={{
-            borderColor: enemyFilter !== 'all' ? withOpacity(enemyColor, OPACITY_25) : undefined,
+            borderColor: activeEnemy ? withOpacity(enemyColor, OPACITY_25) : undefined,
           }}
         >
-          <option value="all">All Enemies</option>
-          {ARCHETYPES.map((a) => (
-            <option key={a.id} value={a.id}>{a.label}</option>
+          <option value="none">Pick an enemy to tune</option>
+          {tierGroups(baseline).map(({ tier, bindings }) => (
+            <optgroup key={tier} label={tier}>
+              {bindings.map((b) => (
+                <option key={b.archetypeId} value={b.archetypeId}>{b.archetypeName}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
-        {enemyFilter !== 'all' && (
-          <div className="mt-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded inline-block"
+        {activeEnemy && (
+          <div className="mt-1.5 text-2xs font-mono px-1.5 py-0.5 rounded inline-block"
             style={{
               backgroundColor: withOpacity(enemyColor, OPACITY_10),
               color: enemyColor,
             }}>
-            Highlighting drops for {activeEnemy?.label ?? enemyFilter}
+            Tuning {activeEnemy.lootTableName} (Core tab)
           </div>
         )}
       </BlueprintPanel>

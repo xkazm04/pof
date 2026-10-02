@@ -1,6 +1,8 @@
 'use client';
 
+import { STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import { NODE_W, NODE_H, SCREEN_TYPES } from './constants';
+import type { MenuFlowSeverity } from './menuFlowLint';
 import type { ScreenNode } from './types';
 
 interface ScreenNodeViewProps {
@@ -13,6 +15,8 @@ interface ScreenNodeViewProps {
   completeConnection: (toId: string) => void;
   startConnection: (fromId: string) => void;
   deleteScreen: (id: string) => void;
+  /** Worst lint severity on this screen, if any (drawn as a dot on the node). */
+  issueSeverity?: MenuFlowSeverity;
 }
 
 export function ScreenNodeView({
@@ -25,6 +29,7 @@ export function ScreenNodeView({
   completeConnection,
   startConnection,
   deleteScreen,
+  issueSeverity,
 }: ScreenNodeViewProps) {
   const cfg = SCREEN_TYPES[scr.type];
   const isSelected = selectedId === scr.id;
@@ -149,6 +154,17 @@ export function ScreenNodeView({
           <text x={5} y={8} fontSize={7} fill="rgba(255,255,255,0.2)" fontFamily="monospace">NO_ELEMENTS</text>
         )}
       </g>
+
+      {/* Lint dot: red = blocks export, amber = warning */}
+      {issueSeverity && (
+        <circle
+          cx={NODE_W - 10} cy={16} r={4}
+          fill={issueSeverity === 'error' ? STATUS_ERROR : STATUS_WARNING}
+          data-testid={`menu-flow-node-${issueSeverity}`}
+        >
+          <title>{issueSeverity === 'error' ? 'Blocks export - see the lint panel' : 'Lint warning - see the lint panel'}</title>
+        </circle>
+      )}
 
       {/* Action buttons when selected */}
       {isSelected && (

@@ -2,15 +2,8 @@ import {
   DEFAULT_ENEMY_LOOT_BINDINGS,
   type EnemyLootBinding,
 } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
+import { lootTierOf } from '@/lib/loot/economy';
 import type { LootTableEntry } from './types';
-
-/** Bucket a drop chance into a difficulty tier for the L4 taxonomy. */
-function tierOf(dropChance: number): string {
-  if (dropChance >= 1) return 'Boss';
-  if (dropChance >= 0.5) return 'Elite';
-  if (dropChance >= 0.32) return 'Standard';
-  return 'Minion';
-}
 
 /** Convert one enemy→loot binding into a catalog LootTableEntry. */
 export function lootBindingToEntry(binding: EnemyLootBinding): LootTableEntry {
@@ -18,7 +11,7 @@ export function lootBindingToEntry(binding: EnemyLootBinding): LootTableEntry {
     id: `lt-${binding.archetypeId}`,
     catalogId: 'loot-tables',
     name: binding.lootTableName,
-    categoryPath: ['Loot Tables', tierOf(binding.dropChance)],
+    categoryPath: ['Loot Tables', lootTierOf(binding.dropChance)],
     tags: [binding.archetypeName],
     lifecycle: 'planned',
     data: binding,

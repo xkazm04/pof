@@ -6,18 +6,29 @@ import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { withItemFixCopy } from './shared/itemFixCopy';
 import { useStaticStep } from './useStaticStep';
+import { noopFixSuggestion } from './ArchetypeStep';
+import { itemsBespokeStepSpec } from '../itemsBespokeSpecs';
+import { TEMPLATE_MARKER } from '@/lib/catalog/acceptance/markers';
 import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { LabStepArtifact } from '../labPipelineStore';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
+import type { StepSpec } from '@/lib/catalog/stepSpec';
+import type { ProduceDispatch } from './shared/useStepProduceDoor';
 
 /** What a static step needs to build its panels: the persisted artifact and the
  *  shared produce dispatch (used as both `onComplete` and the banner `onFix`). */
 export interface StaticStepContext {
   art: LabStepArtifact | undefined;
   /** Pass straight to `CliProduce.onComplete` — the typed direction reaches produce. */
-  runProduce: (ctx?: { direction: string; prompt: string }) => void;
+  runProduce: ProduceDispatch;
+  /** Pass to `CliProduce.liveEligible`: true only for a text step a CLI session can author. */
+  liveEligible: boolean;
+  /** Live mode is on for this step — the next click runs a real session (display only). */
+  live: boolean;
+  /** The shared produce prompt — the one a live dispatch sends; use it as `buildPrompt`. */
+  stepPrompt: (direction: string) => string;
 }
 
 /**
@@ -47,7 +58,7 @@ export function StaticStepFrame({ t, entity, step, panels }: {
   /** Build the step's panels from the shared static-step context. */
   panels: (ctx: StaticStepContext) => StepPanel[];
 }) {
-  const { art, runProduce } = useStaticStep(entity, step);
+  const { art, runProduce, liveEligible, live, stepPrompt } = useStaticStep(entity, step);
   const accept = useCallback(
     (data: Record<string, unknown>, ctx: CheckerContext) => ITEM_STEP_SPECS[step].accept(data, ctx),
     [step],
@@ -58,9 +69,20 @@ export function StaticStepFrame({ t, entity, step, panels }: {
   // early on `pass`, so a server-drain or judge down-grade used to land a bare FAIL with no
   // `why` — and StepFrame nests "⚡ Produce fix" inside `{acceptance.why && …}`, so the step
   // silently lost its one-click remediation exactly when it needed it. Display only.
+  //
+  // A TEMPLATE hold is not a checker shortfall: the step-authored copy ("Only 4 clip(s) present")
+  // would misdescribe it, so the reason-bearing generic copy is used, and — the stub being
+  // data-blind and direction-blind — no fix is offered; the banner says what WOULD move it.
+  const held = typeof judged.reason === 'string' && judged.reason.startsWith(TEMPLATE_MARKER);
   const acceptance = useMemo(
-    () => withItemFixCopy(step, art?.data ?? {}, judged),
-    [step, art, judged],
+    () => {
+      const base = held ? { ...judged, why: undefined, suggestion: undefined, fixDirection: undefined } : judged;
+      const copied = withItemFixCopy(step, art?.data ?? {}, base);
+      if (!held) return copied;
+      const spec = itemsBespokeStepSpec(step) ?? ({ archetype: 'custom', label: step } as StepSpec);
+      return { ...copied, suggestion: noopFixSuggestion(spec, copied.fixDirection) };
+    },
+    [step, art, judged, held],
   );
 
   // onFix carries a corrective DIRECTION STRING, not a produce ctx — drop it rather than
@@ -69,10 +91,10 @@ export function StaticStepFrame({ t, entity, step, panels }: {
   // is proved by the drain, not by re-producing from this panel.
   return (
     <StepFrame t={t} acceptance={acceptance}
-      onFix={acceptance.status === 'deferred' ? undefined : () => runProduce()}
+      onFix={acceptance.status === 'deferred' || held ? undefined : () => { void runProduce(); }}
       catalogId="items" step={step}
       panels={[
-        ...panels({ art, runProduce }),
+        ...panels({ art, runProduce, liveEligible, live, stepPrompt }),
         { label: 'Raw artifact', node: (
           <RawArtifactDisclosure t={t} data={art?.data ?? {}} ueAssets={art?.ueAssets} verdict={art} />
         ) },

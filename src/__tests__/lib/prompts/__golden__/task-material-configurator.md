@@ -57,6 +57,13 @@ If your solution depends on one of these, declare it in Wiring Requirements and 
 ### Rendering Features
 - Enable Emissive output: connect emissive color with intensity multiplier. Consider using a mask texture to control which regions glow.
 
+### Shader Budget
+
+**Samplers: 4 of 16 · Instructions: 1.33× metal base**
+- Sampler sources: metal base 3 (Albedo + Normal + ORM), Emissive 1
+- No budget warnings.
+- Keep the generated material within this budget: pack maps (ORM) instead of adding samplers, and compile optional features out behind static switches.
+
 ### Required Files (all under Source/PoF/Materials/)
 
 1. **M_Metal_Master** — Material setup instructions

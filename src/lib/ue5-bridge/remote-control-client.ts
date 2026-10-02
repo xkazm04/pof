@@ -2,7 +2,8 @@
  * UE5 Remote Control HTTP Client
  *
  * Communicates with UE5's Web Remote Control plugin over HTTP.
- * All methods return Result<T, string> for explicit success/failure handling.
+ * All methods return BridgeRequestResult<T>: a `Result<T, string>` whose failure
+ * also carries the transport verdict as fields (kind, reachable, indeterminate, status).
  *
  * UE5 Remote Control API reference:
  *   GET  /remote/info              — server info & version
@@ -13,9 +14,8 @@
  *   PUT  /remote/batch             — batch multiple requests
  */
 
-import { ok, err, type Result } from '@/types/result';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { bridgeRequest } from '@/lib/ue5-bridge/shared';
+import { bridgeRequest, type BridgeRequestResult } from '@/lib/ue5-bridge/shared';
 import type {
   UE5RemoteControlInfo,
   UE5FunctionCall,
@@ -41,7 +41,7 @@ export class RemoteControlClient {
     method: 'GET' | 'PUT' | 'POST' | 'DELETE',
     path: string,
     body?: unknown,
-  ): Promise<Result<T, string>> {
+  ): Promise<BridgeRequestResult<T>> {
     return bridgeRequest<T>(this.baseUrl, {
       method,
       path,
@@ -55,12 +55,12 @@ export class RemoteControlClient {
   // ── Public API ────────────────────────────────────────────────────────────
 
   /** Ping the Remote Control server and return version info. */
-  async ping(): Promise<Result<UE5RemoteControlInfo, string>> {
+  async ping(): Promise<BridgeRequestResult<UE5RemoteControlInfo>> {
     return this.request<UE5RemoteControlInfo>('GET', '/remote/info');
   }
 
   /** Read a property value from a UObject. */
-  async getProperty(objectPath: string, propertyName: string): Promise<Result<unknown, string>> {
+  async getProperty(objectPath: string, propertyName: string): Promise<BridgeRequestResult<unknown>> {
     return this.request<unknown>('PUT', '/remote/object/property', {
       objectPath,
       access: 'READ_ACCESS',
@@ -73,7 +73,7 @@ export class RemoteControlClient {
     objectPath: string,
     propertyName: string,
     value: unknown,
-  ): Promise<Result<unknown, string>> {
+  ): Promise<BridgeRequestResult<unknown>> {
     return this.request<unknown>('PUT', '/remote/object/property', {
       objectPath,
       access: 'WRITE_ACCESS',
@@ -83,7 +83,7 @@ export class RemoteControlClient {
   }
 
   /** Call a UFUNCTION on a UObject. */
-  async callFunction(call: UE5FunctionCall): Promise<Result<unknown, string>> {
+  async callFunction(call: UE5FunctionCall): Promise<BridgeRequestResult<unknown>> {
     return this.request<unknown>('PUT', '/remote/object/call', {
       objectPath: call.objectPath,
       functionName: call.functionName,
@@ -96,7 +96,7 @@ export class RemoteControlClient {
   async searchAssets(
     query: string,
     className?: string,
-  ): Promise<Result<UE5AssetSearchResult[], string>> {
+  ): Promise<BridgeRequestResult<UE5AssetSearchResult[]>> {
     const body: Record<string, unknown> = { query };
     if (className) {
       body.filter = { classNames: [className] };
@@ -109,18 +109,18 @@ export class RemoteControlClient {
     );
 
     if (!result.ok) return result;
-    return ok(result.data.assets ?? []);
+    return { ok: true, data: result.data.assets ?? [] };
   }
 
   /** Describe a UObject's exposed properties and functions. */
-  async describeObject(objectPath: string): Promise<Result<unknown, string>> {
+  async describeObject(objectPath: string): Promise<BridgeRequestResult<unknown>> {
     return this.request<unknown>('PUT', '/remote/object/describe', {
       objectPath,
     });
   }
 
   /** Execute a batch of Remote Control requests. */
-  async batch(batchRequest: UE5BatchRequest): Promise<Result<UE5BatchResponse, string>> {
+  async batch(batchRequest: UE5BatchRequest): Promise<BridgeRequestResult<UE5BatchResponse>> {
     return this.request<UE5BatchResponse>('PUT', '/remote/batch', batchRequest);
   }
 
@@ -128,7 +128,7 @@ export class RemoteControlClient {
    * Execute a UE5 console command via Remote Control.
    * Uses KismetSystemLibrary::ExecuteConsoleCommand on the GameWorld.
    */
-  async executeConsoleCommand(command: string): Promise<Result<{ command: string; executed: boolean }, string>> {
+  async executeConsoleCommand(command: string): Promise<BridgeRequestResult<{ command: string; executed: boolean }>> {
     const result = await this.request<unknown>('PUT', '/remote/object/call', {
       objectPath: '/Script/Engine.Default__KismetSystemLibrary',
       functionName: 'ExecuteConsoleCommand',
@@ -138,7 +138,7 @@ export class RemoteControlClient {
       },
     });
 
-    if (!result.ok) return err(result.error);
-    return ok({ command, executed: true });
+    if (!result.ok) return result;
+    return { ok: true, data: { command, executed: true } };
   }
 }

@@ -1,5 +1,6 @@
 import type { OverlapPair } from '@/lib/overlap-detection';
-import { STATUS_ERROR, STATUS_WARNING, STATUS_STALE } from '@/lib/chart-colors';
+import type { TwinKind } from '@/lib/evaluator/overlap-twins';
+import { STATUS_ERROR, STATUS_WARNING, STATUS_STALE, STATUS_SUCCESS, STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 // ── Reason labels + colors ──
 
@@ -10,3 +11,12 @@ export const REASON_CONFIG: Record<OverlapPair['reason'], { label: string; color
 };
 
 export type FilterReason = OverlapPair['reason'] | 'all';
+
+// ── Twin status labels + colors ──
+
+export const TWIN_KIND_CONFIG: Record<TwinKind, { label: string; color: string }> = {
+  diverged: { label: 'Diverged', color: STATUS_ERROR },
+  unreviewed: { label: 'Unreviewed', color: STATUS_WARNING },
+  'agreed-open': { label: 'Both open', color: STATUS_NEUTRAL },
+  'agreed-done': { label: 'Both done', color: STATUS_SUCCESS },
+};

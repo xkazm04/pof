@@ -10,9 +10,13 @@ import {
   updateScenario,
   deleteScenario,
   bulkUpdateScenarioStatus,
+  recordRunVerdicts,
   getTestingSummary,
 } from '@/lib/ai-testing-db';
 import type { ScenarioStatus } from '@/types/ai-testing';
+import { isAiTestReportDir, isAiTestRunId } from '@/lib/ai-testing/test-identity';
+import { deriveRunVerdicts } from '@/lib/ai-testing/run-verdict';
+import { readReport } from '@/lib/test-gate-runner/batchAutomation';
 
 const SCENARIO_STATUSES: ReadonlySet<ScenarioStatus> = new Set([
   'draft', 'ready', 'running', 'passed', 'failed', 'error',
@@ -73,25 +77,30 @@ export async function POST(req: NextRequest) {
       return apiSuccess({ scenario }, 201);
     }
 
-    // CLI run write-back (@@CALLBACK from the run-ai-tests task): persist
-    // per-scenario outcomes so status pills / pass-rate / Last Run Output
-    // reflect real runs.
+    // Run write-back (@@CALLBACK from the run-ai-tests task, or the view closing
+    // a run whose callback never landed). Every dispatched scenario is graded
+    // from UE's automation report in the app-chosen reportDir — the CLI's
+    // per-scenario claim is kept only as a note in Last Run Output.
     if (action === 'record-run-results') {
       if (!Array.isArray(body.results)) return apiError('results array is required', 400);
-      const now = new Date().toISOString();
-      const updated: number[] = [];
-      for (const r of body.results) {
-        const scenarioId = Number(r?.scenarioId);
-        if (!Number.isInteger(scenarioId)) continue;
-        const status = r?.status === 'passed' || r?.status === 'failed' ? r.status : 'error';
-        const scenario = updateScenario({
-          id: scenarioId,
-          status,
-          lastRunOutput: typeof r?.output === 'string' ? r.output : '',
-          lastRunAt: now,
-        });
-        if (scenario) updated.push(scenarioId);
+      if (!isAiTestRunId(body.runId)) return apiError('valid runId is required', 400);
+      // Policy: the server reads only index.json under <project>/Saved/Automation/PoF-AITests/<runId>.
+      if (!isAiTestReportDir(body.reportDir, body.runId)) {
+        return apiError('reportDir must be <project>/Saved/Automation/PoF-AITests/<runId> (no "..")', 400);
       }
+      const scenarioIds: number[] = Array.isArray(body.scenarioIds) ? [...new Set<number>(body.scenarioIds.map(Number))] : [];
+      if (scenarioIds.length === 0 || !scenarioIds.every(Number.isInteger)) {
+        return apiError('scenarioIds array is required', 400);
+      }
+      const suite = getAllSuites().find((s) => s.scenarios.some((sc) => sc.id === scenarioIds[0]));
+      const inSuite = new Set(suite?.scenarios.map((sc) => sc.id));
+      if (!suite || !scenarioIds.every((id) => inSuite.has(id))) {
+        return apiError('scenarioIds must belong to one suite', 400);
+      }
+      const report = await readReport(body.reportDir);
+      // One door: status + last-run fields AND the run-history row keyed by runId.
+      const verdicts = deriveRunVerdicts(report, scenarioIds, body.results, suite);
+      const updated = recordRunVerdicts(body.runId, new Date().toISOString(), verdicts);
       return apiSuccess({ updated });
     }
 

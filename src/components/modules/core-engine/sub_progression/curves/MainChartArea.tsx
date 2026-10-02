@@ -21,18 +21,20 @@ interface MainChartAreaProps {
   snapshotChartData: { level: number; xp: number }[];
   snapshotBaseXp: number;
   snapshotCurveExp: number;
+  /** A pace fit is previewed: the split pane reads Current (pre-fit) vs Fitted. */
+  previewing: boolean;
 }
 
 export function MainChartArea({
   chartData, maxXp, sharedMaxXp,
   compareMode, baseXp, curveExp,
-  snapshotChartData, snapshotBaseXp, snapshotCurveExp,
+  snapshotChartData, snapshotBaseXp, snapshotCurveExp, previewing,
 }: MainChartAreaProps) {
   return (
     <BlueprintPanel color={compareMode ? STATUS_INFO : ACCENT} className="lg:col-span-2 p-5">
       <div className="flex justify-between items-center mb-2.5">
         <SectionHeader
-          label={compareMode ? 'Curve Comparison' : 'Required XP per Level Curve'}
+          label={compareMode ? (previewing ? 'Current vs Fitted Curve' : 'Curve Comparison') : 'Required XP per Level Curve'}
           icon={TrendingUp}
           color={ACCENT}
         />
@@ -43,13 +45,13 @@ export function MainChartArea({
 
       {compareMode ? (
         <div>
-          {/* Split-pane: Snapshot (left) vs Live (right) */}
+          {/* Split-pane: Snapshot (left) vs Live (right); Current vs Fitted while a pace fit is previewed */}
           <div className="grid grid-cols-2 gap-3 mt-2">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <Camera className="w-3 h-3" style={{ color: STATUS_INFO }} />
                 <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>
-                  Snapshot
+                  {previewing ? 'Current' : 'Snapshot'}
                 </span>
                 <span className="text-xs font-mono text-text-muted">
                   Base {snapshotBaseXp} | Exp {snapshotCurveExp.toFixed(2)}
@@ -63,7 +65,7 @@ export function MainChartArea({
               <div className="flex items-center gap-2 mb-1.5">
                 <SlidersHorizontal className="w-3 h-3" style={{ color: ACCENT }} />
                 <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT }}>
-                  Live
+                  {previewing ? 'Fitted' : 'Live'}
                 </span>
                 <span className="text-xs font-mono text-text-muted">
                   Base {baseXp} | Exp {curveExp.toFixed(2)}
@@ -76,8 +78,6 @@ export function MainChartArea({
           </div>
 
           <CurveDeltaSummary
-            snapshotData={snapshotChartData}
-            liveData={chartData}
             snapshotBaseXp={snapshotBaseXp}
             snapshotCurveExp={snapshotCurveExp}
             liveBaseXp={baseXp}

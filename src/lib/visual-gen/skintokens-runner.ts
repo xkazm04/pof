@@ -33,6 +33,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { gateRig, type RigFacts, type RigGateResult, type RigVerdict } from './rig-gate';
 import type { RigExpectation } from './skeleton-profiles';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
 
 /** What the CLI prints to stdout after a successful rig/skin write. */
 export const SKINTOKENS_SUCCESS_MARKER = 'written to';
@@ -131,7 +132,11 @@ export interface SkintokensResult {
  */
 export const SKINTOKENS_CRASH_EXIT_CODES = [139, -1073741819, 3221225477] as const;
 
-/** True when the exit code means a crash worth retrying. `null` = spawn error/killed. Pure. */
+/**
+ * True when the exit code means a crash worth retrying. `null` = killed by a signal (a
+ * POSIX SIGSEGV surfaces that way). Judges the CODE only: a kill by our own timer or a
+ * spawn failure is decided before this is asked, and is never retried. Pure.
+ */
 export function isCrashExit(code: number | null): boolean {
   if (code === null) return true;
   return (SKINTOKENS_CRASH_EXIT_CODES as readonly number[]).includes(code);
@@ -216,7 +221,7 @@ function firstMeaningfulLine(s: string): string {
   );
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
 export interface SkintokensDeps {
   run?: RunFn;
@@ -272,7 +277,14 @@ export async function runSkintokens(
   // repeating it just runs our own bug N times and buries the message.
   for (let i = 0; i < maxAttempts; i++) {
     attempts += 1;
-    const { stdout, code } = await run(bin, args, spec.timeoutMs ?? 3_600_000);
+    const timeoutMs = spec.timeoutMs ?? 3_600_000;
+    const outcome = await run(bin, args, timeoutMs);
+    const { stdout, code } = outcome;
+    // A timeout or a failure to start is terminal: retrying a 60-min kill 8 times burns
+    // GPU-hours and then blames Vulkan for what was a ceiling.
+    if (outcome.timedOut || outcome.spawnError) {
+      return { ...fail(processFailureReason(outcome, { tool: 'skintokens-cli', timeoutMs })), attempts };
+    }
     if (isCrashExit(code)) {
       lastError = `skintokens-cli crashed (exit ${code})`;
       continue;
@@ -315,16 +327,5 @@ export async function runSkintokens(
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });

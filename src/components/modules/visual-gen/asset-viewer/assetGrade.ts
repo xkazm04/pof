@@ -11,8 +11,10 @@
  * gone; this module is the replacement, and it owns no numbers of its own.
  *
  * Three rules, inherited rather than re-invented:
- *  1. the budget comes from `polycount-presets`, the size from `world-scale`, and the
- *     verdict vocabulary from `face-budget` — no constants live here;
+ *  1. what the mesh is held to comes from the Tier-1 gate's own request (`gateRequestFor`)
+ *     and how bad each finding is from the gate's own scorer (`scoreGeometry` → `scoreMesh`),
+ *     so the viewer and the job verdict cannot disagree on a fact both can measure — no
+ *     constants and no second severity vocabulary live here;
  *  2. the asset class is a STATED INPUT. It is never guessed from a filename: a file
  *     called `warrior.glb` is not evidence of anything, and a wrong guess grades a
  *     character against a prop budget;
@@ -23,22 +25,14 @@
  * the loaded scene, not a measured draw count, and PoF authors no draw-call budget.
  * Grading a proxy against an invented number is the failure this module exists to undo.
  */
-import {
-  polycountFor,
-  resolveAssetClass,
-  type AssetClass,
-  type PolycountPreset,
-} from '@/lib/visual-gen/polycount-presets';
+import { polycountFor, type AssetClass, type PolycountPreset } from '@/lib/visual-gen/polycount-presets';
+import { gateRequestFor } from '@/lib/visual-gen/gate-request';
+import { scoreGeometry, GATE_ONLY_CODES, type Finding, type FindingCode } from '@/lib/visual-gen/mesh-score';
 import { gradeFaceBudget, type BudgetGrade } from '@/lib/visual-gen/face-budget';
 import {
-  gradeWorldScale,
   isGeneratorNormalized,
   longestExtent,
-  nominalExtentFor,
   type ScaleGrade,
-  type SizeRequest,
-  gradeOrientation,
-  expectsUprightFor,
   type OrientationGrade,
 } from '@/lib/visual-gen/world-scale';
 import type { AssetStats } from './assetStats';
@@ -57,6 +51,9 @@ export const CEILING_NOTE =
 /** What `drawCalls` actually counts, stated wherever it is shown. */
 export const DRAW_CALLS_PROXY_NOTE =
   'material slots traversed in the loaded scene — a proxy for draw calls, not a measured draw count, and not graded';
+
+/** A row's severity: the gate's finding when it has one, else pass or unmeasured. */
+export type RowSeverity = 'fail' | 'warn' | 'pass' | 'unmeasured';
 
 export interface ViewerAssetGrade {
   /** The class the user stated, or undefined — never inferred. */
@@ -86,6 +83,17 @@ export interface ViewerAssetGrade {
   generatorNormalized: boolean;
   /** The size target actually applied, when one was stated or is honest for the class. */
   targetExtentM?: number;
+  /** The gate's findings on the faces + bbox the viewer measured, in the gate's order. */
+  findings: Finding[];
+  /**
+   * The worst finding severity (the gate's own). With no finding: `pass` when a class was
+   * stated, `unmeasured` when not — class-blind is stated, never graded green.
+   */
+  verdict: RowSeverity;
+  /** Criteria only the Tier-1 gate's trimesh pass measures — named, never implied passed. */
+  gateOnly: readonly FindingCode[];
+  /** Each visible row's severity, taken from the gate's findings. */
+  severity: { budget: RowSeverity; scale: RowSeverity; orientation: RowSeverity };
 }
 
 const usable = (n: number | null | undefined): n is number =>
@@ -93,13 +101,12 @@ const usable = (n: number | null | undefined): n is number =>
 
 const int = (n: number) => Math.round(n).toLocaleString('en-US');
 
-function budgetSentence(grade: BudgetGrade, preset: PolycountPreset | undefined): string {
-  if (!preset) {
+function budgetSentence(grade: BudgetGrade, preset: PolycountPreset | undefined, ceiling: number | undefined): string {
+  if (!preset || ceiling === undefined) {
     // Deliberately never uses the words the old panel stamped on an ungraded mesh:
     // silence must not read as compliance, and a test guards the phrase.
     return 'no asset class stated — a triangle count cannot be graded without one (40,000 triangles is a whole character budget and four times a prop ceiling), so this mesh is UNMEASURED, not compliant';
   }
-  const ceiling = preset.warnAbove;
   const measured = grade.measuredTriangles;
   if (measured === undefined) {
     return `mesh was not measured — the ${int(ceiling)}-triangle ${preset.label} ceiling cannot be confirmed without a triangle count`;
@@ -130,14 +137,20 @@ function scaleSentence(grade: ScaleGrade, normalized: boolean): string {
     : 'no size verdict available';
 }
 
+const rowSeverity = (findings: readonly Finding[], codes: readonly FindingCode[], ok: boolean): RowSeverity => {
+  const hit = findings.filter((f) => codes.includes(f.code));
+  if (hit.some((f) => f.severity === 'fail')) return 'fail';
+  if (hit.length) return 'warn';
+  return ok ? 'pass' : 'unmeasured';
+};
+
 /**
  * Grade a loaded mesh. Pure. Returns null when there is nothing loaded to grade.
  *
- * `assetClass` and `targetExtentM` are both STATED inputs. When no target is stated the
- * class's nominal extent is used ONLY where one is honest (`world-scale` gives a
- * character the 1.8 m UE5 Mannequin and deliberately gives a prop nothing, because a prop
- * can be a coin or a wagon) — so a prop with no stated target grades `unmeasured` rather
- * than inheriting an invented number.
+ * `assetClass` and `targetExtentM` are both STATED inputs, turned into a request by the
+ * gate's one rule (`gateRequestFor`): an absent target falls back to the class nominal only
+ * where one is honest (a character gets the 1.8 m Mannequin, a prop nothing, because a
+ * prop can be a coin or a wagon), and only a class that reliably stands is held upright.
  */
 export function gradeViewerAsset(
   stats: AssetStats | null,
@@ -146,41 +159,49 @@ export function gradeViewerAsset(
 ): ViewerAssetGrade | null {
   if (!stats) return null;
 
-  const resolved = resolveAssetClass(assetClass || undefined);
-  const preset = resolved.assetClass ? polycountFor(resolved.assetClass) : undefined;
+  // Stage `unknown`: a file opened in the viewer carries no record of its pipeline stage,
+  // and no `sentBudget` for the same reason — see CEILING_NOTE.
+  const gate = gateRequestFor({ assetClass: assetClass || undefined, stage: 'unknown', targetExtentM: targetExtentM ?? undefined });
+  const preset = assetClass ? polycountFor(assetClass) : undefined;
+  const ceiling = preset ? gate.deps.thresholds?.maxFacesWarn : undefined;
 
-  const budget = gradeFaceBudget(
-    stats.triangles,
-    preset ? { triangleBudget: preset.warnAbove, topology: 'triangles' } : undefined,
-  );
+  const bbox: [number, number, number] = [stats.boundingBox.width, stats.boundingBox.height, stats.boundingBox.depth];
+  const card = scoreGeometry({ faces: stats.triangles, verts: stats.vertices, bbox }, gate.deps);
+  const findings = card.findings;
+  const faceCount = findings.find((f) => f.code === 'face-count');
 
-  const bbox = [stats.boundingBox.width, stats.boundingBox.height, stats.boundingBox.depth];
-  const target = usable(targetExtentM) ? targetExtentM : nominalExtentFor(resolved.assetClass);
-  const request: SizeRequest | undefined = usable(target) ? { targetExtentM: target } : undefined;
-  const scale = gradeWorldScale(bbox, request);
-  // Only classes whose subject genuinely stands taller than it is wide get an expectation
-  // — `expectsUprightFor` gives a character one and a prop none, the same discipline that
-  // gives a character a nominal height and a prop none.
-  const uprightExpected = expectsUprightFor(resolved.assetClass);
-  const orientation = gradeOrientation(
-    bbox,
-    uprightExpected === undefined ? undefined : { expectUpright: uprightExpected },
-  );
+  // The ceiling row speaks `face-budget`'s vocabulary, but its verdict may not contradict
+  // the gate: a count inside `face-budget`'s 10% overrun tolerance still draws the gate's
+  // face-count WARN, so the row reads over whenever the gate says so.
+  const graded = gradeFaceBudget(stats.triangles, ceiling !== undefined ? { triangleBudget: ceiling, topology: 'triangles' } : undefined);
+  const budget: BudgetGrade = faceCount && graded.verdict === 'honored' ? { ...graded, verdict: 'over', reason: faceCount.reason } : graded;
+  // `scoreMesh` always grades scale and orientation, so both are present on every card.
+  const scale = card.scale as ScaleGrade;
+  const orientation = card.orientation as OrientationGrade;
   const generatorNormalized = isGeneratorNormalized(bbox);
+  const sizeTarget = gate.deps.size?.targetExtentM;
 
   return {
-    assetClass: resolved.assetClass,
-    gradedAs: resolved.gradedAs,
+    assetClass: preset?.assetClass,
+    gradedAs: gate.gradedAs,
     preset,
-    ceilingTriangles: preset?.warnAbove,
+    ceilingTriangles: ceiling,
     budget,
-    budgetLine: budgetSentence(budget, preset),
+    budgetLine: budgetSentence(budget, preset, ceiling),
     scale,
     scaleLine: scaleSentence(scale, generatorNormalized),
     orientation,
     orientationLine: orientationSentence(orientation),
     longestExtentM: longestExtent(bbox),
     generatorNormalized,
-    targetExtentM: request?.targetExtentM,
+    targetExtentM: usable(sizeTarget) ? sizeTarget : undefined,
+    findings,
+    verdict: card.verdict === 'pass' && !preset ? 'unmeasured' : card.verdict,
+    gateOnly: GATE_ONLY_CODES,
+    severity: {
+      budget: rowSeverity(findings, ['face-count', 'budget-over'], budget.verdict === 'honored'),
+      scale: rowSeverity(findings, ['scale-off'], scale.verdict === 'matches'),
+      orientation: rowSeverity(findings, ['orientation-lying'], orientation.verdict === 'upright'),
+    },
   };
 }

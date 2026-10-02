@@ -24,12 +24,12 @@ import {
 import { parseImageDataUrl } from '@/lib/visual-gen/triposr-runner';
 import { startTriposrJob, getTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { startHunyuanJob, getHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
-import { startTripoJob, getTripoJob } from '@/lib/visual-gen/tripo-job-store';
+import { startTripoJob, startTripoRecoveryJob, getTripoJob } from '@/lib/visual-gen/tripo-job-store';
 import { startTrellisJob, getTrellisJob } from '@/lib/visual-gen/trellis-job-store';
 import { generationPlanFor, resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 import { providerFaceLimit } from '@/lib/visual-gen/face-budget';
 import { tripoModelFor } from '@/lib/visual-gen/tripo-models';
-import { TRIPO_VIEW_ORDER, type TripoView } from '@/lib/visual-gen/tripo-runner';
+import { TRIPO_VIEW_ORDER, isTripoTaskId, type TripoView } from '@/lib/visual-gen/tripo-runner';
 import { hunyuanModelFor } from '@/lib/visual-gen/hunyuan-models';
 import type { CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 
@@ -57,12 +57,28 @@ export interface RunnerJob {
   result?: unknown;
   critique?: CritiqueResult;
   error?: string;
+  /** The provider-side task id this job paid for (cloud Tripo only) — survives a restart. */
+  providerTaskId?: string;
+  /** Errored while that task may still deliver: recover it by id, never pay again. */
+  recoverable?: boolean;
+}
+
+/** What POST /api/visual-gen/generate/recover hands a `recover`-capable entry. */
+export interface RunnerRecoverInput {
+  taskId: string;
+  assetClass?: string;
 }
 
 export interface RunnerDispatch {
   modes: readonly RunnerMode[];
   start(input: RunnerStartInput): Result<RunnerStarted, string>;
   getJob(id: string): RunnerJob | undefined;
+  /**
+   * Re-collect an EXISTING provider task by id — poll + download, never a create, so it
+   * never pays. Only a provider whose task outlives PoF has one (cloud Tripo); a local
+   * runner's job dies with its process and has nothing to recover.
+   */
+  recover?(input: RunnerRecoverInput): Result<RunnerStarted, string>;
 }
 
 const outFor = (id: string) => {
@@ -93,8 +109,11 @@ function singleImage(id: string, input: RunnerStartInput): Result<{ imagePath: s
 // unrecognised) input grades class-blind and `gradedAs` says so.
 const gradedAs = (assetClass: string | undefined) => resolveAssetClass(assetClass).gradedAs;
 
-function startTripo(input: RunnerStartInput): Result<RunnerStarted, string> {
-  const { mode, prompt, imageDataUrl, viewDataUrls, assetClass, maxAttempts } = input;
+/**
+ * The class-derived half of a Tripo job — the ONE place a class becomes a face budget, so a
+ * fresh job and a recovery of one are graded against the same budget.
+ */
+function tripoClassPlan(assetClass: string | undefined) {
   // WHERE the budget is enforced is a per-class decision: a `max-then-finish` class sends
   // NO `face_limit` (the generator's low-poly mode drops the detail the high->low bake
   // recovers), so mesh-finish enforces it instead.
@@ -102,10 +121,15 @@ function startTripo(input: RunnerStartInput): Result<RunnerStarted, string> {
   const faceLimit = generationPlan?.faceLimit !== undefined
     ? providerFaceLimit({ triangleBudget: generationPlan.faceLimit, topology: 'triangles' })
     : undefined;
+  return { faceLimit, extras: { gradedAs: gradedAs(assetClass), generationPlan } };
+}
+
+function startTripo(input: RunnerStartInput): Result<RunnerStarted, string> {
+  const { mode, prompt, imageDataUrl, viewDataUrls, assetClass, maxAttempts } = input;
+  const { faceLimit, extras } = tripoClassPlan(assetClass);
   // Never leave model_version unset — the arena graded the silent account default a FAIL.
   const pin = tripoModelFor(assetClass);
   const base = { pbr: true, faceLimit, assetClass, maxAttempts, modelVersion: pin.modelVersion, textureQuality: pin.textureQuality };
-  const extras = { gradedAs: gradedAs(assetClass), generationPlan };
   const { stamp, outputPath } = outFor('tripo3d');
   if (mode === 'text-to-3d') {
     if (!prompt?.trim()) return err('Missing prompt for text-to-3d');
@@ -129,6 +153,15 @@ function startTripo(input: RunnerStartInput): Result<RunnerStarted, string> {
   }
   const jobId = startTripoJob({ mode: 'multiview-to-3d', views, outputPath, ...base });
   return ok({ jobId, extras: { ...extras, views: Object.keys(views) } });
+}
+
+/** Recover a paid Tripo task by id: graded with the class plan a fresh job would carry. */
+function recoverTripo({ taskId, assetClass }: RunnerRecoverInput): Result<RunnerStarted, string> {
+  if (!isTripoTaskId(taskId)) return err('taskId must be a Tripo task id (letters, digits and dashes only)');
+  const { faceLimit, extras } = tripoClassPlan(assetClass);
+  const { outputPath } = outFor('tripo3d');
+  const jobId = startTripoRecoveryJob(taskId, { outputPath, assetClass, faceLimit });
+  return ok({ jobId, extras: { ...extras, recoveredTaskId: taskId } });
 }
 
 // Job lookups are wrapped (never bare references) so a store is only touched when used.
@@ -159,6 +192,7 @@ export const RUNNER_DISPATCH = {
     modes: ['text-to-3d', 'image-to-3d', 'multiview-to-3d'],
     start: startTripo,
     getJob: (id) => getTripoJob(id),
+    recover: recoverTripo,
   },
   trellis2: {
     modes: ['image-to-3d'],
@@ -191,6 +225,15 @@ export function runnerRefusal(providerId: string, mode: string): string {
   if (exec.path === 'mcp') return `${provider.name} runs through Blender MCP — submit it to /api/blender-mcp/generate`;
   const modes = runnerDispatchFor(providerId)?.modes ?? provider.modes;
   return `${provider.name} does not support ${mode} (it supports ${modes.join(', ')}).`;
+}
+
+/** Why `providerId` has nothing to recover — names the providers that do. */
+export function recoverRefusal(providerId: string): string {
+  const able = (Object.keys(RUNNER_DISPATCH) as RunnerProviderId[])
+    .filter((id) => (RUNNER_DISPATCH[id] as RunnerDispatch).recover)
+    .join(', ');
+  const name = getProviderById(providerId)?.name ?? `"${providerId}"`;
+  return `${name} has no provider-side task to recover — only ${able} keeps a task id PoF can re-poll without paying again.`;
 }
 
 /** Find a job by id across every runner the table dispatches. */

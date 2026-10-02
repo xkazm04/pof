@@ -1,24 +1,34 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import {
   Code, FileCode, ArrowRight, AlertTriangle,
-  XCircle, Loader2, Upload,
+  XCircle, Loader2, Upload, RefreshCw, ChevronDown,
 } from 'lucide-react';
-import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
+import type { BlueprintAsset, TranspileResult } from '@/types/blueprint';
 import { describeTranspileFidelity } from '@/lib/blueprint-cpp-codegen';
+import { buildResidue, type ResidueFile } from '@/lib/blueprint-transpiler/residue';
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
 import { OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
 import { WriteToProjectButton } from './WriteToProjectButton';
+import { ResidueList } from './ResidueList';
+
+const LEDGER_TITLE = 'Counted per node from the transpiler\'s ledger: emitted statements and the variables they read are translated; '
+  + 'refused nodes left a // TODO stub; never-reached nodes were not evaluated. Click to list them.';
+const WARNING_TITLE = 'Counted from the transpiler\'s own warnings: every node it refused to translate raises one carrying that node\'s id.';
+
+/** A jump to a stub, bound to the result it was computed from; `seq` re-reveals a repeated click. */
+interface StubFocus { result: TranspileResult; file: ResidueFile; line: number; seq: number }
 
 // ─── Transpile Pane ─────────────────────────────────────────────────────────
 
 export function TranspilePane({
   blueprintJson, setBlueprintJson,
   onTranspile, onLoadSample,
-  isLoading, error, asset, summary, result,
+  isLoading, error, asset, summary, result, stale = false,
   showCode, setShowCode,
   moduleName, onModuleChange, projectPath,
 }: {
@@ -28,9 +38,11 @@ export function TranspilePane({
   onLoadSample: () => void;
   isLoading: boolean;
   error: string | null;
-  asset: ReturnType<typeof useBlueprintTranspiler>['asset'];
+  asset: BlueprintAsset | null;
   summary: string | null;
-  result: ReturnType<typeof useBlueprintTranspiler>['transpileResult'];
+  result: TranspileResult | null;
+  /** The Blueprint JSON changed since `result` was generated from it. */
+  stale?: boolean;
   showCode: 'header' | 'source';
   setShowCode: (v: 'header' | 'source') => void;
   /** Target C++ module — decides the API macro AND the Source/<Module>/ path. */
@@ -38,8 +50,17 @@ export function TranspilePane({
   onModuleChange: (next: string) => void;
   projectPath: string;
 }) {
-  // Derived from the result's own warning list — never a constant.
+  // Counted from the result's per-node ledger (warning list for an older payload) — never a constant.
   const fidelity = describeTranspileFidelity(result ?? { warnings: [], nodeCount: 0 });
+  const residue = useMemo(() => (result ? buildResidue(result) : []), [result]);
+  const [residueOpen, setResidueOpen] = useState(false);
+  const [focus, setFocus] = useState<StubFocus | null>(null);
+  const focusLine = focus && focus.result === result && focus.file === showCode ? focus.line : null;
+
+  function openStub(file: ResidueFile, line: number) {
+    setShowCode(file);
+    setFocus((prev) => ({ result: result as TranspileResult, file, line, seq: (prev?.seq ?? 0) + 1 }));
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-full overflow-auto md:overflow-hidden">
@@ -116,20 +137,41 @@ export function TranspilePane({
               {/* Fidelity — how much of the graph actually became code. Always
                   shown: the warning badge below appears only when non-empty, so
                   a body the walker refused to write used to read as a clean
-                  transpile with nothing stating otherwise. */}
-              <span
-                data-testid="transpile-fidelity"
-                className={`text-2xs ${fidelity.todo > 0 ? 'text-amber-400' : 'text-text-muted'}`}
-                title="Counted from the transpiler's own warnings: every node it refused to translate raises one carrying that node's id."
-              >
-                {fidelity.label}
-              </span>
+                  transpile with nothing stating otherwise. With residue it is
+                  the toggle for the worklist of every untranslated node. */}
+              {residue.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setResidueOpen((o) => !o)}
+                  aria-expanded={residueOpen}
+                  aria-controls="transpile-residue"
+                  title={LEDGER_TITLE}
+                  className="flex items-center gap-1 text-2xs text-amber-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-bright rounded"
+                >
+                  <span data-testid="transpile-fidelity">{fidelity.label}</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${residueOpen ? 'rotate-180' : ''}`} aria-hidden />
+                </button>
+              ) : (
+                <span
+                  data-testid="transpile-fidelity"
+                  className={`text-2xs ${fidelity.todo > 0 ? 'text-amber-400' : 'text-text-muted'}`}
+                  title={fidelity.perNode ? LEDGER_TITLE : WARNING_TITLE}
+                >
+                  {fidelity.label}
+                </span>
+              )}
               {result.warnings.length > 0 && (
                 <span className="text-2xs text-amber-400 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> {result.warnings.length} warnings
                 </span>
               )}
             </div>
+
+            {residueOpen && residue.length > 0 && (
+              <div id="transpile-residue">
+                <ResidueList entries={residue} onLocate={openStub} />
+              </div>
+            )}
 
             {/* Code tabs */}
             <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border">
@@ -152,24 +194,40 @@ export function TranspilePane({
                 {result.className}.cpp
               </button>
               <div className="ml-auto flex items-center gap-1">
-                <WriteToProjectButton
-                  className={result.className}
-                  header={result.headerCode}
-                  source={result.sourceCode}
-                  projectPath={projectPath}
-                  moduleName={moduleName}
-                  onModuleChange={onModuleChange}
-                />
+                {/* Code generated from a Blueprint that is no longer the input
+                    must not reach the project: offer the re-transpile instead. */}
+                {stale ? (
+                  <button
+                    onClick={onTranspile}
+                    disabled={isLoading || !blueprintJson.trim()}
+                    title="The code below was generated from an earlier version of the Blueprint JSON"
+                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-amber-400 border border-amber-400/40 disabled:opacity-40"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Blueprint changed - re-transpile
+                  </button>
+                ) : (
+                  <WriteToProjectButton
+                    className={result.className}
+                    header={result.headerCode}
+                    source={result.sourceCode}
+                    projectPath={projectPath}
+                    moduleName={moduleName}
+                    onModuleChange={onModuleChange}
+                  />
+                )}
               </div>
             </div>
 
             {/* Code display — Shiki-highlighted with copy + download (shared CodeViewer) */}
             <div className="flex-1 min-h-0 overflow-hidden">
               <CodeViewer
+                key={focus?.seq ?? 0}
                 code={showCode === 'header' ? result.headerCode : result.sourceCode}
                 fileName={`${result.className}.${showCode === 'header' ? 'h' : 'cpp'}`}
                 lang="cpp"
                 maxHeightClass="max-h-full"
+                focusLine={focusLine}
               />
             </div>
 

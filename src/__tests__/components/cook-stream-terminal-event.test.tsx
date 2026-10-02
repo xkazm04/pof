@@ -86,3 +86,49 @@ describe('a cook stream that ends without a terminal event', () => {
     expect(onComplete.mock.calls[0][0]).toMatchObject({ status: 'success' });
   });
 });
+
+/** A stream carrying the given events in order, then closing. */
+function streamOf(events: object[]): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const ev of events) controller.enqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`));
+      controller.close();
+    },
+  });
+  return new Response(body, { status: 200 });
+}
+
+describe('the cook settles once the build is RECORDED, carrying its id', () => {
+  const DONE = { type: 'done', exePath: 'C:/out/My.exe', durationMs: 5, sizeBytes: null, status: 'success', t: 5 };
+
+  it('"done" then "recorded" completes ONCE with the recorded buildId', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => streamOf([
+      DONE,
+      { type: 'recorded', buildId: 42, version: '0.1.3', versionRule: 'bump-per-green-cook' },
+      { type: 'size-baseline', baseline: null, note: 'first build' },
+    ])));
+    const onComplete = vi.fn();
+    render(<Probe onComplete={onComplete} />);
+
+    await waitFor(() => expect(onComplete).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete.mock.calls[0][0]).toMatchObject({ status: 'success', exePath: 'C:/out/My.exe', buildId: 42 });
+  });
+
+  it('"done" then "record-error" completes with no buildId and names why', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => streamOf([
+      DONE,
+      { type: 'record-error', message: 'SQLITE_BUSY', note: 'writing it to build history FAILED' },
+    ])));
+    const onComplete = vi.fn();
+    render(<Probe onComplete={onComplete} />);
+
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    const r = onComplete.mock.calls[0][0] as { status: string; buildId?: number; recordError?: string };
+    expect(r.status).toBe('success');
+    expect(r.buildId).toBeUndefined();
+    expect(r.recordError).toContain('SQLITE_BUSY');
+  });
+});

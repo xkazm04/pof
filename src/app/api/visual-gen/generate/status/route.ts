@@ -79,6 +79,11 @@ export async function GET(req: NextRequest) {
       remedy: job.status === 'done'
         ? remedyFor({ critique: job.critique, assetClass: gate.spec?.assetClass, meshPath: r?.meshPath })
         : undefined,
+      // The provider-side task this job paid for (cloud Tripo) and whether an errored job's
+      // task may still deliver. Projected on EVERY poll, so a client that later loses the
+      // job (a restart 404s it) still holds the handle POST /generate/recover takes.
+      providerTaskId: job.providerTaskId,
+      recoverable: job.recoverable,
       error: job.error,
     });
   } catch (e) {

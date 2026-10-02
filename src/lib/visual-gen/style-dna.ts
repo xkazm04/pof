@@ -63,20 +63,27 @@ export function parseStyleDnaReply(text: string): StyleDnaReply {
 }
 
 /** Max items per dimension in the injected fragment — keeps it inside prompt budgets. */
-const FRAGMENT_CAP = 4;
+export const FRAGMENT_CAP = 4;
+
+/**
+ * The fragment's grammar, exported so `styleFragmentPreview` (style-dna-edit.ts) can locate each
+ * chip INSIDE the real fragment instead of re-deriving a second one. Order = emission order.
+ */
+export const STYLE_DNA_FRAGMENT_PREFIX = 'In the established project art style — ';
+export const STYLE_DNA_FRAGMENT_LABELS: ReadonlyArray<readonly [keyof StyleDna, string]> = [
+  ['palette', 'palette of'],
+  ['materials', 'materials:'],
+  ['mood', 'mood:'],
+  ['render', 'rendered'],
+  ['motifs', 'recurring motifs:'],
+];
 
 /** Compact prompt fragment appended to a generation prompt. Empty dimensions are skipped. */
 export function styleDnaToPromptFragment(dna: StyleDna): string {
-  const part = (label: string, items: string[]) =>
-    items.length ? `${label} ${items.slice(0, FRAGMENT_CAP).join(', ')}` : '';
-  const parts = [
-    part('palette of', dna.palette),
-    part('materials:', dna.materials),
-    part('mood:', dna.mood),
-    part('rendered', dna.render),
-    part('recurring motifs:', dna.motifs),
-  ].filter(Boolean);
-  return `In the established project art style — ${parts.join('; ')}.`;
+  const parts = STYLE_DNA_FRAGMENT_LABELS.map(([key, label]) =>
+    dna[key].length ? `${label} ${dna[key].slice(0, FRAGMENT_CAP).join(', ')}` : '',
+  ).filter(Boolean);
+  return `${STYLE_DNA_FRAGMENT_PREFIX}${parts.join('; ')}.`;
 }
 
 /**
@@ -107,30 +114,61 @@ export function applyStyleFragment(
 }
 
 /**
- * WHERE the forge's "apply project style" flag actually reaches — declared, so the
- * toggle's LABEL cannot claim more than its senders deliver.
- *
- * The switch used to read "Applied to prompts" while reaching exactly one consumer: the
- * Asset Forge 3D submit. `/api/leonardo` implements the same injection behind
- * `applyStyleDna: true`, but nothing in `src/` has ever sent it — only the gap-loop
- * batch scripts do — so a user who distilled a mood board and flipped the switch got
- * style injection into a *mesh* prompt and nothing at all in the 2D image path the
- * panel appeared to describe.
+ * One sender of the forge's "apply project style" flag: a file that READS the flag to build a
+ * submitted prompt. `resolution` says where the style is resolved — `server` = the file sends the
+ * flag and a route resolves it through the ONE canon-aware resolver (`style-apply.ts`); `client` =
+ * the file appends the store's active-style snapshot itself (canon-blind; the 3D MCP path has no
+ * server hop to resolve on).
+ */
+export interface StyleDnaSender {
+  file: string;
+  path: '2D' | '3D';
+  resolution: 'server' | 'client';
+  /** What it reaches, in the operator's words — the note is built from these. */
+  reaches: string;
+}
+
+export const STYLE_DNA_SENDERS: readonly StyleDnaSender[] = [
+  {
+    file: 'src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx',
+    path: '3D',
+    resolution: 'client',
+    reaches: 'Asset Forge 3D generation prompts (text-to-3D and image-to-3D)',
+  },
+  {
+    file: 'src/components/modules/visual-gen/asset-forge/Image2DPanel.tsx',
+    path: '2D',
+    resolution: 'server',
+    reaches: 'Asset Forge 2D image prompts (resolved on the server)',
+  },
+  {
+    file: 'src/components/modules/visual-gen/asset-forge/IconSetPanel.tsx',
+    path: '2D',
+    resolution: 'server',
+    reaches: 'Asset Forge icon-set contact sheets (resolved on the server, per canon profile)',
+  },
+];
+
+const reachedPaths = [...new Set(STYLE_DNA_SENDERS.map((s) => s.path))].sort();
+
+/**
+ * WHERE the flag actually reaches — DERIVED from {@link STYLE_DNA_SENDERS}, so the toggle's label
+ * cannot claim more than its senders deliver (it once read "Applied to prompts" while reaching
+ * only the 3D submit, then "3D prompts" while the 2D front sent no style at all).
  *
  * `senders` is asserted against the real readers of the flag by
- * `src/__tests__/components/visual-gen/StyleDnaReach.test.tsx`: widening the reach
- * without widening the label (or the reverse) fails that test.
+ * `src/__tests__/components/visual-gen/StyleDnaReach.test.tsx`: adding a reader without a table
+ * row (or the reverse) fails that test. /api/visual-gen/contact-sheet is toggle reach only through
+ * the forge's icon-set panel; its other callers (batch scripts) and /api/leonardo resolve through
+ * the same `style-apply.ts` and are not toggle reach.
  */
 export const STYLE_DNA_REACH = {
-  /** Source files that READ the flag and inject the fragment into a submitted prompt. */
-  senders: ['src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx'],
-  /** The noun the toggle uses. Must name exactly what `senders` covers. */
-  label: '3D prompts',
-  /** The full sentence shown beside the toggle — reach AND the path it does not cover. */
-  note:
-    'Appended to Asset Forge 3D generation prompts (text-to-3D and image-to-3D) only. ' +
-    'The 2D Leonardo image route accepts the same style, but nothing in the app sends it — ' +
-    'only the gap-loop batch scripts do.',
+  /** Source files that READ the flag and inject (or send) the style for a submitted prompt. */
+  senders: STYLE_DNA_SENDERS.map((s) => s.file),
+  /** The noun the toggle uses — every path a sender covers, and no other. */
+  label: `${reachedPaths.join(' + ')} prompts`,
+  /** The full sentence shown beside the toggle. */
+  note: `Appended to ${STYLE_DNA_SENDERS.map((s) => s.reaches).join(' and ')}.`,
 } as const;
 
 export type StyleDnaResult =

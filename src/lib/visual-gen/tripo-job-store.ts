@@ -6,10 +6,13 @@
  * Ephemeral — the durable artifact is the downloaded .glb. Auto-runs the Tier-1
  * geometry gate on the produced mesh, same as the local stores.
  */
-import { runTripo, type TripoSpec, type TripoResult } from './tripo-runner';
+import {
+  runTripo, awaitTripoTask, isRecoverableTripoFailure,
+  type TripoSpec, type TripoResult, type TripoDeps, type TripoPollOptions,
+} from './tripo-runner';
 import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
 import { gateRequestFor, type GateRequest } from './gate-request';
-import { generateUntilAcceptable } from './best-of-n';
+import { generateUntilAcceptable, type RetryOutcome } from './best-of-n';
 import type { BudgetRequest } from './face-budget';
 
 /**
@@ -29,10 +32,31 @@ export function attemptPath(base: string, attempt: number): string {
   return ext.test(base) ? base.replace(ext, `_a${attempt}$1`) : `${base}_a${attempt}`;
 }
 
+/** The spec fields the Tier-1 gate request is derived from. */
+export type TripoGateSpec = Pick<TripoSpec, 'assetClass' | 'targetExtentM' | 'faceLimit' | 'quad'>;
+
+/**
+ * What a RECOVERY job is started with: where to write the mesh, how to grade it (the same
+ * gate facts a fresh job of the class carries, so a recovered mesh is never graded more
+ * leniently) and how long to watch. No generation inputs - recovery never generates.
+ */
+export type TripoRecoverySpec = TripoGateSpec & TripoPollOptions & { outputPath: string };
+
 export interface TripoJob {
   id: string;
   status: 'running' | 'done' | 'error';
-  spec: TripoSpec;
+  spec: TripoSpec | TripoRecoverySpec;
+  /**
+   * The Tripo task id currently paid for - recorded the moment Tripo accepts the task (and,
+   * on a recovery job, the task being recovered), so the handle survives a timeout, a lost
+   * poll and a PoF server restart: it is provider-side, not in-process.
+   */
+  providerTaskId?: string;
+  /**
+   * True when the job ended in error while `providerTaskId` may still deliver (PoF stopped
+   * watching; Tripo gave no terminal verdict). Recover it by id - never pay again.
+   */
+  recoverable?: boolean;
   result?: TripoResult;
   /** Tier-1 quality-gate scorecard, run automatically on the produced mesh. */
   critique?: CritiqueResult;
@@ -62,8 +86,21 @@ const g = globalThis as unknown as { pofTripoJobs?: Map<string, TripoJob> };
 const jobs = g.pofTripoJobs ?? new Map<string, TripoJob>();
 if (!g.pofTripoJobs) g.pofTripoJobs = jobs;
 
-type Runner = (spec: TripoSpec) => Promise<TripoResult>;
+type Runner = (spec: TripoSpec, hooks?: Pick<TripoDeps, 'onTaskCreated'>) => Promise<TripoResult>;
+type Recoverer = (taskId: string, spec: TripoRecoverySpec) => Promise<TripoResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
+
+/**
+ * Thrown out of a roll whose paid task is still live: it ends the re-roll loop, because
+ * the next roll would buy a SECOND task while the first may still deliver.
+ */
+class LiveTaskStop extends Error {
+  constructor(readonly result: TripoResult) {
+    super(result.error ?? 'Tripo task still live');
+  }
+}
+
+const recoverTask: Recoverer = (taskId, spec) => awaitTripoTask(taskId, spec.outputPath, spec);
 
 /**
  * The Tier-1 gate request for a job: the class rule from `gateRequestFor` plus the one
@@ -73,7 +110,7 @@ type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
  * What this store grades is provider output straight off the API — pre-retopo, pre-unwrap,
  * pre-bake — so the stage is `raw`.
  */
-export function tripoGateRequest(spec: TripoSpec): GateRequest {
+export function tripoGateRequest(spec: TripoSpec | TripoRecoverySpec): GateRequest {
   const sentBudget: BudgetRequest | undefined =
     spec.faceLimit !== undefined
       ? { triangleBudget: spec.faceLimit, topology: spec.quad ? 'quads' : 'triangles' }
@@ -82,7 +119,7 @@ export function tripoGateRequest(spec: TripoSpec): GateRequest {
 }
 
 /** The gate deps alone — kept as the stable seam other producers and tests pin. Pure. */
-export function critiqueDepsForSpec(spec: TripoSpec): CritiqueDeps {
+export function critiqueDepsForSpec(spec: TripoSpec | TripoRecoverySpec): CritiqueDeps {
   return tripoGateRequest(spec).deps;
 }
 
@@ -97,6 +134,10 @@ export function critiqueDepsForSpec(spec: TripoSpec): CritiqueDeps {
  * The loop stops on the first mesh that clears the gate, so a healthy generation still
  * pays for exactly one task. When every attempt fails the mesh is still delivered — with
  * `accepted: false` and the reason — because hiding it would be worse than reporting it.
+ *
+ * An attempt that ends with its paid task still LIVE (poll window spent, unreadable polls)
+ * stops the loop: the job errors `recoverable` with that `providerTaskId`, and no further
+ * task is bought while the first may still finish.
  */
 export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic: Critic = critiqueMesh): string {
   const id = `tripo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -104,35 +145,88 @@ export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic
   jobs.set(id, job);
 
   const maxAttempts = Math.min(Math.max(1, spec.maxAttempts ?? 1), MAX_GENERATION_ATTEMPTS);
+  let spent = 0;
+  settleJob(job, spec, critic, maxAttempts, () => spent, (attempt) => {
+    spent++;
+    return runner(
+      { ...spec, outputPath: attemptPath(spec.outputPath, attempt) },
+      { onTaskCreated: (taskId) => { job.providerTaskId = taskId; } },
+    );
+  });
+  return id;
+}
+
+/**
+ * Recover an EXISTING Tripo task by id (fire-and-forget): poll it, download its model and
+ * run the SAME Tier-1 gate a fresh job of the class gets. Single-shot and never
+ * regenerating — it creates no task, so it spends no generation (`attempts: 0`). A task
+ * that is still not finished leaves the job `recoverable` again.
+ */
+export function startTripoRecoveryJob(
+  taskId: string,
+  spec: TripoRecoverySpec,
+  recoverer: Recoverer = recoverTask,
+  critic: Critic = critiqueMesh,
+): string {
+  const id = `tripo-recover-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const job: TripoJob = { id, status: 'running', spec, providerTaskId: taskId, startedAt: Date.now() };
+  jobs.set(id, job);
+  settleJob(job, spec, critic, 1, () => 0, () => recoverer(taskId, spec));
+  return id;
+}
+
+/** Run the gate loop over `roll` and write its outcome onto `job`. */
+function settleJob(
+  job: TripoJob,
+  spec: TripoSpec | TripoRecoverySpec,
+  critic: Critic,
+  maxAttempts: number,
+  spent: () => number,
+  roll: (attempt: number) => Promise<TripoResult>,
+): void {
   const gate = tripoGateRequest(spec);
   const critiqueDeps = gate.deps;
   job.gradedAs = gate.gradedAs;
 
   generateUntilAcceptable<TripoResult>(
-    (attempt) => runner({ ...spec, outputPath: attemptPath(spec.outputPath, attempt) }),
+    async (attempt) => {
+      const result = await roll(attempt);
+      if (isRecoverableTripoFailure(result)) throw new LiveTaskStop(result);
+      return result;
+    },
     { critic: (meshPath) => critic(meshPath, critiqueDeps), maxAttempts },
   )
-    .then((outcome) => {
-      // Fall back to the last attempt so a failed generation still reports its own
-      // error — `best` only ever holds attempts that produced a mesh.
-      const delivered = outcome.best ?? outcome.attempts[outcome.attempts.length - 1];
-      job.result = delivered?.result;
-      job.critique = delivered?.critique;
-      job.attempts = outcome.attempts.length;
-      job.accepted = outcome.accepted;
-      job.ungated = outcome.ungated === true;
-      // The calibration caveat rides on the reason itself, so the one field the status
-      // route already projects carries it to wherever the verdict is shown.
-      job.gateReason = outcome.note ? `${outcome.reason} — note: ${outcome.note}` : outcome.reason;
-      const produced = delivered?.result.ok === true;
-      job.status = produced ? 'done' : 'error';
-      if (!produced) job.error = delivered?.result.error;
-    })
+    .then((outcome) => writeOutcome(job, outcome, spent()))
     .catch((e: unknown) => {
+      if (e instanceof LiveTaskStop) {
+        job.result = e.result;
+        job.providerTaskId = e.result.taskId;
+        job.recoverable = true;
+        job.attempts = spent();
+        job.accepted = false;
+        job.gateReason = `stopped — Tripo task ${e.result.taskId} was still live when polling ended, so no new paid task was started; recover it by task id`;
+      }
       job.error = e instanceof Error ? e.message : String(e);
       job.status = 'error';
     });
-  return id;
+}
+
+function writeOutcome(job: TripoJob, outcome: RetryOutcome<TripoResult>, spent: number): void {
+  // Fall back to the last attempt so a failed generation still reports its own
+  // error — `best` only ever holds attempts that produced a mesh.
+  const delivered = outcome.best ?? outcome.attempts[outcome.attempts.length - 1];
+  job.result = delivered?.result;
+  job.critique = delivered?.critique;
+  if (delivered?.result.taskId) job.providerTaskId = delivered.result.taskId;
+  job.attempts = spent;
+  job.accepted = outcome.accepted;
+  job.ungated = outcome.ungated === true;
+  // The calibration caveat rides on the reason itself, so the one field the status
+  // route already projects carries it to wherever the verdict is shown.
+  job.gateReason = outcome.note ? `${outcome.reason} — note: ${outcome.note}` : outcome.reason;
+  const produced = delivered?.result.ok === true;
+  job.status = produced ? 'done' : 'error';
+  if (!produced) job.error = delivered?.result.error;
 }
 
 export function getTripoJob(id: string): TripoJob | undefined {

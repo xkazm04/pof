@@ -4,6 +4,7 @@
 
 import type { RoomNode, RoomConnection, RoomType, PacingCurve } from '@/types/level-design';
 import type { AudioZone, SoundEmitter, ReverbPreset } from '@/types/audio-scene';
+import { zoneDerivation, emitterDerivation } from '@/lib/spatial-audio-sync';
 
 // ── Room type → acoustic profile mapping ─────────────────────────────────────
 
@@ -89,7 +90,6 @@ interface EmitterTemplate {
   keywords: RegExp;
   name: string;
   type: SoundEmitter['type'];
-  soundCueRef: string;
   volumeMultiplier: number;
   attenuationRadius: number;
   cooldownSeconds: number;
@@ -101,7 +101,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /fire|fireplace|torch|flame|brazier|candle/i,
     name: 'Crackling Fire',
     type: 'loop',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Fire_Loop',
     volumeMultiplier: 0.7,
     attenuationRadius: 400,
     cooldownSeconds: 0,
@@ -111,7 +110,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /water|waterfall|fountain|stream|river|drip/i,
     name: 'Flowing Water',
     type: 'loop',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Water_Loop',
     volumeMultiplier: 0.8,
     attenuationRadius: 600,
     cooldownSeconds: 0,
@@ -121,7 +119,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /forge|anvil|blacksmith|hammer|smelt/i,
     name: 'Forge Ambience',
     type: 'loop',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Forge_Loop',
     volumeMultiplier: 0.6,
     attenuationRadius: 500,
     cooldownSeconds: 0,
@@ -131,7 +128,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /wind|breeze|gust|draft|howl/i,
     name: 'Wind Ambience',
     type: 'ambient',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Wind_Ambient',
     volumeMultiplier: 0.5,
     attenuationRadius: 800,
     cooldownSeconds: 0,
@@ -141,7 +137,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /crystal|magic|arcane|glow|rune|enchant/i,
     name: 'Arcane Hum',
     type: 'loop',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Arcane_Hum',
     volumeMultiplier: 0.4,
     attenuationRadius: 350,
     cooldownSeconds: 0,
@@ -151,7 +146,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /gate|door|portcullis|mechanism|lever/i,
     name: 'Mechanical Creak',
     type: 'oneshot',
-    soundCueRef: '/Game/Audio/SFX/SFX_Mechanism_Creak',
     volumeMultiplier: 0.8,
     attenuationRadius: 500,
     cooldownSeconds: 5,
@@ -161,7 +155,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /trap|spike|dart|pressure|trigger/i,
     name: 'Trap Warning',
     type: 'oneshot',
-    soundCueRef: '/Game/Audio/SFX/SFX_Trap_Warning',
     volumeMultiplier: 0.9,
     attenuationRadius: 300,
     cooldownSeconds: 3,
@@ -171,7 +164,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /crow|bird|owl|bat|insect|cricket/i,
     name: 'Creature Sounds',
     type: 'ambient',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Creatures_Ambient',
     volumeMultiplier: 0.3,
     attenuationRadius: 600,
     cooldownSeconds: 8,
@@ -181,7 +173,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /chain|prison|dungeon|cell|cage/i,
     name: 'Rattling Chains',
     type: 'ambient',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Chains_Rattle',
     volumeMultiplier: 0.4,
     attenuationRadius: 400,
     cooldownSeconds: 10,
@@ -191,7 +182,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /crowd|merchant|vendor|npc|tavern|inn|market/i,
     name: 'Crowd Chatter',
     type: 'loop',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Crowd_Loop',
     volumeMultiplier: 0.5,
     attenuationRadius: 700,
     cooldownSeconds: 0,
@@ -201,7 +191,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
     keywords: /music|bard|instrument|lute|drum/i,
     name: 'Background Music',
     type: 'music',
-    soundCueRef: '/Game/Audio/Music/MUS_Background_Layer',
     volumeMultiplier: 0.4,
     attenuationRadius: 800,
     cooldownSeconds: 0,
@@ -213,7 +202,6 @@ const EMITTER_TEMPLATES: EmitterTemplate[] = [
 
 interface PacingOverlay {
   extraEmitterName: string;
-  soundCueRef: string;
   type: SoundEmitter['type'];
   volumeMultiplier: number;
 }
@@ -221,19 +209,16 @@ interface PacingOverlay {
 const PACING_OVERLAYS: Partial<Record<PacingCurve, PacingOverlay>> = {
   peak: {
     extraEmitterName: 'Tension Stinger',
-    soundCueRef: '/Game/Audio/Music/MUS_Tension_Layer',
     type: 'music',
     volumeMultiplier: 0.3,
   },
   rest: {
     extraEmitterName: 'Calm Ambience',
-    soundCueRef: '/Game/Audio/Ambience/SFX_Calm_Pad',
     type: 'ambient',
     volumeMultiplier: 0.25,
   },
   buildup: {
     extraEmitterName: 'Rising Tension',
-    soundCueRef: '/Game/Audio/Music/MUS_Buildup_Layer',
     type: 'music',
     volumeMultiplier: 0.2,
   },
@@ -299,15 +284,19 @@ export interface RoomAudioReport {
   reasoning: string;
 }
 
-let emitterIdCounter = 0;
-let zoneIdCounter = 0;
-
-function genZoneId(): string {
-  return `zone-auto-${++zoneIdCounter}-${Date.now().toString(36)}`;
+/**
+ * Ids are derived from the room, never from the clock: a re-run on the same
+ * level yields the same ids, so the sync (`spatial-audio-sync.ts`) recognises
+ * its own earlier output instead of appending a second copy.
+ */
+function genZoneId(roomId: string): string {
+  return `zone-room-${roomId}`;
 }
 
-function genEmitterId(): string {
-  return `emitter-auto-${++emitterIdCounter}-${Date.now().toString(36)}`;
+/** One emitter per (room, sound): the slot is the sound's name. */
+function genEmitterId(roomId: string, soundName: string): string {
+  const slot = soundName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `emitter-room-${roomId}-${slot}`;
 }
 
 /**
@@ -320,10 +309,6 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
   const zones: AudioZone[] = [];
   const emitters: SoundEmitter[] = [];
   const report: RoomAudioReport[] = [];
-
-  // Reset counters
-  emitterIdCounter = 0;
-  zoneIdCounter = 0;
 
   for (const room of rooms) {
     const profile = ROOM_ACOUSTICS[room.type];
@@ -347,7 +332,7 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
     const baseWidth = room.type === 'transition' ? 120 : room.type === 'boss' ? 250 : 180;
     const baseHeight = room.type === 'transition' ? 80 : room.type === 'boss' ? 220 : 150;
 
-    const zoneId = genZoneId();
+    const zoneId = genZoneId(room.id);
 
     // Build soundscape description from room data
     const soundscape = buildSoundscapeDescription(room, profile, connCount);
@@ -369,6 +354,7 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
       occlusionMode: finalOcclusion,
       priority: profile.priority,
       color: profile.color,
+      sourceRoomId: room.id,
     };
     zones.push(zone);
 
@@ -381,12 +367,12 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
     for (const template of EMITTER_TEMPLATES) {
       if (template.keywords.test(searchText)) {
         const emitter: SoundEmitter = {
-          id: genEmitterId(),
+          id: genEmitterId(room.id, template.name),
           name: `${room.name} — ${template.name}`,
           type: template.type,
           x: room.x + 20 + roomEmitters.length * 30,
           y: room.y + 20 + roomEmitters.length * 20,
-          soundCueRef: template.soundCueRef,
+          soundCueRef: '',
           attenuationRadius: template.attenuationRadius,
           volumeMultiplier: Math.min(template.volumeMultiplier * diffMods.volumeScale, 2),
           pitchMin: 0.95,
@@ -401,7 +387,7 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
 
     // Room type–based default ambient emitter (if no keyword matches)
     if (roomEmitters.length === 0) {
-      const defaultEmitter = getDefaultEmitterForType(room.type, room.name, zoneId, room.x, room.y, diffMods.volumeScale);
+      const defaultEmitter = getDefaultEmitterForType(room.type, room.id, room.name, zoneId, room.x, room.y, diffMods.volumeScale);
       if (defaultEmitter) {
         roomEmitters.push(defaultEmitter);
       }
@@ -411,12 +397,12 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
     const pacingOverlay = PACING_OVERLAYS[room.pacing];
     if (pacingOverlay) {
       roomEmitters.push({
-        id: genEmitterId(),
+        id: genEmitterId(room.id, pacingOverlay.extraEmitterName),
         name: `${room.name} — ${pacingOverlay.extraEmitterName}`,
         type: pacingOverlay.type,
         x: room.x + baseWidth / 2,
         y: room.y + baseHeight / 2,
-        soundCueRef: pacingOverlay.soundCueRef,
+        soundCueRef: '',
         attenuationRadius: Math.round(profile.attenuationBase * 0.6),
         volumeMultiplier: pacingOverlay.volumeMultiplier,
         pitchMin: 1.0,
@@ -427,6 +413,14 @@ export function generateSpatialAudio(input: SpatialAudioGeneratorInput): Spatial
       });
     }
 
+    // No cue path is invented: soundCueRef stays '' (codegen labels it a
+    // PLACEHOLDER), and the sound each emitter needs is named in the report.
+    // Stamp what was derived so a later sync can tell a level edit from tuning.
+    for (const em of roomEmitters) {
+      em.sourceRoomId = room.id;
+      em.derivedFrom = emitterDerivation(em);
+    }
+    zone.derivedFrom = zoneDerivation(zone, roomEmitters.map((e) => e.id));
     emitters.push(...roomEmitters);
 
     // Build report entry
@@ -493,31 +487,32 @@ function buildSoundscapeDescription(room: RoomNode, profile: AcousticProfile, co
 
 function getDefaultEmitterForType(
   type: RoomType,
+  roomId: string,
   roomName: string,
   zoneId: string,
   x: number,
   y: number,
   volumeScale: number,
 ): SoundEmitter | null {
-  const defaults: Partial<Record<RoomType, { name: string; cue: string; emitType: SoundEmitter['type'] }>> = {
-    combat: { name: 'Combat Ambience', cue: '/Game/Audio/Ambience/SFX_Combat_Ambient', emitType: 'ambient' },
-    boss: { name: 'Boss Arena Rumble', cue: '/Game/Audio/Ambience/SFX_Boss_Rumble', emitType: 'loop' },
-    puzzle: { name: 'Puzzle Ambience', cue: '/Game/Audio/Ambience/SFX_Puzzle_Ambient', emitType: 'ambient' },
-    exploration: { name: 'Exploration Ambience', cue: '/Game/Audio/Ambience/SFX_Explore_Ambient', emitType: 'ambient' },
-    safe: { name: 'Safe Zone Ambience', cue: '/Game/Audio/Ambience/SFX_Safe_Ambient', emitType: 'ambient' },
-    hub: { name: 'Hub Activity', cue: '/Game/Audio/Ambience/SFX_Hub_Activity', emitType: 'loop' },
+  const defaults: Partial<Record<RoomType, { name: string; emitType: SoundEmitter['type'] }>> = {
+    combat: { name: 'Combat Ambience', emitType: 'ambient' },
+    boss: { name: 'Boss Arena Rumble', emitType: 'loop' },
+    puzzle: { name: 'Puzzle Ambience', emitType: 'ambient' },
+    exploration: { name: 'Exploration Ambience', emitType: 'ambient' },
+    safe: { name: 'Safe Zone Ambience', emitType: 'ambient' },
+    hub: { name: 'Hub Activity', emitType: 'loop' },
   };
 
   const def = defaults[type];
   if (!def) return null;
 
   return {
-    id: genEmitterId(),
+    id: genEmitterId(roomId, def.name),
     name: `${roomName} — ${def.name}`,
     type: def.emitType,
     x: x + 40,
     y: y + 40,
-    soundCueRef: def.cue,
+    soundCueRef: '',
     attenuationRadius: 500,
     volumeMultiplier: Math.min(0.5 * volumeScale, 2),
     pitchMin: 0.98,

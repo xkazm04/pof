@@ -21,6 +21,9 @@
  */
 import {
   critiqueLoop,
+  measureClip,
+  scoreLoopClosure,
+  sha256Hex,
   type LoopIntent,
   type LoopScorecard,
   type LoopVerdict,
@@ -29,6 +32,26 @@ import {
 /** What this tier answers, stated on every report so the two are never read as one score. */
 export const TIER1_BASIS = 'integrity — numeric loop closure, root-relative millimetres (pure, no model)' as const;
 export const TIER2_BASIS = 'craft — VLM aesthetic critique over six dimensions (0-100, worst-of)' as const;
+
+/**
+ * WHERE a Tier-1 verdict came from. `measured` is the only kind bound to content: the gate
+ * read the clip's bytes itself and names their sha256. `caller-markers` / `caller-card`
+ * are inputs the gated caller authored — still accepted, but labelled, because a pasted
+ * transcript carries no identity of the clip it was measured on.
+ */
+export type Tier1Source =
+  | {
+      kind: 'measured';
+      path: string | null;
+      sha256: string;
+      frames: number;
+      fps: number | null;
+      skeleton?: string;
+      appliedOps?: string[];
+    }
+  | { kind: 'unreadable-clip'; path: string | null; sha256: string }
+  | { kind: 'caller-markers' }
+  | { kind: 'caller-card' };
 
 /** `LoopVerdict` plus the two states that mean "this gate produced no measurement". */
 export type Tier1Status = LoopVerdict | 'not-run' | 'error';
@@ -42,6 +65,8 @@ export interface Tier1Report {
   card?: LoopScorecard;
   /** The extractor's own diagnosis, verbatim, when `status === 'error'`. */
   error?: string;
+  /** What the verdict is bound to. Absent only on `not-run` (nothing was supplied). */
+  source?: Tier1Source;
 }
 
 export interface Tier2Report {
@@ -53,15 +78,21 @@ export interface Tier2Report {
 /**
  * How a caller supplies Tier-1.
  *
- * `markers` — the extractor's stdout — is the primary seam, chosen to MIRROR
- * `visual-gen/mesh-critique.parseCritiqueMetrics`: the loop extractor
- * (`scripts/visual-gen/ardy/pof_loop_closure.py`) runs outside this process and its only
- * transport is the marker text it prints. Accepting a pre-scored verdict as the only door
+ * `clip` — the motion archive's bytes — is the primary door: the gate measures them
+ * in-process (`@/lib/motion-gate.measureClip`, no python) and binds the verdict to their
+ * sha256. It wins over every other field when present.
+ *
+ * Legacy doors, kept and labelled (`source.kind` says which one answered):
+ * `markers` — the extractor's stdout — was the original seam, chosen to MIRROR
+ * `visual-gen/mesh-critique.parseCritiqueMetrics` while the loop extractor
+ * (`scripts/visual-gen/ardy/pof_loop_closure.py`) ran outside this process and its only
+ * transport was the marker text it prints. Accepting a pre-scored verdict as the only door
  * would force every caller to re-implement the parser AND would let a caller hand-write a
  * `pass` the extractor never emitted. `card` exists for callers that already ran the pure
  * core in-process (and for tests injecting a result), never as a way to skip measurement.
  */
 export interface Tier1Input {
+  clip?: { path?: string; bytes: Uint8Array };
   markers?: string;
   intent?: LoopIntent;
   card?: LoopScorecard;
@@ -82,8 +113,12 @@ export function tier2NotRun(reason: string): Tier2Report {
 /** Turn whatever the caller supplied into a report. Pure. Never invents a verdict. */
 export function resolveTier1(input?: Tier1Input): Tier1Report {
   if (!input) return TIER1_NOT_RUN;
+  if (input.clip) return resolveClip(input.clip, input.intent ?? 'loop');
   if (input.card) {
-    return { status: input.card.verdict, basis: TIER1_BASIS, reason: input.card.reason, card: input.card };
+    return {
+      status: input.card.verdict, basis: TIER1_BASIS, reason: input.card.reason, card: input.card,
+      source: { kind: 'caller-card' },
+    };
   }
   if (typeof input.markers !== 'string' || input.markers.trim() === '') return TIER1_NOT_RUN;
 
@@ -95,9 +130,32 @@ export function resolveTier1(input?: Tier1Input): Tier1Report {
       basis: TIER1_BASIS,
       reason: `Tier-1 gate could not run: ${error}`,
       error,
+      source: { kind: 'caller-markers' },
     };
   }
-  return { status: run.card.verdict, basis: TIER1_BASIS, reason: run.card.reason, card: run.card };
+  return {
+    status: run.card.verdict, basis: TIER1_BASIS, reason: run.card.reason, card: run.card,
+    source: { kind: 'caller-markers' },
+  };
+}
+
+/** Measure the clip itself. An unreadable archive is an `error` with the reader's reason. */
+function resolveClip(clip: { path?: string; bytes: Uint8Array }, intent: LoopIntent): Tier1Report {
+  const measured = measureClip(clip.bytes, clip.path ? { path: clip.path } : {});
+  if (!measured.ok) {
+    return {
+      status: 'error',
+      basis: TIER1_BASIS,
+      reason: `Tier-1 gate could not measure the clip: ${measured.error}`,
+      error: measured.error,
+      source: { kind: 'unreadable-clip', path: clip.path ?? null, sha256: sha256Hex(clip.bytes) },
+    };
+  }
+  const card = scoreLoopClosure(measured.data.metrics, intent);
+  return {
+    status: card.verdict, basis: TIER1_BASIS, reason: card.reason, card,
+    source: { kind: 'measured', ...measured.data.source },
+  };
 }
 
 /**

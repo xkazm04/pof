@@ -4,20 +4,22 @@ import { Suspense, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
+import { colourSpaceOf, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
 import type { PBRParams, PreviewMesh } from './useMaterialStore';
 import { buildStandardMaterialProps } from './materialPreviewProps';
 
 /**
  * Load a texture from a URL and dispose the previous one whenever the URL (or
- * color space) changes or the component unmounts. `colorSpace` must be
- * `SRGBColorSpace` for color maps (albedo) and `NoColorSpace` for data maps
- * (normal / metallic / roughness) — feeding a data map through sRGB decode
- * skews its values and renders the material subtly wrong.
+ * channel) changes or the component unmounts. The channel's role decides the
+ * colour space — `SRGBColorSpace` for colour maps (albedo), `NoColorSpace` for
+ * data maps (normal / metallic / roughness / AO) — because feeding a data map
+ * through sRGB decode skews its values and renders the material subtly wrong.
  */
 function useDisposableTexture(
   url: string | null,
-  colorSpace: THREE.ColorSpace,
+  channel: MaterialChannel,
 ): THREE.Texture | null {
+  const colorSpace = colourSpaceOf(channel) === 'srgb' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   const texture = useMemo(() => {
     if (!url) return null;
     const tex = new THREE.TextureLoader().load(url);
@@ -68,13 +70,13 @@ function MaterialMesh({
   roughnessTexture: string | null;
   aoTexture: string | null;
 }) {
-  // Albedo is a color map (sRGB); normal/metallic/roughness/AO are data maps and
-  // must stay in linear space (NoColorSpace) or their values get gamma-skewed.
-  const albedoMap = useDisposableTexture(albedoTexture, THREE.SRGBColorSpace);
-  const normalMap = useDisposableTexture(normalTexture, THREE.NoColorSpace);
-  const metallicMap = useDisposableTexture(metallicTexture, THREE.NoColorSpace);
-  const roughnessMap = useDisposableTexture(roughnessTexture, THREE.NoColorSpace);
-  const aoMap = useDisposableTexture(aoTexture, THREE.NoColorSpace);
+  // Each map's colour space comes from the lab's per-role table
+  // (material-boundary.ts) — the same one Blender and UE read.
+  const albedoMap = useDisposableTexture(albedoTexture, 'albedo');
+  const normalMap = useDisposableTexture(normalTexture, 'normal');
+  const metallicMap = useDisposableTexture(metallicTexture, 'metallic');
+  const roughnessMap = useDisposableTexture(roughnessTexture, 'roughness');
+  const aoMap = useDisposableTexture(aoTexture, 'ao');
 
   // The slot→material mapping is a pure function so it can be asserted directly
   // (see materialPreviewProps.ts) instead of only through a WebGL render.

@@ -4,15 +4,18 @@
  * Usage:
  *   node scripts/anim-critique.mjs --dir <frameDir> --intent "<how it should read>" \
  *     [--name AM_SwordSlashC] [--duration 1.2] [--cam main|side] [--model gemini-2.5-pro] [--url http://localhost:3000] \
- *     [--loop-markers <file with pof_loop_closure.py stdout>] [--oneshot]
+ *     [--npz <motion.npz>] [--loop-markers <file with pof_loop_closure.py stdout>] [--oneshot]
  *
  * Two tiers, reported side by side and never averaged: INTEGRITY (Tier-1, numeric loop
- * closure in millimetres — pass `--loop-markers`) and CRAFT (Tier-2, the VLM's six
+ * closure in millimetres — pass `--npz` and the route measures the clip itself, in-process,
+ * binding the verdict to the archive's sha256; `--loop-markers` is the legacy pasted-transcript
+ * input, labelled `caller-markers` in the report) and CRAFT (Tier-2, the VLM's six
  * dimensions). A Tier-1 fail skips the paid vision call entirely, and craft then prints as
  * NOT RUN rather than borrowing the integrity verdict.
  */
 import { argv } from 'node:process';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const arg = (name, def) => {
   const i = argv.indexOf(`--${name}`);
@@ -28,6 +31,7 @@ const model = arg('model');
 const provider = arg('provider'); // 'qwen' | 'gemini' (route default: gemini)
 const url = arg('url', 'http://localhost:3000');
 const loopMarkersFile = arg('loop-markers');
+const npz = arg('npz');
 const oneshot = argv.includes('--oneshot');
 
 if (!dir || !intent) {
@@ -39,10 +43,9 @@ const body = { name, intent, frameDir: dir, cam };
 if (duration) body.durationSeconds = Number(duration);
 if (model) body.model = model;
 if (provider) body.provider = provider;
-if (loopMarkersFile) {
-  body.loopMarkers = readFileSync(loopMarkersFile, 'utf8');
-  body.loopIntent = oneshot ? 'oneshot' : 'loop';
-}
+if (npz) body.motionPath = resolve(npz);
+if (loopMarkersFile) body.loopMarkers = readFileSync(loopMarkersFile, 'utf8');
+if (npz || loopMarkersFile) body.loopIntent = oneshot ? 'oneshot' : 'loop';
 
 const res = await fetch(`${url}/api/verify/animation`, {
   method: 'POST',
@@ -66,7 +69,16 @@ if (t1) {
   const m = t1.card?.metrics;
   const detail = m ? `  [pose ${m.poseGapMm} mm · worst joint ${m.worstJointMm} mm · seam ${m.velJumpMm} mm · ${m.frames} frames]` : '';
   console.log(`\n  TIER 1 · ${t1.status.toUpperCase()} — ${t1.basis}`);
-  console.log(`   ${t1.reason}${detail}`);
+  // What the verdict is bound to: a measured clip names its bytes; pasted markers say so.
+  const src = t1.source;
+  const bound = src?.kind === 'measured'
+    ? `
+   measured from ${src.path} · sha256 ${src.sha256.slice(0, 12)} · ${src.frames} frames @ ${src.fps ?? '?'} fps`
+    : src
+      ? `
+   source: ${src.kind}${src.kind === 'caller-markers' ? ' (pasted transcript — not bound to a clip)' : ''}`
+      : '';
+  console.log(`   ${t1.reason}${detail}${bound}`);
 }
 if (c.gated) {
   console.log(`\n  TIER 2 · NOT RUN — ${c.tier2?.basis ?? 'craft'}`);

@@ -2,31 +2,17 @@
 
 import { useState } from 'react';
 import { OVERLAY_WHITE, withOpacity, OPACITY_4, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
-import { ACCENT } from '../_shared/data';
-import { WEAPONS, parseDamageMidpoint } from '../_shared/data-metrics';
-import type { Weapon, WeaponCategory } from '../_shared/data-metrics';
-
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
-
-function weaponDps(w: Weapon): number {
-  const mid = parseDamageMidpoint(w.baseDamage);
-  const speed = parseFloat(w.attackSpeed);
-  const crit = parseInt(w.critChance);
-  return mid / speed * (1 + crit / 100);
-}
+import { ACCENT, WEAPON_ROSTER } from '../_shared/data';
 
 /* ── Grouped DPS Bar Chart ────────────────────────────────────────────── */
 
-const DPS_GROUPS = WEAPON_CATEGORIES.map(cat => {
-  const weapons = WEAPONS.filter(w => w.category === cat);
-  const dpsList = weapons.map(w => ({ weapon: w, dps: weaponDps(w) })).sort((a, b) => b.dps - a.dps);
-  const avgDps = dpsList.reduce((s, d) => s + d.dps, 0) / dpsList.length;
-  return { category: cat, weapons: dpsList, avgDps };
-});
-const DPS_GLOBAL_MAX = Math.max(...WEAPONS.map(w => weaponDps(w)));
+/** Groups, bars, avg lines and the axis all read the one weapon-DPS law (weapon-throughput). */
+const DPS_GROUPS = WEAPON_ROSTER.groups;
+const DPS_GLOBAL_MAX = WEAPON_ROSTER.globalMax || 1;
+type RosterRow = (typeof WEAPON_ROSTER.rows)[number];
 
 export function GroupedDpsBarChart() {
-  const [hoveredWeapon, setHoveredWeapon] = useState<Weapon | null>(null);
+  const [hoveredWeapon, setHoveredWeapon] = useState<RosterRow | null>(null);
 
   const svgW = 520;
   const svgH = 200;
@@ -51,19 +37,19 @@ export function GroupedDpsBarChart() {
         {/* Bars by category */}
         {DPS_GROUPS.map((group, gi) => {
           const gx = mLeft + gi * groupW;
-          const barW = Math.max(2, (groupW - 6) / group.weapons.length - 1);
+          const barW = Math.max(2, (groupW - 6) / group.rows.length - 1);
           return (
             <g key={group.category}>
               <text x={gx + groupW / 2} y={svgH - 4} textAnchor="middle" style={{ fontSize: 8 }} className="font-mono uppercase" fill="var(--text-muted)">{group.category}</text>
-              {group.weapons.map((entry, bi) => {
+              {group.rows.map((entry, bi) => {
                 const barH = Math.max(1, (entry.dps / DPS_GLOBAL_MAX) * chartH);
                 const x = gx + 3 + bi * (barW + 1);
                 const y = mTop + chartH - barH;
-                const isHov = hoveredWeapon?.id === entry.weapon.id;
+                const isHov = hoveredWeapon?.id === entry.id;
                 return (
-                  <rect key={entry.weapon.id} x={x} y={y} width={barW} height={barH} rx={1}
+                  <rect key={entry.id} x={x} y={y} width={barW} height={barH} rx={1}
                     fill={isHov ? entry.weapon.color : withOpacity(entry.weapon.color, OPACITY_50)}
-                    onMouseEnter={() => setHoveredWeapon(entry.weapon)}
+                    onMouseEnter={() => setHoveredWeapon(entry)}
                     onMouseLeave={() => setHoveredWeapon(null)}
                     style={{ cursor: 'pointer' }} />
                 );
@@ -80,14 +66,14 @@ export function GroupedDpsBarChart() {
       {hoveredWeapon && (
         <div className="absolute top-1 right-1 p-2 rounded border text-xs font-mono z-10" style={{
           backgroundColor: 'var(--surface-deep)',
-          borderColor: withOpacity(hoveredWeapon.color, OPACITY_30),
+          borderColor: withOpacity(hoveredWeapon.weapon.color, OPACITY_30),
         }}>
-          <div className="font-bold" style={{ color: hoveredWeapon.color }}>{hoveredWeapon.name}</div>
+          <div className="font-bold" style={{ color: hoveredWeapon.weapon.color }}>{hoveredWeapon.name}</div>
           <div className="text-text-muted mt-1 space-y-0.5">
-            <div>Damage: {hoveredWeapon.baseDamage}</div>
-            <div>Speed: {hoveredWeapon.attackSpeed}</div>
-            <div>Crit: {hoveredWeapon.critChance}</div>
-            <div className="font-bold mt-1" style={{ color: hoveredWeapon.color }}>DPS: {weaponDps(hoveredWeapon).toFixed(1)}</div>
+            <div>Damage: {hoveredWeapon.weapon.baseDamage}</div>
+            <div>Speed: {hoveredWeapon.weapon.attackSpeed}</div>
+            <div>Crit: {hoveredWeapon.weapon.critChance}</div>
+            <div className="font-bold mt-1" style={{ color: hoveredWeapon.weapon.color }}>DPS: {hoveredWeapon.dps.toFixed(1)}</div>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CheckCircle2, Info, AlertTriangle, AlertOctagon, Heart, Wrench, Sparkles,
 } from 'lucide-react';
@@ -13,6 +13,14 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { TEXT_SCALE } from '@/lib/typography-scale';
 import { buildBalanceHealthReport, type HealthSeverity, type HealthGrade, type HealthFinding } from './balanceHealth';
 import type { SimResults, SimScenario } from './data';
+import { FindingFix } from './FindingFix';
+import { rankFixes, type FixSolution } from './balanceFixes';
+
+/** Applies a solved fix: the caller swaps the scenario in and re-runs. */
+export type ApplyFix = (next: SimScenario, label: string) => void;
+
+/** The run a fix was applied over, so the next report can show before → after. */
+export interface AppliedFix { label: string; results: SimResults; scenario: SimScenario }
 
 const SEVERITY_COLORS: Record<HealthSeverity, string> = {
   good: STATUS_SUCCESS,
@@ -43,7 +51,10 @@ const GRADE_COLORS: Record<HealthGrade, string> = {
   F: STATUS_ERROR,
 };
 
-function FindingCard({ finding }: { finding: HealthFinding }) {
+function FindingCard({ finding, scenario, onApply, onSolved }: {
+  finding: HealthFinding; scenario: SimScenario; onApply?: ApplyFix;
+  onSolved?: (findingId: string, fixes: FixSolution[]) => void;
+}) {
   const color = SEVERITY_COLORS[finding.severity];
   const Icon = SEVERITY_ICONS[finding.severity];
   return (
@@ -93,14 +104,41 @@ function FindingCard({ finding }: { finding: HealthFinding }) {
             </span>
           </div>
         )}
+        {onApply && <FindingFix finding={finding} scenario={scenario} color={color} onApply={onApply} onSolved={onSolved} />}
       </div>
     </div>
   );
 }
 
-export function BalanceHealthReport({ results, scenario }: { results: SimResults; scenario: SimScenario }) {
+/**
+ * "What to try first": each suggestion, ranked by `rankFixes` once solved — the best
+ * measured grade change first, unsolved next (severity order), refused last. A
+ * solved suggestion reads as its best measured lever.
+ */
+function rankedRecommendations(findings: HealthFinding[], solved: Record<string, FixSolution[]>): string[] {
+  const items = findings.filter(f => f.suggestion).map(f => {
+    const fixes = solved[f.id];
+    if (!fixes) return { id: f.id, text: f.suggestion! };
+    const best = fixes.find(x => x.applicable && x.scoreDelta !== undefined);
+    if (!best) return { id: f.id, text: `${f.suggestion} (no single stat lands it)`, applicable: false };
+    const d = best.scoreDelta!;
+    return { id: f.id, scoreDelta: d, text: `${f.title}: ${best.label} fix measured grade ${best.before.grade}→${best.after!.grade} (${d >= 0 ? '+' : ''}${d} pts).` };
+  });
+  return rankFixes(items).slice(0, 4).map(i => i.text);
+}
+
+export function BalanceHealthReport({ results, scenario, onApply, applied }: {
+  results: SimResults; scenario: SimScenario; onApply?: ApplyFix; applied?: AppliedFix | null;
+}) {
   const report = useMemo(() => buildBalanceHealthReport(results, scenario), [results, scenario]);
+  const prior = useMemo(() => (applied ? buildBalanceHealthReport(applied.results, applied.scenario) : null), [applied]);
   const gradeColor = GRADE_COLORS[report.grade];
+  // Solved fixes belong to the run they were measured on; a new run starts clean.
+  const [solvedFor, setSolvedFor] = useState<{ results: SimResults; map: Record<string, FixSolution[]> }>({ results, map: {} });
+  const solved = solvedFor.results === results ? solvedFor.map : {};
+  const onSolved = (id: string, fixes: FixSolution[]) =>
+    setSolvedFor(prev => ({ results, map: { ...(prev.results === results ? prev.map : {}), [id]: fixes } }));
+  const recommendations = rankedRecommendations(report.findings, solved);
 
   return (
     <BlueprintPanel color={ACCENT_VIOLET} className="p-3 relative overflow-hidden">
@@ -130,18 +168,27 @@ export function BalanceHealthReport({ results, scenario }: { results: SimResults
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           <p className="text-sm font-semibold text-text leading-snug">{report.headline}</p>
           <p className={`${TEXT_SCALE.body} text-text-muted leading-relaxed mt-1`}>{report.narrative}</p>
+          {applied && prior && (
+            <span
+              data-testid="applied-fix-chip"
+              className="self-start mt-1.5 text-2xs font-mono px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: withOpacity(gradeColor, OPACITY_15), color: gradeColor }}
+            >
+              Applied {applied.label}: grade {prior.grade} {prior.score} → {report.grade} {report.score}, survival {Math.round(applied.results.survivalRate * 100)}% → {Math.round(results.survivalRate * 100)}%
+            </span>
+          )}
         </div>
       </div>
 
       {/* Findings */}
       <div className="mt-3 space-y-1.5">
         {report.findings.map(f => (
-          <FindingCard key={f.id} finding={f} />
+          <FindingCard key={f.id} finding={f} scenario={scenario} onApply={onApply} onSolved={onSolved} />
         ))}
       </div>
 
       {/* Top recommendations */}
-      {report.topRecommendations.length > 0 && (
+      {recommendations.length > 0 && (
         <div
           className="mt-3 rounded-md border p-2.5"
           style={{
@@ -156,7 +203,7 @@ export function BalanceHealthReport({ results, scenario }: { results: SimResults
             </span>
           </div>
           <ol className="space-y-1 list-none">
-            {report.topRecommendations.map((rec, i) => (
+            {recommendations.map((rec, i) => (
               <li key={i} className={`flex gap-2 ${TEXT_SCALE.body} text-text leading-relaxed`}>
                 <span
                   className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-mono font-bold text-2xs"

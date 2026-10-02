@@ -1,11 +1,13 @@
 import { safeDivide } from '@/lib/math-utils';
+import { ENCOUNTER_ENVELOPE } from './encounter-findings';
 
 /**
  * Dramatic tension model for combat encounters.
  *
- * Extends the choreography sim's 2s damage-bucket analysis into a continuous
- * emotional-pacing curve: intensity (combat flux) blended with threat (player
- * jeopardy) into a single 0–1 arc, then mined for narrative "beats" — climax,
+ * Extends the choreography sim's damage-bucket analysis into a continuous
+ * emotional-pacing curve: intensity (combat flux on a fixed basis, see
+ * TensionBasis) blended with threat (player jeopardy) into a single 0–1 arc,
+ * then mined for narrative "beats" — climax,
  * near-death spikes, comebacks, breathers — plus pacing defects (dead zones,
  * anticlimactic finishes, flat pacing) so a fight can be sculpted like a story.
  *
@@ -32,7 +34,7 @@ export interface ComputeTensionInput {
   playerDied: boolean;
   /** Curve sample resolution, default 0.5s */
   sampleStepSec?: number;
-  /** Sliding window for the intensity flux, default 2s (matches alert buckets) */
+  /** Sliding window for the intensity flux, default ENCOUNTER_ENVELOPE.bucketSec */
   windowSec?: number;
 }
 
@@ -40,7 +42,7 @@ export interface TensionSample {
   timeSec: number;
   /** 0–1 smoothed dramatic tension */
   tension: number;
-  /** 0–1 combat activity (normalized damage flux) */
+  /** 0–1 combat activity (damage flux / basis.intensityReference) */
   intensity: number;
   /** 0–1 player jeopardy (1 − hp/maxHp) */
   threat: number;
@@ -60,6 +62,20 @@ export type DramaticBeatType =
 /** Whether a beat is a high point, a release, or a pacing problem */
 export type BeatTone = 'peak' | 'valley' | 'issue';
 
+/** The one tone table: a beat's tone is a property of its type. */
+export const BEAT_TONE = {
+  climax: 'peak',
+  'near-death': 'peak',
+  comeback: 'peak',
+  breather: 'valley',
+  'dead-zone': 'issue',
+  anticlimax: 'issue',
+  'flat-pacing': 'issue',
+} as const satisfies Record<DramaticBeatType, BeatTone>;
+
+/** Beat types that are pacing problems — each is promoted to exactly one encounter finding. */
+export type IssueBeatType = { [K in DramaticBeatType]: (typeof BEAT_TONE)[K] extends 'issue' ? K : never }[DramaticBeatType];
+
 export interface DramaticBeat {
   type: DramaticBeatType;
   timeSec: number;
@@ -71,6 +87,20 @@ export interface DramaticBeat {
   tone: BeatTone;
 }
 
+/**
+ * The fixed basis intensity is measured on, so two curves are comparable: a
+ * window whose (crit-weighted) damage flux equals `intensityReference` — the
+ * effective player HP — reads as intensity 1. Not normalized by the fight's own peak.
+ */
+export interface TensionBasis {
+  windowSec: number;
+  sampleStepSec: number;
+  /** Flux per window that reads as intensity 1 (effective player max HP) */
+  intensityReference: number;
+  /** Diagnostic only: the largest flux this fight produced in one window */
+  observedPeakFlux: number;
+}
+
 export interface TensionCurve {
   samples: TensionSample[];
   beats: DramaticBeat[];
@@ -80,7 +110,12 @@ export interface TensionCurve {
   dynamicRange: number;
   /** One-line read of the dramatic arc */
   summary: string;
+  /** The basis intensity was measured on (always set by computeTensionCurve) */
+  basis?: TensionBasis;
 }
+
+/** A curve as computeTensionCurve returns it: the basis is always declared. */
+export type MeasuredTensionCurve = TensionCurve & { basis: TensionBasis };
 
 const BEAT_LABELS: Record<DramaticBeatType, string> = {
   climax: 'Climax',
@@ -97,9 +132,10 @@ const r3 = (v: number): number => Math.round(v * 1000) / 1000;
 
 // ── Model ────────────────────────────────────────────────────────────────────
 
-export function computeTensionCurve(input: ComputeTensionInput): TensionCurve {
+export function computeTensionCurve(input: ComputeTensionInput): MeasuredTensionCurve {
   const step = input.sampleStepSec ?? 0.5;
-  const half = (input.windowSec ?? 2) / 2;
+  const windowSec = input.windowSec ?? ENCOUNTER_ENVELOPE.bucketSec;
+  const half = windowSec / 2;
   const duration = Math.max(input.totalDurationSec, step);
   const maxHp = input.playerMaxHp > 0 ? input.playerMaxHp : 1;
   const events = input.damageEvents;
@@ -122,7 +158,8 @@ export function computeTensionCurve(input: ComputeTensionInput): TensionCurve {
   }
 
   const blended = raw.map((r) => {
-    const intensity = clamp01(safeDivide(r.flux, maxFlux, 0));
+    // Fixed basis: flux against the effective player HP, not this fight's own peak.
+    const intensity = clamp01(safeDivide(r.flux, maxHp, 0));
     let tension = clamp01(0.45 * intensity + 0.55 * r.threat);
     if (r.hpFrac < 0.25) tension = clamp01(tension + 0.18); // near-death emphasis
     return { ...r, intensity, tension };
@@ -144,7 +181,8 @@ export function computeTensionCurve(input: ComputeTensionInput): TensionCurve {
   const hasActivity = maxFlux > 0;
   let peakTension = 0;
   let climaxIdx = 0;
-  samples.forEach((s, i) => { if (s.tension > peakTension) { peakTension = s.tension; climaxIdx = i; } });
+  // On a fixed basis tension can saturate in several places; the climax is the LAST time it reaches its peak.
+  samples.forEach((s, i) => { if (s.tension > 0 && s.tension >= peakTension) { peakTension = s.tension; climaxIdx = i; } });
 
   // Dynamic range over the interior (drop edge windows that catch fewer events).
   const interior = samples.length > 2 ? samples.slice(1, -1) : samples;
@@ -153,10 +191,12 @@ export function computeTensionCurve(input: ComputeTensionInput): TensionCurve {
   const dynamicRange = r3(Math.max(0, hi - lo));
 
   const beats = hasActivity
-    ? detectBeats(samples, blended, events, { duration, peakTension, climaxIdx, dynamicRange, playerDied: input.playerDied })
+    ? detectBeats(samples, blended, events, { duration, peakTension, climaxIdx, dynamicRange, playerDied: input.playerDied, windowSec })
     : [];
 
-  return { samples, beats, peakTension: r3(peakTension), climaxTimeSec: samples[climaxIdx]?.timeSec ?? 0, dynamicRange, summary: buildSummary(hasActivity, beats, peakTension, samples[climaxIdx]?.timeSec ?? 0) };
+  const climaxTimeSec = samples[climaxIdx]?.timeSec ?? 0;
+  const basis: TensionBasis = { windowSec, sampleStepSec: step, intensityReference: maxHp, observedPeakFlux: r3(maxFlux) };
+  return { samples, beats, peakTension: r3(peakTension), climaxTimeSec, dynamicRange, summary: buildSummary(hasActivity, beats, peakTension, climaxTimeSec), basis };
 }
 
 // ── Beat detection ─────────────────────────────────────────────────────────
@@ -165,26 +205,26 @@ function detectBeats(
   samples: TensionSample[],
   blended: { flux: number; hpFrac: number }[],
   events: TensionDamageEvent[],
-  ctx: { duration: number; peakTension: number; climaxIdx: number; dynamicRange: number; playerDied: boolean },
+  ctx: { duration: number; peakTension: number; climaxIdx: number; dynamicRange: number; playerDied: boolean; windowSec: number },
 ): DramaticBeat[] {
   const beats: DramaticBeat[] = [];
-  const beat = (type: DramaticBeatType, timeSec: number, detail: string, tone: BeatTone, endTimeSec?: number): DramaticBeat =>
-    ({ type, timeSec, endTimeSec, label: BEAT_LABELS[type], detail, tone });
+  const beat = (type: DramaticBeatType, timeSec: number, detail: string, endTimeSec?: number): DramaticBeat =>
+    ({ type, timeSec, endTimeSec, label: BEAT_LABELS[type], detail, tone: BEAT_TONE[type] });
 
   if (ctx.peakTension >= 0.2) {
-    beats.push(beat('climax', samples[ctx.climaxIdx].timeSec, `Peak tension ${Math.round(ctx.peakTension * 100)}%`, 'peak'));
+    beats.push(beat('climax', samples[ctx.climaxIdx].timeSec, `Peak tension ${Math.round(ctx.peakTension * 100)}%`));
   }
 
   // Near-death regions (hp < 25%) → one beat at each region's lowest point.
   forEachRegion(samples, (s) => s.hpFrac < 0.25, (start, end) => {
     let lowIdx = start;
     for (let i = start; i <= end; i++) if (samples[i].hpFrac < samples[lowIdx].hpFrac) lowIdx = i;
-    beats.push(beat('near-death', samples[lowIdx].timeSec, `Player dropped to ${Math.round(samples[lowIdx].hpFrac * 100)}% HP`, 'peak'));
+    beats.push(beat('near-death', samples[lowIdx].timeSec, `Player dropped to ${Math.round(samples[lowIdx].hpFrac * 100)}% HP`));
     // Comeback: survived the brush with death well before the end and kept fighting.
     if (!ctx.playerDied && samples[end].timeSec < ctx.duration * 0.8) {
       const recoverAt = samples[end].timeSec;
       if (events.some((e) => e.source === 'Player' && e.timeSec > recoverAt)) {
-        beats.push(beat('comeback', recoverAt, 'Pulled through a near-death moment and fought on', 'peak'));
+        beats.push(beat('comeback', recoverAt, 'Pulled through a near-death moment and fought on'));
       }
     }
   });
@@ -201,7 +241,7 @@ function detectBeats(
     if (!isMin) continue;
     if (prefixMax[i - 1] - t > 0.2 && suffixMax[i + 1] - t > 0.2 && samples[i].timeSec - lastBreather >= 3) {
       lastBreather = samples[i].timeSec;
-      beats.push(beat('breather', samples[i].timeSec, 'A lull between intense moments', 'valley'));
+      beats.push(beat('breather', samples[i].timeSec, 'A lull between intense moments'));
     }
   }
 
@@ -209,9 +249,9 @@ function detectBeats(
   forEachRegion(samples, (_s, i) => blended[i].flux === 0, (start, end) => {
     const t0 = samples[start].timeSec;
     const t1 = samples[end].timeSec;
-    if (t1 - t0 < 2) return;
+    if (t1 - t0 < ctx.windowSec) return;
     if (events.some((e) => e.timeSec < t0) && events.some((e) => e.timeSec > t1)) {
-      beats.push(beat('dead-zone', t0, `No combat for ${(t1 - t0).toFixed(1)}s — pacing stalls`, 'issue', t1));
+      beats.push(beat('dead-zone', t0, `No combat for ${(t1 - t0).toFixed(1)}s — pacing stalls`, t1));
     }
   });
 
@@ -221,13 +261,13 @@ function detectBeats(
     const tail = samples.slice(tailStart);
     const tailAvg = tail.reduce((s, x) => s + x.tension, 0) / Math.max(1, tail.length);
     if (tailAvg < ctx.peakTension * 0.5) {
-      beats.push(beat('anticlimax', samples[samples.length - 1].timeSec, 'Tension peaks early then fizzles before the end', 'issue'));
+      beats.push(beat('anticlimax', samples[samples.length - 1].timeSec, 'Tension peaks early then fizzles before the end'));
     }
   }
 
   // Flat pacing: tension never moves across the whole fight.
   if (ctx.duration > 5 && ctx.dynamicRange < 0.18) {
-    beats.push(beat('flat-pacing', samples[0].timeSec, 'Tension never builds or releases — monotonous pacing', 'issue', samples[samples.length - 1].timeSec));
+    beats.push(beat('flat-pacing', samples[0].timeSec, 'Tension never builds or releases — monotonous pacing', samples[samples.length - 1].timeSec));
   }
 
   return beats.sort((a, b) => a.timeSec - b.timeSec || a.type.localeCompare(b.type));
@@ -255,6 +295,7 @@ function buildSummary(hasActivity: boolean, beats: DramaticBeat[], peakTension: 
   if (!hasActivity) return 'No combat activity to pace.';
   const has = (t: DramaticBeatType) => beats.some((b) => b.type === t);
   if (has('flat-pacing')) return 'Flat pacing — the fight never builds or releases.';
+  if (!has('climax')) return `Low stakes — tension never rises above ${Math.round(peakTension * 100)}%.`;
   const parts = [`Builds to a ${Math.round(peakTension * 100)}% climax at ${climaxTimeSec}s`];
   if (has('near-death')) parts.push('with a near-death spike');
   if (has('comeback')) parts.push('and a comeback');

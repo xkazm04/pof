@@ -132,4 +132,18 @@ describe('readAllJudgeVerdicts — Result-keeping, on the existing 60 s cache', 
     const v = result.current.verdicts!;
     expect(v.ok && v.byCatalog.get('items')).toEqual([fail('e1')]);
   });
+
+  it('a lab-side invalidation that lands new rows reaches a mounted useStatusVerdicts without its reload (lab-hooks/A)', async () => {
+    const { result } = renderHook(() => useStatusVerdicts());
+    await waitFor(() => expect(result.current.verdicts?.ok).toBe(true));
+    verdictBody = () => ({ success: true, data: [fail('e1')] });
+    act(() => invalidateJudgeVerdicts('items'));
+    // Revalidating: the held (stale) read stays on screen — never a loading null.
+    expect(result.current.verdicts?.ok).toBe(true);
+    await waitFor(() => {
+      const v = result.current.verdicts;
+      expect(v?.ok && v.byCatalog.get('items')).toEqual([fail('e1')]);
+    });
+    expect(verdictGets()).toBe(2);
+  });
 });

@@ -1,8 +1,16 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { SEVERITY_TOKENS, withOpacity, OPACITY_10 } from '@/lib/chart-colors';
 import type { RegressionAlert } from '@/lib/ue5-bridge/build-health';
 
-export function RegressionBanner({ regressions }: { regressions: RegressionAlert[] }) {
+/**
+ * `onRebuild` re-runs the alert's build with its identical request, so the next
+ * point in the lane confirms or clears the regression.
+ */
+export function RegressionBanner({ regressions, onRebuild, rebuildDisabled }: {
+  regressions: RegressionAlert[];
+  onRebuild?: (buildId: string) => void;
+  rebuildDisabled?: boolean;
+}) {
   return (
     <div data-testid="build-health-regressions" className="space-y-2">
       {regressions.map((r) => {
@@ -31,6 +39,18 @@ export function RegressionBanner({ regressions }: { regressions: RegressionAlert
               </div>
               <p className="text-xs text-text-muted-hover leading-relaxed mt-0.5">{r.message}</p>
             </div>
+            {onRebuild && (
+              <button
+                onClick={() => onRebuild(r.buildId)}
+                disabled={rebuildDisabled}
+                title="Re-run this build's target, configuration and platform"
+                className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium flex-shrink-0 disabled:opacity-40"
+                style={{ color: token.color, border: `1px solid ${token.border}` }}
+              >
+                <RotateCcw className="w-3 h-3" />
+                Rebuild to confirm
+              </button>
+            )}
           </div>
         );
       })}

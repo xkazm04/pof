@@ -10,13 +10,21 @@ import {
   generateImportScript,
   generateDataAsset,
   DEFAULT_IMPORT_CONFIG,
+  formatScale,
+  importPlanFor,
   type ImportConfig,
 } from '@/lib/visual-gen/ue5-import-templates';
+import type { CollisionUse } from '@/lib/visual-gen/ue-import-plan';
+
+const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
 
 function ConfigTab() {
   const [config, setConfig] = useState<ImportConfig>({ ...DEFAULT_IMPORT_CONFIG });
   const [activeOutput, setActiveOutput] = useState<'import' | 'dataasset'>('import');
   const [copied, setCopied] = useState(false);
+
+  const plan = useMemo(() => importPlanFor(config), [config]);
+  const glb = config.format !== 'fbx';
 
   const output = useMemo(() => {
     return activeOutput === 'import'
@@ -86,17 +94,30 @@ function ConfigTab() {
           </div>
         </div>
 
-        <div>
-          <StyledSlider
-            min={0.01}
-            max={100}
-            step={0.1}
-            value={config.scale}
-            onChange={(v) => updateConfig('scale', v)}
-            accentColor="var(--visual-gen)"
-            label={`Scale: ${config.scale.toFixed(1)}`}
-          />
-        </div>
+        {glb ? (
+          <div>
+            <label className="text-xs text-text-muted mb-1 block">Source .glb / .gltf</label>
+            <input
+              type="text"
+              value={config.sourcePath}
+              placeholder={`generated/mesh-finish/${config.assetName}.glb`}
+              onChange={(e) => updateConfig('sourcePath', e.target.value)}
+              className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text font-mono focus:outline-none focus:border-[var(--visual-gen)]"
+            />
+          </div>
+        ) : (
+          <div>
+            <StyledSlider
+              min={0.01}
+              max={100}
+              step={0.01}
+              value={config.scale}
+              onChange={(v) => updateConfig('scale', v)}
+              accentColor="var(--visual-gen)"
+              label={`FBX scale: ${formatScale(config.scale)}`}
+            />
+          </div>
+        )}
 
         <div>
           <label className="text-xs text-text-muted mb-1 block">Content Path</label>
@@ -108,15 +129,43 @@ function ConfigTab() {
           />
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer">
+        <div>
+          <label className="text-xs text-text-muted mb-1 block">Use (decides collision)</label>
+          <div className="flex gap-1.5" role="radiogroup" aria-label="What the asset is for">
+            {USES.map((u) => (
+              <button
+                key={u}
+                role="radio"
+                aria-checked={config.use === u}
+                onClick={() => updateConfig('use', u)}
+                className={`flex-1 px-2 py-1 rounded text-xs capitalize ${
+                  config.use === u
+                    ? 'bg-[var(--visual-gen)] text-white'
+                    : 'text-text-muted border border-border hover:text-text'
+                }`}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-text-muted mb-1 block">Shells (declared — nothing here measures the mesh)</label>
           <input
-            type="checkbox"
-            checked={config.generateCollision}
-            onChange={(e) => updateConfig('generateCollision', e.target.checked)}
-            className="rounded"
+            type="number"
+            min={1}
+            value={config.components ?? ''}
+            onChange={(e) => updateConfig('components', e.target.value ? Math.max(1, Math.floor(Number(e.target.value))) : undefined)}
+            className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text font-mono focus:outline-none focus:border-[var(--visual-gen)]"
           />
-          Auto-generate collision
-        </label>
+        </div>
+
+        <p className="text-2xs text-text-muted leading-snug" aria-live="polite">
+          {plan
+            ? `Collision: ${plan.collision.kind} (${plan.collisionBasis}). ${glb ? 'Scale: derived by the import route from the measured mesh — never typed here.' : 'FBX: the importer’s one-box collision stays off.'}`
+            : 'Pick a use — no default is safe.'}
+        </p>
 
         <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer">
           <input

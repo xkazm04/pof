@@ -15,6 +15,7 @@ const T = readCanonThresholds();
 const cell = (o: Partial<HeatmapCell> = {}): HeatmapCell => ({
   playerLevel: 10,
   enemyLabel: '1x Test Dummy',
+  encounterIndex: 0,
   survivalRate: 0.5,
   avgTTK: 10,
   avgDPS: 20,

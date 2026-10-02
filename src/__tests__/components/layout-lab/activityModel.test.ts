@@ -7,6 +7,9 @@ import {
   type ActivityInput,
   type DrainInput,
 } from '@/components/layout-lab/activityModel';
+import { fromLabActivity } from '@/lib/shell/tabAttention';
+import { emptyBatchSummary, type BatchDrainSummary } from '@/components/layout-lab/batchDrainModel';
+import type { DrainRun } from '@/components/layout-lab/labRunnerStore';
 
 const IDLE_INPUT: ActivityInput = {
   drain: { localDrain: null, lease: { held: false, scope: null, since: null, scopes: [] }, leaseProbe: 'ok' },
@@ -127,5 +130,56 @@ describe('summarizeActivity — one answer for the whole lab', () => {
     expect(s.detail).toContain('spellbook/s1');
     // The failed job is still readable in the per-lane detail — nothing is swallowed.
     expect(s.detail).toContain('failed');
+  });
+});
+
+const FREE = { held: false, scope: null, since: null, scopes: [] };
+const batchRun = (over: Partial<DrainRun> & { summary?: BatchDrainSummary | null }): DrainRun => ({
+  id: 'batch:items', kind: 'batch', catalogId: 'items', entityIds: ['e1', 'e2'], scope: 'items · 2 sets',
+  phase: 'done', cancelRequested: false, cancelEffect: null, summary: emptyBatchSummary(), startedAt: 1, ...over,
+});
+
+describe('drainLane — a finished drain is reported by its OUTCOME, not as idle', () => {
+  it('a done batch with a failed gate needs you, names the catalog and reads as Failed in the tab', () => {
+    const failedRun = batchRun({ summary: { ...emptyBatchSummary(), entitiesRun: 2, ran: 2, passed: 1, failed: 1 } });
+    const lane = drainLane({ runs: [failedRun], lease: null, leaseProbe: 'ok' });
+    expect(lane.state).toBe('attention');
+    expect(lane.label).toContain('items');
+    expect(lane.label).toMatch(/· failed$/);
+
+    const running = summarizeActivity({ ...IDLE_INPUT, drain: { runs: [batchRun({ phase: 'running' })], lease: null, leaseProbe: 'ok' } });
+    const ended = summarizeActivity({ ...IDLE_INPUT, drain: { runs: [failedRun], lease: null, leaseProbe: 'ok' } });
+    expect(running.lanes[0].state).toBe('running-here');
+    expect(fromLabActivity(running, ended).ended).toEqual(['failed']);
+  });
+
+  it('a done batch that ran 0 gates (all skipped) is attention saying 0 gates ran — never idle', () => {
+    const lane = drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), ran: 0, skipped: 3 } })], lease: FREE, leaseProbe: 'ok' });
+    expect(lane.state).toBe('attention');
+    expect(lane.label).toMatch(/0 gates ran/);
+    expect(lane.label).toMatch(/· failed$/);
+  });
+
+  it('a locked or errored batch is attention too', () => {
+    expect(drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), entitiesLocked: 2 } })], lease: FREE, leaseProbe: 'ok' }).state).toBe('attention');
+    expect(drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), entitiesErrored: 2 } })], lease: FREE, leaseProbe: 'ok' }).state).toBe('attention');
+  });
+
+  it('a clean done batch falls back to the lease (idle when free)', () => {
+    const lane = drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), entitiesRun: 2, ran: 2, passed: 2 } })], lease: FREE, leaseProbe: 'ok' });
+    expect(lane.state).toBe('idle');
+  });
+
+  it('a running batch with a registered cancel says so from the run flag', () => {
+    const lane = drainLane({ runs: [batchRun({ phase: 'running', cancelRequested: true })], lease: null, leaseProbe: 'unpolled' });
+    expect(lane.state).toBe('running-here');
+    expect(lane.label).toContain('items · 2 sets');
+    expect(lane.label).toContain('cancel requested');
+  });
+
+  it('a lease held elsewhere still outranks a finished local run', () => {
+    const failedRun = batchRun({ summary: { ...emptyBatchSummary(), ran: 1, failed: 1 } });
+    const lane = drainLane({ runs: [failedRun], lease: { held: true, scope: 'spellbook/s1', since: null, scopes: [] }, leaseProbe: 'ok' });
+    expect(lane.state).toBe('running-elsewhere');
   });
 });

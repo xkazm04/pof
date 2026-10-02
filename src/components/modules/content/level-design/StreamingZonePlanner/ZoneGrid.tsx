@@ -13,6 +13,8 @@ interface ZoneGridProps {
   handleCellClick: (x: number, y: number) => void;
   deleteTransition: (id: string) => void;
   selectedZoneId: string | null;
+  /** Zones resident while the player stands in the selected zone (streaming preflight residency). */
+  residentIds?: ReadonlySet<string> | null;
 }
 
 export function ZoneGrid({
@@ -25,6 +27,7 @@ export function ZoneGrid({
   handleCellClick,
   deleteTransition,
   selectedZoneId,
+  residentIds = null,
 }: ZoneGridProps) {
   return (
     <div className="flex-1 min-w-[550px] bg-[#03030a] rounded-2xl border-2 border-surface-deep shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-4 relative overflow-hidden flex items-center justify-center">
@@ -88,6 +91,7 @@ export function ZoneGrid({
             key={zone.id}
             zone={zone}
             selectedZoneId={selectedZoneId}
+            isResident={residentIds?.has(zone.id) ?? false}
             linkingFrom={linkingFrom}
             paintType={paintType}
             handleCellClick={handleCellClick}

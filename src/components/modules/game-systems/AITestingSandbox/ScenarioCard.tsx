@@ -17,6 +17,8 @@ import { STATUS_META, SYSTEMS_ACCENT } from './constants';
 import { DebouncedTextarea } from './DebouncedFields';
 import { StimuliEditor, ExpectedActionsEditor } from './ScenarioEditors';
 import { getRunFreshness, describeRunFreshness } from './runFreshness';
+import { classifyTrend } from '@/lib/ai-testing/run-trend';
+import { RunTrendStrip, TrendChip } from './RunTrendStrip';
 
 // ── Scenario Card ──
 
@@ -45,6 +47,9 @@ export function ScenarioCard({
   // predates the scenario's last edit is stale, not green. Never rewrites status.
   const freshness = getRunFreshness(scenario);
   const freshnessNote = describeRunFreshness(freshness.state);
+  // Display-only too: what changed since the previous report-graded run.
+  const history = scenario.history ?? [];
+  const trend = classifyTrend(history);
 
   const handleAddStimulus = () => {
     const newStimulus: MockStimulus = {
@@ -110,6 +115,9 @@ export function ScenarioCard({
         <span className="text-2xs text-text-muted flex-shrink-0 hidden sm:inline">
           {freshness.ranAtMs === null ? 'never run' : `ran ${formatTimeAgo(freshness.ranAtMs, { extended: true })}`}
         </span>
+
+        <RunTrendStrip name={scenario.name} history={history} />
+        <TrendChip trend={trend} />
 
         {/* Stale marker — the scenario was edited after the run that produced the
             status, so the pill describes an older definition. Glyph + word, not hue. */}

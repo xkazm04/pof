@@ -5,8 +5,8 @@
  * from pin names and unquoted defaults presented as a clean transpile. The
  * fidelity line is always present and is derived from the warning list.
  */
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { TranspilePane } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/TranspilePane';
 import type { TranspileResult } from '@/types/blueprint';
 
@@ -25,12 +25,12 @@ function result(partial: Partial<TranspileResult> = {}): TranspileResult {
   };
 }
 
-function renderPane(r: TranspileResult) {
+function renderPane(r: TranspileResult, extra: { stale?: boolean; onTranspile?: () => void; projectPath?: string } = {}) {
   return render(
     <TranspilePane
       blueprintJson="{}"
       setBlueprintJson={() => {}}
-      onTranspile={() => {}}
+      onTranspile={extra.onTranspile ?? (() => {})}
       onLoadSample={() => {}}
       isLoading={false}
       error={null}
@@ -41,7 +41,8 @@ function renderPane(r: TranspileResult) {
       setShowCode={() => {}}
       moduleName="PoF"
       onModuleChange={() => {}}
-      projectPath=""
+      projectPath={extra.projectPath ?? ''}
+      stale={extra.stale}
     />,
   );
 }
@@ -65,5 +66,23 @@ describe('TranspilePane — fidelity readout', () => {
     renderPane(result({ nodeCount: 4, warnings: [] }));
     expect(screen.getByTestId('transpile-fidelity').textContent)
       .toBe('4 of 4 nodes translated');
+  });
+});
+
+describe('TranspilePane — a result for a Blueprint that has since changed', () => {
+  afterEach(() => cleanup());
+
+  it('hides Write to Project and offers a re-transpile that calls onTranspile once', () => {
+    const onTranspile = vi.fn();
+    renderPane(result(), { stale: true, onTranspile, projectPath: 'C:/proj' });
+    expect(screen.queryByText('Write to Project')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Blueprint changed - re-transpile/ }));
+    expect(onTranspile).toHaveBeenCalledTimes(1);
+  });
+
+  it('[guard] a fresh result keeps Write to Project', () => {
+    renderPane(result(), { stale: false, projectPath: 'C:/proj' });
+    expect(screen.getByText('Write to Project')).toBeTruthy();
+    expect(screen.queryByText(/Blueprint changed/)).toBeNull();
   });
 });

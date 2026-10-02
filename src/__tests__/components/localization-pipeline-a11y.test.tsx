@@ -105,7 +105,7 @@ describe('LocalizationPipelineView is keyboard / screen-reader accessible', () =
   it('renders the sub-tab nav as a tablist of tabs with aria-selected', () => {
     render(<LocalizationPipelineView />);
     const tablist = screen.getByRole('tablist', { name: /localization views/i });
-    expect(within(tablist).getAllByRole('tab')).toHaveLength(6);
+    expect(within(tablist).getAllByRole('tab')).toHaveLength(7);
 
     const overview = screen.getByRole('tab', { name: /overview/i });
     const strings = screen.getByRole('tab', { name: /strings/i });

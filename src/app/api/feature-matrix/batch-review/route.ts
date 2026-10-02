@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
-import { startExecution, getExecution, subscribeToExecution, abortExecution } from '@/lib/claude-terminal/cli-service';
+import { startExecution } from '@/lib/claude-terminal/cli-service';
+import { settleExecution } from '@/lib/claude-terminal/run-settle';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { TaskFactory, buildTaskPrompt, extractCallbackPayload, resolveCallback } from '@/lib/cli-task';
+import { TaskFactory, buildTaskPrompt, resolveCallback } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { getOriginFromRequest } from '@/lib/constants';
+import { getOriginFromRequest, UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import type { BatchReviewAbortRequest, BatchReviewStartRequest, BatchReviewState } from '@/types/batch-review';
 import { resolveBatchModules } from '@/lib/evaluator/stale-review-plan';
@@ -12,7 +13,8 @@ import { resolveBatchModules } from '@/lib/evaluator/stale-review-plan';
 // ── In-memory batch state (single batch at a time) ──
 
 let activeBatch: BatchReviewState | null = null;
-let batchAborted = false;
+/** Aborting it cancels the batch AND kills the module run in flight (settleExecution). */
+let batchController: AbortController | null = null;
 
 function getModulesWithDefinitions(): { moduleId: SubModuleId; label: string; featureCount: number }[] {
   return Object.entries(MODULE_FEATURE_DEFINITIONS)
@@ -24,44 +26,11 @@ function getModulesWithDefinitions(): { moduleId: SubModuleId; label: string; fe
     }));
 }
 
-async function waitForExecution(executionId: string, timeoutMs = 600000): Promise<{ result: 'completed' | 'error' | 'aborted'; assistantOutput: string }> {
-  let assistantOutput = '';
-
-  // Subscribe to events to collect assistant output for callback processing
-  const unsub = subscribeToExecution(executionId, (event) => {
-    if (event.type === 'text') {
-      const content = event.data.content as string | undefined;
-      if (content) {
-        assistantOutput += content;
-      }
-    }
-  });
-
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (batchAborted) {
-      unsub?.();
-      // Stopping the wait is not stopping the work — kill the CLI process
-      // too, or the "aborted" review keeps burning tokens to completion.
-      abortExecution(executionId);
-      return { result: 'aborted', assistantOutput };
-    }
-    const exec = getExecution(executionId);
-    if (!exec) { unsub?.(); return { result: 'error', assistantOutput }; }
-    if (exec.status === 'completed') { unsub?.(); return { result: 'completed', assistantOutput }; }
-    if (exec.status === 'error' || exec.status === 'aborted') { unsub?.(); return { result: exec.status, assistantOutput }; }
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-  unsub?.();
-  abortExecution(executionId); // timeout: the runaway review must not keep running
-  return { result: 'error', assistantOutput }; // timeout
-}
-
-async function runBatchReview(projectPath: string, projectName: string, ueVersion: string, appOrigin: string) {
+async function runBatchReview(projectPath: string, projectName: string, ueVersion: string, appOrigin: string, signal: AbortSignal) {
   if (!activeBatch) return;
 
   for (let i = 0; i < activeBatch.modules.length; i++) {
-    if (batchAborted) {
+    if (signal.aborted) {
       activeBatch.status = 'aborted';
       activeBatch.completedAt = new Date().toISOString();
       return;
@@ -90,9 +59,14 @@ async function runBatchReview(projectPath: string, projectName: string, ueVersio
       });
       mod.executionId = executionId;
 
-      const { result, assistantOutput } = await waitForExecution(executionId);
+      // One settlement (run-settle.ts): ends the moment the run ends, with a typed reason.
+      const settled = await settleExecution(executionId, {
+        expect: 'callback',
+        timeoutMs: UI_TIMEOUTS.batchReviewTimeout,
+        signal,
+      });
 
-      if (result === 'aborted') {
+      if (!settled.ok && settled.error.reason === 'cancelled' && signal.aborted) {
         mod.status = 'error';
         mod.error = 'Batch aborted';
         mod.completedAt = new Date().toISOString();
@@ -101,16 +75,18 @@ async function runBatchReview(projectPath: string, projectName: string, ueVersio
         return;
       }
 
-      // Process structured callback from assistant output
-      if (result === 'completed' && assistantOutput) {
-        const cbMatch = extractCallbackPayload(assistantOutput);
-        if (cbMatch) {
-          await resolveCallback(cbMatch.callbackId, cbMatch.payload);
-        }
+      if (!settled.ok) {
+        // A run that recorded nothing is a failure with its reason, never `completed`.
+        mod.status = 'error';
+        mod.error = `${settled.error.reason}: ${settled.error.message}`;
+      } else {
+        const cb = settled.data.callback; // always set when expect is 'callback'
+        const posted = cb
+          ? await resolveCallback(cb.callbackId, cb.payload)
+          : { success: false, error: 'no callback marker' };
+        mod.status = posted.success ? 'completed' : 'error';
+        if (!posted.success) mod.error = `callback-rejected: ${posted.error ?? 'unknown'}`;
       }
-
-      mod.status = result === 'completed' ? 'completed' : 'error';
-      if (result === 'error') mod.error = 'CLI execution failed';
       mod.completedAt = new Date().toISOString();
     } catch (err) {
       mod.status = 'error';
@@ -147,7 +123,7 @@ export async function POST(request: NextRequest) {
     // Abort active batch
     if ('action' in raw && raw.action === 'abort') {
       if (activeBatch && activeBatch.status === 'running') {
-        batchAborted = true;
+        batchController?.abort();
         return apiSuccess({ message: 'Batch abort requested' });
       }
       return apiError('No active batch to abort', 400);
@@ -182,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     const batchId = `batch-${Date.now()}`;
-    batchAborted = false;
+    batchController = new AbortController();
 
     activeBatch = {
       batchId,
@@ -203,7 +179,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Start batch in background (don't await — return immediately)
-    runBatchReview(projectPath, projectName, ueVersion, appOrigin);
+    runBatchReview(projectPath, projectName, ueVersion, appOrigin, batchController.signal);
 
     return apiSuccess({
       batchId,

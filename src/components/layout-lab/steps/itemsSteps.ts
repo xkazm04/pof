@@ -7,27 +7,20 @@ import {
 import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact';
 import { readHistory } from './shared/genHistory';
 import { useCatalogStore } from '@/stores/catalogStore';
+import { produceItemStep } from '@/components/layout-lab/itemsLabelOwner'; // call-time only (import cycle is benign)
 import type { Acceptance } from './StepFrame';
 import type { CheckerContext, SiblingVerdict } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepOutput } from '../labPipelineStore';
+import {
+  itemAssetPaths, itemDeclaredAssets, itemPackagingClaim, itemRarity, iconTierFor, itemSlug, readableItemSlug,
+  type ItemAssetPaths,
+} from '@/lib/catalog/itemAssetPaths';
 
-/** PascalCase, space-free asset slug for UE paths (Iron Longsword → IronLongsword).
- *  Readable but LOSSY — every non-alnum char is dropped, so "Iron Sword",
- *  "Iron-Sword" and "Iron_Sword" all collapse to "IronSword". Use {@link entitySlug}
- *  for any real asset PATH so distinct entities can't collide onto one folder. */
-export function slug(name: string): string {
-  return name.replace(/[^a-z0-9]+/gi, '');
-}
-
-/** Short, stable, path-safe token derived from an entity id — the disambiguator
- *  appended to a slug when a DISTINCT sibling entity would otherwise share the same
- *  (lossy) readable slug, and hence the same UE asset path. */
-function idToken(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(36);
-}
+/** PascalCase, space-free readable slug (Iron Longsword → IronLongsword). LOSSY — use
+ *  {@link entitySlug} / {@link itemPaths} for any real asset path. Lives in the one Items
+ *  asset-path table (`@/lib/catalog/itemAssetPaths`), shared with the registered pipeline. */
+export const slug = readableItemSlug;
 
 /** Entities registered in the same catalog as `entity` (empty when the entity
  *  isn't in the store — e.g. ad-hoc test entities), read non-reactively so the
@@ -40,32 +33,28 @@ function catalogSiblings(entityId: string): { id: string; name: string }[] {
   return [];
 }
 
-/** The asset-path slug for one entity. Readable in the common case
- *  (`Iron Sword → IronSword`); when a DISTINCT sibling entity in the same catalog
- *  sanitizes to the same readable slug (`"Iron-Sword"` vs `"Iron Sword"`), a stable
- *  id-derived token is appended (`IronSword-<token>`) so the two entities never
- *  share a `/Game/Items/<slug>/` asset path and overwrite each other's UE assets. */
+/** The live store siblings when the entity is registered there, else undefined (the table then
+ *  falls back to the items seed — the same universe the registered pipeline slugs against). */
+function storeSiblings(entity: LabEntity): { id: string; name: string }[] | undefined {
+  const sibs = catalogSiblings(entity.id);
+  return sibs.length > 0 ? sibs : undefined;
+}
+
+/** The collision-safe asset-path slug for one entity (`itemSlug` over its store siblings). */
 export function entitySlug(entity: LabEntity): string {
-  const readable = slug(entity.name);
-  const collides = catalogSiblings(entity.id).some((s) => s.id !== entity.id && slug(s.name) === readable);
-  return collides ? `${readable}-${idToken(entity.id)}` : readable;
+  return itemSlug(entity, storeSiblings(entity));
 }
 
-/** Root UE content path for all catalog item assets. */
-const ITEMS_ROOT = '/Game/Items';
-
-/** UE asset folder for one item: `/Game/Items/<slug>/`. The single source of
- *  truth for the Items asset-path layout — reused by the step specs and ItemArt. */
-export function base(entity: LabEntity): string {
-  return `${ITEMS_ROOT}/${entitySlug(entity)}/`;
+/** Every UE path this item owns, from THE Items asset-path table — the same paths the
+ *  registered pipeline reads, so both halves declare one layout (the slug may differ only when a
+ *  NON-seed store sibling collides — the registered produce sees the seed alone). */
+export function itemPaths(entity: LabEntity): ItemAssetPaths {
+  return itemAssetPaths(entity, storeSiblings(entity));
 }
 
-/** Full path for one item asset named `<prefix><slug><suffix>` — the convention
- *  every Items asset follows (e.g. `itemAsset(e, 'T_', '_Icon')` →
- *  `/Game/Items/<slug>/T_<slug>_Icon`). Computes the (collision-safe) slug once. */
-export function itemAsset(entity: LabEntity, prefix: string, suffix = ''): string {
-  const s = entitySlug(entity);
-  return `${ITEMS_ROOT}/${s}/${prefix}${s}${suffix}`;
+/** One bespoke step's slice of the table (its `ueAssets`), keyed by its step label. */
+function declared(entity: LabEntity, step: string): string[] {
+  return itemDeclaredAssets(entity, storeSiblings(entity))[step] ?? [];
 }
 
 /**
@@ -504,7 +493,7 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Icon 2D Art': {
-    produce: (e) => ({ data: { selected: 0, prompt: 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon' }, ueAssets: [itemAsset(e, 'T_', '_Icon')] }),
+    produce: (e) => ({ data: { selected: 0, prompt: 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon' }, ueAssets: [itemPaths(e).icons[iconTierFor(itemRarity(e))]] }),
     // Grades the SELECTED CANDIDATE, not the existence of an integer. The old gate was
     // `sel != null ? 'pass' : 'pending'` with the detail `"candidate · 256px"` — a resolution
     // claim about an image that need not exist; it is the exact integer-not-asset checker the
@@ -514,31 +503,31 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     accept: (data) => withCopy('Icon 2D Art', data, gradeGallerySelection(data, 'selected', 'A main icon is selected')),
   },
   '3D Generation': {
-    produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: [itemAsset(e, 'SM_')] }),
+    produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: declared(e, '3D Generation') }),
     // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
     // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
     accept: (data, ctx) => withCopy('3D Generation', data, ITEMS_BESPOKE_CHECKERS['3D Generation'](data, ctx)),
   },
   'Material / Texture': {
-    produce: (e) => ({ data: { maps: ['Albedo', 'Normal', 'ORM', 'Height'] }, ueAssets: [itemAsset(e, 'MI_')] }),
+    produce: (e) => ({ data: { maps: ['Albedo', 'Normal', 'ORM', 'Height'] }, ueAssets: declared(e, 'Material / Texture') }),
     // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
     // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
     accept: (data, ctx) => withCopy('Material / Texture', data, ITEMS_BESPOKE_CHECKERS['Material / Texture'](data, ctx)),
   },
   'Animations': {
-    produce: (e) => ({ data: { clips: DEFAULT_ANIM_CLIPS }, ueAssets: [itemAsset(e, 'A_', '_Equip')] }),
+    produce: (e) => ({ data: { clips: DEFAULT_ANIM_CLIPS }, ueAssets: declared(e, 'Animations') }),
     // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
     // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
     accept: (data, ctx) => withCopy('Animations', data, ITEMS_BESPOKE_CHECKERS['Animations'](data, ctx)),
   },
   'VFX': {
-    produce: (e) => ({ data: { cost: 0.4, cap: 0.8, variants: DEFAULT_VFX_VARIANTS }, ueAssets: [itemAsset(e, 'NS_', '_Use')] }),
+    produce: (e) => ({ data: { cost: 0.4, cap: 0.8, variants: DEFAULT_VFX_VARIANTS }, ueAssets: declared(e, 'VFX') }),
     // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
     // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
     accept: (data, ctx) => withCopy('VFX', data, ITEMS_BESPOKE_CHECKERS['VFX'](data, ctx)),
   },
   'SFX': {
-    produce: (e) => ({ data: { cues: DEFAULT_SFX_CUES }, ueAssets: [itemAsset(e, 'SC_')] }),
+    produce: (e) => ({ data: { cues: DEFAULT_SFX_CUES }, ueAssets: declared(e, 'SFX') }),
     // Gate logic lives in the SERVER-IMPORTABLE checker so the on-screen verdict and the
     // produce-POST re-grade are the same function (see itemsBespokeCheckers.ts).
     accept: (data, ctx) => withCopy('SFX', data, ITEMS_BESPOKE_CHECKERS['SFX'](data, ctx)),
@@ -644,9 +633,10 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
   },
   'UE Packaging': {
     produce: (e) => {
-      const s = entitySlug(e);
-      const assets = [`DT_Items :: ${s}`, `T_${s}_Icon`, `SM_${s}`, `MI_${s}`, `A_${s}_Equip`, `NS_${s}_Use`];
-      return { data: { assets }, ueAssets: assets.slice(1).map((x) => `${base(e)}${x}`) };
+      // The same derived claim the registered UE Packaging writes: only sibling-declared paths,
+      // the DT_Items row as data (a row is never a file on disk).
+      const claim = itemPackagingClaim(e, storeSiblings(e));
+      return { data: { assets: claim.names, declaredBy: claim.declaredBy, dataTableRow: claim.dataTableRow }, ueAssets: claim.assets };
     },
     accept: (data) => {
       const assets = (data.assets ?? []) as unknown[];
@@ -658,12 +648,10 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
 /** Ordered step names (matches the registry + pipeline). */
 export const ITEM_STEP_NAMES = Object.keys(ITEM_STEP_SPECS);
 
-/** Run every Items step for one entity — the worked "fully populated item" example.
- *  Steps that already have an artifact are SKIPPED: produce() is a
- *  whole-artifact replace, the generative steps keep their entire kept batch
- *  history inside data.genHistory, and the write-through sink persists the
- *  replacement to the server (hydrateEntity is add-only, so a wiped history
- *  is unrecoverable). Demo data must only fill gaps, never overwrite work. */
+/** Run every Items step for one entity through its OWNER's produce door (`produceItemStep`: a
+ *  registry-owned label writes the registered, template-stamped stub — never the Pillars
+ *  exemplar body graded pass on another item). Steps that already have an artifact are SKIPPED:
+ *  produce() is a whole-artifact replace synced to the server; demo data only fills gaps. */
 export function populateItemDemo(
   entity: LabEntity,
   produce: (entityId: string, step: string, out?: StepOutput) => void,
@@ -671,6 +659,6 @@ export function populateItemDemo(
 ) {
   for (const step of ITEM_STEP_NAMES) {
     if (hasArtifact?.(entity.id, step)) continue;
-    produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity));
+    produce(entity.id, step, produceItemStep(entity, step) ?? ITEM_STEP_SPECS[step].produce(entity));
   }
 }

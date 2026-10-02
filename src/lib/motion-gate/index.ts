@@ -10,7 +10,12 @@
  *
  * Loop closure is the first check. Foot-contact and root-continuity checks — named in
  * `docs/research/ardy-text-to-motion-spec.md` as the rest of the Tier-1 gate — slot in here
- * beside it against the same extracted-marker seam.
+ * beside it.
+ *
+ * The gate measures the clip ITSELF: `readNpz` reads the `.npz` in-process (numpy's
+ * force_zip64 shape, resolved through the central directory, pickle refused) and
+ * `measureClip` ports the extractor's root-relative math, returning the sha256 of the bytes
+ * it measured. The pasted-marker seam (`parseLoopMetrics`) remains as a labelled legacy input.
  */
 export {
   scoreLoopClosure,
@@ -24,3 +29,11 @@ export {
   type LoopScorecard,
   type ParsedLoopMetrics,
 } from './loopClosure';
+export { readNpz, npyNumbers, type NpzArchive, type NpyArray, type NpyDtype } from './npz';
+export {
+  measureClip,
+  sha256Hex,
+  type ClipSource,
+  type MeasuredClip,
+  type MeasureClipOptions,
+} from './measureClip';

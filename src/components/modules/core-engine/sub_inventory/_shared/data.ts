@@ -1,7 +1,7 @@
 import {
   STATUS_ERROR, ACCENT_EMERALD, ACCENT_PURPLE, RARITY_COLORS,
 } from '@/lib/chart-colors';
-import { Package, FlaskConical, TrendingUp, ListFilter, Activity } from 'lucide-react';
+import { Package, FlaskConical, TrendingUp, ListFilter, Activity, Dna } from 'lucide-react';
 import type { LoadoutSlot } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
 import { EXPANDED_ITEMS } from './data-items';
@@ -29,7 +29,7 @@ export const ACCENT = ACCENT_EMERALD;
 
 /* ── Subtab types & definitions ──────────────────────────────────────── */
 
-export type ItemCatalogSubtab = 'features' | 'catalog-gear' | 'economy-sourcing' | 'mechanics-scaling' | 'economy-sim' | 'loot-filter';
+export type ItemCatalogSubtab = 'features' | 'catalog-gear' | 'economy-sourcing' | 'mechanics-scaling' | 'economy-sim' | 'loot-filter' | 'item-dna';
 
 export interface ItemCatalogSubtabDef {
   key: ItemCatalogSubtab;
@@ -45,6 +45,7 @@ export const SUBTABS: ItemCatalogSubtabDef[] = [
   { key: 'mechanics-scaling', label: 'Mechanics & Scaling', icon: TrendingUp, narrative: 'Understand Scaling', subtitle: 'Power budgets, affix probability trees & stat scaling curves' },
   { key: 'economy-sim', label: 'Economy Sim', icon: Activity, narrative: 'Stress-test Loot', subtitle: 'Monte Carlo loot economy: power, rarity, affix-pool and upgrade verdicts with endgame coverage' },
   { key: 'loot-filter', label: 'Loot Filter', icon: ListFilter, narrative: 'Filter Drops', subtitle: 'Author Show/Hide/Highlight rules, preview them live, and export to a UE DataTable' },
+  { key: 'item-dna', label: 'Item DNA', icon: Dna, narrative: 'Breed DNA', subtitle: 'Genome editor, DNA-biased affix roller, breeding lab with preview, evolution & UE struct export' },
 ];
 
 /* ── Equipment slot layout ─────────────────────────────────────────────── */

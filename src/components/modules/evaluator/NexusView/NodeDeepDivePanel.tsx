@@ -4,16 +4,22 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle, X, Network, CheckCircle2, XCircle,
-  Zap, BookOpen, Sparkles,
+  Zap, BookOpen, Sparkles, RefreshCw,
 } from 'lucide-react';
 import { SUB_GENRE_TEMPLATES } from '@/lib/genre-evolution-engine';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { ImplementationPattern } from '@/types/pattern-library';
 import type { Recommendation } from '@/types/evaluator';
+import type { SessionRecord } from '@/types/session-analytics';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
 import { MOTION } from '@/lib/constants';
 import type { NexusNode } from './types';
 import { itemIdToModule } from './helpers';
+import type { RetryableSource } from './useNexusSignals';
+
+/** How many of the module's newest recorded runs the deep-dive lists. */
+const RECENT_SESSION_ROWS = 8;
 
 // ─── Deep Dive Panel ───────────────────────────────────────────────────────
 
@@ -21,20 +27,21 @@ export function NodeDeepDivePanel({
   node,
   patterns,
   recommendations,
-  history,
+  sessions,
   onClose,
 }: {
   node: NexusNode;
-  patterns: ImplementationPattern[];
-  recommendations: Recommendation[];
-  history: { id: string; prompt: string; status: string; timestamp: number; duration?: number }[];
+  patterns: readonly ImplementationPattern[];
+  recommendations: readonly Recommendation[];
+  /** The module's recorded runs (session_analytics), newest first. */
+  sessions: RetryableSource<readonly SessionRecord[]>;
   onClose: () => void;
 }) {
   const [expandedSection, setExpandedSection] = useState<string | null>('checklist');
 
-  const healthColor = node.healthScore >= 70 ? STATUS_SUCCESS : node.healthScore >= 40 ? STATUS_WARNING : STATUS_ERROR;
-  const successCount = history.filter((h) => h.status === 'completed').length;
-  const failCount = history.filter((h) => h.status === 'failed').length;
+  // null = never deep-evaluated: no health shown (not a 0 score).
+  const healthColor = node.healthScore === null ? undefined : scoreStatusToken(node.healthScore).color;
+  const history = sessions.state === 'ready' ? sessions.data : [];
 
   return (
     <motion.div
@@ -60,7 +67,7 @@ export function NodeDeepDivePanel({
                 <span>{node.implementedCount}/{node.featureCount} features</span>
                 <span>·</span>
                 <span>{node.checklistDone}/{node.checklistTotal} checklist</span>
-                {node.healthScore > 0 && (
+                {node.healthScore !== null && (
                   <>
                     <span>·</span>
                     <span style={{ color: healthColor }}>Health: {node.healthScore}</span>
@@ -82,7 +89,11 @@ export function NodeDeepDivePanel({
             value={node.patternSuccessRate !== null ? `${Math.round(node.patternSuccessRate * 100)}%` : '—'}
             color={node.patternSuccessRate !== null && node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : STATUS_WARNING}
           />
-          <MiniStat label="Sessions" value={`${successCount}/${successCount + failCount}`} color={STATUS_INFO} />
+          <MiniStat
+            label="Sessions"
+            value={node.sessionCount === null ? '—' : `${node.runSuccessCount ?? 0}/${node.sessionCount}`}
+            color={STATUS_INFO}
+          />
           <MiniStat label="Genre Items" value={node.genreItemCount.toString()} color={ACCENT_VIOLET} />
         </div>
 
@@ -141,7 +152,16 @@ export function NodeDeepDivePanel({
             </CollapsibleSection>
           )}
 
-          {/* Session history section */}
+          {/* Session history section — a failed read says so (with Retry), never an empty history */}
+          {sessions.state === 'failed' && (
+            <div role="alert" className="flex items-center gap-2 px-3 py-2 rounded-md border border-border/50 text-2xs text-text-muted">
+              <XCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} />
+              <span className="flex-1 truncate">Recent CLI Sessions unavailable: {sessions.error}</span>
+              <button onClick={sessions.retry} className="flex items-center gap-0.5 hover:text-text transition-colors">
+                <RefreshCw className="w-2.5 h-2.5" /> Retry
+              </button>
+            </div>
+          )}
           {history.length > 0 && (
             <CollapsibleSection
               title="Recent CLI Sessions"
@@ -151,17 +171,17 @@ export function NodeDeepDivePanel({
               onToggle={() => setExpandedSection(expandedSection === 'sessions' ? null : 'sessions')}
             >
               <div className="space-y-0.5">
-                {history.slice(-8).reverse().map((h) => (
+                {history.slice(0, RECENT_SESSION_ROWS).map((h) => (
                   <div key={h.id} className="flex items-center gap-2 px-2 py-1 rounded-md bg-background">
-                    {h.status === 'completed' ? (
-                      <CheckCircle2 className="w-3 h-3 text-[#4ade80] flex-shrink-0" />
+                    {h.success ? (
+                      <CheckCircle2 className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
                     ) : (
-                      <XCircle className="w-3 h-3 text-[#f87171] flex-shrink-0" />
+                      <XCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} />
                     )}
-                    <span className="text-xs text-text-muted flex-1 truncate">{h.prompt.slice(0, 60)}</span>
-                    {h.duration && (
+                    <span className="text-xs text-text-muted flex-1 truncate">{h.promptPreview}</span>
+                    {h.durationMs > 0 && (
                       <span className="text-2xs text-text-muted flex-shrink-0">
-                        {h.duration > 60000 ? `${Math.round(h.duration / 60000)}m` : `${Math.round(h.duration / 1000)}s`}
+                        {h.durationMs > 60000 ? `${Math.round(h.durationMs / 60000)}m` : `${Math.round(h.durationMs / 1000)}s`}
                       </span>
                     )}
                   </div>

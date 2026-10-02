@@ -13,17 +13,13 @@
  * RED before this change: every "aggregate refetched" assertion below failed,
  * while its statuses twin passed.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, cleanup, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { mockFetchRoutes } from '@/__tests__/setup';
 
-// Auto-verify's engine talks to the UE bridge; this test is about what the hook
-// invalidates AFTER a successful write, not about the verification itself.
-vi.mock('@/lib/pof-bridge/verification-engine', () => ({
-  autoUpdateFeatureMatrix: vi.fn(async () => []),
-}));
-
+// Auto-verify runs the REAL engine against a fixture manifest held in the bridge
+// store: no UE connection exists here, and every feature-matrix call is routed below.
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { useNBA } from '@/hooks/useNBA';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
@@ -79,6 +75,15 @@ function installRoutes(status = 'implemented') {
 const callsTo = (fragment: string) =>
   mocks.reduce((n, m) => n + m.mock.calls.filter((c) => String(c[0]).includes(fragment)).length, 0);
 const aggregateCalls = () => callsTo('feature-matrix/aggregate');
+const postCalls = () =>
+  mocks.reduce((n, m) => n + m.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === 'POST').length, 0);
+
+/** A connected editor's manifest with no assets: every rule for the module reads
+ *  `missing`, so the preview has flips to propose without any UE connection. */
+const EMPTY_MANIFEST = {
+  version: 1, generatedAt: '2026-09-30T00:00:00.000Z', projectName: 'PoF', engineVersion: '5.8',
+  assetCount: 0, checksumSha256: 'c', blueprints: [], materials: [], animAssets: [], dataTables: [], otherAssets: [],
+};
 const statusCalls = () => callsTo('all-statuses');
 
 /** A status consumer and an aggregate consumer mounted beside the mutating hook. */
@@ -111,7 +116,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
-  usePofBridgeStore.setState({ manifest: null } as never);
+  usePofBridgeStore.setState({ manifest: null, connectionStatus: 'disconnected' } as never);
 });
 
 describe('feature-matrix mutations invalidate BOTH derived caches', () => {
@@ -127,16 +132,54 @@ describe('feature-matrix mutations invalidate BOTH derived caches', () => {
     await waitFor(() => expect(aggregateCalls()).toBe(2));
   });
 
-  it('auto-verify: a status consumer AND an aggregate consumer both refetch', async () => {
+  it('auto-verify preview reads the current rows and writes nothing', async () => {
     installRoutes();
-    // A manifest is the precondition for the auto-verify path running at all.
-    usePofBridgeStore.setState({ manifest: { classes: [], animAssets: [] } } as never);
+    usePofBridgeStore.setState({ manifest: EMPTY_MANIFEST, connectionStatus: 'connected' } as never);
+    const { result } = renderHook(() => useFeatureMatrix(MODULE), { wrapper: withConsumers });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await settle();
+    const rowReadsBefore = callsTo('/api/feature-matrix?moduleId=');
+
+    let plan: Awaited<ReturnType<typeof result.current.previewAutoVerify>> = null;
+    await act(async () => { plan = await result.current.previewAutoVerify(); });
+
+    expect(plan).not.toBeNull();
+    expect(plan!.changes.length).toBeGreaterThan(0);
+    expect(callsTo('/api/feature-matrix?moduleId=')).toBe(rowReadsBefore + 1);
+    expect(postCalls()).toBe(0);
+    // Nothing was written, so no derived cache moved.
+    expect(statusCalls()).toBe(1);
+    expect(aggregateCalls()).toBe(1);
+  });
+
+  it('auto-verify preview with a cached manifest but no connected editor plans nothing and reads nothing', async () => {
+    installRoutes();
+    usePofBridgeStore.setState({ manifest: EMPTY_MANIFEST, connectionStatus: 'disconnected' } as never);
+    const { result } = renderHook(() => useFeatureMatrix(MODULE), { wrapper: withConsumers });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await settle();
+    const rowReadsBefore = callsTo('/api/feature-matrix?moduleId=');
+
+    let plan: Awaited<ReturnType<typeof result.current.previewAutoVerify>> = null;
+    await act(async () => { plan = await result.current.previewAutoVerify(); });
+
+    expect(plan).toBeNull();
+    expect(callsTo('/api/feature-matrix?moduleId=')).toBe(rowReadsBefore);
+    expect(postCalls()).toBe(0);
+  });
+
+  it('auto-verify apply: one POST, then a status consumer AND an aggregate consumer both refetch', async () => {
+    installRoutes();
+    usePofBridgeStore.setState({ manifest: EMPTY_MANIFEST, connectionStatus: 'connected' } as never);
     const { result } = renderHook(() => useFeatureMatrix(MODULE), { wrapper: withConsumers });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await settle();
 
-    await act(async () => { await result.current.runAutoVerify(); });
+    await act(async () => { await result.current.previewAutoVerify(); });
+    const picked = result.current.verifyPlan!.changes[0].featureName;
+    await act(async () => { await result.current.applyAutoVerify([picked]); });
 
+    expect(postCalls()).toBe(1);
     await waitFor(() => expect(statusCalls()).toBe(2));
     await waitFor(() => expect(aggregateCalls()).toBe(2));
   });

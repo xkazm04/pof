@@ -3,6 +3,7 @@ import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
 import { createBlankLayer, createLayerFromTemplate, LAYER_TEMPLATES, resolveStack } from '@/lib/feel-adjustment-layers';
 import { buildStackApplyPrompt } from '@/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt';
+import { CURVE_CHANNELS, PLAYGROUND_LAYER_ID, channelCoord, encodeCurves } from '@/lib/character/feel-curve-codec';
 
 const store = useCharacterBlueprintStore;
 
@@ -93,6 +94,29 @@ describe('characterBlueprintStore inspector overrides', () => {
     expect(store.getState().feelLayers).toHaveLength(2);
     store.getState().clearInspectorOverrides();
     expect(store.getState().feelLayers.map((l) => l.id)).toEqual([other.id]);
+  });
+});
+
+describe('characterBlueprintStore playground curves', () => {
+  it('case 7: a curve edit is persisted in feelLayers and survives a merge() rehydrate', () => {
+    const base = FEEL_PRESETS[0];
+    const ch = CURVE_CHANNELS.find((c) => c.field === 'dodge.distance')!;
+    const pts = encodeCurves(base.profile).dodge.map((p) => ({ ...p }));
+    pts[ch.index][ch.axis] = channelCoord('dodge.distance', 500);
+    store.getState().applyPlaygroundCurve('dodge', pts);
+
+    const layer = store.getState().feelLayers.find((l) => l.id === PLAYGROUND_LAYER_ID);
+    expect(layer?.modifiers).toEqual([{ field: 'dodge.distance', op: 'set', value: 500 }]);
+
+    const { partialize, merge } = store.persist.getOptions();
+    const persisted = JSON.parse(JSON.stringify(partialize!(store.getState())));
+    expect(persisted.feelLayers.some((l: { id: string }) => l.id === PLAYGROUND_LAYER_ID)).toBe(true);
+
+    const rehydrated = merge!(persisted, { ...store.getState(), feelLayers: [] });
+    expect(rehydrated.feelLayers).toEqual(store.getState().feelLayers);
+
+    store.getState().clearPlaygroundCurves();
+    expect(store.getState().feelLayers).toEqual([]);
   });
 });
 

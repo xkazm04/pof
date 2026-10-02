@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
-import {
-  exportSceneScript,
-  EXPORT_OK_MARKER,
-} from '@/lib/blender-mcp/scripts/export-scene';
+import { exportSceneScript } from '@/lib/blender-mcp/scripts/export-scene';
+import { readReceipt } from '@/lib/blender-mcp/receipt';
 
 export function SceneExporter() {
   const [outputPath, setOutputPath] = useState('');
@@ -29,12 +27,17 @@ export function SceneExporter() {
 
     // A 200 from the execute route means the ADDON accepted the script, not
     // that a file exists. The bridge may be on another machine, so PoF cannot
-    // check — the honest ceiling is what Blender itself printed. If the marker
-    // is absent, say we could not confirm rather than claiming "Exported".
-    const output = result.data.output ?? '';
-    if (output.includes(EXPORT_OK_MARKER)) {
+    // check — the honest ceiling is what Blender itself printed: an 'export'
+    // receipt for THIS path, printed only after the exporter reported FINISHED.
+    // Anything else says we could not confirm rather than claiming "Exported".
+    const receipt = readReceipt(result.data, 'export', { path: outputPath });
+    if (receipt.state === 'confirmed') {
       setStatus(`Blender reported the export finished: ${outputPath}`);
+    } else if (receipt.state === 'mismatch') {
+      setFailed(true);
+      setStatus(`Could not confirm ${outputPath} was written: ${receipt.reason}.`);
     } else {
+      const output = result.data.output ?? '';
       setFailed(true);
       setStatus(
         `Script ran without error, but Blender printed no export confirmation — ` +

@@ -8,10 +8,12 @@ export function Field({ label, htmlFor, children }: { label: string; htmlFor: st
     </label>
   );
 }
+/** The caller's className is merged, never discarded, so a themed adapter (steps/controls) can ride these. */
+const withFocusRing = (className?: string) => (className ? `focus-ring-inset ${className}` : 'focus-ring-inset');
 const fieldStyle = { width: '100%', fontFamily: 'var(--lab-font-body)', fontSize: 'var(--lab-fs-sm)', padding: 'var(--lab-s2) var(--lab-s3)', background: 'var(--lab-panel)', border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)', color: 'var(--lab-text)' } as const;
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className="focus-ring-inset" style={{ ...fieldStyle, ...props.style }} />;
+  return <input {...props} className={withFocusRing(props.className)} style={{ ...fieldStyle, ...props.style }} />;
 }
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className="focus-ring-inset" style={{ ...fieldStyle, resize: 'vertical', ...props.style }} />;
+  return <textarea {...props} className={withFocusRing(props.className)} style={{ ...fieldStyle, resize: 'vertical', ...props.style }} />;
 }

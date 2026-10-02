@@ -1,19 +1,20 @@
 import { STATUS_INFO, STATUS_SUCCESS, ACCENT_VIOLET, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_SUBDUED, ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
-import type { ZoneType, LoadPriority, TransitionStyle, StreamingZone, ZoneTransition } from './types';
+import { ZONE_TYPE_LABELS } from '@/lib/level-design/streaming-plan';
+import type { ZoneType, LoadPriority, TransitionStyle } from './types';
 
 // ── Constants ──
 
 export const CELL_SIZE = 72;
 
 export const ZONE_TYPES: Record<ZoneType, { color: string; label: string; letter: string }> = {
-  'town': { color: STATUS_INFO, label: 'Town', letter: 'T' },
-  'forest': { color: STATUS_SUCCESS, label: 'Forest', letter: 'F' },
-  'ruins': { color: ACCENT_VIOLET, label: 'Ruins', letter: 'R' },
-  'catacombs': { color: STATUS_SUBDUED, label: 'Catacombs', letter: 'C' },
-  'boss-arena': { color: STATUS_ERROR, label: 'Boss Arena', letter: 'B' },
-  'hub': { color: ACCENT_CYAN_LIGHT, label: 'Hub', letter: 'H' },
-  'dungeon': { color: STATUS_BLOCKER, label: 'Dungeon', letter: 'D' },
-  'custom': { color: 'var(--text-muted)', label: 'Custom', letter: '?' },
+  'town': { color: STATUS_INFO, label: ZONE_TYPE_LABELS['town'], letter: 'T' },
+  'forest': { color: STATUS_SUCCESS, label: ZONE_TYPE_LABELS['forest'], letter: 'F' },
+  'ruins': { color: ACCENT_VIOLET, label: ZONE_TYPE_LABELS['ruins'], letter: 'R' },
+  'catacombs': { color: STATUS_SUBDUED, label: ZONE_TYPE_LABELS['catacombs'], letter: 'C' },
+  'boss-arena': { color: STATUS_ERROR, label: ZONE_TYPE_LABELS['boss-arena'], letter: 'B' },
+  'hub': { color: ACCENT_CYAN_LIGHT, label: ZONE_TYPE_LABELS['hub'], letter: 'H' },
+  'dungeon': { color: STATUS_BLOCKER, label: ZONE_TYPE_LABELS['dungeon'], letter: 'D' },
+  'custom': { color: 'var(--text-muted)', label: ZONE_TYPE_LABELS['custom'], letter: '?' },
 };
 
 export const PRIORITY_COLORS: Record<LoadPriority, string> = {
@@ -22,21 +23,6 @@ export const PRIORITY_COLORS: Record<LoadPriority, string> = {
   normal: STATUS_INFO,
   low: 'var(--text-muted)',
 };
-
-export const DEFAULT_ZONES: StreamingZone[] = [
-  { id: 'z-town', name: 'Town', type: 'town', gridX: 2, gridY: 2, loadPriority: 'always', alwaysLoaded: true, preloadRadius: 2 },
-  { id: 'z-forest', name: 'Dark Forest', type: 'forest', gridX: 3, gridY: 1, loadPriority: 'normal', alwaysLoaded: false, preloadRadius: 1 },
-  { id: 'z-ruins', name: 'Old Ruins', type: 'ruins', gridX: 4, gridY: 2, loadPriority: 'normal', alwaysLoaded: false, preloadRadius: 1 },
-  { id: 'z-cata', name: 'Catacombs', type: 'catacombs', gridX: 3, gridY: 3, loadPriority: 'low', alwaysLoaded: false, preloadRadius: 1 },
-  { id: 'z-boss', name: 'Boss Arena', type: 'boss-arena', gridX: 5, gridY: 2, loadPriority: 'high', alwaysLoaded: false, preloadRadius: 2 },
-];
-
-export const DEFAULT_TRANSITIONS: ZoneTransition[] = [
-  { id: 'tr-1', fromId: 'z-town', toId: 'z-forest', style: 'seamless', triggerType: 'proximity', condition: '' },
-  { id: 'tr-2', fromId: 'z-forest', toId: 'z-ruins', style: 'seamless', triggerType: 'proximity', condition: '' },
-  { id: 'tr-3', fromId: 'z-town', toId: 'z-cata', style: 'fade', triggerType: 'interaction', condition: '' },
-  { id: 'tr-4', fromId: 'z-ruins', toId: 'z-boss', style: 'loading-screen', triggerType: 'interaction', condition: 'Collect 3 Rune Fragments' },
-];
 
 // ── Transition style config ──
 

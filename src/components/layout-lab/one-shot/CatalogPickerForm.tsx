@@ -92,9 +92,10 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
         value={catalogInput}
         onChange={(e) => onCatalogChange(e.target.value)}
         aria-label="catalog"
+        className="focus-ring-inset"
         style={{
           width: '100%', fontSize: 14, padding: '7px 10px', marginBottom: 12, boxSizing: 'border-box',
-          background: t.panel, color: t.text, border: `1px solid ${t.line}`, outline: 'none',
+          background: t.panel, color: t.text, border: `1px solid ${t.line}`,
         }}
       >
         {CATALOG_SECTIONS.map((s) => (

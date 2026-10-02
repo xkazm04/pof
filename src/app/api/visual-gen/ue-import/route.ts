@@ -17,7 +17,7 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
  * generated meshes, finished them, graded them, and stopped at the filesystem. Every UE
  * import until now was a human driving the editor.
  *
- * Body: { glbPath, use, destPath?, assetName?, components?, settleMs? }
+ * Body: { glbPath, use, destPath?, assetName?, components?, settleMs?, assetClass?, targetExtentM? }
  *
  * `use` is REQUIRED and has no default. It is the one thing the mesh cannot tell us and
  * the one thing collision depends on: the same geometry wants convex hulls as a crate and
@@ -26,6 +26,11 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
  * `components` is an ESCAPE HATCH, not the normal path — the job measures the real shell
  * count with the Tier-1 critic and only falls back to a declared number when the critic
  * could not run. The job reports which basis it used.
+ *
+ * `assetClass` / `targetExtentM` feed the gate request (`gateRequestFor`) the job critiques
+ * through, which is what makes the SCALE derivable: a character has the 1.8 m Mannequin as its
+ * nominal, a declared target overrides it, and with neither the plan states that no scale is
+ * derivable rather than importing at a silent 1.0. The factor is applied at import and read back.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +41,8 @@ export async function POST(req: NextRequest) {
       assetName?: string;
       components?: number;
       settleMs?: number;
+      assetClass?: string;
+      targetExtentM?: number;
     };
 
     const glbPath = body.glbPath?.trim();
@@ -63,6 +70,13 @@ export async function POST(req: NextRequest) {
       return apiError('components, when given, must be a positive integer', 400);
     }
 
+    if (body.targetExtentM !== undefined && !(typeof body.targetExtentM === 'number' && Number.isFinite(body.targetExtentM) && body.targetExtentM > 0)) {
+      return apiError('targetExtentM, when given, must be a positive number of metres (the intended longest extent)', 400);
+    }
+    if (body.assetClass !== undefined && typeof body.assetClass !== 'string') {
+      return apiError('assetClass, when given, must be a string', 400);
+    }
+
     const jobId = startUeImportJob({
       glbPath,
       use: body.use as CollisionUse,
@@ -70,6 +84,8 @@ export async function POST(req: NextRequest) {
       assetName: body.assetName,
       components: body.components,
       settleMs: body.settleMs,
+      assetClass: body.assetClass?.trim() || undefined,
+      targetExtentM: body.targetExtentM,
     });
     return apiSuccess({ jobId }, 202);
   } catch (e) {

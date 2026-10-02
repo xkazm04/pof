@@ -16,7 +16,6 @@ import { useSpellbookEntries } from '@/stores/catalogStore';
 import { LifecycleBadge } from '@/components/catalog/LifecycleBadge';
 import type { LifecycleState } from '@/lib/catalog/types';
 import { useGeneration } from '@/hooks/useGeneration';
-import type { GenerationStep } from '@/lib/catalog/recipe';
 import { AbilityCompareSelector } from './AbilityCompareSelector';
 
 const DEFAULT_SELECTED = ['off-fire-01', 'off-ice-01', 'off-ltn-01', 'def-phy-03'];
@@ -52,11 +51,6 @@ export function AbilityCompareRadar() {
   // folder-09: dispatch generation for the primary compared ability.
   const primaryEntry = (entries.find((e) => e.id === primary?.id) ?? entries[0])!;
   const gen = useGeneration(primaryEntry);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'scaffolded' ? 'author-python'
-      : primaryEntry?.lifecycle === 'generated' ? 'wire'
-        : primaryEntry?.lifecycle === 'wired' ? 'verify'
-          : 'scaffold-cpp';
 
   return (
     <SurfaceCard level={2} className="p-3 relative overflow-hidden">
@@ -64,8 +58,9 @@ export function AbilityCompareRadar() {
       <div className="flex items-center justify-between mb-3">
         <SectionLabel icon={Sparkles} label="Ability Comparison Radar" color={ACCENT_PURPLE_BOLD} />
         <div className="flex items-center gap-2">
+        {gen.nextStep && (
         <button
-          onClick={() => gen.generate(nextStep)}
+          onClick={() => gen.generate()}
           disabled={gen.isRunning}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
@@ -73,11 +68,12 @@ export function AbilityCompareRadar() {
             borderColor: withOpacity(ACCENT_GREEN, OPACITY_25),
             color: ACCENT_GREEN,
           }}
-          title={`Generate "${primaryEntry?.name}" into UE — next step: ${nextStep}`}
+          title={`Generate "${primaryEntry?.name}" into UE — next step: ${gen.nextStep}`}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          {gen.isRunning ? 'Generating…' : `(Re)generate · ${nextStep}`}
+          {gen.isRunning ? 'Generating…' : `(Re)generate · ${gen.nextStep}`}
         </button>
+        )}
         <button
           onClick={() => setSelectorOpen(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer hover:shadow-sm"

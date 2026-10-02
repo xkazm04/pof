@@ -7,6 +7,7 @@ import { STATUS_WARNING, OVERLAY_WHITE,
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
 import { ELITE_MODIFIERS } from '../_shared/data';
+import { inertStatMods } from '@/lib/bestiary/elite-stat-axes';
 
 interface ExpandedDetailsProps {
   archetype: ArchetypeConfig;
@@ -82,20 +83,40 @@ export function ExpandedDetails({
         {appliedMods.length > 0 && (
           <div className="mt-2 bg-surface-deep rounded-lg border border-border/30 p-2 space-y-1">
             <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Modifier Effects</div>
-            {appliedMods.map(mod => (
-              <div key={mod.id} className="flex items-center gap-2 text-xs">
-                <span style={{ color: mod.color }}>{mod.icon} {mod.name}</span>
-                <span className="text-text-muted">&mdash;</span>
-                <span className="text-text-muted font-mono">{mod.statMods.map(s => s.label).join(', ')}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onViewCodegen(mod); }}
-                  className="ml-auto text-text-muted hover:text-text transition-colors p-0.5 cursor-pointer"
-                  title="View UE5 GameplayEffect code"
-                >
-                  <Code className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
+            {appliedMods.map(mod => {
+              const inert = inertStatMods(mod, archetype);
+              return (
+                <div key={mod.id} className="flex items-center gap-2 text-xs">
+                  <span style={{ color: mod.color }}>{mod.icon} {mod.name}</span>
+                  <span className="text-text-muted">&mdash;</span>
+                  <span className="text-text-muted font-mono">
+                    {mod.statMods.map((s, i) => {
+                      const isInert = inert.includes(s.label);
+                      return (
+                        <span key={s.label}>
+                          {i > 0 && ', '}
+                          <span
+                            className={isInert ? 'line-through opacity-50' : undefined}
+                            title={isInert ? `${s.label}: no ${s.stat} stat on this archetype` : undefined}
+                            data-inert={isInert || undefined}
+                          >
+                            {s.label}
+                          </span>
+                          {isInert && <span className="opacity-60"> (inert)</span>}
+                        </span>
+                      );
+                    })}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onViewCodegen(mod); }}
+                    className="ml-auto text-text-muted hover:text-text transition-colors p-0.5 cursor-pointer"
+                    title="View UE5 GameplayEffect code"
+                  >
+                    <Code className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

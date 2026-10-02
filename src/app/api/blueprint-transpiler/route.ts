@@ -5,6 +5,10 @@ import { generateCppFromBlueprint } from '@/lib/blueprint-cpp-codegen';
 import { computeSemanticDiff } from '@/lib/blueprint-semantic-diff';
 
 // ─── POST /api/blueprint-transpiler ─────────────────────────────────────────
+//
+// transpile and diff each return the parse they were computed from (`asset` +
+// `summary`, additive), so a client action is ONE request and the server parses
+// the Blueprint once. `parse` stays for callers that only want the parse.
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,7 +62,7 @@ function handleTranspile(
   try {
     const asset = parseBlueprintJson(blueprintJson);
     const result = generateCppFromBlueprint(asset, projectName ?? 'MyProject', moduleName);
-    return apiSuccess(result);
+    return apiSuccess({ ...result, asset, summary: summarizeBlueprintForPrompt(asset) });
   } catch (e) {
     return apiError(`Transpilation failed: ${e instanceof Error ? e.message : 'Error'}`, 400);
   }
@@ -77,7 +81,7 @@ function handleDiff(
   try {
     const asset = parseBlueprintJson(blueprintJson);
     const result = computeSemanticDiff(asset, existingCpp, projectName ?? 'MyProject');
-    return apiSuccess(result);
+    return apiSuccess({ ...result, asset, summary: summarizeBlueprintForPrompt(asset) });
   } catch (e) {
     return apiError(`Diff failed: ${e instanceof Error ? e.message : 'Error'}`, 400);
   }

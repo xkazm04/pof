@@ -15,6 +15,11 @@ interface SSEEvent {
   type: string;
   data: Record<string, unknown>;
   timestamp: number;
+  /**
+   * Position of the execution event this frame carries: its index in
+   * `execution.events` + 1. Absent on synthesized frames (connected, heartbeat).
+   */
+  seq?: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -23,6 +28,9 @@ export async function GET(request: NextRequest) {
   const projectPath = searchParams.get('projectPath');
   const prompt = searchParams.get('prompt');
   const resumeSessionId = searchParams.get('resumeSessionId');
+  // Resume cursor: the last `seq` the client already holds. A re-shown terminal
+  // reconnects with it so the replay skips what is on screen (missing = 0 = full replay).
+  const after = Math.max(0, Number.parseInt(searchParams.get('after') ?? '0', 10) || 0);
 
   let activeExecutionId = executionId;
 
@@ -78,6 +86,8 @@ export async function GET(request: NextRequest) {
             return { type: 'result', data: { sessionId: cliEvent.data.sessionId, usage: cliEvent.data.usage, durationMs: cliEvent.data.durationMs, totalCostUsd: cliEvent.data.costUsd, isError: cliEvent.data.isError }, timestamp: cliEvent.timestamp };
           case 'error':
             return { type: 'error', data: { error: cliEvent.data.message, exitCode: cliEvent.data.exitCode }, timestamp: cliEvent.timestamp };
+          case 'callbacks':
+            return { type: 'callbacks', data: { status: cliEvent.data.status, failed: cliEvent.data.failed }, timestamp: cliEvent.timestamp };
           default:
             return { type: 'stdout', data: cliEvent.data, timestamp: cliEvent.timestamp };
         }
@@ -91,17 +101,28 @@ export async function GET(request: NextRequest) {
         return;
       }
 
-      for (const event of execution.events) {
-        if (event.type === 'stdout') continue;
-        sendEvent(convertEvent(event));
-        if (event.type === 'result' || event.type === 'error') {
+      // A run that declared @@CALLBACKs is settled server-side AFTER its result: its
+      // stream ends with the `callbacks` frame (the verdict), not with `result`.
+      const settlesCallbacks = (execution.callbacks?.length ?? 0) > 0;
+      const isTerminal = (type: CLIExecutionEvent['type']) =>
+        type === 'error' || type === (settlesCallbacks ? 'callbacks' : 'result');
+
+      for (let i = 0; i < execution.events.length; i++) {
+        const event = execution.events[i];
+        const seq = i + 1;
+        if (event.type === 'stdout' || seq <= after) continue;
+        sendEvent({ ...convertEvent(event), seq });
+        if (isTerminal(event.type)) {
           closeStream();
           return;
         }
       }
 
+      // A cleanly finished run whose callback settlement is still in flight: wait for it.
+      const awaitingSettlement = settlesCallbacks && execution.status === 'completed' && execution.callbackStatus === undefined;
+
       // If execution already finished during replay
-      if (execution.status !== 'running') {
+      if (execution.status !== 'running' && !awaitingSettlement) {
         sendEvent({
           type: execution.status === 'completed' ? 'result' : 'error',
           data: { status: execution.status, sessionId: execution.sessionId },
@@ -115,8 +136,10 @@ export async function GET(request: NextRequest) {
       const unsubscribe = subscribeToExecution(activeExecutionId!, (cliEvent) => {
         if (isStreamClosed) { unsubscribe?.(); return; }
         if (cliEvent.type === 'stdout') return;
-        sendEvent(convertEvent(cliEvent));
-        if (cliEvent.type === 'result' || cliEvent.type === 'error') {
+        // Live events are appended before listeners run: the position is where it landed.
+        const idx = execution.events.lastIndexOf(cliEvent);
+        sendEvent(idx >= 0 ? { ...convertEvent(cliEvent), seq: idx + 1 } : convertEvent(cliEvent));
+        if (isTerminal(cliEvent.type)) {
           unsubscribe?.();
           closeStream();
         }

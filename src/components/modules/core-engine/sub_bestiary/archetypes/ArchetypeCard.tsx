@@ -11,6 +11,7 @@ import { NeonBar } from '../../unique-tabs/_design';
 import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
 import { ARCHETYPES, ELITE_MODIFIERS, applyModifiers, TIER_GLOW_COLORS, STAT_AVERAGES } from '../_shared/data';
+import { inertStatMods } from '@/lib/bestiary/elite-stat-axes';
 import { ExpandedDetails } from './ExpandedDetails';
 import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
 
@@ -112,14 +113,17 @@ export function ArchetypeCard({
           {/* Active modifier badges */}
           {appliedMods.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
-              {appliedMods.map(mod => (
-                <span key={mod.id} className="text-xs font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1"
-                  style={{ backgroundColor: `${withOpacity(mod.color, OPACITY_10)}`, borderColor: `${withOpacity(mod.color, OPACITY_25)}`, color: mod.color }}
-                  title={`${mod.name}: ${mod.statMods.map(s => s.label).join(', ')}`}>
-                  <span>{mod.icon}</span>
-                  {mod.name}
-                </span>
-              ))}
+              {appliedMods.map(mod => {
+                const inert = inertStatMods(mod, archetype);
+                return (
+                  <span key={mod.id} className="text-xs font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1"
+                    style={{ backgroundColor: `${withOpacity(mod.color, OPACITY_10)}`, borderColor: `${withOpacity(mod.color, OPACITY_25)}`, color: mod.color }}
+                    title={`${mod.name}: ${mod.statMods.map(s => s.label).join(', ')}${inert.length > 0 ? ` (inert on this archetype: ${inert.join(', ')})` : ''}`}>
+                    <span>{mod.icon}</span>
+                    {mod.name}
+                  </span>
+                );
+              })}
             </div>
           )}
 

@@ -14,10 +14,9 @@
  * Server-only; client code imports only the snapshot TYPE.
  */
 
-import { startExecution, abortExecution, getExecution } from '@/lib/claude-terminal/cli-service';
-import type { CLIExecutionEvent } from '@/lib/claude-terminal/cli-service';
+import { startExecution } from '@/lib/claude-terminal/cli-service';
+import { settleExecution } from '@/lib/claude-terminal/run-settle';
 import { resolveDispatchModelChoice } from '@/lib/model-policy';
-import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { ok, err } from '@/types/result';
 import type { Result } from '@/types/result';
@@ -44,7 +43,6 @@ export interface DeepEvalJobSnapshot {
 interface DeepEvalJob {
   snap: DeepEvalJobSnapshot;
   controller: AbortController;
-  inFlight: Set<string>;
   done: Promise<DeepEvalResult>;
 }
 
@@ -69,49 +67,25 @@ function cancelledError(): DOMException {
 }
 
 /**
- * The default executor: spawn one CLI pass, collect its `text` events, and resolve
- * with them when it ends. Registers each execution id in `inFlight` so a cancel can
- * kill the process, not just stop waiting for it.
+ * The default executor: spawn one CLI pass and settle it through the one settlement
+ * seam (`settleExecution`, run-settle.ts) with the job's signal. A clean end resolves
+ * the pass's text; any failure rejects with its typed reason (the engine records it as
+ * `cli-error: <reason>: ...`). A cancel kills the pass's process through the same
+ * signal, so the job keeps no in-flight id list of its own.
  */
-function cliExecutor(inFlight: Set<string>, pin: { model?: string; effort?: string }): PassExecutor {
-  return (prompt, projectPath, signal, cell) => new Promise<string>((resolve, reject) => {
-    if (signal.aborted) { reject(cancelledError()); return; }
-    let text = '';
-    let settled = false;
-    let id: string | null = null;
-    let poll: ReturnType<typeof setInterval> | null = null;
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      if (poll) clearInterval(poll);
-      signal.removeEventListener('abort', onAbort);
-      if (id) inFlight.delete(id);
-      fn();
-    };
-    const onAbort = () => finish(() => reject(cancelledError()));
-    const onEvent = (ev: CLIExecutionEvent) => {
-      if (ev.type === 'text' && typeof ev.data.content === 'string') text += ev.data.content;
-      else if (ev.type === 'result') {
-        finish(() => (ev.data.isError ? reject(new Error('CLI reported an error result')) : resolve(text)));
-      } else if (ev.type === 'error') {
-        finish(() => reject(new Error(String(ev.data.message ?? 'execution error'))));
-      }
-    };
-    signal.addEventListener('abort', onAbort);
-    id = startExecution(projectPath, prompt, undefined, onEvent, {
+function cliExecutor(pin: { model?: string; effort?: string }): PassExecutor {
+  return async (prompt, projectPath, signal, cell) => {
+    if (signal.aborted) throw cancelledError();
+    const id = startExecution(projectPath, prompt, undefined, undefined, {
       model: pin.model,
       effort: pin.effort,
       attribution: { moduleId: cell.moduleId, taskType: 'deep-eval', taskLabel: `Deep Eval: ${cell.pass}` },
     });
-    if (settled) return; // the spawn failed synchronously and already reported it
-    inFlight.add(id);
-    // A clean exit with no result event emits nothing: settle from the status too.
-    poll = setInterval(() => {
-      const status = id ? getExecution(id)?.status : undefined;
-      if (status === 'completed') finish(() => resolve(text));
-      else if (status && status !== 'running') finish(() => reject(new Error(`execution ${status}`)));
-    }, UI_TIMEOUTS.pollInterval);
-  });
+    const settled = await settleExecution(id, { expect: 'end', signal });
+    if (settled.ok) return settled.data.text;
+    if (settled.error.reason === 'cancelled' && signal.aborted) throw cancelledError();
+    throw new Error(`${settled.error.reason}: ${settled.error.message}`);
+  };
 }
 
 /** Start a deep-eval job for a project; refused while one is already running there. */
@@ -125,9 +99,7 @@ export function startDeepEvalJob(
   const moduleIds = opts.moduleIds ?? getEvaluableModuleIds();
   const resumeFrom = opts.scanId ? readPassLedger(scanId) : [];
   const controller = new AbortController();
-  const inFlight = new Set<string>();
   const executePass = opts.executePass ?? cliExecutor(
-    inFlight,
     resolveDispatchModelChoice({ model: opts.model, effort: opts.effort, taskClass: 'judge-content' }),
   );
 
@@ -164,7 +136,7 @@ export function startDeepEvalJob(
     return result;
   });
 
-  jobs.set(projectPath, { snap, controller, inFlight, done });
+  jobs.set(projectPath, { snap, controller, done });
   return ok({ scanId, done });
 }
 
@@ -174,17 +146,15 @@ export function getDeepEvalJob(projectPath: string): DeepEvalJobSnapshot | null 
 }
 
 /**
- * Cancel the project's running job: kill every in-flight CLI execution, abort the
- * run, and wait for it to settle so the snapshot carries its honest partial result
- * (unfinished modules are failed, never evaluated).
+ * Cancel the project's running job: abort the run (each in-flight pass's settlement
+ * kills its CLI execution on the signal), and wait for it to settle so the snapshot
+ * carries its honest partial result (unfinished modules are failed, never evaluated).
  */
 export async function cancelDeepEvalJob(projectPath: string): Promise<DeepEvalJobSnapshot | null> {
   const job = jobs.get(projectPath);
   if (!job) return null;
   if (job.snap.status === 'running') {
     job.snap.status = 'cancelled';
-    for (const id of job.inFlight) abortExecution(id);
-    job.inFlight.clear();
     job.controller.abort();
     await job.done;
   }

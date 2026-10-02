@@ -11,8 +11,8 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import {
   AFFIX_POOL, SYNERGY_RULES, SYNERGY_COLORS, RARITY_COLORS,
-} from './data';
-import type { RarityArchetype, CraftedAffix, Rarity } from './data';
+} from '@/components/modules/core-engine/sub_loot/affix-workbench/data';
+import type { RarityArchetype, CraftedAffix, Rarity } from '@/components/modules/core-engine/sub_loot/affix-workbench/data';
 
 interface ArchetypeSuggestionGridProps {
   archetypes: RarityArchetype[];

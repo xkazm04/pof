@@ -15,6 +15,7 @@ import {
   getHealthTrend,
   updateFindingTriage,
   markFindingFixDispatched,
+  getSessionByHarnessRun,
 } from '@/lib/game-director-db';
 import type {
   CreateSessionPayload,
@@ -30,6 +31,14 @@ import { simulatePlaytest } from '@/lib/game-director-sim';
 import { ingestExternalPlaytest } from '@/lib/game-director/external-ingest';
 import { createDbDirectorWriter, createDbMatrixRoutingDeps } from '@/lib/game-director/db-writer';
 import { routeFindingsToMatrix } from '@/lib/game-director/matrix-routing';
+import { processSession } from '@/lib/regression-tracker';
+import { listRuns, getRun } from '@/lib/harness-runs-db';
+import {
+  previewHarnessRun,
+  importHarnessRun,
+  type HarnessRunOption,
+} from '@/lib/game-director/harness-import';
+import { normalizeProjectId } from '@/lib/project-id';
 import { logger } from '@/lib/logger';
 
 /**
@@ -40,6 +49,18 @@ import { logger } from '@/lib/logger';
  */
 function normalizeSource(value: unknown, fallback: SessionSource): SessionSource {
   return value === 'external' || value === 'simulated' ? value : fallback;
+}
+
+/** Append one completion-pipeline disclosure to a session's timeline. */
+function stampPipelineEvent(sessionId: string, tag: string, message: string, data?: Record<string, unknown>) {
+  addEvent({
+    id: `ev-${Date.now()}-${tag}-${Math.random().toString(36).slice(2, 7)}`,
+    sessionId,
+    timestamp: new Date().toISOString(),
+    type: 'action',
+    message,
+    data,
+  });
 }
 
 /**
@@ -56,16 +77,8 @@ async function routeSessionFindings(sessionId: string, source: SessionSource, pr
   const projectId = projectIdOverride?.trim() || session.config?.projectId?.trim() || '';
   const findings = getFindings(sessionId);
 
-  const stampEvent = (message: string, data?: Record<string, unknown>) => {
-    addEvent({
-      id: `ev-${Date.now()}-matrix-${Math.random().toString(36).slice(2, 7)}`,
-      sessionId,
-      timestamp: new Date().toISOString(),
-      type: 'action',
-      message,
-      data,
-    });
-  };
+  const stampEvent = (message: string, data?: Record<string, unknown>) =>
+    stampPipelineEvent(sessionId, 'matrix', message, data);
 
   if (findings.length === 0) {
     stampEvent('Matrix routing: this session recorded no findings, so no feature-matrix row was updated.', {
@@ -96,6 +109,50 @@ async function routeSessionFindings(sessionId: string, source: SessionSource, pr
       failed: true,
     });
   }
+}
+
+/**
+ * On completion, analyze the session for regressions — so the Regressions pill,
+ * the alerts and the trend markers exist for every completed session without
+ * anyone remembering to click Analyze. Best-effort and disclosed exactly like
+ * matrix routing: the session is already written, so a failure is stated on the
+ * timeline instead of failing the completion. The tracker decides the pass by
+ * session time: a session older than the newest analyzed one only backfills.
+ */
+function analyzeSessionRegressions(sessionId: string) {
+  const session = getSession(sessionId);
+  if (!session) return;
+  try {
+    const report = processSession(session);
+    const counts = `${report.newFindings.length} new, ${report.regressions.length} regressed, ${report.newlyFixed.length} newly fixed`;
+    const message = report.mode === 'backfill'
+      ? `Regression analysis (backfill — older than the newest analyzed session, so it recorded occurrences only and changed no status): ${counts}.`
+      : `Regression analysis: ${counts}.`;
+    stampPipelineEvent(sessionId, 'regression', message, {
+      mode: report.mode,
+      newFindings: report.newFindings.length,
+      regressions: report.regressions.length,
+      newlyFixed: report.newlyFixed.length,
+      persistent: report.persistent.length,
+    });
+  } catch (analysisError) {
+    logger.error('[game-director] regression analysis failed:', analysisError);
+    stampPipelineEvent(
+      sessionId, 'regression',
+      `Regression analysis FAILED — ${String(analysisError)}. No regression state is known to have changed.`,
+      { failed: true },
+    );
+  }
+}
+
+/**
+ * The ONE set of completion side-effects, shared by every path that completes a
+ * session (simulate, ingest-external, the external writer's complete): route the
+ * findings to the matrix, then analyze regressions. Each step discloses itself.
+ */
+async function completeSessionPipeline(sessionId: string, source: SessionSource, projectIdOverride?: string) {
+  await routeSessionFindings(sessionId, source, projectIdOverride);
+  analyzeSessionRegressions(sessionId);
 }
 
 // ─── GET: list sessions, get single session, get findings, get events, get stats
@@ -137,6 +194,29 @@ export async function GET(req: Request) {
         const limitParam = searchParams.get('limit');
         const limit = limitParam ? Math.max(1, Math.min(200, Number(limitParam))) : 30;
         return apiSuccess(getHealthTrend(limit));
+      }
+
+      case 'harness-runs': {
+        // The stored harness runs of ONE project, each with the session it was
+        // already imported as. harness_runs keeps the raw project path while the
+        // Director's projectId may be spelled differently, so the join is on the
+        // normalized id — over the newest 500 runs (listRuns' ceiling).
+        const projectId = normalizeProjectId(searchParams.get('projectId'));
+        if (!projectId) return apiError('projectId required — harness runs are listed per project', 400);
+        const rows: HarnessRunOption[] = listRuns({ limit: 500 })
+          .filter((r) => normalizeProjectId(r.projectPath) === projectId)
+          .map((r) => ({
+            runId: r.runId,
+            projectName: r.projectName,
+            projectPath: r.projectPath,
+            status: r.status,
+            startedAt: r.startedAt,
+            endedAt: r.endedAt,
+            iteration: r.iteration,
+            passRate: r.passRate,
+            ingestedSessionId: getSessionByHarnessRun(r.runId)?.id ?? null,
+          }));
+        return apiSuccess(rows);
       }
 
       default:
@@ -184,10 +264,12 @@ export async function POST(req: Request) {
         // headless runner, a human) POSTs its own measured summary here, so the
         // default provenance is 'external'. The in-repo simulator never reaches
         // this branch — it calls updateSessionSummary directly with 'simulated'.
+        const completedSource = normalizeSource(source, 'external');
         updateSessionSummary(
           sessionId, summary, durationMs, systemsTestedCount, findingsCount,
-          normalizeSource(source, 'external'),
+          completedSource,
         );
+        await completeSessionPipeline(sessionId, completedSource);
         return apiSuccess({ ok: true });
       }
 
@@ -245,7 +327,7 @@ export async function POST(req: Request) {
         // The simulated path routes its findings the same way a real one does —
         // and the line it writes SAYS it is simulated, so a canned finding can
         // never read as an observed gap on the module's own work queue.
-        await routeSessionFindings(sessionId, 'simulated');
+        await completeSessionPipeline(sessionId, 'simulated');
         const updatedSession = getSession(sessionId);
         return apiSuccess(updatedSession);
       }
@@ -269,7 +351,46 @@ export async function POST(req: Request) {
           projectId,
         });
         if (!outcome.ok) return apiError(outcome.error, 400);
-        await routeSessionFindings(outcome.data.sessionId, 'external', projectId);
+        await completeSessionPipeline(outcome.data.sessionId, 'external', projectId);
+        return apiSuccess(outcome.data);
+      }
+
+      case 'preview-harness-run': {
+        // What importing a STORED run would write — the import's own validation
+        // and mapping, projected to counts. Writes nothing.
+        const { runId, projectId, sessionName } = body as {
+          action: string; runId?: string; projectId?: string; sessionName?: string;
+        };
+        if (!runId) return apiError('runId required', 400);
+        const run = getRun(runId);
+        if (!run) return apiError(`Harness run ${runId} not found`, 404);
+        const preview = previewHarnessRun(run, { now: () => Date.now(), projectId, sessionName });
+        if (!preview.ok) return apiError(preview.error, 400);
+        return apiSuccess({ ...preview.data, ingestedSessionId: getSessionByHarnessRun(runId)?.id ?? null });
+      }
+
+      case 'ingest-harness-run': {
+        // Import a stored run, at most once: a re-import (sequential or
+        // concurrent) is 409 naming the session that already holds the run.
+        // Completion goes through the SAME pipeline as every other completion.
+        const { runId, projectId, sessionName } = body as {
+          action: string; runId?: string; projectId?: string; sessionName?: string;
+        };
+        if (!runId) return apiError('runId required', 400);
+        const run = getRun(runId);
+        if (!run) return apiError(`Harness run ${runId} not found`, 404);
+        const outcome = await importHarnessRun(run, {
+          writer: createDbDirectorWriter(),
+          projectId,
+          sessionName,
+          findIngested: (id) => getSessionByHarnessRun(id)?.id ?? null,
+          complete: (id) => completeSessionPipeline(id, 'external', projectId),
+        });
+        if (!outcome.ok) {
+          return outcome.error.kind === 'duplicate'
+            ? apiError(outcome.error.message, 409, { sessionId: outcome.error.sessionId })
+            : apiError(outcome.error.message, 400);
+        }
         return apiSuccess(outcome.data);
       }
 

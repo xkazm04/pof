@@ -6,6 +6,7 @@ import {
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_VIOLET,
   OPACITY_15,
 } from '@/lib/chart-colors';
+import { survivalTone } from '@/lib/balance/encounter-bands';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { LevelSweepChart, LEVEL_SWEEP_METRICS } from './LevelSweepChart';
 import type { LevelSweepPoint, LevelSweepConfig } from './data';
@@ -141,7 +142,7 @@ export function LevelSweepPanel({ show, points, breakpoints, running, config, se
                       <td className="py-0.5 px-1 text-text">{p.level}</td>
                       <td className="py-0.5 px-1 text-right" style={{ color: ACCENT_CYAN }}>{p.ttk.toFixed(1)}s</td>
                       <td className="py-0.5 px-1 text-right" style={{ color: ACCENT_ORANGE }}>{p.dps.toFixed(0)}</td>
-                      <td className="py-0.5 px-1 text-right" style={{ color: p.survivalRate > 0.5 ? STATUS_SUCCESS : STATUS_ERROR }}>
+                      <td className="py-0.5 px-1 text-right" style={{ color: survivalTone(p.survivalRate) }}>
                         {(p.survivalRate * 100).toFixed(0)}%
                       </td>
                       <td className="py-0.5 px-1 text-right" style={{ color: ACCENT_EMERALD }}>{p.ehp.toFixed(0)}</td>

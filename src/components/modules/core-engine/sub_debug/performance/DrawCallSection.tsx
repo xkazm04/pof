@@ -2,70 +2,48 @@
 
 import { motion } from 'framer-motion';
 import { Layers } from 'lucide-react';
-import { STATUS_ERROR, STATUS_WARNING, OPACITY_10,
-  withOpacity, OPACITY_80,
-} from '@/lib/chart-colors';
+import { STATUS_ERROR, withOpacity, OPACITY_80 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { Sparkline } from '../system/CircularGauge';
 import { ACCENT } from '../_shared/data';
-import { DRAW_CALL_CATEGORIES, DRAW_CALL_TOTAL, DRAW_CALL_BUDGET, EXPENSIVE_MATERIALS } from '../_shared/data-perf';
+import type { DebugSnapshot } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
 
-export function DrawCallSection() {
+/** Draw calls per frame from the capture: the same figure as the gauge and the stat dashboard. */
+export function DrawCallSection({ drawCalls }: { drawCalls: DebugSnapshot['drawCalls'] }) {
+  const { perFrame, peak, budget, series } = drawCalls;
+  const usage = (perFrame / budget) * 100;
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
       <div className="flex items-center justify-between mb-3">
         <SectionHeader label="DRAW_CALL_ANALYZER" color={ACCENT} icon={Layers} />
         <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted shrink-0 ml-2">
-          TOTAL: {DRAW_CALL_TOTAL} / {DRAW_CALL_BUDGET} BUDGET
+          AVG: {perFrame} / {budget} BUDGET
         </span>
       </div>
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Bar chart */}
           <div className="space-y-3">
-            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">BY CATEGORY</div>
-            {DRAW_CALL_CATEGORIES.map((cat) => {
-              const maxCount = Math.max(...DRAW_CALL_CATEGORIES.map(c => c.count));
-              return (
-                <div key={cat.category} className="flex items-center gap-1.5">
-                  <span className="text-xs font-mono uppercase tracking-[0.15em] w-24 text-right text-text-muted">{cat.category}</span>
-                  <div className="flex-1">
-                    <NeonBar pct={(cat.count / maxCount) * 100} color={cat.color} height={5} />
-                  </div>
-                  <span className="text-xs font-mono font-bold w-10 text-right" style={{ color: cat.color }}>{cat.count}</span>
-                </div>
-              );
-            })}
-            {/* Budget bar */}
-            <div className="mt-3 pt-2 border-t border-border">
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">PER FRAME</div>
+            <Sparkline data={series} color={ACCENT} width={240} height={36} />
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono uppercase tracking-[0.15em]">
+              <span className="text-text-muted">Average</span>
+              <span className="text-right font-bold" style={{ color: withOpacity(ACCENT, OPACITY_80) }}>{perFrame}</span>
+              <span className="text-text-muted">Peak</span>
+              <span className="text-right font-bold" style={{ color: peak > budget ? STATUS_ERROR : withOpacity(ACCENT, OPACITY_80) }}>{peak}</span>
+            </div>
+            <div className="pt-2 border-t border-border">
               <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">
                 <span>BUDGET USAGE</span>
-                <span>{((DRAW_CALL_TOTAL / DRAW_CALL_BUDGET) * 100).toFixed(0)}%</span>
+                <span>{usage.toFixed(0)}%</span>
               </div>
-              <NeonBar pct={(DRAW_CALL_TOTAL / DRAW_CALL_BUDGET) * 100} color={ACCENT} height={4} glow />
+              <NeonBar pct={Math.min(usage, 100)} color={ACCENT} height={4} glow />
             </div>
           </div>
-
-          {/* Expensive materials table */}
-          <div>
-            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">TOP EXPENSIVE MATERIALS</div>
-            <div className="grid grid-cols-4 gap-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted pb-1 border-b border-border">
-              <span>Material</span><span className="text-center">Draws</span><span>Shader</span><span className="text-right">Cost</span>
-            </div>
-            <div className="space-y-0.5">
-              {EXPENSIVE_MATERIALS.map((mat) => {
-                const costColor = mat.cost === 'High' ? STATUS_ERROR : STATUS_WARNING;
-                return (
-                  <div key={mat.name} className="grid grid-cols-4 gap-2 text-xs font-mono py-1 hover:bg-surface-deep/50 transition-colors">
-                    <span style={{ color: `${withOpacity(ACCENT, OPACITY_80)}` }} className="truncate">{mat.name}</span>
-                    <span className="text-center text-text-muted">{mat.drawCalls}</span>
-                    <span className="text-text-muted truncate text-xs">{mat.shader}</span>
-                    <span className="text-right">
-                      <span className="text-xs px-1 py-[1px] rounded uppercase" style={{ color: costColor, backgroundColor: `${costColor}${OPACITY_10}` }}>{mat.cost}</span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="text-xs font-mono text-text-muted leading-relaxed">
+            <div className="uppercase tracking-[0.15em] mb-1.5">By category / material</div>
+            Not in this capture: a profiler session records draw calls per frame, not which
+            mesh class or material issued them. Use <span style={{ color: withOpacity(ACCENT, OPACITY_80) }}>stat scenerendering</span> or
+            a GPU capture for the breakdown.
           </div>
         </div>
       </BlueprintPanel>

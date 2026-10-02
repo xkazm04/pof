@@ -25,6 +25,15 @@ const SCREEN_TYPE_LABELS: Record<ScreenType, string> = {
   'custom':     'Custom Screen',
 };
 
+/**
+ * The C++ identifier a screen name becomes: the `U<id>Widget` class and its
+ * `EMenuScreenType` entry. The Menu Flow lint checks exactly this string, so the
+ * check and the codegen cannot drift.
+ */
+export function screenIdentifier(name: string): string {
+  return name.replace(/[^a-zA-Z0-9]/g, '');
+}
+
 export function buildMenuFlowPrompt(config: MenuFlowConfig, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
@@ -75,7 +84,7 @@ export function buildMenuFlowPrompt(config: MenuFlowConfig, ctx: ProjectContext)
 
   const screenClassNames = config.screens
     .map((s) => {
-      const className = `U${s.name.replace(/[^a-zA-Z0-9]/g, '')}Widget`;
+      const className = `U${screenIdentifier(s.name)}Widget`;
       return `  - ${className} (.h/.cpp) — ${SCREEN_TYPE_LABELS[s.type]}`;
     })
     .join('\n');
@@ -126,7 +135,7 @@ ${screenClassNames}
    - Common styling setup in NativeConstruct
 
 4. **EMenuScreenType** enum
-   - One entry per screen: ${config.screens.map((s) => s.name.replace(/[^a-zA-Z0-9]/g, '')).join(', ')}
+   - One entry per screen: ${config.screens.map((s) => screenIdentifier(s.name)).join(', ')}
    - Used by NavigationController to identify and instantiate screens
 
 ### Transition Behavior

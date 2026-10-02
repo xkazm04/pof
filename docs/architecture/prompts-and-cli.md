@@ -18,6 +18,7 @@ calls in strings.
 | `src/lib/prompts/material-configurator.ts` | Per-module builder (materials); illustrates `.withBestPractices()` |
 | `src/lib/cli-task.ts` | `CLITask` type hierarchy, `TaskFactory`, `buildTaskPrompt()`, callback registry (`registerCallback` / `extractCallbackPayload` / `resolveCallback`) |
 | `src/lib/claude-terminal/cli-service.ts` | `startExecution()` — spawns Claude Code CLI, stream-json parsing, `CLIExecution` lifecycle, `buildCliArgs()` (model/effort pinning) |
+| `src/lib/claude-terminal/run-callbacks.ts` | `settleRunCallbacks()` — the server settles a terminal run's declared `@@CALLBACK`s once each, POSTing only to their `/api/` path on the app's own origin; `sanitizeCallbackDescriptors()` for the query POST |
 | `src/lib/model-policy.ts` | Model-policy registry (WS0): `getModelPolicy(taskClass)`, `taskClassForDispatchType()`, `resolveDispatchModelChoice()` — the single source of truth for which model + effort powers each task class |
 | `src/lib/prompt-evolution/dispatch-resolve.ts` | `composeTaskDispatch()` / `resolveActivePrompt()` — swaps the served prompt-evolution variant in before the prompt is built; `STATIC_VARIANT_ID` sentinel |
 | `src/lib/prompt-evolution/engine.ts` | `resolveDispatchVariant()` (serve) / `recordTrialForServedVariant()` (record) / `concludeTest()` (decide) — the A/B loop |
@@ -78,7 +79,7 @@ promoted to production-ready).
 | Fact | Consumed by |
 |---|---|
 | `msvc` | `getRequiredMSVCVersion` → the header's `Required MSVC toolchain` line |
-| `substrate`, `substrateSlabHint` | `DOMAIN_CONTEXT.materials`, `material-configurator.ts` (per-surface shading model + best practices) |
+| `substrate`, `substrateSlabHint` | `DOMAIN_CONTEXT.materials`, `material-configurator.ts` (Substrate half of the shading-model line + best practices) |
 | `megaLights`, `pcg` | `DOMAIN_CONTEXT['level-design']` |
 | `stateTree` | `DOMAIN_CONTEXT['ai-behavior']` |
 | `iris` | `DOMAIN_CONTEXT.multiplayer` |
@@ -166,7 +167,7 @@ also maps the content modules `animations` / `ui-hud` / `level-design`). Because
 the routing is kind- and module-scoped, joining it typically makes a builder's
 prompt *shorter*: a materials prompt no longer hauls the GAS / Niagara /
 motion-matching pitfalls it can never hit. Builder→module mapping: `level-design`
-→ `level-design`; `inventory`, `menu-flow` → `ui-hud`; `material-configurator`,
+→ `level-design`; `inventory`, `menu-flow`, `hud-theme` → `ui-hud`; `material-configurator`,
 `material-patterns`, `post-process`, `style-transfer` → `materials`;
 `animation-checklist` → `animations`; `audio-scene`, `audio-events` → `audio`;
 `ai-testing` → `ai-behavior`. The rail
@@ -191,8 +192,24 @@ both (with a golden per surface):
   `buildTaskPrompt` composes the routed header for them (pinned, so a refactor that
   sends the raw string is caught). The genuinely raw one was **feature-init**:
   `FeatureInitButton` sent `initPrompt.prompt` through `sendPrompt` with no
-  composition at all, and now dispatches `TaskFactory.quickAction` (prompt text
-  unchanged, full header + domain + knowledge gained).
+  composition at all; its successor, the Feature Map's `useSectionScaffold`,
+  dispatches `TaskFactory.quickAction` (prompt text unchanged, full header +
+  domain + knowledge gained).
+- *Feel vs UE (drift-only apply)* — `ai-feel`'s full-stack apply prompt names 34
+  UPROPERTYs blind. `UEDriftPanel` (AI Feel tab) instead reads what the project
+  declares through the read-only `POST /api/ue5-source/character-feel` (validation
+  as `/api/ue5-source/parse`, module from the .uproject, <= 64 `.h/.cpp` under
+  `Source/<Module>` matching Character|Dodge|Camera) and the pure
+  `src/lib/character/feel-ue-sync.ts`: `FEEL_UE_BINDINGS` (feel field -> ordered UE
+  aliases, e.g. MaxSprintSpeed|SprintSpeed), `parseFeelDefaults` (numeric literals
+  only; a runtime assignment is a *runtime writer* - listed, never a value, and it
+  makes a field `unparsed` only when no literal exists; disagreeing literals are
+  `ambiguous`), `diffAgainstUE` (in-sync / drift / absent / unparsed / ambiguous,
+  one row per bound field), `buildDriftApplyPrompt` (drift rows name the identifier
+  and file:line to edit; absent rows are reported, never created; null = in sync)
+  and `buildAdoptLayer` (reserved `ue-adopted` set layer). The prompt goes out as an
+  `ask-claude` task on the panel's explicit click only, and the panel re-reads UE
+  after the run.
 
 **Two composition engines, and the migration off the second one.** Knowledge
 routing closed the *content* gap, but a standalone builder dispatched by a raw
@@ -212,6 +229,41 @@ entity id. `MaterialsView` dispatches it via `useModuleCLI.execute`, never
 to `builder-material-configurator.md`) and
 `__tests__/lib/prompt-evolution/material-configurator-rail.test.ts`.
 
+**One surface spec behind the configurator.** `lib/materials/surface-spec.ts` is
+the single per-surface table (prompt label, Roughness/Metallic defaults, default
+features, base sampler/instruction cost, forced-vs-default shading path) plus
+`resolveShadingModel(surface, features)`, `shadingModelLabel` and
+`FORBIDDEN_COMBINATIONS` / `refusalFor` - the same table-plus-resolvers shape as
+`lib/visual-gen/material-boundary.ts`. The cost estimator (rendered by
+`MaterialBudgetBar`), the component's `SURFACES` / helpers and
+`buildMaterialConfiguratorPrompt` all read it, so the Shader Budget bar and the
+dispatched `Shading model:` line name the same UE model for all 512 surface x
+feature combinations (cloth names UE's `Cloth`), and the prompt carries a
+`### Shader Budget` section (samplers n of 16, x metal base, warnings with their
+cheaper swap) the way post-process carries its GPU budget. A forbidden
+combination (tessellation + parallax; the estimator's error rows read the same
+table) is refused in `useMaterialParameterConfigurator`: `onGenerate` is not
+called and Generate is disabled with the reason shown. The component's
+`types.ts` re-exports `SurfaceType` / `RenderFeature` from the spec. Pinned by
+`__tests__/lib/materials/surface-spec.test.ts` and
+`__tests__/components/materials/MaterialParameterConfigurator.spec.test.tsx`.
+
+**A live UE master as the instance's parent.** With the bridge connected, the
+Configure tab lists the project's masters (`masterCandidates`: `parentMaterial
+=== null`, most-instanced first) as one-click "Instance this" buttons
+(`MaterialParameterConfigurator/LiveParentList.tsx`). `adoptParent(entry)` turns
+the manifest entry into a `ParentMaterialRef` (`liveParent.ts` `toParentRef`:
+scalars with a range that always contains the default, vectors / textures /
+static switches by name; a non-numeric scalar default stays `null` and is never
+dispatched as a value), forces `outputType: 'instance'` and makes the parent's
+scalars the sliders; Clear or choosing Master Material drops it. The optional
+`config.parentMaterial` makes `buildMaterialConfiguratorPrompt`'s instance branch
+name the parent asset and its exact parameter set ("override only"), and
+`materialConfiguratorVariantKey` digests it; with no parent both are
+byte-identical (golden + key pinned in `__tests__/materials/material-configurator.test.ts`).
+Pinned by `__tests__/components/materials/liveParent.test.ts` and
+`MaterialParameterConfigurator.parent.test.tsx` (manifest mocked).
+
 Phase 2 converted **post-process** the same way: `TaskFactory.postProcess(spec)`,
 a verbatim `post-process` handler and `postProcessVariantKey(spec)`. The config
 is the stack's one spec — `toStackSpec(effects, resolution)` in
@@ -223,12 +275,46 @@ old server-side builder (`POST /api/post-process-studio`) is retired (400, GET
 presets stays). Pinned by `task-post-process.md` (byte-identical to
 `builder-post-process.md`) and `prompt-evolution/post-process-rail.test.ts`.
 
-**Remaining gap: 8 standalone builders still dispatch through raw `sendPrompt`**
+**Remaining gap: 9 standalone builders still dispatch through raw `sendPrompt`**
 and stay invisible to prompt evolution — `material-patterns`,
 `style-transfer` (`MaterialsView`), `audio-scene`, `audio-events`
-(`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `level-design`
+(`AudioView/useAudioView`), `inventory`, `menu-flow` (`UIHudView`), `hud-theme`
+(`HudThemeEditor/ApplyToProjectBar`, which sends only the theme rows changed since
+the last successful apply; see `useHudDesignStore`), `level-design`
 (`useLevelDesignView`, three dispatch sites), and `ai-testing`
 (`AIBehaviorView`). Converting each is the same three-part move as above.
+
+**The audio builders share one UE runtime contract (`src/lib/audio-runtime-contract.ts`).**
+The deterministic codegen (`audio-codegen.ts`) and the `audio-scene` (system, zone,
+soundscape) and `audio-events` builders all write into `Source/<Module>/Audio/`, and
+they once asked for three pool-owning `UGameInstanceSubsystem`s under different names.
+`AUDIO_RUNTIME` now names each class once, with the names and headers codegen already
+emits (`UAudioSceneManager`, `UAudioReverbPresets`, `UAudioZoneAttenuation`,
+`ASceneAudioVolume`, `ASceneEmitterSpawner`, `UProceduralAmbientManager`), plus the one
+CLI-authored class, `UAudioEventRouter`. Codegen does not import the contract;
+`__tests__/lib/audio-runtime-contract.test.ts` parses codegen output against it as the
+drift guard, and asserts that the five generators together request exactly one
+subsystem. Every builder embeds `runtimeContractBlock(scene, module)`. That block says
+`UAudioSceneManager` is the only audio subsystem and owns the pool size and voice
+limit. It marks the codegen headers as do-not-edit, so PlayEvent, the pool, the
+priority queue, concurrency and cooldowns go in `UAudioEventRouter`: a `UObject`
+(not a subsystem) whose Outer is the manager and which reads
+`GetSoundPoolSize()` / `GetMaxConcurrentSounds()`. The zone prompt configures an
+`ASceneAudioVolume` entry, and the soundscape prompt adds a `UProceduralAmbientManager`
+layer. `buildAudioEventPrompt(config, ctx, scene?)` takes the settled scene's budget
+from `useAudioView`. It prints `eventBudget` (declared voices vs the scene limit), for
+example "21 declared voices exceed the scene limit of 16 ... priority decides which
+voice is stolen".
+
+The Settings tab states what that limit does in a fight: `src/lib/audio-event-budget.ts`
+(`simulateEventBudget`) runs the scene's Event Catalog against the draft
+`maxConcurrentSounds` with the same three rules the event prompt asks
+`UAudioEventRouter` to implement (per-event cooldown, oldest-steal at the class cap,
+lowest-priority steal at the limit, else drop), and `AudioView/BudgetStressPanel`
+shows per-class started/cooled/cut/stolen/dropped, with in-row fixes written to the
+per-scene catalog store. A class never triggered, or with no known clip length, is
+NOT MEASURED. Change the router rules in `prompts/audio-events.ts` and the simulator
+together.
 
 **Asset-Code Oracle remedies start on the rail (remedy -> rescan -> key diff).**
 `src/lib/asset-oracle/oracleRemedy.ts` plans only the task body for the two
@@ -300,8 +386,9 @@ eventually dispatches it).
   gotchas (stamped with the project's engine version from `engine-facts.ts`).
   (`animation-checklist.ts:5`)
 
-- `buildMaterialConfiguratorPrompt(config, ctx)` — maps surface type to shading model
-  and render-feature instructions, generates a three-file task description (master
+- `buildMaterialConfiguratorPrompt(config, ctx)` — resolves the shading model from surface
+  + features via `lib/materials/surface-spec.ts`, adds render-feature instructions and
+  the estimator's Shader Budget section, generates a three-file task description (master
   material or MID variant), then calls `.withBestPractices()` with UMD / TSoftObjectPtr /
   Substrate 5.7+ tips. (`material-configurator.ts:36`)
 
@@ -344,14 +431,47 @@ The report persists as the spec's `codegen` provenance (`ability_specs.codegen`)
 and drives the `dispatched → confirmed/failed` line in the Forge adopt bar and
 the GAS Blueprint editor's spec bar.
 
+The `run-ai-tests` task (`TaskFactory.runAITests(..., runId)`) never lets the
+agent grade itself. Every sandbox prompt names a scenario's UE test through ONE
+identity (`@/lib/ai-testing/test-identity`: `AI.BehaviorTests.<Class>.S<id>_<Slug>`,
+matched by the rename-proof, prefix-free `S<id>_` prefix). The run prompt spells a
+single headless boot via `buildBatchAutomationArgs` (pure, in
+`test-gate-runner/batchAutomationArgs.ts` so client prompt builders can use it)
+with `-ReportOutputPath=<project>/Saved/Automation/PoF-AITests/<runId>`. The
+callback's staticFields carry `runId` / `reportDir` / `scenarioIds`, and
+`record-run-results` checks the dir's shape (400 on `..` or any other path),
+reads UE's `index.json` (`readReport`) and derives each scenario through
+`deriveRunVerdicts` (`@/lib/ai-testing/run-verdict`): report pass means passed,
+fail means failed, and an unmatched test or a missing report means error. The
+agent's claim survives only as a note. If the run ends without a confirmed
+callback, `AIBehaviorView` POSTs `record-run-results` itself with `results: []`,
+so no dispatched scenario stays `running`.
+
 An `ability_specs` row carries **all five** GAS Blueprint editor slices —
 `effects` / `tag_rules` (required) plus the additive, nullable `attributes` /
 `relationships` / `loadout` columns that feed `AttributeSet.h` and
 `GameplayTags.h` codegen — so an entity switch or reload restores the whole
 editor, not two of its five panels. Legacy rows read those three back as
-`undefined` and the editor keeps its own seed. `upsertSpec` writes every slice
-plus `provenance` but deliberately **never** the `codegen` column: that audit
-trail is owned solely by the codegen callback, so a Save/Adopt cannot clobber it.
+`undefined` and the editor keeps its own seed. A POST is a **slice-merge**, not
+a row replace: `upsertSpec` reads the row and applies `mergeSpecWrite`
+(`@/lib/ability/spec`, inside one `db.transaction`) — `effects` / `tagRules`
+replace, and each of `attributes` / `relationships` / `loadout` / `provenance`
+is **kept when the key is absent**, replaced when named, and cleared only by an
+explicit `null` (the route preserves absent vs `null`). So forge Adopt (no
+editor slices) and blueprint Save (no provenance) never destroy what they did
+not send, and the `draft-ability-spec` callback clears the forge provenance via
+`provenance: null` in its staticFields. `upsertSpec` deliberately **never**
+writes the `codegen` column: that audit trail is owned solely by the codegen
+callback, so a Save/Adopt cannot clobber it.
+
+**Forge Adopt previews the merge.** The forge's Adopt bar never writes blind:
+`suggestAdoptTargets` (`@/lib/ability/adopt-preview`) ranks spellbook targets by
+element, then radar distance (the top one is preselected per forge result),
+`useForgeAdopt` GETs the target's stored spec into `abilitySpecStore`, and
+`previewAdopt(current, next)` reads the replaced/kept split off `mergeSpecWrite`
+itself: effects and tag rules removed, the prior forge provenance superseded, a
+confirmed `codegen` report invalidated, the authored slices kept. Anything real
+replaced (or an unread target) routes the write through `ConfirmDialog`.
 
 **One tag dialect.** UE5 spells every gameplay tag twice — a C++ identifier
 (`Ability_Fire_Fireball`) and a tag string (`Ability.Fire.Fireball`). The app
@@ -491,6 +611,26 @@ go through it, so the wire format can never drift between the two paths. The reg
 The id is any non-whitespace run — `cb-…` from `registerCallback` **or** `step-…`
 from the one-shot routes — so the prefix is intentionally unconstrained.
 
+**One run settlement (server, `run-settle.ts`).** Every server path that spawns a CLI run
+and waits for it — `awaitCallback` (one-shot propose/refine/step), batch review
+(`/api/feature-matrix/batch-review`) and the deep-eval job's executor — settles through
+`settleExecution(executionId, { expect: 'callback' | 'end', timeoutMs?, signal? })`. It never
+rejects: it returns `Result<{ text, callback }, { reason, message }>` with a closed reason
+union `no-callback | timeout | cancelled | exit-nonzero | error-result | spawn-error |
+not-found`. It reads the execution's event backlog and status at subscribe time (a spawn
+that failed synchronously settles `spawn-error` at once), then listens live and on the
+process `close` (a clean exit with no result emits no event), so a run that ended cleanly
+without a marker settles `no-callback` the moment it ends instead of holding the caller for
+the whole window. Only a still-`running` run is aborted — on the caller's timeout or signal
+— so no taskkill hits an exited PID and a `completed` run stays `completed`. `awaitCallback`
+throws the seam's message (`ended without a callback`, `callback timeout … (execution
+aborted)`); batch review writes `mod.error = "<reason>: <message>"` (a callback-less or
+rejected-callback run is `error`, never `completed`) on `UI_TIMEOUTS.batchReviewTimeout`,
+and its abort is an `AbortController` the seam honours; deep eval passes its job signal, so
+a cancel kills every in-flight pass. The runaway guard's error event carries
+`timedOut: true` and reads `timeout`. (Server-side; not the client door
+`cliPanelStore.settleRun`.)
+
 **Full sequence:**
 
 1. **Caller** calls `TaskFactory.<method>()` to create a `CLITask` with `appOrigin`
@@ -544,31 +684,44 @@ from the one-shot routes — so the prefix is intentionally unconstrained.
    the Evaluator → **Spend** dashboard + budget guard. See *state-and-persistence →
    `cli_spend`*.
 
-6. **Terminal component** subscribes to `CLIExecutionEvent`s. When the run's `result`
-   event arrives, it scans the accumulated output for **every** marker via
-   `extractAllCallbackPayloads(text)` → `{ callbackId, payload }[]` (a run may emit more
-   than one; the single-match `extractCallbackPayload` / `parseCallbackMarker` are still
-   used server-side by `awaitCallback`, which wants only the first). All markers share the
-   one regex source, so the global and single variants can never drift.
+6. **The run declares its callbacks; the SERVER settles them** (settlement lives with
+   the run, not the tab). `useTaskQueue` (`submitPrompt` and queued `executeTask`) derives
+   `callbacks = callbackIdsIn(prompt).map(getCallback)` from the registry of the tab that
+   built the prompt and sends them with the query POST. The route keeps well-formed
+   descriptors (`sanitizeCallbackDescriptors`) and passes them, with
+   `appOrigin = getOriginFromRequest(request)`, to `startExecution`, which stores them on
+   the execution. A run that declares none is unchanged (one-shot, batch review, free-typed
+   prompts).
 
-7. **`resolveCallback(callbackId, rawPayload)`** (`cli-task.ts:118`):
-   - Looks up the callback in `_callbackRegistry` by ID.
-   - `JSON.parse(rawPayload)` — returns error on malformed JSON.
-   - Merges `cb.staticFields` over the parsed object (static fields take precedence,
-     preventing prompt injection from overriding `moduleId` etc.).
-   - `fetch(cb.url, { method, body: JSON.stringify(merged) })` — POSTs to the app API.
-   - On `json.success === true`: removes the callback from the registry and returns
-     `{ success: true, data }`.
-   - On failure: returns `{ success: false, error }` without deregistering (allows retry).
+7. **`settleRunCallbacks({ text, callbacks, appOrigin })`** (`run-callbacks.ts`) runs in
+   `cli-service` when the run's `result` arrives (or on a clean exit without one), once per
+   execution (`callbacksSettling` latch): it parses **every** marker in the run's text
+   (`parseAllCallbackMarkers`), keeps only declared ids, POSTs each id **once** (a repeated
+   marker never double-POSTs), merges `staticFields` over the payload (`mergeCallbackBody` —
+   static fields win), and is bounded per POST by `UI_TIMEOUTS.callbackSettleMax`. **The
+   server is never a relay:** a descriptor is POSTed only to its `/api/…` path resolved
+   against the app's own origin; one naming another host (or a path outside `/api/`) is
+   `failed` and never fetched. The verdict (`confirmed` / `failed` / `missing`, plus the
+   failed `{ callbackId, payload, error }[]`) is recorded as `execution.callbackStatus` /
+   `callbacksFailed` and emitted as a `callbacks` event. The stream route forwards it as a
+   `callbacks` SSE frame and, for a run that declared callbacks, closes after that frame
+   instead of after `result`; `GET /api/claude-terminal/query` returns `callbackStatus`,
+   `callbacksFailed` and `isError` alongside `status`.
 
-8. The terminal displays a confirmation message. The store or API handler on the
-   receiving end updates its state (checklist progress, feature-matrix entry, scan
-   findings, pipeline artifact, etc.).
+8. **The terminal only reads the verdict.** Attached: the `result` handler waits (bounded by
+   `callbackSettleMax`) for the `callbacks` frame and completes with its status. **Hidden**
+   (the module was navigated away from, so the EventSource is closed): a visibility-gated
+   poll of `GET /query` every `UI_TIMEOUTS.stuckCheckInterval` ends the run from the
+   execution status — `onTaskComplete` fires once through `finishRun`, without re-show, and
+   a later re-show does not re-attach. The receiving API handler updates its state
+   (checklist progress, feature-matrix entry, scan findings, pipeline artifact, etc.).
+   `resolveCallback` (client registry) remains only for the host's **Resubmit** of a failed
+   payload and for server routes that registered their own callbacks (batch review).
 
 **Callback truth (additive completion status).** The run's completion signal carries a
 `callbackStatus` — `confirmed` (every marker's POST succeeded), `failed` (a marker was
-emitted but its POST was rejected), or `missing` (no marker at all). It is resolved inside
-the existing `callbackSettleMax` race, so the `isRunning` release is **bounded, never
+emitted but its POST was rejected), or `missing` (no marker at all). It is the server's
+verdict (step 7), awaited inside the existing `callbackSettleMax` race, so the `isRunning` release is **bounded, never
 indefinite** — the session stays running (`runPhase: 'settling'`) only until the race ends.
 It flows `useTaskQueue.onTaskComplete(id, success, { callbackStatus })` → `bindSessionRun`
 → `cliPanelStore.endRun(id, seq, { success, callbackStatus })` (stored as
@@ -587,6 +740,37 @@ bounded callback-settle race), and the poller re-checks the latch after its asyn
 { callbackStatus })`, which releases `dispatchingRef`, records the registry completion and
 fires `onTaskComplete` — no terminal path can skip one of them (the stuck-poller paths used
 to leave `dispatchingRef` set and silently drop every later dispatch).
+
+**The server decides when a run ends (`runArbiter.ts`).** The terminator set that ends a
+run directly is closed and positive: the `result` frame, the `error` frame (including
+`Execution not found`, which ends it as unknown), a start failure and user Abort. Every
+other observation only asks the server: stream `onerror` (after
+`UI_TIMEOUTS.streamReconnectDelay`), the visible silence watchdog (no frame at all,
+heartbeats included, for `UI_TIMEOUTS.streamSilenceMax`, about 3x the stream route's 15 s
+heartbeat), the stuck poller (registry verdict or heartbeat staleness) and the hidden poll.
+Each one goes through `useTaskQueue.consultServer`, which GETs `/api/claude-terminal/query`
+and applies the pure `arbitrateRunEnd(observation, { declared })`. The rule: `running` gives
+`reconnect` (a closed stream on a visible tab re-opens at the `after=<lastSeq>` cursor,
+keeping `executionIdRef`, so Abort still works); a completed run that declared callbacks
+with no verdict yet, or an unreachable server, gives `wait` (the watchdog re-arms, so the
+run is asked about again and never parked); `Execution not found` gives an end as unknown;
+anything else gives an end with the server's `status`/`isError`/`callbackStatus` through
+`finishRun`. A reconnect never re-POSTs a query or a callback. So a dropped stream no longer
+records a false failure, and Retry can no longer start a second process beside a live one.
+
+**Build ledger: fix a build in one run, diff each rebuild (`buildLedger.ts`).** Every build
+tool_result is parsed into `useTaskQueue.buildParseCache` (an insertion-ordered Map), and
+both terminal render sites (single log rows and tool-pair rows) render the ONE
+`TerminalOutput/BuildBlock`: error cards, grouped warnings, `BuildSummaryCard`, plus a
+ledger row. `previousBuild(cache, logId)` finds the build before this one; the pure
+`diffBuildErrors(prev, next)` keys errors by content (`errorKey` = severity|file|code|message,
+never line/column or the Date.now-based diag id) into fixed / remaining / introduced, shown as
+"N fixed · N new · N remaining since previous build". Counts come only from two parsed
+builds, never from what a run claims. One "Fix all N" sends `buildFixAllPrompt` (distinct
+errors grouped by file, linker checklist only when present, ends with rebuild-and-verify)
+through the unchanged `onBuildFix(prompt)` host callback, on click only and disabled while a
+run streams. The single-error prompt has one builder, `buildFixPrompt` (ErrorCard's Fix;
+`UE5BuildParser.buildFixPromptFromError` re-exports it).
 
 **One run-lifecycle door.** A run's session state is written ONLY through the sequenced
 door in `cliPanelStore`: `beginRun(id) → seq` (isRunning=true, clears the previous run's
@@ -609,8 +793,8 @@ the `pof-cli-prompt` event asks for a fresh Claude session), `resume` ("Collect 
 result": a success whose prompt carried `@@CALLBACK:<id>` but reported `missing` asks the
 same session for exactly those ids — no "next item" is offered), `resubmit-callback`, and
 `navigate` (the owning module's overview). `useTaskQueue` reports `onDispatch({ prompt,
-taskType })` from `submitPrompt` and `onCallbacksUnresolved(markers)` from the result path
-(the markers whose POST failed, dropped if a newer run began); `InlineTerminal` stores them
+taskType })` from `submitPrompt` and `onCallbacksUnresolved(markers)` from the server's
+verdict (the markers whose POST failed, dropped if a newer run began); `InlineTerminal` stores them
 via `recordDispatch` / `setPendingCallbacks`. **Resubmit:** `resubmitPendingCallbacks(id)`
 re-POSTs each retained payload through `resolveCallback` (the registry keeps an entry until
 its POST succeeds) — no new run, no tokens — then `recordCallbackResubmit(id, seq, remaining)`
@@ -865,13 +1049,47 @@ switch: an ingested entity's `provenance.canonProfile` (stamped from its `Refere
 `LabEntity.canonProfile` — set by every constructor through `canonProfileOf` — and
 `buildStepProducePrompt` calls `rulesForProfile` before `canonContextFor`. An unknown profile throws.
 The one-shot DESIGN prompt (a new entity is PoF's) filters to `pof`. `project_rules.profile` stores it
-(additive migration runs before seeding); each profile seeds ONCE under its own marker, so an edit to a
-shipped profile rule does not reach an already-seeded DB (sync is open work). Threshold checkers
+(additive migration runs before seeding); each profile seeds ONCE under its own marker, and a later edit to
+a shipped rule's TEXT is reconciled by **canon drift** (next paragraph). Threshold checkers
 (`acceptance/invariants.ts`, `balance/canon-conformance.ts`) still read PoF's `CANON_SEED` and are NOT
 profile-aware yet — **superseded (W02):** the 8 law-backed invariants are wrapped by
 `canonLawChecker(lawId)` and return `pending` + `UNGRADED:` where the entity's profile (`CheckerContext.canonProfile`)
 has no such law; every step's `accept` is wrapped once at `registerCatalogPipeline` by the SOURCED guard (a seeded
 artifact never grades `pass`). Markers live in `acceptance/markers.ts`.
+
+**Canon drift: provenance-hashed sync with an operator review** (`@/lib/catalog/canon/canonSync.ts`, 2026-09-29).
+Checkers and derivations read the SHIPPED law text; every produce prompt cites the `project_rules` copy. Each row
+records `shipped_hash` (additive, nullable): `canonTextHash` of the shipped text it was last written FROM. Only
+shipped-text writes stamp it (fresh seed, profile offer, restore-defaults, adopt, keep-mine); an operator upsert
+never touches it. The pure `planCanonSync(shipped, rows, offeredIds)` gives each rule one verdict from a closed
+vocabulary: `fresh` (equal; stamped if the stamp is stale) · `follow` (row still equals its recorded offer, shipped
+moved) · `edited` (operator edit, shipped unmoved; no finding) · `conflict` (operator edit AND shipped moved) ·
+`unrecorded` (legacy NULL stamp, differs) · `missing` (shipped, never offered) · `orphaned` (a seed id no longer
+shipped). An offered-then-deleted id gets no verdict (a deleted rule never returns). **Only `follow` and the `fresh`
+stamp are applied automatically** (`ensureTable`, once per process, so the machine-global DB tracks the shipped canon
+of whichever checkout ran last); everything else ASKS: `GET /api/project-rules?view=drift` groups findings by profile
+→ verdict with both texts, and `POST ?action=adopt-shipped | keep-mine | undo-adopt {ids}` (behind
+`requireOperator`) answers them. **Adopt is reversible:** it archives the replaced row (every column, or its
+absence) in `project_rules_adopted` first, and undo-adopt restores it byte-for-byte. keep-mine stamps the current
+shipped hash, so the rule asks again (`conflict`) only when the shipped text moves again. Orphans are only surfaced;
+removal is the explicit Delete. The lab's Canon view banners the active profile's drift and opens
+`CanonDriftPanel` (old vs shipped per rule, per-rule Adopt / Keep mine, bulk "Adopt shipped for all N unrecorded"
+with a count preview before the write, and Undo per adopted rule). The stamp is a `contentHash` of the canon
+fields; changing that hash makes every stamped row read as edited, which only ever asks (never auto-writes).
+
+**Canon law reach + refusal at authoring time** (`@/lib/catalog/canon/ruleReach.ts`, 2026-09-30).
+`ruleReach(rule, pipelines)` → `{ scopeKnown, stepCount, steps, byCatalog }` is exactly the set of Produce prompts a
+law enters, derived from the SAME `rulesForProfile` (own profile + profiles inheriting it) × `stepsForProfile` ×
+`canonCategoriesForStep` × `selectRules` that `buildStepProducePrompt` uses — a parity test pins reach == the steps
+whose built prompt carries the law (a global `game` law reaches 253 prompts; the same law as `art`, 77).
+`validateRuleDraft(draft, pipelines)` (`canon/validation.ts`) is the ONE upsert check, run by the editor before POSTing
+and by `POST /api/project-rules`: schema, registered profile, and scope ∈ `global` ∪ registered catalog ids — an
+unregistered scope is refused `400 Unknown scope "<scope>"` (it used to be stored with 200 and reach nothing). The
+route imports `pipelines/registry.generated` itself, so catalog scopes resolve in its own import graph.
+`useCanonStore.upsert` is server-first: it POSTs, commits locally only on success and returns the `Result` — lab
+previews read the store while dispatch reads the DB, so the old optimistic write cited laws the dispatch never
+carried. `CanonRuleEditor` shows the live reach line, picks scope from a list, and stays open with the refusal;
+'+ Add rule' is a local draft, so Cancel writes nothing.
 
 **A produce prompt names everything its checker grades** (`acceptance/requiredFields.ts`): `fieldsPopulated` keys,
 `minLength` text fields, `minCount` lists and the `wiringContract` STRUCTURE are tagged on the checker, collected
@@ -911,7 +1129,7 @@ identical wherever a step is driven:
 | Seam | File | What it injects |
 |------|------|-----------------|
 | generic lab step (~330) | `ArchetypeStep.buildPrompt` | that step's own contract + criteria |
-| headless / pof-mcp step | `catalog/headless.ts` `buildStepRecipe` | same block, same canon scope |
+| headless / pof-mcp step | `catalog/headless.ts` `buildStepRecipe` | same block, same canon scope. The recipe's `example` is the body's output stamped by `stampTemplate` like any stub write, so a non-exemplar entity's data-blind example carries `data.template` and grades `pending` with a `TEMPLATE:` `exampleReason` (never handed over as passing data); `settle` and submit's `next: { settle, entityStep }` name the act that settles a verdict (`catalog/stepSettlement.ts` `settlementOf`: resubmit / fill-gap / produce / produce-live / drain / settle route / none for UNGRADED) and the lab coach ladder's next step (`pickLadderIssue` over persisted verdicts) |
 | four-phase generation recipe | `catalog/recipe.ts` `recipeBuilder` | the **whole catalog's** contract-bearing steps as a `## Wiring Requirements` table + `## Success Criteria` (a `GenerationRecipe` phase has no defined mapping onto a named pipeline step, so all are injected) |
 
 It is **injection only** — nothing re-derives, re-validates or grades a contract, so no
@@ -955,14 +1173,15 @@ route or UI spawns it; the overseer runs the dispatcher from a session.
   or `PromptBuilder` for per-module builders. This keeps `@@CALLBACK` marker
   registration and context injection in one code path.
 
-- **`staticFields` override Claude's output.** In `resolveCallback`, the merge is
+- **`staticFields` override Claude's output.** In `mergeCallbackBody` (server settlement and `resolveCallback`), the merge is
   `{ ...parsed, ...cb.staticFields }` — static fields win. This prevents prompt
   injection from spoofing `moduleId`, `entityId`, etc.
 
 - **`appOrigin` must be set for callback-bearing tasks.** Use `getAppOrigin()` on the
   client (`src/lib/constants.ts`) or `getOriginFromRequest(request)` in server
-  handlers to get the absolute URL. Relative URLs silently fail since the callback
-  is resolved from within the browser, not from the CLI subprocess.
+  handlers to get the absolute URL. The server settles a terminal run's callbacks
+  against its own origin and accepts only `/api/` paths there — a callback to another
+  host is refused, never relayed.
 
 - **`checklist`, `quick-action`, `feature-fix` get Wiring Requirements.** The set
   `WIRING_TASK_TYPES` gates the wiring block. Other task types (`ask-claude`,
@@ -974,9 +1193,10 @@ route or UI spawns it; the overseer runs the dispatcher from a session.
   `!dynamicContext?.projectType || projectType === 'ue5'`. Adding `dynamicContext`
   with `projectType: 'nextjs'` switches the entire prompt layer to web-app mode.
 
-- **Callback registry is module-level / in-memory.** It does not survive Next.js
-  hot-reload (dev) or server restart. The registry auto-deregisters on successful
-  `resolveCallback`; failed resolutions leave the entry in place for retry.
+- **Callback registry is module-level / in-memory (the dispatching tab's).** It only
+  supplies the descriptors a run declares at dispatch and the Resubmit path; the run
+  itself is settled by the server, so a hidden or navigated-away tab no longer loses or
+  duplicates it. The registry auto-deregisters on a successful `resolveCallback`.
 
 - **100-minute hard timeout.** `startExecution` sets a 6 000 000 ms `setTimeout`
   that kills the child process if Claude does not finish. (`cli-service.ts:294`)

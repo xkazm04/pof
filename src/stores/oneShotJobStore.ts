@@ -86,7 +86,8 @@ const INITIAL: Pick<
   stepModeOverrides: {},
 };
 
-const IN_FLIGHT: readonly OneShotPhase[] = ['analyzing', 'proposing', 'refining', 'awaitingRun', 'running'];
+/** The phases with a live request behind them: a reload interrupts each (below), and leaving warns on each (`leaveRisk`). THE list - import it, never restate it. */
+export const IN_FLIGHT_PHASES: readonly OneShotPhase[] = ['analyzing', 'proposing', 'refining', 'awaitingRun', 'running'];
 
 /**
  * No request survives a reload, so no in-flight phase may either: each rehydrates to the resting
@@ -98,7 +99,7 @@ function restingAfterReload(p: Partial<OneShotJobState>): Pick<OneShotJobState, 
   const phase = p.phase ?? 'idle';
   // A resting `analyzed` is only meaningful with the distribution the operator picks from.
   if (phase === 'analyzed' && !p.distribution) return { phase: 'idle', failureReason: p.failureReason };
-  if (!IN_FLIGHT.includes(phase)) return { phase, failureReason: p.failureReason };
+  if (!IN_FLIGHT_PHASES.includes(phase)) return { phase, failureReason: p.failureReason };
   const interrupted = 'reload-interrupted';
   if (phase !== 'running' && phase !== 'analyzing') {
     if (p.proposal && p.distribution) return { phase: 'proposing', failureReason: p.failureReason };

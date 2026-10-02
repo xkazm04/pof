@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
+
+// Only `defaultRunnerDeps` reaches the real pre-flight; mocked so it never reads a project.
+vi.mock('@/lib/packaging/preflight-runner', () => ({
+  runFastPreflight: vi.fn().mockResolvedValue({ results: [], overall: 'pass' }),
+}));
+
+import { runFastPreflight } from '@/lib/packaging/preflight-runner';
 import {
+  defaultRunnerDeps,
   runScheduledBuild,
   type ScheduledRunContext,
   type ScheduledRunDeps,
@@ -175,5 +183,14 @@ describe('runScheduledBuild', () => {
     await runScheduledBuild(context(), d);
     expect(d.insertBuild).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
     expect(d.nextVersion).not.toHaveBeenCalled();
+  });
+});
+
+describe("defaultRunnerDeps — the nightly pre-flight measures the scheduled profile's maps", () => {
+  it("passes the profile's cookSettings.mapsToInclude as runFastPreflight's third argument", async () => {
+    const base = profile();
+    const ctx = context({ profile: { ...base, cookSettings: { ...base.cookSettings, mapsToInclude: ['/Game/Maps/B'] } } });
+    await defaultRunnerDeps().runPreflight(ctx);
+    expect(runFastPreflight).toHaveBeenCalledWith('C:\\proj', 'PoF', ['/Game/Maps/B']);
   });
 });

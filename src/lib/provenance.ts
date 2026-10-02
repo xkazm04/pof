@@ -95,10 +95,18 @@ export function withProvenance(data: Record<string, unknown>, provenance: Proven
  * One sentence for "how was this made?", for any surface that shows provenance.
  * An unrecorded producer says so in words — it never renders `unknown` in the slot where
  * a producer name goes, because a placeholder in an answer's position reads as an answer.
+ *
+ * Two different absences, told apart: a row with NO stamp predates stamping (legacy), while a
+ * row stamped `unknown` was written by a door that stamps — its writer simply did not attest
+ * which engine ran (e.g. an ingest, or a refused client claim). Telling the second one it
+ * "was written before produce paths stamped" is false for every row written since they do.
  */
 export function describeProducer(p: Provenance | null): string {
-  if (!p || !p.engine || p.engine === UNKNOWN_ENGINE) {
-    const version = p?.promptVersion ? ` (prompt ${p.promptVersion})` : '';
+  const version = p?.promptVersion ? ` (prompt ${p.promptVersion})` : '';
+  if (p?.engine === UNKNOWN_ENGINE) {
+    return `producer: not recorded — not attested by the writer that stored this artifact${version}`;
+  }
+  if (!p || !p.engine) {
     return `producer: not recorded — this artifact was written before produce paths stamped their engine${version}`;
   }
   const parts = [p.engine, p.model, p.effort, p.promptVersion ? `prompt ${p.promptVersion}` : null].filter(Boolean);

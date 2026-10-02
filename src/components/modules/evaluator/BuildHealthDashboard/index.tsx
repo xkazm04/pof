@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Hammer, RefreshCw, CheckCircle, Clock, ListChecks,
   TrendingUp, Bug, Activity, Timer,
@@ -8,6 +8,8 @@ import {
 import { apiFetch } from '@/lib/api-utils';
 import { formatDuration } from '@/lib/format';
 import { useProjectStore } from '@/stores/projectStore';
+import { useBuildRun } from '@/hooks/useBuildRun';
+import { isRunActive } from '@/lib/ue5-bridge/build-run';
 import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -22,9 +24,12 @@ import type { BuildHealthDashboardProps } from './types';
 import { RegressionBanner } from './RegressionBanner';
 import { TargetRow } from './TargetRow';
 import { RecurringErrorRow } from './RecurringErrorRow';
+import { BuildNowBar } from './BuildNowBar';
 
 export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProps) {
   const projectPath = useProjectStore((s) => s.projectPath);
+  const projectName = useProjectStore((s) => s.projectName);
+  const ueVersion = useProjectStore((s) => s.ueVersion);
   const [report, setReport] = useState<BuildHealthReport | null>(initialReport ?? null);
   const [loading, setLoading] = useState(!initialReport);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +53,11 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
       setLoading(false);
     }
   }, [projectPath]);
+
+  // Builds dispatch only on a click; a settled run refetches the report.
+  const project = useMemo(() => ({ projectPath, projectName, ueVersion }), [projectPath, projectName, ueVersion]);
+  const run = useBuildRun({ project, onSettled: fetchReport });
+  const buildNowBar = <BuildNowBar project={project} state={run.state} onBuild={run.buildNow} onAbort={run.abort} />;
 
   // Skip the network entirely when a report was injected (tests / SSR).
   useEffect(() => {
@@ -84,9 +94,10 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
         <EmptyState
           icon={Hammer}
           title="No headless builds yet"
-          description="Run a headless UE build (from a module's build action or the nightly scheduler) and its duration, errors, and warnings will be tracked and trended here."
+          description="Build the project's editor target from here: each headless build's duration, errors, and warnings are recorded and trended on this tab once it settles."
           iconColor={ACCENT}
         />
+        <div className="flex justify-center -mt-2">{buildNowBar}</div>
       </div>
     );
   }
@@ -103,19 +114,22 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           <span className="text-sm font-semibold text-text">Build Health &amp; Trends</span>
           <span className="text-xs text-text-muted font-mono">{summary.totalBuilds} builds</span>
         </div>
-        <button
-          onClick={fetchReport}
-          disabled={loading || !!initialReport}
-          className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-40"
-          aria-label="Refresh build health"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2 min-w-0">
+          {buildNowBar}
+          <button
+            onClick={fetchReport}
+            disabled={loading || !!initialReport}
+            className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-40"
+            aria-label="Refresh build health"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Regression alerts */}
       {regressions.length > 0 && (
-        <RegressionBanner regressions={regressions} />
+        <RegressionBanner regressions={regressions} onRebuild={run.rebuild} rebuildDisabled={isRunActive(run.state)} />
       )}
 
       {/* KPI row */}
@@ -184,9 +198,14 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           <div className="flex items-center gap-1.5 mb-3">
             <Bug className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
             <span className="text-xs font-semibold text-text">Recurring Build Errors</span>
-            <span className="ml-auto text-2xs text-text-muted">from error memory</span>
+            <span className="ml-auto text-2xs text-text-muted">from build diagnostics</span>
           </div>
-          {recurringErrors.length === 0 ? (
+          {recurringErrors.length === 0 && summary.totalErrors > 0 ? (
+            <div data-testid="build-health-errors-unparsed" className="text-center text-text-muted text-xs py-6">
+              {summary.totalErrors} build error{summary.totalErrors !== 1 ? 's' : ''} counted, but they carried no
+              parseable diagnostic — open a failed build&apos;s log to see them.
+            </div>
+          ) : recurringErrors.length === 0 ? (
             <div className="text-center text-text-muted text-xs py-6">No recorded build errors. 🎉</div>
           ) : (
             <div className="space-y-1.5">

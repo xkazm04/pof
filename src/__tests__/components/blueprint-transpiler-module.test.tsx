@@ -10,49 +10,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
-const transpileMock = vi.fn().mockResolvedValue(null);
-const parseMock = vi.fn().mockResolvedValue(null);
-
-vi.mock('@/hooks/useBlueprintTranspiler', () => ({
-  useBlueprintTranspiler: () => ({
-    blueprintJson: BP_JSON,
-    setBlueprintJson: vi.fn(),
-    existingCpp: '',
-    setExistingCpp: vi.fn(),
-    asset: null,
-    summary: null,
-    transpileResult: null,
-    diffResult: null,
-    isLoading: false,
-    error: null,
-    parse: parseMock,
-    transpile: transpileMock,
-    diff: vi.fn(),
-    reset: vi.fn(),
-  }),
-}));
-
 const BP_JSON = '{"ClassName":"BP_Hero"}';
+
+const fetchMock = vi.fn(async () => ({
+  json: async () => ({ success: false, error: 'stubbed' }),
+}));
 
 import { BlueprintTranspilerView } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView';
 import { headerDeclaresModule } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/helpers';
+import { resetBlueprintTranspilerSessions } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
 
 describe('Blueprint transpiler — module name reaches codegen', () => {
   beforeEach(() => {
-    transpileMock.mockClear();
-    parseMock.mockClear();
+    fetchMock.mockClear();
+    resetBlueprintTranspilerSessions();
+    vi.stubGlobal('fetch', fetchMock);
     useProjectStore.setState({ projectName: 'My Game', projectPath: 'C:/proj' });
   });
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
-  it('passes the sanitized module identifier to transpile, not just the raw project name', async () => {
+  it('sends the sanitized module identifier with the transpile, not just the raw project name', async () => {
     render(<BlueprintTranspilerView />);
+    fireEvent.change(screen.getByPlaceholderText(/Paste Blueprint JSON/), { target: { value: BP_JSON } });
     fireEvent.click(screen.getByText('Transpile to C++'));
-    await vi.waitFor(() => expect(transpileMock).toHaveBeenCalled());
-    // (json, projectName, moduleName) — the third argument is what makes the
-    // API macro agree with Source/<Module>/.
-    expect(transpileMock.mock.calls[0][2]).toBe('MyGame');
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    // The module is what makes the API macro agree with Source/<Module>/.
+    const init = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const body = JSON.parse(String(init.body));
+    expect(body).toMatchObject({ action: 'transpile', blueprintJson: BP_JSON, projectName: 'My Game', moduleName: 'MyGame' });
   });
 });
 

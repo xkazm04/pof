@@ -2,9 +2,9 @@
 
 import { Clock, AlertTriangle, Activity } from 'lucide-react';
 import {
-  ACCENT_EMERALD, ACCENT_ORANGE, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, GLOW_SM,
+  ACCENT_EMERALD, ACCENT_ORANGE, STATUS_ERROR, STATUS_WARNING, GLOW_SM,
 } from '@/lib/chart-colors';
-import { FEEDBACK_CHANNELS, type ScrubData } from './types';
+import { FEEDBACK_CHANNELS, severityColor, type ScrubData } from './types';
 
 export function ScrubTooltip({
   displayTime,
@@ -85,7 +85,7 @@ export function ScrubTooltip({
         {scrubData.alert && (
           <div
             className="mt-0.5 flex items-center gap-1"
-            style={{ color: scrubData.alert.severity === 'critical' ? STATUS_ERROR : scrubData.alert.severity === 'warning' ? STATUS_WARNING : STATUS_INFO }}
+            style={{ color: severityColor(scrubData.alert.severity) }}
           >
             <AlertTriangle className="w-2.5 h-2.5" />
             <span className="truncate max-w-[200px]">{scrubData.alert.message}</span>

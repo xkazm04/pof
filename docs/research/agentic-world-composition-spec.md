@@ -137,3 +137,28 @@ size-class-only. The decomposer now knows each prop's NAME and material, but not
 the name to place it, so the bush-on-stairs *class* of error survives anywhere the exclusion
 list misses. A name/semantics-aware affordance pass is the natural next step and is cheaper
 than it looks — the judgement is already a Claude call with a schema.
+
+---
+
+## Update 2026-09-30 — the manifest has an operator surface and a Blender blockout
+
+Scene Composer → Composer tab → **Dress from image** is the route's first caller outside a
+test (`scene-composer/useSceneDressStore.ts`, `SceneDressPanel.tsx`, `DressPlanMap.tsx`).
+Two explicit clicks, nothing spent before them: **Decompose** posts the image with
+`gateCrops` sent explicitly (off by default — the route gates unless told not to, one
+vision call per prop); the placed plan is shown as a top-down footprint map plus a table
+joined by `src/lib/visual-gen/scene-dress-plan.ts` (size from the assets, material and mass
+read back off each instance's own `phys_`/`mass_kg_` tags, crop-gate verdict per asset,
+unplaced rows with the solver's reason). **Block out in Blender** dispatches
+`src/lib/blender-mcp/scripts/composition-blockout.ts` through `executeViaMCP`: one sized
+proxy cube per placed instance with `obj["pof_tags"]` = its UE actor tags, in a NEW
+collection, never touching existing objects. The manifest's cm (z = prop base) becomes
+Blender metres (origin = proxy centre) there, once, and the UI believes only the
+`blockout` receipt on the shared `POF_RESULT=` envelope (`{ placed: <n> }`, read by `readReceipt` in `src/lib/blender-mcp/receipt.ts`).
+
+The crop gate's error path was also made honest: a throw inside it (crop, seam, bug) is now
+`{ ran: false, unavailable: true, note: "crop gate error: …" }` — `skipped` stays reserved
+for a caller that opted out, as in `input-gate.ts`.
+
+**Still the gap:** step 1, the UE-side spawn. The Blender blockout proves the manifest and
+its unit convention in a real scene; it is not an L3.

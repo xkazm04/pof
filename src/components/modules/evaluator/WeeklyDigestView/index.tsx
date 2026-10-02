@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  Calendar, Copy, Check, Image, Flame, Clock, BarChart3, Zap, Loader2, RefreshCw,
+  Calendar, Copy, Check, Image, Flame, Clock, BarChart3, Zap, Loader2, RefreshCw, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { MetricCard } from '@/components/ui/MetricCard';
@@ -13,10 +13,18 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 import { formatDuration } from '@/lib/format';
 import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE } from '@/lib/chart-colors';
 import { FetchError } from '@/components/modules/shared/FetchError';
-import { MODULE_ITEM_IDS, EMPTY_PROGRESS } from './constants';
+import type { CompletionLedger } from '@/lib/roadmap/completion-ledger';
+import { EMPTY_PROGRESS } from './constants';
 import { formatDateRange, formatDigestMarkdown, renderDigestToCanvas } from './helpers';
+import { weekLanded, digestWindows } from './weekLanded';
 import { DailyActivity } from './DailyActivity';
 import { ModuleLeaderboard } from './ModuleLeaderboard';
+import { LandedList } from './LandedList';
+
+const EMPTY_LEDGER: CompletionLedger = {};
+/** Furthest week back the stepper goes (the route accepts weeksAgo 0-52). */
+const MAX_WEEKS_AGO = 52;
+const STEP_BTN = 'p-1 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:pointer-events-none';
 
 // ── Main component ──────────────────────────────────────────────────────────
 
@@ -28,50 +36,49 @@ export function WeeklyDigestView() {
   const [exporting, setExporting] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMounted = useIsMounted();
+  /** 0 = the current week; N = N weeks back. */
+  const [weeksAgo, setWeeksAgo] = useState(0);
+  const requestSeq = useRef(0);
 
   const checklistProgress = useModuleStore((s) => s.checklistProgress) || EMPTY_PROGRESS;
+  const completionLedger = useModuleStore((s) => s.checklistCompletedAt) || EMPTY_LEDGER;
 
-  // Compute checklist completed from client store
-  const checklistCompleted = useMemo(() => {
-    let completed = 0;
-    for (const [moduleId, items] of Object.entries(MODULE_ITEM_IDS)) {
-      const progress = checklistProgress[moduleId];
-      if (!progress) continue;
-      for (const id of items) {
-        if (progress[id]) completed++;
-      }
-    }
-    return completed;
-  }, [checklistProgress]);
+  // What landed in the viewed week, from the dated completion ledger (never the
+  // all-time done count stamped onto whatever week is shown).
+  const landed = useMemo(() => {
+    if (!digest) return null;
+    const { window, prevWindow } = digestWindows(digest);
+    return weekLanded(checklistProgress, completionLedger, window, prevWindow);
+  }, [digest, checklistProgress, completionLedger]);
 
-  // Fetch digest
+  // Fetch digest - the latest request wins, so fast stepping never shows a stale week.
   const fetchDigest = useCallback(async () => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<{ digest: WeeklyDigest }>('/api/weekly-digest');
-      if (!isMounted()) return;
-      const d = data.digest;
-      d.checklistCompleted = checklistCompleted;
-      setDigest(d);
+      const url = weeksAgo === 0 ? '/api/weekly-digest' : `/api/weekly-digest?weeksAgo=${weeksAgo}`;
+      const data = await apiFetch<{ digest: WeeklyDigest }>(url);
+      if (!isMounted() || seq !== requestSeq.current) return;
+      setDigest(data.digest);
     } catch (err) {
-      if (!isMounted()) return;
+      if (!isMounted() || seq !== requestSeq.current) return;
       setError(err instanceof Error ? err.message : 'Failed to load weekly digest');
     } finally {
-      if (isMounted()) setLoading(false);
+      if (isMounted() && seq === requestSeq.current) setLoading(false);
     }
-  }, [checklistCompleted, isMounted]);
+  }, [weeksAgo, isMounted]);
 
   useEffect(() => { void fetchDigest(); }, [fetchDigest]);
 
   // ── Copy as Markdown ──
   const handleCopy = useCallback(async () => {
     if (!digest) return;
-    const md = formatDigestMarkdown(digest);
+    const md = formatDigestMarkdown(digest, landed ?? undefined);
     await navigator.clipboard.writeText(md);
     setCopied(true);
     setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [digest]);
+  }, [digest, landed]);
 
   // ── Export as PNG ──
   const handleExportImage = useCallback(async () => {
@@ -80,7 +87,7 @@ export function WeeklyDigestView() {
 
     // Small delay to ensure canvas is available
     await new Promise((r) => setTimeout(r, 50));
-    renderDigestToCanvas(canvasRef.current, digest);
+    renderDigestToCanvas(canvasRef.current, digest, landed ?? undefined);
 
     canvasRef.current.toBlob((blob) => {
       if (!blob) { setExporting(false); return; }
@@ -92,7 +99,7 @@ export function WeeklyDigestView() {
       URL.revokeObjectURL(url);
       setExporting(false);
     }, 'image/png');
-  }, [digest]);
+  }, [digest, landed]);
 
   if (loading && !digest) {
     return (
@@ -125,9 +132,30 @@ export function WeeklyDigestView() {
           <Calendar className="w-5 h-5" style={{ color: ACCENT_VIOLET }} />
           <div>
             <h2 className="text-base font-semibold text-text">Weekly Progress Digest</h2>
-            <p className="text-2xs text-text-muted">
-              {formatDateRange(digest.periodStart, digest.periodEnd)}
-            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setWeeksAgo((w) => Math.min(MAX_WEEKS_AGO, w + 1))}
+                disabled={weeksAgo >= MAX_WEEKS_AGO}
+                className={STEP_BTN}
+                aria-label="Previous week"
+                title="Previous week"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <p className="text-2xs text-text-muted tabular-nums">
+                {formatDateRange(digest.periodStart, digest.periodEnd)}
+                {weeksAgo > 0 && ` · ${weeksAgo === 1 ? 'last week' : `${weeksAgo} weeks ago`}`}
+              </p>
+              <button
+                onClick={() => setWeeksAgo((w) => Math.max(0, w - 1))}
+                disabled={weeksAgo === 0}
+                className={STEP_BTN}
+                aria-label="Next week"
+                title="Next week"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -175,7 +203,8 @@ export function WeeklyDigestView() {
         />
         <MetricCard
           label="Checklist"
-          value={`${digest.checklistCompleted}/${digest.checklistTotal}`}
+          value={`${landed?.count ?? 0} landed`}
+          delta={landed?.delta ?? undefined}
           icon={Check}
           accent={ACCENT_VIOLET}
         />
@@ -200,6 +229,9 @@ export function WeeklyDigestView() {
           <span className="text-sm font-bold text-text tabular-nums">{digest.longestStreak}</span>
         </div>
       </div>
+
+      {/* What landed in the viewed week */}
+      {landed && <LandedList landed={landed} checklistTotal={digest.checklistTotal} zone={digest.zone} />}
 
       {/* Daily activity sparkline */}
       <DailyActivity dailySessions={digest.dailySessions} />

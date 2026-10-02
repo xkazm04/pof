@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Z_INDEX } from '@/lib/constants';
+import { useDynamicTitle } from '@/hooks/useDynamicTitle';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
-import { LANE_GLYPH, LANE_WORD, type ActivityLane, type LaneState } from './activityModel';
+import { LANE_GLYPH, LANE_WORD, drainSubject, type ActivityLane, type LaneState } from './activityModel';
+import { useLabRunnerStore, type DrainRun } from './labRunnerStore';
 import { useLabActivity } from './hooks/useLabActivity';
 import { Button } from './ui/Button';
 import { labPanelStyle, type LabTheme } from './theme';
@@ -24,12 +26,21 @@ import { labPanelStyle, type LabTheme } from './theme';
  *   - Before the first lease poll answers (and after one fails) the lane reads UNKNOWN,
  *     never idle: a false idle invites a second, non-reentrant UE editor boot.
  *   - Each lane names its own blind spot, so the surface never claims knowledge it lacks.
+ *
+ * The drain lane is an ACTION surface for this session's batch drains (the run lives in
+ * `labRunnerStore`, not in the Matrix): Cancel while one runs, Open in Matrix / Dismiss once it
+ * has finished. `onOpenDrain(catalogId)` routes through the shell's navigate door.
  */
-export function ActivityChip({ t }: { t: LabTheme }) {
+export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (catalogId: string) => void }) {
   const summary = useLabActivity();
+  // The lab shell's tab title: this chip is always mounted in the header and already holds
+  // the summary, so the tab reports outcomes (failed / needs you / done) from the same read.
+  useDynamicTitle(summary);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement | null>(null);
   const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
+  const runMap = useLabRunnerStore((s) => s.runs);
+  const drainRun = useMemo(() => drainSubject(Object.values(runMap)), [runMap]);
 
   // Close on outside click / Escape (mirrors LabBridgeStrip's popover behaviour).
   useEffect(() => {
@@ -84,10 +95,10 @@ export function ActivityChip({ t }: { t: LabTheme }) {
               key={lane.id}
               lane={lane}
               t={t}
-              action={
+              actions={
                 lane.id === 'one-shot' && lane.state !== 'idle'
-                  ? { label: 'Open panel', onClick: () => { setPanelOpen(true); setOpen(false); }, aria: 'open one-shot panel' }
-                  : null
+                  ? [{ label: 'Open panel', onClick: () => { setPanelOpen(true); setOpen(false); }, aria: 'open one-shot panel' }]
+                  : lane.id === 'drain' ? drainActions(drainRun, onOpenDrain, () => setOpen(false)) : []
               }
             />
           ))}
@@ -102,10 +113,26 @@ export function ActivityChip({ t }: { t: LabTheme }) {
   );
 }
 
-function LaneRow({ lane, t, action }: {
+interface LaneAction { label: string; onClick: () => void; aria: string }
+
+/** The drain lane's actions for the run it is about (see `drainSubject`). */
+function drainActions(run: DrainRun | null, onOpenDrain: ((catalogId: string) => void) | undefined, close: () => void): LaneAction[] {
+  if (!run) return [];
+  const runner = useLabRunnerStore.getState();
+  if (run.phase === 'running') {
+    // Honest Cancel: it skips the automatic retry only; the lane then says "cancel requested".
+    return run.cancelRequested ? [] : [{ label: 'Cancel', onClick: () => { runner.requestCancel(run.id); }, aria: `cancel the ${run.catalogId} batch drain` }];
+  }
+  const acts: LaneAction[] = [];
+  if (onOpenDrain) acts.push({ label: 'Open in Matrix', onClick: () => { onOpenDrain(run.catalogId); close(); }, aria: `open the ${run.catalogId} drain in the Matrix` });
+  acts.push({ label: 'Dismiss', onClick: () => { runner.dismissRun(run.id); close(); }, aria: `dismiss the ${run.catalogId} drain result` });
+  return acts;
+}
+
+function LaneRow({ lane, t, actions }: {
   lane: ActivityLane;
   t: LabTheme;
-  action: { label: string; onClick: () => void; aria: string } | null;
+  actions: LaneAction[];
 }) {
   const tone = toneOf(lane.state, t);
   return (
@@ -115,11 +142,11 @@ function LaneRow({ lane, t, action }: {
           <span aria-hidden="true">{LANE_GLYPH[lane.state]}</span> {LANE_WORD[lane.state]}
         </span>
         <span style={{ fontFamily: t.fontMono, fontSize: 'var(--lab-fs-xs)', color: t.ink }}>{lane.title}</span>
-        {action && (
-          <Button onClick={action.onClick} ariaLabel={action.aria} mono style={{ marginLeft: 'auto' }}>
-            {action.label}
+        {actions.map((a, i) => (
+          <Button key={a.aria} onClick={a.onClick} ariaLabel={a.aria} mono style={i === 0 ? { marginLeft: 'auto' } : undefined}>
+            {a.label}
           </Button>
-        )}
+        ))}
       </div>
       <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.text }}>{lane.label}</span>
       {/* The blind spot is always shown: an operator reading "idle" must be able to see

@@ -10,6 +10,7 @@ import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/
 import { RadarChart } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { ItemGenome, TraitAxis } from '@/types/item-genome';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
+import { ITEM_TYPES, RARITY_ORDER } from '@/lib/item-dna/rules';
 import { AXIS_CONFIGS } from './data';
 import { DNAStrand } from './DNAStrand';
 import { TraitSlider } from './TraitSlider';
@@ -65,7 +66,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, itemType: e.target.value as ItemGenome['itemType'] }))}
               className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
             >
-              {['Weapon', 'Armor', 'Consumable', 'Material', 'Accessory'].map((t) => (
+              {ITEM_TYPES.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
@@ -77,7 +78,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, minRarity: e.target.value as ItemGenome['minRarity'] }))}
               className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
             >
-              {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map((r) => (
+              {RARITY_ORDER.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>

@@ -1,7 +1,9 @@
 import { getDb } from './db';
 import { buildUpdateQuery } from './db-utils';
-import { summarizeScenarios } from '@/types/ai-testing';
+import { summarizeScenarios, RUN_HISTORY_LIMIT } from '@/types/ai-testing';
+import { scenarioDefinitionHash } from '@/lib/ai-testing/run-trend';
 import type {
+  ScenarioRunRecord,
   TestSuite,
   TestScenario,
   TestSuiteSummary,
@@ -13,6 +15,9 @@ import type {
   MockStimulus,
   ExpectedAction,
 } from '@/types/ai-testing';
+
+/** A history row keeps the head of the graded output (the scenario row keeps it whole). */
+const HISTORY_OUTPUT_MAX = 2000;
 
 // ── Schema bootstrap ──
 
@@ -52,6 +57,25 @@ export function ensureAITestingTables() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_ai_test_scenarios_suite
     ON ai_test_scenarios(suite_id)
+  `);
+
+  // Additive (no existing column or row is touched): one row per (scenario, run),
+  // written only by recordRunVerdicts — i.e. by a report-graded run write-back.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_test_run_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scenario_id INTEGER NOT NULL REFERENCES ai_test_scenarios(id) ON DELETE CASCADE,
+      run_id TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('passed', 'failed', 'error')),
+      ran_at TEXT NOT NULL,
+      definition_hash TEXT NOT NULL,
+      output TEXT NOT NULL DEFAULT '',
+      UNIQUE(scenario_id, run_id)
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_ai_test_run_history_scenario
+    ON ai_test_run_history(scenario_id, ran_at DESC)
   `);
 }
 
@@ -98,6 +122,40 @@ function rowToScenario(row: ScenarioRow): TestScenario {
   };
 }
 
+interface HistoryRow {
+  scenario_id: number;
+  run_id: string;
+  status: ScenarioRunRecord['status'];
+  ran_at: string;
+  definition_hash: string;
+}
+
+/** The newest RUN_HISTORY_LIMIT runs per scenario (all scenarios, or one suite's). */
+function historyByScenario(suiteId?: number): Map<number, ScenarioRunRecord[]> {
+  const where = suiteId === undefined
+    ? ''
+    : 'WHERE scenario_id IN (SELECT id FROM ai_test_scenarios WHERE suite_id = ?)';
+  const rows = getDb()
+    .prepare(
+      `SELECT scenario_id, run_id, status, ran_at, definition_hash FROM (
+         SELECT *, ROW_NUMBER() OVER (PARTITION BY scenario_id ORDER BY ran_at DESC, id DESC) AS rn
+         FROM ai_test_run_history ${where}
+       ) WHERE rn <= ? ORDER BY scenario_id, rn`,
+    )
+    .all(...(suiteId === undefined ? [] : [suiteId]), RUN_HISTORY_LIMIT) as HistoryRow[];
+  const out = new Map<number, ScenarioRunRecord[]>();
+  for (const r of rows) {
+    const list = out.get(r.scenario_id) ?? [];
+    list.push({ runId: r.run_id, status: r.status, ranAt: r.ran_at, definitionHash: r.definition_hash });
+    out.set(r.scenario_id, list);
+  }
+  return out;
+}
+
+function withHistory(row: ScenarioRow, history: Map<number, ScenarioRunRecord[]>): TestScenario {
+  return { ...rowToScenario(row), history: history.get(row.id) ?? [] };
+}
+
 function rowToSuite(row: SuiteRow, scenarios: TestScenario[]): TestSuite {
   return {
     id: row.id,
@@ -123,10 +181,11 @@ export function getAllSuites(): TestSuite[] {
     .prepare('SELECT * FROM ai_test_scenarios ORDER BY id ASC')
     .all() as ScenarioRow[];
 
+  const history = historyByScenario();
   const scenariosBySuite = new Map<number, TestScenario[]>();
   for (const row of scenarioRows) {
     const list = scenariosBySuite.get(row.suite_id) ?? [];
-    list.push(rowToScenario(row));
+    list.push(withHistory(row, history));
     scenariosBySuite.set(row.suite_id, list);
   }
 
@@ -147,7 +206,8 @@ export function getSuite(id: number): TestSuite | null {
     .prepare('SELECT * FROM ai_test_scenarios WHERE suite_id = ? ORDER BY id ASC')
     .all(id) as ScenarioRow[];
 
-  return rowToSuite(row, scenarioRows.map(rowToScenario));
+  const history = historyByScenario(id);
+  return rowToSuite(row, scenarioRows.map((r) => withHistory(r, history)));
 }
 
 export function createSuite(payload: CreateSuitePayload): TestSuite {
@@ -281,6 +341,50 @@ export function bulkUpdateScenarioStatus(
     }
   });
   run(valid);
+  return updated;
+}
+
+/** A report-graded outcome for one scenario of one run (see run-verdict.ts). */
+export interface RecordedVerdict {
+  scenarioId: number;
+  status: ScenarioRunRecord['status'];
+  output: string;
+}
+
+/**
+ * The ONE door a graded run outcome takes: sets the scenario's status /
+ * last-run fields AND appends its run-history row, in one transaction, keyed
+ * by (scenario, runId) — grading the same run twice (callback + view close)
+ * keeps one row carrying the latest grade. The history row stamps the hash of
+ * the definition the run graded. Plain updateScenario / bulk writes never
+ * record history: an edit, a dispatch, a client-set status or an ungraded
+ * reset is not a run. Returns the scenario ids that exist and were updated.
+ */
+export function recordRunVerdicts(runId: string, ranAt: string, verdicts: readonly RecordedVerdict[]): number[] {
+  ensureAITestingTables();
+  const db = getDb();
+  const selectRow = db.prepare('SELECT * FROM ai_test_scenarios WHERE id = ?');
+  const updateRow = db.prepare(
+    "UPDATE ai_test_scenarios SET status = ?, last_run_output = ?, last_run_at = ?, updated_at = datetime('now') WHERE id = ?",
+  );
+  const upsertHistory = db.prepare(
+    `INSERT INTO ai_test_run_history (scenario_id, run_id, status, ran_at, definition_hash, output)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(scenario_id, run_id) DO UPDATE SET
+       status = excluded.status, ran_at = excluded.ran_at,
+       definition_hash = excluded.definition_hash, output = excluded.output`,
+  );
+  const updated: number[] = [];
+  db.transaction(() => {
+    for (const v of verdicts) {
+      const row = selectRow.get(v.scenarioId) as ScenarioRow | undefined;
+      if (!row) continue;
+      updateRow.run(v.status, v.output, ranAt, v.scenarioId);
+      const hash = scenarioDefinitionHash(rowToScenario(row));
+      upsertHistory.run(v.scenarioId, runId, v.status, ranAt, hash, v.output.slice(0, HISTORY_OUTPUT_MAX));
+      updated.push(v.scenarioId);
+    }
+  })();
   return updated;
 }
 

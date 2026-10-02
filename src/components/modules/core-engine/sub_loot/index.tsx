@@ -9,6 +9,7 @@ import { DUMMY_ITEMS } from '../sub_inventory/_shared/data';
 import { LootFilters } from './LootFilters';
 import { NarrativeBreadcrumb } from './NarrativeBreadcrumb';
 import { LootTabPanels } from './LootTabPanels';
+import { useLootTuningStore } from '@/components/modules/core-engine/sub_loot/_shared/lootTuningStore';
 import type { SubModuleId } from '@/types/modules';
 
 /* ── Cross-reference lookup maps (used by sub-components) ───────────────── */
@@ -35,7 +36,6 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('All');
-  const [enemyFilter, setEnemyFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<LootSubtab>('core');
 
   const tabs: SubTab[] = useMemo(() => [
@@ -43,8 +43,9 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
     ...LOOT_SUBTABS.map(t => ({ id: t.key, label: t.label, icon: t.icon })),
   ], []);
 
-  /* Shared pity threshold: used by PityTimerSection and DroughtCalculator */
-  const [pityThreshold, setPityThreshold] = useState(20);
+  /* Shared pity threshold: the Pity tab edits it, the Feature Map glyphs read it (lootTuningStore) */
+  const pityThreshold = useLootTuningStore((s) => s.pityThreshold);
+  const setPityThreshold = useLootTuningStore((s) => s.setPityThreshold);
 
   const activeRarityColor = useMemo(() => {
     if (rarityFilter === 'All') return ACCENT;
@@ -55,6 +56,8 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
     (name: string) => setExpanded((prev) => (prev === name ? null : name)),
     [],
   );
+
+  const focusTuner = useCallback(() => setActiveTab('core'), []);
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
@@ -80,13 +83,12 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
       {/* ── Active Tab Subtitle ───────────────────────────────────────────── */}
       {subtitle && <p className="text-xs font-mono text-text-muted/70 -mt-1 mb-1 pl-0.5">{subtitle}</p>}
 
-      {/* Rarity + Enemy filters */}
+      {/* Rarity filter + Enemy Source (picks the binding the Core-tab tuner focuses) */}
       <LootFilters
         rarityFilter={rarityFilter}
         setRarityFilter={setRarityFilter}
-        enemyFilter={enemyFilter}
-        setEnemyFilter={setEnemyFilter}
         activeRarityColor={activeRarityColor}
+        onEnemyPicked={focusTuner}
       />
 
       {/* ── Tab Content with Animated Transitions ─────────────────────────── */}

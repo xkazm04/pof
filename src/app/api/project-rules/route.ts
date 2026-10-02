@@ -1,13 +1,23 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { listRules, upsertRule, deleteRule, restoreCanonSeed } from '@/lib/project-rules-db';
-import { ruleUpsertSchema } from '@/lib/catalog/canon/validation';
-import { CANON_PROFILES } from '@/lib/catalog/canon/profiles';
+import { listRules, upsertRule, deleteRule, restoreCanonSeed, canonDrift, adoptShipped, keepMine, undoAdopt } from '@/lib/project-rules-db';
+import { requireOperator } from '@/lib/api-auth';
+import { validateRuleDraft } from '@/lib/catalog/canon/validation';
+// Populates the pipeline registry through THIS route's own import graph: the scope check below
+// reads `allCatalogPipelines()`, and an empty registry would refuse every catalog scope.
+import '@/lib/catalog/pipelines/registry.generated';
+import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import type { ProjectRule } from '@/lib/catalog/canon/types';
 
-/** GET /api/project-rules → ProjectRule[] */
-export async function GET() {
+/**
+ * GET /api/project-rules → ProjectRule[]
+ * GET /api/project-rules?view=drift → CanonDrift: every shipped/DB disagreement that needs an
+ * operator (unrecorded / conflict / missing / orphaned), grouped by profile → verdict, plus the
+ * adopts that can still be undone. Reading it writes nothing.
+ */
+export async function GET(req?: NextRequest) {
   try {
+    if (req?.nextUrl.searchParams.get('view') === 'drift') return apiSuccess(canonDrift());
     return apiSuccess(listRules());
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'project-rules GET failed', 500);
@@ -15,26 +25,38 @@ export async function GET() {
 }
 
 /**
- * POST /api/project-rules — upsert a rule.
+ * POST /api/project-rules — upsert a rule. Refused (400) unless `validateRuleDraft` passes: a scope
+ * must be `global` or a registered catalog id, since any other scope enters no prompt.
  *
  * POST /api/project-rules?action=restore-defaults re-writes the shipped canon.
  * That is the ONLY path that puts `CANON_SEED` back: emptying the table no longer
  * resurrects it, so restoring has to be something the caller asked for by name.
  * The body is ignored for this action.
+ *
+ * Canon drift review — `{ ids: string[] }`, behind requireOperator (they overwrite rows in bulk):
+ * - ?action=adopt-shipped  write the shipped rule over each row (the replaced row is archived first)
+ * - ?action=keep-mine      keep each row's text; it asks again only when the shipped text moves again
+ * - ?action=undo-adopt     restore each archived row exactly as it was before its adopt
  */
 export async function POST(req: NextRequest) {
   try {
-    if (req.nextUrl.searchParams.get('action') === 'restore-defaults') {
+    const action = req.nextUrl.searchParams.get('action');
+    if (action === 'restore-defaults') {
       return apiSuccess(restoreCanonSeed());
     }
-    const body = await req.json();
-    const parsed = ruleUpsertSchema.safeParse(body);
-    if (!parsed.success) {
-      return apiError('Invalid rule', 400, parsed.error.issues);
+    const review = action ? DRIFT_ACTIONS[action] : undefined;
+    if (review) {
+      const denied = requireOperator(req);
+      if (denied) return denied;
+      const ids = ((await req.json().catch(() => null)) as { ids?: unknown } | null)?.ids;
+      if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) return apiError('ids: string[] is required', 400);
+      return apiSuccess(review(ids));
     }
-    if (parsed.data.profile && !CANON_PROFILES[parsed.data.profile]) {
-      return apiError(`Unknown canon profile "${parsed.data.profile}" — registered: ${Object.keys(CANON_PROFILES).join(', ')}`, 400);
-    }
+    if (action) return apiError(`Unknown action "${action}"`, 400);
+    // One check shared with the editor: schema, registered profile, and a scope that reaches a
+    // prompt (`global` or a registered catalog) — an unknown scope used to be stored with 200.
+    const parsed = validateRuleDraft(await req.json(), allCatalogPipelines());
+    if (!parsed.ok) return apiError(parsed.error, 400);
     const rule: ProjectRule = {
       id: parsed.data.id,
       category: parsed.data.category,
@@ -50,6 +72,12 @@ export async function POST(req: NextRequest) {
     return apiError(e instanceof Error ? e.message : 'project-rules POST failed', 500);
   }
 }
+
+const DRIFT_ACTIONS: Record<string, (ids: string[]) => unknown> = {
+  'adopt-shipped': adoptShipped,
+  'keep-mine': keepMine,
+  'undo-adopt': undoAdopt,
+};
 
 /**
  * DELETE /api/project-rules?id=<id>

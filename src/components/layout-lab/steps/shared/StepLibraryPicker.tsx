@@ -75,7 +75,7 @@ export function StepLibraryPicker({ t, referencedIds, onPick, onUnpick }: {
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ flex: 1, minWidth: 180 }}>
-              <LabInput t={t} value={q} onChange={(v) => search(v, category)} placeholder="Search the library…" />
+              <LabInput t={t} ariaLabel="Search the library" value={q} onChange={(v) => search(v, category)} placeholder="Search the library…" />
             </div>
             <select
               value={category}

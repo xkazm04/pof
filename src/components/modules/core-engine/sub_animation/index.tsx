@@ -8,7 +8,6 @@ import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { AnimationEntry } from '@/lib/catalog/types';
-import type { GenerationStep } from '@/lib/catalog/recipe';
 import { ALL_MONTAGES } from './_shared/data';
 import {
   TabHeader,
@@ -73,10 +72,6 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
     (primaryMontageId != null ? entryByMontageId.get(primaryMontageId) : undefined)
     ?? animEntries[0];
   const gen = useGeneration(primaryEntry!);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
@@ -107,7 +102,7 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
             lifecycle={primaryEntry.lifecycle}
             ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
             busy={gen.isRunning}
-            onRegenerate={() => gen.generate(nextStep)}
+            onRegenerate={gen.nextStep ? () => gen.generate() : undefined}
           />
         </div>
       )}

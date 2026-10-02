@@ -11,6 +11,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { POST } from '@/app/api/visual-gen/ue-import/route';
 import { GET } from '@/app/api/visual-gen/ue-import/status/route';
+import { startUeImportJob } from '@/lib/visual-gen/ue-import-job-store';
+import type { CritiqueResult } from '@/lib/visual-gen/mesh-critique';
+import type { UeImportResult } from '@/lib/visual-gen/ue-import';
 
 const dir = mkdtempSync(join(tmpdir(), 'pof-ueimp-'));
 const GLB = join(dir, 'chair.glb');
@@ -108,5 +111,46 @@ describe('GET /api/visual-gen/ue-import/status', () => {
     expect(body).toHaveProperty('planBasis');
     expect(body).toHaveProperty('collisionElements');
     expect(body.collisionElements).toBeNull();
+  });
+});
+
+// ── Scale is reported beside collision (challenge-2026-09-29b) ───────────────
+// What was PLANNED (`scale`: factor, basis, reason) and what was OBSERVED on the asset
+// (`observedExtentCm`, read back from the imported bounds) are separate facts, like collision.
+describe('GET /api/visual-gen/ue-import/status — scale', () => {
+  const scaled = {
+    ok: true,
+    metrics: { verts: 1000, faces: 2000, watertight: true, windingConsistent: true, components: 1, euler: 2, bbox: [0.4, 1, 0.3], volume: 1, area: 6, degenerateFaces: 0 },
+    scale: { verdict: 'off', measuredExtentM: 1, targetExtentM: 1.8, importUniformScale: 1.8 },
+  } as CritiqueResult;
+
+  it('case 7: a job with a scale plan reports scale (factor, basis, reason) and the observed extent', async () => {
+    const importer = async (): Promise<UeImportResult> => ({
+      ok: true, assetPath: '/Game/Generated/SM_X.SM_X', collisionElements: 1, observedExtentCm: 179, logs: [],
+    });
+    const jobId = startUeImportJob({ glbPath: GLB, use: 'blocking', assetClass: 'character' }, { critic: async () => scaled, importer });
+    await new Promise((r) => setTimeout(r, 0));
+    const body = (await (await status(`?jobId=${jobId}`)).json()).data;
+    expect(body.scale).toMatchObject({ factor: 1.8, basis: 'measured' });
+    expect(typeof body.scale.reason).toBe('string');
+    expect(body.observedExtentCm).toBe(179);
+  });
+
+  it('case 7: before the job has planned or observed, both keys are present as null', async () => {
+    const jobId = startUeImportJob(
+      { glbPath: GLB, use: 'blocking' },
+      { critic: () => new Promise<CritiqueResult>(() => {}), importer: async () => ({ ok: true, logs: [] }) },
+    );
+    const body = (await (await status(`?jobId=${jobId}`)).json()).data;
+    expect(body).toHaveProperty('scale');
+    expect(body.scale).toBeNull();
+    expect(body).toHaveProperty('observedExtentCm');
+    expect(body.observedExtentCm).toBeNull();
+  });
+
+  it('POST refuses a nonsensical targetExtentM', async () => {
+    const res = await POST(post({ glbPath: GLB, use: 'blocking', targetExtentM: -1 }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/targetExtentM/);
   });
 });

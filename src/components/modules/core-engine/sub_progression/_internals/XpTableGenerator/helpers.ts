@@ -1,4 +1,7 @@
-import { LEVEL_REWARDS } from '../../_shared/data';
+import { LEVEL_REWARDS, calculateXpForLevel } from '../../_shared/data';
+import {
+  rewardSchedule, unlockRewardCell, type RewardGroup,
+} from '@/components/modules/core-engine/sub_progression/_shared/rewardPacing';
 import type { ProgressionRow } from './types';
 
 /* ── Data Table Generation ─────────────────────────────────────────────────── */
@@ -11,18 +14,19 @@ export function generateProgressionTable(
   manaPerLvl: number,
   attrPointsPerLvl: number,
   levelOverrides: Map<number, Partial<{ xpRequired: number; hpBonus: number; manaBonus: number }>>,
+  /** Rewards grouped by level; every reward at a level lands in that row's one UnlockReward cell. */
+  schedule: readonly RewardGroup<{ level: number; name: string; type: string }>[] = rewardSchedule(LEVEL_REWARDS),
 ): ProgressionRow[] {
   const rows: ProgressionRow[] = [];
+  const rewardsAt = new Map(schedule.map((g) => [g.level, g.rewards]));
   let xpTotal = 0;
 
   for (let lvl = 1; lvl <= maxLevel; lvl++) {
     const override = levelOverrides.get(lvl);
-    const xpRequired = override?.xpRequired ?? Math.floor(baseXp * Math.pow(lvl, exponent));
+    const xpRequired = override?.xpRequired ?? calculateXpForLevel(lvl, baseXp, exponent);
     xpTotal += xpRequired;
     const hpBonus = override?.hpBonus ?? hpPerLvl;
     const manaBonus = override?.manaBonus ?? manaPerLvl;
-
-    const reward = LEVEL_REWARDS.find(r => r.level === lvl);
 
     rows.push({
       level: lvl,
@@ -31,16 +35,17 @@ export function generateProgressionTable(
       hpBonus,
       manaBonus,
       attrPoints: attrPointsPerLvl,
-      unlockReward: reward ? `${reward.name} (${reward.type})` : '',
+      unlockReward: unlockRewardCell(rewardsAt.get(lvl) ?? []),
     });
   }
   return rows;
 }
 
+/** One row per level (the DataTable RowName); UnlockReward is one quoted cell. */
 export function progressionToCSV(rows: ProgressionRow[]): string {
   const header = 'Level,XPRequired,XPTotal,HPBonus,ManaBonus,AttrPoints,UnlockReward';
   const lines = rows.map(r =>
-    `${r.level},${r.xpRequired},${r.xpTotal},${r.hpBonus},${r.manaBonus},${r.attrPoints},"${r.unlockReward}"`
+    `${r.level},${r.xpRequired},${r.xpTotal},${r.hpBonus},${r.manaBonus},${r.attrPoints},"${r.unlockReward.replace(/"/g, '""')}"`
   );
   return [header, ...lines].join('\n');
 }
@@ -84,7 +89,7 @@ struct POF_API FProgressionCurveRow : public FTableRowBase
 \tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
 \tint32 AttrPoints = 3;
 
-\t/** Unlock reward name (ability, passive, milestone, etc.). Empty if none. */
+\t/** Unlock reward(s) at this level, "Name (Type)" joined by "; ". Empty if none. */
 \tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
 \tFString UnlockReward;
 };`;

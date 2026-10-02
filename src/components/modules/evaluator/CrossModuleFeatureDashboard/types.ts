@@ -1,4 +1,5 @@
 import type { SubModuleId } from '@/types/modules';
+import type { StatusKey } from './constants';
 
 // ── Types ──
 
@@ -15,7 +16,8 @@ export interface CellData {
   pctComplete: number;
 }
 
-export interface MissingFeatureGroup {
-  featureName: string;
-  modules: string[];
+/** The heatmap status cell whose features the drill panel shows. */
+export interface SelectedCell {
+  moduleId: SubModuleId;
+  status: StatusKey;
 }

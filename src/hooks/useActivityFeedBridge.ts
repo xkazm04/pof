@@ -76,21 +76,22 @@ export function useActivityFeedBridge() {
   // so rather than implying the feed is a complete ledger of what navigation cost.
   useEffect(() => {
     return eventBus.on('nav.module.evicted', (event: BusEvent<'nav.module.evicted'>) => {
-      const { evictedId, label, scope, cap, liveWork, basis } = event.payload;
+      const { evictedId, label, scope, cap, liveWork, basis, holdReason } = event.payload;
       if (!tearsDownObservedWork({ evictedId, label, scope, cap, liveWork, basis })) return;
 
       const what = scope === 'session' ? 'Terminal session' : 'Module';
       addEvent({
         type: 'shell-eviction',
-        title: `${what} torn down: ${label}`,
+        title: `${what} torn down: ${label}` + (holdReason ? ` — ${holdReason}` : ''),
         description:
           (basis === 'forced-over-live-work'
             ? `Only ${cap} panes stay mounted and every candidate had live work, so this one was unmounted anyway`
             : `The ${cap}-pane keep-alive limit unmounted this one`) +
           (liveWork === 'cli-session-running'
-            ? ' while a CLI session was still running.'
-            : '.') +
-          ' Streams and polls a module holds internally are invisible to the shell, so more may have gone with it.',
+            ? ' while a CLI session was still running'
+            : '') +
+          (holdReason ? ` while it held in-flight work (${holdReason})` : '') +
+          '. Streams and polls a module runs without declaring a pane hold are invisible to the shell, so more may have gone with it.',
         moduleId: scope === 'module' ? evictedId : undefined,
       });
     });

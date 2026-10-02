@@ -13,6 +13,11 @@
  * exists and a human can look at it. What must not happen is cutting anyway and filing
  * sixteen crops under sixteen real entity ids on a grid that was never there.
  *
+ * Every cut is filed through the icon library's door (`icon-library.ts`, injected as
+ * `commit`): the cut is the door's `write`, and the origin it records names the sheet and
+ * the cell the bytes came from, bound to those bytes. A later overwrite by any other
+ * writer turns that claim `unrecorded` instead of leaving it standing.
+ *
  * Every I/O is injected — no test generates, measures or writes anything real.
  */
 import {
@@ -22,7 +27,7 @@ import {
   type SheetCell,
 } from './contact-sheet';
 import { gradeSheet, type SheetGateVerdict } from './sheet-gate';
-import { iconFileBase } from './generated-icons';
+import { iconFileBase, type IconOrigin } from './generated-icons';
 
 export interface SheetImageOps {
   dimensions(path: string): Promise<{ width: number; height: number }>;
@@ -39,8 +44,11 @@ export interface SheetRunDeps {
   /** Runs the prompt through a 2D provider and returns where the bytes landed. */
   generate(prompt: string): Promise<{ ok: boolean; error?: string; refused?: boolean; path?: string; url?: string; model?: string }>;
   image: SheetImageOps;
-  /** Absolute, forward-slashed dir the cut icons land in (`<cwd>/generated/icons`). */
-  iconDir: string;
+  /**
+   * The icon library's door, bound to its dir (`commitLibraryIcon(<cwd>/generated/icons, …)`):
+   * runs `write(path)` for `name`, then records `origin` bound to the bytes it wrote.
+   */
+  commit(name: string, write: (path: string) => Promise<void>, origin: IconOrigin): Promise<unknown>;
 }
 
 export interface SheetRunRequest {
@@ -113,9 +121,16 @@ export async function runContactSheet(
   }
 
   const icons: CutIcon[] = [];
+  const sheetPath = gen.path;
   for (const cell of cells) {
     const file = `${iconFileBase(catalogId, step, cell.id)}.png`;
-    await deps.image.cut(gen.path, cell, `${deps.iconDir}/${file}`);
+    const origin: IconOrigin = {
+      kind: 'contact-sheet',
+      sheetUrl: gen.url ?? '',
+      cellIndex: cell.index,
+      ...(gen.model ? { model: gen.model } : {}),
+    };
+    await deps.commit(file, (out) => deps.image.cut(sheetPath, cell, out), origin);
     icons.push({ entityId: cell.id, file, url: iconUrl(file) });
   }
 

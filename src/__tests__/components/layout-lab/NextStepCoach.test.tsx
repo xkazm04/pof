@@ -19,6 +19,8 @@ afterEach(cleanup);
 
 const rollup = (over: Partial<EntityRollup> = {}): EntityRollup => ({
   total: 5, done: 0, deferred: 0, pending: 5, failed: 0,
+  // Fixtures here are never-produced steps unless a case says otherwise: unproduced follows pending.
+  unproduced: over.pending ?? 5,
   highestTier: null, configComplete: false, ...over,
 });
 
@@ -278,5 +280,60 @@ describe('<NextStepCoach />', () => {
     expect(screen.queryByTestId('next-step-jump')).toBeNull();
     fireEvent.click(screen.getByTestId('next-step-drain'));
     expect(onDrain).toHaveBeenCalled();
+  });
+});
+
+describe('<NextStepCoach /> — the settling act (pipeline-acceptance-engine/B)', () => {
+  const dialog = ['VO Script', 'Subtitles & Choices UI', 'Test Gate'];
+  const dialogVerdicts: Record<string, { status: string; tier?: string; reason?: string }> = {
+    'VO Script': { status: 'pending', tier: 'L0', reason: 'UNGRADED: content invariant "dialog-vo-line-length" is PoF law and is not law under canon profile "diablo1"' },
+    'Subtitles & Choices UI': { status: 'pending', tier: 'L0', reason: 'SOURCED: seeded from Diablo I town dialog' },
+    'Test Gate': { status: 'deferred', tier: 'L3' },
+  };
+
+  it('counts only the gates the live drain can settle: "Run 3 deferred gates", not 4', () => {
+    const tiers = ['L2', 'L3', 'L4', undefined];
+    const gates = ['Rules', 'Live', 'Look', 'Untiered'];
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={gates}
+        statusByStep={() => 'deferred' as StepStatus}
+        verdictOf={(s) => { const tier = tiers[gates.indexOf(s)]; return { status: 'deferred', ...(tier ? { tier } : {}) }; }}
+        rollup={rollup({ done: 0, pending: 0, deferred: 4, total: 4 })}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+        onDrain={() => {}}
+        draining={false}
+      />,
+    );
+    // The L2 pick is settled by the settle passes, so the primary CTA jumps instead of draining.
+    expect(screen.queryByTestId('next-step-drain')).toBeNull();
+    fireEvent.click(screen.getByTestId('coach-expand'));
+    expect(screen.getByTestId('coach-drain').textContent).toBe('Run 3 deferred gates');
+    expect(screen.queryByText(/Run 4 deferred gates/)).toBeNull();
+  });
+
+  it("names the pick's settling act and lists the row nothing here can settle", () => {
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={dialog}
+        statusByStep={(s) => dialogVerdicts[s].status as StepStatus}
+        verdictOf={(s) => dialogVerdicts[s] ?? null}
+        rollup={rollup({ done: 0, pending: 2, unproduced: 0, deferred: 1, total: 3 })}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+      />,
+    );
+    expect(screen.getByTestId('next-step-name').textContent).toBe('Subtitles & Choices UI');
+    expect(screen.getByTestId('next-step-reason').textContent).toMatch(/seeded from a reference/i);
+    fireEvent.click(screen.getByTestId('coach-expand'));
+    const list = screen.getByTestId('coach-unsettleable');
+    expect(list.textContent).toMatch(/nothing here can settle/i);
+    expect(list.textContent).toContain('UNGRADED');
+    expect(list.textContent).toContain('VO Script');
   });
 });

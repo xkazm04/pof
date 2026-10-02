@@ -1,10 +1,12 @@
-import type { ReverbPreset, OcclusionMode } from '@/types/audio-scene';
+import type { AudioZone, ReverbPreset, OcclusionMode } from '@/types/audio-scene';
 
 /**
  * The audio scene's acoustics tables — ONE authority per quantity. The UE codegen
  * (`audio-codegen.ts`) ships these rows as UReverbEffect / AAudioVolume settings,
  * and the painter's LISTEN mode (`audio-scene-audition.ts`) auditions the same
- * numbers, so what the designer hears is what UE is given.
+ * numbers, so what the designer hears is what UE is given. A ZONE's effective
+ * reverb is decided in ONE place, `resolveZoneReverb` below — codegen, listen mode
+ * and the decay glyph all read it.
  */
 
 export interface ReverbParams {
@@ -30,6 +32,36 @@ export const REVERB_PARAMS: Record<ReverbPreset, ReverbParams> = {
   'forest':           { decayTime: 0.6, diffusion: 0.95, density: 0.3, wetDry: 0.2, earlyDelay: 0.002, lateDelay: 0.008 },
   'custom':           { decayTime: 1.0, diffusion: 0.5, density: 0.5, wetDry: 0.3, earlyDelay: 0.01, lateDelay: 0.02 },
 };
+
+// ─── One zone's effective reverb ──────────────────────────────────────────────
+
+export interface ResolvedReverb extends ReverbParams {
+  /** True for `custom`: decay/diffusion/wet are the zone's own sliders. */
+  fromZoneSliders: boolean;
+}
+
+/** The zone fields the resolver reads. Missing sliders fall back to the custom row. */
+export type ZoneReverbInput = Pick<AudioZone, 'reverbPreset'>
+  & Partial<Pick<AudioZone, 'reverbDecayTime' | 'reverbDiffusion' | 'reverbWetDry'>>;
+
+/**
+ * The ONE answer to "what reverb does this zone have". A table preset is its
+ * REVERB_PARAMS row, whatever the zone's sliders say (they are hidden for table
+ * presets and hold stale birth defaults). `custom` is the sliders' decay /
+ * diffusion / wet over the custom row's density and delays. No zone: `none`.
+ */
+export function resolveZoneReverb(zone: ZoneReverbInput | null | undefined): ResolvedReverb {
+  const preset: ReverbPreset = zone?.reverbPreset ?? 'none';
+  const row = REVERB_PARAMS[preset];
+  if (preset !== 'custom' || !zone) return { ...row, fromZoneSliders: false };
+  return {
+    ...row,
+    decayTime: zone.reverbDecayTime ?? row.decayTime,
+    diffusion: zone.reverbDiffusion ?? row.diffusion,
+    wetDry: zone.reverbWetDry ?? row.wetDry,
+    fromZoneSliders: true,
+  };
+}
 
 // ─── Occlusion mapping ────────────────────────────────────────────────────────
 

@@ -2,41 +2,87 @@ import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { getEngineFacts, type EngineFacts } from '@/lib/engine-facts';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
-import type { MaterialConfiguratorConfig, SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
+import type { MaterialConfiguratorConfig } from '@/components/modules/content/materials/MaterialParameterConfigurator';
+import type { ParentMaterialRef, ParentScalar } from '@/components/modules/content/materials/MaterialParameterConfigurator/types';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
-
-const SURFACE_LABELS: Record<SurfaceType, string> = {
-  metal: 'Metallic (PBR metal workflow)',
-  cloth: 'Cloth / Fabric (fuzz, anisotropy)',
-  skin: 'Skin (subsurface scattering profile)',
-  glass: 'Glass (translucent, refractive)',
-  water: 'Water (animated, depth-based)',
-  emissive: 'Emissive (self-illuminated)',
-  foliage: 'Foliage (two-sided, subsurface)',
-  stone: 'Stone / Rock (parallax detail)',
-};
+import {
+  SURFACE_SPEC, resolveShadingModel, shadingModelLabel, substrateQualifier, type RenderFeature,
+} from '@/lib/materials/surface-spec';
+import { estimateMaterialBudget, SAMPLER_HARD_LIMIT } from '@/lib/material-cost-estimator';
 
 /**
- * Shading-model guidance per surface. The Substrate half of each line comes from
- * the project's engine facts (`engine-facts.ts`) — never a hard-coded "5.7+".
+ * The dispatched shading model — the SAME `resolveShadingModel` the Shader Budget
+ * bar reports (surface + features, `lib/materials/surface-spec.ts`). The Substrate
+ * half comes from the project's engine facts (`engine-facts.ts`) — never a
+ * hard-coded "5.7+".
  */
-function surfaceShadingModel(f: EngineFacts): Record<SurfaceType, string> {
-  const slab = f.substrateSlabHint;
-  return {
-    metal: `Default Lit (${slab})`,
-    cloth: `Cloth (if available) or Subsurface (${slab}, with fuzz)`,
-    skin: `Subsurface Profile (${slab}, with subsurface)`,
-    glass: `Default Lit Translucent (${slab}, translucent)`,
-    water: `Default Lit Translucent (${slab}, translucent)`,
-    emissive: `Unlit or Default Lit with Emissive-only (${slab}, emissive)`,
-    foliage: `Two Sided Foliage or Subsurface (${slab}, two-sided)`,
-    stone: `Default Lit (${slab})`,
-  };
+function shadingModelLine(config: MaterialConfiguratorConfig, f: EngineFacts): string {
+  const model = resolveShadingModel(config.surfaceType, config.features);
+  const q = substrateQualifier(model);
+  return `${shadingModelLabel(model)} (${f.substrateSlabHint}${q ? `, ${q}` : ''})`;
+}
+
+/**
+ * The cost the designer tuned against in the Shader Budget bar, carried into the
+ * prompt (as post-process carries its GPU budget) so the generated material is
+ * held to it.
+ */
+function formatShaderBudget(config: MaterialConfiguratorConfig): string {
+  const r = estimateMaterialBudget({ surfaceType: config.surfaceType, features: config.features });
+  const { mapNotes } = SURFACE_SPEC[config.surfaceType].base;
+  const sources = r.samplerBreakdown
+    .map((b, i) => (i === 0 ? `${b.source} ${b.count} (${mapNotes})` : `${b.source} ${b.count}`))
+    .join(', ');
+  const warnings = r.warnings.length > 0
+    ? r.warnings
+      .map((w) => `- ${w.severity === 'error' ? 'Error' : 'Warning'}: ${w.message}${w.suggestion ? ` Cheaper: ${w.suggestion}` : ''}`)
+      .join('\n')
+    : '- No budget warnings.';
+  return `### Shader Budget\n\n` +
+    `**Samplers: ${r.samplers} of ${SAMPLER_HARD_LIMIT} · Instructions: ${r.instructionScore.toFixed(2)}× metal base**\n` +
+    `- Sampler sources: ${sources}\n` +
+    `${warnings}\n` +
+    '- Keep the generated material within this budget: pack maps (ORM) instead of adding samplers, and compile optional features out behind static switches.';
+}
+
+const list = (names: string[]): string => (names.length > 0 ? names.join(', ') : 'none');
+
+function parentScalar(s: ParentScalar): string {
+  return s.defaultValue === null
+    ? `${s.name} (no numeric default in the manifest)`
+    : `${s.name} (parent default ${s.defaultValue}, range [${s.min} – ${s.max}])`;
+}
+
+/**
+ * The instance's Required Files when it targets a live UE master (bridge
+ * manifest): the parent is named and its EXACT parameter set is the only thing
+ * the instance may override — the engine-side material is the authority.
+ */
+function parentInstanceFiles(p: ParentMaterialRef, moduleName: string, surface: string): string {
+  const scalars = p.scalars.length > 0 ? p.scalars.map(parentScalar).join(', ') : 'none';
+  return `### Required Files (all under Source/${moduleName}/Materials/)\n\n` +
+    `1. **MI_${surface}_Instance** — Material Instance of \`${p.path}\`\n` +
+    `   - Parent: \`${p.path}\` — a live master in this project (read from the UE bridge manifest); create a MaterialInstanceConstant of exactly this asset\n` +
+    `   - Override only the parameters this parent exposes:\n` +
+    `     - Scalars: ${scalars}\n` +
+    `     - Vectors: ${list(p.vectors)}\n` +
+    `     - Textures: ${list(p.textures)}\n` +
+    `     - Static switches: ${list(p.switches)}\n` +
+    `   - Never add, rename or invent a parameter the parent does not expose; anything not set under Parameter Defaults keeps the parent's value\n\n` +
+    `2. **U${surface}InstanceHelper** (UBlueprintFunctionLibrary)\n` +
+    `   - \`static UMaterialInstanceDynamic* Create${surface}Instance(UMeshComponent* Mesh, UMaterialInterface* Parent)\`\n` +
+    `   - Sets only the overrides above, by these exact parameter names\n` +
+    `   - Blueprint-callable for runtime creation\n` +
+    `   - UFUNCTION(BlueprintCallable, Category = "Materials|${surface}")\n\n` +
+    `3. **U${surface}MaterialComponent** (UActorComponent)\n` +
+    `   - Simplified component that creates an instance on BeginPlay\n` +
+    `   - UPROPERTY for tunable parameters only (skip switches)\n` +
+    `   - TSoftObjectPtr<UMaterialInterface> for the parent, defaulting to \`${p.path}\` (async load)`;
 }
 
 function featureDetails(f: EngineFacts): Record<RenderFeature, string> {
   return {
-    subsurface: 'Enable Subsurface Scattering: use a Subsurface Profile asset, set subsurface color and radius. Use Subsurface Profile shading model.',
+    subsurface: 'Enable Subsurface Scattering: use a Subsurface Profile asset, set subsurface color and radius. Use the shading model named in Surface Configuration above.',
     parallax: 'Enable Parallax Occlusion Mapping: use a heightmap texture, implement POM via Custom node or BumpOffset. Set min/max samples for quality vs performance.',
     emissive: 'Enable Emissive output: connect emissive color with intensity multiplier. Consider using a mask texture to control which regions glow.',
     refraction: 'Enable Refraction: set Blend Mode to Translucent, use Refraction input with IOR value. Consider using SceneColor for behind-surface sampling.',
@@ -49,8 +95,10 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
   const moduleName = getModuleName(ctx.projectName);
   const isMaster = config.outputType === 'master';
   const facts = getEngineFacts(ctx.ueVersion);
-  const shadingModels = surfaceShadingModel(facts);
+  const surfaceLabel = SURFACE_SPEC[config.surfaceType].promptLabel;
   const featureText = featureDetails(facts);
+  // A live parent applies to an instance only; absent, the prompt is byte-identical to before.
+  const parent = isMaster ? undefined : config.parentMaterial;
 
   const paramLines = Object.values(config.params)
     .map((p) => `  - ${p.name}: default=${p.defaultValue}, range=[${p.min} – ${p.max}], step=${p.step}`)
@@ -60,7 +108,9 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
     ? config.features.map((f) => `- ${featureText[f]}`).join('\n')
     : '- No additional rendering features selected (standard PBR only).';
 
-  const filesSection = isMaster
+  const filesSection = parent
+    ? parentInstanceFiles(parent, moduleName, capitalize(config.surfaceType))
+    : isMaster
     ? `### Required Files (all under Source/${moduleName}/Materials/)\n\n` +
       `1. **M_${capitalize(config.surfaceType)}_Master** — Material setup instructions\n` +
       `   - Node graph description for the UE5 Material Editor\n` +
@@ -106,13 +156,14 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
       ],
     })
     .withRawTask(
-      `## Task: Create ${isMaster ? 'Master Material' : 'Material Instance'} — ${SURFACE_LABELS[config.surfaceType]}\n\n` +
+      `## Task: Create ${isMaster ? 'Master Material' : 'Material Instance'} — ${surfaceLabel}\n\n` +
       `### Surface Configuration\n` +
-      `- Surface type: **${SURFACE_LABELS[config.surfaceType]}**\n` +
-      `- Shading model: **${shadingModels[config.surfaceType]}**\n` +
+      `- Surface type: **${surfaceLabel}**\n` +
+      `- Shading model: **${shadingModelLine(config, facts)}**\n` +
       `- Output type: **${isMaster ? 'Master Material (full shader)' : 'Material Instance (parameter-driven)'}**\n\n` +
       `### Parameter Defaults\n${paramLines}\n\n` +
       `### Rendering Features\n${featureLines}\n\n` +
+      `${formatShaderBudget(config)}\n\n` +
       filesSection,
     )
     .withBestPractices([
@@ -126,7 +177,9 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
       'Include UPROPERTY metadata: ClampMin, ClampMax, UIMin, UIMax matching the parameter ranges above',
       facts.substrate,
       'CRITICAL UE5 authoring gotcha: a Constant3Vector expression\'s color output pin is "" (the empty string), NOT "RGB". connect_material_property(node, "RGB", ...) silently returns false and the material renders black. Use a VectorParameter for tunable colors (its output IS "RGB"), or pass "" when wiring a Constant3Vector.',
-      'Prefer emitting a MaterialInstanceConstant of the shared master M_ARPG_Surface_Master over authoring a new one-off Material. Instances share the compiled shader, keep the project consolidated, and expose Albedo/Normal/Roughness texture params + BaseColorTint + TilingScale + EmissiveStrength.',
+      parent
+        ? `Emit a MaterialInstanceConstant of the live master ${parent.path} over authoring a new one-off Material or parenting to any other master. Instances share the compiled shader and keep the project consolidated.`
+        : 'Prefer emitting a MaterialInstanceConstant of the shared master M_ARPG_Surface_Master over authoring a new one-off Material. Instances share the compiled shader, keep the project consolidated, and expose Albedo/Normal/Roughness texture params + BaseColorTint + TilingScale + EmissiveStrength.',
     ])
     .build();
 }

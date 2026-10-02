@@ -23,7 +23,8 @@ const abortExecution = vi.fn<(id: string) => boolean>(() => true);
 vi.mock('@/lib/claude-terminal/cli-service', () => ({
   startExecution: (...args: unknown[]) => startExecution(...args),
   abortExecution: (id: string) => abortExecution(id),
-  getExecution: () => ({ status: 'running' }),
+  // A live run as the settlement seam (run-settle.ts) reads it: no backlog, no process.
+  getExecution: () => ({ status: 'running', events: [], listeners: new Set(), process: null }),
 }));
 
 import { NextRequest } from 'next/server';
@@ -56,7 +57,8 @@ describe('/api/evaluator/deep-eval', () => {
     expect(projectPath).toBe('C:/p');
     expect(prompt).toContain('EVALUATION task');
     expect(resume).toBeUndefined();
-    expect(typeof onEvent).toBe('function');
+    // Events reach the pass through the settlement seam, not an onEvent callback.
+    expect(onEvent).toBeUndefined();
     expect(options.model).toBe('opus');
     expect(options.effort).toBe('high');
     expect(options.attribution).toMatchObject({ taskType: 'deep-eval', moduleId: 'audio' });

@@ -1,7 +1,7 @@
-import type { ArtifactVerdictRow, PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
-import { stepContentHash } from '@/lib/judge/contentHash';
-import { labContentHash } from './labContentDrift';
+import { isComparableHash, stepContentHash } from '@/lib/judge/contentHash';
+import { driftHashOf } from './labContentDrift';
 
 /**
  * The VERDICT-ONLY projection of a persisted pipeline artifact — what a whole-project
@@ -25,8 +25,11 @@ import { labContentHash } from './labContentDrift';
  *    into `JudgedContent.hash`;
  *  - `driftHash` is {@link labContentHash} — the lab's drift fingerprint (content + UE asset
  *    list), compared against the local artifact exactly as `contentDiverges` does.
- * They are emitted separately rather than reconstructed from one another, so this module
- * never encodes an assumption about either function's output format.
+ * The drift hash is built from the content hash through `driftHashOf` — the SAME helper
+ * `labContentHash` itself calls — so the rule still lives in one place.
+ *
+ * Both hashes are read from the STORED `content_hash` column when the row came from the
+ * blob-free `listArtifactVerdicts` (no `data` fetched or re-hashed); a full row hashes its `data`.
  *
  * A summary is a PROJECTION of the same rows, never a second source of truth: the status it
  * carries is the one the server persisted (and the POST route server-grades every write), and
@@ -50,8 +53,14 @@ export interface StepSummary {
  * Project one persisted artifact into its summary. THE one projection — the route and every
  * test read it from here, so a field can never be added to the wire shape without the
  * derivation that consumes it seeing the same rule.
+ *
+ * Takes a full row (`data` present — hashed, the ground truth) or a verdict read (`data` absent —
+ * its comparable stored `contentHash`). A row with neither has no provable binding, and this
+ * refuses rather than fingerprint `{}` for a blob nobody read.
  */
-export function toStepSummary(a: PipelineArtifact): StepSummary {
+export function toStepSummary(a: ArtifactVerdictRow & { ueAssets?: string[] }): StepSummary {
+  const contentHash = a.data ? stepContentHash(a.data) : isComparableHash(a.contentHash) ? a.contentHash! : null;
+  if (!contentHash) throw new Error(`${a.catalogId}/${a.entityId}/${a.step}: stored content is unreadable and carries no content hash`);
   return {
     entityId: a.entityId,
     step: a.step,
@@ -59,8 +68,8 @@ export function toStepSummary(a: PipelineArtifact): StepSummary {
     ...(a.tier ? { tier: a.tier } : {}),
     ...(a.reason ? { reason: a.reason } : {}),
     ...(a.updatedAt ? { updatedAt: a.updatedAt } : {}),
-    contentHash: stepContentHash(a.data),
-    driftHash: labContentHash(a.data, a.ueAssets),
+    contentHash,
+    driftHash: driftHashOf(contentHash, a.ueAssets),
   };
 }
 

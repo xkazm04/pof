@@ -12,6 +12,7 @@ import { EconomySourcingTab } from './economy/EconomySourcingTab';
 import { MechanicsScalingTab } from './mechanics/MechanicsScalingTab';
 import { LootFilterRuleBuilder } from './loot-filter/LootFilterRuleBuilder';
 import { ItemEconomySimulator } from './economy-simulator';
+import { ItemDNAGenomeEditor } from './dna-genome';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { renderItemMetric } from './metrics';
@@ -146,6 +147,7 @@ export function ItemCatalog({ moduleId }: ItemCatalogProps) {
             <LootFilterRuleBuilder key="loot-filter" />
             </VisibleSection>
           )}
+          {activeTab === 'item-dna' && <ItemDNAGenomeEditor key="item-dna" moduleId={moduleId} />}
           </motion.div>
         </AnimatePresence>
       </div>

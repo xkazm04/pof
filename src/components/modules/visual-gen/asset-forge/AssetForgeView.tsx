@@ -9,6 +9,7 @@ import { GenerationPanel } from './GenerationPanel';
 import { GenerationQueue } from './GenerationQueue';
 import { StyleDnaPanel } from './StyleDnaPanel';
 import { Image2DPanel } from './Image2DPanel';
+import { IconSetPanel } from './IconSetPanel';
 import { ChaosClothPanel } from './ChaosClothPanel';
 import { UeImportPanel } from './UeImportPanel';
 
@@ -16,7 +17,10 @@ import { UeImportPanel } from './UeImportPanel';
  * The 2D face of the forge. Separate tab, not a mode of the 3D one: the two share
  * nothing but the word "generate" — different providers, different capability rules
  * (a 2D provider can be wired and still keyless), different output (an image file vs
- * a polled mesh job).
+ * a polled mesh job). The one thing they DO share is the project style: the Style DNA
+ * panel sits on both tabs, so the switch and the active profile are visible where they apply.
+ * Beneath the one-prompt front sits Icon Set mode: a catalog step's missing entity art as planned
+ * contact sheets, previewed free, run on one paid click.
  */
 function Image2DTab() {
   return (
@@ -25,7 +29,9 @@ function Image2DTab() {
         title="AI 2D Image Generation"
         description="Turn a prompt into an image. Providers that this server holds no key for say so before you submit."
       />
+      <StyleDnaPanel />
       <Image2DPanel />
+      <IconSetPanel />
     </div>
   );
 }

@@ -1,14 +1,16 @@
 import { test, expect } from '@playwright/test';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
-import { catalogManifest, itemsRegistryOnlySteps } from '@/components/layout-lab/catalogManifest';
+import { catalogManifest, itemsRegistrySteps } from '@/components/layout-lab/catalogManifest';
 import {
   gotoLab, openCatalog, selectStep, produceStep, acceptanceStatus, type StepStatus,
 } from './helpers/lab-mode';
 
 /**
  * Items is the REFERENCE pipeline. It renders the ORDERED UNION of its two step specs
- * (ITEMS_SPEC_DUALITY): the 13 bespoke step UIs in ITEM_STEP_NAMES order, then the 5
- * registry-only labels routed to the generic ArchetypeStep. Those five were invisible
+ * (ITEMS_SPEC_DUALITY): the 13 ITEM_STEP_NAMES labels in order, then the 5 registry-only
+ * labels. Since 2026-09-29 every label the registry declares (the 5 + the 6 shared) is
+ * registry-OWNED (itemsLabelOwner) and renders through the generic ArchetypeStep; the 7
+ * bespoke-only labels keep their bespoke step UIs. Those five were invisible
  * until 2026-08-19 while carrying 31 of the catalog's 90 persisted artifact rows — so the
  * walk covers the union, not the bespoke half. This deep-walks it with tailored assertions
  * the generic walker can't make, and is why `items` is in WALKER_SKIP. The default entity
@@ -31,9 +33,9 @@ test.describe('catalog pipeline: items (reference)', () => {
     const stepCount = await page.locator('[data-testid^="step-dot-stamp-"]').count();
     expect(stepCount, 'Items should render the union of both step specs').toBe(ITEMS_STEPS.length);
     expect(ITEMS_STEPS.length).toBe(18);
-    // The registry-only tail is on screen, tagged as such (the duality stays visible).
+    // Every registry-owned label is on screen, tagged as such (the duality stays visible).
     const tags = page.locator('[data-step-source="registry"]');
-    await expect(tags).toHaveCount(itemsRegistryOnlySteps().length);
+    await expect(tags).toHaveCount(itemsRegistrySteps().length);
 
     for (let i = 0; i < stepCount; i++) {
       await selectStep(page, i);
@@ -50,24 +52,17 @@ test.describe('catalog pipeline: items (reference)', () => {
     }
   });
 
-  test('Test Gate renders its functional-test breakdown and reaches a terminal status', async ({ page }) => {
+  test('Test Gate grades through the registered L3 gate and reaches a terminal status', async ({ page }) => {
     await gotoLab(page);
     await openCatalog(page, 'items');
-    // Test Gate is the 12th step (index 11) in ITEM_STEP_NAMES order. Its verdict is DERIVED
-    // from sibling acceptance, so what it reaches depends on what the upstream steps own:
-    //  • every upstream passing → `pass` / `Result={Success}`;
-    //  • blocked only by upstream steps that are themselves DEFERRED (the stub-mode reality —
-    //    the generative steps hold deterministic swatches, not generated art) → `deferred` /
-    //    `Result={Deferred}`. Both are config-complete under Rule 5; a `fail` here would mean
-    //    a real upstream defect, which this walk must still catch.
+    // Test Gate is the 12th step (index 11) in ITEM_STEP_NAMES order. It is registry-owned
+    // (2026-09-29): the registered `entityRuntimeDeferred` gate grades it exactly as the server
+    // does — `deferred` at L3 until VSItemsDefinitionsTest reports. The bespoke per-check
+    // breakdown (`Result={…}` log) is no longer on screen.
     await selectStep(page, 11);
     await produceStep(page, false);
     const status = await acceptanceStatus(page);
     expect(CONFIG_COMPLETE.has(status), `Test Gate reached "${status}"`).toBe(true);
-    // The bespoke gate surfaces its per-check breakdown + the functional-test log, and the log
-    // outcome must agree with the banner (it used to print Success beside a condemned upstream).
-    await expect(page.locator('#lab-canvas')).toContainText(
-      status === 'pass' ? 'Result={Success}' : 'Result={Deferred}',
-    );
+    expect(status).toBe('deferred');
   });
 });

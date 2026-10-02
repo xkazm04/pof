@@ -3,6 +3,11 @@
 **Status:** the loop-closure half of the mechanism is **PROVEN LIVE 2026-08-19** against a
 reinstalled ARDY (see [`ardy-text-to-motion-spec.md`](./ardy-text-to-motion-spec.md)). The
 critique→constraint mapping for the *aesthetic* dimensions is still unbuilt.
+**Tier-1 loop fix: BUILT 2026-10-01.** `src/lib/motion-gate/loopRemedy.ts` (remedy→axes data,
+anti-entries kept, `unaddressed` never dropped), `seamConstraints.ts` (the constraint file below,
+built in-process from the npz — no python), `loopFixRun.ts` (preflight → constraints → `runArdy`
+same prompt + seed → in-process Tier-1, cap 2, best attempt at its true verdict) and the operator
+CLI `scripts/visual-gen/ardy/pof_loop_fix.ts` (previews by default, regenerates only on `--run`).
 **Source run:** `/research` 2026-08-19, "Text to Animation in UE 5.8 | DDS Motion + NVIDIA
 Kimodo" (Dark Dojo Studios).
 **Effort:** L.
@@ -106,7 +111,8 @@ Round-trip helper: `save_constraints_lst(path, lst)` (tensors → lists).
 **This lines up with what PoF already stores.** The generated npz carries `local_rot_mats`
 and `root_positions`, so a loop-closure repair constraint is a direct transform of data the
 pipeline already has: take frame 0's `local_rot_mats`, convert to axis-angle, emit at
-`frame_indices: [last]`.
+`frame_indices: [0, last]` — BOTH endpoints; `[last]` alone is the measured anti-entry below —
+plus one velocity-matched fullbody entry at `[last-1]` (`R0 · R1ᵀ · R0` per joint).
 
 Enforcement strength is a first-class knob: `--cfg_weight <text_weight> <constraint_weight>`
 (default `2.0 2.0`), so the fix path can push constraint adherence without re-weighting the
@@ -167,8 +173,8 @@ correction has been proven to work by hand. Indicative shape only:
 
 | Failing signal | Plausible corrective constraint |
 |---|---|
-| Tier-1 `poseGap` / `worstJoint` | full-body pose keyframe at the last frame pinned to frame 0's pose |
-| Tier-1 `velJump` | keyframes on the two frames either side of the seam |
+| Tier-1 `poseGap` / `worstJoint` | full-body pose keyframe at BOTH endpoints pinned to frame 0's pose (measured; last-only is worse) |
+| Tier-1 `velJump` | one velocity-matched frame at `last-1` (measured: partial, still warn) |
 | `silhouette` low | sparse joint positions at the peak frame, widening the pose |
 | `followThrough` low | end-effector keyframe past the peak, then a settle keyframe |
 | `weight` / `timing` low | likely NOT constraint-addressable — these are dynamics, and a reworded prompt or a different seed is the honest response |

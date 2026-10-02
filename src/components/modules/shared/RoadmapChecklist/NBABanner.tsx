@@ -8,11 +8,11 @@ import { NBAScoreBar } from '@/components/modules/shared/NBAScoreBar';
 import { nbaSuccessOdds } from '@/lib/nba-breakdown';
 import type { NBARecommendation } from '@/lib/nba-engine';
 import type { ModulePatternsResult } from './useModulePatterns';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
 
-/** Odds colour — only ever applied to a number that actually has evidence. */
+/** Odds colour (the `SCORE_BANDS` band) — only ever applied to a number that actually has evidence. */
 function oddsColor(pct: number): string {
-  return pct >= 70 ? STATUS_SUCCESS : pct >= 40 ? STATUS_WARNING : STATUS_ERROR;
+  return scoreStatusToken(pct).color;
 }
 
 /**

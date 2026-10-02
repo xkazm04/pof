@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Rocket, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
@@ -8,6 +8,8 @@ import { slugifyForTestId } from '@/lib/test-ids';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Button } from '@/components/ui/Button';
+import { useNewProjectPlan } from '@/components/modules/project-setup/useNewProjectPlan';
+import type { PlanIssue } from '@/lib/project-setup/newProjectPlan';
 
 const UE_VERSIONS = [
   { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
@@ -16,10 +18,9 @@ const UE_VERSIONS = [
   { value: '5.8.0', label: '5.8', note: 'latest' },
 ] as const;
 
-const DEFAULT_PROJECTS_DIR = 'C:\\Users\\kazda\\Documents\\Unreal Projects';
-
-/** Characters Windows forbids in a path segment. */
-const INVALID_CHARS_RE = /[<>:"|?*\\/]/;
+/** The pill value for an installed engine version (same major.minor), else the raw version. */
+const pillValueFor = (version: string) =>
+  UE_VERSIONS.find((v) => version.startsWith(v.value.split('.').slice(0, 2).join('.')))?.value ?? version;
 
 interface DetectedProject {
   name: string;
@@ -44,6 +45,8 @@ export function SetupWizard() {
   const setProject = useProjectStore((s) => s.setProject);
   const completeSetup = useProjectStore((s) => s.completeSetup);
   const ueVersion = useProjectStore((s) => s.ueVersion);
+  const { plan, engines, root, retry } = useNewProjectPlan(newName, ueVersion);
+  const installed = engines ? new Set(engines.map((e) => e.version.split('.').slice(0, 2).join('.'))) : null;
 
   // Scan for existing projects on mount
   useEffect(() => {
@@ -93,28 +96,25 @@ export function SetupWizard() {
     completeSetup();
   };
 
-  // Start a fresh project with defaults
+  // Start a fresh project — only a plan with no blockers (real root, buildable name, no collision)
   const handleStartFresh = () => {
-    const name = newName.trim();
-    if (!name) return;
-    setProject({
-      projectName: name,
-      projectPath: `${DEFAULT_PROJECTS_DIR}\\${name}`,
-      isNewProject: true,
-    });
+    if (!plan.canCreate || !plan.projectPath) return;
+    setProject({ projectName: plan.identifier, projectPath: plan.projectPath, isNewProject: true });
     completeSetup();
   };
 
-  const nameValid = newName.trim().length > 0 && !INVALID_CHARS_RE.test(newName);
-  const nameError = useMemo(() => {
-    if (newName.length === 0) return null;
-    if (newName.trim().length === 0) return 'Name cannot be only whitespace';
-    if (INVALID_CHARS_RE.test(newName)) {
-      const found = [...new Set(newName.split('').filter((c) => INVALID_CHARS_RE.test(c)))];
-      return `Name cannot contain ${found.map((c) => `"${c}"`).join(' ')}  — invalid characters: < > : " | ? * \\ /`;
-    }
-    return null;
-  }, [newName]);
+  // The name collides with an existing UE project: open it instead of scaffolding over it
+  const handleOpenCollision = (target: NonNullable<PlanIssue['openExisting']>) => {
+    const key = target.path.toLowerCase();
+    const detected = projects.find((p) => p.path.toLowerCase() === key);
+    if (detected) return handleOpenExisting(detected);
+    setProject({ projectName: target.name, projectPath: target.path, isNewProject: false });
+    completeSetup();
+  };
+
+  // 'empty' is not an error to show; 'root-pending' is a transient status line.
+  const shownIssues = plan.issues.filter((i) => i.code !== 'empty' && i.code !== 'root-pending');
+  const nameError = newName.length > 0 && shownIssues.length > 0;
 
   const tabClasses = (active: boolean) =>
     `focus-ring relative flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors ${
@@ -144,14 +144,16 @@ export function SetupWizard() {
               data-testid={`pof-setup-wizard-version-pill-${v.value}`}
               aria-pressed={ueVersion === v.value}
               onClick={() => setProject({ ueVersion: v.value })}
-              title={v.note}
-              className={`focus-ring px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              title={installed ? `${v.note} · ${installed.has(v.label) ? 'installed' : 'not installed'}` : v.note}
+              data-installed={installed ? String(installed.has(v.label)) : undefined}
+              className={`focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                 ueVersion === v.value
                   ? 'bg-accent-medium text-accent-setup border-accent-strong'
                   : 'bg-surface-deep text-text-muted border-border hover:text-text hover:border-border-bright'
               }`}
             >
               UE {v.label}
+              {installed?.has(v.label) && <StatusDot state="ok" size="xs" label="installed" />}
             </button>
           ))}
         </div>
@@ -264,7 +266,7 @@ export function SetupWizard() {
               data-testid="pof-setup-wizard-project-name-input"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && nameValid && handleStartFresh()}
+              onKeyDown={(e) => e.key === 'Enter' && handleStartFresh()}
               placeholder="Project name"
               autoFocus
               className={`w-full px-3 py-2 bg-surface-deep border rounded-lg text-sm text-text placeholder-text-muted outline-none transition-colors ${
@@ -273,18 +275,49 @@ export function SetupWizard() {
                   : 'border-border focus:border-border-bright'
               }`}
             />
-            {nameError ? (
-              <p className="text-xs text-red-400 mt-2">{nameError}</p>
-            ) : (
-              <p className="text-xs text-text-muted font-mono mt-2 truncate">
-                {newName.trim() ? `${DEFAULT_PROJECTS_DIR}\\${newName.trim()}` : DEFAULT_PROJECTS_DIR}
-              </p>
+            <p className="text-xs text-text-muted font-mono mt-2 truncate" data-testid="pof-setup-wizard-project-path">
+              {plan.projectPath ?? root ?? 'Resolving your Unreal Projects folder…'}
+            </p>
+            {newName.length > 0 && shownIssues.map((issue) => (
+              <div key={issue.code} data-testid={`pof-setup-wizard-issue-${issue.code}`} className="flex items-center gap-2 mt-2 flex-wrap">
+                <p className="text-xs text-red-400">{issue.message}</p>
+                {issue.openExisting && (
+                  <button type="button" data-testid="pof-setup-wizard-open-existing" className={LINK_CLASSES}
+                    onClick={() => handleOpenCollision(issue.openExisting!)}>
+                    Open it instead
+                  </button>
+                )}
+                {issue.code === 'root-unreadable' && (
+                  <button type="button" onClick={retry} className={LINK_CLASSES}>Retry</button>
+                )}
+              </div>
+            ))}
+            {plan.suggestion && (
+              <button type="button" data-testid="pof-setup-wizard-name-suggestion" onClick={() => setNewName(plan.suggestion!)}
+                className="focus-ring mt-2 px-2 py-0.5 rounded text-xs font-mono bg-accent-medium text-accent-setup border border-accent-strong">
+                Use {plan.suggestion}
+              </button>
             )}
+            {plan.advisories.map((a) => (
+              <div key={a.code} className="flex items-center gap-2 mt-2 flex-wrap">
+                <StatusDot state="warn" size="sm" />
+                <p className="text-xs text-text-muted">{a.message}</p>
+                {a.suggestedVersion && (
+                  <button type="button" data-testid="pof-setup-wizard-engine-switch" className={LINK_CLASSES}
+                    onClick={() => setProject({ ueVersion: pillValueFor(a.suggestedVersion!) })}>
+                    Switch to UE {a.suggestedVersion}
+                  </button>
+                )}
+                {a.install && (
+                  <a href={a.install.url} target="_blank" rel="noopener noreferrer" className={LINK_CLASSES}>{a.install.label}</a>
+                )}
+              </div>
+            ))}
             <Button
               data-testid="pof-setup-wizard-create-btn"
               intent="primary"
               onClick={handleStartFresh}
-              disabled={!nameValid}
+              disabled={!plan.canCreate}
               leftIcon={<Rocket className="w-4 h-4" />}
               className="w-full justify-center mt-4"
             >

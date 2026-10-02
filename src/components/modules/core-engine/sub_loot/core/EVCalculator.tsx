@@ -6,19 +6,23 @@ import { motion } from 'framer-motion';
 import { OPACITY_20, STATUS_WARNING,
   withOpacity, OPACITY_5,
 } from '@/lib/chart-colors';
-import { ACCENT, RARITY_TIERS, DEFAULT_ENEMY_LOOT_BINDINGS, DEFAULT_RARITY_GOLD } from '../_shared/data';
+import { ACCENT, RARITY_TIERS } from '../_shared/data';
+import { useLootTuningStore } from '../_shared/lootTuningStore';
 import { computeEVResults } from '../_shared/math';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 
+/** EV per kill/hour/session for the TUNED roster, against the one editable gold table in useLootTuningStore. */
 export function EVCalculator() {
-  const [rarityGold, setRarityGold] = useState<Record<string, number>>(DEFAULT_RARITY_GOLD);
+  const bindings = useLootTuningStore((s) => s.bindings);
+  const rarityGold = useLootTuningStore((s) => s.rarityGold);
+  const dispatch = useLootTuningStore((s) => s.dispatch);
   const [evKillsPerHour, setEvKillsPerHour] = useState(120);
   const [evSessionHours, setEvSessionHours] = useState(2);
   const [evTargetGold, setEvTargetGold] = useState(10000);
 
   const evResults = useMemo(
-    () => computeEVResults(DEFAULT_ENEMY_LOOT_BINDINGS, rarityGold, evKillsPerHour, evSessionHours),
-    [rarityGold, evKillsPerHour, evSessionHours],
+    () => computeEVResults(bindings, rarityGold, evKillsPerHour, evSessionHours),
+    [bindings, rarityGold, evKillsPerHour, evSessionHours],
   );
 
   const evMaxPerHour = useMemo(() => Math.max(...evResults.map(r => r.evPerHour), 1), [evResults]);
@@ -35,8 +39,8 @@ export function EVCalculator() {
             <div key={tier.name} className="flex items-center gap-1.5 rounded-lg border px-2 py-1" style={{ borderColor: withOpacity(tier.color, OPACITY_20), backgroundColor: withOpacity(tier.color, OPACITY_5) }}>
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color }} />
               <span className="text-xs font-mono" style={{ color: tier.color }}>{tier.name}</span>
-              <input type="number" min={0} step={5} value={rarityGold[tier.name]}
-                onChange={e => setRarityGold(prev => ({ ...prev, [tier.name]: Math.max(0, Number(e.target.value)) }))}
+              <input type="number" min={0} step={5} value={rarityGold[tier.name]} aria-label={`${tier.name} sell value`}
+                onChange={e => dispatch({ type: 'setGold', rarity: tier.name, value: Number(e.target.value) })}
                 className="w-16 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-current/50" />
               <span className="text-xs font-mono text-text-muted">g</span>
             </div>
@@ -63,7 +67,7 @@ export function EVCalculator() {
       {/* EV Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         {evResults.map(r => (
-          <motion.div key={r.archetypeId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          <motion.div key={r.archetypeId} data-testid={`ev-card-${r.archetypeId}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="rounded-lg border p-3" style={{ borderColor: withOpacity(r.color, OPACITY_20), backgroundColor: withOpacity(r.color, OPACITY_5) }}>
             <div className="text-xs font-bold mb-2" style={{ color: r.color }}>{r.archetypeName}</div>
             <div className="space-y-1.5">

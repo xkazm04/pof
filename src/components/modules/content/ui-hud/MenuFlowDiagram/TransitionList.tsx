@@ -9,9 +9,10 @@ interface TransitionListProps {
   transitions: ScreenTransition[];
   toggleBidirectional: (id: string) => void;
   deleteTransition: (id: string) => void;
+  updateTransition: (id: string, patch: Partial<Omit<ScreenTransition, 'id'>>) => void;
 }
 
-export function TransitionList({ screens, transitions, toggleBidirectional, deleteTransition }: TransitionListProps) {
+export function TransitionList({ screens, transitions, toggleBidirectional, deleteTransition, updateTransition }: TransitionListProps) {
   return (
     <div className="p-5 bg-black/40 border border-violet-900/40 rounded-2xl shadow-inner relative z-10">
       <div className="flex items-center gap-2 text-xs uppercase text-violet-400 font-bold mb-4">
@@ -23,6 +24,9 @@ export function TransitionList({ screens, transitions, toggleBidirectional, dele
           const fromScr = screens.find((s) => s.id === tr.fromId);
           const toScr = screens.find((s) => s.id === tr.toId);
           if (!fromScr || !toScr) return null;
+          // Triggers are the source screen's widgets; an unbound legacy value stays visible until rebound
+          const bound = fromScr.widgets.includes(tr.trigger);
+          const options = bound ? fromScr.widgets : [tr.trigger, ...fromScr.widgets];
           return (
             <div
               key={tr.id}
@@ -31,7 +35,17 @@ export function TransitionList({ screens, transitions, toggleBidirectional, dele
               <div className="flex-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase bg-violet-950/20 rounded-md px-3 py-1.5 border border-violet-900/30">
                 <span className="text-white drop-shadow-md" style={{ color: SCREEN_TYPES[fromScr.type].color }}>{fromScr.name}</span>
                 <div className="flex flex-col items-center flex-1 px-4">
-                  <span className="text-[11px] text-violet-400/60 font-mono mb-0.5 truncate max-w-[120px]">{tr.trigger}</span>
+                  <select
+                    value={tr.trigger}
+                    onChange={(e) => updateTransition(tr.id, { trigger: e.target.value })}
+                    aria-label={`Trigger for ${fromScr.name} to ${toScr.name}`}
+                    title={bound ? 'Widget on the source screen that fires this route' : `"${tr.trigger}" is not a widget on ${fromScr.name}`}
+                    className={`text-xs font-mono mb-0.5 max-w-[160px] bg-black/60 border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-violet-500/50 ${bound ? 'text-violet-300 border-violet-900/50' : 'text-amber-400 border-amber-700/60'}`}
+                  >
+                    {options.map((w) => (
+                      <option key={w} value={w}>{w === tr.trigger && !bound ? `${w} (unbound)` : w}</option>
+                    ))}
+                  </select>
                   <div className="w-full h-px bg-violet-900/40 relative">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-1 text-violet-500">{tr.bidirectional ? '⟷' : '→'}</div>
                   </div>

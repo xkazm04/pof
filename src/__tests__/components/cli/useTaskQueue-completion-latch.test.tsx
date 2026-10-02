@@ -24,6 +24,7 @@ vi.mock('@/components/cli/skills', () => ({
 import { useTaskQueue } from '@/components/cli/useTaskQueue';
 import type { QueuedTask } from '@/components/cli/types';
 import type { CallbackStatus } from '@/lib/cli-task';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 type CompleteFn = (taskId: string, success: boolean, meta?: { callbackStatus?: CallbackStatus }) => void;
 
@@ -65,12 +66,20 @@ async function startQueuedRun() {
 
 describe('useTaskQueue — single completion latch', () => {
   const realES = globalThis.EventSource;
+  let serverStatus = 'running';
 
   beforeEach(() => {
     vi.useFakeTimers();
     FakeEventSource.instances = [];
     (globalThis as unknown as { EventSource: unknown }).EventSource = FakeEventSource;
-    apiFetch.mockResolvedValue({ executionId: 'exec-1', streamUrl: '/stream?executionId=exec-1', logFilePath: null });
+    apiFetch.mockImplementation(async (url: string, init?: { method?: string }) => {
+      // The server's execution status — the only authority that can end a run from a poll.
+      if (url.startsWith('/api/claude-terminal/query?executionId=') && !init?.method) {
+        return { execution: { status: serverStatus, callbackStatus: null } };
+      }
+      return { executionId: 'exec-1', streamUrl: '/stream?executionId=exec-1', logFilePath: null };
+    });
+    serverStatus = 'running';
     registerTaskStart.mockResolvedValue({ success: true });
     registerTaskComplete.mockResolvedValue(undefined);
     getTaskStatus.mockResolvedValue({ found: true, status: 'running', isStale: false });
@@ -106,16 +115,26 @@ describe('useTaskQueue — single completion latch', () => {
     renderHook(() => useTaskQueue(baseOpts(onTaskComplete)));
     const es = await startQueuedRun();
 
-    // The server-side registry reports the task completed; the stuck poller (30s)
-    // observes it and fires completion.
+    // The registry reports the task completed; the stuck poller (30s) observes it and
+    // asks the server, whose execution status ends the run.
     getTaskStatus.mockResolvedValue({ found: true, status: 'completed', isStale: false });
+    serverStatus = 'completed';
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(onTaskComplete).toHaveBeenCalledTimes(1);
     expect(onTaskComplete).toHaveBeenCalledWith('t1', true);
 
     // Latch holds across paths: a subsequent stream onerror does not re-complete.
-    await act(async () => { es.triggerError(); await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { es.triggerError(); await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.streamReconnectDelay + 10); });
     expect(onTaskComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('a stale heartbeat or registry verdict alone never ends a run the server says is live', async () => {
+    const onTaskComplete = vi.fn<CompleteFn>();
+    renderHook(() => useTaskQueue(baseOpts(onTaskComplete)));
+    await startQueuedRun();
+    getTaskStatus.mockResolvedValue({ found: true, status: 'failed', isStale: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(onTaskComplete).not.toHaveBeenCalled();
   });
 
   // ── One finishRun for every terminal path (scan-sweep --challenge cli-terminal-shell/A) ──
@@ -125,6 +144,7 @@ describe('useTaskQueue — single completion latch', () => {
     const { result } = renderHook(() => useTaskQueue(baseOpts(onTaskComplete)));
     await startQueuedRun();
     getTaskStatus.mockResolvedValue({ found: true, status: 'completed', isStale: false });
+    serverStatus = 'completed';
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(onTaskComplete).toHaveBeenCalledTimes(1);
 

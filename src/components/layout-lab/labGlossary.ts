@@ -34,7 +34,7 @@ export const STATUS_GLOSSARY: Record<AcceptanceStatus, GlossaryEntry> = {
   pass: { short: 'done', plain: 'This step is finished and meets its acceptance check.' },
   fail: { short: 'needs a fix', plain: 'This step ran but did not meet its acceptance check — open it to see why.' },
   deferred: { short: 'waiting on Unreal', plain: 'This step is waiting on a live Unreal run; queue it with “Run deferred gates”.' },
-  pending: { short: 'not started', plain: 'This step has not been produced yet.' },
+  pending: { short: 'held', plain: 'This step has a row, but its acceptance is held — the coach names what settles it.' },
 };
 
 /** Other lab jargon that surfaces in the UI. */
@@ -68,7 +68,10 @@ export interface PlainSummaryInput {
   done: number;
   total: number;
   deferred: number;
+  /** Held rows plus never-produced steps (EntityRollup.pending). */
   pending: number;
+  /** The never-produced part of `pending`. Absent → the split is unknown and `pending` is not split. */
+  unproduced?: number;
   failed: number;
   highestTier: AcceptanceTier | null;
   configComplete: boolean;
@@ -84,6 +87,12 @@ export function plainEntitySummary(s: PlainSummaryInput): string {
   parts.push(`${s.done} of ${s.total} done`);
   if (s.failed > 0) parts.push(`${s.failed} need${s.failed === 1 ? 's' : ''} a fix`);
   if (s.deferred > 0) parts.push(`${s.deferred} waiting on Unreal`);
-  if (s.pending > 0) parts.push(`${s.pending} not started`);
+  if (s.unproduced == null) {
+    if (s.pending > 0) parts.push(`${s.pending} pending`);
+  } else {
+    const held = s.pending - s.unproduced;
+    if (held > 0) parts.push(`${held} held for authoring`);
+    if (s.unproduced > 0) parts.push(`${s.unproduced} not started`);
+  }
   return parts.join(' · ') + '.';
 }

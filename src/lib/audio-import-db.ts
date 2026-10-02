@@ -1,32 +1,5 @@
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { getAudioDb as db } from '@/lib/audio-db-conn';
 import type { AudioImportResult } from '@/types/audio-import';
-
-const DB_PATH = join(homedir(), '.pof', 'pof.db');
-let _db: Database.Database | null = null;
-
-function db(): Database.Database {
-  if (_db) return _db;
-  if (!existsSync(join(homedir(), '.pof'))) mkdirSync(join(homedir(), '.pof'), { recursive: true });
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  _db.exec(`
-    CREATE TABLE IF NOT EXISTS audio_import_runs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      setName TEXT NOT NULL,
-      eventKey TEXT,
-      surface TEXT,
-      assetsImported INTEGER NOT NULL DEFAULT 0,
-      cuePath TEXT,
-      wiredEvent TEXT,
-      createdAt INTEGER NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_audio_import_runs_setName ON audio_import_runs(setName, id);
-  `);
-  return _db;
-}
 
 function rowToImport(row: Record<string, unknown>): AudioImportResult {
   return {

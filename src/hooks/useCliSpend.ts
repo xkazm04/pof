@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import { budgetPeriods, ENFORCED_BUDGET_ZONE } from '@/lib/cli-spend/budgetPreview';
 import type { SpendDashboard, BudgetConfig, BudgetStatus } from '@/types/cli-spend';
 
-const EMPTY_BUDGET_STATUS: BudgetStatus = {
+/** Placeholder until the first fetch lands; built lazily so its windows are current. */
+const emptyBudgetStatus = (): BudgetStatus => ({
   config: { dailyLimitUsd: null, monthlyLimitUsd: null },
   todaySpendUsd: 0,
   monthSpendUsd: 0,
@@ -15,7 +17,8 @@ const EMPTY_BUDGET_STATUS: BudgetStatus = {
   monthlyPct: null,
   dailyExceeded: false,
   monthlyExceeded: false,
-};
+  periods: budgetPeriods(new Date(), ENFORCED_BUDGET_ZONE),
+});
 
 export interface UseSpendDashboardResult {
   dashboard: SpendDashboard | null;
@@ -60,7 +63,7 @@ export interface UseBudgetResult {
 
 /** Read + persist the daily/monthly budget config and its live status. */
 export function useBudget(onSaved?: () => void): UseBudgetResult {
-  const [status, setStatus] = useState<BudgetStatus>(EMPTY_BUDGET_STATUS);
+  const [status, setStatus] = useState<BudgetStatus>(emptyBudgetStatus);
   const [isSaving, setIsSaving] = useState(false);
   const isMounted = useIsMounted();
 

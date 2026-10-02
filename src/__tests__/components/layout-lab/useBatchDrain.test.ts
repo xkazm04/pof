@@ -13,7 +13,7 @@ vi.mock('@/components/layout-lab/labArtifactCache', () => ({
 }));
 
 import { useBatchDrain, type BatchEntity } from '@/components/layout-lab/hooks/useBatchDrain';
-import { useLabRunnerStore } from '@/components/layout-lab/labRunnerStore';
+import { useLabRunnerStore, batchRunId } from '@/components/layout-lab/labRunnerStore';
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
@@ -29,7 +29,7 @@ const failResult = (entityId: string, step: string, reason: string) => ({
 });
 const ents: BatchEntity[] = [{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }, { id: 'e3', name: 'Three' }];
 
-beforeEach(() => { drainMock.mockReset(); invalidateMock.mockReset(); useLabRunnerStore.setState({ localDrain: null }); });
+beforeEach(() => { drainMock.mockReset(); invalidateMock.mockReset(); useLabRunnerStore.setState({ runs: {}, localDrain: null }); });
 afterEach(cleanup);
 
 describe('useBatchDrain — one-boot batch', () => {
@@ -191,13 +191,13 @@ describe('useBatchDrain — summary lifecycle + runner-chip ownership', () => {
     await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
     expect(useLabRunnerStore.getState().localDrain).toBe('c · 3 sets');
 
-    // A per-entity coach drain starts while the batch is in flight and takes the chip over.
-    act(() => { useLabRunnerStore.getState().setLocalDrain('c/e9'); });
+    // A per-entity coach drain starts while the batch is in flight — its own keyed run.
+    act(() => { useLabRunnerStore.getState().beginRun({ id: 'c/e9', kind: 'entity', catalogId: 'c', entityIds: ['e9'], scope: 'c/e9' }); });
 
     await act(async () => { d.resolve(okOutcome({ ran: 3, passed: 3 })); await run; });
 
-    // The batch finishing must NOT clear a chip it no longer owns — that per-entity
-    // drain is still live, and blanking it would report an idle runner while UE is busy.
+    // The batch finishing must NOT clear the per-entity drain's live state — that drain is
+    // still running, and blanking it would report an idle runner while UE is busy.
     expect(useLabRunnerStore.getState().localDrain).toBe('c/e9');
   });
 });
@@ -294,11 +294,11 @@ describe('useBatchDrain — cancel tells the truth', () => {
     let run!: Promise<void>;
     act(() => { run = result.current.start(ents); });
     await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
-    act(() => { useLabRunnerStore.getState().setLocalDrain('c/e9'); }); // a coach drain took the chip
+    act(() => { useLabRunnerStore.getState().beginRun({ id: 'c/e9', kind: 'entity', catalogId: 'c', entityIds: ['e9'], scope: 'c/e9' }); });
 
     act(() => { result.current.cancel(); });
-    expect(result.current.state.cancelRequested).toBe(true);   // the click still registers locally
-    expect(useLabRunnerStore.getState().localDrain).toBe('c/e9'); // but never overwrites another drain
+    expect(result.current.state.cancelRequested).toBe(true);   // the click registers on the batch run
+    expect(useLabRunnerStore.getState().runs['c/e9'].cancelRequested).toBe(false); // never on another drain
 
     await act(async () => { d1.resolve(okOutcome()); await run; });
     expect(useLabRunnerStore.getState().localDrain).toBe('c/e9');
@@ -312,5 +312,82 @@ describe('useBatchDrain — cancel tells the truth', () => {
     act(() => { result.current.cancel(); });
     expect(result.current.state.cancelRequested).toBe(false);
     expect(result.current.state.cancelEffect).toBeNull();
+  });
+});
+
+describe('useBatchDrain — the run is the lab\'s, not the Matrix panel\'s', () => {
+  const two: BatchEntity[] = [{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }];
+
+  it('survives the hook unmounting mid-run: the store records the result and a remount reads it', async () => {
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise);
+    const first = renderHook(() => useBatchDrain('items', 0));
+    let run!: Promise<void>;
+    act(() => { run = first.result.current.start(two); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+
+    first.unmount(); // the operator left the Matrix view
+    await act(async () => {
+      d.resolve(okOutcome({ ran: 2, passed: 1, failed: 1, results: [failResult('e2', 'Gate', 'bad')] }));
+      await run;
+    });
+
+    const stored = useLabRunnerStore.getState().runs[batchRunId('items')];
+    expect(stored.phase).toBe('done');
+    expect(stored.summary?.failed).toBe(1);
+
+    const again = renderHook(() => useBatchDrain('items', 0)); // back on the Matrix
+    expect(again.result.current.state.summary).toMatchObject({ passed: 1, failed: 1 });
+    expect(again.result.current.state.summary?.fails).toEqual([{ entityId: 'e2', entityName: 'Two', step: 'Gate', reason: 'bad' }]);
+    expect(again.result.current.state.running).toBe(false);
+  });
+
+  it('a catalog switch shows the NEW catalog\'s own drain state, never the old run', async () => {
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise);
+    const { result, rerender } = renderHook(({ c }) => useBatchDrain(c, 0), { initialProps: { c: 'items' } });
+    let run!: Promise<void>;
+    act(() => { run = result.current.start(two); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+
+    rerender({ c: 'spellbook' });
+    expect(result.current.state.running).toBe(false);
+    expect(result.current.state.summary).toBeNull();
+    expect(result.current.state.activeEntityIds.size).toBe(0);
+    expect(result.current.state.catalogId).toBe('spellbook');
+
+    rerender({ c: 'items' });
+    expect(result.current.state.running).toBe(true);
+    expect([...result.current.state.activeEntityIds]).toEqual(['e1', 'e2']);
+    expect(result.current.state.catalogId).toBe('items');
+
+    await act(async () => { d.resolve(okOutcome()); await run; });
+  });
+
+  it('a Drain on catalog B starts while catalog A is still running (no silent ignore)', async () => {
+    const d = deferred<DrainOutcome>();
+    drainMock.mockReturnValueOnce(d.promise).mockResolvedValueOnce(okOutcome({ ran: 1, passed: 1 }));
+    const a = renderHook(() => useBatchDrain('items', 0));
+    const b = renderHook(() => useBatchDrain('spellbook', 0));
+    let run!: Promise<void>;
+    act(() => { run = a.result.current.start(two); });
+    await waitFor(() => expect(drainMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => { await b.result.current.start([{ id: 's1', name: 'S' }]); });
+    expect(drainMock).toHaveBeenNthCalledWith(2, 'spellbook', ['s1']);
+    expect(b.result.current.state.summary).toMatchObject({ passed: 1 });
+    expect(a.result.current.state.running).toBe(true);
+
+    await act(async () => { d.resolve(okOutcome()); await run; });
+  });
+
+  it('dismissRun(<items run id>) clears what useBatchDrain(\'items\') reads', async () => {
+    drainMock.mockResolvedValue(okOutcome({ ran: 2, passed: 1, failed: 1 }));
+    const { result } = renderHook(() => useBatchDrain('items', 0));
+    await act(async () => { await result.current.start(two); });
+    expect(result.current.state.summary).not.toBeNull();
+
+    act(() => { useLabRunnerStore.getState().dismissRun(batchRunId('items')); });
+    expect(result.current.state.summary).toBeNull();
   });
 });

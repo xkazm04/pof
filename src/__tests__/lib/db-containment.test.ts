@@ -77,4 +77,26 @@ describe('test DB containment', () => {
     // assert, and failing for the inability to look would be a lie of a different kind.
     if (leaked !== null) expect(leaked).toBe(0);
   });
+
+  it('src/lib/db.ts is the ONLY place app code constructs a SQLite connection', () => {
+    // The floor above only reaches code that goes through `getDb()`. A private
+    // `new Database(...)` resolves its own path and walks straight past it — which is how
+    // the whole audio stack leaked every fixture into ~/.pof/pof.db (see
+    // audio-db-containment.test.ts). A new table goes through `getDb()` plus a schema guard
+    // (`library-db-conn.ts`, `audio-db-conn.ts`), never a second connection.
+    const root = path.resolve(__dirname, '..', '..');
+    const sites: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const abs = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (abs !== path.join(root, '__tests__')) walk(abs);
+        } else if (/\.tsx?$/.test(e.name) && fs.readFileSync(abs, 'utf8').includes('new Database(')) {
+          sites.push(path.relative(path.dirname(root), abs).split(path.sep).join('/'));
+        }
+      }
+    };
+    walk(root);
+    expect(sites).toEqual(['src/lib/db.ts']);
+  });
 });

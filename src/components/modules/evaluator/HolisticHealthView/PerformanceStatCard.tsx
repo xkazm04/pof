@@ -1,7 +1,8 @@
 import { Gauge } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
-import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
 
 export function PerformanceStatCard({
   score,
@@ -14,13 +15,7 @@ export function PerformanceStatCard({
   avgFPS: number | null;
   onDrill?: () => void;
 }) {
-  const color = score === null
-    ? STATUS_NEUTRAL
-    : score >= 70
-      ? ACCENT_EMERALD
-      : score >= 40
-        ? STATUS_WARNING
-        : STATUS_ERROR;
+  const color = score === null ? STATUS_NEUTRAL : scoreStatusToken(score).color;
 
   const subtitle = score === null
     ? 'No trace triaged'

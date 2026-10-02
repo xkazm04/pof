@@ -75,7 +75,7 @@ export function SpendDashboard() {
       </div>
 
       {/* Budget guard */}
-      <SpendBudgetPanel status={status} isSaving={isSaving} onSave={save} />
+      <SpendBudgetPanel status={status} daily={dashboard.daily} isSaving={isSaving} onSave={save} />
 
       {/* Daily spend trend */}
       {dashboard.daily.length > 0 && (

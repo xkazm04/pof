@@ -191,3 +191,43 @@ describe('validateStateMachine — invalid identifiers (codegen syntax gate)', (
     expect(warnings.some((w) => w.kind === 'invalid-state-name' || w.kind === 'invalid-state-flag')).toBe(false);
   });
 });
+
+describe('validateStateMachine — entry comes from the compiled model', () => {
+  it('with no Default state, graph checks still run (from the compiled fallback) next to implicit-fallback', () => {
+    const { states, transitions } = makeBasic();
+    states[0] = { ...states[0], isDefault: false, flag: 'bShouldMove' };
+    const warnings = validateStateMachine(states, transitions, [...KNOWN_FLAGS, 'bShouldMove']);
+    expect(warnings.map((w) => [w.kind, w.stateIds])).toEqual([
+      ['soft-lock-deadend', ['s3']],
+      ['implicit-fallback', ['s1']],
+    ]);
+  });
+
+  it('a no-Default machine still reports a state with no path from the compiled entry', () => {
+    const states: S[] = [
+      { id: 'a', name: 'Attacking', priority: 0, flag: 'bIsAttacking' },
+      { id: 'o', name: 'Orphan', priority: 1, flag: 'bIsDodging' },
+      { id: 'l', name: 'Locomotion', priority: 2, flag: 'bIsDead' },
+    ];
+    const transitions: T[] = [
+      { id: 't1', from: 'l', to: 'a', rule: 'bIsAttacking == true' },
+      { id: 't2', from: 'a', to: 'l', rule: 'bIsAttacking == false' },
+      { id: 't3', from: 'o', to: 'l', rule: 'bIsDodging == false' },
+    ];
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    const unreachable = warnings.filter((w) => w.kind === 'unreachable-state');
+    expect(unreachable).toHaveLength(1);
+    expect(unreachable[0].stateIds).toEqual(['o']);
+    expect(unreachable[0].message).toContain('"Orphan" is unreachable');
+    expect(unreachable[0].message).toContain('no path from "Locomotion"');
+    expect(warnings.some((w) => w.kind === 'implicit-fallback' && w.stateIds[0] === 'l')).toBe(true);
+  });
+
+  it('with two Defaults, reachability runs from the lowest-priority one (the C++ fallback)', () => {
+    const { states, transitions } = makeBasic();
+    states[2] = { ...states[2], isDefault: true };
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    expect(warnings.some((w) => w.kind === 'unreachable-state')).toBe(false);
+    expect(warnings.find((w) => w.kind === 'multiple-defaults')?.stateIds).toEqual(['s1', 's3']);
+  });
+});

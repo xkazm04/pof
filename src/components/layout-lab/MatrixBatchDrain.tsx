@@ -5,7 +5,7 @@ import type { LabTheme } from './theme';
 import { Button } from './ui/Button';
 import type { BatchGateNote } from './batchDrainModel';
 import type { BatchDrainState, BatchEntity } from './hooks/useBatchDrain';
-import { MatrixBindIcons } from './MatrixBindIcons';
+import { MatrixSettle } from './MatrixSettle';
 import { DrainFrameLinks } from '@/components/layout-lab/DrainFrameLinks';
 // The executor-absent rule (ran 0 + skipped > 0) is shared with the per-entity coach drain.
 import { ranNothing } from '@/components/layout-lab/entityDrainOutcome';
@@ -52,10 +52,10 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
   // can never disagree about whether an editor is there to drain through.
   const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
   const editorConnected = connectionStatus === 'connected';
-  // The icon-bind pass is the drain's sibling — both are idempotent disk-truth passes over
-  // this catalog's artifacts — so it lives beside this button and stays reachable even when
-  // there is nothing left to drain (which is exactly when a campaign needs it).
-  if (deferredEntities.length === 0 && !running && !summary) return <MatrixBindIcons t={t} />;
+  // The drain's sibling: this catalog's filesystem settle, reachable even with nothing left to
+  // drain — exactly when a campaign needs it.
+  const settle = state.catalogId ? <MatrixSettle t={t} catalogId={state.catalogId} /> : null;
+  if (deferredEntities.length === 0 && !running && !summary) return settle;
 
   return (
     <div
@@ -191,8 +191,8 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
       {/* Captured L4 frames — the runner hoists these so a human LOOKS; make them openable. */}
       {!running && summary && <DrainFrameLinks t={t} frames={summary.screenshots} testIdPrefix="batch-drain" />}
 
-      {/* Sibling pass: bind already-generated 2D art onto stub artifacts and re-grade. */}
-      <MatrixBindIcons t={t} />
+      {/* Sibling passes: re-settle this catalog's filesystem truth (preview, then confirmed apply). */}
+      {settle}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { RefreshCw, Wrench, Rocket } from 'lucide-react';
 import {
@@ -12,6 +12,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { generateUATCommand } from '@/lib/packaging/uat-command-generator';
 import { PlatformProfileCard } from '../PlatformProfileCard';
 import { CookProgress } from '../CookProgress';
+import type { CookCompletion } from '@/components/modules/game-systems/CookProgress/types';
 import { PreflightPanel, type PreflightStatusSummary } from '../PreflightPanel';
 import { SmokeTest, type SmokeTestRequest } from '../SmokeTest';
 import { NightlyBuildScheduler } from '../NightlyBuildScheduler';
@@ -21,6 +22,7 @@ import { PLATFORM_ICONS } from './constants';
 import { ProfileEditor } from './ProfileEditor';
 import { AddPlatformButtons } from './AddPlatformButtons';
 import { PreflightGateBlock } from './PreflightGateBlock';
+import { packageFlow, INITIAL_PACKAGE_FLOW, type PackageFlowEvent, type PackageFlowState } from '@/lib/packaging/package-flow';
 
 // ---------- Main component ----------
 
@@ -51,28 +53,39 @@ export function BuildConfigSelector() {
     profileId: string; projectPath: string; projectName: string; ueVersion: string;
   } | null>(null);
 
-  // Pre-flight gate: a failing check blocks the cook until the operator fixes
-  // it or explicitly overrides. Catches the build-config defect class before a
-  // long cook starts rather than 20 minutes in.
+  // Pre-flight gate: Package is a flow (`package-flow.ts`), not a boolean. A press
+  // measures the PRESSED profile's maps with the fast pre-flight before its cook can
+  // start; a failing or unmeasurable gate blocks until the operator runs the checks,
+  // overrides, or cancels. The summary starts unmeasured (mapsKey null), so an early
+  // press waits for the gate instead of cooking on zero checks.
   const [preflight, setPreflight] = useState<PreflightStatusSummary>({
-    canCook: true,
-    overall: 'idle',
-    fullyCovered: false,
-    notRunLabels: [],
-    coverage: { ran: 0, total: 0 },
+    canCook: true, overall: 'idle', fullyCovered: false,
+    notRunLabels: [], notRunKinds: [], coverage: { ran: 0, total: 0 },
+    mapsKey: null, failing: [], failingKinds: [], running: [],
   });
-  const [gateBlock, setGateBlock] = useState<BuildProfile | null>(null);
+  const [flow, setFlow] = useState<PackageFlowState>(INITIAL_PACKAGE_FLOW);
+  const flowRef = useRef<PackageFlowState>(INITIAL_PACKAGE_FLOW);
 
-  // The pre-flight panel is project-wide, but the map-exists check has to look
-  // at the maps a cook will actually ship. The default profile (else the first)
-  // supplies that list, and the panel names which profile it took them from.
-  const gateProfile = useMemo(
+  // The pre-flight panel measures the maps a cook will actually ship: the pressed
+  // profile's while a Package flow is live, else the default profile's (else the
+  // first). The panel names which profile it took them from.
+  const defaultProfile = useMemo(
     () => profiles.find((p) => p.isDefault) ?? profiles[0] ?? null,
     [profiles],
   );
+  const flowProfile = flow.phase === 'idle' ? null : profiles.find((p) => p.id === flow.profileId) ?? null;
+  const gateProfile = flowProfile ?? defaultProfile;
+  const gateMaps = flow.phase === 'idle' ? defaultProfile?.cookSettings.mapsToInclude ?? [] : flow.maps;
+  const requestedChecks = useMemo(
+    () => (flow.phase === 'measuring' ? { token: flow.seq, kinds: flow.kinds } : null),
+    [flow],
+  );
 
-  // After a successful Win64 cook, auto-run the runnable-exe smoke-test.
+  // After a successful Win64 cook, auto-run the runnable-exe smoke-test — against the
+  // build row the cook RECORDED, by id. No recorded row means nothing to smoke or
+  // condemn, and the panel says so instead of guessing a build.
   const [smokeRequest, setSmokeRequest] = useState<SmokeTestRequest | null>(null);
+  const [smokeSkipped, setSmokeSkipped] = useState<string | null>(null);
 
   // Fetch profiles
   const fetchProfiles = useCallback(async () => {
@@ -122,51 +135,58 @@ export function BuildConfigSelector() {
     await handleSave({ ...profile, isDefault: true });
   }, [profiles, handleSave]);
 
-  // Package
+  // Advance the Package flow. The cook request is issued only on the transition
+  // INTO `cook`, capturing the project at that moment.
+  const step = useCallback((event: PackageFlowEvent) => {
+    const prev = flowRef.current;
+    const next = packageFlow(prev, event);
+    if (next === prev) return;
+    flowRef.current = next;
+    setFlow(next);
+    if (next.phase === 'cook' && prev.phase !== 'cook') {
+      setCookRequest({ profileId: next.profileId, projectPath, projectName, ueVersion });
+    }
+  }, [projectPath, projectName, ueVersion]);
+
+  const handlePreflightStatus = useCallback((summary: PreflightStatusSummary) => {
+    setPreflight(summary);
+    step({ type: 'summary', summary });
+  }, [step]);
+
+  // Package: a press never cooks on its own; the flow decides from THIS profile's gate.
   const handlePackage = useCallback((profile: BuildProfile) => {
     if (cookRequest !== null) return;
-    if (!preflight.canCook) {
-      setGateBlock(profile);
-      return;
-    }
-    setGateBlock(null);
-    setCookRequest({
-      profileId: profile.id,
-      projectPath,
-      projectName,
-      ueVersion,
-    });
-  }, [cookRequest, preflight.canCook, projectPath, projectName, ueVersion]);
+    step({ type: 'press', profileId: profile.id, maps: profile.cookSettings.mapsToInclude ?? [], summary: preflight });
+  }, [cookRequest, preflight, step]);
 
-  // Override the pre-flight gate and cook anyway (operator's explicit choice).
-  const handleOverridePackage = useCallback(() => {
-    if (cookRequest !== null || !gateBlock) return;
-    const profile = gateBlock;
-    setGateBlock(null);
-    setCookRequest({ profileId: profile.id, projectPath, projectName, ueVersion });
-  }, [cookRequest, gateBlock, projectPath, projectName, ueVersion]);
-
-  const handleCookComplete = useCallback((result: { status: 'success' | 'failed'; exePath?: string }) => {
-    const profileId = cookRequest?.profileId;
+  // Also called for a cook this panel did not start: the console reattaches to the
+  // project's server cook job after a reload, or to a running nightly. A refused start
+  // (409: the project is busy) settles here too, and clearing the request lets the
+  // console attach to the job that holds the project.
+  const handleCookComplete = useCallback((result: CookCompletion) => {
+    const profileId = result.profileId ?? cookRequest?.profileId;
     setCookRequest(null);
+    step({ type: 'settled' });
     if (result.status !== 'success') return;
     fetchProfiles();
+    // The nightly chain runs (and records) its own smoke-test.
+    if (result.kind === 'nightly') return;
 
-    // Kick off the post-cook smoke-test for runnable (Win64) builds.
+    // Kick off the post-cook smoke-test for runnable (Win64) builds, naming the
+    // recorded build: the server launches, watches and condemns exactly that row.
     const profile = profiles.find((p) => p.id === profileId);
-    if (result.exePath && profile && profile.platform === 'Win64') {
-      setSmokeRequest({
-        exePath: result.exePath,
-        projectName,
-        platform: profile.platform,
-        config: profile.config,
-        // The project MUST travel: without it the server chooses the build to record
-        // the verdict against with an unscoped query, and it lands on whichever
-        // unattributed legacy row is newest rather than on the build just cooked.
-        projectPath,
-      });
+    if (!profile || profile.platform !== 'Win64') return;
+    if (result.buildId != null) {
+      setSmokeSkipped(null);
+      setSmokeRequest({ buildId: result.buildId });
+    } else {
+      setSmokeRequest(null);
+      setSmokeSkipped(
+        `the cook finished but its build was not recorded (${result.recordError ?? 'no build id'}), `
+        + 'so there is no build to smoke-test or condemn.',
+      );
     }
-  }, [cookRequest, profiles, projectName, projectPath, fetchProfiles]);
+  }, [cookRequest, profiles, fetchProfiles, step]);
 
   // New profile
   const handleNewProfile = useCallback((platform: PlatformId) => {
@@ -230,9 +250,10 @@ export function BuildConfigSelector() {
           projectPath={projectPath}
           projectName={projectName}
           ueVersion={ueVersion}
-          cookMaps={gateProfile?.cookSettings.mapsToInclude ?? []}
+          cookMaps={gateMaps}
           cookProfileName={gateProfile?.name}
-          onStatusChange={setPreflight}
+          requestedChecks={requestedChecks}
+          onStatusChange={handlePreflightStatus}
         />
       )}
 
@@ -274,19 +295,20 @@ export function BuildConfigSelector() {
         </div>
       )}
 
-      {/* Pre-flight gate block notice */}
+      {/* Package flow notice: measuring / blocked (run missing, override, cancel) / cook disclosure */}
       <PreflightGateBlock
-        visible={!!gateBlock}
-        notRunLabels={preflight.notRunLabels}
-        onCancel={() => setGateBlock(null)}
-        onOverride={handleOverridePackage}
+        flow={flow}
+        profileName={flowProfile?.name}
+        onCancel={() => step({ type: 'cancel' })}
+        onOverride={() => step({ type: 'override' })}
+        onMeasureMissing={() => step({ type: 'measure-missing' })}
       />
 
       {/* Cook progress */}
-      <CookProgress request={cookRequest} onComplete={handleCookComplete} />
+      <CookProgress request={cookRequest} projectPath={projectPath} onComplete={handleCookComplete} />
 
       {/* Post-cook runnable-exe smoke-test */}
-      <SmokeTest key={smokeRequest?.exePath ?? 'idle'} request={smokeRequest} />
+      <SmokeTest key={smokeRequest?.buildId ?? 'idle'} request={smokeRequest} skippedReason={smokeSkipped} />
 
       {/* Unattended nightly builds (preflight → cook → smoke → size-budget, skip-if-unchanged) */}
       <NightlyBuildScheduler profiles={profiles} />

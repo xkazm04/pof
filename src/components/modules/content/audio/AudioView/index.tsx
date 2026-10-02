@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import {
   Trash2, Loader2,
   Zap, Volume2, Radio, Settings, List, Eye, ListChecks, Code2, Wand2,
@@ -51,7 +52,6 @@ export function AudioView() {
     isLoading,
     error,
     retry,
-    setActiveDocId,
     deleteDoc,
     refetch,
     activeTab,
@@ -79,14 +79,14 @@ export function AudioView() {
     rvChecklist,
     AUD_MODULE_ID,
     handleCreateDoc,
-    commitScene,
-    commitZones,
+    sceneSession,
     handleGenerateAll,
     handleGenerateZoneCode,
     handleGenerateSoundscape,
     commitDescription,
     commitSetting,
   } = useAudioView();
+  const [forgeTargetSetId, setForgeTargetSetId] = useState<string | null>(null);
 
   // The full-screen spinner is for the FIRST load only. `useCRUD.refetch` raises
   // `isLoading` on every background refetch (each save triggers one), and blanking
@@ -129,9 +129,12 @@ export function AudioView() {
         summary={summary}
         docs={docs}
         activeDoc={activeDoc}
-        setActiveDocId={setActiveDocId}
-        setSelectedZoneId={setSelectedZoneId}
-        setSelectedEmitterId={setSelectedEmitterId}
+        onSelectScene={sceneSession.requestSwitch}
+        pendingSwitch={sceneSession.pendingSwitch}
+        switchBlocked={sceneSession.switchBlocked}
+        saveError={sceneSession.buffer.saveError}
+        onRetrySwitch={sceneSession.retrySwitch}
+        onDiscardSwitch={sceneSession.discardAndSwitch}
         newDocName={newDocName}
         setNewDocName={setNewDocName}
         handleCreateDoc={handleCreateDoc}
@@ -243,7 +246,7 @@ export function AudioView() {
               {activeTab === 'painter' && (
                 <PainterTab
                   activeDoc={activeDoc}
-                  commitScene={commitScene}
+                  buffer={sceneSession.buffer}
                   setSelectedZoneId={setSelectedZoneId}
                   setSelectedEmitterId={setSelectedEmitterId}
                   selectedZoneId={selectedZoneId}
@@ -268,7 +271,7 @@ export function AudioView() {
                   key={activeDoc.id}
                   activeDoc={activeDoc}
                   commitDescription={commitDescription}
-                  commitZones={commitZones}
+                  scene={sceneSession.buffer}
                   handleGenerateSoundscape={handleGenerateSoundscape}
                   audioCli={audioCli}
                 />
@@ -298,12 +301,14 @@ export function AudioView() {
                 </div>
               )}
 
+              {/* The Library's 'More takes' aims the Forge at that set: the id is
+                  handed over here, and the Forge numbers new takes past its own. */}
               {activeTab === 'forge' && (
-                <SoundForgePanel />
+                <SoundForgePanel initialTargetSetId={forgeTargetSetId} />
               )}
 
               {activeTab === 'library' && (
-                <AudioLibraryPanel />
+                <AudioLibraryPanel onMoreTakes={(setId) => { setForgeTargetSetId(setId); setActiveTab('forge'); }} />
               )}
             </div>
           </>

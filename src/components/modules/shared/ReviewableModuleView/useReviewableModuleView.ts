@@ -3,12 +3,15 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { usePaneHold } from '@/hooks/usePaneHold';
+import { useEscapeLayer } from '@/hooks/useHotkey';
 import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { useModuleTab } from '@/hooks/useModuleTab';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { SubModuleId, ChecklistItem } from '@/types/modules';
@@ -32,39 +35,23 @@ export function useReviewableModuleView({
   const panelCollapsed = useModuleStore((s) => s.quickActionsPanelCollapsed);
   const setPanelCollapsed = useModuleStore((s) => s.setQuickActionsPanelCollapsed);
 
-  // Close panel on Escape key
-  useEffect(() => {
-    if (panelCollapsed) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPanelCollapsed(true);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [panelCollapsed, setPanelCollapsed]);
+  // Close panel on Escape — as a LIFO layer, so an Escape meant for a layer
+  // opened over it (global search, a drawer) never also flips this PERSISTED flag.
+  useEscapeLayer('quick-actions-panel', !panelCollapsed, () => setPanelCollapsed(true));
 
   // Memoized on the tab IDS, not on the `extraTabs` array identity: a host that
   // rebuilds its tab descriptors every render (most of them do — the render
-  // closures capture handlers) otherwise produced a new dep on every pass, so the
-  // `pof-navigate-tab` listener below was torn down and re-added on EVERY render
-  // of every one of the 23 consumers. Same ids → same array → one listener.
+  // closures capture handlers) would otherwise hand a new array to the tab
+  // validation on every pass of every one of the 23 consumers.
   const extraTabIdKey = extraTabs.map((t) => t.id).join('\u0000');
   const allTabIds = useMemo(
     () => ['overview', 'roadmap', ...(extraTabIdKey ? extraTabIdKey.split('\u0000') : [])],
     [extraTabIdKey],
   );
-  const [activeTab, setActiveTab] = useState(allTabIds[0]);
-
-  // Listen for suggested-action tab navigation events
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const tab = (e as CustomEvent).detail?.tab;
-      if (tab && allTabIds.includes(tab)) {
-        setActiveTab(tab);
-      }
-    };
-    window.addEventListener('pof-navigate-tab', handler);
-    return () => window.removeEventListener('pof-navigate-tab', handler);
-  }, [allTabIds]);
+  // The open tab is this module's entry in the navigation model
+  // (`navigationStore.moduleTabs`): a jump addressed to ANOTHER module never
+  // moves this pane, and one written before this pane mounted lands on mount.
+  const [activeTab, setActiveTab] = useModuleTab(moduleId, allTabIds);
 
   // --- Checklist CLI session ---
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -91,11 +78,18 @@ export function useReviewableModuleView({
   //   • item not in the checklist — skipped; the watchdog below re-advances, so
   //     the drain continues rather than stalling
   //   • hook unmounted  — LRU eviction destroys the queue and progress UI, so a
-  //     further tick would dispatch a paid CLI run nobody can observe
+  //     further tick would dispatch a paid CLI run nobody can observe. The queue
+  //     holds its pane (`usePaneHold`, below) so the LRU only does this when
+  //     every other candidate is held too — and then says so in the feed.
   // Deliberately NOT suspended when the module is hidden: a batch run the user
   // started is a paid, multi-minute CLI job and must survive navigation (same
   // reasoning as the forge poll in visual-gen/asset-forge/useForgeStore.ts).
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Held while items are still queued — this covers the inter-item gap, when no
+  // CLI session is running and the shell would otherwise see nothing live here.
+  // The last item's own run is covered by its CLI session.
+  usePaneHold(batchQueue.length > 0, 'Checklist batch running');
 
   const advanceBatch = useCallback(() => {
     const queue = batchQueueRef.current;

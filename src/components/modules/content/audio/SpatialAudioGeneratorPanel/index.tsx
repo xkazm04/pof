@@ -11,8 +11,18 @@ import {
   STATUS_SUCCESS,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_50,
 } from '@/lib/chart-colors';
-import type { LevelDocItem, GenerateResult, SpatialAudioGeneratorPanelProps } from './types';
+import { tryApiFetch } from '@/lib/api-utils';
+import type { LevelDocItem, GenerateResult, SyncPreview, SpatialAudioGeneratorPanelProps } from './types';
 import { RoomReportItem } from './RoomReportItem';
+import { SyncPlanPreview, syncSummaryLine } from './SyncPlanPreview';
+
+const SYNC_URL = '/api/spatial-audio-generate';
+const NO_OVERWRITE: ReadonlySet<string> = new Set();
+const post = (body: unknown): RequestInit => ({
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
 
 export function SpatialAudioGeneratorPanel({
   activeDoc,
@@ -22,9 +32,16 @@ export function SpatialAudioGeneratorPanel({
   const ACCENT = accentColor;
 
   const [levelDocs, setLevelDocs] = useState<LevelDocItem[]>([]);
-  const [loadingLevels, setLoadingLevels] = useState(false);
+  const [loadingLevels, setLoadingLevels] = useState(true);
   const [selectedLevelId, setSelectedLevelId] = useState<number | null>(null);
-  const [mergeIntoActive, setMergeIntoActive] = useState(false);
+  const [syncIntoActive, setSyncIntoActive] = useState(false);
+  const targetSceneId = syncIntoActive && activeDoc ? activeDoc.id : null;
+
+  const [overwrite, setOverwrite] = useState<ReadonlySet<string>>(NO_OVERWRITE);
+  const [planEpoch, setPlanEpoch] = useState(0);
+  // The last settled preview and the request it answered: a preview is
+  // "planning" while the current request is not the one it answered.
+  const [settled, setSettled] = useState<{ key: string; preview: SyncPreview | null }>({ key: '', preview: null });
 
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<GenerateResult | null>(null);
@@ -32,55 +49,84 @@ export function SpatialAudioGeneratorPanel({
   const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
 
+  // A different source level or target scene starts from a clean overwrite choice.
+  const planKey = `${selectedLevelId}:${targetSceneId}`;
+  const [lastPlanKey, setLastPlanKey] = useState(planKey);
+  if (planKey !== lastPlanKey) {
+    setLastPlanKey(planKey);
+    setOverwrite(NO_OVERWRITE);
+  }
+
   // Load available level design docs
   useEffect(() => {
     let cancelled = false;
-    setLoadingLevels(true);
-    fetch('/api/spatial-audio-generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list-levels' }),
-    })
-      .then((r) => r.json())
-      .then((json) => {
-        if (!cancelled && json.success) {
-          setLevelDocs(json.data);
-          if (json.data.length === 1) setSelectedLevelId(json.data[0].id);
-        }
+    tryApiFetch<LevelDocItem[]>(SYNC_URL, post({ action: 'list-levels' }))
+      .then((r) => {
+        if (cancelled || !r.ok) return;
+        setLevelDocs(r.data);
+        if (r.data.length === 1) setSelectedLevelId(r.data[0].id);
       })
-      .catch(() => { })
       .finally(() => { if (!cancelled) setLoadingLevels(false); });
     return () => { cancelled = true; };
   }, []);
 
-  const handleGenerate = useCallback(async () => {
+  // The plan is shown BEFORE anything is written: re-planned whenever the
+  // source, the target or the overwrite choice changes, and after an apply.
+  const requestKey = `${planKey}:${[...overwrite].join(',')}:${planEpoch}`;
+  useEffect(() => {
+    if (!selectedLevelId) return;
+    let cancelled = false;
+    tryApiFetch<SyncPreview>(SYNC_URL, post({
+      action: 'preview',
+      levelDocId: selectedLevelId,
+      audioSceneId: targetSceneId ?? undefined,
+      overwrite: [...overwrite],
+    }))
+      .then((r) => {
+        if (cancelled) return;
+        setSettled({ key: requestKey, preview: r.ok ? r.data : null });
+        setError(r.ok ? null : r.error);
+      });
+    return () => { cancelled = true; };
+  }, [selectedLevelId, targetSceneId, overwrite, requestKey]);
+  const preview = settled.preview;
+  const previewing = selectedLevelId !== null && settled.key !== requestKey;
+
+  const toggleOverwrite = useCallback((roomId: string) => {
+    setOverwrite((prev) => {
+      const next = new Set(prev);
+      if (next.has(roomId)) next.delete(roomId);
+      else next.add(roomId);
+      return next;
+    });
+  }, []);
+
+  const handleApply = useCallback(async () => {
     if (!selectedLevelId) return;
     setGenerating(true);
     setError(null);
     setResult(null);
-    try {
-      const res = await fetch('/api/spatial-audio-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'generate',
-          levelDocId: selectedLevelId,
-          audioSceneId: mergeIntoActive && activeDoc ? activeDoc.id : undefined,
-        }),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setError(json.error ?? 'Generation failed');
-        return;
-      }
-      setResult(json.data);
-      onSceneCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error');
-    } finally {
-      setGenerating(false);
+    const r = await tryApiFetch<GenerateResult>(SYNC_URL, post({
+      action: 'generate',
+      levelDocId: selectedLevelId,
+      audioSceneId: targetSceneId ?? undefined,
+      overwrite: [...overwrite],
+    }));
+    setGenerating(false);
+    if (!r.ok) {
+      setError(r.error);
+      return;
     }
-  }, [selectedLevelId, mergeIntoActive, activeDoc, onSceneCreated]);
+    setResult(r.data);
+    setOverwrite(NO_OVERWRITE);
+    setPlanEpoch((n) => n + 1);
+    onSceneCreated();
+  }, [selectedLevelId, targetSceneId, overwrite, onSceneCreated]);
+
+  const opCount = preview?.ops.length ?? 0;
+  const nothingToApply = targetSceneId !== null && opCount === 0;
+  // Keep the plan on screen while an overwrite toggle re-plans, never another level's plan.
+  const visiblePreview = selectedLevelId && settled.key.startsWith(`${planKey}:`) ? preview : null;
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto bg-surface-deep rounded-2xl border border-border relative w-full h-full">
@@ -165,23 +211,31 @@ export function SpatialAudioGeneratorPanel({
             <label className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-deep cursor-pointer hover:bg-surface-hover transition-colors mt-2">
               <input
                 type="checkbox"
-                checked={mergeIntoActive}
-                onChange={(e) => setMergeIntoActive(e.target.checked)}
+                checked={syncIntoActive}
+                onChange={(e) => setSyncIntoActive(e.target.checked)}
                 className="w-4 h-4 rounded border-border bg-surface-deep focus-ring outline-none"
                 style={{ accentColor: ACCENT }}
               />
               <span className="text-xs text-text-muted flex-1">
-                Append to active scene: <span className="text-text font-semibold">&quot;{activeDoc.name}&quot;</span>
+                Sync into active scene: <span className="text-text font-semibold">&quot;{activeDoc.name}&quot;</span>
+                <span className="block text-2xs mt-0.5">Adds new rooms, follows level edits, keeps hand-tuned zones. Nothing is written until you apply.</span>
               </span>
             </label>
           )}
         </div>
       </SurfaceCard>
 
-      {/* Generate button */}
+      {/* Plan preview: what applying would write */}
+      {visiblePreview && (
+        <SurfaceCard className="p-4">
+          <SyncPlanPreview preview={visiblePreview} overwrite={overwrite} onToggleOverwrite={toggleOverwrite} />
+        </SurfaceCard>
+      )}
+
+      {/* Apply button */}
       <button
-        onClick={handleGenerate}
-        disabled={!selectedLevelId || generating || levelDocs.length === 0}
+        onClick={handleApply}
+        disabled={!selectedLevelId || !visiblePreview || previewing || generating || nothingToApply || levelDocs.length === 0}
         className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 group outline-none"
         style={{
           backgroundColor: withOpacity(ACCENT, OPACITY_10),
@@ -192,15 +246,19 @@ export function SpatialAudioGeneratorPanel({
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
         <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" />
 
-        {generating ? (
+        {generating || previewing ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Generating spatial audio…
+            {generating ? 'Applying sync…' : 'Planning sync…'}
           </>
         ) : (
           <>
             <Wand2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            Generate Spatial Audio
+            {nothingToApply
+              ? 'Scene is in sync — nothing to apply'
+              : targetSceneId !== null
+                ? `Apply ${opCount} change${opCount === 1 ? '' : 's'} to "${activeDoc?.name}"`
+                : 'Create audio scene from level'}
           </>
         )}
       </button>
@@ -209,7 +267,7 @@ export function SpatialAudioGeneratorPanel({
       {error && (
         <div className="flex items-center gap-3 text-xs rounded-xl px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          Generation failed: {error}
+          Sync failed: {error}
         </div>
       )}
 
@@ -236,10 +294,10 @@ export function SpatialAudioGeneratorPanel({
               </div>
               <div className="flex-1">
                 <p className="text-xs font-semibold text-text">
-                  {result.merged ? 'Merge complete' : 'Generation complete'}: {result.audioScene?.name}
+                  {result.merged ? 'Sync applied' : 'Scene created'}: {result.audioScene?.name}
                 </p>
                 <p className="text-2xs font-mono text-text-muted mt-1">
-                  {result.report.length} zones · {result.report.reduce((n, r) => n + r.emitterCount, 0)} emitters · Reverb: {result.audioScene?.globalReverbPreset}
+                  {syncSummaryLine(result)} · {result.audioScene?.zones.length} zones · {result.audioScene?.emitters.length} emitters · Reverb: {result.audioScene?.globalReverbPreset}
                 </p>
               </div>
             </div>

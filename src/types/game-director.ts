@@ -151,6 +151,13 @@ export interface PlaytestConfig {
    * no project is refused rather than silently scoped to the legacy bucket.
    */
   projectId?: string;
+  /**
+   * The harness run this session was imported from (`harness_runs.run_id`) —
+   * the run's build identity, so one run is one session and a second import is
+   * refused instead of double-counted. Absent on every other session (the raw
+   * `ingest-external` door carries no run identity).
+   */
+  harnessRunId?: string;
 }
 
 export interface PlaytestSummary {

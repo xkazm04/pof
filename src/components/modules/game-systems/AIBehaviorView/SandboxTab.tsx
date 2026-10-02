@@ -10,6 +10,7 @@ import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { AITestingSandbox } from '@/components/modules/game-systems/AITestingSandbox';
 import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
 import type { TestScenario } from '@/types/ai-testing';
+import { summarizeTrends } from '@/lib/ai-testing/run-trend';
 import type { useAITesting } from '@/hooks/useAITesting';
 import { SYSTEMS_ACCENT } from './constants';
 
@@ -149,6 +150,7 @@ export function SandboxTab({
                 const isActive = activeSuite?.id === suite.id;
                 const passed = suite.scenarios.filter((s) => s.status === 'passed').length;
                 const total = suite.scenarios.length;
+                const { regressed } = summarizeTrends(suite.scenarios);
                 return (
                   <button
                     key={suite.id}
@@ -167,6 +169,9 @@ export function SandboxTab({
                       <span className="text-2xs text-text-muted">
                         {total > 0 ? `${passed}/${total} passed` : 'no scenarios'}
                       </span>
+                      {regressed > 0 && (
+                        <span className="text-2xs" style={{ color: STATUS_ERROR }}>{regressed} regressed</span>
+                      )}
                     </div>
                   </button>
                 );

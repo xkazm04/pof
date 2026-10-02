@@ -9,6 +9,7 @@ import { ItemAnimations, ItemVFX, ItemSFX } from './ItemAnimAudio';
 import { ItemInventoryUI, ItemTooltip } from './ItemIntegration';
 import { ItemTestGate, ItemPackaging } from './ItemGate';
 import { ITEM_STEP_NAMES } from './itemsSteps';
+import { itemsLabelOwner } from '@/components/layout-lab/itemsLabelOwner';
 
 export type StepComponent = ComponentType<{ t: LabTheme; entity: LabEntity; step: string }>;
 
@@ -33,6 +34,10 @@ const STEP_REGISTRY: Record<string, Record<string, StepComponent>> = {
   items: Object.fromEntries(ITEM_STEP_NAMES.map((name, i) => [name, ITEM_STEP_COMPONENTS[i]])),
 };
 
+/** A registry-owned items label (`itemsLabelOwner`) returns null, so `Baseline` renders it through
+ *  `ArchetypeStep` with the registered `StepSpec` — the spec the server grades. The six shared
+ *  labels' bespoke components stay in the tree, unrouted (2026-09-29). */
 export function getStepComponent(catalogId: string, stepName: string): StepComponent | null {
+  if (catalogId === 'items' && itemsLabelOwner(stepName) !== 'bespoke') return null;
   return STEP_REGISTRY[catalogId]?.[stepName] ?? null;
 }

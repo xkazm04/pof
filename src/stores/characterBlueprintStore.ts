@@ -14,6 +14,12 @@ import {
   findBasePreset,
 } from '@/lib/character/inspector-fields';
 import {
+  applyCurveEdit,
+  clearPlaygroundCurves as dropPlaygroundCurves,
+  type CurveId,
+  type CurvePoint,
+} from '@/lib/character/feel-curve-codec';
+import {
   rebindAction,
   resolveBindings,
   sanitizeBindingOverrides,
@@ -62,6 +68,11 @@ interface CharacterBlueprintState {
    *  layer of `feelLayers` (see `@/lib/character/inspector-fields`). */
   setInspectorOverride: (name: string, value: number) => void;
   clearInspectorOverrides: () => void;
+
+  /** Feel Playground drag → `set` modifiers in the reserved 'Playground curves'
+   *  layer of `feelLayers` (see `@/lib/character/feel-curve-codec`). */
+  applyPlaygroundCurve: (curve: CurveId, points: CurvePoint[]) => void;
+  clearPlaygroundCurves: () => void;
 
   /** Input tab key rebinds: sparse action -> key over INPUT_BINDINGS, persisted.
    *  Every input surface reads `useResolvedBindings()`. */
@@ -126,6 +137,17 @@ export const useCharacterBlueprintStore = create<CharacterBlueprintState>()(
 
       clearInspectorOverrides: () =>
         set((state) => ({ feelLayers: dropInspectorOverrides(state.feelLayers) })),
+
+      applyPlaygroundCurve: (curve, points) =>
+        set((state) => {
+          const feelLayers = applyCurveEdit(
+            state.feelLayers, findBasePreset(state.baseFeelPresetId).profile, curve, points,
+          );
+          return feelLayers === state.feelLayers ? state : { feelLayers };
+        }),
+
+      clearPlaygroundCurves: () =>
+        set((state) => ({ feelLayers: dropPlaygroundCurves(state.feelLayers) })),
 
       bindingOverrides: {},
 

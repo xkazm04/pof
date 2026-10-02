@@ -6,11 +6,13 @@ import {
   groupWarningsByState,
   type ValidationWarning,
 } from '@/lib/state-machine-validator';
+import { compileMachine } from '@/lib/state-machine-compile';
 import type { EditorState, EditorTransition, DiffResult } from './types';
 import { DEFAULT_STATES, DEFAULT_TRANSITIONS, KNOWN_FLAGS } from './constants';
 import { computeDiff, genId } from './helpers';
 import { loadDraft, saveDraft, clearDraft } from './draftStore';
 import { seedSignature, type EditorSeed } from './seed';
+import { buildApplyPlan } from './applyPlan';
 import {
   generateEnumCode,
   generateComputeAnimState,
@@ -49,7 +51,9 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     if (seed) return { states: seed.states, transitions: seed.transitions, restored: false };
     return { states: DEFAULT_STATES, transitions: DEFAULT_TRANSITIONS, restored: false };
   });
-  const draftRestored = initial.restored;
+  // Mutable: a converged apply (markApplied + matching re-scan) retires the
+  // restored draft, so the canvas reads as untouched again.
+  const [draftRestored, setDraftRestored] = useState(initial.restored);
   const [states, setStates] = useState<EditorState[]>(initial.states);
   const [transitions, setTransitions] = useState<EditorTransition[]>(initial.transitions);
 
@@ -76,11 +80,30 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
    // and trips `react-hooks/set-state-in-effect`. The seed is compared by
    // CONTENT — callers rebuild the object every render, and an identity check
    // would re-adopt (and re-render) forever.
+  //
+  // After `markApplied()` the next new seed is the post-apply re-scan: it is
+  // adopted (and the draft retired) ONLY when the canvas has no changes left
+  // against it. A re-scan that still differs keeps the canvas and the draft,
+  // and the plan lists the residual changes — a CLI "success" is not proof.
   const seedSig = seedSignature(seed);
   const [adoptedSig, setAdoptedSig] = useState<string | null>(seedSig);
+  const [applyPending, setApplyPending] = useState(false);
+  const [lastApplyOutcome, setLastApplyOutcome] = useState<'converged' | 'residual' | null>(null);
+  // Only while an apply awaits its re-scan: THIS canvas's status against the
+  // incoming seed (lint-free — convergence is about content, not findings).
+  const statusVsSeed = useMemo(
+    () => (applyPending ? buildApplyPlan({ seed, states, transitions, warnings: [] }).status : null),
+    [applyPending, seed, states, transitions],
+  );
   if (seed && adoptedSig !== seedSig) {
     setAdoptedSig(seedSig);
-    if (!touched) {
+    const converged = applyPending && statusVsSeed === 'no-changes';
+    if (applyPending) {
+      setApplyPending(false);
+      setLastApplyOutcome(converged ? 'converged' : 'residual');
+    }
+    if (converged) setDraftRestored(false);
+    if (applyPending ? converged : !touched) {
       setBaseline({ states: seed.states, transitions: seed.transitions });
       setStates(seed.states);
       setTransitions(seed.transitions);
@@ -93,6 +116,20 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     if (!draftKey || !touched) return;
     saveDraft(draftKey, { states, transitions }, Date.now());
   }, [draftKey, touched, states, transitions]);
+
+  // A converged apply retires the draft: the project now holds those edits.
+  useEffect(() => {
+    if (draftKey && !touched && lastApplyOutcome === 'converged') clearDraft(draftKey);
+  }, [draftKey, touched, lastApplyOutcome]);
+
+  /**
+   * The CLI reported a successful apply: arm the rebase. Nothing is cleared
+   * here — the next seed (the re-scan) decides, see the adoption block above.
+   */
+  const markApplied = useCallback(() => {
+    setApplyPending(true);
+    setLastApplyOutcome(null);
+  }, []);
 
   // Snapshot for diff
   const [snapshot, setSnapshot] = useState<{ states: EditorState[]; transitions: EditorTransition[] } | null>(null);
@@ -282,6 +319,8 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     setEditingPanel(null);
     setSnapshot(null);
     setDiff(null);
+    setApplyPending(false);
+    setLastApplyOutcome(null);
   }, [draftKey]);
 
   // cleanup mouse listener
@@ -297,15 +336,24 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
   // Priority sorted for display
   const sortedByPriority = useMemo(() => [...states].sort((a, b) => a.priority - b.priority), [states]);
 
-  // ── Lint warnings ──
+  // ── Compiled model + lint warnings ──
+  // One model of entry/cascade/emit (state-machine-compile.ts): the linter
+  // checks it and the canvas draws Entry at its fallback, as codegen emits it.
+  const compiled = useMemo(() => compileMachine(states, transitions), [states, transitions]);
   const warnings = useMemo(
-    () => validateStateMachine(states, transitions, KNOWN_FLAGS),
-    [states, transitions],
+    () => validateStateMachine(states, transitions, KNOWN_FLAGS, compiled),
+    [states, transitions, compiled],
   );
   const warningsByState = useMemo(() => groupWarningsByState(warnings), [warnings]);
   const errorCount = warnings.filter((w) => w.severity === 'error').length;
   const warnCount = warnings.filter((w) => w.severity === 'warning').length;
   const infoCount = warnings.filter((w) => w.severity === 'info').length;
+
+  // ── Apply plan: canvas vs the SEED (what the project has), by name ──
+  const applyPlan = useMemo(
+    () => buildApplyPlan({ seed, states, transitions, warnings }),
+    [seed, states, transitions, warnings],
+  );
   const [showWarnings, setShowWarnings] = useState(true);
 
   const focusWarning = useCallback((w: ValidationWarning) => {
@@ -365,6 +413,10 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     selectedState,
     selectedTransition,
     sortedByPriority,
+    /** The state ComputeAnimState() falls back to — the canvas Entry. */
+    entryStateId: compiled.entryId,
+    /** 'implicit' when no state is marked Default (lowest priority wins). */
+    entrySource: compiled.entrySource,
     warnings,
     warningsByState,
     errorCount,
@@ -374,6 +426,12 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     focusWarning,
     hasChanges,
     diffTotal,
+    /** Seed-relative change plan: status, blocking reasons, named changes. */
+    applyPlan,
+    /** Call when the apply CLI run succeeded; the next re-scan seed rebases. */
+    markApplied,
+    /** How the last post-apply re-scan compared with the canvas. */
+    lastApplyOutcome,
   };
 }
 

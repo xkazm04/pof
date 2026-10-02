@@ -2,7 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_5, statusBorder } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_IMPROVED, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_5, statusBorder } from '@/lib/chart-colors';
+import { isFeatureDone } from '@/lib/feature-done';
 import { MOTION } from '@/lib/constants';
 import { BuildChip } from './UnblockCallout';
 import type { SelectedFeatureDetail } from './types';
@@ -56,8 +57,8 @@ export function SelectedModuleDetail({
                       className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
                       style={{
                         backgroundColor:
-                          feat.status === 'implemented'
-                            ? STATUS_SUCCESS
+                          isFeatureDone(feat.status)
+                            ? feat.status === 'improved' ? STATUS_IMPROVED : STATUS_SUCCESS
                             : feat.status === 'partial'
                               ? STATUS_WARNING
                               : feat.status === 'missing'

@@ -2,9 +2,8 @@
  * The smoke panel is what the operator reads after a cook. Two things it owed and
  * did not deliver:
  *
- *   • the request carried no `projectPath`, though `BuildConfigSelector` had one in
- *     scope — so the server chose the build with an UNSCOPED query and the verdict
- *     landed on whichever legacy row was newest;
+ *   • the request re-identified the build after the fact (exe path + name + config)
+ *     instead of naming the row the cook recorded — it now carries only `buildId`;
  *   • when the verdict flipped the build to `failed`, nothing said so. The cook
  *     stream had already emitted `done: success`, so the panel and the DB disagreed
  *     with no way to tell which was true.
@@ -15,14 +14,7 @@ import { SmokeTest } from '@/components/modules/game-systems/SmokeTest';
 
 afterEach(cleanup);
 
-const PROJECT = 'C:/Users/kazda/Documents/Unreal Projects/PoF';
-const REQUEST = {
-  exePath: 'C:\\out\\PoF.exe',
-  projectName: 'PoF',
-  platform: 'Win64',
-  config: 'Shipping',
-  projectPath: PROJECT,
-};
+const REQUEST = { buildId: 42 };
 
 const FAIL = {
   status: 'fail', gameAlive: false, bootstrapExitCode: 1, spawnError: null,
@@ -49,7 +41,7 @@ describe('the smoke request is scoped', () => {
     await waitFor(() => expect(mock).toHaveBeenCalled());
 
     const sent = JSON.parse(String((mock.mock.calls[0][1] as RequestInit).body));
-    expect(sent.projectPath).toBe(PROJECT);
+    expect(sent).toEqual({ buildId: 42 });
   });
 });
 

@@ -7,6 +7,7 @@ import { useCrossModuleFeatureDashboard } from './useCrossModuleFeatureDashboard
 import { OverallSummary } from './OverallSummary';
 import { HeatmapGrid } from './HeatmapGrid';
 import { BottomPanels } from './BottomPanels';
+import { CellDrillPanel } from './CellDrillPanel';
 
 // ── Component ──
 
@@ -25,8 +26,16 @@ export function CrossModuleFeatureDashboard() {
     totals,
     overallPct,
     lowestModules,
-    mostMissingFeatures,
+    buildable,
     handleCellClick,
+    selectedCell,
+    selectCell,
+    closeDrill,
+    drillRows,
+    buildItem,
+    buildKey,
+    isBuilding,
+    buildError,
     scope,
     scopedRows,
   } = useCrossModuleFeatureDashboard();
@@ -75,13 +84,30 @@ export function CrossModuleFeatureDashboard() {
         hoveredCell={hoveredCell}
         setHoveredCell={setHoveredCell}
         handleCellClick={handleCellClick}
+        selectedCell={selectedCell}
+        onSelectCell={selectCell}
       />
 
-      {/* ── Bottom panels: Lowest modules + Most missing features ────── */}
+      {/* ── The features behind the clicked count: ready vs blocked, Build in place ── */}
+      {selectedCell && (
+        <CellDrillPanel
+          cell={selectedCell}
+          rows={drillRows}
+          onBuildItem={buildItem}
+          onBuildKey={buildKey}
+          onClose={closeDrill}
+          isBuilding={isBuilding}
+          buildError={buildError}
+        />
+      )}
+
+      {/* ── Bottom panels: Lowest modules + Buildable now ────── */}
       <BottomPanels
         lowestModules={lowestModules}
-        mostMissingFeatures={mostMissingFeatures}
+        buildable={buildable}
         handleCellClick={handleCellClick}
+        onBuild={buildItem}
+        isBuilding={isBuilding}
       />
     </div>
   );

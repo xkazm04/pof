@@ -20,8 +20,10 @@
  * testable without Blender.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { resolveBlenderPath } from './mesh-finish';
+import { basename, join } from 'node:path';
+import { blenderNotFound, locateBlender, type BlenderSeams } from './blender-locate';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 /** Yaws rendered by default — enough that no side of a prop goes unseen. */
 export const DEFAULT_VIEWS = 6;
@@ -114,43 +116,51 @@ export interface ParsedMeshViews {
   ok: boolean;
   error?: string;
   views: RenderedView[];
+  /** Non-fatal notes (e.g. `PALETTE_SKIPPED` — why no view carries a palette) and any
+   *  undeclared marker, verbatim (`script-markers.ts`). */
+  diagnostics?: Record<string, string>;
 }
 
-/** Parse the `POF_VIEWS_*` marker block. Pure. */
+/** Parse the `POF_VIEWS_*` marker block (declared in `script-markers.ts`). Pure. */
 export function parseMeshViewsOutput(stdout: string): ParsedMeshViews {
-  const errorLine = stdout.match(/^POF_VIEWS_ERROR=(.*)$/m);
-  if (errorLine) return { ok: false, error: errorLine[1].trim(), views: [] };
+  const block = readMarkerBlock('meshViews', stdout);
+  const diagnostics = block.diagnostics;
+  const error = block.get('ERROR');
+  if (error !== undefined) return { ok: false, error, views: [], diagnostics };
 
   const views: RenderedView[] = [];
-  const re = /^POF_VIEWS_(\d+)=([^|\r\n]*)\|([^|\r\n]*)(?:\|([^\r\n]*))?$/gm;
-  for (let m = re.exec(stdout); m !== null; m = re.exec(stdout)) {
-    const palette = (m[4] ?? '').split(',').map((c) => c.trim()).filter(Boolean);
+  for (const { slot, value } of block.slots('{n}')) {
+    const [yaw, path, ...rest] = value.split('|');
+    if (path === undefined) continue;
+    const palette = rest.join('|').split(',').map((c) => c.trim()).filter(Boolean);
     views.push({
-      index: Number(m[1]),
-      yawDeg: Number(m[2]),
-      imagePath: m[3].trim(),
+      index: Number(slot),
+      yawDeg: Number(yaw),
+      imagePath: path.trim(),
       palette: palette.length ? palette : undefined,
     });
   }
   views.sort((a, b) => a.index - b.index);
 
-  const done = stdout.match(/^POF_VIEWS_DONE=(\d+)$/m);
-  if (!done) {
+  const done = block.get('DONE');
+  if (done === undefined || !/^\d+$/.test(done)) {
     return {
       ok: false,
       error: 'no POF_VIEWS_DONE marker in Blender output — the render did not finish',
       views,
+      diagnostics,
     };
   }
-  const claimed = Number(done[1]);
+  const claimed = Number(done);
   if (claimed !== views.length) {
     return {
       ok: false,
       error: `render claimed ${claimed} views but emitted ${views.length} — treating the run as failed rather than grading a partial set`,
       views,
+      diagnostics,
     };
   }
-  return { ok: true, views };
+  return { ok: true, views, diagnostics };
 }
 
 export interface MeshViewsResult {
@@ -159,30 +169,22 @@ export interface MeshViewsResult {
   views: RenderedView[];
   /** Set when the requested yaw count was adjusted. */
   viewsPlanReason?: string;
+  /** Non-fatal script notes (e.g. why no palette was measured), verbatim. */
+  diagnostics?: Record<string, string>;
   durationMs?: number;
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
-export interface MeshViewsDeps {
+export interface MeshViewsDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
   now?: () => number;
   env?: Record<string, string | undefined>;
 }
 
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });
 
 /** Render a mesh from N yaws. A marker without a file on disk is not a view. */
 export async function runMeshViews(spec: MeshViewsSpec, deps: MeshViewsDeps = {}): Promise<MeshViewsResult> {
@@ -192,10 +194,9 @@ export async function runMeshViews(spec: MeshViewsSpec, deps: MeshViewsDeps = {}
   const run = deps.run ?? defaultRun;
   const plan = viewsPlan(spec.views);
 
-  const blender = resolveBlenderPath(spec.blenderPath, env, fileExists);
-  if (!blender) {
-    return { ok: false, error: 'Blender not found — set POF_BLENDER to the blender executable', views: [] };
-  }
+  const located = locateBlender({ ...deps, explicit: spec.blenderPath, env, exists: fileExists });
+  const blender = located.path;
+  if (!blender) return { ok: false, error: blenderNotFound(located.probed), views: [] };
   if (!fileExists(spec.meshPath)) {
     return { ok: false, error: `mesh not found at ${spec.meshPath}`, views: [] };
   }
@@ -205,11 +206,18 @@ export async function runMeshViews(spec: MeshViewsSpec, deps: MeshViewsDeps = {}
   }
 
   const start = now();
-  const { stdout } = await run(blender, buildMeshViewsArgs(script, spec), spec.timeoutMs ?? 300_000);
-  const parsed = parseMeshViewsOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 300_000;
+  const outcome = await run(blender, buildMeshViewsArgs(script, spec), timeoutMs);
+  const parsed = parseMeshViewsOutput(outcome.stdout);
   const durationMs = now() - start;
+  const diagnostics = parsed.diagnostics;
   if (!parsed.ok) {
-    return { ok: false, error: parsed.error, views: parsed.views, viewsPlanReason: plan.reason, durationMs };
+    // No DONE and no ERROR marker → Blender itself says why (crash, timeout, never started).
+    const ended = readMarkerBlock('meshViews', outcome.stdout);
+    const error = ended.get('DONE') === undefined && ended.get('ERROR') === undefined
+      ? processFailureReason(outcome, { tool: `Blender (${basename(script)})`, timeoutMs })
+      : parsed.error;
+    return { ok: false, error, views: parsed.views, viewsPlanReason: plan.reason, diagnostics, durationMs };
   }
 
   const missing = parsed.views.filter((v) => !fileExists(v.imagePath));
@@ -219,8 +227,9 @@ export async function runMeshViews(spec: MeshViewsSpec, deps: MeshViewsDeps = {}
       error: `${missing.length} of ${parsed.views.length} view images were not written to disk (first: ${missing[0].imagePath}) — a marker is not a file`,
       views: parsed.views.filter((v) => fileExists(v.imagePath)),
       viewsPlanReason: plan.reason,
+      diagnostics,
       durationMs,
     };
   }
-  return { ok: true, views: parsed.views, viewsPlanReason: plan.reason, durationMs };
+  return { ok: true, views: parsed.views, viewsPlanReason: plan.reason, diagnostics, durationMs };
 }

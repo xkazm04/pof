@@ -1,17 +1,14 @@
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_10 } from '@/lib/chart-colors';
+import { scoreBandToken, withOpacity, OPACITY_10 } from '@/lib/chart-colors';
 
 // ─── Score coloring ──────────────────────────────────────────────────────────
+// Both read the one `SCORE_BANDS` table through `scoreBandToken` (the private
+// 70/45/25 ladder is retired), so a combined score reads the same band here as
+// on every other evaluator surface.
 
 export function healthColor(score: number): string {
-  if (score >= 70) return STATUS_SUCCESS;
-  if (score >= 45) return STATUS_WARNING;
-  if (score >= 25) return STATUS_BLOCKER;
-  return STATUS_ERROR;
+  return scoreBandToken(score).color;
 }
 
 export function healthBg(score: number): string {
-  if (score >= 70) return `${STATUS_SUCCESS}${OPACITY_10}`;
-  if (score >= 45) return `${STATUS_WARNING}${OPACITY_10}`;
-  if (score >= 25) return `${STATUS_BLOCKER}${OPACITY_10}`;
-  return `${STATUS_ERROR}${OPACITY_10}`;
+  return withOpacity(scoreBandToken(score).color, OPACITY_10);
 }

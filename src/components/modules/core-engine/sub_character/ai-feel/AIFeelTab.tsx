@@ -24,6 +24,7 @@ import { ParameterDetails } from './ParameterDetails';
 import { ComparisonPanel } from './ComparisonPanel';
 import { FeelInputPanel } from './FeelInputPanel';
 import { FeelLayerStack } from './FeelLayerStack';
+import { UEDriftPanel } from './UEDriftPanel';
 import { buildStackApplyPrompt } from './build-apply-prompt';
 import { ACCENT } from './constants';
 
@@ -111,6 +112,12 @@ export function CharacterFeelOptimizer({ moduleId }: CharacterFeelOptimizerProps
     execute(task);
   }, [isRunning, basePreset, feelLayers, resolvedProfile, activeLayerCount, moduleId, execute]);
 
+  /** Feel vs UE: only the located drift, only on the panel's explicit click. */
+  const handleApplyDrift = useCallback((prompt: string, driftCount: number) => {
+    if (isRunning) return;
+    execute(TaskFactory.askClaude(moduleId, prompt, `Apply UE drift: ${driftCount} field${driftCount === 1 ? '' : 's'}`));
+  }, [isRunning, moduleId, execute]);
+
   const handleSelectCompare = useCallback((preset: FeelPreset) => {
     setComparePreset((prev) => prev?.id === preset.id ? null : preset);
     setShowComparison(true);
@@ -147,6 +154,7 @@ export function CharacterFeelOptimizer({ moduleId }: CharacterFeelOptimizerProps
           <FeelLayerStack basePreset={basePreset} />
         </div>
 
+        <div className="space-y-4">
         <BlueprintPanel color={basePreset.color} className="p-3">
           <div className="flex items-center justify-between mb-2">
             <SectionHeader
@@ -200,6 +208,14 @@ export function CharacterFeelOptimizer({ moduleId }: CharacterFeelOptimizerProps
 
           <ParameterDetails preset={resolvedPreset} />
         </BlueprintPanel>
+
+        <UEDriftPanel
+          resolved={resolvedProfile}
+          basePreset={basePreset}
+          isRunning={isRunning}
+          onApplyDrift={handleApplyDrift}
+        />
+        </div>
       </div>
 
       {/* A/B Comparison Panel — resolved vs compare target */}

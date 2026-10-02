@@ -3,24 +3,12 @@
 import { useCallback, useMemo } from 'react';
 import { Music, Lock, Check, ChevronUp, Volume2, Radio, Layers, Loader2, Send, AlertTriangle } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
-import { getModuleChecklist } from '@/lib/module-registry';
+import { resolveDiagramNodes, deriveDiagramNodeStates, type DiagramNode } from '@/lib/checklist-diagram';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import type { LucideIcon } from 'lucide-react';
 
 const ACCENT = MODULE_COLORS.content;
-
-interface PipelineLayer {
-  id: string;
-  label: string;
-  subtitle: string;
-  description: string;
-  icon: LucideIcon;
-  prompt: string;
-  prerequisites: string[];
-  /** True when `id` resolves to no registry checklist item — surfaced, not hidden. */
-  missing: boolean;
-}
 
 /**
  * The shape of the diagram: which REAL `audio` checklist items it draws and how
@@ -33,6 +21,7 @@ interface PipelineLayer {
  * percentage, the feature matrix and the module views could never count it.
  * They mirror `aud-1..aud-3` one-for-one, so `ORPHAN_KEY_MIGRATIONS` moves any
  * already-stored `au-*` completion onto the real id rather than resetting it.
+ * Resolution and state derivation are the shared `@/lib/checklist-diagram` model.
  */
 interface PipelineLayerSpec {
   id: string;
@@ -48,25 +37,11 @@ const HIERARCHY: PipelineLayerSpec[] = [
   { id: 'aud-1', subtitle: 'Foundation', icon: Volume2, prerequisites: [] },
 ];
 
-/**
- * Resolve a layer against the registry. A spec whose id no longer exists renders
- * as a loud, undispatchable drift marker rather than vanishing from the diagram —
- * a silently-dropped node is exactly how the `au-*` divergence survived.
- */
-function layerFrom(spec: PipelineLayerSpec): PipelineLayer {
-  const item = getModuleChecklist('audio').find((i) => i.id === spec.id);
-  return {
-    ...spec,
-    label: item?.label ?? spec.id,
-    description:
-      item?.description ??
-      `No "${spec.id}" item exists in the audio checklist — this diagram and the registry have drifted.`,
-    prompt: item?.prompt ?? '',
-    missing: !item,
-  };
-}
+type PipelineLayer = DiagramNode<PipelineLayerSpec>;
 
-const LAYERS: PipelineLayer[] = HIERARCHY.map(layerFrom);
+// A spec whose id no longer exists resolves to a loud, undispatchable drift node
+// rather than vanishing — a silently-dropped node is how `au-*` survived.
+const LAYERS: PipelineLayer[] = resolveDiagramNodes('audio', HIERARCHY);
 
 /** Label lookup so prerequisite copy can never drift from the layer list above. */
 const LAYER_LABELS: Record<string, string> = Object.fromEntries(LAYERS.map((l) => [l.id, l.label]));
@@ -82,17 +57,19 @@ const EMPTY_PROGRESS: Record<string, boolean> = {};
 export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: AudioPipelineDiagramProps) {
   const progress = useModuleStore((s) => s.checklistProgress['audio'] ?? EMPTY_PROGRESS);
 
-  const layerStates = useMemo(() => {
-    return LAYERS.map((layer) => {
-      const completed = !!progress[layer.id];
-      const prerequisitesMet = layer.prerequisites.every((pid) => !!progress[pid]);
-      // A drifted layer has no registry prompt behind it, so it is never runnable.
-      const locked = layer.missing || (!prerequisitesMet && !completed);
-      const isActive = activeItemId === layer.id;
-      const isFoundation = layer.prerequisites.length === 0;
-      const prereqLabel = layer.prerequisites.map((pid) => LAYER_LABELS[pid] ?? pid).join(' + ');
-      return { ...layer, completed, locked, isActive, isFoundation, prereqLabel };
-    });
+  const { layerStates, completedCount, nextBuildable } = useMemo(() => {
+    const derived = deriveDiagramNodeStates(LAYERS, progress, activeItemId);
+    return {
+      layerStates: derived.nodes.map((layer) => ({
+        ...layer,
+        isFoundation: layer.prerequisites.length === 0,
+        prereqLabel: layer.prerequisites.map((pid) => LAYER_LABELS[pid] ?? pid).join(' + '),
+      })),
+      completedCount: derived.completedCount,
+      // Build order runs bottom-up (the shared model picks fewest prerequisites
+      // first — the foundation) while the list renders top-down.
+      nextBuildable: derived.nextBuildable,
+    };
   }, [progress, activeItemId]);
 
   const handleClick = useCallback(
@@ -105,10 +82,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
     [onRunPrompt, isRunning],
   );
 
-  const completedCount = layerStates.filter((l) => l.completed).length;
   const allComplete = completedCount === layerStates.length;
-  // Build order runs bottom-up (foundation first); the list renders top-down.
-  const nextBuildable = [...layerStates].reverse().find((l) => !l.completed && !l.locked);
   const summary = allComplete
     ? 'Audio stack complete — every layer is in place'
     : nextBuildable

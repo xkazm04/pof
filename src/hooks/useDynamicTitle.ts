@@ -1,10 +1,28 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
+import { useCLIPanelStore, type CLISessionState } from '@/components/cli/store/cliPanelStore';
+import type { ActivitySummary } from '@/components/layout-lab/activityModel';
+import { STATUS_ERROR, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
+import {
+  fromCliSessions,
+  fromLabActivity,
+  initialTabAttention,
+  reduceTabAttention,
+  type TabSignal,
+  type TabTone,
+} from '@/lib/shell/tabAttention';
 
-const BASE_TITLE = 'POF';
-const DONE_DISPLAY_MS = 4000;
+const LEGACY_BASE_TITLE = 'POF';
+const NO_SESSIONS: Record<string, CLISessionState> = {};
+
+const TONE_COLOR: Record<TabTone, string | null> = {
+  none: null,
+  running: STATUS_WARNING,
+  attention: STATUS_WARNING,
+  success: STATUS_SUCCESS,
+  error: STATUS_ERROR,
+};
 
 // Cache original favicon href so we can restore it
 let originalFaviconHref: string | null = null;
@@ -25,34 +43,24 @@ function setFavicon(color: string | null) {
   }
 
   if (!color) {
-    // Restore original
     link.href = originalFaviconHref;
     return;
   }
 
-  // Generate a 32x32 canvas favicon with a colored dot
+  // A 32x32 canvas favicon: a coloured dot with a soft glow.
   const canvas = document.createElement('canvas');
   canvas.width = 32;
   canvas.height = 32;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Dark background circle
-  ctx.fillStyle = '#0a0a0f';
-  ctx.beginPath();
-  ctx.arc(16, 16, 16, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Inner colored dot
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(16, 16, 8, 0, Math.PI * 2);
+  ctx.arc(16, 16, 9, 0, Math.PI * 2);
   ctx.fill();
 
-  // Glow effect
   ctx.shadowColor = color;
   ctx.shadowBlur = 6;
-  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(16, 16, 5, 0, Math.PI * 2);
   ctx.fill();
@@ -60,58 +68,71 @@ function setFavicon(color: string | null) {
   link.href = canvas.toDataURL('image/png');
 }
 
-export function useDynamicTitle() {
-  const sessions = useCLIPanelStore((s) => s.sessions);
-  const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevRunningRef = useRef(0);
+const isVisible = () => document.visibilityState !== 'hidden';
+
+/** Owns document.title + favicon for one mount: reduces signals, repaints only on tone change. */
+function createTitleController(base: string) {
+  let state = initialTabAttention(base);
+  let painted: TabTone = 'none';
+  let last: TabSignal = { running: 0, ended: [], rest: null };
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const apply = (signal: TabSignal) => {
+    last = { ...signal, ended: [] };
+    if (timer) { clearTimeout(timer); timer = null; }
+    state = reduceTabAttention(state, signal, isVisible(), Date.now());
+    if (document.title !== state.title) document.title = state.title;
+    if (state.tone !== painted) {
+      painted = state.tone;
+      setFavicon(TONE_COLOR[painted]);
+    }
+    if (state.expiresAt !== null) {
+      timer = setTimeout(() => apply(last), Math.max(0, state.expiresAt - Date.now()));
+    }
+  };
+  const onVisibility = () => apply(last);
+  document.addEventListener('visibilitychange', onVisibility);
+
+  return {
+    apply,
+    dispose() {
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (timer) clearTimeout(timer);
+      if (document.title !== base) document.title = base;
+      if (painted !== 'none') setFavicon(null);
+    },
+  };
+}
+
+/**
+ * Tab title + favicon for running work (see `src/lib/shell/tabAttention.ts`).
+ * - `useDynamicTitle()` — legacy shell: CLI sessions from cliPanelStore, base title 'POF'.
+ * - `useDynamicTitle(summary)` — lab shell: the ActivityChip's summary, base = the document's
+ *   own title at mount (left untouched while nothing runs or ends).
+ */
+export function useDynamicTitle(labSummary?: ActivitySummary) {
+  const isLab = labSummary !== undefined;
+  const sessions = useCLIPanelStore((s) => (isLab ? NO_SESSIONS : s.sessions));
+  const controllerRef = useRef<ReturnType<typeof createTitleController> | null>(null);
+  const prevRef = useRef<Record<string, CLISessionState> | ActivitySummary | null>(null);
 
   useEffect(() => {
-    const sessionList = Object.values(sessions);
-    const runningCount = sessionList.filter((s) => s.isRunning).length;
-    const totalSessions = sessionList.length;
-    const prevRunning = prevRunningRef.current;
-
-    // Clear any pending "done" timer
-    if (doneTimerRef.current) {
-      clearTimeout(doneTimerRef.current);
-      doneTimerRef.current = null;
-    }
-
-    if (runningCount > 0) {
-      // Tasks are running
-      document.title = runningCount === 1
-        ? `(Running) ${BASE_TITLE}`
-        : `(${runningCount} running) ${BASE_TITLE}`;
-      setFavicon('#fbbf24'); // amber while running
-    } else if (prevRunning > 0 && runningCount === 0) {
-      // Just finished — show "Done" briefly
-      document.title = `(Done) ${BASE_TITLE}`;
-      setFavicon('#4ade80'); // green on complete
-
-      doneTimerRef.current = setTimeout(() => {
-        // Revert to session count or base
-        if (totalSessions > 1) {
-          document.title = `(${totalSessions} sessions) ${BASE_TITLE}`;
-        } else {
-          document.title = BASE_TITLE;
-        }
-        setFavicon(null);
-        doneTimerRef.current = null;
-      }, DONE_DISPLAY_MS);
-    } else if (totalSessions > 1) {
-      document.title = `(${totalSessions} sessions) ${BASE_TITLE}`;
-      setFavicon(null);
-    } else {
-      document.title = BASE_TITLE;
-      setFavicon(null);
-    }
-
-    prevRunningRef.current = runningCount;
-
+    const ctl = createTitleController(isLab ? document.title : LEGACY_BASE_TITLE);
+    controllerRef.current = ctl;
     return () => {
-      if (doneTimerRef.current) {
-        clearTimeout(doneTimerRef.current);
-      }
+      ctl.dispose();
+      controllerRef.current = null;
     };
-  }, [sessions]);
+  }, [isLab]);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    if (labSummary) {
+      prevRef.current = labSummary;
+      controllerRef.current?.apply(fromLabActivity(prev as ActivitySummary | null, labSummary));
+    } else {
+      prevRef.current = sessions;
+      controllerRef.current?.apply(fromCliSessions(prev as Record<string, CLISessionState> | null, sessions));
+    }
+  }, [labSummary, sessions]);
 }

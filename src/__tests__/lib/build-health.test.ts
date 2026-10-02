@@ -1,9 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Real in-memory SQLite so the project-scoped SELECT is exercised as written.
+vi.mock('@/lib/db', async () => {
+  const Database = (await import('better-sqlite3')).default;
+  const db = new Database(':memory:');
+  return { getDb: () => db };
+});
+
+// error_memory is project-blind and no build writes it — the report must not read it.
+const { getAllErrorsSpy } = vi.hoisted(() => ({ getAllErrorsSpy: vi.fn() }));
+vi.mock('@/lib/error-memory-db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/error-memory-db')>();
+  return { ...actual, getAllErrors: getAllErrorsSpy };
+});
+
+import { getDb } from '@/lib/db';
+import { ensureHeadlessBuildsTable } from '@/lib/ue5-bridge/build-pipeline';
 import {
   summarizeBuilds,
   buildDurationTrend,
   rankTargetsByDuration,
   detectRegressions,
+  getBuildHealthReport,
   type HealthBuild,
 } from '@/lib/ue5-bridge/build-health';
 
@@ -184,5 +202,44 @@ describe('detectRegressions', () => {
     expect(
       detectRegressions(builds, { durationSpikeFactor: 1.1 }).some((a) => a.kind === 'duration'),
     ).toBe(true);
+  });
+});
+
+// ── getBuildHealthReport: recurring errors come from the project's own builds ──
+
+describe('getBuildHealthReport recurring errors', () => {
+  function insert(buildId: string, projectPath: string, createdAt: string, message: string | null) {
+    const diags = message
+      ? [{ id: 'd', severity: 'error', file: 'A.cpp', line: 12, column: 1, code: 'C2065', message, rawText: message, category: 'compile' }]
+      : [];
+    getDb()
+      .prepare(
+        `INSERT INTO headless_builds (build_id, project_path, target_name, ue_version, platform, configuration,
+           target_type, status, started_at, duration_ms, error_count, warning_count, diagnostics_json, created_at)
+         VALUES (?, ?, 'Did', '5.7', 'Win64', 'Development', 'Editor', ?, ?, 1000, ?, 0, ?, ?)`,
+      )
+      .run(buildId, projectPath, message ? 'failed' : 'success', createdAt, diags.length, JSON.stringify(diags), createdAt);
+  }
+
+  it("derives only from the asked project's builds and never reads error_memory", () => {
+    ensureHeadlessBuildsTable();
+    getAllErrorsSpy.mockReturnValue([
+      { id: 1, moduleId: 'arpg-combat', fingerprint: 'fp-memory', category: 'other', errorCode: null, pattern: 'x', message: 'x', file: null, fixDescription: '', occurrences: 99, firstSeenAt: '', lastSeenAt: '', wasResolved: false },
+    ]);
+
+    // A seeded error_memory row with zero builds yields nothing.
+    expect(getBuildHealthReport('C:/P').recurringErrors).toEqual([]);
+
+    insert('p1', 'C:/P', '2026-09-01T10:00:00Z', "'UFoo': undeclared identifier");
+    insert('q1', 'C:/Q', '2026-09-01T11:00:00Z', "'UBar': undeclared identifier");
+    insert('q2', 'C:/Q', '2026-09-01T12:00:00Z', "'UBar': undeclared identifier");
+
+    const report = getBuildHealthReport('C:/P');
+    expect(report.recurringErrors).toHaveLength(1);
+    expect(report.recurringErrors[0].pattern).toBe('UFoo');
+    expect(report.recurringErrors[0].lastSeenBuildId).toBe('p1');
+    expect(report.recurringErrors[0].stillFailing).toBe(true);
+    expect(report.recurringErrors.some((e) => e.fingerprint === 'fp-memory')).toBe(false);
+    expect(getAllErrorsSpy).not.toHaveBeenCalled();
   });
 });

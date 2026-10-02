@@ -27,6 +27,7 @@ import { trackLabel, trackHint } from '@/lib/pipeline/tracks';
 import { buildAbilitySpecDraftPrompt } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
+import { aiTestReportDir } from '@/lib/ai-testing/test-identity';
 import { MIXAMO_DOWNLOAD_CONTRACT, MIXAMO_DOWNLOAD_CONTRACT_HEADING } from '@/lib/prompts/_shared';
 import { buildSyncCheckPrompt } from '@/lib/prompts/level-design';
 import { buildMaterialConfiguratorPrompt } from '@/lib/prompts/material-configurator';
@@ -36,6 +37,7 @@ import {
   findAnimationChecklistStep,
 } from '@/lib/prompts/animation-checklist';
 import { logger } from '@/lib/logger';
+import { normalizeProjectId } from '@/lib/project-id';
 
 import {
   registerCallback,
@@ -275,6 +277,10 @@ const featureFix: TaskPromptHandler = (task, ctx, { isUE5, knownAssetDomains, wi
       moduleId: ft.moduleId,
       featureName: ft.featureName,
       status: 'improved',
+      // The route is project-scoped: without the run's project the PATCH resolves
+      // unscoped and 409s on the project's own row. Guarded by
+      // cli-callback-scope-guard.test.ts.
+      projectId: normalizeProjectId(ctx.projectPath),
     },
     schemaHint: '  "completed": true',
   });
@@ -302,6 +308,9 @@ const featureReview: TaskPromptHandler = (task, ctx, { isUE5, touchesBinaryAsset
     method: 'POST',
     staticFields: {
       moduleId: task.moduleId,
+      // The review is ABOUT the run's project: without it the import writes
+      // unattributed ('') rows that list beside the project's own.
+      projectId: normalizeProjectId(ctx.projectPath),
     },
     schemaHint: `  "reviewedAt": "<ISO timestamp>",
   "features": [
@@ -392,10 +401,13 @@ const moduleScan: TaskPromptHandler = (task, ctx) => {
     method: 'POST',
     staticFields: {
       moduleId: task.moduleId,
+      // The passes this scan RAN, so the server records a clean pass (and can
+      // tell "no longer found" from "not re-scanned") even when it found nothing.
+      passes: st.passes,
     },
     schemaHint: `  "findings": [
     {
-      "pass": "structure|quality|performance",
+      "pass": "${st.passes.join('|')}",
       "category": "string",
       "severity": "critical|high|medium|low",
       "file": "relative/path.h or null",
@@ -853,7 +865,10 @@ const draftAbilitySpec: TaskPromptHandler = (task, ctx) => {
   const cbId = registerCallback({
     url: `${dt.appOrigin}/api/ability-spec`,
     method: 'POST',
-    staticFields: { catalogId: dt.catalogId, entityId: dt.entityId },
+    // The POST is a slice-merge (absent = keep): a redraft keeps the authored
+    // attributes/relationships/loadout but must still drop the forge provenance
+    // its effects no longer come from — hence the explicit null.
+    staticFields: { catalogId: dt.catalogId, entityId: dt.entityId, provenance: null },
     schemaHint:
       '  "effects": [\n' +
       '    { "id": "<id>", "name": "GE_<Name>", "duration": "instant|duration|infinite", "durationSec": 0, "cooldownSec": 0, "color": "#rrggbb", "modifiers": [{ "attribute": "Health", "operation": "add|multiply", "magnitude": 0 }], "grantedTags": [] }\n' +
@@ -894,14 +909,22 @@ const generateGasEffects: TaskPromptHandler = (task, ctx, { knownAssetDomains, t
 
 const runAITests: TaskPromptHandler = (task, ctx) => {
   const rt = task as RunAITestsTask;
-  const base = buildRunTestsPrompt(rt.suite, ctx);
+  const reportDir = aiTestReportDir(ctx.projectPath, rt.runId);
+  const base = buildRunTestsPrompt(rt.suite, ctx, { runId: rt.runId, reportDir });
+  // App-controlled: the server grades exactly these scenarios from UE's report in
+  // exactly this dir — static fields win the merge, so the model cannot redirect it.
   const cbId = registerCallback({
     url: `${rt.appOrigin}/api/ai-testing`,
     method: 'POST',
-    staticFields: { action: 'record-run-results' },
+    staticFields: {
+      action: 'record-run-results',
+      runId: rt.runId,
+      reportDir,
+      scenarioIds: rt.suite.scenarios.map((s) => s.id),
+    },
     schemaHint:
       '  "results": [\n' +
-      '    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<pass summary or failure reason>" }\n' +
+      '    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<your read of the result - kept as a note>" }\n' +
       '  ]',
   });
   return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;

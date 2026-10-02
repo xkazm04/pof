@@ -11,14 +11,18 @@
  * matches class bodies, and extracts typed UPROPERTY members + UFUNCTION
  * signatures, so the diff sees the same structure the semantic verifier does.
  * This avoids the comment / call-site false positives and the missed pointer/
- * template-typed UPROPERTY members of the old ad-hoc `fnRegex`/`varRegex`. Kept
+ * template-typed UPROPERTY members of the old ad-hoc `fnRegex`/`varRegex`.
+ * The Blueprint side is `deriveCppSurface` (`blueprint-cpp-surface.ts`) — the
+ * member record codegen renders from — so diffing the transpiler's own output
+ * reports nothing, and a header missing a custom event or OnRep handler the
+ * transpiler would emit is reported. Kept
  * pure (no React/I/O) so it can be unit-tested and reused outside the HTTP
  * route, mirroring `replication-scaffolder.ts`.
  */
 
-import { blueprintTypeToCpp } from '@/lib/blueprint-parser';
-import { deriveFunctionSignature } from '@/lib/blueprint-cpp-codegen';
+import { deriveCppSurface, isEditorExposed } from '@/lib/blueprint-cpp-surface';
 import { parseHeader, hasSpecifier, type ParsedFunction } from '@/lib/cpp-semantic-parser';
+import { onRepHandlerName } from '@/lib/replication-scaffolder';
 import type {
   SemanticDiffResult,
   SemanticChange,
@@ -34,13 +38,15 @@ import type {
 const COMPARED_DIMENSIONS = [
   'Variable names and types',
   'Variable replication flags (Replicated / ReplicatedUsing)',
-  'Variable editor exposure (Edit* / BlueprintReadWrite)',
+  'Variable editor exposure (EditAnywhere / EditDefaultsOnly / EditInstanceOnly)',
   'Function names (both directions)',
   'Function parameter arity, parameter types and return type',
+  'Custom events and RepNotify handlers (declared or missing)',
 ];
 
 const NOT_COMPARED = [
   'Event graph node logic — only the node count is summarised, never matched against C++ overrides',
+  'Custom event and RepNotify handler parameter lists — only their presence is checked',
   'Function bodies — no C++ statement is parsed, so identical declarations may still behave differently',
   'Default values, categories and tooltips',
   'Whether the C++ compiles at all',
@@ -68,11 +74,6 @@ function replicationExpectation(v: BlueprintVariable): { required: string[]; lab
   return null;
 }
 
-const EDITOR_EXPOSURE_SPECIFIERS = [
-  'EditAnywhere', 'EditDefaultsOnly', 'EditInstanceOnly',
-  'BlueprintReadWrite', 'BlueprintReadOnly',
-];
-
 export function computeSemanticDiff(
   asset: BlueprintAsset,
   existingCpp: string,
@@ -82,6 +83,11 @@ export function computeSemanticDiff(
 ): SemanticDiffResult {
   const changes: SemanticChange[] = [];
   let changeId = 0;
+
+  // The expected C++ is the member model codegen renders from — the same
+  // properties, specifiers and UFUNCTION set — so the transpiler's own output
+  // diffs clean by construction and the diff cannot disagree with codegen.
+  const surface = deriveCppSurface(asset);
 
   // Parse the existing C++ with the shared header parser (single source of
   // truth): comments stripped, class bodies brace-matched, UPROPERTY members
@@ -102,7 +108,8 @@ export function computeSemanticDiff(
   }
 
   // Check Blueprint variables vs C++ variables
-  for (const v of asset.variables) {
+  for (const prop of surface.properties) {
+    const v = prop.variable;
     const cppProp = cppProperties.get(v.name);
     if (cppProp !== undefined) {
       const cppType = cppProp.type;
@@ -119,7 +126,7 @@ export function computeSemanticDiff(
           blueprintSide: `${v.name}: ${rep.label}`,
           cppSide: `UPROPERTY(${cppProp.specifiers.join(', ')})`,
           conflictLevel: 'conflict',
-          resolution: `Add ${rep.required[0]}${v.isRepNotify ? ` = OnRep_${v.name}` : ''} to the UPROPERTY and register it in GetLifetimeReplicatedProps`,
+          resolution: `Add ${rep.required[0]}${v.isRepNotify ? ` = ${onRepHandlerName(v.name)}` : ''} to the UPROPERTY and register it in GetLifetimeReplicatedProps`,
         });
       } else if (!rep && cppProp.specifiers.some((s) => hasSpecifier([s], 'Replicated') || hasSpecifier([s], 'ReplicatedUsing'))) {
         changes.push({
@@ -136,25 +143,27 @@ export function computeSemanticDiff(
       }
 
       // Editor exposure — a weaker (compatible) divergence than replication.
-      const cppExposed = EDITOR_EXPOSURE_SPECIFIERS.some((s) => hasSpecifier(cppProp.specifiers, s));
-      if (v.isExposedToEditor !== cppExposed) {
+      // Both sides are read with the same rule: the Edit* family only.
+      const bpExposed = isEditorExposed(prop.specifiers);
+      const cppExposed = isEditorExposed(cppProp.specifiers);
+      if (bpExposed !== cppExposed) {
         changes.push({
           id: `change-${changeId++}`,
           type: 'modify',
           scope: 'variable',
           name: v.name,
-          description: `Editor exposure mismatch: Blueprint ${v.isExposedToEditor ? 'exposes' : 'does not expose'} "${v.name}" but C++ ${cppExposed ? 'does' : 'does not'}`,
-          blueprintSide: `${v.name}: ${v.isExposedToEditor ? 'exposed to editor' : 'not exposed'}`,
+          description: `Editor exposure mismatch: Blueprint ${bpExposed ? 'exposes' : 'does not expose'} "${v.name}" but C++ ${cppExposed ? 'does' : 'does not'}`,
+          blueprintSide: `${v.name}: ${bpExposed ? 'exposed to editor' : 'not exposed'}`,
           cppSide: `UPROPERTY(${cppProp.specifiers.join(', ')})`,
           conflictLevel: 'compatible',
-          resolution: v.isExposedToEditor
-            ? 'Add EditAnywhere / BlueprintReadWrite to the UPROPERTY'
-            : 'Remove the editor specifier, or expose the Blueprint variable',
+          resolution: bpExposed
+            ? 'Add EditAnywhere (or EditDefaultsOnly / EditInstanceOnly) to the UPROPERTY — BlueprintReadWrite alone does not show it in the Details panel'
+            : 'Remove the Edit* specifier, or expose the Blueprint variable',
         });
       }
 
       // Both sides have it — check for type conflicts using the parsed type.
-      const expectedType = blueprintTypeToCpp(v.type);
+      const expectedType = prop.cppType;
       if (normalizeType(cppType) !== normalizeType(expectedType)) {
         changes.push({
           id: `change-${changeId++}`,
@@ -177,14 +186,14 @@ export function computeSemanticDiff(
         description: `Variable "${v.name}" exists in Blueprint but not in C++`,
         blueprintSide: `${v.name}: ${v.type}`,
         conflictLevel: 'compatible',
-        resolution: `Add UPROPERTY ${blueprintTypeToCpp(v.type)} ${v.name} to header`,
+        resolution: `Add UPROPERTY ${prop.cppType} ${v.name} to header`,
       });
     }
   }
 
   // Check for C++ variables not in Blueprint
   for (const cppVar of cppProperties.keys()) {
-    if (!asset.variables.some((v) => v.name === cppVar)) {
+    if (!surface.properties.some((p) => p.name === cppVar)) {
       changes.push({
         id: `change-${changeId++}`,
         type: 'remove',
@@ -198,27 +207,68 @@ export function computeSemanticDiff(
     }
   }
 
-  // Check Blueprint functions vs C++ functions — name AND signature. The
-  // Blueprint signature comes from `deriveFunctionSignature`, the same helper
-  // the transpiler emits from, so the diff can never disagree with codegen.
-  const blueprintFnNames = new Set<string>();
-  for (const fn of asset.functions) {
-    const fnName = fn.name.replace(/\s+/g, '');
-    blueprintFnNames.add(fnName);
-    const cppFn = cppFunctions.get(fnName);
-    const { params, returnType } = deriveFunctionSignature(fn);
-    const bpSignature = `${returnType} ${fnName}(${params.join(', ')})`;
+  // Check every UFUNCTION the Blueprint becomes against the C++ — Blueprint
+  // functions by name AND signature; custom events and OnRep handlers by
+  // presence (codegen emits them parameterless; UE also accepts an OnRep that
+  // takes the old value, so their parameter lists are not compared).
+  const expectedFnNames = new Set(surface.functions.map((f) => f.name));
+  for (const fn of surface.functions) {
+    const cppFn = cppFunctions.get(fn.name);
+
+    if (fn.origin === 'custom-event') {
+      if (!cppFn) {
+        changes.push({
+          id: `change-${changeId++}`,
+          type: 'add',
+          scope: 'event',
+          name: fn.name,
+          description: `Custom event "${fn.name}" exists in Blueprint but the C++ declares no UFUNCTION for it`,
+          blueprintSide: `Custom event ${fn.name}`,
+          conflictLevel: 'compatible',
+          resolution: `Declare UFUNCTION(BlueprintCallable) void ${fn.name}() so callers of the event still resolve`,
+        });
+      }
+      continue;
+    }
+
+    if (fn.origin === 'onrep-handler') {
+      if (!cppFn) {
+        // UHT rejects a ReplicatedUsing that names an undeclared handler, so
+        // when the C++ property already points at it this is a conflict.
+        const cppProp = cppProperties.get(fn.property);
+        const namedByCpp = cppProp?.specifiers.some(
+          (s) => hasSpecifier([s], 'ReplicatedUsing') && s.slice(s.indexOf('=') + 1).trim() === fn.name,
+        ) ?? false;
+        changes.push({
+          id: `change-${changeId++}`,
+          type: 'add',
+          scope: 'function',
+          name: fn.name,
+          description: namedByCpp
+            ? `RepNotify handler "${fn.name}" is named by the "${fn.property}" UPROPERTY but never declared — UHT rejects the header`
+            : `RepNotify handler "${fn.name}" for "${fn.property}" is not declared in C++`,
+          blueprintSide: `${fn.property}: RepNotify`,
+          ...(cppProp ? { cppSide: `UPROPERTY(${cppProp.specifiers.join(', ')})` } : {}),
+          conflictLevel: namedByCpp ? 'conflict' : 'compatible',
+          resolution: `Declare UFUNCTION() void ${fn.name}();`,
+        });
+      }
+      continue;
+    }
+
+    const { params, returnType } = fn;
+    const bpSignature = `${returnType} ${fn.name}(${params.join(', ')})`;
 
     if (!cppFn) {
       changes.push({
         id: `change-${changeId++}`,
         type: 'add',
         scope: 'function',
-        name: fnName,
-        description: `Function "${fnName}" exists in Blueprint but not in C++`,
-        blueprintSide: `${fnName}() — ${fn.nodes.length} nodes`,
+        name: fn.name,
+        description: `Function "${fn.name}" exists in Blueprint but not in C++`,
+        blueprintSide: `${fn.name}() — ${fn.graph.nodes.length} nodes`,
         conflictLevel: 'compatible',
-        resolution: `Transpile function ${fnName} to C++`,
+        resolution: `Transpile function ${fn.name} to C++`,
       });
       continue;
     }
@@ -253,8 +303,8 @@ export function computeSemanticDiff(
         id: `change-${changeId++}`,
         type: 'modify',
         scope: 'function',
-        name: fnName,
-        description: `Signature mismatch on "${fnName}" — ${reasons.join('; ')}`,
+        name: fn.name,
+        description: `Signature mismatch on "${fn.name}" — ${reasons.join('; ')}`,
         blueprintSide: bpSignature,
         cppSide: renderCppSignature(cppFn),
         conflictLevel: 'conflict',
@@ -263,10 +313,11 @@ export function computeSemanticDiff(
     }
   }
 
-  // Check for C++ functions not in the Blueprint — the mirror of the
-  // variable pass, which the name-only comparison never had.
+  // Check for C++ functions the Blueprint does not become — the mirror of the
+  // variable pass. The transpiler's own custom events and OnRep handlers are
+  // expected members, so they no longer read as C++-only.
   for (const [name, cppFn] of cppFunctions) {
-    if (blueprintFnNames.has(name)) continue;
+    if (expectedFnNames.has(name)) continue;
     changes.push({
       id: `change-${changeId++}`,
       type: 'remove',

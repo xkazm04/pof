@@ -145,6 +145,17 @@ export function getRigPreset(id: string): RigPreset | undefined {
   return RIG_PRESETS.find((p) => p.id === id);
 }
 
+/**
+ * The chain endpoints a target skeleton REQUIRES — every IK chain's start and end bone,
+ * deduped in declaration order. The one required-bone rule: {@link checkPresetBinding}
+ * reads it to check the preset's own table, and `bindRigToPreset` (`rig-binding.ts`)
+ * reads it to check a produced rig's actual names, so the two cannot disagree on what a
+ * target needs.
+ */
+export function requiredChainBones(preset: RigPreset): string[] {
+  return [...new Set(preset.ikChains.flatMap((c) => [c.startBone, c.endBone]))];
+}
+
 export interface PresetBindingCheck {
   presetId: string;
   kind: RigTargetKind;
@@ -171,7 +182,7 @@ export interface PresetBindingCheck {
  * ship with an empty table that nothing reads.
  */
 export function checkPresetBinding(preset: RigPreset): PresetBindingCheck {
-  const required = [...new Set(preset.ikChains.flatMap((c) => [c.startBone, c.endBone]))];
+  const required = requiredChainBones(preset);
 
   if (preset.kind === 'conform') {
     // Not a pass by default: a pass on a check that does not apply, stated as such.

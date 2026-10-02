@@ -19,6 +19,8 @@ interface ItemGenomeState {
   /** Breeding-lab parent selections */
   breedParentA: string | null;
   breedParentB: string | null;
+  /** Transient (never persisted): the rolled offspring awaiting Keep / Re-roll / Discard */
+  breedPreview: ItemGenome | null;
 
   /* ── Actions ── */
   setSelectedId: (id: string) => void;
@@ -32,6 +34,15 @@ interface ItemGenomeState {
   updateGenome: (id: string, updater: (g: ItemGenome) => ItemGenome) => void;
   importGenome: (genome: ItemGenome) => void;
   duplicateGenome: (id: string) => void;
+  /** Roll an offspring of the selected parents into breedPreview; writes nothing */
+  previewBreed: () => string | null;
+  /** Replace the open preview with a fresh roll of the same parents */
+  rerollBreed: () => string | null;
+  /** Append the previewed offspring to the library and select it */
+  keepBreed: () => string | null;
+  /** Drop the previewed offspring */
+  discardBreed: () => void;
+  /** Preview + keep in one step (kept for callers that commit immediately) */
   breedSelected: () => string | null;
   evolveById: (id: string, xp: number) => boolean;
   resetToPresets: () => void;
@@ -41,6 +52,36 @@ interface ItemGenomeState {
 
 function createInitialGenomes(): ItemGenome[] {
   return PRESET_GENOMES.map((g) => ({ ...g, id: createItemId(), isPreset: true }));
+}
+
+/**
+ * Roll one offspring of two parents. The child inherits item type, rarity floor and
+ * mutation profile from the dominant parent (the one inheritGenomes names), so two
+ * Armor parents breed Armor rather than createGenome's 'Weapon' default.
+ */
+function rollOffspring(pA: ItemGenome, pB: ItemGenome): ItemGenome {
+  const result = inheritGenomes(pA, pB);
+  const dominant = result.dominantParent === 'A' ? pA : pB;
+  const child = createGenome(`${pA.name} x ${pB.name}`, dominant.color, {
+    traits: result.traits as TraitGene[],
+    description: `Bred from ${pA.name} + ${pB.name}`,
+    tags: ['bred'],
+    itemType: dominant.itemType,
+    minRarity: dominant.minRarity,
+    mutation: { ...dominant.mutation },
+  });
+  return {
+    ...child,
+    parents: [
+      { id: pA.id, name: pA.name, color: pA.color },
+      { id: pB.id, name: pB.name, color: pB.color },
+    ],
+  };
+}
+
+/** A preview never outlives a parent it names. */
+function previewSurvives(preview: ItemGenome | null, removedId: string): ItemGenome | null {
+  return preview?.parents?.some((p) => p.id === removedId) ? null : preview;
 }
 
 /* ── Store ─────────────────────────────────────────────────────────────────── */
@@ -53,10 +94,12 @@ export const useItemGenomeStore = create<ItemGenomeState>()(
       compareIds: [],
       breedParentA: null,
       breedParentB: null,
+      breedPreview: null,
 
       setSelectedId: (id) => set({ selectedId: id }),
-      setBreedParentA: (id) => set({ breedParentA: id }),
-      setBreedParentB: (id) => set({ breedParentB: id }),
+      // Changing a parent invalidates a preview rolled from the old pair.
+      setBreedParentA: (id) => set((s) => ({ breedParentA: id, breedPreview: id === s.breedParentA ? s.breedPreview : null })),
+      setBreedParentB: (id) => set((s) => ({ breedParentB: id, breedPreview: id === s.breedParentB ? s.breedPreview : null })),
 
       toggleCompareId: (id) => {
         const prev = get().compareIds;
@@ -77,7 +120,7 @@ export const useItemGenomeStore = create<ItemGenomeState>()(
       },
 
       deleteGenome: (id) => {
-        const { genomes, selectedId, compareIds, breedParentA, breedParentB } = get();
+        const { genomes, selectedId, compareIds, breedParentA, breedParentB, breedPreview } = get();
         if (genomes.length <= 1) return;
         const target = genomes.find((g) => g.id === id);
         if (target?.isPreset) return; // presets are sticky
@@ -89,6 +132,7 @@ export const useItemGenomeStore = create<ItemGenomeState>()(
           compareIds: compareIds.filter((x) => x !== id),
           breedParentA: breedParentA === id ? null : breedParentA,
           breedParentB: breedParentB === id ? null : breedParentB,
+          breedPreview: previewSurvives(breedPreview, id),
         });
       },
 
@@ -121,34 +165,35 @@ export const useItemGenomeStore = create<ItemGenomeState>()(
         }));
       },
 
-      breedSelected: () => {
+      previewBreed: () => {
         const { genomes, breedParentA, breedParentB } = get();
         if (!breedParentA || !breedParentB || breedParentA === breedParentB) return null;
         const pA = genomes.find((g) => g.id === breedParentA);
         const pB = genomes.find((g) => g.id === breedParentB);
         if (!pA || !pB) return null;
-        const result = inheritGenomes(pA, pB);
-        const child = createGenome(
-          `${pA.name} x ${pB.name}`,
-          result.dominantParent === 'A' ? pA.color : pB.color,
-          {
-            traits: result.traits as TraitGene[],
-            description: `Bred from ${pA.name} + ${pB.name}`,
-            tags: ['bred'],
-          },
-        );
-        const childWithLineage: ItemGenome = {
-          ...child,
-          parents: [
-            { id: pA.id, name: pA.name, color: pA.color },
-            { id: pB.id, name: pB.name, color: pB.color },
-          ],
-        };
+        const child = rollOffspring(pA, pB);
+        set({ breedPreview: child });
+        return child.id;
+      },
+
+      rerollBreed: () => get().previewBreed(),
+
+      keepBreed: () => {
+        const preview = get().breedPreview;
+        if (!preview) return null;
         set((state) => ({
-          genomes: [...state.genomes, childWithLineage],
-          selectedId: childWithLineage.id,
+          genomes: [...state.genomes, preview],
+          selectedId: preview.id,
+          breedPreview: null,
         }));
-        return childWithLineage.id;
+        return preview.id;
+      },
+
+      discardBreed: () => set({ breedPreview: null }),
+
+      breedSelected: () => {
+        if (!get().previewBreed()) return null;
+        return get().keepBreed();
       },
 
       evolveById: (id, xp) => {
@@ -169,6 +214,7 @@ export const useItemGenomeStore = create<ItemGenomeState>()(
           compareIds: [],
           breedParentA: null,
           breedParentB: null,
+          breedPreview: null,
         });
       },
     }),

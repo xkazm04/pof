@@ -9,6 +9,7 @@ import {
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { ItemGenome, DNARollResult } from '@/types/item-genome';
+import { RARITY_ORDER, describeAffixCount, describeLevelScale } from '@/lib/item-dna/rules';
 import { ACCENT } from './data';
 import { DNAStrand } from './DNAStrand';
 import { DistributionBar } from './DistributionBar';
@@ -47,7 +48,7 @@ export function RollerTab({
               onChange={(e) => setRollRarity(e.target.value)}
               className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text"
             >
-              {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map((r) => (
+              {RARITY_ORDER.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
@@ -100,11 +101,11 @@ export function RollerTab({
           <BlueprintPanel color={ACCENT} className="p-3 space-y-1.5">
             <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Rolling Pipeline</span>
             {[
-              { step: '1. Roll Count', desc: `${rollRarity} = ${({'Common': '0', 'Uncommon': '1-2', 'Rare': '3-4', 'Epic': '4-5', 'Legendary': '5-6'} as Record<string, string>)[rollRarity] ?? '?'} affixes`, color: ACCENT },
+              { step: '1. Roll Count', desc: `${rollRarity} = ${describeAffixCount(rollRarity)} affixes`, color: ACCENT },
               { step: '2. Rarity Gate', desc: 'Filter pool by MinRarity', color: STATUS_WARNING },
               { step: '3. DNA Bias', desc: 'Weight by genome traits + tag affinity', color: selected.color },
               { step: '4. Mutation Check', desc: `${(selected.mutation.mutationRate * 100).toFixed(0)}% chance per slot`, color: ACCENT_PINK },
-              { step: '5. Scale by Level', desc: `Base * (1 + 0.1 * ${rollLevel})`, color: STATUS_SUCCESS },
+              { step: '5. Scale by Level', desc: describeLevelScale(rollLevel), color: STATUS_SUCCESS },
             ].map((s, i) => (
               <div key={i} className="relative flex items-center gap-2 text-xs font-mono px-2 py-0.5 rounded overflow-hidden" style={{ backgroundColor: `${s.color}${OPACITY_10}` }}>
                 <CornerBrackets color={s.color} size={5} />

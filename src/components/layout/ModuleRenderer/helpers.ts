@@ -55,8 +55,9 @@ export function resolveVisibleModule(
  *
  * `false` is deliberately NOT "idle". It means "no live work observed", which
  * this shell cannot distinguish from "this pane's work is invisible to me" — it
- * can see CLI sessions and nothing else, so a module's own SSE streams, polls
- * and subscriptions read as `false` while running. The LRU therefore uses the
+ * can see CLI sessions and the pane holds modules declare (`usePaneHold`), and
+ * nothing else, so a module's undeclared SSE streams, polls and subscriptions
+ * read as `false` while running. The LRU therefore uses the
  * probe as an eviction PREFERENCE (prefer a pane with no observed live work over
  * one with observed live work), never as a safety claim that the chosen victim
  * was doing nothing. `EvictionBasis` below carries that distinction outward so
@@ -198,9 +199,16 @@ export function lruTouchedAll(
 }
 
 /**
- * Fold the shell's ONE observation source — the CLI session store — into an
- * order-stable key naming every id with live work, prefixed by scope
- * (`s:` session id, `m:` module id).
+ * Pane holds by pane id: the reasons each mounted module declared through
+ * `usePaneHold` (`@/hooks/usePaneHold`). Only non-empty lists count as held.
+ */
+export type PaneHoldMap = Readonly<Record<string, readonly string[]>>;
+
+/**
+ * Fold the shell's observation sources — the CLI session store, plus the pane
+ * holds modules declare — into an order-stable key naming every id with live
+ * work, prefixed by scope (`s:` session id, `m:` module id). A hold is a module
+ * scope fact only (`m:`), and positive evidence exactly like a running session.
  *
  * A string, not a Set, on purpose: this is read through a zustand selector on
  * every render, and a fresh object identity per render would re-subscribe (and,
@@ -209,14 +217,32 @@ export function lruTouchedAll(
  *
  * What it can see is exactly what `describeEviction` can see, and no more.
  */
-export function observedLiveKey(sessions: Record<string, EvictionSessionInfo>): string {
-  const ids: string[] = [];
+export function observedLiveKey(
+  sessions: Record<string, EvictionSessionInfo>,
+  holds?: PaneHoldMap,
+): string {
+  const ids = new Set<string>();
   for (const [sessionId, s] of Object.entries(sessions)) {
     if (!s?.isRunning) continue;
-    ids.push(`s:${sessionId}`);
-    if (s.moduleId) ids.push(`m:${s.moduleId}`);
+    ids.add(`s:${sessionId}`);
+    if (s.moduleId) ids.add(`m:${s.moduleId}`);
   }
-  return ids.sort().join('|');
+  for (const [paneId, reasons] of Object.entries(holds ?? {})) {
+    if (reasons.length > 0) ids.add(`m:${paneId}`);
+  }
+  return [...ids].sort().join('|');
+}
+
+/**
+ * The holds of just `ids`, copied — what a pending eviction must carry from the
+ * render that DECIDED it to the effect that reports it. By report time the
+ * victim's unmount cleanup has already released its hold, so reading the live
+ * registry there would never see it.
+ */
+export function pickPaneHolds(holds: PaneHoldMap, ids: readonly string[]): PaneHoldMap {
+  const picked: Record<string, readonly string[]> = {};
+  for (const id of ids) if (holds[id]?.length) picked[id] = [...holds[id]];
+  return picked;
 }
 
 /**
@@ -243,7 +269,9 @@ export interface EvictionSignal {
   label: string;
   scope: 'module' | 'session';
   cap: number;
-  liveWork: 'cli-session-running' | 'none-observed';
+  liveWork: 'cli-session-running' | 'pane-hold' | 'none-observed';
+  /** The evicted pane's declared hold reason(s), joined — set whenever it was held. */
+  holdReason?: string;
   /**
    * How this victim was chosen. `forced-over-live-work` is the case the LRU could
    * not avoid — every candidate had observed live work — and is what promotes the
@@ -256,10 +284,16 @@ export interface EvictionSignal {
  * Describe an eviction for reporting.
  *
  * The `liveWork` verdict is deliberately narrow and never guesses: the shell can
- * only see CLI sessions (`sessions`), so it reports `cli-session-running` when a
- * running session is attributable to the evicted pane and `none-observed`
- * otherwise. `none-observed` means "this shell detected nothing", NOT "nothing was
- * lost" — a module's own SSE streams, polls and subscriptions are invisible here.
+ * only see CLI sessions (`sessions`) and declared pane holds (`holds`), so it
+ * reports `cli-session-running` when a running session is attributable to the
+ * evicted pane, `pane-hold` when the pane had declared in-flight work (named in
+ * `holdReason`), and `none-observed` otherwise. `none-observed` means "this shell
+ * detected nothing", NOT "nothing was lost" — a module's undeclared streams, polls
+ * and subscriptions are invisible here.
+ *
+ * `holds` must be the snapshot taken when the eviction was DECIDED (see
+ * `pickPaneHolds`): the victim's own cleanup releases its hold before any report
+ * effect runs.
  *
  * `basis` is the same distinction seen from the DECISION side (see `EvictionBasis`):
  * `no-observed-live-work` says the LRU preferred this victim because nothing was
@@ -272,32 +306,40 @@ export function describeEviction(
   cap: number,
   sessions: Record<string, EvictionSessionInfo>,
   basis: EvictionBasis = 'unprobed',
+  holds?: PaneHoldMap,
 ): EvictionSignal {
   const running = Object.entries(sessions).some(([sessionId, s]) =>
     s?.isRunning && (scope === 'session' ? sessionId === evictedId : s.moduleId === evictedId),
   );
+  const reasons = scope === 'module' ? holds?.[evictedId] ?? [] : [];
   return {
     evictedId,
     label: scope === 'session' ? evictedId : moduleLabel(evictedId),
     scope,
     cap,
-    liveWork: running ? 'cli-session-running' : 'none-observed',
+    liveWork: running ? 'cli-session-running' : reasons.length > 0 ? 'pane-hold' : 'none-observed',
+    ...(reasons.length > 0 ? { holdReason: reasons.join('; ') } : {}),
     basis,
   };
 }
 
 /**
  * True when an eviction destroyed work this shell could actually SEE — either the
- * LRU was forced over every live candidate, or a session attributable to the pane
- * was still running when the report was written (the probe and the report read the
- * store at different moments, so the second check is not redundant).
+ * LRU was forced over every live candidate, the pane had declared a hold, or a
+ * session attributable to the pane was still running when the report was written
+ * (the probe and the report read the store at different moments, so the last
+ * check is not redundant).
  *
  * The negative is never "nothing was lost"; it is "nothing observable was lost",
  * which is why the un-flagged case stays a debug line rather than a user-facing
  * claim of safety.
  */
 export function tearsDownObservedWork(signal: EvictionSignal): boolean {
-  return signal.basis === 'forced-over-live-work' || signal.liveWork === 'cli-session-running';
+  return (
+    signal.basis === 'forced-over-live-work' ||
+    signal.liveWork === 'cli-session-running' ||
+    signal.liveWork === 'pane-hold'
+  );
 }
 
 /**
@@ -315,6 +357,8 @@ export function reportEviction(signal: EvictionSignal): void {
       `basis ${signal.basis}; ` +
       (signal.liveWork === 'cli-session-running'
         ? 'a RUNNING CLI session was torn down'
-        : 'no running CLI session observed (module-internal streams/polls are not visible here)'),
+        : signal.liveWork === 'pane-hold'
+          ? `a declared pane hold was torn down (${signal.holdReason})`
+          : 'no running CLI session or pane hold observed (undeclared module streams/polls are not visible here)'),
   );
 }

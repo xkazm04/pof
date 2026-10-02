@@ -9,28 +9,24 @@ import {
   GLOW_SM, GLOW_MD, GLOW_LG,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { arpgPreviewLayout } from '@/components/modules/core-engine/sub_ui/_shared/hudRegistry';
 
 const ACCENT = ACCENT_PINK;
 
-interface HudElement {
-  id: string; label: string; top: string; left: string;
-  width: string; height: string;
-  render: 'globe-red' | 'globe-blue' | 'skill-bar' | 'xp-bar' | 'minimap' | 'rect' | 'badge';
-}
+type HudRender = 'globe-red' | 'globe-blue' | 'skill-bar' | 'xp-bar' | 'minimap' | 'rect' | 'badge';
 
-const HUD_ELEMENTS: HudElement[] = [
-  { id: 'portrait',      label: 'Portrait Frame',   top: '4%',  left: '2%',  width: '8%',  height: '12%', render: 'rect' },
-  { id: 'buffs',         label: 'Buffs / Debuffs',  top: '4%',  left: '12%', width: '18%', height: '6%',  render: 'rect' },
-  { id: 'minimap',       label: 'Minimap',          top: '3%',  left: '83%', width: '14%', height: '22%', render: 'minimap' },
-  { id: 'loot-feed',     label: 'Loot Feed',        top: '18%', left: '2%',  width: '14%', height: '28%', render: 'rect' },
-  { id: 'quest-tracker', label: 'Quest Tracker',    top: '14%', left: '80%', width: '18%', height: '22%', render: 'rect' },
-  { id: 'target-frame',  label: 'Target Frame',     top: '30%', left: '35%', width: '20%', height: '8%',  render: 'rect' },
-  { id: 'combo-counter', label: 'Combo Counter',    top: '42%', left: '82%', width: '10%', height: '8%',  render: 'badge' },
-  { id: 'xp-bar',        label: 'XP Bar',           top: '76%', left: '2%',  width: '96%', height: '3%',  render: 'xp-bar' },
-  { id: 'skill-bar',     label: 'Skill Bar',        top: '84%', left: '22%', width: '56%', height: '10%', render: 'skill-bar' },
-  { id: 'health-globe',  label: 'Health Globe',     top: '72%', left: '3%',  width: '16%', height: '24%', render: 'globe-red' },
-  { id: 'force-globe',   label: 'Force Globe',      top: '72%', left: '81%', width: '16%', height: '24%', render: 'globe-blue' },
-];
+/** How the preview draws a registry widget; geometry comes from the registry, never from here. */
+const RENDER_BY_ID: Record<string, HudRender> = {
+  'health-globe': 'globe-red',
+  'force-globe': 'globe-blue',
+  'skill-bar': 'skill-bar',
+  ExperienceBar: 'xp-bar',
+  MiniMap: 'minimap',
+  'combo-counter': 'badge',
+};
+
+/** The ARPG Layout context's placements (one rect per widget, shared with the compositor). */
+const HUD_ELEMENTS = arpgPreviewLayout().map(p => ({ ...p, render: RENDER_BY_ID[p.id] ?? 'rect' }));
 
 const SKILL_KEYS = ['1', '2', '3', '4', '5', '6', 'Q', 'R'];
 
@@ -137,7 +133,7 @@ export function ArpgHudPreview() {
             <motion.button key={el.id}
               onClick={() => handleClick(el.id)}
               className="absolute cursor-pointer z-10 focus:outline-none"
-              style={{ top: el.top, left: el.left, width: el.width, height: el.height }}
+              style={{ top: `${el.y}%`, left: `${el.x}%`, width: `${el.w}%`, height: `${el.h}%` }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}

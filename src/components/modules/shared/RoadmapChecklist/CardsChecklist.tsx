@@ -1,14 +1,15 @@
 'use client';
 
 import {
-  Check, Play, Loader2, Sparkles, CheckSquare, Square, ShieldAlert, ScanSearch,
-  StickyNote,
+  Check, Play, Loader2, Sparkles, CheckSquare, Square, ShieldAlert, HardDrive,
+  StickyNote, Wrench,
 } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { AccentButton } from '@/components/ui/AccentButton';
 import type { ChecklistItem, SubModuleId } from '@/types/modules';
 import type { PatternSuggestion } from '@/types/pattern-library';
 import type { VerificationInfo } from '@/stores/moduleStore';
+import { buildFinishPrompt, finishTargetFor } from '@/lib/checklist-disk-check';
 import { PriorityBadge, PriorityDropdown } from './Priority';
 import { NotesSection } from './NotesSection';
 import { CopyItemButton } from './CopyItemButton';
@@ -19,7 +20,7 @@ export function CardsChecklist({
   items, subModuleId, progress, verification, metadata, suggestions,
   accentColor, isRunning, activeItemId, lastCompletedItemId,
   selectMode, selected, hoveredItemId, priorityDropdown, expandedNotes, editingNotes,
-  onRunPrompt, toggleItem, toggleSelected, setHoveredItemId, setPriorityDropdown,
+  onRunPrompt, onDiskRecheck, toggleItem, toggleSelected, setHoveredItemId, setPriorityDropdown,
   handleContextMenu, toggleNotes, setEditingNotes, saveMetadata, handleSetPriority,
 }: {
   items: ChecklistItem[];
@@ -39,6 +40,8 @@ export function CardsChecklist({
   expandedNotes: Set<string>;
   editingNotes: string | null;
   onRunPrompt: (itemId: string, prompt: string) => void;
+  /** Re-check this module against disk (one verify-semantic call; records, never ticks) */
+  onDiskRecheck?: () => void;
   toggleItem: (subModuleId: SubModuleId, itemId: string) => void;
   toggleSelected: (itemId: string) => void;
   setHoveredItemId: (id: string | null) => void;
@@ -252,15 +255,28 @@ export function CardsChecklist({
                 />
                 {/* Copy prompt */}
                 <CopyItemButton text={item.prompt} tooltip="Copy CLI prompt" />
-                {/* Verify implementation — for partial items, sends to Claude for deep review */}
-                {isPartial && !isActive && (
+                {/* Partial: re-read the headers here (no CLI run), or finish only the missing members */}
+                {isPartial && !isActive && onDiskRecheck && (
                   <button
-                    onClick={() => onRunPrompt(item.id, `Verify my implementation of "${item.label}". Check the header file for: ${itemVerification.missingMembers?.join(', ') || 'completeness'}. Confirm what is implemented, what is missing, and suggest fixes.`)}
+                    onClick={onDiskRecheck}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all bg-yellow-500/12 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/20"
+                    title="Re-read this module's headers now"
+                  >
+                    <HardDrive className="w-3 h-3" />
+                    Re-check
+                  </button>
+                )}
+                {isPartial && !isActive && itemVerification.missingMembers?.length > 0 && (
+                  <button
+                    onClick={() => onRunPrompt(item.id, buildFinishPrompt(
+                      item, finishTargetFor(subModuleId, item.id, itemVerification.missingMembers),
+                    ))}
                     disabled={isRunning}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 bg-yellow-500/12 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/20"
+                    title={`Claude adds only: ${itemVerification.missingMembers.join(', ')}`}
                   >
-                    <ScanSearch className="w-3 h-3" />
-                    Verify
+                    <Wrench className="w-3 h-3" />
+                    Finish
                   </button>
                 )}
                 {/* Claude */}

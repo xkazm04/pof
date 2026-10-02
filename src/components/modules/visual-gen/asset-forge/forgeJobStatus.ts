@@ -73,6 +73,13 @@ export interface ForgeStatusResponse {
    * reason. Absent when there is nothing to remedy. The MCP status path omits it.
    */
   remedy?: DeliveryRemedy;
+  /**
+   * The provider-side task id this job paid for (cloud Tripo only). Carried on every poll
+   * so the client keeps the handle even if the server later forgets the job.
+   */
+  providerTaskId?: string;
+  /** On `status: 'error'`: the paid task may still deliver — recover it, never re-pay. */
+  recoverable?: boolean;
   error?: string;
 }
 

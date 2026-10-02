@@ -81,12 +81,20 @@ export interface BuildResult {
   output: string;
 }
 
+/** Latest UBT progress line of a running build (`[N/M] ...` gives the percent). */
+export interface BuildProgress {
+  message: string;
+  percent?: number;
+}
+
 export interface BuildQueueItem {
   buildId: string;
   request: BuildRequest;
   status: BuildStatus;
   queuedAt: string;
   startedAt: string | null;
+  /** Additive: the running item's latest progress, so a status poll can show it. */
+  progress?: BuildProgress;
 }
 
 export interface BuildOptions {

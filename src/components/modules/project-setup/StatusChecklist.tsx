@@ -15,14 +15,32 @@ import type { ChecklistItem } from './useProjectScan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { StatusDot } from '@/components/ui/StatusDot';
+import { apiFetch } from '@/lib/api-utils';
+import {
+  installLinkFor,
+  parseManifest,
+  planManifestImport,
+  type EnvironmentManifest,
+  type ImportedManifest,
+  type ManifestImportPlan,
+} from '@/lib/project-setup/toolchain';
 
-const INSTALL_URLS: Record<string, { url: string; label: string }> = {
-  engine: { url: 'https://www.unrealengine.com/download', label: 'Get Epic Launcher' },
-  'tool-vs': { url: 'https://visualstudio.microsoft.com/downloads/', label: 'Get Visual Studio' },
-  'tool-msvc': { url: 'https://visualstudio.microsoft.com/visual-cpp-build-tools/', label: 'Get C++ Build Tools' },
-  'tool-wsdk': { url: 'https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/', label: 'Get Windows SDK' },
-  'tool-dotnet': { url: 'https://dotnet.microsoft.com/en-us/download/dotnet/8.0', label: 'Get .NET 8.0 Runtime' },
-};
+/** The toolchain table's install link for a failing requirement (nothing for non-requirement items). */
+function InstallLink({ checklistId }: { checklistId: string }) {
+  const link = installLinkFor(checklistId);
+  if (!link) return null;
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1 text-xs text-accent-core hover:text-accent-core/80 mt-0.5 transition-colors"
+    >
+      <ExternalLink className="w-2.5 h-2.5" />
+      {link.label}
+    </a>
+  );
+}
 
 interface StatusChecklistProps {
   checklist: ChecklistItem[];
@@ -53,13 +71,11 @@ export function StatusChecklist({
 
   const handleExportManifest = useCallback(async () => {
     try {
-      const res = await fetch('/api/filesystem/browse', {
+      const data = await apiFetch<{ manifest: EnvironmentManifest }>('/api/filesystem/browse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'export-manifest' }),
       });
-      if (!res.ok) return;
-      const data = await res.json();
       const json = JSON.stringify(data.manifest, null, 2);
       onManifestExported(json);
       await navigator.clipboard.writeText(json);
@@ -73,25 +89,18 @@ export function StatusChecklist({
   const jsonValidation = useMemo<
     | { status: 'empty' }
     | { status: 'error'; message: string }
-    | { status: 'valid'; manifest: { tools: { installed: boolean; name: string; installCommand?: string; category?: string }[] }; toolCount: number; categoryCount: number; missingCount: number }
+    | { status: 'valid'; manifest: ImportedManifest; toolCount: number; categoryCount: number; plan: ManifestImportPlan }
   >(() => {
     const trimmed = importText.trim();
     if (!trimmed) return { status: 'empty' };
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (!parsed.tools || !Array.isArray(parsed.tools)) {
-        return { status: 'error', message: 'Missing "tools" array in manifest' };
-      }
-      const tools = parsed.tools as { installed: boolean; name: string; installCommand?: string; category?: string }[];
-      const categories = new Set(tools.map((t) => t.category ?? 'uncategorized'));
-      const missingCount = tools.filter((t) => !t.installed && t.installCommand).length;
-      return { status: 'valid', manifest: parsed, toolCount: tools.length, categoryCount: categories.size, missingCount };
-    } catch (e) {
-      const msg = e instanceof SyntaxError ? e.message : 'Invalid JSON';
-      return { status: 'error', message: msg };
-    }
-  }, [importText]);
+    const parsed = parseManifest(trimmed);
+    if (!parsed.ok) return { status: 'error', message: parsed.error };
+    const { tools } = parsed.data;
+    const categories = new Set(tools.map((t) => t?.category ?? 'uncategorized'));
+    // Diff the teammate's installed set against THIS machine's scan.
+    const plan = planManifestImport(parsed.data, checklist);
+    return { status: 'valid', manifest: parsed.data, toolCount: tools.length, categoryCount: categories.size, plan };
+  }, [importText, checklist]);
 
   const handleFormatJson = useCallback(() => {
     if (jsonValidation.status !== 'valid') return;
@@ -99,15 +108,8 @@ export function StatusChecklist({
   }, [jsonValidation]);
 
   const handleImportManifest = useCallback(() => {
-    if (jsonValidation.status !== 'valid') return;
-    const missing = jsonValidation.manifest.tools
-      .filter((t) => !t.installed && t.installCommand)
-      .map((t) => `- ${t.name}: \`${t.installCommand}\``)
-      .join('\n');
-    if (!missing) return;
-
-    const prompt = `A teammate shared their environment manifest. Install the following missing tools:\n\n${missing}\n\nRun each command and report the result. Do NOT use TodoWrite.`;
-    onBootstrapFromManifest(prompt);
+    if (jsonValidation.status !== 'valid' || !jsonValidation.plan.prompt) return;
+    onBootstrapFromManifest(jsonValidation.plan.prompt);
     setShowImport(false);
     setImportText('');
   }, [jsonValidation, onBootstrapFromManifest]);
@@ -161,17 +163,7 @@ export function StatusChecklist({
               >
                 {item.detail}
               </span>
-              {!item.ok && INSTALL_URLS[item.id] && (
-                <a
-                  href={INSTALL_URLS[item.id].url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-accent-core hover:text-accent-core/80 mt-0.5 transition-colors"
-                >
-                  <ExternalLink className="w-2.5 h-2.5" />
-                  {INSTALL_URLS[item.id].label}
-                </a>
-              )}
+              {!item.ok && <InstallLink checklistId={item.id} />}
             </div>
           </div>
         ))}
@@ -248,7 +240,11 @@ export function StatusChecklist({
                 <p className="text-2xs text-accent-setup/80 leading-snug">
                   {jsonValidation.toolCount} tool{jsonValidation.toolCount !== 1 ? 's' : ''} detected
                   {jsonValidation.categoryCount > 1 ? ` across ${jsonValidation.categoryCount} categories` : ''}
-                  {jsonValidation.missingCount > 0 ? ` · ${jsonValidation.missingCount} to install` : ' · all installed'}
+                  {jsonValidation.plan.installs.length > 0
+                    ? ` · ${jsonValidation.plan.installs.length} to install`
+                    : jsonValidation.plan.skipped.some((s) => s.reason === 'not-scanned')
+                      ? ' · re-scan this machine first'
+                      : ' · nothing missing here'}
                 </p>
               )}
               <div className="flex items-center gap-1.5">
@@ -256,7 +252,7 @@ export function StatusChecklist({
                   intent="info"
                   size="sm"
                   onClick={handleImportManifest}
-                  disabled={jsonValidation.status !== 'valid' || jsonValidation.missingCount === 0 || isBootstrapping}
+                  disabled={jsonValidation.status !== 'valid' || jsonValidation.plan.installs.length === 0 || isBootstrapping}
                   leftIcon={<Wrench className="w-3 h-3" />}
                   className="flex-1 justify-center"
                 >

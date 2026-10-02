@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { createHash } from 'node:crypto';
 import { buildGlbImportPython, collisionPlan, importGlbToUE } from '@/lib/visual-gen/ue-import';
 import type { ExperimentResult } from '@/lib/ue-experiment/runner';
 
@@ -242,5 +243,81 @@ describe('buildGlbImportPython — persisting the whole import', () => {
     const py = buildGlbImportPython('C:/gen/chair.glb');
     expect(py).toContain('task.save = True');
     expect(py).not.toContain('save_loaded_asset');
+  });
+});
+
+// ── Scale: applied at the import edge and READ BACK (challenge-2026-09-29b) ──
+// The gate's `importUniformScale` had zero appliers. The factor is applied on the LOD0 build
+// settings BEFORE collision (hulls must be built on the scaled mesh) and claimed only from the
+// observed bounds — the same fail-safe stance as collision.
+describe('buildGlbImportPython — scale', () => {
+  const box = collisionPlan({ use: 'blocking', components: 1 });
+
+  it('case 5: applies build_scale3d before collision, defers the save, and reads the extent back', () => {
+    const py = buildGlbImportPython('x.glb', '/Game/Generated', 'SM_X', { collision: box, scale: 1.8 });
+    expect(py).toContain('build_scale3d');
+    expect(py).toContain('unreal.Vector(1.8, 1.8, 1.8)');
+    expect(py.indexOf('build_scale3d')).toBeLessThan(py.indexOf('add_simple_collisions'));
+    expect(py).toContain('task.save = False');
+    expect(py).toContain('POF_UE_EXTENT_CM=');
+    // Everything imported is still saved, after both edits.
+    expect(py.lastIndexOf('save_loaded_asset(a)')).toBeGreaterThan(py.indexOf('POF_UE_EXTENT_CM='));
+  });
+
+  it('case 5: a scale alone (no collision) still defers the save and saves everything after', () => {
+    const py = buildGlbImportPython('x.glb', '/Game/Generated', 'SM_X', { scale: 1.8 });
+    expect(py).toContain('task.save = False');
+    expect(py).toContain('save_loaded_asset(a)');
+    expect(py).not.toContain('add_simple_collisions');
+  });
+
+  it('case 5: with no scale option the emitted python is byte-identical to the pre-plan output', () => {
+    const sha = (s: string) => createHash('sha256').update(s).digest('hex');
+    // Captured from the tree at 942afc3e, before the plan existed.
+    expect(sha(buildGlbImportPython('x.glb', '/Game/Generated', 'SM_X'))).toBe('7f181b66595806231be544cfc7cbd7b894d1d9c055d51de85798c11e27a9b043');
+    expect(sha(buildGlbImportPython('x.glb', '/Game/Generated', 'SM_X', { collision: box }))).toBe('449c13cbfa8a090a419e10d9f1f51d3279b62d8c973f333f96c348ebc906fe09');
+    expect(sha(buildGlbImportPython('x.glb', '/Game/Generated', 'SM_X', { collision: collisionPlan({ use: 'blocking', components: 3 }) })))
+      .toBe('c22ba5164e59657540e0142cdf67453b1c733e8577a8b08aa70270f7cfec9d33');
+  });
+});
+
+describe('importGlbToUE — scale is observed, not assumed', () => {
+  const scale = { factor: 1.8, targetExtentCm: 180 };
+
+  it('case 6: an observed extent far from the target fails and names both numbers', async () => {
+    const res = await importGlbToUE('x.glb', {
+      scale,
+      runExperimentFn: async () => RES({ POF_UE_IMPORT: '/Game/Generated/SM_X', POF_UE_EXTENT_CM: '100' }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('180');
+    expect(res.error).toContain('100');
+  });
+
+  it('case 6: an observed extent within tolerance passes and is reported', async () => {
+    const res = await importGlbToUE('x.glb', {
+      scale,
+      runExperimentFn: async () => RES({ POF_UE_IMPORT: '/Game/Generated/SM_X', POF_UE_EXTENT_CM: '179' }),
+    });
+    expect(res.ok).toBe(true);
+    expect(res.observedExtentCm).toBe(179);
+  });
+
+  it('case 6: a requested scale with no extent marker is refused', async () => {
+    const res = await importGlbToUE('x.glb', {
+      scale,
+      runExperimentFn: async () => RES({ POF_UE_IMPORT: '/Game/Generated/SM_X' }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/scale requested but no extent observed/);
+  });
+
+  it('asks the runner to apply the factor it was handed', async () => {
+    let python = '';
+    await importGlbToUE('x.glb', {
+      scale,
+      runExperimentFn: async (spec) => { python = spec.python; return RES({ POF_UE_IMPORT: '/Game/Generated/SM_X', POF_UE_EXTENT_CM: '180' }); },
+    });
+    expect(python).toContain('unreal.Vector(1.8, 1.8, 1.8)');
   });
 });

@@ -6,6 +6,10 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { GENERATED_IMAGE_DIR, generateTwoDImage } from '@/lib/visual-gen/image-providers';
 import { DEFAULT_SHEET_PX, type ContactSheetSpec } from '@/lib/visual-gen/contact-sheet';
 import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slice';
+import { commitLibraryIcon } from '@/lib/visual-gen/icon-library';
+import { styleClause, styleRequestOf } from '@/lib/visual-gen/style-apply';
+import { SHEET_DEFAULTS, SHEET_PROVIDER_ID } from '@/lib/visual-gen/icon-set-plan';
+import { getDb } from '@/lib/db';
 
 /**
  * One generation -> a whole SET of per-entity icons.
@@ -15,12 +19,16 @@ import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slic
  * `kit-coherence.ts` measures that spread. This route asks for all of them in one grid
  * image, cuts it on the DELIVERED dimensions, and files each cell under
  * `iconFileBase(catalog, step, entity)` so the existing icon library resolves it
- * entity-first with no other change.
+ * entity-first with no other change. Each cut goes through the library door
+ * (`commitLibraryIcon`), which records the sheet url + cell index bound to the cut's bytes.
  *
  * Refusals keep their own reason: a cast that does not fill the grid is a 400 that never
  * reaches a provider; a provider failure is a 502; a sheet that generated but could not
  * be cut is a 502 that still hands back the sheet url and the verdict, because the art
- * exists and a human can look at it.
+ * exists and a human can look at it: `details` = `{ sheetUrl, verdict }` plus the style outcome.
+ *
+ * The prompt defaults and the default provider are `icon-set-plan.ts`'s, so the forge's icon-set
+ * preview shows the prompt this route sends and checks the provider this route calls.
  */
 
 function imageDir(): string {
@@ -91,6 +99,8 @@ export async function POST(request: NextRequest) {
       cast?: { entityId?: string; brief?: string }[];
       providerId?: string;
       size?: string;
+      applyStyleDna?: boolean;
+      canonProfile?: string;
     };
 
     const catalogId = typeof body?.catalogId === 'string' ? body.catalogId : '';
@@ -103,12 +113,16 @@ export async function POST(request: NextRequest) {
       return apiError('every cast member needs an entityId and a brief — a blank brief buys a random cell', 400);
     }
 
+    // Style DNA (optional, via the one canon-aware resolver): with `applyStyleDna` the resolved
+    // style — the canon's own for a canon entity, never the project's — IS the sheet's medium.
+    // Absent the flag (or withheld) the medium is exactly what it was: `style` or the default.
+    const dna = styleClause(getDb, styleRequestOf(body));
     const spec: ContactSheetSpec = {
       cols: Number(body?.cols) || 4,
       rows: Number(body?.rows) || 4,
-      cellSubject: body?.cellSubject ?? 'game entity icon',
-      style: body?.style ?? 'painterly dark-fantasy ARPG art',
-      background: body?.background ?? 'subtle deep charcoal atmospheric background',
+      cellSubject: body?.cellSubject ?? SHEET_DEFAULTS.cellSubject,
+      style: dna.clause ?? body?.style ?? SHEET_DEFAULTS.style,
+      background: body?.background ?? SHEET_DEFAULTS.background,
       accent: typeof body?.accent === 'string' ? body.accent : undefined,
       cast: cast.map((c) => ({ id: c.entityId!, brief: c.brief! })),
       width: DEFAULT_SHEET_PX,
@@ -127,7 +141,7 @@ export async function POST(request: NextRequest) {
           const g = await generateTwoDImage(
             {
               prompt,
-              providerId: typeof body?.providerId === 'string' ? body.providerId : 'qwen-image',
+              providerId: typeof body?.providerId === 'string' ? body.providerId : SHEET_PROVIDER_ID,
               size: typeof body?.size === 'string' ? body.size : `${DEFAULT_SHEET_PX}*${DEFAULT_SHEET_PX}`,
               width: DEFAULT_SHEET_PX,
               height: DEFAULT_SHEET_PX,
@@ -144,14 +158,18 @@ export async function POST(request: NextRequest) {
           };
         },
         image: sharpImageOps,
-        iconDir: icons,
+        commit: (name, write, origin) => commitLibraryIcon(icons, name, write, origin),
       },
     );
 
     if (!result.ok) {
-      return apiError(result.error, result.refused ? 400 : 502);
+      // The uncut branch: the credit is spent and the sheet exists — hand back its url and verdict.
+      const uncut = result.sheetUrl || result.verdict
+        ? { sheetUrl: result.sheetUrl, verdict: result.verdict, ...dna.outcome }
+        : undefined;
+      return apiError(result.error, result.refused ? 400 : 502, uncut);
     }
-    return apiSuccess(result);
+    return apiSuccess({ ...result, ...dna.outcome });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Failed to process contact sheet request', 500);
   }

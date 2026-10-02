@@ -17,6 +17,7 @@ import type {
   GenerationProvider,
 } from './types';
 import { DEFAULT_BLENDER_HOST, DEFAULT_BLENDER_PORT } from './types';
+import { parseReceipts, printedText } from '@/lib/blender-mcp/receipt';
 
 /**
  * Hard ceiling on a single response's accumulated bytes. The wire protocol has
@@ -424,13 +425,12 @@ class BlenderMCPService {
       params: { code },
     });
     if (!result.ok) return result;
-    const data = result.data as Record<string, unknown>;
-    return ok({
-      output:
-        typeof data?.output === 'string'
-          ? data.output
-          : JSON.stringify(data),
-    });
+    // Normalise BEFORE parsing: PoF's own shape is `{ output }`, the ahujasid
+    // addon answers `{ executed, result }`. Stringifying the whole reply (the old
+    // fallback for anything but `output`) quote-escaped every printed receipt.
+    const data = result.data as Record<string, unknown> | null;
+    const output = printedText(data) ?? JSON.stringify(data);
+    return ok({ output, receipts: parseReceipts(output) });
   }
 
   async getViewportScreenshot(): Promise<Result<string, string>> {

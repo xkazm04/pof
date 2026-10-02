@@ -3,27 +3,24 @@
 import { useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
-import { ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_20,
+import { ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_20, STATUS_WARNING,
   withOpacity, OPACITY_3, OPACITY_5, OPACITY_37,
 } from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
-import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { BlueprintPanel, SectionHeader } from './design';
+import type { ComboSchedule } from './schedule';
 import { ResponsiveSvgContainer } from '../damage-pipeline/ResponsiveSvgContainer';
 
-export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbility[]; totalDuration: number }) {
+/** Cooldown bars at each cast's scheduled start; the ability that binds the loop is outlined. */
+export function CooldownOverlapChart({ schedule, binding }: { schedule: ComboSchedule; binding: string | null }) {
   const prefersReduced = useReducedMotion();
-  const cdEntries = useMemo(() => {
-    const entries: { ability: ComboAbility; startTime: number }[] = [];
-    let t = 0;
-    for (const ab of chain) {
-      if (ab.cooldown > 0) {
-        entries.push({ ability: ab, startTime: t });
-      }
-      t += ab.animDuration;
-    }
-    return entries;
-  }, [chain]);
+  const { totalDuration } = schedule;
+  const cdEntries = useMemo(
+    () => schedule.casts
+      .filter(c => c.ability.cooldown > 0)
+      .map(c => ({ ability: c.ability, startTime: c.start })),
+    [schedule],
+  );
 
   if (cdEntries.length === 0) return null;
 
@@ -58,6 +55,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
             const y = 18 + i * (laneH + 4);
             const startX = labelW + (entry.startTime / maxTime) * barW;
             const cdW = (entry.ability.cooldown / maxTime) * barW;
+            const binds = entry.ability.id === binding;
             return (
               <g key={`${entry.ability.id}-${i}`}>
                 {/* Label */}
@@ -75,8 +73,9 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
                   width={cdW} height={laneH}
                   rx={4}
                   fill={`${entry.ability.color}${OPACITY_20}`}
-                  stroke={`${withOpacity(entry.ability.color, OPACITY_37)}`}
-                  strokeWidth={1}
+                  stroke={binds ? STATUS_WARNING : withOpacity(entry.ability.color, OPACITY_37)}
+                  strokeWidth={binds ? 2 : 1}
+                  strokeDasharray={binds ? '4 2' : undefined}
                   initial={prefersReduced ? { scaleX: 1 } : { scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={motionSafe({ delay: i * 0.1, duration: 0.4 }, prefersReduced)}
@@ -89,7 +88,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
                   className="text-[9px] font-mono"
                   fill={entry.ability.color}
                 >
-                  {entry.ability.cooldown}s CD
+                  {entry.ability.cooldown}s CD{binds ? ' · binds loop' : ''}
                 </text>
               </g>
             );

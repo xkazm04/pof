@@ -5,7 +5,8 @@ import { logger } from '@/lib/logger';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import type { InjectItemResponse } from '@/types/ue5-bridge';
-import { generateExportCode, getItemLevelScaling } from './data';
+import { generateExportCode } from './codegen';
+import { scaledMagnitude } from './craftingKernel';
 import type { CraftedAffix, ItemBase } from './data';
 
 /** Hook for export, clipboard, and UE5 inject functionality. */
@@ -18,16 +19,16 @@ export function useExportActions(selectedBase: ItemBase, craftedAffixes: Crafted
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(generateExportCode(selectedBase, craftedAffixes));
+      await navigator.clipboard.writeText(generateExportCode(selectedBase, craftedAffixes, itemLevel));
       setCopiedExport(true);
       setTimeout(() => setCopiedExport(false), 2000);
     } catch {
       logger.warn('Clipboard copy failed');
     }
-  }, [selectedBase, craftedAffixes]);
+  }, [selectedBase, craftedAffixes, itemLevel]);
 
   const handleExportFile = useCallback(() => {
-    const code = generateExportCode(selectedBase, craftedAffixes);
+    const code = generateExportCode(selectedBase, craftedAffixes, itemLevel);
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -35,7 +36,7 @@ export function useExportActions(selectedBase: ItemBase, craftedAffixes: Crafted
     a.download = `ItemInstance_${selectedBase.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.cpp`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [selectedBase, craftedAffixes]);
+  }, [selectedBase, craftedAffixes, itemLevel]);
 
   const handleInjectToUE5 = useCallback(async () => {
     if (craftedAffixes.length === 0) return;
@@ -49,7 +50,7 @@ export function useExportActions(selectedBase: ItemBase, craftedAffixes: Crafted
         itemLevel,
         affixes: craftedAffixes.map((a) => ({
           tag: a.tag, displayName: a.displayName,
-          magnitude: a.magnitude * getItemLevelScaling(itemLevel),
+          magnitude: scaledMagnitude(a, itemLevel),
           bIsPrefix: a.bIsPrefix,
         })),
       }),

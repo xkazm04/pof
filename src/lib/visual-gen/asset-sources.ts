@@ -3,6 +3,14 @@
  * All sources are Creative Commons Zero — free for commercial use.
  */
 
+import {
+  ambientCgVariants,
+  isValidPolyHavenId,
+  type AmbientCgDownloadRow,
+  type DownloadVariant,
+  type PolyHavenFiles,
+} from '@/lib/visual-gen/download-variants';
+
 /**
  * `sketchfab` used to be a third member of this union with no `searchSketchfab` beside it:
  * `/api/visual-gen/browse` answered `400 Unknown source`, and the panel only avoided that by
@@ -26,6 +34,13 @@ export interface AssetSearchResult {
   license: 'CC0';
   resolutions?: string[];
   tags?: string[];
+  /**
+   * The files the source offers, as format x resolution choices with sizes — present when the
+   * search response already carries them (ambientCG). Poly Haven's come from
+   * `/api/visual-gen/browse/files`. `downloadUrl` alone is NOT the file to acquire: for Poly Haven
+   * it is the JSON listing (`isListingUrl`).
+   */
+  variants?: DownloadVariant[];
 }
 
 export interface AssetSearchParams {
@@ -84,15 +99,36 @@ export async function searchPolyHaven(
   return results;
 }
 
+// The per-asset file tree behind the picker. Cached per id for the same reason as the
+// catalog: a re-opened picker must not re-download the listing. Failures are never cached.
+const polyHavenFilesCache = new Map<string, { fetchedAt: number; files: PolyHavenFiles }>();
+
+/** `GET api.polyhaven.com/files/<id>` — the listing of every file the asset offers. */
+export async function fetchPolyHavenFiles(id: string): Promise<PolyHavenFiles> {
+  if (!isValidPolyHavenId(id)) throw new Error(`Invalid Poly Haven asset id: ${id}`);
+  const cached = polyHavenFilesCache.get(id);
+  if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) return cached.files;
+
+  const res = await fetch(`${POLYHAVEN_API}/files/${id}`);
+  if (!res.ok) throw new Error(`Poly Haven files API error: ${res.status}`);
+  const files = await res.json() as PolyHavenFiles;
+  polyHavenFilesCache.set(id, { fetchedAt: Date.now(), files });
+  return files;
+}
+
+/** Test seam: forget every cached Poly Haven file listing. */
+export function clearPolyHavenFilesCache(): void {
+  polyHavenFilesCache.clear();
+}
+
 // ── ambientCG ───────────────────────────────────────────────────────────────
 
 const AMBIENTCG_API = 'https://ambientcg.com/api/v2/full_json';
 
-interface AmbientCGAsset {
+interface AmbientCGAsset extends AmbientCgDownloadRow {
   assetId: string;
   displayName: string;
   previewImage: { uri256: string };
-  downloadFolders: Record<string, { downloadFiletypeCategories: Record<string, { downloads: Array<{ downloadLink: string; attribute: string }> }> }>;
   tags: string[];
 }
 
@@ -120,19 +156,10 @@ export async function searchAmbientCG(
   const data = await res.json() as AmbientCGResponse;
 
   return (data.foundAssets ?? []).map((asset) => {
-    // Find the first available download link
-    let downloadUrl = '';
-    const folders = Object.values(asset.downloadFolders ?? {});
-    for (const folder of folders) {
-      const cats = Object.values(folder.downloadFiletypeCategories ?? {});
-      for (const cat of cats) {
-        if (cat.downloads?.[0]?.downloadLink) {
-          downloadUrl = cat.downloads[0].downloadLink;
-          break;
-        }
-      }
-      if (downloadUrl) break;
-    }
+    // Every package with its size (1K-JPG .. 8K-PNG) — the picker offers them all. The row's
+    // `downloadUrl` stays the first package, as before, for callers that want one link.
+    const variants = ambientCgVariants(asset);
+    const downloadUrl = variants[0]?.mainUrl ?? '';
 
     return {
       id: asset.assetId,
@@ -143,6 +170,7 @@ export async function searchAmbientCG(
       downloadUrl,
       license: 'CC0' as const,
       tags: asset.tags ?? [],
+      variants,
     };
   });
 }

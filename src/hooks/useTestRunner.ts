@@ -79,11 +79,11 @@ export function useTestRunner(): UseTestRunnerResult {
     setError(null);
     abortRef.current = false;
 
-    // Submit the test spec
+    // Submit the test spec — the proxy reads `{ action, spec }` and forwards `body.spec`.
     const submitResult = await tryApiFetch<PofTestResult>('/api/pof-bridge/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(spec),
+      body: JSON.stringify({ action: 'run', spec }),
     });
 
     if (!submitResult.ok) {

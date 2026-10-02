@@ -7,7 +7,10 @@ export interface EntityRollup {
   total: number;
   done: number;       // status === 'pass'
   deferred: number;
+  /** Held rows (an artifact whose acceptance is pending) PLUS steps never produced. */
   pending: number;
+  /** The never-produced part of {@link EntityRollup.pending} (no artifact at all). */
+  unproduced: number;
   failed: number;
   highestTier: AcceptanceTier | null;
   /** Every step is either pass (any tier) or deferred at L3/L4 — i.e. nothing pending/failed. */
@@ -31,6 +34,7 @@ export function summarizeEntity(artifacts: PipelineArtifact[], totalSteps: numbe
   return {
     total: totalSteps, done, deferred, failed,
     pending: pendingTotal,
+    unproduced: missing,
     highestTier: hi >= 0 ? TIER_ORDER[hi] : null,
     configComplete: failed === 0 && pendingTotal === 0 && earlyDeferred === 0,
   };

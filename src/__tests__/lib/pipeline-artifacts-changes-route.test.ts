@@ -13,17 +13,23 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-vi.hoisted(() => {
-  const dir = process.env.TEMP || process.env.TMPDIR || '/tmp';
-  process.env.POF_DB_PATH = `${dir}/pof-test-artifact-changes-${process.pid}.db`;
+// A fresh directory per FILE run (not per pid): a pid-named DB can be reused by a later run
+// that recycles the pid, and its leftover rows then leak into this file's catalog.
+await vi.hoisted(async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-test-artifact-changes-'));
+  process.env.POF_DB_PATH = path.join(dir, 'pof.db');
 });
 import { GET } from '@/app/api/pipeline-artifacts/changes/route';
 import type { CatalogChanges } from '@/app/api/pipeline-artifacts/changes/route';
 import { upsertArtifact, MAX_REVISIONS } from '@/lib/pipeline-artifacts-db';
+import { getDb } from '@/lib/db';
 
 const get = (qs: string) => GET(new NextRequest(`http://localhost/api/pipeline-artifacts/changes?${qs}`));
 
-const write = (entityId: string, step: string, body: string, status: 'pass' | 'fail' = 'pass') =>
+const write = (entityId: string, step: string, body: string, status: 'pass' | 'fail' | 'deferred' = 'pass') =>
   upsertArtifact({ catalogId: 'chg-test', entityId, step, data: { body }, ueAssets: [], status, tier: 'L0' });
 
 const PAST = new Date(Date.now() - 3600_000).toISOString();
@@ -81,5 +87,54 @@ describe('GET /api/pipeline-artifacts/changes', () => {
 
     const noCatalog = await get(`since=${encodeURIComponent(PAST)}`);
     expect(noCatalog.status).toBe(400);
+  });
+
+  // -- What the step WAS: the verdict archived with the version its first change replaced --
+
+  it('carries priorStatus from the first version archived after the baseline', async () => {
+    write('p1', 'Broke', 'v1', 'pass'); write('p1', 'Broke', 'v2', 'fail'); // pass archived, live fail
+    write('p1', 'Fixed', 'v1', 'deferred'); write('p1', 'Fixed', 'v2', 'fail'); write('p1', 'Fixed', 'v3', 'pass');
+    const json = await body(await get(`catalogId=chg-test&since=${encodeURIComponent(PAST)}`));
+    const byStep = new Map(json.data.rows.filter((r) => r.entityId === 'p1').map((r) => [r.step, r]));
+    expect(byStep.get('Broke')!.status).toBe('fail');
+    expect(byStep.get('Broke')!.priorStatus).toBe('pass');
+    // The EARLIEST archive after the baseline, not the latest: what it held before it moved.
+    expect(byStep.get('Fixed')!.priorStatus).toBe('deferred');
+    expect(json.data.catalogId).toBe('chg-test');
+  });
+
+  it('omits priorStatus when nothing was archived after the baseline', async () => {
+    write('p2', 'Once', 'v1', 'fail');
+    write('p2', 'Verdict', 'same', 'pass'); write('p2', 'Verdict', 'same', 'fail');
+    const json = await body(await get(`catalogId=chg-test&since=${encodeURIComponent(PAST)}`));
+    const mine = json.data.rows.filter((r) => r.entityId === 'p2');
+    expect(mine).toHaveLength(2);
+    for (const r of mine) expect('priorStatus' in r).toBe(false);
+  });
+
+  it('omits priorStatus at the cap when every surviving version post-dates the baseline (the baseline version may be pruned)', async () => {
+    for (let i = 0; i < MAX_REVISIONS + 3; i++) write('p3', 'Churned', `v${i}`, i === 0 ? 'pass' : 'fail');
+    const json = await body(await get(`catalogId=chg-test&since=${encodeURIComponent(PAST)}`));
+    const churned = json.data.rows.find((r) => r.entityId === 'p3' && r.step === 'Churned')!;
+    expect(churned.historyTruncated).toBe(true);
+    expect('priorStatus' in churned).toBe(false);
+  });
+
+  it('keeps priorStatus at the cap when a surviving version predates the baseline (nothing after it was pruned)', async () => {
+    // 23 writes archive v0..v21; the cap keeps v2..v21. v2..v8 deferred, v9 fail, v10.. pass.
+    for (let i = 0; i < MAX_REVISIONS + 3; i++) write('p4', 'Churned', `v${i}`, i < 9 ? 'deferred' : i === 9 ? 'fail' : 'pass');
+    const db = getDb();
+    const ids = (db.prepare(`SELECT id FROM pipeline_artifact_revisions WHERE catalog_id = 'chg-test' AND entity_id = 'p4' ORDER BY id ASC`)
+      .all() as { id: number }[]).map((r) => r.id);
+    expect(ids).toHaveLength(MAX_REVISIONS);
+    // Back-date the 7 oldest survivors (v2..v8) to before the baseline: the first archive after
+    // it (v9) is then provably the earliest, so its verdict is on record.
+    const old = new Date(Date.now() - 2 * 3600_000).toISOString();
+    for (const id of ids.slice(0, 7)) db.prepare('UPDATE pipeline_artifact_revisions SET archived_at = ? WHERE id = ?').run(old, id);
+    const json = await body(await get(`catalogId=chg-test&since=${encodeURIComponent(PAST)}`));
+    const churned = json.data.rows.find((r) => r.entityId === 'p4' && r.step === 'Churned')!;
+    expect(churned.historyTruncated).toBe(true);
+    expect(churned.revisionsSince).toBe(MAX_REVISIONS - 7);
+    expect(churned.priorStatus).toBe('fail');
   });
 });

@@ -2,7 +2,8 @@ import { Globe, Languages, BookOpen, ArrowRight } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
-import type { ScanResult, LOCTEXTReplacementSuggestion, LocaleQAStatus } from '@/types/localization-pipeline';
+import type { ScanResult, LOCTEXTReplacementSuggestion, LocaleQAStatus, ScanProvenance } from '@/types/localization-pipeline';
+import type { ReadinessSummary } from '@/lib/localization/readiness';
 import { SUPPORTED_LOCALES } from '@/lib/localization/definitions';
 import { ACCENT_EMERALD, ACCENT_INDIGO, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { TEXT_SCALE } from '@/lib/typography-scale';
@@ -10,6 +11,7 @@ import { SCALE } from './constants';
 import { ReadyToShipBadge } from './ReadyToShipBadge';
 import { ExpansionFactorBars } from './ExpansionFactorBars';
 import { ReplacementCard } from './ReplacementCard';
+import { ReadinessSummaryLine } from './ReadinessTab';
 
 export function OverviewTab({
   scanResult,
@@ -22,6 +24,9 @@ export function OverviewTab({
   expansionIssues,
   qaByLocale,
   replacements,
+  readiness,
+  scanProvenance,
+  onOpenReadiness,
 }: {
   scanResult: ScanResult;
   locReadiness: number;
@@ -33,6 +38,9 @@ export function OverviewTab({
   expansionIssues: Record<string, number>;
   qaByLocale: Record<string, LocaleQAStatus>;
   replacements: LOCTEXTReplacementSuggestion[];
+  readiness: ReadinessSummary;
+  scanProvenance: ScanProvenance | null;
+  onOpenReadiness: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -51,6 +59,9 @@ export function OverviewTab({
               </p>
             )}
           </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-border">
+          <ReadinessSummaryLine summary={readiness} provenance={scanProvenance} onOpen={onOpenReadiness} />
         </div>
       </SurfaceCard>
 

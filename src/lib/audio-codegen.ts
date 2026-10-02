@@ -16,7 +16,7 @@ import type {
   ReverbPreset,
   EmitterType,
 } from '@/types/audio-scene';
-import { REVERB_PARAMS, OCCLUSION_VALUES } from '@/lib/audio-scene-acoustics';
+import { REVERB_PARAMS, OCCLUSION_VALUES, resolveZoneReverb } from '@/lib/audio-scene-acoustics';
 
 // ─── Generated file structure ─────────────────────────────────────────────────
 
@@ -266,7 +266,9 @@ public:
 
 function generateReverbPresetsCpp(presets: Set<ReverbPreset>, moduleName: string): GeneratedFile {
   const initEntries = [...presets].filter(p => p !== 'none').map(p => {
-    const params = p === 'custom' ? REVERB_PARAMS['custom'] : REVERB_PARAMS[p];
+    // The table row per preset. A custom ZONE's own sliders do not live here:
+    // they ride on its volume (ASceneAudioVolume::CustomReverb, see resolveZoneReverb).
+    const params = REVERB_PARAMS[p];
     const enumName = safeName(p).replace(/-/g, '_');
     return `\t{
 \t\tFAudioReverbConfig Config;
@@ -417,6 +419,13 @@ public:
 \tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Zone")
 \tfloat OcclusionLPFCutoff = 20000.0f;
 
+\t/** A custom zone's own reverb (its sliders); preferred over the preset row when set. */
+\tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Zone")
+\tbool bUseCustomReverb = false;
+
+\tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio Zone", meta=(EditCondition="bUseCustomReverb"))
+\tFAudioReverbConfig CustomReverb;
+
 \tUFUNCTION(BlueprintCallable, Category = "Audio Zone")
 \tvoid ApplyReverbSettings(const UAudioReverbPresets* PresetAsset);
 
@@ -433,6 +442,18 @@ function generateAudioVolumeCpp(doc: AudioSceneDocument, moduleName: string): Ge
     const name = safeName(zone.name);
     const preset = safeName(zone.reverbPreset).replace(/-/g, '_');
     const occ = OCCLUSION_VALUES[zone.occlusionMode];
+    // A custom zone's sliders reach UE as a per-volume override (resolveZoneReverb).
+    const reverb = resolveZoneReverb(zone);
+    const custom = reverb.fromZoneSliders ? [
+      'bUseCustomReverb = true;',
+      `CustomReverb.Preset = EAudioReverbPreset::${preset};`,
+      `CustomReverb.DecayTime = ${reverb.decayTime}f;`,
+      `CustomReverb.Diffusion = ${reverb.diffusion}f;`,
+      `CustomReverb.Density = ${reverb.density}f;`,
+      `CustomReverb.WetDryMix = ${reverb.wetDry}f;`,
+      `CustomReverb.EarlyDelay = ${reverb.earlyDelay}f;`,
+      `CustomReverb.LateDelay = ${reverb.lateDelay}f;`,
+    ].map(l => `\n *   Vol_${name}->${l}`).join('') : '';
     return `/*
  * Zone: ${zone.name}
  * Shape: ${zone.shape}, Reverb: ${zone.reverbPreset}, Occlusion: ${zone.occlusionMode}
@@ -441,7 +462,7 @@ function generateAudioVolumeCpp(doc: AudioSceneDocument, moduleName: string): Ge
  * Spawn in level blueprint or construction script:
  *   ASceneAudioVolume* Vol_${name} = GetWorld()->SpawnActor<ASceneAudioVolume>(...);
  *   Vol_${name}->ZoneName = FName(TEXT("${name}"));
- *   Vol_${name}->ReverbPreset = EAudioReverbPreset::${zone.reverbPreset === 'none' ? 'None' : preset};
+ *   Vol_${name}->ReverbPreset = EAudioReverbPreset::${zone.reverbPreset === 'none' ? 'None' : preset};${custom}
  *   Vol_${name}->ZonePriority = ${zone.priority};
  *   Vol_${name}->OcclusionVolumeMultiplier = ${occ.volume}f;
  *   Vol_${name}->OcclusionLPFCutoff = ${occ.lpf}f;
@@ -474,9 +495,9 @@ void ASceneAudioVolume::BeginPlay()
 
 void ASceneAudioVolume::ApplyReverbSettings(const UAudioReverbPresets* PresetAsset)
 {
-\tif (!PresetAsset) return;
+\tif (!bUseCustomReverb && !PresetAsset) return;
 
-\tFAudioReverbConfig Config = PresetAsset->GetPresetConfig(ReverbPreset);
+\tconst FAudioReverbConfig Config = bUseCustomReverb ? CustomReverb : PresetAsset->GetPresetConfig(ReverbPreset);
 \tFReverbSettings& Reverb = GetReverbSettings();
 
 \tReverb.bApplyReverb = true;
@@ -742,12 +763,18 @@ private:
 function generateMetaSoundCpp(zones: AudioZone[], moduleName: string): GeneratedFile {
   const layerConfigs = zones.map(zone => {
     const name = safeName(zone.name);
+    // The zone's RESOLVED reverb (table row, or a custom zone's sliders). `none`
+    // has no tail to fade by: keep the struct defaults, never a 0 s fade to 0.
+    const reverb = resolveZoneReverb(zone);
+    const fade = zone.reverbPreset === 'none'
+      ? `\t\t// Reverb 'none': CrossfadeDuration / WetMix keep the FAmbientLayerConfig defaults.`
+      : `\t\tConfig.CrossfadeDuration = ${(reverb.decayTime * 0.5).toFixed(1)}f;
+\t\tConfig.WetMix = ${reverb.wetDry.toFixed(2)}f;`;
     return `\t{
 \t\tFAmbientLayerConfig Config;
 \t\tConfig.ZoneName = FName(TEXT("${name}"));
 \t\tConfig.SoundscapeDescription = TEXT("${zone.soundscapeDescription.replace(/"/g, '\\"').replace(/\n/g, ' ')}");
-\t\tConfig.CrossfadeDuration = ${(zone.reverbDecayTime * 0.5).toFixed(1)}f;
-\t\tConfig.WetMix = ${zone.reverbWetDry.toFixed(2)}f;
+${fade}
 \t\tLayerConfigs.Add(Config);
 \t}`;
   }).join('\n');

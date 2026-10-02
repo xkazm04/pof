@@ -31,12 +31,9 @@ vi.mock('@/components/cli/skills', () => ({
   injectSkillsIntoPrompt: ({ basePrompt }: { basePrompt: string }) => ({ prompt: basePrompt }),
 }));
 
-// The callback POST settles 2000 ms after the result, as REJECTED.
-const resolveCallback = vi.fn();
-vi.mock('@/lib/cli-task', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/lib/cli-task')>()),
-  resolveCallback: (...a: unknown[]) => resolveCallback(...a),
-}));
+// The run's callbacks are settled by the SERVER (cli-terminal-system/A): the test
+// plays its `callbacks` verdict frame 2000 ms after the result, as REJECTED.
+import { registerCallback } from '@/lib/cli-task';
 
 vi.mock('@/hooks/useSessionAnalytics', () => ({ recordSessionOutcome: vi.fn() }));
 
@@ -80,7 +77,6 @@ afterEach(() => {
   globalThis.fetch = realFetch;
   (globalThis as unknown as { EventSource: unknown }).EventSource = realES;
   apiFetch.mockReset();
-  resolveCallback.mockReset();
 });
 
 describe('bindSessionRun (the handlers InlineTerminal passes to CompactTerminal)', () => {
@@ -172,9 +168,7 @@ describe('InlineTerminal settle window', () => {
     apiFetch.mockImplementation(() => Promise.resolve({
       executionId: 'exec-1', streamUrl: '/stream?executionId=exec-1', logFilePath: null, model: null, effort: null,
     }));
-    resolveCallback.mockImplementation(() => new Promise((resolve) => {
-      setTimeout(() => resolve({ success: false, error: 'rejected' }), 2000);
-    }));
+    const cbId = registerCallback({ url: 'http://localhost:3000/api/checklist/complete', method: 'POST', staticFields: {}, schemaHint: '' });
     const queryPosts = () => apiFetch.mock.calls.filter(([url, init]) =>
       url === '/api/claude-terminal/query' && (init as { method?: string } | undefined)?.method === 'POST').length;
     const prompt = (text: string) => act(() => {
@@ -184,17 +178,23 @@ describe('InlineTerminal settle window', () => {
     const id = newSession();
     render(<InlineTerminal sessionId={id} />);
 
-    prompt('first run');
+    prompt(`first run\n@@CALLBACK:${cbId}\n{}\n@@END_CALLBACK`);
     await act(async () => { await vi.advanceTimersByTimeAsync(10); });
     expect(queryPosts()).toBe(1);
     expect(useCLIPanelStore.getState().sessions[id].isRunning).toBe(true);
 
     const es = FakeEventSource.instances.at(-1)!;
     await act(async () => {
-      es.emit({ type: 'message', data: { type: 'assistant', content: '@@CALLBACK:cb-1\n{"ok":true}\n@@END_CALLBACK' }, timestamp: 1 });
+      es.emit({ type: 'message', data: { type: 'assistant', content: `@@CALLBACK:${cbId}\n{"ok":true}\n@@END_CALLBACK` }, timestamp: 1 });
       es.emit({ type: 'result', data: { isError: false, sessionId: 's1' }, timestamp: 2 });
       await vi.advanceTimersByTimeAsync(10);
     });
+    // The server settles 2000 ms later (rejected) and streams its verdict.
+    setTimeout(() => es.emit({
+      type: 'callbacks',
+      data: { status: 'failed', failed: [{ callbackId: cbId, payload: '{"ok":true}', error: 'rejected' }] },
+      timestamp: 3,
+    }), 2000);
 
     // Stream ended, callback not settled: the session (module button) still reads running.
     let sess = useCLIPanelStore.getState().sessions[id];

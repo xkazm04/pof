@@ -4,6 +4,9 @@ import { useMemo, useState } from 'react';
 import type { LabTheme } from './theme';
 import type { EntityRollup } from '@/lib/catalog/rollup';
 import { pickNextActionableStep, type StepStatus } from './nextActionableStep';
+import { drainableCount, unsettleable } from './coachSettlement';
+import type { SettleSpec, SettleVerdict } from '@/lib/catalog/stepSettlement';
+import { NextStepCoachMore } from './NextStepCoachMore';
 import type { StepDrift } from './hooks/useEntityArtifacts';
 import { plainEntitySummary, STATUS_GLOSSARY } from './labGlossary';
 import { doneHeadline, type DoneProvenance } from './coachProvenance';
@@ -26,6 +29,14 @@ interface NextStepCoachProps {
    * generic plain-language hint is kept (we never invent text).
    */
   reasonForStep?: (step: string, index: number) => string | undefined;
+  /**
+   * The step's verdict (status/tier/reason — the derived artifact). When given, the ladder skips
+   * rows nothing can settle (as the MCP loop does), the pick names the act that settles it, and
+   * the drain counts only gates the live drain can reach. Absent → today's picks and copy.
+   */
+  verdictOf?: (step: string) => SettleVerdict | null | undefined;
+  /** The pipeline's step specs (packaging steps settle via the settle route, never the drain). */
+  stepSpecs?: readonly SettleSpec[];
   /**
    * Steps whose local verdict contradicts the server's (`deriveEntityArtifacts`'s
    * `driftByStep`). Feeds the shared ladder's `drift` rung so this coach and the
@@ -70,21 +81,30 @@ interface NextStepCoachProps {
  */
 export function NextStepCoach({
   t, steps, statusByStep, rollup, onJump, plainMode, onTogglePlainMode, onDrain, draining, reasonForStep, driftByStep,
-  serverError = null, onRetryLoad, doneProvenance,
+  serverError = null, onRetryLoad, doneProvenance, verdictOf, stepSpecs,
 }: NextStepCoachProps) {
   const [expanded, setExpanded] = useState(false);
-  const next = useMemo(
-    () => pickNextActionableStep(steps, statusByStep, driftByStep),
-    [steps, statusByStep, driftByStep],
-  );
+  const { next, stuck, drainable } = useMemo(() => {
+    const specOf = (s: string) => stepSpecs?.find((x) => x.label === s);
+    const known = verdictOf ? steps.flatMap((s) => { const v = verdictOf(s); return v ? [{ ...v, step: s }] : []; }) : [];
+    return {
+      next: pickNextActionableStep(steps, statusByStep, driftByStep, verdictOf, specOf),
+      stuck: verdictOf ? unsettleable(steps, verdictOf, specOf) : [],
+      drainable: verdictOf ? drainableCount(known, specOf) : null,
+    };
+  }, [steps, statusByStep, driftByStep, verdictOf, stepSpecs]);
   // Terminal state only: what the passes are actually standing on. Absent → "All done."
+  // Rows nothing can settle are not "done" — say so rather than celebrate over them.
   const done = !next && doneProvenance ? doneHeadline(doneProvenance) : null;
+  const heldOut = !next && stuck.length > 0;
 
-  // Prefer the concrete checker reason for a fail/deferred step over the generic
+  // A known verdict: the hint IS the settling act, built from its own reason (coachActionFor).
+  // Otherwise prefer the concrete checker reason for a fail/deferred step over the generic
   // hint — but only when one is actually available (never invent text).
+  const reasonOf = reasonForStep ?? (verdictOf ? (s: string) => verdictOf(s)?.reason : undefined);
   const concreteReason =
-    next && (next.status === 'fail' || next.status === 'deferred')
-      ? reasonForStep?.(next.step, next.index)
+    next && !next.settlement && (next.status === 'fail' || next.status === 'deferred')
+      ? reasonOf?.(next.step, next.index)
       : undefined;
   const shownHint = concreteReason ?? next?.plainHint;
 
@@ -93,13 +113,15 @@ export function NextStepCoach({
   // An unproven "done" is tinted `warn`, not `ok` — a green rail beside "can't prove it"
   // would let the colour contradict the sentence.
   const tint = !next
-    ? (done && !done.verified ? t.warn : t.ok)
+    ? ((done && !done.verified) || heldOut ? t.warn : t.ok)
     : next.priority === 'drift' ? t.warn : statusColor(next.status, t);
-  const nextIsDeferred = next?.priority === 'deferred';
-  const canDrain = !!onDrain && rollup.deferred > 0;
+  const nextIsDeferred = next?.cta === 'drain';
+  // Count only what the L3/L4 drain can settle when verdicts are known (an L2 deferral is the settle passes').
+  const drainCount = drainable ?? rollup.deferred;
+  const canDrain = !!onDrain && drainCount > 0;
   const drainLabel = draining
     ? 'Running…'
-    : `Run ${rollup.deferred} deferred gate${rollup.deferred > 1 ? 's' : ''}`;
+    : `Run ${drainCount} deferred gate${drainCount > 1 ? 's' : ''}`;
 
   // Fetch failed → say so and offer a retry. Recommending a step here would be a guess
   // built on statuses we could not read (every unfetched step looks `unproduced`).
@@ -167,15 +189,17 @@ export function NextStepCoach({
         ) : (
           <span
             data-testid="coach-done"
-            data-verified={done ? String(done.verified) : 'unknown'}
+            data-verified={heldOut ? 'false' : done ? String(done.verified) : 'unknown'}
             title={done && !done.verified ? done.detail : undefined}
             style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
           >
             <strong style={{ color: 'var(--lab-ink-deep)', fontWeight: 600 }}>
-              {done ? done.headline : 'All done.'}
+              {heldOut ? 'Nothing left the coach can settle.' : done ? done.headline : 'All done.'}
             </strong>{' '}
             <span data-testid="coach-done-detail" style={{ color: 'var(--lab-muted)' }}>
-              {done && !done.verified ? done.detail : STATUS_GLOSSARY.pass.plain}
+              {heldOut
+                ? `${stuck.length} step${stuck.length === 1 ? '' : 's'} cannot be graded here (UNGRADED) — see more.`
+                : done && !done.verified ? done.detail : STATUS_GLOSSARY.pass.plain}
             </span>
           </span>
         )}
@@ -240,47 +264,15 @@ export function NextStepCoach({
 
       {/* Expanded "more information" region. */}
       {expanded && (
-        <div
-          id="next-step-coach-more"
-          data-testid="coach-more"
-          style={{
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--lab-s3)',
-            paddingTop: 'var(--lab-s2)', borderTop: '1px dashed var(--lab-line)',
-          }}
-        >
-          <Button
-            onClick={onTogglePlainMode}
-            data-testid="plain-mode-toggle"
-            active={plainMode}
-            title={plainMode ? 'Switch to technical labels' : 'Switch to plain-language labels'}
-            mono
-            style={{ flexShrink: 0 }}
-          >
-            {plainMode ? '✓ plain-language' : 'plain-language'}
-          </Button>
-
-          {/* Drain stays reachable here whenever it isn't already the compact CTA. */}
-          {canDrain && !nextIsDeferred && (
-            <Button
-              onClick={onDrain}
-              disabled={draining}
-              data-testid="coach-drain"
-              mono
-              style={{ flexShrink: 0, opacity: draining ? 0.6 : 1, cursor: draining ? 'wait' : 'pointer' }}
-            >
-              {drainLabel}
-            </Button>
-          )}
-
-          {plainMode && (
-            <span
-              data-testid="plain-summary"
-              style={{ flexBasis: '100%', fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-text)', lineHeight: 1.5, paddingTop: 'var(--lab-s2)' }}
-            >
-              {plainEntitySummary(rollup)}
-            </span>
-          )}
-        </div>
+        <NextStepCoachMore
+          t={t}
+          plainMode={plainMode}
+          onTogglePlainMode={onTogglePlainMode}
+          // Drain stays reachable here whenever it isn't already the compact CTA.
+          drain={canDrain && !nextIsDeferred ? { onDrain: onDrain!, draining, label: drainLabel } : undefined}
+          summary={plainEntitySummary(rollup)}
+          unsettleable={stuck}
+        />
       )}
     </Panel>
   );

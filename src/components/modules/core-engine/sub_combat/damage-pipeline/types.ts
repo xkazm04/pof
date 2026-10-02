@@ -57,29 +57,7 @@ export const NODE_H = 40;
 export const GAP_Y = 12;
 export const BRANCH_OFFSET_X = 130;
 
-// ── Execution calculation types ──────────────────────────────────────────────
-
-export interface CalcInputs {
-  attackPower: number;
-  critChance: number;
-  critDamage: number;
-  armor: number;
-  baseDamage: number;
-  scaling: number;
-  critRoll: number;
-}
-
-export const DEFAULT_CALC: CalcInputs = {
-  attackPower: 50,
-  critChance: 0.25,
-  critDamage: 1.5,
-  armor: 30,
-  baseDamage: 20,
-  scaling: 1.0,
-  critRoll: 0.5,
-};
-
-export const fmtNum = (v: number, dec = 2) => v.toFixed(dec);
+// The execution calculator's inputs + formula live in @/lib/combat/ue-damage-execution.
 
 // ── Fade mask type ───────────────────────────────────────────────────────────
 

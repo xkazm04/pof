@@ -445,11 +445,19 @@ export const COMBO_CHAIN_NODES: ComboNode[] = [
   { id: 'force-lightning', name: 'Force Lightning', montage: 'AM_ForceLightning', damage: 200, x: 700, y: 100 },
 ];
 
-export const COMBO_CHAIN_EDGES = [
+/** A template edge: one `window` label per link (the graph draws exactly this field). */
+export interface ComboEdge {
+  from: string;
+  to: string;
+  window: string;
+  label?: string;
+}
+
+export const COMBO_CHAIN_EDGES: ComboEdge[] = [
   { from: 'atk1', to: 'atk2', window: '0.4-0.6s' },
   { from: 'atk2', to: 'atk3', window: '0.35-0.55s' },
-  { from: 'atk3', to: 'force-push', label: 'combo → Force', inputWindow: '200ms' },
-  { from: 'force-push', to: 'saber-throw', label: 'Force → ranged', inputWindow: '300ms' },
+  { from: 'atk3', to: 'force-push', label: 'combo → Force', window: '200ms' },
+  { from: 'force-push', to: 'saber-throw', label: 'Force → ranged', window: '300ms' },
 ];
 
 /* ── Root Motion Trajectory data ───────────────────────────────────────────── */
@@ -555,37 +563,6 @@ export const ANIMATION_TIMELINE_EVENTS: TimelineEvent[] = [
 
 export type AnimStateName = 'Locomotion' | 'Attacking' | 'Dodging' | 'HitReact' | 'Death';
 
-export interface MontageTiming {
-  name: string;
-  state: AnimStateName;
-  totalFrames: number;
-  fps: number;
-  cancelWindowStart?: number;
-  cancelWindowEnd?: number;
-  blendInTime: number;
-}
-
-/**
- * FIXTURE — invented montage timings for the header metric tiles only.
- *
- * These numbers describe no project. They must never feed the Predictive
- * Responsiveness Analyzer again: that panel reads {@link DerivedMontageTiming}
- * values produced by {@link timingsFromManifest} from the PoF bridge manifest,
- * and a guard test asserts the analyzer does not import this array.
- */
-export const MONTAGE_TIMINGS: MontageTiming[] = [
-  { name: 'AM_Combo1', state: 'Attacking', totalFrames: 30, fps: 30, cancelWindowStart: 20, cancelWindowEnd: 30, blendInTime: 0.05 },
-  { name: 'AM_Combo2', state: 'Attacking', totalFrames: 36, fps: 30, cancelWindowStart: 24, cancelWindowEnd: 36, blendInTime: 0.05 },
-  { name: 'AM_Combo3', state: 'Attacking', totalFrames: 45, fps: 30, cancelWindowStart: 30, cancelWindowEnd: 45, blendInTime: 0.08 },
-  { name: 'AM_HeavyAttack', state: 'Attacking', totalFrames: 50, fps: 30, cancelWindowStart: 35, cancelWindowEnd: 50, blendInTime: 0.08 },
-  { name: 'AM_Dodge', state: 'Dodging', totalFrames: 15, fps: 30, cancelWindowStart: 10, cancelWindowEnd: 15, blendInTime: 0.03 },
-  { name: 'AM_HitReact', state: 'HitReact', totalFrames: 12, fps: 30, blendInTime: 0.0 },
-  { name: 'AM_ForcePush', state: 'Attacking' as AnimStateName, totalFrames: 25, fps: 30, cancelWindowStart: 15, cancelWindowEnd: 20, blendInTime: 0.1 },
-  { name: 'AM_SaberThrow', state: 'Attacking' as AnimStateName, totalFrames: 40, fps: 30, cancelWindowStart: 30, cancelWindowEnd: 35, blendInTime: 0.15 },
-  { name: 'AM_ForceLightning', state: 'Attacking' as AnimStateName, totalFrames: 60, fps: 30, blendInTime: 0.2 },
-  { name: 'AM_ForceHeal', state: 'Locomotion' as AnimStateName, totalFrames: 45, fps: 30, blendInTime: 0.25 },
-];
-
 export interface TransitionRule {
   from: AnimStateName;
   to: AnimStateName;
@@ -666,6 +643,14 @@ export function stateFromMontageName(name: string): AnimStateName | null {
 /** A notify whose name marks the point a montage becomes cancellable. */
 const CANCEL_NOTIFY_RE = /combo|cancel/i;
 
+/**
+ * THE combo/cancel notify rule: timingsFromManifest opens a montage's cancel
+ * window on it, and lib/animation/combo-links opens a combo link's window on it.
+ */
+export function isComboWindowNotify(name: string): boolean {
+  return CANCEL_NOTIFY_RE.test(name);
+}
+
 export type ManifestMontage = Pick<AnimAssetEntry, 'path' | 'assetType' | 'duration' | 'notifies'>;
 
 export interface ManifestTimingRead {
@@ -702,7 +687,7 @@ export function timingsFromManifest(assets: ManifestMontage[] | null | undefined
       continue;
     }
     const cancel = (asset.notifies ?? [])
-      .filter((n) => CANCEL_NOTIFY_RE.test(n.name) && n.time >= 0 && n.time <= duration)
+      .filter((n) => isComboWindowNotify(n.name) && n.time >= 0 && n.time <= duration)
       .sort((a, b) => a.time - b.time)[0];
 
     timings.push({

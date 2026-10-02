@@ -338,16 +338,52 @@ export function qualityColor(score: number | null): string {
   return QUALITY_COLORS[score];
 }
 
+// ── Score bands (0-100) ─────────────────────────────────────────────────────
+
 /**
- * Map a 0-100 build success-rate to a semantic color: ≥80 healthy (green),
- * ≥50 caution (amber), else failing (red). Keeps the build-history threshold
- * logic in one place so a metric value, its label, and the progress-bar fill
- * always draw the same band color instead of drifting between greens.
+ * One band of the 0-100 score table. `severity` is the 4-band vocabulary
+ * (`scoreBandToken`); `level` is its 3-level ok/warn/bad projection
+ * (`scoreStatusToken`, `successRateColor`) — medium and high both read warn.
+ */
+export interface ScoreBand {
+  /** Inclusive lower bound. */
+  readonly min: number;
+  readonly severity: 'positive' | 'medium' | 'high' | 'critical';
+  readonly level: 'ok' | 'warn' | 'bad';
+}
+
+/**
+ * THE 0-100 score → band table (best → worst). Every score helper derives from
+ * it, so a number reads the same band on every surface. A surface must never
+ * restate these cuts inline (guarded by `no-inline-score-ladder.test.ts`), and
+ * a cut may only ever move so a score reads less flattering, never more.
+ */
+export const SCORE_BANDS: readonly ScoreBand[] = Object.freeze([
+  Object.freeze({ min: 80, severity: 'positive', level: 'ok' } as const),
+  Object.freeze({ min: 60, severity: 'medium', level: 'warn' } as const),
+  Object.freeze({ min: 50, severity: 'high', level: 'warn' } as const),
+  Object.freeze({ min: -Infinity, severity: 'critical', level: 'bad' } as const),
+]);
+
+/** The band a 0-100 score falls in (NaN reads worst). */
+export function scoreBand(score: number): ScoreBand {
+  return SCORE_BANDS.find((b) => score >= b.min) ?? SCORE_BANDS[SCORE_BANDS.length - 1];
+}
+
+/** Solid colour per 3-level projection — the same hues `STATUS_TOKENS` carries. */
+const SCORE_LEVEL_COLORS: Record<ScoreBand['level'], string> = {
+  ok: STATUS_SUCCESS,
+  warn: STATUS_WARNING,
+  bad: STATUS_ERROR,
+};
+
+/**
+ * Map a 0-100 build success-rate to its `SCORE_BANDS` colour: ≥80 healthy
+ * (green), ≥50 caution (amber), else failing (red), so a metric value, its
+ * label, and the progress-bar fill always draw the same band colour.
  */
 export function successRateColor(rate: number): string {
-  if (rate >= 80) return STATUS_SUCCESS;
-  if (rate >= 50) return STATUS_WARNING;
-  return STATUS_ERROR;
+  return SCORE_LEVEL_COLORS[scoreBand(rate).level];
 }
 
 // ── Feature status colors ───────────────────────────────────────────────────
@@ -429,15 +465,13 @@ export const SEVERITY_TOKENS = {
 export type SeverityLevel = keyof typeof SEVERITY_TOKENS;
 
 /**
- * Map a 0-100 health/compliance score to a severity-band token: high score =
- * healthy (green), low = critical (red). Used by GDD compliance scores and the
- * quality dashboards so the same number always maps to the same band color.
+ * Map a 0-100 health/compliance score to its `SCORE_BANDS` severity token:
+ * ≥80 positive (green), ≥60 medium (amber), ≥50 high (orange), else critical
+ * (red). Used by GDD compliance scores and the quality dashboards so the same
+ * number always maps to the same band color.
  */
 export function scoreBandToken(score: number): SeverityToken {
-  if (score >= 80) return SEVERITY_TOKENS.positive;
-  if (score >= 60) return SEVERITY_TOKENS.medium;
-  if (score >= 40) return SEVERITY_TOKENS.high;
-  return SEVERITY_TOKENS.critical;
+  return SEVERITY_TOKENS[scoreBand(score).severity];
 }
 
 /**
@@ -622,9 +656,11 @@ export const CHECKBOX_BORDER_HOVER = '#5e5e8a';
 
 // ── Health score thresholds ─────────────────────────────────────────────────
 
-/** Return a semantic color for a 0-100 health/progress score. */
+/**
+ * Return a semantic color for a 0-100 health/progress score — the `SCORE_BANDS`
+ * 3-level colour (its old private 60/30 cuts are retired).
+ * @deprecated use `successRateColor` or `scoreStatusToken` directly.
+ */
 export function healthColor(score: number): string {
-  if (score >= 60) return STATUS_SUCCESS;
-  if (score >= 30) return STATUS_WARNING;
-  return STATUS_ERROR;
+  return successRateColor(score);
 }

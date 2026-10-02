@@ -10,6 +10,7 @@ import { appendBatch, emptyHistory, historyData, makeBatch } from '@/components/
 import { WALKER_SKIP } from '../../../e2e/helpers/pipeline-coverage';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
+import { TEMPLATE_FIELD } from '@/lib/catalog/acceptance/template';
 
 /**
  * ITEMS IS ONE PIPELINE — the guards the fleet applies to every registered `StepSpec`
@@ -59,12 +60,14 @@ function withRealAsset(data: Record<string, unknown>): Record<string, unknown> {
   return historyData(appendBatch(emptyHistory(), batch), data);
 }
 
-/** Record every top-level key a bespoke checker touches (same Proxy probe as the fleet linter). */
+/** Record every top-level key a bespoke checker touches (same Proxy probe as the fleet linter). `TEMPLATE_FIELD`
+ *  is provenance read by the template guard (`ITEMS_BESPOKE_CHECKERS`), not graded content — exempt, as there. */
 function acceptFields(label: string, data: Record<string, unknown>): { read: Set<string>; status: string } {
   const read = new Set<string>();
+  const graded = (k: string | symbol): k is string => typeof k === 'string' && k !== TEMPLATE_FIELD;
   const proxy = new Proxy({ ...data }, {
-    get(t, k) { if (typeof k === 'string') read.add(k); return Reflect.get(t, k); },
-    has(t, k) { if (typeof k === 'string') read.add(k); return Reflect.has(t, k); },
+    get(t, k) { if (graded(k)) read.add(k); return Reflect.get(t, k); },
+    has(t, k) { if (graded(k)) read.add(k); return Reflect.has(t, k); },
   });
   return { read, status: ITEM_STEP_SPECS[label].accept(proxy as Record<string, unknown>).status };
 }
@@ -96,9 +99,11 @@ describe('Items spec duality — declared, not implied', () => {
       expect(m.steps, `items step "${label}" is declared but never rendered`).toContain(label);
       expect(hasStepGrader('items', label), `items step "${label}" is rendered but ungraded`).toBe(true);
     }
-    // …tagged, not merged: the reader can still tell the two specs apart.
+    // …tagged, not merged: the reader can still tell the two specs apart. A shared label is
+    // tagged by its OWNER — the registry, the server's order (2026-09-29).
     expect(m.mixedStepSources).toBe(true);
-    expect(m.stepEntries.filter((e) => e.source === 'registry').map((e) => e.label)).toEqual(registryOnly);
+    expect(m.stepEntries.filter((e) => e.source === 'registry').map((e) => e.label))
+      .toEqual([...itemsSharedSteps(), ...registryOnly]);
   });
 
   it('gives EVERY items step in either spec an audited StepFact (no PROVENANCE: UNAUDITED)', () => {

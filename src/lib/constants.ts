@@ -105,6 +105,12 @@ export const UI_TIMEOUTS = {
   heartbeatInterval: 2 * 60 * 1000,
   /** Interval to check for stuck/stale tasks. */
   stuckCheckInterval: 30 * 1000,
+  /** Pause after a CLI run's stream drops before the tab asks the server whether the run
+   *  is still live (runArbiter.ts) — a drop reconnects or ends from the server's answer. */
+  streamReconnectDelay: 1000,
+  /** A visible run's stream with no frame at all (heartbeats included) for this long is
+   *  presumed half-open and the server is consulted — ~3x the stream route's 15 s heartbeat. */
+  streamSilenceMax: 45 * 1000,
   /** Delay before starting the next queued task. */
   nextTaskDelay: 3000,
   /** Hard ceiling on a single CLI child-process run before it's force-killed
@@ -113,6 +119,9 @@ export const UI_TIMEOUTS = {
   cliExecutionTimeout: 100 * 60 * 1000,
   /** Default window awaitCallback() waits for a @@CALLBACK block before rejecting (5 min). */
   callbackAwaitTimeout: 5 * 60 * 1000,
+  /** Window batch review gives ONE module's review run to emit its @@CALLBACK (10 min);
+   *  a still-running run is aborted when it elapses (settleExecution, run-settle.ts). */
+  batchReviewTimeout: 10 * 60 * 1000,
   /** A running task whose last heartbeat is older than this is treated as stale /
    *  timed-out (10 min). Shared by the task-registry route and its client. */
   taskTimeout: 10 * 60 * 1000,
@@ -142,6 +151,12 @@ export const UI_TIMEOUTS = {
   pofReconnectMax: 30_000,
   /** Poll interval for manifest checksum change detection. */
   pofManifestPoll: 30_000,
+  /** Interval the Snapshots tab reads back GET /pof/snapshot/diff after a capture ack
+   *  (suspend-gated: a hidden pane stops reading). */
+  pofSnapshotPoll: 1_500,
+  /** Budget for one snapshot readback: past it the capture is reported as timed out,
+   *  naming the presets no newer report covered. Captures load maps / PIE, so minutes. */
+  pofSnapshotReadbackTimeout: 120_000,
   /** Timeout for individual PoF Bridge HTTP requests. */
   pofHttpTimeout: 15_000,
   /** Idle timeout before voice connection auto-disconnects (2 minutes). */
@@ -177,6 +192,9 @@ export const UI_TIMEOUTS = {
    *  The client waits ceiling + this, and says so when it gives up — it never invents a
    *  budget unrelated to what the server can possibly spend. */
   experimentBudgetMargin: 3 * 60 * 1000,
+  /** How long a tab-title outcome ('(Failed)', '(Done)', ...) lingers once the tab is SEEN.
+   *  A hidden tab holds the outcome indefinitely; this countdown starts on visibility. */
+  tabOutcomeLinger: 4_000,
 } as const;
 
 /**

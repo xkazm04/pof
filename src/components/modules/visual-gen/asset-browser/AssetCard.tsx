@@ -41,6 +41,8 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
             onClick={() => onDownload(asset)}
             className={`p-2 rounded-full bg-[var(--visual-gen)] text-white hover:brightness-110 ${VISUAL_GEN_FOCUS_RING}`}
             aria-label={`Download ${asset.name}`}
+            aria-haspopup="dialog"
+            title="Choose a file to download"
           >
             <Download size={16} />
           </button>

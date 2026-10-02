@@ -1,4 +1,5 @@
 import type { SubModuleId, PartialModuleMap } from '@/types/modules';
+import { isFeatureDone } from '@/lib/feature-done';
 
 // ─── Module-level prerequisite graph ──────────────────────────────────────────
 // Defines which modules should be completed before starting another.
@@ -466,7 +467,7 @@ export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> =
   'blender-pipeline': [
     { featureName: 'Blender install detection', category: 'Setup', description: 'GET /api/visual-gen/blender/detect probing the known Windows/Linux/macOS install paths and reading `blender --version`' },
     { featureName: 'Blender MCP script runner', category: 'Execution', description: 'ScriptRunner.executeViaMCP posting generated Python to /api/blender-mcp/execute, with the job list, output and status held in useBlenderStore' },
-    { featureName: 'FBX to glTF conversion', category: 'Conversion', description: 'convertFbxScript driven by FBXConversionTab — import, apply transforms, triangulate, export GLB', dependsOn: ['Blender MCP script runner'] },
+    { featureName: 'FBX to glTF conversion', category: 'Conversion', description: 'runFbxConvert (headless Blender on pof_fbx_convert.py, never the live MCP session) driven by FBXConversionTab via POST /api/visual-gen/fbx-convert — import, apply rotation/scale, triangulate, export GLB into the allow-listed generated/converted/ dir; converted only when the GLB is on disk (meshes/triangles/bytes receipt), Draco opt-in', dependsOn: ['Blender MCP script runner'] },
     { featureName: 'LOD generation', category: 'Optimization', description: 'generateLodsScript driven by LODGenerationTab with configurable decimate ratios per LOD level', dependsOn: ['Blender MCP script runner'] },
     { featureName: 'Mesh optimization', category: 'Optimization', description: 'optimizeMeshScript driven by MeshOptimizationTab — merge by distance, recalculate normals, remove loose geometry, smooth shading', dependsOn: ['Blender MCP script runner'] },
     { featureName: 'Blender connection bar', category: 'Setup', description: 'BlenderConnectionBar + ViewportPreview in BlenderSetup: live MCP connection state and captured Blender viewport frames' },
@@ -988,9 +989,9 @@ export interface ResolvedDependency {
 export interface DependencyInfo {
   /** Direct dependencies for this feature */
   deps: ResolvedDependency[];
-  /** Dependencies that are NOT implemented (status != 'implemented') */
+  /** Dependencies that are NOT done (`!isFeatureDone(status)` - neither implemented nor improved) */
   blockers: ResolvedDependency[];
-  /** True if any upstream dependency is missing/unknown */
+  /** True if any upstream dependency is not done */
   isBlocked: boolean;
 }
 
@@ -1065,10 +1066,8 @@ export function computeBlockers(
 ): Map<string, DependencyInfo> {
   const result = new Map<string, DependencyInfo>();
   for (const [key, info] of depMap) {
-    const blockers = info.deps.filter((d) => {
-      const status = statusMap.get(d.key);
-      return !status || status !== 'implemented';
-    });
+    // One done rule: an 'improved' dep (what the app's own Build lands) is met.
+    const blockers = info.deps.filter((d) => !isFeatureDone(statusMap.get(d.key)));
     result.set(key, {
       ...info,
       blockers,

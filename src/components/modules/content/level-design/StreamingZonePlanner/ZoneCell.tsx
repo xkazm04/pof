@@ -6,12 +6,14 @@ import type { StreamingZone, ZoneType } from './types';
 interface ZoneCellProps {
   zone: StreamingZone;
   selectedZoneId: string | null;
+  /** Loaded while the player stands in the selected zone. */
+  isResident?: boolean;
   linkingFrom: string | null;
   paintType: ZoneType | 'erase' | null;
   handleCellClick: (x: number, y: number) => void;
 }
 
-export function ZoneCell({ zone, selectedZoneId, linkingFrom, paintType, handleCellClick }: ZoneCellProps) {
+export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom, paintType, handleCellClick }: ZoneCellProps) {
   const cfg = ZONE_TYPES[zone.type];
   const isSelected = selectedZoneId === zone.id;
   const isLinkTarget = linkingFrom !== null && linkingFrom !== zone.id;
@@ -62,6 +64,15 @@ export function ZoneCell({ zone, selectedZoneId, linkingFrom, paintType, handleC
           <path d={`M ${cx + CELL_SIZE + 2} ${cy + CELL_SIZE - 10} L ${cx + CELL_SIZE + 2} ${cy + CELL_SIZE + 2} L ${cx + CELL_SIZE - 10} ${cy + CELL_SIZE + 2}`} />
           <path d={`M ${cx + 10} ${cy + CELL_SIZE + 2} L ${cx - 2} ${cy + CELL_SIZE + 2} L ${cx - 2} ${cy + CELL_SIZE - 10}`} />
         </g>
+      )}
+
+      {/* Resident from the selected zone */}
+      {isResident && !isSelected && (
+        <rect
+          x={cx + 1} y={cy + 1} width={CELL_SIZE - 2} height={CELL_SIZE - 2} rx={9}
+          fill="none" stroke={cfg.color} strokeWidth={1.5} strokeDasharray="2,3" opacity={0.9}
+          data-resident="true" className="pointer-events-none"
+        />
       )}
 
       {/* Link target highlight */}

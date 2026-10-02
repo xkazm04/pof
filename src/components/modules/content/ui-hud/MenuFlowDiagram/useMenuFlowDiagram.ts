@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { NODE_W, NODE_H, DEFAULT_SCREENS, DEFAULT_TRANSITIONS } from './constants';
+import { lintMenuFlow, applyMenuFlowFix, defaultTrigger, nextScreenName, type MenuFlowIssue } from './menuFlowLint';
 import type { ScreenNode, ScreenTransition, MenuFlowConfig } from './types';
 
 export function useMenuFlowDiagram() {
@@ -8,6 +9,10 @@ export function useMenuFlowDiagram() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [editingScreen, setEditingScreen] = useState<string | null>(null);
+
+  // Monotonic suffix so two nodes/routes minted in the same millisecond never share an id
+  const idSeq = useRef(0);
+  const mintId = useCallback((prefix: string) => `${prefix}-${Date.now()}-${++idSeq.current}`, []);
 
   // Pan + drag state
   const svgRef = useRef<SVGSVGElement>(null);
@@ -23,19 +28,14 @@ export function useMenuFlowDiagram() {
   // ── CRUD ──
 
   const addScreen = useCallback(() => {
-    const id = `scr-${Date.now()}`;
-    const newScreen: ScreenNode = {
-      id,
-      name: `Screen ${screens.length + 1}`,
-      type: 'custom',
-      x: 160 + Math.random() * 140 - pan.x,
-      y: 100 + Math.random() * 140 - pan.y,
-      widgets: [],
-    };
-    setScreens((prev) => [...prev, newScreen]);
+    const id = mintId('scr');
+    const x = 160 + Math.random() * 140 - pan.x;
+    const y = 100 + Math.random() * 140 - pan.y;
+    // Name from the latest list: `Screen ${length + 1}` reused a live name after a delete
+    setScreens((prev) => [...prev, { id, name: nextScreenName(prev), type: 'custom', x, y, widgets: [] }]);
     setSelectedId(id);
     setEditingScreen(id);
-  }, [screens.length, pan]);
+  }, [pan, mintId]);
 
   const deleteScreen = useCallback((id: string) => {
     setScreens((prev) => prev.filter((s) => s.id !== id));
@@ -64,19 +64,18 @@ export function useMenuFlowDiagram() {
         (t.fromId === toId && t.toId === connectingFrom)
     );
     if (!exists) {
-      setTransitions((prev) => [
-        ...prev,
-        {
-          id: `tr-${Date.now()}`,
-          fromId: connectingFrom,
-          toId,
-          trigger: 'Button Click',
-          bidirectional: false,
-        },
-      ]);
+      // Bind the route to a real widget on its source screen (first one not already a trigger)
+      const route: ScreenTransition = {
+        id: mintId('tr'),
+        fromId: connectingFrom,
+        toId,
+        trigger: defaultTrigger(screens.find((s) => s.id === connectingFrom), transitions),
+        bidirectional: false,
+      };
+      setTransitions((prev) => [...prev, route]);
     }
     setConnectingFrom(null);
-  }, [connectingFrom, transitions]);
+  }, [connectingFrom, transitions, screens, mintId]);
 
   const deleteTransition = useCallback((id: string) => {
     setTransitions((prev) => prev.filter((t) => t.id !== id));
@@ -86,6 +85,10 @@ export function useMenuFlowDiagram() {
     setTransitions((prev) =>
       prev.map((t) => t.id === id ? { ...t, bidirectional: !t.bidirectional } : t)
     );
+  }, []);
+
+  const updateTransition = useCallback((id: string, patch: Partial<Omit<ScreenTransition, 'id'>>) => {
+    setTransitions((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t));
   }, []);
 
   // ── SVG interaction ──
@@ -168,6 +171,16 @@ export function useMenuFlowDiagram() {
 
   const config: MenuFlowConfig = useMemo(() => ({ screens, transitions }), [screens, transitions]);
 
+  // ── Lint (live) ──
+
+  const issues = useMemo(() => lintMenuFlow(config), [config]);
+
+  const applyFix = useCallback((issue: MenuFlowIssue) => {
+    const next = applyMenuFlowFix(config, issue);
+    setScreens(next.screens);
+    setTransitions(next.transitions);
+  }, [config]);
+
   // ── Arrow head math ──
 
   const getArrowPath = useCallback(
@@ -215,7 +228,8 @@ export function useMenuFlowDiagram() {
     setSelectedId, setConnectingFrom, setEditingScreen,
     svgRef, pan, isPanning, dragState,
     addScreen, deleteScreen, updateScreen,
-    startConnection, completeConnection, deleteTransition, toggleBidirectional,
+    startConnection, completeConnection, deleteTransition, toggleBidirectional, updateTransition,
+    issues, applyFix,
     handleNodeMouseDown, handleMouseMove, handleMouseUp, handleSvgMouseDown,
     getNodeCenter, selectedScreen, config, getArrowPath,
   };

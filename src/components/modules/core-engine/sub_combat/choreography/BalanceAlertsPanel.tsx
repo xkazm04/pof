@@ -2,12 +2,12 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
+import { STATUS_SUCCESS,
   withOpacity, OPACITY_12, OPACITY_25, OPACITY_8, OPACITY_20, OPACITY_15, OPACITY_5,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import type { BalanceAlertSeverity } from '@/types/combat-simulator';
-import type { BalanceAlert } from './types';
+import { severityColor, findingTimeLabel, type BalanceAlert } from './types';
 
 export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -38,9 +38,9 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
   }, [alerts]);
 
   const SEVERITY_PILLS: { key: BalanceAlertSeverity; label: string; color: string }[] = [
-    { key: 'critical', label: 'Critical', color: STATUS_ERROR },
-    { key: 'warning', label: 'Warning', color: STATUS_WARNING },
-    { key: 'info', label: 'Info', color: STATUS_INFO },
+    { key: 'critical', label: 'Critical', color: severityColor('critical') },
+    { key: 'warning', label: 'Warning', color: severityColor('warning') },
+    { key: 'info', label: 'Info', color: severityColor('info') },
   ];
 
   return (
@@ -71,8 +71,7 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
           </div>
         ) : (
           alerts.map((alert, i) => {
-            const color = alert.severity === 'critical' ? STATUS_ERROR
-              : alert.severity === 'warning' ? STATUS_WARNING : STATUS_INFO;
+            const color = severityColor(alert.severity);
             const isFirstCrit = i === alerts.findIndex(a => a.severity === 'critical');
             return (
               <div
@@ -86,7 +85,12 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
                 }}
               >
                 <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" style={{ color }} />
-                <span className="text-xs font-mono" style={{ color }}>{alert.message}</span>
+                <span className="text-xs font-mono flex-1" style={{ color }}>{alert.message}</span>
+                {alert.endTimeSec !== undefined && (
+                  <span className="text-xs font-mono tabular-nums shrink-0 opacity-70" style={{ color }} data-testid="finding-range">
+                    {findingTimeLabel(alert)}
+                  </span>
+                )}
               </div>
             );
           })

@@ -22,8 +22,20 @@ export type SuggestionAction =
   | { type: 'resume'; prompt: string; taskType?: string }
   /** Re-POST the retained callback payloads — no new run, no tokens. */
   | { type: 'resubmit-callback' }
-  /** Switch the owning module's view to `tab`. */
+  /** Switch the owning module's view to `tab` (no moduleId → the session's own module). */
   | { type: 'navigate'; tab: string; moduleId?: string };
+
+/**
+ * Where a navigate suggestion lands: the action's module, else the module the
+ * session belongs to. Never untargeted — no module anywhere → null (no jump).
+ */
+export function tabJumpTarget(
+  action: { type: 'navigate'; tab: string; moduleId?: string },
+  sessionModuleId: string | undefined,
+): { moduleId: string; tab: string } | null {
+  const moduleId = action.moduleId ?? sessionModuleId;
+  return moduleId ? { moduleId, tab: action.tab } : null;
+}
 
 export interface Suggestion {
   id: string;

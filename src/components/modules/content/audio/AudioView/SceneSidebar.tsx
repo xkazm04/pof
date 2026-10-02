@@ -1,17 +1,24 @@
 'use client';
 import type { Dispatch, SetStateAction } from 'react';
-import { Music, Plus, FileText } from 'lucide-react';
+import { Music, Plus, FileText, AlertTriangle } from 'lucide-react';
 import { ModuleHeaderDecoration } from '@/components/modules/ModuleHeaderDecoration';
 import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_ERROR, OPACITY_8, OPACITY_15 } from '@/lib/chart-colors';
 import type { AudioSceneDocument, AudioSceneSummary } from '@/types/audio-scene';
 
 interface SceneSidebarProps {
   summary: AudioSceneSummary;
   docs: AudioSceneDocument[];
   activeDoc: AudioSceneDocument | null;
-  setActiveDocId: (id: number | null) => void;
-  setSelectedZoneId: Dispatch<SetStateAction<string | null>>;
-  setSelectedEmitterId: Dispatch<SetStateAction<string | null>>;
+  /** Ask the scene session to open `id` — it writes the open scene's edit first. */
+  onSelectScene: (id: number) => void;
+  /** Scene a switch is waiting to open (its predecessor's write is in flight or refused). */
+  pendingSwitch: number | null;
+  /** The held switch is blocked by a refused write; `saveError` says why. */
+  switchBlocked: boolean;
+  saveError: string | null;
+  onRetrySwitch: () => void;
+  onDiscardSwitch: () => void;
   newDocName: string;
   setNewDocName: Dispatch<SetStateAction<string>>;
   handleCreateDoc: () => void;
@@ -22,9 +29,12 @@ export function SceneSidebar({
   summary,
   docs,
   activeDoc,
-  setActiveDocId,
-  setSelectedZoneId,
-  setSelectedEmitterId,
+  onSelectScene,
+  pendingSwitch,
+  switchBlocked,
+  saveError,
+  onRetrySwitch,
+  onDiscardSwitch,
   newDocName,
   setNewDocName,
   handleCreateDoc,
@@ -48,15 +58,51 @@ export function SceneSidebar({
         </div>
       </div>
 
+      {/* A switch held by a refused write: the edit is stated, never silently lost. */}
+      {switchBlocked && activeDoc && (
+        <div
+          role="alert"
+          aria-label="Unsaved scene change"
+          className="m-2 p-2 rounded-md text-2xs space-y-1.5"
+          style={{
+            color: STATUS_ERROR,
+            backgroundColor: `${STATUS_ERROR}${OPACITY_8}`,
+            border: `1px solid ${STATUS_ERROR}${OPACITY_15}`,
+          }}
+        >
+          <p className="flex items-start gap-1.5">
+            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+            <span>
+              {activeDoc.name} has an unsaved change the server refused{saveError ? ` (${saveError})` : ''}.
+              Retry to save it, or discard it to switch.
+            </span>
+          </p>
+          <div className="flex gap-1.5">
+            <button
+              onClick={onRetrySwitch}
+              className="focus-ring px-2 py-0.5 rounded font-medium hover:opacity-80"
+              style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_15}` }}
+            >
+              Retry
+            </button>
+            <button onClick={onDiscardSwitch} className="focus-ring px-2 py-0.5 rounded font-medium hover:opacity-80">
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Scene list */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-2 space-y-0.5">
           {docs.map((doc) => {
             const isActive = activeDoc?.id === doc.id;
+            const isWaiting = pendingSwitch === doc.id && !switchBlocked;
             return (
               <button
                 key={doc.id}
-                onClick={() => { setActiveDocId(doc.id); setSelectedZoneId(null); setSelectedEmitterId(null); }}
+                onClick={() => onSelectScene(doc.id)}
+                aria-busy={isWaiting || undefined}
                 className={`w-full text-left px-2.5 py-2 rounded-md text-xs transition-colors ${
                   isActive
                     ? 'bg-surface-hover text-text'
@@ -69,7 +115,7 @@ export function SceneSidebar({
                 </div>
                 <div className="flex items-center gap-2 mt-1 ml-5">
                   <span className="text-2xs text-text-muted">
-                    {doc.zones.length} zones · {doc.emitters.length} emitters
+                    {isWaiting ? 'saving the open scene…' : `${doc.zones.length} zones · ${doc.emitters.length} emitters`}
                   </span>
                 </div>
               </button>

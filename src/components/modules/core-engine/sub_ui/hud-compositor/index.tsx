@@ -1,28 +1,32 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Eye, Layers } from 'lucide-react';
+import { AlertTriangle, Eye, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_PINK, OPACITY_20,
+import { ACCENT_PINK, OPACITY_20, STATUS_WARNING,
   withOpacity, OPACITY_5, OPACITY_37, OPACITY_56, OPACITY_8, OPACITY_10,
 } from '@/lib/chart-colors';
 import { InteractivePill } from '@/components/ui/InteractivePill';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { WidgetRect } from './WidgetRect';
 import {
-  VIEWPORT_ASPECT, ALL_WIDGETS, CONTEXT_PILLS, HUD_CONTEXTS,
+  VIEWPORT_ASPECT, CONTEXT_PILLS, HUD_CONTEXTS,
   Z_DEPTH_LABELS, widgetChangedBetween,
 } from './data';
 import type { WidgetPlacement } from './data';
 import { HudWidgetSummary } from './HudWidgetSummary';
+import {
+  HUD_REGISTRY, contextPlacements, placementsForContext, validateHudRegistry,
+} from '@/components/modules/core-engine/sub_ui/_shared/hudRegistry';
 
-/* ── Filtered placements ───────────────────────────────────────────────────── */
+/* ── Registry-resolved placements ──────────────────────────────────────────── */
 
-import { WIDGET_PLACEMENTS } from './data';
+/** Every rect some context names (visible or hidden); each context toggles its own. */
+const RELEVANT_PLACEMENTS: WidgetPlacement[] = contextPlacements();
 
-const RELEVANT_PLACEMENTS: WidgetPlacement[] = WIDGET_PLACEMENTS.filter(
-  p => ALL_WIDGETS.has(p.id),
-);
+/** Registry issues scoped to a context (unknown or unplaced names), shown as a chip. */
+const CONTEXT_ISSUES = validateHudRegistry(HUD_REGISTRY)
+  .filter((i): i is Extract<typeof i, { context: string }> => 'context' in i);
 
 /* ── HudCompositor ─────────────────────────────────────────────────────────── */
 
@@ -36,23 +40,23 @@ export function HudCompositor({ accent }: HudCompositorProps) {
   const [showZLayers, setShowZLayers] = useState(false);
 
   const ctx = HUD_CONTEXTS[activeContext];
-  const visibleSet = useMemo(() => new Set(ctx.visible), [ctx.visible]);
+  const drawn = useMemo(() => placementsForContext(ctx.name), [ctx.name]);
+  const visibleSet = useMemo(() => new Set(drawn.map(p => p.id)), [drawn]);
+  const unresolved = useMemo(() => CONTEXT_ISSUES.filter(i => i.context === ctx.name), [ctx.name]);
 
   const handleContextSwitch = useCallback((idx: number) => {
     setPrevContext(activeContext);
     setActiveContext(idx);
   }, [activeContext]);
 
-  const visibleCount = ctx.visible.length;
+  // Rendered rects, not names: a name that resolves to no placement is not drawn.
+  const visibleCount = drawn.length;
   const totalCount = ctx.visible.length + ctx.hidden.length;
 
-  const activeZDepths = useMemo(() => {
-    const depths = new Set<number>();
-    for (const p of RELEVANT_PLACEMENTS) {
-      if (visibleSet.has(p.id)) depths.add(p.zDepth);
-    }
-    return Array.from(depths).sort((a, b) => a - b);
-  }, [visibleSet]);
+  const activeZDepths = useMemo(
+    () => Array.from(new Set(drawn.map(p => p.zDepth))).sort((a, b) => a - b),
+    [drawn],
+  );
 
   return (
     <BlueprintPanel color={accent} className="p-4 col-span-1 lg:col-span-2">
@@ -112,6 +116,17 @@ export function HudCompositor({ accent }: HudCompositorProps) {
           <span className="text-[9px] font-mono text-text-muted opacity-60">
             {visibleCount}/{totalCount} widgets
           </span>
+          {unresolved.length > 0 && (
+            <span
+              data-testid="hud-unresolved"
+              title={unresolved.map(i => `${i.widget}: ${i.kind}`).join(', ')}
+              className="flex items-center gap-1 px-1.5 rounded border text-xs font-mono pointer-events-auto"
+              style={{ color: STATUS_WARNING, borderColor: withOpacity(STATUS_WARNING, OPACITY_37) }}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              {unresolved.length} unresolved
+            </span>
+          )}
         </div>
 
         {/* Widget rectangles */}

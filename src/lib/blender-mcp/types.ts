@@ -24,8 +24,10 @@ export interface BlenderConnection {
 // ever wrote it — the only values in the tree were test fixtures. Neither the
 // health check (`get_scene_info`) nor any other command on this bridge carries a
 // Blender version, so the field could only ever have been a fabrication. The
-// separate `useBlenderStore.blenderVersion` is unrelated and IS real: it comes
-// from `/api/visual-gen/blender/detect` running the local Blender executable.
+// separate `useBlenderStore.blenderVersion` is unrelated, and today nothing writes
+// it (`setBlenderPath` has no caller). The truthful source for it is
+// `GET /api/visual-gen/blender/detect`, which resolves Blender through the same
+// `locateBlender` the headless runners spawn and reads `blender --version`.
 
 export const DEFAULT_BLENDER_HOST = 'localhost';
 export const DEFAULT_BLENDER_PORT = 9876;
@@ -76,8 +78,17 @@ export interface SceneInfo {
 
 // ─── Execution ──────────────────────────────────────────────────────────────
 
+/** One parsed `POF_RESULT=` line a script printed (see `receipt.ts`). */
+export interface Receipt {
+  kind: string;
+  [field: string]: unknown;
+}
+
 export interface ExecuteOutput {
+  /** What the script printed — the addon's `output` or `result` text, never a stringified reply. */
   output: string;
+  /** Every receipt in `output`, parsed once at the service edge. Read with `readReceipt`. */
+  receipts: Receipt[];
 }
 
 // ─── Assets ─────────────────────────────────────────────────────────────────

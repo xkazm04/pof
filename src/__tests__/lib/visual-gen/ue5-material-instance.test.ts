@@ -50,7 +50,9 @@ describe('buildUE5MaterialInstance', () => {
     // The two strengths that could not reach Blender DO reach UE5.
     expect(emitted.script).toContain('"NormalStrength": 1.6,');
     expect(emitted.script).toContain('"AOStrength": 0.4,');
-    expect(emitted.script).toContain('"BaseColorTint": (1, 0.843137, 0, 1.0),');
+    // BaseColorTint is a LinearColor: #ffd700's G byte 215 decodes to 0.679542,
+    // not the sRGB code value 0.843137 the lab used to write into it.
+    expect(emitted.script).toContain('"BaseColorTint": (1, 0.679542, 0, 1.0),');
     expect(emitted.parameters.map((p) => p.name)).toEqual([
       'BaseColorTint', 'Metallic', 'Roughness', 'NormalStrength', 'AOStrength',
     ]);
@@ -97,6 +99,19 @@ describe('buildUE5MaterialInstance', () => {
     expect(script).toContain('authoring a minimal stand-in');
   });
 
+  it('flags the stand-in master for skeletal meshes before it compiles', () => {
+    // An MI inherits usage flags from its parent; a -game run cannot add one and
+    // silently draws the DEFAULT material on a skeletal mesh (fleet CONVENTION 2026-09-24).
+    const script = buildUE5MaterialInstance({
+      name: 'Gold',
+      params: { baseColor: '#ffd700', metallic: 1, roughness: 0.2, normalStrength: 0.5, aoStrength: 1 },
+    }).script;
+    const flag = script.indexOf('master.set_editor_property("used_with_skeletal_mesh", True)');
+    const compile = script.indexOf('lib.recompile_material(master)');
+    expect(flag).toBeGreaterThan(script.indexOf('def _ensure_parent'));
+    expect(compile).toBeGreaterThan(flag);
+  });
+
   it('honours an overridden parent and package path', () => {
     const emitted = build({ parentMaterial: '/Game/Custom/M_Master', packagePath: '/Game/Custom' });
     expect(emitted.assetPath).toBe('/Game/Custom/MI_LabMaterial');
@@ -128,7 +143,10 @@ describe('hexToLinearColor', () => {
   it('converts and rounds so the output stays byte-stable', () => {
     expect(hexToLinearColor('#000000')).toEqual([0, 0, 0]);
     expect(hexToLinearColor('#ffffff')).toEqual([1, 1, 1]);
-    expect(hexToLinearColor('#808080')).toEqual([0.501961, 0.501961, 0.501961]);
+    // A non-endpoint grey: #000/#fff are the transfer curve's fixed points and
+    // pass under ANY curve, so they alone cannot catch a missing decode.
+    expect(hexToLinearColor('#808080')).toEqual([0.215861, 0.215861, 0.215861]);
+    expect(hexToLinearColor('#bcbcbc')).toEqual([0.502886, 0.502886, 0.502886]);
     expect(hexToLinearColor('zzzzzz')).toEqual([0, 0, 0]);
   });
 });

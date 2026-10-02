@@ -7,14 +7,17 @@ import { OPACITY_20, STATUS_SUCCESS, STATUS_WARNING, ACCENT_CYAN,
   withOpacity, OPACITY_5, OPACITY_12, OPACITY_10, OPACITY_8, OPACITY_90,
 } from '@/lib/chart-colors';
 import { SectionHeader } from '../_shared/design';
-import { ACCENT, RARITY_TIERS, DEFAULT_ENEMY_LOOT_BINDINGS } from '../_shared/data';
-import type { EnemyLootBinding as ELBinding } from '../_shared/data';
+import { ACCENT, RARITY_TIERS } from '../_shared/data';
+import { useLootTuningStore } from '../_shared/lootTuningStore';
 import { simulateKills } from '../_shared/math';
 import { generateEnemyLootCpp } from '../_shared/codegen';
 import { BlueprintPanel } from '../_shared/design';
 
+/** The TUNED roster (useLootTuningStore): simulated drops and the C++ export follow the tuner; a card click focuses it. */
 export function EnemyLootBindingSection() {
-  const [enemyLootBindings] = useState<ELBinding[]>(DEFAULT_ENEMY_LOOT_BINDINGS);
+  const enemyLootBindings = useLootTuningStore((s) => s.bindings);
+  const selectedId = useLootTuningStore((s) => s.selectedId);
+  const dispatch = useLootTuningStore((s) => s.dispatch);
   const [simKillCount, setSimKillCount] = useState(100);
   const [copiedLootCpp, setCopiedLootCpp] = useState(false);
   const [showLootCpp, setShowLootCpp] = useState(false);
@@ -57,7 +60,10 @@ export function EnemyLootBindingSection() {
           const totalWeight = binding.rarityWeights.reduce((s, w) => s + w, 0);
 
           return (
-            <div key={binding.archetypeId} className="rounded-lg border p-3" style={{ borderColor: withOpacity(binding.color, OPACITY_20), backgroundColor: withOpacity(binding.color, OPACITY_5) }}>
+            <div key={binding.archetypeId} role="button" tabIndex={0} aria-pressed={selectedId === binding.archetypeId}
+              onClick={() => dispatch({ type: 'select', id: binding.archetypeId })}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dispatch({ type: 'select', id: binding.archetypeId }); } }}
+              className="rounded-lg border p-3 cursor-pointer" style={{ borderColor: selectedId === binding.archetypeId ? binding.color : withOpacity(binding.color, OPACITY_20), backgroundColor: withOpacity(binding.color, OPACITY_5) }}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold" style={{ backgroundColor: withOpacity(binding.color, OPACITY_12), color: binding.color }}>{binding.icon}</div>
                 <div className="flex-1">

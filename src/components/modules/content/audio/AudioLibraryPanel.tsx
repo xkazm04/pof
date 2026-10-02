@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X, AlertTriangle } from 'lucide-react';
+import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X, AlertTriangle, Sparkles } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { ok, err, type Result } from '@/types/result';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { TaskFactory } from '@/lib/cli-task';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
@@ -70,7 +71,15 @@ function fmtDuration(ms: number): string {
   return `${(ms / 1000).toFixed(ms % 1000 === 0 ? 0 : 1)}s`;
 }
 
-export function AudioLibraryPanel() {
+interface AudioLibraryPanelProps {
+  /**
+   * Opens the Sound Forge aimed at this set (`AudioView` switches tab). The click
+   * only hands over the id: nothing is generated or billed from the Library.
+   */
+  onMoreTakes?: (setId: string) => void;
+}
+
+export function AudioLibraryPanel({ onMoreTakes }: AudioLibraryPanelProps = {}) {
   const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null, audioDir: null, disk: null });
   const [reality, setReality] = useState<ImportReality>({ bySet: {}, preflight: null });
   const [loading, setLoading] = useState(true);
@@ -80,7 +89,6 @@ export function AudioLibraryPanel() {
   const [failedImportSetId, setFailedImportSetId] = useState<string | null>(null);
   const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
-  const [failedDelete, setFailedDelete] = useState<PendingDelete | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -186,19 +194,18 @@ export function AudioLibraryPanel() {
   }
 
   // Both deletes are irreversible, so they route through a styled confirm dialog
-  // (never the blocking native `confirm`) and surface any failure inline instead
-  // of throwing an unhandled rejection.
-  async function runDelete(pending: PendingDelete) {
+  // (never the blocking native `confirm`). A failed DELETE comes back as a Result
+  // err, which ConfirmDialog shows in place with a Retry of this same delete.
+  async function runDelete(pending: PendingDelete): Promise<Result<void>> {
     setDeleteError(null);
     const query = pending.kind === 'asset' ? `assetId=${pending.id}` : `setId=${pending.id}`;
     const res = await tryApiFetch<DeleteResult>(`/api/audio-gen?${query}`, { method: 'DELETE' });
     if (res.ok) {
-      setFailedDelete(null);
       // The row is gone but the bytes may not be. Never let that stay silent —
-      // state both outcomes, and name the path left on disk.
+      // state both outcomes, and name the path left on disk. (A success with a
+      // warning, so it is a page banner, not a dialog failure.)
       const fr = res.data.fileRemoval;
       if (fr && !fr.ok) {
-        setFailedDelete(null);
         setDeleteError(
           `Deleted ${pending.label} from the database, but its files were NOT removed` +
           `${fr.path ? ` (${fr.path})` : ''}: ${fr.reason ?? 'unknown reason'}. ` +
@@ -206,11 +213,10 @@ export function AudioLibraryPanel() {
         );
       }
       refresh();
-    } else {
-      logger.warn('audio delete failed', { pending, err: res.error });
-      setFailedDelete(pending);
-      setDeleteError(`Could not delete ${pending.label}: ${res.error}`);
+      return ok(undefined);
     }
+    logger.warn('audio delete failed', { pending, err: res.error });
+    return err(`Could not delete ${pending.label}: ${res.error}`);
   }
 
   async function handleToggleFavorite(asset: AudioAsset) {
@@ -382,9 +388,16 @@ export function AudioLibraryPanel() {
                   )}
                 </span>
                 <span className="text-2xs text-text-muted">· {assets.length}</span>
+                {onMoreTakes && (
+                  <button onClick={() => onMoreTakes(s.id)} data-testid={`more-takes-${s.id}`}
+                          title={`Open the Sound Forge aimed at ${s.name}: new takes continue its numbering`}
+                          className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-medium text-text-muted hover:text-text border border-border focus-ring">
+                    <Sparkles className="w-3 h-3" /> More takes
+                  </button>
+                )}
                 <button onClick={() => handleImport(s, assets)} disabled={importing === s.id}
                         data-testid="import-to-ue"
-                        className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-medium disabled:opacity-50 focus-ring"
+                        className={`${onMoreTakes ? '' : 'ml-auto '}flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-medium disabled:opacity-50 focus-ring`}
                         style={{ backgroundColor: `${MODULE_COLORS.content}15`, color: MODULE_COLORS.content, border: `1px solid ${MODULE_COLORS.content}30` }}>
                   {importing === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                   Import to UE
@@ -431,9 +444,10 @@ export function AudioLibraryPanel() {
         <div className="px-3 pb-3">
           <InlineErrorRetry
             message={deleteError}
-            // A failed DELETE retries the delete; an orphaned-file report has no
-            // delete left to retry, so it re-reads the library (and its footprint).
-            onRetry={() => { setDeleteError(null); if (failedDelete) runDelete(failedDelete); else refresh(); }}
+            // A failed DELETE retries inside the confirm dialog; this banner only
+            // reports orphaned files, which have no delete left to retry, so it
+            // re-reads the library (and its footprint).
+            onRetry={() => { setDeleteError(null); refresh(); }}
             onDismiss={() => setDeleteError(null)}
             dense
           />
@@ -443,7 +457,7 @@ export function AudioLibraryPanel() {
       <ConfirmDialog
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        onConfirm={() => { if (pendingDelete) runDelete(pendingDelete); }}
+        onConfirm={() => (pendingDelete ? runDelete(pendingDelete) : undefined)}
         title={pendingDelete?.kind === 'set' ? 'Delete this set?' : 'Delete this variation?'}
         description={
           pendingDelete?.kind === 'set'
@@ -451,6 +465,7 @@ export function AudioLibraryPanel() {
             : `This permanently deletes ${pendingDelete?.label}. This cannot be undone.`
         }
         confirmLabel="Delete"
+        busyLabel="Deleting…"
       />
     </div>
   );

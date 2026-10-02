@@ -16,10 +16,19 @@ import { useForgeStore } from './useForgeStore';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { PromptBuilder } from './PromptBuilder';
+import { initialForgeMode } from './referenceHandoff';
 
 export function GenerationPanel() {
-  const [mode, setMode] = useState<GenerationMode>('text-to-3d');
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  /**
+   * The image-to-3D reference lives in the store, not here: this panel unmounts on every
+   * forge tab switch, and a reference staged from the 2D tab ("Make 3D from this image")
+   * must be waiting when it mounts. The mount opens in image-to-3D when one is staged.
+   */
+  const reference = useForgeStore((s) => s.reference);
+  const stageReference = useForgeStore((s) => s.stageReference);
+  const clearReference = useForgeStore((s) => s.clearReference);
+  const [mode, setMode] = useState<GenerationMode>(() => initialForgeMode(useForgeStore.getState().reference));
+  const [uploadError, setUploadError] = useState<string | null>(null);
   /**
    * The grading budget this generation is held to. EMPTY IS A REAL CHOICE, not an
    * unset field: the route grades class-blind when no class arrives and states that in
@@ -30,7 +39,8 @@ export function GenerationPanel() {
   const [assetClass, setAssetClass] = useState<string>('');
 
   // Prompt builder state — chips compose the real prompt under the hood.
-  const [subject, setSubject] = useState('');
+  // A staged 2D result's prompt seeds the subject (still editable).
+  const [subject, setSubject] = useState(() => useForgeStore.getState().reference?.subject ?? '');
   const [selectedChipIds, setSelectedChipIds] = useState<string[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [rawPrompt, setRawPrompt] = useState('');
@@ -88,7 +98,7 @@ export function GenerationPanel() {
       return 'Blender MCP is not connected — connect the bridge above to generate through it.';
     }
     if (mode === 'text-to-3d' && !effectivePrompt) return 'Describe what to generate first.';
-    if (mode === 'image-to-3d' && !imageFile) return 'Upload a reference image first.';
+    if (mode === 'image-to-3d' && !reference) return 'Upload a reference image first.';
     return null;
   })();
   const canSubmit = blockReason === null;
@@ -127,24 +137,17 @@ export function GenerationPanel() {
     if (execution.path === 'mcp') {
       void submitMcpJob(activeProvider.id, styledPrompt, mode);
       resetBuilder();
-      setImageFile(null);
       return;
     }
 
-    // Runner-backed image-to-3D: read the reference image as a data URL the server
-    // can decode, then submit + poll.
+    // Runner-backed image-to-3D: the staged reference is already a data URL the server
+    // can decode. A 2D-forge origin is recorded on the job (never sent in the body).
     if (mode === 'image-to-3d') {
-      if (!imageFile) return;
-      const providerId = activeProvider.id;
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          void submitLocalJob(providerId, mode, reader.result, styledPrompt, assetClass || undefined);
-        }
-      };
-      reader.readAsDataURL(imageFile);
+      if (!reference) return;
+      const origin = reference.source === 'image-2d' ? { sourceImage: reference.sourceName } : undefined;
+      void submitLocalJob(activeProvider.id, mode, reference.dataUrl, styledPrompt, assetClass || undefined, origin);
       resetBuilder();
-      setImageFile(null);
+      clearReference();
       return;
     }
 
@@ -152,12 +155,22 @@ export function GenerationPanel() {
     // now, unreachable from this panel because the real path was gated on image mode.
     void submitLocalJob(activeProvider.id, mode, undefined, styledPrompt, assetClass || undefined);
     resetBuilder();
-    setImageFile(null);
   };
 
+  // An upload is read into a data URL as soon as it is picked and staged like any other
+  // reference, so it too survives a tab switch.
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setImageFile(file);
+    if (!file) return;
+    setUploadError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        stageReference({ dataUrl: reader.result, source: 'upload', sourceName: file.name });
+      }
+    };
+    reader.onerror = () => setUploadError(`Could not read ${file.name}.`);
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -166,6 +179,7 @@ export function GenerationPanel() {
       <div className="flex gap-2">
         <button
           onClick={() => setMode('text-to-3d')}
+          aria-pressed={mode === 'text-to-3d'}
           className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
             mode === 'text-to-3d'
               ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/10 text-[var(--visual-gen)]'
@@ -177,6 +191,7 @@ export function GenerationPanel() {
         </button>
         <button
           onClick={() => setMode('image-to-3d')}
+          aria-pressed={mode === 'image-to-3d'}
           className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
             mode === 'image-to-3d'
               ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/10 text-[var(--visual-gen)]'
@@ -290,26 +305,32 @@ export function GenerationPanel() {
       {/* Reference image upload (image-to-3d only) */}
       {mode === 'image-to-3d' && (
         <div>
-          <label className="text-xs text-text-muted mb-1.5 block">Upload reference image</label>
-          <div className="flex items-center gap-3">
-            <label className="flex-1 flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-[var(--visual-gen)] transition-colors">
-              <Upload size={16} className="text-text-muted" />
-              <span className="text-xs text-text-muted">
-                {imageFile ? imageFile.name : 'Click or drag to upload PNG/JPG'}
+          <label className="text-xs text-text-muted mb-1.5 block">Reference image</label>
+          {reference && (
+            <div className="flex items-center gap-3 mb-2" data-testid="forge-reference">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a data: URL held in the store */}
+              <img src={reference.dataUrl} alt="" className="w-12 h-12 rounded border border-border object-cover" />
+              <span className="flex-1 text-xs text-text truncate" data-testid="forge-reference-label">
+                {reference.source === 'image-2d' ? `from 2D image ${reference.sourceName}` : reference.sourceName}
               </span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-            </label>
-            {imageFile && (
-              <button onClick={() => setImageFile(null)} className="text-xs text-text-muted hover:text-text">
+              <button onClick={clearReference} className="text-xs text-text-muted hover:text-text">
                 Clear
               </button>
-            )}
-          </div>
+            </div>
+          )}
+          <label className="flex items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-[var(--visual-gen)] transition-colors">
+            <Upload size={16} className="text-text-muted" />
+            <span className="text-xs text-text-muted">
+              {reference ? 'Replace with an upload (PNG/JPG)' : 'Click or drag to upload PNG/JPG'}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </label>
+          {uploadError && <p className="mt-1 text-2xs text-amber-400">{uploadError}</p>}
         </div>
       )}
 

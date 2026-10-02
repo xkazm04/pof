@@ -16,16 +16,19 @@ import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register al
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { seededEntities } from '@/lib/catalog/seed';
-import { stepAppliesTo, stepsForProfile } from '@/lib/catalog/stepScope';
+import { stepsForProfile } from '@/lib/catalog/stepScope';
 import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { deriveEntityLifecycle, type DerivedLifecycle } from '@/lib/catalog/lifecycle';
-import { listArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
+import { listArtifacts } from '@/lib/pipeline-artifacts-db';
 import { listVerdicts } from '@/lib/status/judge-verdicts-db';
-import { logger } from '@/lib/logger';
+import { commitArtifact, type CommitDeps } from '@/lib/catalog/artifactCommit';
+import type { Provenance } from '@/lib/provenance';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
 import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
 import { canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
+import { stampTemplate } from '@/lib/catalog/produceTemplate';
+import { settlementOf, entityNextStep, type Settlement, type EntityStepPick } from '@/lib/catalog/stepSettlement';
 import { collectStepEvidence } from '@/components/layout-lab/steps/shared/stepEvidence';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import type { AcceptanceResult, Checker, CheckerContext } from '@/lib/catalog/acceptance/types';
@@ -58,6 +61,8 @@ export interface EntitySummary {
   lifecycle: LifecycleState;
   ueAssets: string[];
   lastTestResult?: TestResult;
+  /** The canon profile its prompts (and a sheet's Style line) are resolved for (`canonProfileOf`). */
+  canonProfile: string;
 }
 
 export interface StepRecipe {
@@ -73,7 +78,8 @@ export interface StepRecipe {
   canonCategories: string[];
   /** The full instruction Claude should fulfil: canon prefix + the Produce line. */
   prompt: string;
-  /** A deterministic example of a passing artifact's data + the UE asset paths the step owns. */
+  /** The step body's deterministic output + the UE asset paths the step owns. For a non-exemplar entity
+   *  with a data-blind body it is the EXEMPLAR's content: stamped `data.template` and graded pending. */
   example: { data: Record<string, unknown>; ueAssetTargets: string[] } | null;
   /** The Acceptance contract, derived from the step's Checker (never a manual toggle). */
   acceptance: {
@@ -82,6 +88,8 @@ export interface StepRecipe {
     /** What the verdict would be if the example data were submitted — i.e. what "good" looks like. */
     exampleStatus?: string;
     exampleDetail?: string;
+    /** Why the example is not a pass (a `TEMPLATE:` reason when it is another entity's content). */
+    exampleReason?: string;
     /** The verdict for whatever is currently persisted (or the pending message if nothing is). */
     currentStatus: string;
     currentDetail?: string;
@@ -89,6 +97,8 @@ export interface StepRecipe {
   };
   /** What's already persisted for this step, if anything (so Claude sees prior work). */
   current: { data: Record<string, unknown>; status: string; tier?: string; ueAssets: string[] } | null;
+  /** What settles the CURRENT verdict (`stepSettlement`); null when it is a pass. */
+  settle: Settlement | null;
 }
 
 /**
@@ -248,6 +258,7 @@ export function listEntitySummaries(catalogId: string): EntitySummary[] {
       name: e.name,
       lifecycle: derived.get(e.id)?.lifecycle ?? row?.lifecycle ?? e.lifecycle,
       ueAssets: row?.ueAssets ?? e.ueAssets ?? [],
+      canonProfile: canonProfileOf(e),
       ...(lastTestResult ? { lastTestResult: lastTestResult as TestResult } : {}),
     };
   });
@@ -288,8 +299,9 @@ function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>
  * that has persisted artifacts — one-shot drafts included). READ-ONLY: it computes,
  * it does not write, so a display read can never mutate state.
  */
-function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
-  const allArts = listArtifacts(catalogId);
+function derivedByEntity(catalogId: string, entityId?: string): Map<string, DerivedLifecycle> {
+  // A registered pipeline's total never reads the rows (`totalStepsFor`): one entity needs only its own.
+  const allArts = entityId && getCatalogPipeline(catalogId) ? listArtifacts(catalogId, entityId) : listArtifacts(catalogId);
   // An entity's total depends on its canon profile (a diablo1-only step is not part of a PoF entity's pipeline).
   const profileOf = new Map(seededEntities(catalogId).map((e) => [e.id, canonProfileOf(e)]));
   const byEntity = new Map<string, typeof allArts>();
@@ -304,7 +316,7 @@ function derivedByEntity(catalogId: string): Map<string, DerivedLifecycle> {
 }
 
 export function deriveCatalogLifecycle(catalogId: string, entityId?: string): EntityLifecycleView[] {
-  const byEntity = derivedByEntity(catalogId);
+  const byEntity = derivedByEntity(catalogId, entityId);
   const emptyDerived = deriveEntityLifecycle([], totalStepsFor(catalogId, []));
   const seeded = seededEntities(catalogId);
   const names = new Map(seeded.map((e) => [e.id, e.name] as const));
@@ -419,7 +431,9 @@ export function buildStepRecipe(
 
   let example: StepRecipe['example'] = null;
   try {
-    const out = spec.produce(labEntity);
+    // Stamped exactly as the lab's stub write is, so the guarded checker holds another entity's
+    // template at pending instead of presenting it as passing data (D12, one field over).
+    const out = stampTemplate(catalogId, spec, labEntity, spec.produce(labEntity));
     example = { data: out.data ?? {}, ueAssetTargets: out.ueAssets ?? [] };
   } catch {
     example = null;
@@ -462,6 +476,7 @@ export function buildStepRecipe(
     label: exampleRes?.label ?? pendingRes?.label ?? spec.label,
     tier: exampleRes?.tier ?? pendingRes?.tier ?? 'L0',
     ...(exampleRes ? { exampleStatus: exampleRes.status, exampleDetail: exampleRes.detail } : {}),
+    ...(exampleRes?.reason ? { exampleReason: exampleRes.reason } : {}),
     currentStatus: curRes?.status ?? pendingRes?.status ?? 'pending',
     ...(!cur && pendingRes?.detail ? { currentDetail: pendingRes.detail } : {}),
     ...(curRes?.reason ? { currentReason: curRes.reason } : {}),
@@ -481,6 +496,7 @@ export function buildStepRecipe(
     example,
     acceptance,
     current,
+    settle: settlementOf(curRes ?? pendingRes, spec),
   };
 }
 
@@ -497,15 +513,41 @@ export interface SubmitResult {
   };
   /** The DERIVED acceptance verdict — the server grades the submission; Claude never self-grades. */
   acceptance: { status: string; tier: string; label: string; detail?: string; reason?: string };
+  /** What settles this verdict, and the step the lab coach ladder picks next for the entity. */
+  next: { settle: Settlement | null; entityStep: EntityStepPick | null };
 }
+
+/** The ladder pick over the entity's profile-scoped steps, reading persisted judge-bridged verdicts. */
+function nextEntityStep(catalogId: string, entityId: string): EntityStepPick | null {
+  const pipeline = getCatalogPipeline(catalogId);
+  if (!pipeline) return null;
+  const entity = seededEntities(catalogId).find((e) => e.id === entityId);
+  const arts = new Map(listArtifacts(catalogId, entityId).map((a) => [a.step, a]));
+  return entityNextStep(stepsForProfile(pipeline, canonProfileOf(entity)), (step) => {
+    const a = arts.get(step);
+    return a ? bridgeAcceptance(catalogId, entityId, step, { label: step, tier: a.tier ?? 'L0', status: a.status, detail: '', ...(a.reason ? { reason: a.reason } : {}) }, a.data) : null;
+  });
+}
+
+/** What the one write door (`@/lib/catalog/artifactCommit`) grades and syncs with. */
+export const artifactCommitDeps: CommitDeps = {
+  grade: gradeArtifact,
+  hasRegisteredChecker,
+  // Only a registered catalog has a derivable lifecycle worth caching.
+  syncLifecycle: (catalogId, entityId) => { if (getCatalogPipeline(catalogId)) syncEntityLifecycle(catalogId, entityId); },
+};
+
+/** `mcp-submit` = `POST /api/catalog/step-submit`; default = trusted in-process code (may `attest`). */
+export type SubmitOptions = { policy: 'mcp-submit' } | { policy?: 'in-process'; attest?: Provenance };
 
 /**
  * Persist a step's produced artifact and return the SERVER-DERIVED acceptance verdict.
  *
- * This is the headless equivalent of the lab's Produce → setLabSync write-through: the
- * orchestrating Claude submits its work (data + UE asset paths), and the step's own
- * Checker decides pass/pending/fail/deferred. L3/L4 deferrals are later upgraded by the
- * gate-drain runner — the submit never claims a runtime/visual pass.
+ * This is the headless equivalent of the lab's Produce → setLabSync write-through, through the
+ * SAME door (`commitArtifact`): the orchestrating Claude submits its work (data + UE asset
+ * paths), the step's own Checker decides pass/pending/fail/deferred, the row is stamped with
+ * who produced it, and the derived lifecycle is synced. L3/L4 deferrals are later upgraded by
+ * the gate-drain runner — the submit never claims a runtime/visual pass.
  */
 export function submitStepArtifact(
   catalogId: string,
@@ -513,42 +555,28 @@ export function submitStepArtifact(
   step: string,
   data: Record<string, unknown>,
   ueAssets: string[],
+  opts: SubmitOptions = {},
 ): SubmitResult {
-  const spec = resolveStep(catalogId, step); // throws CatalogNotFoundError for unknown catalog/step
-  const ctx = serverCheckerContext(catalogId, entityId);
-  // A step scoped to other canon profiles is not part of this entity's pipeline (D18): writing a row
-  // for it would put a step the entity does not have into its lifecycle and /status.
-  if (!stepAppliesTo(spec, ctx.canonProfile)) {
-    throw new CatalogNotFoundError(
-      `Step "${step}" of ${catalogId} applies only to canon profile(s) ${spec.profiles!.join(', ')}; ${entityId} is "${ctx.canonProfile ?? 'pof'}"`,
-    );
-  }
-  const res = safeAccept(spec.accept, data, ctx);
-  const status = res?.status ?? 'pending';
-  const tier = res?.tier ?? 'L0';
-  const reason = res?.reason;
-  const artifact = upsertArtifact({
-    catalogId,
-    entityId,
-    step,
-    data,
-    ueAssets,
-    status,
-    tier,
-    ...(reason ? { reason } : {}),
-  });
-  // The entity's lifecycle is DERIVED from its artifacts, so a write to one of them
-  // is exactly when it can change. Best-effort: the artifact is the primary job and
-  // must never fail because the (re-derivable) lifecycle cache could not be written.
-  try {
-    syncEntityLifecycle(catalogId, entityId);
-  } catch (e) {
-    logger.warn('submitStepArtifact: could not sync derived lifecycle', e);
-  }
+  resolveStep(catalogId, step); // throws CatalogNotFoundError for unknown catalog/step
+  const committed = commitArtifact(
+    { catalogId, entityId, step, data, ueAssets },
+    opts.policy === 'mcp-submit' ? { kind: 'mcp-submit' } : { kind: 'in-process', ...(opts.attest ? { attest: opts.attest } : {}) },
+    artifactCommitDeps,
+  );
+  if (!committed.ok) throw new CatalogNotFoundError(committed.error);
+  const { artifact, raw: res } = committed.data;
+  const { status } = artifact, tier = artifact.tier ?? 'L0', reason = res?.reason;
   // The persisted artifact keeps the checker's own verdict (storage separation is
   // deliberate — judge_verdicts lives apart). The RETURNED acceptance the caller consumes
   // is bridged, so a current-rubric judge FAIL surfaces here instead of a stale pass.
   const bridged = res ? bridgeAcceptance(catalogId, entityId, step, res) : res;
+  const acceptance: SubmitResult['acceptance'] = {
+    status: bridged?.status ?? status,
+    tier: bridged?.tier ?? tier,
+    label: bridged?.label ?? res?.label ?? step,
+    ...(bridged?.detail ? { detail: bridged.detail } : {}),
+    ...(bridged?.reason ? { reason: bridged.reason } : reason ? { reason } : {}),
+  };
   return {
     artifact: {
       catalogId: artifact.catalogId,
@@ -560,12 +588,10 @@ export function submitStepArtifact(
       ...(artifact.tier ? { tier: artifact.tier } : {}),
       ...(artifact.reason ? { reason: artifact.reason } : {}),
     },
-    acceptance: {
-      status: bridged?.status ?? status,
-      tier: bridged?.tier ?? tier,
-      label: bridged?.label ?? res?.label ?? step,
-      ...(bridged?.detail ? { detail: bridged.detail } : {}),
-      ...(bridged?.reason ? { reason: bridged.reason } : reason ? { reason } : {}),
+    acceptance,
+    next: {
+      settle: settlementOf(acceptance, getCatalogPipeline(catalogId)?.steps.find((s) => s.label === step)),
+      entityStep: nextEntityStep(catalogId, entityId),
     },
   };
 }

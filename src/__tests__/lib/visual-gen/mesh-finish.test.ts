@@ -29,6 +29,12 @@ describe('resolveBlenderPath', () => {
   it('returns null when nothing resolves (never guesses a path that is not there)', () => {
     expect(resolveBlenderPath(undefined, {}, () => false)).toBeNull();
   });
+
+  it('[guard] explicit beats POF_BLENDER, and POF_BLENDER beats any discovered install', () => {
+    expect(resolveBlenderPath('C:/custom/blender.exe', { POF_BLENDER: 'x' }, () => true)).toBe('C:/custom/blender.exe');
+    const installed = { listDir: () => ['Blender 4.5'], platform: 'win32' as const, which: () => null };
+    expect(resolveBlenderPath(undefined, { POF_BLENDER: 'x' }, () => true, installed)).toBe('x');
+  });
 });
 
 describe('unwrapPlan — never UV-unwrap the high-poly', () => {

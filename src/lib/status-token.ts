@@ -25,6 +25,7 @@ import {
   OVERLAY_WHITE,
   OPACITY_40,
   OPACITY_60,
+  scoreBand,
 } from '@/lib/chart-colors';
 
 /**
@@ -121,11 +122,9 @@ export function recoveryStatusToken(status: 'recovered' | 'partial' | 'lost'): S
 
 /**
  * Map a 0-100 score/confidence to a ramp token: ≥80 healthy (ok), ≥50 caution
- * (warn), else failing (bad). Keeps the threshold logic in one place so a value,
- * its glyph, and its color always agree.
+ * (warn), else failing (bad) — the 3-level projection of `SCORE_BANDS`, the one
+ * score table in chart-colors, so a value, its glyph, and its color always agree.
  */
 export function scoreStatusToken(score: number): StatusToken {
-  if (score >= 80) return STATUS_TOKENS.ok;
-  if (score >= 50) return STATUS_TOKENS.warn;
-  return STATUS_TOKENS.bad;
+  return STATUS_TOKENS[scoreBand(score).level];
 }

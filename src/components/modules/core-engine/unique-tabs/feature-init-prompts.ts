@@ -6,7 +6,8 @@
  * 2. Set up the data bridge so PoF can read live project data
  * 3. Register the feature in the project's configuration
  *
- * Prompts are injected into CLI sessions via FeatureInitButton.
+ * Prompts are dispatched on click by the Feature Map scaffold panel (useSectionScaffold /
+ * ScaffoldPanel); a section counts as present only when the project scan finds its classes.
  */
 
 import type { SubModuleId } from '@/types/modules';

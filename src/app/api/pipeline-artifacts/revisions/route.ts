@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { listRevisions, getRevision, upsertArtifact } from '@/lib/pipeline-artifacts-db';
-import { gradeArtifact } from '@/lib/catalog/headless';
+import { listRevisions, getRevision } from '@/lib/pipeline-artifacts-db';
+import { artifactCommitDeps, gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
+import { commitArtifact, deriveVerdict } from '@/lib/catalog/artifactCommit';
 
 /**
  * GET /api/pipeline-artifacts/revisions?catalogId&entityId&step
@@ -23,7 +24,10 @@ import { gradeArtifact } from '@/lib/catalog/headless';
  * fabricated-pass hole the POST route closed by server-grading every submission.
  *
  * A restore is itself an ordinary content-changing upsert, so the version it replaces is
- * archived in turn — reverting is undoable.
+ * archived in turn — reverting is undoable. It goes through the one write door
+ * (`commitArtifact`, `restore` policy): the archived row's own `_provenance` is kept verbatim,
+ * a step with no server checker keeps the archived status but its reason is stamped
+ * `UNGRADED:` (never indistinguishable from a verified reason), and the lifecycle is synced.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -54,14 +58,13 @@ export async function POST(req: NextRequest) {
     // Re-grade rather than restoring the archived verdict (see the route doc). One verdict
     // for both paths: the dry run reports exactly what the restore below would persist (the
     // RAW checker verdict — never the judge-bridged `result`).
-    const { graded, raw } = gradeArtifact(rev.catalogId, rev.step, rev.data, rev.entityId);
-    const status = graded ? (raw?.status ?? 'pending') : rev.status;
-    const tier = graded ? (raw?.tier ?? 'L0') : rev.tier;
-    const reason = graded
-      ? (raw?.reason ?? (raw ? undefined : 'unverified: acceptance check did not resolve'))
-      : rev.reason;
+    const producer = { status: rev.status, ...(rev.tier ? { tier: rev.tier } : {}), ...(rev.reason ? { reason: rev.reason } : {}) };
 
     if (body.dryRun === true) {
+      const { graded, raw } = gradeArtifact(rev.catalogId, rev.step, rev.data, rev.entityId);
+      const { status, tier, reason } = deriveVerdict({
+        catalogId: rev.catalogId, step: rev.step, graded, raw, producer, hasRegisteredChecker,
+      });
       return apiSuccess({
         regraded: graded,
         wouldStatus: status,
@@ -74,21 +77,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const restored = upsertArtifact({
-      catalogId: rev.catalogId,
-      entityId: rev.entityId,
-      step: rev.step,
-      data: rev.data,
-      ueAssets: rev.ueAssets,
-      status,
-      tier,
-      reason,
-    });
+    const committed = commitArtifact(
+      { catalogId: rev.catalogId, entityId: rev.entityId, step: rev.step, data: rev.data, ueAssets: rev.ueAssets, producer },
+      { kind: 'restore' },
+      artifactCommitDeps,
+    );
+    if (!committed.ok) return apiError(committed.error, 404);
 
     return apiSuccess({
-      artifact: restored,
+      artifact: committed.data.artifact,
       /** True when the restored status came from a fresh checker run rather than the archive. */
-      regraded: graded,
+      regraded: committed.data.graded,
       /** Surfaced so the UI can say a restore did not bring back the verdict it displayed. */
       archivedStatus: rev.status,
     });

@@ -13,24 +13,21 @@
  * and a symmetric character can be authored on one half and mirrored.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { bakeSizeForExtent } from './texel-density';
+import { blenderNotFound, fixedBlenderCandidates, locateBlender, type BlenderSeams } from './blender-locate';
+import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
+import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
 
 /** Above this face count an auto-unwrap explodes into unusable island counts
  *  (and routinely hangs/crashes the unwrapper) — the high-poly is never the
  *  thing you unwrap. */
 export const UNWRAP_FACE_CEILING = 200_000;
 
-/** Known Blender installs, probed in order when nothing is configured.
- *  Mirrors `/api/visual-gen/blender/detect`. */
-export const BLENDER_CANDIDATES = [
-  'C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe',
-  'C:\\Program Files\\Blender Foundation\\Blender 4.1\\blender.exe',
-  'C:\\Program Files\\Blender Foundation\\Blender 4.0\\blender.exe',
-  '/usr/bin/blender',
-  '/usr/local/bin/blender',
-  '/Applications/Blender.app/Contents/MacOS/Blender',
-];
+/** The fixed (non-versioned) install paths for this platform, derived from the one
+ *  locator (`blender-locate.ts`). Versioned installs (`Blender X.Y`) come from the
+ *  directory listing there, never from a hand-written list. */
+export const BLENDER_CANDIDATES = fixedBlenderCandidates(process.platform);
 
 export type MirrorAxis = 'x' | 'y' | 'z';
 export type BakeMap = 'normal' | 'ao' | 'diffuse' | 'roughness' | 'metallic';
@@ -335,20 +332,28 @@ export interface MeshFinishResult {
   /** Requested maps that were not baked, each with the reason — a partial PBR set
    *  must never be reported as a full one. */
   bakeSkipped?: SkippedBake[];
+  /** Maps whose bake RAN and threw (`BAKE_<MAP>_ERROR`), each with Blender's reason.
+   *  Distinct from `bakeSkipped` (refused before running): its map path is absent
+   *  because the bake failed, not because it was never requested. */
+  bakeFailed?: FailedBake[];
+  /** Mirror axis the script applied (echo of the request). */
+  mirror?: MirrorAxis;
+  /** Any marker the declaration does not know, verbatim (`script-markers.ts`). */
+  diagnostics?: Record<string, string>;
   /** Set when an unwrap was asked for but refused — never dropped silently. */
   unwrapSkippedReason?: string;
   durationMs: number;
 }
 
-/** Resolve the Blender executable. Pure (filesystem via the `exists` seam). */
+/** Resolve the Blender executable through the one locator (`locateBlender`): explicit,
+ *  POF_BLENDER, installed versions newest-first, fixed paths, PATH. Pure over its seams. */
 export function resolveBlenderPath(
   explicit: string | undefined,
   env: Record<string, string | undefined>,
   exists: (p: string) => boolean,
+  seams: BlenderSeams = {},
 ): string | null {
-  if (explicit) return explicit;
-  if (env.POF_BLENDER) return env.POF_BLENDER;
-  return BLENDER_CANDIDATES.find(exists) ?? null;
+  return locateBlender({ ...seams, explicit, env, exists }).path;
 }
 
 export interface UnwrapPlan {
@@ -376,6 +381,12 @@ export function unwrapPlan(requested: boolean | undefined, targetFaces: number |
 }
 
 export interface SkippedBake {
+  map: BakeMap;
+  reason: string;
+}
+
+/** A bake that ran and threw — Blender's own reason, from `BAKE_<MAP>_ERROR`. */
+export interface FailedBake {
   map: BakeMap;
   reason: string;
 }
@@ -505,6 +516,10 @@ export interface ParsedMeshFinish {
   cullLimitReason?: string;
   /** Set when the script refused to attempt the cull at all (mesh above its ceiling). */
   cullRefusedReason?: string;
+  /** Maps whose bake ran and threw, with the reason. Absent when none failed. */
+  bakeFailed?: FailedBake[];
+  mirror?: MirrorAxis;
+  diagnostics?: Record<string, string>;
   error?: string;
 }
 
@@ -517,16 +532,13 @@ export function cullLimitReasonFor(facesCulled: number | undefined, shells: numb
   return `interior cull removed nothing: it selects only WELDED interior, so the ${shells} separate shells in this mesh were not evaluated — occlusion between parts needs visibility culling, not select_interior_faces`;
 }
 
-/** Parse the script's `POF_MESHFINISH_*` stdout markers. Pure. */
+/** Parse the script's `POF_MESHFINISH_*` stdout markers (declared in `script-markers.ts`). Pure. */
 export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
-  const get = (k: string): string | undefined => {
-    const m = stdout.match(new RegExp(`^POF_MESHFINISH_${k}=(.*)$`, 'm'));
-    return m ? m[1].trim() : undefined;
-  };
-  const num = (k: string): number | undefined => {
-    const v = get(k);
-    return v === undefined ? undefined : Number(v);
-  };
+  const block = readMarkerBlock('meshFinish', stdout);
+  const { get, num } = block;
+  const bakePath = (map: BakeMap) => block.slots('BAKE_{map}').find((s) => s.slot === map.toUpperCase())?.value;
+  const bakeFailed: FailedBake[] = block.slots('BAKE_{map}_ERROR')
+    .map((s) => ({ map: s.slot.toLowerCase() as BakeMap, reason: s.value }));
   const done = get('DONE');
   const error = get('ERROR');
   const facesCulled = num('FACES_CULLED');
@@ -568,16 +580,19 @@ export function parseMeshFinishOutput(stdout: string): ParsedMeshFinish {
     uvStretchDegenerate,
     uvStretch: stretchGrade?.verdict,
     uvStretchReason: stretchGrade?.reason,
-    normalMapPath: get('BAKE_NORMAL'),
-    aoMapPath: get('BAKE_AO'),
-    diffuseMapPath: get('BAKE_DIFFUSE'),
-    roughnessMapPath: get('BAKE_ROUGHNESS'),
+    normalMapPath: bakePath('normal'),
+    aoMapPath: bakePath('ao'),
+    diffuseMapPath: bakePath('diffuse'),
+    roughnessMapPath: bakePath('roughness'),
+    bakeFailed: bakeFailed.length ? bakeFailed : undefined,
+    mirror: get('MIRROR') as MirrorAxis | undefined,
+    diagnostics: block.diagnostics,
   };
 }
 
-type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<{ stdout: string; code: number | null }>;
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
-export interface MeshFinishDeps {
+export interface MeshFinishDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
   now?: () => number;
@@ -598,21 +613,26 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
   const plan = unwrapPlan(spec.unwrap, spec.targetFaces);
   const bakes = bakePlan(spec.bake);
   const bakeSkipped = bakes.skipped.length ? bakes.skipped : undefined;
-  const blender = resolveBlenderPath(spec.blenderPath, env, fileExists);
-  if (!blender) return err('Blender not found — set POF_BLENDER to the blender executable', plan.reason);
+  const located = locateBlender({ ...deps, explicit: spec.blenderPath, env, exists: fileExists });
+  const blender = located.path;
+  if (!blender) return err(blenderNotFound(located.probed), plan.reason);
   if (!fileExists(spec.highPolyPath)) return err(`input mesh not found at ${spec.highPolyPath}`, plan.reason);
 
   const script = spec.scriptPath ?? join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_finish.py');
   if (!fileExists(script)) return err(`pof_mesh_finish.py not found at ${script}`, plan.reason);
 
   const start = now();
-  const { stdout } = await run(blender, buildMeshFinishArgs(script, spec), spec.timeoutMs ?? 600_000);
-  const parsed = parseMeshFinishOutput(stdout);
+  const timeoutMs = spec.timeoutMs ?? 600_000;
+  const outcome = await run(blender, buildMeshFinishArgs(script, spec), timeoutMs);
+  const parsed = parseMeshFinishOutput(outcome.stdout);
   const meshPath = parsed.meshPath && fileExists(parsed.meshPath) ? parsed.meshPath : undefined;
 
   return {
     ok: parsed.ok && !!meshPath,
-    error: parsed.error ?? (parsed.ok && !meshPath ? 'low-poly file not written despite DONE marker' : undefined),
+    // No DONE and no ERROR marker → Blender itself says why (crash, timeout, never started).
+    error: parsed.error ?? (parsed.ok
+      ? (meshPath ? undefined : 'low-poly file not written despite DONE marker')
+      : processFailureReason(outcome, { tool: `Blender (${basename(script)})`, timeoutMs })),
     meshPath,
     facesIn: parsed.facesIn,
     facesOut: parsed.facesOut,
@@ -636,21 +656,13 @@ export async function runMeshFinish(spec: MeshFinishSpec, deps: MeshFinishDeps =
     diffuseMapPath: parsed.diffuseMapPath,
     roughnessMapPath: parsed.roughnessMapPath,
     bakeSkipped,
+    bakeFailed: parsed.bakeFailed,
+    mirror: parsed.mirror,
+    diagnostics: parsed.diagnostics,
     unwrapSkippedReason: plan.reason,
     durationMs: now() - start,
   };
 }
 
-// ── default spawn seam (not unit-tested; exercised by the live smoke run) ──────
-const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
-  const { spawn } = await import('node:child_process');
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* gone */ } }, timeoutMs);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', () => { clearTimeout(timer); resolve({ stdout, code: null }); });
-  });
-};
+// ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });

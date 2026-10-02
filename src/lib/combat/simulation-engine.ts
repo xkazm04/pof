@@ -196,8 +196,19 @@ export { createRNG };
 export { calculateDamage };
 
 // ── Build Scaled Attributes ─────────────────────────────────────────────────
+// Exported so every caller that observes a fight (the predictive sweep's EHP /
+// biggest-hit facets) reads the SAME rounded attributes the fight resolved with.
 
-function buildPlayerAttributes(
+/**
+ * A scenario whose player attributes are pinned after scaling — the predictive
+ * sweep's sensitivity steps ("what if attackPower were X") run through the one
+ * fight kernel this way. Absent overrides = a plain `CombatScenario`.
+ */
+export interface OverrideCombatScenario extends CombatScenario {
+  playerAttributeOverrides?: Partial<AttributeSet>;
+}
+
+export function buildPlayerAttributes(
   level: number,
   gearBonuses: Partial<Record<AttributeKey, number>>,
   tuning: TuningOverrides,
@@ -222,7 +233,7 @@ function buildPlayerAttributes(
   return attrs;
 }
 
-function buildEnemyAttributes(
+export function buildEnemyAttributes(
   archetype: EnemyArchetype,
   level: number,
   tuning: TuningOverrides,
@@ -257,18 +268,17 @@ interface CombatEntity {
 }
 
 function simulateFight(
-  scenario: CombatScenario,
+  scenario: OverrideCombatScenario,
   tuning: TuningOverrides,
   config: CombatSimConfig,
   rng: () => number,
   registry: ArchetypeRegistry,
 ): FightResult {
   // Build player entity
-  const playerAttrs = buildPlayerAttributes(
-    scenario.playerLevel,
-    scenario.playerGear.bonuses,
-    tuning,
-  );
+  const playerAttrs = {
+    ...buildPlayerAttributes(scenario.playerLevel, scenario.playerGear.bonuses, tuning),
+    ...scenario.playerAttributeOverrides,
+  };
   const player: CombatEntity = {
     name: 'Player',
     attrs: { ...playerAttrs },
@@ -542,7 +552,7 @@ function updateBuffs(entity: CombatEntity, time: number) {
 // ── Monte Carlo Runner ──────────────────────────────────────────────────────
 
 export function runCombatSimulation(
-  scenario: CombatScenario,
+  scenario: OverrideCombatScenario,
   tuning: TuningOverrides,
   config: CombatSimConfig,
   registry: ArchetypeRegistry = ENEMY_ARCHETYPE_BY_ID,
@@ -570,12 +580,28 @@ export function runCombatSimulation(
   };
 }
 
-/** Resolve on the next macrotask so the Node event loop can service other work. */
-function yieldToEventLoop(): Promise<void> {
+/**
+ * Resolve on the next macrotask so the event loop can service other work. Node:
+ * `setImmediate`. Browser: a `MessageChannel` task (a nested `setTimeout(0)` is
+ * clamped to >= 4 ms after five levels, which a many-yield sweep would pay per
+ * yield); input and paint run between tasks either way.
+ */
+export function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => {
-    if (typeof setImmediate === 'function') setImmediate(resolve);
-    else setTimeout(resolve, 0);
+    if (typeof setImmediate === 'function') { setImmediate(resolve); return; }
+    if (typeof MessageChannel === 'function') {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = () => { channel.port1.close(); resolve(); };
+      channel.port2.postMessage(null);
+      return;
+    }
+    setTimeout(resolve, 0);
   });
+}
+
+/** The error a batched run rejects with when its `signal` aborts. */
+function abortError(signal: AbortSignal): unknown {
+  return signal.reason ?? new DOMException('The simulation was aborted.', 'AbortError');
 }
 
 /**
@@ -584,10 +610,12 @@ function yieldToEventLoop(): Promise<void> {
  * summary/alerts) but in batches, yielding between batches so a 5000-iteration
  * run no longer blocks the Node process for its whole duration and starves
  * every other request. `onProgress` fires once per completed batch, enabling a
- * streaming endpoint to report intermediate progress.
+ * streaming endpoint to report intermediate progress. `signal` is checked on
+ * entry and after every yield; an abort rejects with the signal's reason (an
+ * `AbortError` by default) before the next batch runs.
  */
 export async function runCombatSimulationBatched(
-  scenario: CombatScenario,
+  scenario: OverrideCombatScenario,
   tuning: TuningOverrides,
   config: CombatSimConfig,
   opts: {
@@ -595,8 +623,11 @@ export async function runCombatSimulationBatched(
     onProgress?: (completed: number, total: number) => void | Promise<void>;
     /** Override archetype lookup (catalog-hydrated enemies). Default = hardcoded defaults. */
     archetypes?: ArchetypeRegistry;
+    /** Cancels the run at the next yield (and before the first batch). */
+    signal?: AbortSignal;
   } = {},
 ): Promise<SimulationResult> {
+  if (opts.signal?.aborted) throw abortError(opts.signal);
   const startTime = Date.now();
   const rng = createRNG(config.seed);
   const total = config.iterations;
@@ -608,7 +639,10 @@ export async function runCombatSimulationBatched(
     fights.push(simulateFight(scenario, tuning, config, rng, registry));
     if ((i + 1) % batchSize === 0 || i + 1 === total) {
       if (opts.onProgress) await opts.onProgress(i + 1, total);
-      if (i + 1 < total) await yieldToEventLoop();
+      if (i + 1 < total) {
+        await yieldToEventLoop();
+        if (opts.signal?.aborted) throw abortError(opts.signal);
+      }
     }
   }
 

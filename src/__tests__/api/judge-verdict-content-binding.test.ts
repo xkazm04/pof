@@ -127,16 +127,17 @@ describe('judge verdict content binding — real write path vs real lab read pat
     expect(shown.status).toBe('pass');
   });
 
-  it('a headless/MCP-submitted step (NO _provenance stamp) also binds as CURRENT', async () => {
-    // The REAL `pof_submit_artifact` seam: `submitStepArtifact` persists `data` verbatim, so
-    // its rows carry no `_provenance` at all. Under the old rule these agreed by accident;
-    // they must keep agreeing now that the stamp is excluded at the single hash seam.
+  it('a headless-submitted step (now STAMPED by the one write door) also binds as CURRENT', async () => {
+    // The REAL headless seam: `submitStepArtifact` used to persist `data` verbatim (no
+    // `_provenance`, agreeing by accident). It now goes through the one write door, which
+    // stamps the row — the verdict must still bind CURRENT because the stamp is excluded at
+    // the single hash seam, exactly like the lab write above.
     const target = firstRegisteredStep();
     const produced = { probe: 'headless', threshold: 3 };
     submitStepArtifact(target.catalogId, target.entityId, target.step, produced, []);
 
     const stored = listArtifacts(target.catalogId, target.entityId).find((a) => a.step === target.step);
-    expect(stored?.data).not.toHaveProperty('_provenance');
+    expect(stored?.data._provenance).toEqual({ engine: 'unknown' });
 
     await expectOk(await postVerdict(req('/api/judge-verdicts', {
       catalogId: target.catalogId, entityId: target.entityId, step: target.step,

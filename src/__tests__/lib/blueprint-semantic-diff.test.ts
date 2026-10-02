@@ -321,3 +321,66 @@ describe('computeSemanticDiff — signature and flag fidelity', () => {
     expect(result.comparedDimensions.length).toBeGreaterThan(0);
   });
 });
+
+// ── One member model: the diff expects what the transpiler emits ────────────
+//
+// The expected C++ surface comes from `deriveCppSurface`, the same record
+// codegen renders from — so custom events and RepNotify handlers are expected
+// members (their ABSENCE is drift), and editor exposure means the Edit* family
+// only, the specifiers that actually put a property in the Details panel.
+
+describe('computeSemanticDiff — the surface codegen emits is the surface it expects', () => {
+  function cls(...members: string[]): string {
+    return [
+      'UCLASS()',
+      'class GAME_API ADoor : public AActor',
+      '{',
+      '  GENERATED_BODY()',
+      'public:',
+      ...members.map((m) => `  ${m}`),
+      '};',
+    ].join('\n');
+  }
+
+  it('reports a custom event the C++ does not declare as an added event', () => {
+    const result = computeSemanticDiff(
+      asset({
+        className: 'BP_Door',
+        parentClass: 'AActor',
+        eventGraph: {
+          name: 'EventGraph',
+          graphType: 'event',
+          nodes: [{ id: 'c1', type: 'K2Node_CustomEvent', name: 'OpenDoor', memberName: 'OpenDoor', pins: [], posX: 0, posY: 0 }],
+        },
+      }),
+      cls(),
+      'Game',
+    );
+    expect(result.changes.map((c) => ({ type: c.type, scope: c.scope, name: c.name }))).toEqual([
+      { type: 'add', scope: 'event', name: 'OpenDoor' },
+    ]);
+  });
+
+  it('reports ReplicatedUsing naming an OnRep handler the C++ never declares as a conflict', () => {
+    const result = computeSemanticDiff(
+      asset({ variables: [variable({ name: 'Hp', type: 'float', isReplicated: true, isRepNotify: true })] }),
+      cls('UPROPERTY(ReplicatedUsing = OnRep_Hp)', 'float Hp;'),
+      'Game',
+    );
+    const change = result.changes.find((c) => c.name === 'OnRep_Hp');
+    expect(change).toMatchObject({ name: 'OnRep_Hp', scope: 'function', type: 'add', conflictLevel: 'conflict' });
+    expect(result.overallConflict).toBe('conflict');
+  });
+
+  it('does not count BlueprintReadWrite as editor exposure', () => {
+    const result = computeSemanticDiff(
+      asset({ variables: [variable({ name: 'Speed', type: 'float', isExposedToEditor: true })] }),
+      cls('UPROPERTY(BlueprintReadWrite)', 'float Speed;'),
+      'Game',
+    );
+    const change = result.changes.find((c) => c.name === 'Speed');
+    expect(change?.type).toBe('modify');
+    expect(change?.scope).toBe('variable');
+    expect(change?.description).toMatch(/editor exposure/i);
+  });
+});

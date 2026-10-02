@@ -1,7 +1,10 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
+import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getStepComponent } from '@/components/layout-lab/steps';
+import { ArchetypeStep } from '@/components/layout-lab/steps/ArchetypeStep';
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { ITEM_STEP_NAMES, ITEM_STEP_SPECS } from '@/components/layout-lab/steps/itemsSteps';
 import { withGeneratedImages } from '@/components/layout-lab/steps/shared/assetHonesty';
 import { withItemFixCopy } from '@/components/layout-lab/steps/shared/itemFixCopy';
@@ -29,6 +32,14 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 const t = LAB_THEMES[0];
 const entity: LabEntity = { id: 'preview-1', name: 'Iron Longsword', lifecycle: 'planned', data: {} };
+
+/** 'Icon 2D Art' is REGISTRY-owned since 2026-09-29 (itemsLabelOwner): what the screen renders
+ *  for it is ArchetypeStep with the registered StepSpec, so that is what these captions are held on. */
+function IconOnScreen() {
+  expect(getStepComponent('items', 'Icon 2D Art')).toBeNull();
+  const spec = getCatalogPipeline('items')!.steps.find((s) => s.label === 'Icon 2D Art')!;
+  return <ArchetypeStep t={t} entity={entity} step="Icon 2D Art" spec={spec} catalogId="items" />;
+}
 
 function seedAll() {
   const byStep: Record<string, { done: boolean; data: Record<string, unknown>; ueAssets: string[]; at: string }> = {};
@@ -163,8 +174,7 @@ describe('bespoke Items preview panels name what they are showing', () => {
   it('the Icon 2D Art "Selected" panel carries the honest asset caption', () => {
     vi.stubGlobal('fetch', iconFetch([]));
     seedAll();
-    const Step = getStepComponent('items', 'Icon 2D Art')!;
-    render(<Step t={t} entity={entity} step="Icon 2D Art" />);
+    render(<IconOnScreen />);
     const caption = screen.getByTestId('gallery-selected-caption').textContent ?? '';
     // With no generated art in the manifest the panel must say so, not render a bare tile.
     expect(caption).toContain('not the generated asset');
@@ -183,8 +193,7 @@ describe('bespoke Items preview panels name what they are showing', () => {
           selectedId: 'b0-c0' },
       },
     } } } });
-    const Step = getStepComponent('items', 'Icon 2D Art')!;
-    render(<Step t={t} entity={entity} step="Icon 2D Art" />);
+    render(<IconOnScreen />);
     await waitFor(() => {
       expect(screen.getByTestId('gallery-selected-caption').textContent ?? '').toContain('items_icon_2d_art.jpg');
     });
@@ -255,22 +264,23 @@ describe('a judge-flipped bespoke step keeps its explanation AND its Produce-fix
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-  it('STATIC step (Concept Brief, llm-panel FAIL)', async () => {
+  // (Concept Brief was the static case until it became registry-owned on 2026-09-29.)
+  it('STATIC step (Attributes, llm-panel FAIL)', async () => {
     vi.stubGlobal('fetch', iconFetch([], [{
-      catalogId: 'items', entityId: entity.id, step: 'Concept Brief', judge: 'llm-panel', verdict: 'fail',
+      catalogId: 'items', entityId: entity.id, step: 'Attributes', judge: 'llm-panel', verdict: 'fail',
       score: 38, findings: 'generic filler prose', model: 'sonnet', rubricVersion: RUBRIC_VERSION,
     }]));
     seedAll();
-    const Step = getStepComponent('items', 'Concept Brief')!;
-    render(<Step t={t} entity={entity} step="Concept Brief" />);
+    const Step = getStepComponent('items', 'Attributes')!;
+    render(<Step t={t} entity={entity} step="Attributes" />);
     await waitFor(() => {
       expect(screen.getByTestId('acceptance-banner').getAttribute('data-status')).toBe('fail');
     });
     const why = screen.getByTestId('acceptance-explanation').textContent ?? '';
-    // The explanation names the JUDGE's own reason — the bespoke `briefCopy` is authored for
-    // a checker failure and would call a 300+ char brief "too short".
+    // The explanation names the JUDGE's own reason — the bespoke `attributesCopy` is authored
+    // for a checker failure and would claim attributes are "still missing".
     expect(why).toContain('generic filler prose');
-    expect(why).not.toContain('too short');
+    expect(why).not.toContain('still missing');
     expect(screen.getByTestId('acceptance-produce-fix')).toBeTruthy();
   });
 

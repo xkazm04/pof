@@ -190,6 +190,49 @@ export interface StringTable {
   rows: StringTableRow[];
 }
 
+/** How a string literal is used in C++ source (the extractor's classification). */
+export type StringUsage = 'hardcoded' | 'ftext_fromstring' | 'nsloctext' | 'loctext';
+
+/**
+ * One user-facing string literal found in C++ text, with its real location. The single
+ * input shape of the scanner and its hazard rules - real project files and the demo
+ * corpus both arrive as units.
+ */
+export interface RawStringUnit {
+  text: string;
+  usage: StringUsage;
+  /** POSIX path relative to the project root, e.g. `Source/Game/UI/WBP_Menu.cpp`. */
+  filePath: string;
+  /** 1-based line of the literal. */
+  line: number;
+  /** 1-based column of the literal's opening quote. */
+  column: number;
+  /** The trimmed source line holding the literal. */
+  snippet: string;
+  /** Code left of the literal on its line (LHS / setter call) - what the context detector reads. */
+  identifierHint: string;
+  /** LOCTEXT / NSLOCTEXT namespace and key, when the literal is already localized. */
+  namespace?: string;
+  key?: string;
+  /** A declared context (demo corpus only); real units derive theirs from identifierHint. */
+  declaredContext?: StringContext;
+}
+
+/** Why a literal the extractor saw is not a localizable unit. */
+export type ExcludedLiteralClass = 'log' | 'loc-key' | 'include' | 'metadata' | 'fragment' | 'unclassified';
+
+/** Where the scanned strings came from - a scan reports what it read, never claims it. */
+export interface ScanProvenance {
+  kind: 'project' | 'fixture';
+  /** The project root whose Source/ was read; null for the demo corpus. */
+  root: string | null;
+  filesScanned: number;
+  literalsSeen: number;
+  excluded: Partial<Record<ExcludedLiteralClass, number>>;
+  /** True when a file/byte cap stopped the walk early. */
+  truncated: boolean;
+}
+
 /** Scan results from analyzing generated code */
 export interface ScanResult {
   totalFilesScanned: number;

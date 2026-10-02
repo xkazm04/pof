@@ -3,12 +3,13 @@
  * triggers project re-scans on source file changes, and auto-verifies
  * checklist items using semantic C++ header parsing.
  *
- * When a class declaration is detected, the watcher calls the
- * verify-semantic API to check whether the class has the expected
- * members. Items are marked as:
- *   - true (green) when semantic verification returns 'full'
- *   - true + verification='partial' (yellow) when class exists but incomplete
- *   - not checked when the class is a hollow stub
+ * Which items a changed class can verify comes from the expectation table
+ * (`resolveAffectedItems`, src/lib/checklist-verify-index.ts) — module-scoped,
+ * never a bare-name match. The watcher POSTs those {moduleId, itemId} items to
+ * verify-semantic and writes ONLY from its verdict:
+ *   - 'full' / 'partial' → verification recorded + item ticked
+ *   - 'stub' / 'missing' → verification recorded, no tick
+ *   - request failed (non-ok, success:false, network) → nothing written (logged)
  */
 
 'use client';
@@ -16,13 +17,12 @@
 import { useRef, useCallback, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
-import { SUB_MODULE_MAP } from '@/lib/module-registry';
-import { getExpectationsForItem } from '@/lib/checklist-expectations';
+import { resolveAffectedItems, type VerifyTarget } from '@/lib/checklist-verify-index';
 import { createLifecycle } from '@/lib/lifecycle';
 import { useLifecycle } from '@/hooks/useLifecycle';
+import { logger } from '@/lib/logger';
 import type { FileChangeEvent, ScannedDeclaration } from '@/lib/file-watcher';
-import type { VerificationInfo } from '@/stores/moduleStore';
-import type { SubModuleId } from '@/types/modules';
+import type { VerificationInfo, VerificationStatus } from '@/stores/moduleStore';
 
 interface WatcherStatus {
   connected: boolean;
@@ -31,28 +31,60 @@ interface WatcherStatus {
   changeCount: number;
 }
 
-/**
- * Build a map of class name patterns → { subModuleId, checklistItemId }
- * from checklist item labels and descriptions.
- */
-function buildVerificationMap(): Map<string, { subModuleId: string; itemId: string }> {
-  const map = new Map<string, { subModuleId: string; itemId: string }>();
+interface VerifyResult {
+  moduleId?: string;
+  itemId: string;
+  status: VerificationStatus | 'no-expectations';
+  completeness: number;
+  missingMembers: string[];
+}
 
-  for (const [moduleId, mod] of Object.entries(SUB_MODULE_MAP)) {
-    const checklist = mod.checklist ?? [];
-    for (const item of checklist) {
-      const text = `${item.label} ${item.description}`;
-      const classMatches = text.match(/\b[AUFE][A-Z]\w{2,}/g);
-      if (classMatches) {
-        for (const className of classMatches) {
-          if (className.length < 5) continue;
-          map.set(className, { subModuleId: moduleId, itemId: item.id });
-        }
-      }
+const RECORDED: ReadonlySet<string> = new Set<VerificationStatus>(['full', 'partial', 'stub', 'missing']);
+const TICKS: ReadonlySet<string> = new Set<VerificationStatus>(['full', 'partial']);
+
+/**
+ * Verify module-scoped items via verify-semantic and record the verdicts.
+ * Any failure is a non-event: nothing is ticked or recorded.
+ */
+async function semanticVerify(items: VerifyTarget[], projectPath: string): Promise<void> {
+  let data: { success?: boolean; error?: string; data?: { results?: VerifyResult[]; unreadable?: string[] } };
+  try {
+    const res = await fetch('/api/filesystem/verify-semantic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectPath, items: items.map(({ moduleId, itemId }) => ({ moduleId, itemId })) }),
+    });
+    if (!res.ok) {
+      logger.warn(`[useFileWatcher] verify-semantic answered ${res.status}; no checklist writes`);
+      return;
     }
+    data = await res.json();
+  } catch (err) {
+    logger.warn('[useFileWatcher] verify-semantic failed; no checklist writes', err);
+    return;
+  }
+  if (!data.success || !data.data?.results) {
+    logger.warn(`[useFileWatcher] verify-semantic refused: ${data.error ?? 'no results'}; no checklist writes`);
+    return;
+  }
+  if (data.data.unreadable?.length) {
+    logger.warn('[useFileWatcher] verify-semantic could not read', data.data.unreadable);
   }
 
-  return map;
+  const asked = new Map(items.map((i) => [`${i.moduleId}::${i.itemId}`, i]));
+  const { setChecklistItem, setVerification } = useModuleStore.getState();
+  for (const result of data.data.results) {
+    const item = asked.get(`${result.moduleId}::${result.itemId}`);
+    if (!item || !RECORDED.has(result.status)) continue;
+    const verification: VerificationInfo = {
+      status: result.status as VerificationStatus,
+      completeness: result.completeness,
+      missingMembers: result.missingMembers ?? [],
+      verifiedAt: Date.now(),
+    };
+    setVerification(item.moduleId, item.itemId, verification);
+    if (TICKS.has(result.status)) setChecklistItem(item.moduleId, item.itemId, true);
+  }
 }
 
 export function useFileWatcher(): WatcherStatus {
@@ -65,113 +97,14 @@ export function useFileWatcher(): WatcherStatus {
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const verificationMapRef = useRef<Map<string, { subModuleId: string; itemId: string }> | null>(null);
 
-  const getVerificationMap = useCallback(() => {
-    if (!verificationMapRef.current) {
-      verificationMapRef.current = buildVerificationMap();
-    }
-    return verificationMapRef.current;
-  }, []);
-
-  /**
-   * Run semantic verification for detected items via the API,
-   * then update both progress and verification state.
-   */
-  const semanticVerify = useCallback(async (
-    detectedItems: { subModuleId: string; itemId: string }[],
-    currentProjectPath: string,
-  ) => {
-    // Deduplicate
-    const unique = new Map<string, { subModuleId: string; itemId: string }>();
-    for (const item of detectedItems) {
-      unique.set(`${item.subModuleId}::${item.itemId}`, item);
-    }
-
-    // Split by whether they have semantic expectations
-    const withExpectations = [...unique.values()].filter(
-      (item) => getExpectationsForItem(item.itemId) !== null,
-    );
-    const withoutExpectations = [...unique.values()].filter(
-      (item) => getExpectationsForItem(item.itemId) === null,
-    );
-
-    const { setChecklistItem, setVerification } = useModuleStore.getState();
-
-    // Items without expectations: name-match auto-verify (backward-compatible)
-    for (const item of withoutExpectations) {
-      setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
-    }
-
-    if (withExpectations.length === 0) return;
-
-    // Call semantic verification API
-    try {
-      const res = await fetch('/api/filesystem/verify-semantic', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectPath: currentProjectPath,
-          items: withExpectations.map((i) => ({ itemId: i.itemId })),
-        }),
-      });
-
-      if (!res.ok) {
-        // Fallback: name-match only
-        for (const item of withExpectations) {
-          setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
-        }
-        return;
-      }
-
-      const data = await res.json();
-      if (!data.success) return;
-
-      for (const result of data.data.results) {
-        const item = withExpectations.find((i) => i.itemId === result.itemId);
-        if (!item) continue;
-
-        const verification: VerificationInfo = {
-          status: result.status,
-          completeness: result.completeness,
-          missingMembers: result.missingMembers,
-          verifiedAt: Date.now(),
-        };
-
-        setVerification(item.subModuleId as SubModuleId, item.itemId, verification);
-
-        if (result.status === 'full') {
-          setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
-        } else if (result.status === 'partial') {
-          // Mark as checked but verification shows it's partial
-          setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
-        }
-        // 'stub' and 'missing' — don't auto-check (avoids false positives)
-      }
-    } catch {
-      // On network failure, fall back to name-match
-      for (const item of withExpectations) {
-        setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
-      }
-    }
-  }, []);
-
-  // Auto-verify checklist items based on detected declarations
+  // Auto-verify the items whose expectation names a changed class
   const autoVerify = useCallback((declarations: ScannedDeclaration[]) => {
-    const vMap = getVerificationMap();
-    const detected: { subModuleId: string; itemId: string }[] = [];
-
-    for (const decl of declarations) {
-      const match = vMap.get(decl.name);
-      if (match) {
-        detected.push(match);
-      }
+    const items = resolveAffectedItems(declarations);
+    if (items.length > 0 && projectPath) {
+      void semanticVerify(items, projectPath);
     }
-
-    if (detected.length > 0 && projectPath) {
-      semanticVerify(detected, projectPath);
-    }
-  }, [getVerificationMap, projectPath, semanticVerify]);
+  }, [projectPath]);
 
   // Handle incoming change events
   const handleChanges = useCallback((events: FileChangeEvent[]) => {

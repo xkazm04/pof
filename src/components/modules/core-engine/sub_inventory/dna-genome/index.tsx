@@ -49,7 +49,11 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
   const storeUpdateGenome = useItemGenomeStore((s) => s.updateGenome);
   const storeImportGenome = useItemGenomeStore((s) => s.importGenome);
   const storeDuplicateGenome = useItemGenomeStore((s) => s.duplicateGenome);
-  const storeBreedSelected = useItemGenomeStore((s) => s.breedSelected);
+  const breedPreview = useItemGenomeStore((s) => s.breedPreview);
+  const previewBreed = useItemGenomeStore((s) => s.previewBreed);
+  const rerollBreed = useItemGenomeStore((s) => s.rerollBreed);
+  const keepBreed = useItemGenomeStore((s) => s.keepBreed);
+  const discardBreed = useItemGenomeStore((s) => s.discardBreed);
   const storeEvolveById = useItemGenomeStore((s) => s.evolveById);
   const storeResetToPresets = useItemGenomeStore((s) => s.resetToPresets);
 
@@ -111,10 +115,6 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
     const result = rollAffixesWithDNA(selected, rollRarity, rollLevel, DEMO_AFFIX_POOL);
     setRollResult(result);
   }, [selected, rollRarity, rollLevel]);
-
-  const doBreed = useCallback(() => {
-    storeBreedSelected();
-  }, [storeBreedSelected]);
 
   const doEvolve = useCallback(() => {
     if (!selected) return;
@@ -204,7 +204,11 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
           breedParentB={breedParentB}
           setBreedParentA={setBreedParentA}
           setBreedParentB={setBreedParentB}
-          doBreed={doBreed}
+          breedPreview={breedPreview}
+          onPreview={previewBreed}
+          onReroll={rerollBreed}
+          onKeep={keepBreed}
+          onDiscard={discardBreed}
         />
       )}
 

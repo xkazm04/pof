@@ -1,17 +1,18 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import {
-  AlertTriangle, TrendingUp, Shield, Scale,
-  Heart, Swords, Crosshair, Timer, Activity,
+  AlertTriangle, TrendingUp, Scale, Swords, Crosshair, Activity,
 } from 'lucide-react';
 import {
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_VIOLET,
-  STATUS_ERROR, STATUS_WARNING, OPACITY_15,
+  STATUS_ERROR, STATUS_WARNING,
 } from '@/lib/chart-colors';
 import {
   ACCENT, ENCOUNTER_COLORS, SENS_COLORS,
-  survivalColor, type BalanceReport,
+  survivalColor, type BalanceReport, type HeatmapCell,
 } from './data';
+import type { SweepCellRef, SweepDiff } from '@/lib/combat/sweep-tuning';
 import { GlowStat } from './design';
 import { Section } from './Section';
 import { SurvivalHeatmap } from './SurvivalHeatmap';
@@ -22,12 +23,24 @@ import { AlertBadges } from './AlertBadges';
 import { CanonChecksPanel } from './CanonChecksPanel';
 import { EnemySourcePanel } from './EnemySourcePanel';
 
-export function ResultsPanel({ report, levels, enemyLabels }: {
+/**
+ * A finished sweep, rendered from the report ALONE (its own levels, encounters
+ * and mid-level) — never from the live config, which may have changed since.
+ * The tuning props are optional: a selectable heatmap, a slot for the tuner,
+ * and the diff bar shown after an Apply.
+ */
+export function ResultsPanel({ report, diff, diffBar, selectedCell, onSelectCell, tuner }: {
   report: BalanceReport;
-  levels: number[];
-  enemyLabels: string[];
+  /** Per-cell deltas against the run before the last Apply. */
+  diff?: SweepDiff | null;
+  /** Rendered under the summary (the Apply/Undo bar). */
+  diffBar?: ReactNode;
+  selectedCell?: SweepCellRef | null;
+  onSelectCell?: (cell: HeatmapCell) => void;
+  /** Rendered under the heatmap (the cell tuner). */
+  tuner?: ReactNode;
 }) {
-  const midLevel = Math.floor((levels[0] + levels[levels.length - 1]) / 2);
+  const { midLevel } = report;
   const midCells = report.heatmap.filter(c => c.playerLevel === midLevel);
   const avg = (fn: (c: typeof midCells[0]) => number) =>
     midCells.length > 0 ? midCells.reduce((s, c) => s + fn(c), 0) / midCells.length : 0;
@@ -48,12 +61,14 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
         <span className="text-text-muted ml-2 opacity-60">({report.durationMs}ms)</span>
       </div>
 
+      {diffBar}
+
       {/* Which enemies these numbers actually describe */}
       <EnemySourcePanel provenance={report.enemySource} />
 
       {/* Stat badges */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        <GlowStat label="Survival" value={`${(avgSurv * 100).toFixed(0)}%`}
+        <GlowStat label={`Survival Lv.${midLevel}`} value={`${(avgSurv * 100).toFixed(0)}%`}
           color={survivalColor(avgSurv)} delay={0} />
         <GlowStat label="Avg TTK" value={avgTTK.toFixed(1)} unit="s"
           color={ACCENT_CYAN} delay={0.05} />
@@ -68,7 +83,10 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
       {/* Survival Heatmap */}
       <Section title="Survival Heatmap — Level x Encounter" icon={Crosshair}
         color={ACCENT} defaultOpen>
-        <SurvivalHeatmap cells={report.heatmap} levels={levels} enemies={enemyLabels} />
+        <div className="space-y-2">
+          <SurvivalHeatmap report={report} diff={diff} selected={selectedCell} onSelect={onSelectCell} />
+          {tuner}
+        </div>
       </Section>
 
       {/* Survival Curves */}

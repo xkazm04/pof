@@ -2,7 +2,8 @@
  * PoF Bridge HTTP Client
  *
  * Communicates with the PillarsOfFortuneBridge UE5 companion plugin over HTTP.
- * All methods return Result<T, string> for explicit success/failure handling.
+ * All methods return BridgeRequestResult<T>: a `Result<T, string>` whose failure
+ * also carries the transport verdict as fields (kind, reachable, indeterminate, status).
  *
  * PoF Bridge API reference:
  *   GET  /pof/status                — plugin status & version
@@ -18,9 +19,8 @@
  *   GET  /pof/compile/status        — get current compile status
  */
 
-import { type Result } from '@/types/result';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { bridgeRequest } from '@/lib/ue5-bridge/shared';
+import { bridgeRequest, type BridgeRequestResult } from '@/lib/ue5-bridge/shared';
 import type {
   PofBridgeStatus,
   AssetManifest,
@@ -53,7 +53,7 @@ export class PofBridgeClient {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: unknown,
-  ): Promise<Result<T, string>> {
+  ): Promise<BridgeRequestResult<T>> {
     return bridgeRequest<T>(this.baseUrl, {
       method,
       path,
@@ -68,29 +68,29 @@ export class PofBridgeClient {
   // ── Public API ────────────────────────────────────────────────────────────
 
   /** Ping the PoF Bridge plugin and return status info. */
-  async getStatus(): Promise<Result<PofBridgeStatus, string>> {
+  async getStatus(): Promise<BridgeRequestResult<PofBridgeStatus>> {
     return this.request<PofBridgeStatus>('GET', '/pof/status');
   }
 
   /** Fetch the full asset manifest, or just the checksum for change detection. */
-  async getManifest(checksumOnly?: boolean): Promise<Result<AssetManifest, string>> {
+  async getManifest(checksumOnly?: boolean): Promise<BridgeRequestResult<AssetManifest>> {
     const path = checksumOnly ? '/pof/manifest?checksum-only=true' : '/pof/manifest';
     return this.request<AssetManifest>('GET', path);
   }
 
   /** Fetch a single blueprint entry by asset path. */
-  async getBlueprint(assetPath: string): Promise<Result<BlueprintEntry, string>> {
+  async getBlueprint(assetPath: string): Promise<BridgeRequestResult<BlueprintEntry>> {
     const encoded = encodeURIComponent(assetPath);
     return this.request<BlueprintEntry>('GET', `/pof/manifest/blueprint?path=${encoded}`);
   }
 
   /** Submit a test spec for execution in the UE5 editor. */
-  async runTest(spec: PofTestSpec): Promise<Result<PofTestResult, string>> {
+  async runTest(spec: PofTestSpec): Promise<BridgeRequestResult<PofTestResult>> {
     return this.request<PofTestResult>('POST', '/pof/test/run', spec);
   }
 
   /** Retrieve test results. If testId is provided, returns a single result. */
-  async getTestResults(testId?: string): Promise<Result<PofTestResult | PofTestResult[], string>> {
+  async getTestResults(testId?: string): Promise<BridgeRequestResult<PofTestResult | PofTestResult[]>> {
     const path = testId ? `/pof/test/results/${encodeURIComponent(testId)}` : '/pof/test/results';
     return this.request<PofTestResult | PofTestResult[]>('GET', path);
   }
@@ -99,37 +99,39 @@ export class PofBridgeClient {
   async runAutomationTests(
     filter: string,
     flags?: string[],
-  ): Promise<Result<PofTestResult[], string>> {
+  ): Promise<BridgeRequestResult<PofTestResult[]>> {
     return this.request<PofTestResult[]>('POST', '/pof/test/run-automation', {
       filter,
       flags: flags ?? [],
     });
   }
 
-  /** Capture snapshots for the specified camera presets. */
-  async captureSnapshots(
-    req: PofSnapshotCaptureRequest,
-  ): Promise<Result<PofSnapshotDiffReport, string>> {
-    return this.request<PofSnapshotDiffReport>('POST', '/pof/snapshot/capture', req);
+  /**
+   * Capture snapshots for the specified camera presets. The plugin answers an async
+   * ack (`{ accepted, presetIds }`), not a diff report: read the reply with
+   * `normalizeCaptureReply` (`snapshot-review.ts`) and the report via {@link getSnapshotDiff}.
+   */
+  async captureSnapshots(req: PofSnapshotCaptureRequest): Promise<BridgeRequestResult<unknown>> {
+    return this.request<unknown>('POST', '/pof/snapshot/capture', req);
   }
 
   /** Save current captures as baseline for the specified presets. */
-  async saveBaseline(presetIds: string[]): Promise<Result<{ saved: number }, string>> {
+  async saveBaseline(presetIds: string[]): Promise<BridgeRequestResult<{ saved: number }>> {
     return this.request<{ saved: number }>('POST', '/pof/snapshot/baseline', { presetIds });
   }
 
   /** Get the latest snapshot diff report. */
-  async getSnapshotDiff(): Promise<Result<PofSnapshotDiffReport, string>> {
+  async getSnapshotDiff(): Promise<BridgeRequestResult<PofSnapshotDiffReport>> {
     return this.request<PofSnapshotDiffReport>('GET', '/pof/snapshot/diff');
   }
 
   /** Trigger a live coding compile (hot-reload). */
-  async triggerLiveCoding(req?: PofCompileRequest): Promise<Result<PofCompileResult, string>> {
+  async triggerLiveCoding(req?: PofCompileRequest): Promise<BridgeRequestResult<PofCompileResult>> {
     return this.request<PofCompileResult>('POST', '/pof/compile/live', req ?? {});
   }
 
   /** Poll the current compile status. */
-  async getCompileStatus(): Promise<Result<PofCompileStatus, string>> {
+  async getCompileStatus(): Promise<BridgeRequestResult<PofCompileStatus>> {
     return this.request<PofCompileStatus>('GET', '/pof/compile/status');
   }
 }

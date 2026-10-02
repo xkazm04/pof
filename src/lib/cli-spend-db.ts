@@ -18,6 +18,8 @@ import type {
   SpendDashboard,
   TaskTypeEstimate,
 } from '@/types/cli-spend';
+import { dayKey, monthKey } from '@/lib/analytics/report-window';
+import { budgetPeriods, ENFORCED_BUDGET_ZONE } from '@/lib/cli-spend/budgetPreview';
 
 // ── Schema bootstrap ─────────────────────────────────────────────────────────
 
@@ -176,9 +178,11 @@ function sumCostForPrefix(prefix: string, len: number): number {
 export function getBudgetStatus(): BudgetStatus {
   ensureCliSpendTables();
   const config = getBudgetConfig();
-  const nowIso = new Date().toISOString();
-  const today = nowIso.slice(0, 10); // YYYY-MM-DD
-  const month = nowIso.slice(0, 7); // YYYY-MM
+  // One clock read; the summed prefixes and the echoed windows come from the same
+  // report-window keys in the enforced zone, so the UI's period IS the enforced one.
+  const now = new Date();
+  const today = dayKey(now, ENFORCED_BUDGET_ZONE); // YYYY-MM-DD
+  const month = monthKey(now, ENFORCED_BUDGET_ZONE); // YYYY-MM
 
   const todaySpendUsd = sumCostForPrefix(today, 10);
   const monthSpendUsd = sumCostForPrefix(month, 7);
@@ -202,6 +206,7 @@ export function getBudgetStatus(): BudgetStatus {
     monthlyPct,
     dailyExceeded: dailyRemainingUsd != null && dailyRemainingUsd < 0,
     monthlyExceeded: monthlyRemainingUsd != null && monthlyRemainingUsd < 0,
+    periods: budgetPeriods(now, ENFORCED_BUDGET_ZONE),
   };
 }
 

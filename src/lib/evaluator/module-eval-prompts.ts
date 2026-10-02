@@ -27,6 +27,17 @@ export const PASS_LABELS: Record<EvalPass, string> = {
   'combat-trace': 'Combat Trace',
 };
 
+/**
+ * Every pass there is, in one place: the keys of the exhaustive PASS_LABELS.
+ * The import route's zod enums, the eval_findings CHECK (scan-findings-db.ts)
+ * and the Scan tab all derive from this — never hand-list the passes again.
+ */
+export const EVAL_PASS_VOCABULARY = Object.keys(PASS_LABELS) as [EvalPass, ...EvalPass[]];
+
+export function isEvalPass(value: unknown): value is EvalPass {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(PASS_LABELS, value);
+}
+
 // ─── Finding output schema (shared across all prompts) ───────────────────────
 
 const FINDING_SCHEMA = `Output ONLY a JSON array of findings. Each finding:

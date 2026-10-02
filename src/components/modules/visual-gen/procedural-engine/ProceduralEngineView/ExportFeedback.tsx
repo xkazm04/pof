@@ -1,8 +1,9 @@
-export function ExportFeedback({ isExporting, result, error }: {
-  isExporting: boolean;
-  result: string | null;
-  error: string | null;
-}) {
+import type { ExportState } from '../useProceduralStore';
+
+/** One generator's export outcome; `null` = nothing exported from this generator yet. */
+export function ExportFeedback({ feedback }: { feedback: ExportState | null }) {
+  if (!feedback) return null;
+  const { isExporting, exportResult: result, exportError: error } = feedback;
   if (isExporting) {
     return (
       <div className="text-xs text-amber-400 bg-amber-500/5 rounded px-2 py-1.5 animate-pulse">

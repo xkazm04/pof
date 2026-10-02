@@ -207,41 +207,74 @@ export function extractAllCallbackPayloads(text: string): { callbackId: string; 
 }
 
 /**
- * Resolve a callback: parse the payload, merge static fields, POST to the URL.
- * Returns the API response. Removes the callback from the registry on success.
+ * The ids of every `@@CALLBACK:<id>` marker a prompt asks Claude to emit, in order,
+ * de-duplicated. The terminal declares the matching registry descriptors with the
+ * query POST so the server that owns the run can settle them (run-callbacks.ts).
  */
-export async function resolveCallback(
-  callbackId: string,
+export function callbackIdsIn(prompt: string): string[] {
+  const ids = [...prompt.matchAll(/@@CALLBACK:(\S+)/g)].map((m) => m[1]);
+  return [...new Set(ids)];
+}
+
+/** Outcome of one callback POST. */
+export type CallbackPostResult = { success: boolean; error?: string; data?: unknown };
+
+/**
+ * Parse a marker's raw payload and merge the descriptor's static fields over it
+ * (they take precedence — prevents prompt injection overriding moduleId etc.).
+ * The one merge rule, shared by the client Resubmit path and the server settlement.
+ */
+export function mergeCallbackBody(
+  staticFields: Record<string, unknown>,
   rawPayload: string,
-): Promise<{ success: boolean; error?: string; data?: unknown }> {
-  const cb = _callbackRegistry.get(callbackId);
-  if (!cb) return { success: false, error: `Unknown callback: ${callbackId}` };
-
-  let parsed: Record<string, unknown>;
+): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
   try {
-    parsed = JSON.parse(rawPayload);
+    const parsed = JSON.parse(rawPayload) as Record<string, unknown>;
+    return { ok: true, body: { ...parsed, ...staticFields } };
   } catch {
-    return { success: false, error: 'Invalid JSON in callback payload' };
+    return { ok: false, error: 'Invalid JSON in callback payload' };
   }
+}
 
-  // Merge static fields (they take precedence — prevents prompt injection overriding moduleId etc.)
-  const body = { ...parsed, ...cb.staticFields };
-
+/** POST (or PATCH) one merged callback body and read the `{ success }` API envelope. */
+export async function postCallbackBody(
+  req: { url: string; method: TaskCallback['method']; body: Record<string, unknown> },
+  signal?: AbortSignal,
+): Promise<CallbackPostResult> {
   try {
-    const res = await fetch(cb.url, {
-      method: cb.method,
+    const res = await fetch(req.url, {
+      method: req.method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(req.body),
+      ...(signal ? { signal } : {}),
     });
     const json = await res.json();
-    if (json.success) {
-      _callbackRegistry.delete(callbackId);
-      return { success: true, data: json.data };
-    }
+    if (json.success) return { success: true, data: json.data };
     return { success: false, error: json.error || 'API returned failure' };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Network error' };
   }
+}
+
+/**
+ * Resolve a callback from the CLIENT registry: parse the payload, merge static
+ * fields, POST to the URL. Terminal runs are settled server-side (run-callbacks.ts);
+ * this remains for the host's Resubmit of a failed payload and for server routes
+ * that registered their own callbacks. Removes the callback from the registry on success.
+ */
+export async function resolveCallback(
+  callbackId: string,
+  rawPayload: string,
+): Promise<CallbackPostResult> {
+  const cb = _callbackRegistry.get(callbackId);
+  if (!cb) return { success: false, error: `Unknown callback: ${callbackId}` };
+
+  const merged = mergeCallbackBody(cb.staticFields, rawPayload);
+  if (!merged.ok) return { success: false, error: merged.error };
+
+  const out = await postCallbackBody({ url: cb.url, method: cb.method, body: merged.body });
+  if (out.success) _callbackRegistry.delete(callbackId);
+  return out;
 }
 
 // ── Task types ──────────────────────────────────────────────────────────────
@@ -465,15 +498,17 @@ export interface GenerateGasEffectsTask extends CLITask {
 }
 
 /**
- * Run-AI-tests task — builds + runs the suite's UE automation tests, then
- * writes per-scenario pass/fail/error results back to /api/ai-testing via
- * @@CALLBACK so scenario statuses, the pass-rate ring, and Last Run Output
- * reflect real runs.
+ * Run-AI-tests task — builds + runs the suite's UE automation tests in one boot
+ * that writes UE's report to `aiTestReportDir(projectPath, runId)`; the @@CALLBACK
+ * (staticFields runId/reportDir/scenarioIds) makes /api/ai-testing grade every
+ * scenario from that report — the CLI's own status is kept only as a note.
  */
 export interface RunAITestsTask extends CLITask {
   type: 'run-ai-tests';
   suite: TestSuite;
   appOrigin: string;
+  /** App-chosen run id (`newAiTestRunId()`): names the report dir UE writes and the app grades from. */
+  runId: string;
 }
 
 /**
@@ -571,7 +606,12 @@ export function materialConfiguratorVariantKey(config: MaterialConfiguratorConfi
       return `${k}=${p.name}:${p.defaultValue}:${p.min}:${p.max}:${p.step}`;
     })
     .join('|');
-  const shape = `${config.outputType}|${config.surfaceType}|${[...config.features].sort().join(',')}|${params}`;
+  // A live parent (absent = the key is unchanged) — its path and the parameter set the prompt names.
+  const pm = config.parentMaterial;
+  const parent = pm
+    ? `|parent=${pm.path}:${[pm.scalars.map((s) => s.name), pm.vectors, pm.textures, pm.switches].map((n) => n.join(',')).join(':')}`
+    : '';
+  const shape = `${config.outputType}|${config.surfaceType}|${[...config.features].sort().join(',')}|${params}${parent}`;
   return `material-configurator::${config.outputType}::${config.surfaceType}::${fnv1a(shape)}`;
 }
 
@@ -957,10 +997,10 @@ export const TaskFactory = {
     };
   },
 
-  /** Create a run-ai-tests task — runs the suite's automation tests and writes
-   *  per-scenario results back to /api/ai-testing via callback. */
-  runAITests(moduleId: SubModuleId, suite: TestSuite, appOrigin: string, label: string): RunAITestsTask {
-    return { type: 'run-ai-tests', moduleId, prompt: '', label, suite, appOrigin };
+  /** Create a run-ai-tests task — runs the suite's automation tests into the run's
+   *  report dir; the callback makes /api/ai-testing grade every scenario from UE's report. */
+  runAITests(moduleId: SubModuleId, suite: TestSuite, appOrigin: string, label: string, runId: string): RunAITestsTask {
+    return { type: 'run-ai-tests', moduleId, prompt: '', label, suite, appOrigin, runId };
   },
 
   /** Create a detect-stimuli task — parses a scenario description into

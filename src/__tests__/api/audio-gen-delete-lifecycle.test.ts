@@ -1,4 +1,12 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+
+// Own throwaway DB (and so its own `<dir>/audio` clip root) rather than the shared floor
+// DB: audio persistence now goes through `getDb()`, and one more writer on the shared file
+// is one more contender for its WAL. See audio-db-containment.test.ts.
+vi.hoisted(() => {
+  const dir = process.env.TEMP || process.env.TMPDIR || '/tmp';
+  process.env.POF_DB_PATH = `${dir}/pof-vitest/audio-gen-delete-lifecycle-${process.pid}/pof.db`;
+});
 import { NextRequest } from 'next/server';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,22 +1,14 @@
 'use client';
 
 import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   STATUS_SUBDUED,
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
 import type { HeatmapCell } from '@/types/unique-tab-improvements';
+import type { ThreadId } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
 
 export const ACCENT = ACCENT_ORANGE;
-
-/* -- Budget Gauges --------------------------------------------------------- */
-
-export const INITIAL_BUDGETS = [
-  { label: 'TICK_BUDGET', current: 11.2, target: 16.0, unit: 'ms' },
-  { label: 'DRAW_CALLS', current: 1640, target: 2000, unit: '' },
-  { label: 'VRAM_ALLOC', current: 380, target: 512, unit: 'MB' },
-  { label: 'ACTIVE_ACTORS', current: 720, target: 1000, unit: '' },
-];
 
 /* -- Debug Commands (legacy compact list) ---------------------------------- */
 
@@ -27,20 +19,6 @@ export const DEBUG_COMMANDS = [
   { syntax: 'spawn <type>', description: 'Spawn enemy at cursor location' },
   { syntax: 'killall', description: 'Purge all active enemies in cell' },
 ];
-
-/* -- Optimizations --------------------------------------------------------- */
-
-export type EffortLevel = 'Small' | 'Medium' | 'Large';
-export type ImpactLevel = 'High' | 'Medium' | 'Low';
-
-export const OPTIMIZATIONS: { title: string; featureName: string; effort: EffortLevel; impact: ImpactLevel; description: string }[] = [
-  { title: 'Object Pooling Init', featureName: 'Object pooling', effort: 'Medium', impact: 'High', description: 'Pre-allocate projectiles, VFX actors, and floating text.' },
-  { title: 'Tick Optimization', featureName: 'Tick optimization', effort: 'Small', impact: 'High', description: 'Throttle tick on idle actors; move to timer delegates.' },
-  { title: 'Async Asset Streaming', featureName: 'Async asset loading', effort: 'Large', impact: 'Medium', description: 'Stream level chunks to avoid main thread hitches.' },
-];
-
-export const EFFORT_COLORS: Record<EffortLevel, string> = { Small: ACCENT_EMERALD, Medium: STATUS_WARNING, Large: STATUS_ERROR };
-export const IMPACT_COLORS: Record<ImpactLevel, string> = { High: STATUS_SUCCESS, Medium: STATUS_WARNING, Low: STATUS_SUBDUED };
 
 export const FEATURE_NAMES = [
   'Structured logging', 'Debug draw helpers', 'Debug console commands',
@@ -78,32 +56,10 @@ export const HEALTH_MATRIX_CELLS: HeatmapCell[] = [
   { row: 5, col: 3, value: 0.25, tooltip: 'Audio Memory: 25% — low' },
 ];
 
-/* -- 12.2 Frame Time Waterfall --------------------------------------------- */
+/* -- 12.2 / 12.3 panel palettes (figures come from the DebugSnapshot) ----- */
 
-export const FRAME_TIME_BARS = [
-  { label: 'GameThread', ms: 4.2, color: ACCENT_ORANGE },
-  { label: 'RenderThread', ms: 6.1, color: STATUS_ERROR },
-  { label: 'GPUTime', ms: 8.3, color: ACCENT_VIOLET },
-  { label: 'Physics', ms: 1.5, color: ACCENT_CYAN },
-  { label: 'Animation', ms: 2.1, color: ACCENT_EMERALD },
-  { label: 'UI', ms: 0.8, color: STATUS_WARNING },
-];
-export const FRAME_TARGET_MS = 16.67;
-export const FRAME_TOTAL_MS = FRAME_TIME_BARS.reduce((s, b) => s + b.ms, 0);
-
-/* -- 12.3 Memory Allocation Tracker ---------------------------------------- */
-
-export const MEMORY_SLICES = [
-  { label: 'Textures', pct: 45, mb: 171, color: ACCENT_ORANGE },
-  { label: 'Meshes', pct: 25, mb: 95, color: ACCENT_VIOLET },
-  { label: 'Audio', pct: 10, mb: 38, color: ACCENT_CYAN },
-  { label: 'Scripts', pct: 8, mb: 30.4, color: ACCENT_EMERALD },
-  { label: 'Physics', pct: 7, mb: 26.6, color: STATUS_WARNING },
-  { label: 'UI', pct: 5, mb: 19, color: STATUS_INFO },
-];
-export const MEMORY_TOTAL_MB = 380;
-export const MEMORY_PEAK_MB = 412;
-export const MEMORY_BUDGET_MB = 512;
+export const THREAD_COLORS: Record<ThreadId, string> = { game: ACCENT_ORANGE, render: STATUS_ERROR, gpu: ACCENT_VIOLET };
+export const SLICE_COLORS = [ACCENT_ORANGE, ACCENT_VIOLET, ACCENT_CYAN, ACCENT_EMERALD, STATUS_WARNING, STATUS_INFO];
 
 /* -- 12.4 Console Command Builder ------------------------------------------ */
 

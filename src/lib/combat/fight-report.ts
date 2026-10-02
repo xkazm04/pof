@@ -3,6 +3,7 @@ import type {
   ThreatBreakdown,
   BalanceAlert,
 } from '@/types/combat-simulator';
+import { difficultyBand, type ReportBand } from '@/lib/balance/encounter-bands';
 
 /**
  * Plain-language "Fight Report Card" layer for the Combat Simulator's Simple Mode.
@@ -21,8 +22,8 @@ import type {
  * unit-testable and screenshot-stable.
  */
 
-/** Overall difficulty band, derived from survival rate. */
-export type ReportBand = 'easy' | 'fair' | 'tough' | 'brutal';
+/** Overall difficulty band — the shared encounter-band law (`@/lib/balance/encounter-bands`). */
+export type { ReportBand };
 
 export interface FightReportCard {
   /** Difficulty band (drives color + the "too easy / brutal" framing). */
@@ -49,13 +50,6 @@ function clampTen(n: number): number {
 /** Survival rate (0–1) → wins out of 10 tries, the headline's plain framing. */
 function winsOutOfTen(rate: number): number {
   return clampTen(Math.round(rate * 10));
-}
-
-function difficultyBand(rate: number): ReportBand {
-  if (rate >= 0.9) return 'easy';
-  if (rate >= 0.6) return 'fair';
-  if (rate >= 0.35) return 'tough';
-  return 'brutal';
 }
 
 /** Format a fight length in plain seconds ("12 seconds", "1.5 seconds"). */

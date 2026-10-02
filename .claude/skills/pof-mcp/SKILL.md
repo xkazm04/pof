@@ -24,13 +24,27 @@ through the Unreal server, then record it with `pof_submit_artifact`.
 
 1. `pof_list_catalogs` -> `pof_list_entities {catalogId}` -> pick an entity.
 2. `pof_get_step {catalogId, entityId, step, direction?}` returns the RECIPE: canon-prefixed
-   prompt, View shape, UE asset targets, an example of passing data, the Acceptance contract,
-   any already-persisted artifact.
+   prompt, View shape, UE asset targets, the step body's `example` output, the Acceptance
+   contract, any already-persisted artifact, and `settle` (what settles the current verdict).
+   **The example is a shape reference, not this entity's content.** For most entities it is the
+   catalog EXEMPLAR's content with the name swapped: then `example.data.template` names the
+   exemplar and `acceptance.exampleStatus` is `pending` with a `TEMPLATE:` `exampleReason`.
+   Never submit it or paraphrase it - produce THIS entity's content from the prompt.
 3. Do the work yourself (generate the data; make UE edits through the Unreal server).
 4. `pof_submit_artifact {catalogId, entityId, step, data, ueAssets?}`. **The server derives the
-   verdict from the step's own checker - never self-grade, never write a verdict field.** On
-   `fail`, read the reason and resubmit. `deferred` means an L3/L4 runtime/visual gate is
-   waiting on a live editor.
+   verdict from the step's own checker - never self-grade, never write a verdict field.** Then
+   read `next`: `next.settle` names the ONE act that settles this verdict (null on pass) and
+   `next.entityStep` is the step the lab coach would pick next (`{step, priority}`). Act on
+   `settle.kind`:
+
+   | kind | do |
+   |---|---|
+   | `resubmit` | `fail`: the reason names the failing check - fix the data, resubmit |
+   | `produce` / `produce-live` | pending (SOURCED seed, TEMPLATE stub, or not yet graded): `pof_get_step`, produce this entity's own content, submit |
+   | `fill-gap` | a field is a declared reference gap ("not in the reference") - supply a designed value, say it is designed, resubmit |
+   | `drain` | L3/L4 gate waiting on a live editor - `pof_drain_gates` with `settle.args` (tier) |
+   | `settle` | L0-L2 or packaging deferral - `POST /api/pipeline-artifacts/settle` (bind-icons -> verify-static -> verify-packaging); no pof tool wraps it yet |
+   | `none` (`actionable:false`) | UNGRADED - nothing here can settle it; do NOT resubmit, move on to `next.entityStep` |
 5. `pof_get_acceptance {catalogId, entityId?}` for the rollup; `pof_gate_evidence` for the
    proof behind a drained verdict (a verdict with `missing` evidence is itself a finding).
 6. `pof_drain_gates` turns `deferred` into pass/fail on the live editor (or headless with

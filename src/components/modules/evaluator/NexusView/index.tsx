@@ -3,10 +3,12 @@
 import { AnimatePresence } from 'framer-motion';
 import {
   Loader2, ZoomIn, ZoomOut, Maximize2,
-  Network, Eye, EyeOff,
+  Network, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
-import { STATUS_BLOCKER } from '@/lib/chart-colors';
-import { LAYERS, EMPTY_HISTORY } from './constants';
+import { STATUS_BLOCKER, MODULE_COLORS } from '@/lib/chart-colors';
+import type { SourceStatus } from '@/lib/evaluator/nexus-signals';
+import { LAYERS } from './constants';
+import type { LayerConfig } from './constants';
 import { useNexusView } from './useNexusView';
 import { NexusGraph } from './NexusGraph';
 import { NodeDeepDivePanel } from './NodeDeepDivePanel';
@@ -23,15 +25,18 @@ export function NexusView() {
     setZoom,
     activeLayers,
     toggleLayer,
-    patterns,
-    moduleHistory,
-    lastScan,
+    layerState,
+    retryLayer,
+    layerError,
     nodes,
     edges,
     svgWidth,
     svgHeight,
     highlightModule,
     selectedNode,
+    selectedPatterns,
+    selectedRecommendations,
+    moduleSessions,
   } = useNexusView();
 
   if (isLoading) {
@@ -57,26 +62,18 @@ export function NexusView() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Layer toggles */}
-          {LAYERS.map((layer) => {
-            const active = activeLayers.has(layer.id);
-            const Icon = layer.icon;
-            return (
-              <button
-                key={layer.id}
-                onClick={() => toggleLayer(layer.id)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
-                  active
-                    ? 'border-border-bright bg-surface text-text'
-                    : 'border-border bg-surface-deep text-text-muted hover:text-text'
-                }`}
-              >
-                <Icon className="w-2.5 h-2.5" style={{ color: active ? layer.color : undefined }} />
-                {layer.label}
-                {active ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5 opacity-40" />}
-              </button>
-            );
-          })}
+          {/* Layer toggles — each reads its source's state; a failed source is unavailable + Retry, never an empty layer */}
+          {LAYERS.map((layer) => (
+            <LayerToggle
+              key={layer.id}
+              layer={layer}
+              active={activeLayers.has(layer.id)}
+              state={layerState[layer.id]}
+              error={layerError(layer.id)}
+              onToggle={() => toggleLayer(layer.id)}
+              onRetry={() => retryLayer(layer.id)}
+            />
+          ))}
 
           {/* Zoom */}
           <div className="flex items-center gap-0.5 ml-2">
@@ -123,7 +120,10 @@ export function NexusView() {
         )}
         {activeLayers.has('builds') && (
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded border border-[#ef4444] opacity-60" style={{ boxShadow: '0 0 4px #ef4444' }} /> Build failure
+            <span
+              className="w-3 h-3 rounded border opacity-60"
+              style={{ borderColor: MODULE_COLORS.evaluator, boxShadow: `0 0 4px ${MODULE_COLORS.evaluator}` }}
+            /> Critical findings (newest deep eval)
           </span>
         )}
         {activeLayers.has('genre') && (
@@ -138,13 +138,60 @@ export function NexusView() {
         {selectedModule && selectedNode && (
           <NodeDeepDivePanel
             node={selectedNode}
-            patterns={patterns.filter((p) => p.moduleId === selectedModule)}
-            recommendations={lastScan?.recommendations.filter((r) => r.moduleId === selectedModule) ?? []}
-            history={(moduleHistory[selectedModule] ?? EMPTY_HISTORY) as { id: string; prompt: string; status: string; timestamp: number; duration?: number }[]}
+            patterns={selectedPatterns}
+            recommendations={selectedRecommendations}
+            sessions={moduleSessions}
             onClose={() => setSelectedModule(null)}
           />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ─── Layer toggle ──────────────────────────────────────────────────────────
+
+function LayerToggle({
+  layer, active, state, error, onToggle, onRetry,
+}: {
+  layer: LayerConfig;
+  active: boolean;
+  state: SourceStatus;
+  error: string | null;
+  onToggle: () => void;
+  onRetry: () => void;
+}) {
+  const Icon = layer.icon;
+  if (state === 'failed') {
+    return (
+      <span className="flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border border-border bg-surface-deep text-text-muted">
+        <button disabled aria-label={`${layer.label} — unavailable`} title={error ?? undefined} className="flex items-center gap-1 cursor-not-allowed">
+          <Icon className="w-2.5 h-2.5" />
+          {layer.label}
+          <span style={{ color: STATUS_BLOCKER }}>unavailable</span>
+        </button>
+        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="flex items-center gap-0.5 hover:text-text transition-colors">
+          <RefreshCw className="w-2.5 h-2.5" /> Retry
+        </button>
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={active}
+      aria-busy={state === 'loading'}
+      className={`flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
+        active
+          ? 'border-border-bright bg-surface text-text'
+          : 'border-border bg-surface-deep text-text-muted hover:text-text'
+      }`}
+    >
+      <Icon className="w-2.5 h-2.5" style={{ color: active ? layer.color : undefined }} />
+      {layer.label}
+      {state === 'loading'
+        ? <Loader2 className="w-2.5 h-2.5 animate-spin" aria-label="loading" />
+        : active ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5 opacity-40" />}
+    </button>
   );
 }

@@ -4,6 +4,8 @@ import type { RadarDataPoint } from '@/types/unique-tab-improvements';
 import { ENEMY_ARCHETYPES } from '@/lib/combat/definitions';
 import type { EnemyArchetype } from '@/types/combat-simulator';
 import type { EntityMetadata } from '@/types/game-metadata';
+import { sameStatAxis, statAxisOf, ueAttributeOf } from '@/lib/bestiary/elite-stat-axes';
+import { renderModifierInfo } from '@/lib/gas-codegen';
 import { EXPANDED_ARCHETYPES } from './data-expanded';
 export type { BtTreeNode, ExpandedWaveConfig } from './data-expanded';
 export { BT_TREE, EXPANDED_WAVES } from './data-expanded';
@@ -365,7 +367,12 @@ export const ELITE_MODIFIERS: EliteModifier[] = [
   },
 ];
 
-/** Compute effective stat value after applying modifier stack */
+/**
+ * Compute effective stat value after applying modifier stack. A statMod applies
+ * to the stat on its AXIS (`Damage` drives `ATK`, `Speed` drives `SPD`), never
+ * by label equality. The value is not capped at 100: NeonBar clamps its own
+ * width, and a capped number would show a +25% mod as no change.
+ */
 export function applyModifiers(
   baseStat: number,
   statKey: string,
@@ -374,12 +381,12 @@ export function applyModifiers(
   let value = baseStat;
   for (const mod of modifiers) {
     for (const sm of mod.statMods) {
-      if (sm.stat !== statKey) continue;
+      if (!sameStatAxis(statKey, sm.stat)) continue;
       if (sm.mult !== undefined) value = Math.round(value * sm.mult);
       if (sm.flat !== undefined) value = Math.round(value + sm.flat);
     }
   }
-  return Math.max(0, Math.min(100, value));
+  return Math.max(0, value);
 }
 
 /** Tier badge colors for modifier tiers */
@@ -388,6 +395,11 @@ export const MODIFIER_TIER_COLORS: Record<EliteModifier['tier'], string> = {
   major: ACCENT_RED,
   legendary: ACCENT_PINK,
 };
+
+/** A C++ float literal: `1.5f`, `30.0f` (`30f` is not valid C++). */
+function cppFloat(n: number): string {
+  return Number.isInteger(n) ? `${n}.0f` : `${n}f`;
+}
 
 /** Generate UE5 GameplayEffect C++ snippet for a modifier */
 export function generateModifierGE(mod: EliteModifier): string {
@@ -413,6 +425,7 @@ export function generateModifierGE(mod: EliteModifier): string {
     `// ${mod.geClass}.cpp`,
     `#include "${mod.geClass}.h"`,
     `#include "AbilitySystemComponent.h"`,
+    `#include "AbilitySystem/ARPGAttributeSet.h"`,
     ``,
     `U${mod.geClass}::U${mod.geClass}()`,
     `{`,
@@ -422,33 +435,17 @@ export function generateModifierGE(mod: EliteModifier): string {
     ``,
   ];
 
+  // Attributes resolve through the one stat-axis table, schema-down: an axis
+  // with no FARPGAttributeInitRow field becomes the contract's TODO comment.
   for (const sm of mod.statMods) {
-    const attrMap: Record<string, string> = {
-      HP: 'Health.MaxHealth',
-      Damage: 'Combat.AttackPower',
-      Speed: 'Movement.MoveSpeed',
-      Range: 'Combat.AttackRange',
-    };
-    const attr = attrMap[sm.stat] ?? `Custom.${sm.stat}`;
-    if (sm.mult !== undefined) {
+    const axis = statAxisOf(sm.stat);
+    const attribute = axis ? ueAttributeOf(axis) : null;
+    const unknownNote = `${sm.stat}: no UARPGAttributeSet field for this stat`;
+    const ops: Array<['multiply' | 'add', number | undefined]> = [['multiply', sm.mult], ['add', sm.flat]];
+    for (const [operation, magnitude] of ops) {
+      if (magnitude === undefined) continue;
       lines.push(`    // ${sm.label}`);
-      lines.push(`    {`);
-      lines.push(`        FGameplayModifierInfo Mod;`);
-      lines.push(`        Mod.Attribute = U${attr.split('.')[0]}AttributeSet::Get${attr.split('.')[1]}Attribute();`);
-      lines.push(`        Mod.ModifierOp = EGameplayModOp::Multiply;`);
-      lines.push(`        Mod.ModifierMagnitude = FScalableFloat(${sm.mult}f);`);
-      lines.push(`        Modifiers.Add(Mod);`);
-      lines.push(`    }`);
-    }
-    if (sm.flat !== undefined) {
-      lines.push(`    // ${sm.label}`);
-      lines.push(`    {`);
-      lines.push(`        FGameplayModifierInfo Mod;`);
-      lines.push(`        Mod.Attribute = U${attr.split('.')[0]}AttributeSet::Get${attr.split('.')[1]}Attribute();`);
-      lines.push(`        Mod.ModifierOp = EGameplayModOp::Additive;`);
-      lines.push(`        Mod.ModifierMagnitude = FScalableFloat(${sm.flat}.0f);`);
-      lines.push(`        Modifiers.Add(Mod);`);
-      lines.push(`    }`);
+      lines.push(...renderModifierInfo({ attribute, operation, magnitude: cppFloat(magnitude), unknownNote }));
     }
   }
 

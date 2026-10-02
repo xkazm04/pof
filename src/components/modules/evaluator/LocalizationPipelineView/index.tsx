@@ -18,6 +18,7 @@ import { OverviewTab } from './OverviewTab';
 import { StringsTab } from './StringsTab';
 import { TranslationsTab } from './TranslationsTab';
 import { QATab } from './QATab';
+import { ReadinessTab } from './ReadinessTab';
 import { HazardCard } from './HazardCard';
 import { StringTableCard } from './StringTableCard';
 import type { ViewTab } from './types';
@@ -28,6 +29,7 @@ import type { ViewTab } from './types';
 const TABS: readonly { key: ViewTab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'strings', label: 'Strings' },
+  { key: 'readiness', label: 'Readiness' },
   { key: 'translations', label: 'Translations' },
   { key: 'hazards', label: 'Hazards' },
   { key: 'qa', label: 'QA' },
@@ -41,7 +43,7 @@ const panelId = (key: ViewTab) => `loc-panel-${key}`;
 
 export function LocalizationPipelineView() {
   const {
-    config, scanResult, strings, hazards, entries, reviewRequired, progress,
+    config, scanResult, scanProvenance, strings, hazards, entries, reviewRequired, progress,
     expansionIssues, qaFindings, qaByLocale, replacements, stringTables,
     isLoading, error,
     viewTab, setViewTab,
@@ -50,6 +52,7 @@ export function LocalizationPipelineView() {
     localeFilter, setLocaleFilter,
     stringPresets, setStringPresets,
     translationPresets, setTranslationPresets,
+    pseudoKnobs, setPseudoKnobs, readiness,
     handleRunPipeline,
     stringsById, filteredStrings, filteredEntries,
     totalStrings, hardcoded, ftextCount, localizedCount, locReadiness,
@@ -58,6 +61,7 @@ export function LocalizationPipelineView() {
 
   const tabCounts: Partial<Record<ViewTab, number>> = {
     strings: totalStrings,
+    readiness: readiness.summary.overflow,
     translations: entries.length,
     hazards: hazards.length,
     qa: qaFindings.length,
@@ -130,6 +134,15 @@ export function LocalizationPipelineView() {
         </div>
       )}
 
+      {/* Provenance — what the scan actually read, so demo data is never mistaken for a scan. */}
+      {scanResult && scanProvenance && (
+        <p className={`${TEXT_SCALE.body} text-text-muted`} data-testid="loc-scan-provenance">
+          {scanProvenance.kind === 'fixture'
+            ? 'Demo corpus — no UE project configured, so these strings are sample data, not your code.'
+            : `Scanned ${scanProvenance.filesScanned} file${scanProvenance.filesScanned === 1 ? '' : 's'} under ${scanProvenance.root}/Source (read-only)${scanProvenance.truncated ? ' — stopped at the file/size cap' : ''}.`}
+        </p>
+      )}
+
       {/* Sub-tab navigation */}
       {scanResult && (
         <div
@@ -160,8 +173,9 @@ export function LocalizationPipelineView() {
             <Globe aria-hidden="true" className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-40" />
             <p className="text-sm text-text-muted mb-1">No scan results yet</p>
             <p className={`${TEXT_SCALE.body} text-text-muted`}>
-              Click &quot;Run Full Pipeline&quot; to scan your generated code for hardcoded strings,
-              detect localization hazards, and generate translations.
+              Click &quot;Run Full Pipeline&quot; to scan your UE project&apos;s Source/ (read-only) for hardcoded
+              strings, detect localization hazards, and generate translations. With no project configured it
+              runs on a labelled demo corpus.
             </p>
           </div>
         </SurfaceCard>
@@ -196,6 +210,9 @@ export function LocalizationPipelineView() {
               expansionIssues={expansionIssues}
               qaByLocale={qaByLocale}
               replacements={replacements}
+              readiness={readiness.summary}
+              scanProvenance={scanProvenance}
+              onOpenReadiness={() => setViewTab('readiness')}
             />
           )}
 
@@ -211,6 +228,11 @@ export function LocalizationPipelineView() {
               filteredStrings={filteredStrings}
               strings={strings}
             />
+          )}
+
+          {/* ── Readiness Tab (pseudo locale: built, never offered) ── */}
+          {viewTab === 'readiness' && (
+            <ReadinessTab readiness={readiness} knobs={pseudoKnobs} setKnobs={setPseudoKnobs} provenance={scanProvenance} />
           )}
 
           {/* ── Translations Tab ───────────────────────────────────── */}

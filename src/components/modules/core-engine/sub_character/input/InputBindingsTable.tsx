@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Keyboard, RotateCcw, Send } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_SUCCESS, OVERLAY_WHITE, OPACITY_8, withOpacity,
@@ -8,6 +8,7 @@ import {
 import { bindingsApplyGate, normalizeKeyEvent } from '@/lib/character/input-bindings';
 import { useCharacterBlueprintStore, useResolvedBindings } from '@/stores/characterBlueprintStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { useCaptureNext } from '@/hooks/useHotkey';
 import { TaskFactory } from '@/lib/cli-task';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
@@ -51,20 +52,14 @@ export function InputBindingsTable({ moduleId, featureMap }: InputBindingsTableP
     execute(TaskFactory.askClaude(moduleId, buildBindingsApplyPrompt(resolved), `Apply ${n} rebind${n === 1 ? '' : 's'} to IMC_Default`));
   }, [gate, isRunning, resolved, moduleId, execute]);
 
-  /* ── Keydown listener for rebinding ──────────────────────────────────── */
-  useEffect(() => {
-    if (rebindingAction === null) return;
-
-    const handler = (e: KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.key !== 'Escape') setBindingOverride(rebindingAction, normalizeKeyEvent(e.key));
-      setRebindingAction(null);
-    };
-
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
-  }, [rebindingAction, setBindingOverride]);
+  /* ── Exclusive capture of the next key while rebinding ───────────────── */
+  // The keyboard door takes the key before anything else sees it, and releases
+  // the capture when this pane is hidden — a half-finished rebind in a hidden
+  // pane never swallows the next keystroke app-wide.
+  useCaptureNext(rebindingAction !== null, (e) => {
+    if (rebindingAction !== null && e.key !== 'Escape') setBindingOverride(rebindingAction, normalizeKeyEvent(e.key));
+    setRebindingAction(null);
+  });
 
   const accent = hasConflicts ? STATUS_ERROR : STATUS_SUCCESS;
 

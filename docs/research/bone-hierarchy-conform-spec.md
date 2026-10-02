@@ -1,6 +1,6 @@
 # Bone-hierarchy conform — applying a rename plan to a generated rig
 
-**Status:** planner BUILT and tested (`src/lib/visual-gen/bone-conform.ts`), applier SPECIFIED, not built.
+**Status:** planner BUILT and tested (`src/lib/visual-gen/bone-conform.ts`) and CALLED by the rig gate's target binding (`src/lib/visual-gen/rig-binding.ts`); applier SPECIFIED, not built.
 **Source run:** 2026-09-07, `tripo-smart-mesh-animated-character` (Building Aeon, Tripo Smart Mesh P2.0).
 **Owning subsystem:** Visual-gen / asset pipeline (2D→3D→rig→texture→assemble).
 
@@ -41,6 +41,19 @@ silently shifts the whole spine by one.
 `unmatchedClip` reports lost motion (a clip that animates a tail against a rig with no
 tail), and `coverage` is measured against the **clip**, because a spare rig bone is usually
 harmless while an undriven clip bone is motion thrown away.
+
+### First consumer: the rig gate's target binding (2026-10-01)
+
+The planner's first production caller is not the applier but the gate. `bindRigToPreset(jointNames, preset)`
+(`rig-binding.ts`) answers *can this rig be animated on that target?* from the rig's ACTUAL names:
+Mixamo names onto a remap preset bind through the preset's table (the table stays the one owner, and a
+row counts only when its source bone is really in the rig); any other semantic vocabulary is planned onto
+the target's vocabulary (root ∪ IK chain endpoints ∪ table targets) by `planConform`; anonymous, empty or
+uncaptured names are `unverifiable`; a conform-kind target is `not-applicable`. The required set is the
+one rule `requiredChainBones(preset)` that `checkPresetBinding` also reads. `scoreRig` with
+`expect.target` fails every chain with an unbound endpoint by name — measured: a 14-bone biped with no
+clavicles or thighs scored 100/pass before, and now fails LeftArm/RightArm/LeftLeg/RightLeg against the
+UE5 Mannequin (6/10 endpoints bound). This only READS the plan; nothing is renamed.
 
 ## The hard limit — read this before extending the planner
 

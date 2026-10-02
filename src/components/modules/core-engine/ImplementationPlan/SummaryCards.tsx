@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Clock, TrendingUp } from 'lucide-react';
+import { Clock, Timer, TrendingUp } from 'lucide-react';
 import { formatEffortTime } from '@/lib/implementation-planner/effort-estimator';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS, STATUS_STALE } from '@/lib/chart-colors';
@@ -9,10 +9,13 @@ export function SummaryCards({
   plan,
   progress,
   readyCount,
+  onPlanSession,
 }: {
   plan: ImplementationPlan;
   progress: number;
   readyCount: number;
+  /** Opens the Build session panel — the effort total's entry point. */
+  onPlanSession?: () => void;
 }) {
   return (
     <div className="grid grid-cols-4 gap-4">
@@ -50,8 +53,17 @@ export function SummaryCards({
         <div className="text-base font-semibold text-text">
           {formatEffortTime(plan.totalEffortMinutes)}
         </div>
-        <div className="text-2xs text-text-muted mt-0.5">
-          {plan.items.length} tasks
+        <div className="flex items-center justify-between gap-1 mt-0.5">
+          <span className="text-2xs text-text-muted">{plan.items.length} tasks</span>
+          {onPlanSession && readyCount > 0 && (
+            <button
+              onClick={onPlanSession}
+              className="flex items-center gap-0.5 text-2xs font-medium text-blue-400 hover:text-blue-300"
+            >
+              <Timer className="w-2.5 h-2.5" />
+              Plan a session
+            </button>
+          )}
         </div>
       </SurfaceCard>
 

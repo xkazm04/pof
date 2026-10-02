@@ -48,13 +48,25 @@ export interface GeneratedIcon {
   url: string;
   mtimeMs: number;
   /**
-   * Absolute path of the MESH this icon is a render of — present only for an icon
-   * written by `icon-from-mesh.ts`, which leaves a `<base>.render.json` sidecar beside
-   * it. Absent means "no provenance recorded", never "generated art": the library
-   * predates the sidecar and an older file's origin genuinely is not known.
+   * Where THESE bytes came from, as recorded by the writer that produced them through the
+   * library door (`icon-library.ts`) and bound to the file's size + mtime. `unrecorded` when
+   * no binding provenance describes the current bytes (a script writer, an out-of-band
+   * overwrite). Absent only on a list shaped without the door's reader.
+   */
+  origin?: IconOrigin;
+  /**
+   * Absolute path of the MESH this icon is a render of — derived from a `mesh-render`
+   * {@link origin} (or a legacy render sidecar that still post-dates the bytes). Absent
+   * means "no provenance recorded", never "generated art".
    */
   renderedFrom?: string;
 }
+
+/** The recorded origin of an icon's current bytes. */
+export type IconOrigin =
+  | { kind: 'contact-sheet'; sheetUrl: string; cellIndex: number; model?: string }
+  | { kind: 'mesh-render'; renderedFrom: string; yawDeg: number }
+  | { kind: 'unrecorded' };
 
 /** The structural identity encoded in an icon filename. */
 export interface IconIdentity {
@@ -130,12 +142,14 @@ export function parseIconFileName(name: string): IconIdentity {
 
 /** Shape the icon manifest: served url + its identity + scope, newest first. Pure. */
 export function buildIconList(
-  files: { name: string; mtimeMs: number; renderedFrom?: string }[],
+  files: { name: string; mtimeMs: number; renderedFrom?: string; origin?: IconOrigin }[],
 ): GeneratedIcon[] {
   return files
     .filter((f) => safeIconName(f.name) != null)
     .map((f) => {
       const id = parseIconFileName(f.name);
+      // With an origin, `renderedFrom` is derived from it ONLY — never from a loose field.
+      const renderedFrom = f.origin ? (f.origin.kind === 'mesh-render' ? f.origin.renderedFrom : undefined) : f.renderedFrom;
       return {
         name: f.name,
         slug: id.slug,
@@ -143,7 +157,8 @@ export function buildIconList(
         ...(id.entityId ? { entityId: id.entityId } : {}),
         url: `/api/visual-gen/icon/${encodeURIComponent(f.name)}`,
         mtimeMs: f.mtimeMs,
-        ...(f.renderedFrom ? { renderedFrom: f.renderedFrom } : {}),
+        ...(f.origin ? { origin: f.origin } : {}),
+        ...(renderedFrom ? { renderedFrom } : {}),
       };
     })
     .sort((a, b) => b.mtimeMs - a.mtimeMs);

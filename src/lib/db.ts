@@ -5,10 +5,13 @@ import fs from 'fs';
 import { logger } from '@/lib/logger';
 import { normalizeProjectId } from '@/lib/project-id';
 
-// POF_DB_PATH overrides the SQLite location — used by the pof-mcp integration suite to
-// run against a throwaway DB instead of the user's real ~/.pof/pof.db. Falls back to the
-// default so normal runs are unchanged.
-const DB_PATH = process.env.POF_DB_PATH || path.join(os.homedir(), '.pof', 'pof.db');
+// POF_DB_PATH overrides the SQLite location — used by the vitest containment floor, the
+// Playwright e2e and the pof-mcp integration suite to run against a throwaway DB instead of
+// the user's real ~/.pof/pof.db. Falls back to the default so normal runs are unchanged.
+export function resolveDbPath(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  return env.POF_DB_PATH || path.join(os.homedir(), '.pof', 'pof.db');
+}
+const DB_PATH = resolveDbPath();
 const DB_DIR = path.dirname(DB_PATH);
 
 // Bump when adding a NEW one-off migration probe below. `CREATE TABLE/INDEX IF NOT
@@ -17,7 +20,10 @@ const DB_DIR = path.dirname(DB_PATH);
 // rebuilds) are gated behind this so they run once per DB instead of on every
 // cold start. A fresh DB (user_version 0) runs them once against freshly-created
 // tables (all guards no-op) then stamps the version.
-const SCHEMA_VERSION = 3;
+// 4: eval_findings.resolved_at (durable scan-finding resolutions).
+// 5: project_progress.completed_json + folded_json (server-held completion ledger).
+// 6: review_snapshots.feature_states (per-feature states behind the review delta).
+const SCHEMA_VERSION = 6;
 
 let db: Database.Database | null = null;
 
@@ -149,7 +155,11 @@ function bootstrap(conn: Database.Database): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       -- Same reasoning as feature_matrix.project_id: migration-added, so a fresh DB
       -- that skips the probes must still get it — captureReviewSnapshot inserts it.
-      project_id TEXT NOT NULL DEFAULT ''
+      project_id TEXT NOT NULL DEFAULT '',
+      -- Per-feature states at this point ([{featureName, status, quality, source}],
+      -- JSON). NULL on rows written before schema 6 — readers treat that as
+      -- "not recorded" (the review delta reports measured:false), never as empty.
+      feature_states TEXT
     )
   `);
 
@@ -175,7 +185,10 @@ function bootstrap(conn: Database.Database): void {
       suggested_fix TEXT NOT NULL DEFAULT '',
       effort TEXT NOT NULL DEFAULT 'medium'
         CHECK(effort IN ('trivial', 'small', 'medium', 'large')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- Operator resolution (NULL = open). Declared here for fresh DBs AND added by
+      -- the schema-4 migration below for existing ones.
+      resolved_at TEXT
     )
   `);
 
@@ -187,6 +200,34 @@ function bootstrap(conn: Database.Database): void {
   conn.exec(`
     CREATE INDEX IF NOT EXISTS idx_eval_findings_severity
     ON eval_findings(severity, module_id)
+  `);
+
+  // Migrate (schema 4): durable resolutions. Additive and nullable — readers that
+  // select named columns (gdd-synthesizer, search-index) never see it.
+  if (needsMigrations) {
+    const efCols = conn.prepare("PRAGMA table_info(eval_findings)").all() as { name: string }[];
+    if (!efCols.some((c) => c.name === 'resolved_at')) {
+      conn.exec('ALTER TABLE eval_findings ADD COLUMN resolved_at TEXT');
+    }
+  }
+
+  // Module scan runs — one row per scan, INCLUDING a scan that found nothing, so a
+  // clean re-scan is distinguishable from a lost report. `passes_json` is what the
+  // scan covered; a pass it did not run can never clear a finding. Read/written by
+  // src/app/api/module-scan/import/route.ts.
+  conn.exec(`
+    CREATE TABLE IF NOT EXISTS module_scans (
+      scan_id TEXT PRIMARY KEY,
+      module_id TEXT NOT NULL,
+      passes_json TEXT NOT NULL DEFAULT '[]',
+      finding_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    )
+  `);
+
+  conn.exec(`
+    CREATE INDEX IF NOT EXISTS idx_module_scans_module
+    ON module_scans(module_id, created_at)
   `);
 
   // Build history — records every package/build operation for trending & comparison
@@ -254,6 +295,10 @@ function bootstrap(conn: Database.Database): void {
   if (!rsColNames.has('improved')) {
     conn.exec("ALTER TABLE review_snapshots ADD COLUMN improved INTEGER NOT NULL DEFAULT 0");
   }
+  // Schema 6: additive and nullable — existing rows keep NULL (= not recorded).
+  if (!rsColNames.has('feature_states')) {
+    conn.exec('ALTER TABLE review_snapshots ADD COLUMN feature_states TEXT');
+  }
 
   const bhCols = conn.prepare("PRAGMA table_info(build_history)").all() as { name: string }[];
   if (!new Set(bhCols.map((c) => c.name)).has('project_id')) {
@@ -311,9 +356,28 @@ function bootstrap(conn: Database.Database): void {
       health_json TEXT NOT NULL DEFAULT '{}',
       verification_json TEXT NOT NULL DEFAULT '{}',
       history_json TEXT NOT NULL DEFAULT '{}',
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      -- WHEN each done item was first completed ({module: {item: epoch ms}}) and
+      -- which legacy row ids (non-canonical spellings) were folded into this row.
+      -- Owned by src/lib/project-progress-db.ts.
+      completed_json TEXT NOT NULL DEFAULT '{}',
+      folded_json TEXT NOT NULL DEFAULT '[]'
     )
   `);
+
+  // Migrate (schema 5): additive columns with defaults — existing rows read as
+  // "no dated completions, nothing folded yet". Nothing is re-keyed or rewritten.
+  if (needsMigrations) {
+    const ppCols = new Set(
+      (conn.prepare('PRAGMA table_info(project_progress)').all() as { name: string }[]).map((c) => c.name),
+    );
+    if (!ppCols.has('completed_json')) {
+      conn.exec("ALTER TABLE project_progress ADD COLUMN completed_json TEXT NOT NULL DEFAULT '{}'");
+    }
+    if (!ppCols.has('folded_json')) {
+      conn.exec("ALTER TABLE project_progress ADD COLUMN folded_json TEXT NOT NULL DEFAULT '[]'");
+    }
+  }
 
   // Session log — unified audit trail linking CLI sessions to modules and projects
   conn.exec(`

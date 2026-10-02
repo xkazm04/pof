@@ -1,6 +1,8 @@
-import { buildProjectContextHeader, type ProjectContext } from '@/lib/prompt-context';
+import { buildProjectContextHeader, getEnginePath, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import type { TestScenario, TestSuite } from '@/types/ai-testing';
 import { moduleKnowledge } from '@/lib/prompts/module-knowledge';
+import { buildBatchAutomationArgs } from '@/lib/test-gate-runner/batchAutomationArgs';
+import { AI_TEST_ROOT, aiScenarioTestPath, aiScenarioTestPrefix, aiTestSlug } from '@/lib/ai-testing/test-identity';
 
 /**
  * Prompt to generate a full UE5 Automation Framework test spec
@@ -24,7 +26,7 @@ export function buildGenerateTestsPrompt(
       const expectedLines = s.expectedActions
         .map((ea) => `    - Action: "${ea.action}" (BT node: ${ea.btNode || 'any'}, timeout: ${ea.timeoutSeconds}s)`)
         .join('\n');
-      return `  ${i + 1}. "${s.name}" — ${s.description}\n    Stimuli:\n${stimuliLines}\n    Expected:\n${expectedLines}`;
+      return `  ${i + 1}. "${s.name}" — ${s.description}\n    Test path: \`${aiScenarioTestPath(suite, s)}\`\n    Stimuli:\n${stimuliLines}\n    Expected:\n${expectedLines}`;
     })
     .join('\n\n');
 
@@ -49,7 +51,7 @@ ${scenarioBlock}
    - For gameplay tags: add/remove tags from the AI controller's tag container
 3. After applying stimuli, tick the behavior tree and assert the expected task/node is active
 4. Use \`TestEqual\`, \`TestTrue\`, \`TestNotNull\` for assertions
-5. Organize tests in the \`"AI.BehaviorTests.${suite.targetClass}"\` category
+5. Register each scenario's test under EXACTLY the "Test path" listed with it (the pretty name passed to the automation macro) — the app runs and grades each scenario by the \`S<id>_\` prefix of that path, so a renamed or regrouped test is reported as missing
 6. Include setup/teardown that creates a minimal test world with AI controller + pawn
 
 Output a single .cpp file ready to be placed in \`Source/<Module>/Tests/\`.
@@ -99,7 +101,7 @@ ${expectedLines}
 2. Create mock stimuli without requiring a running game — spawn a test world with just AI controller + pawn
 3. Tick the behavior tree after each stimulus and check which BT node/task becomes active
 4. Use meaningful assertion messages that report stimulus → action mapping on failure
-5. Place in test category \`"AI.BehaviorTests.${suite.targetClass}.${scenario.name.replace(/\s+/g, '_')}"\`
+5. Register the test under EXACTLY \`"${aiScenarioTestPath(suite, scenario)}"\` (the pretty name passed to the automation macro) — the app runs and grades this scenario by that path's \`S${scenario.id}_\` prefix
 
 Output the test function + necessary includes. Do NOT use TodoWrite.`;
 }
@@ -153,12 +155,27 @@ Produce the two arrays as \`{ "stimuli": [...], "expectedActions": [...] }\` and
 Do NOT use TodoWrite.`;
 }
 
+/** The app-chosen identity of one Run Tests dispatch (`reportDir` = `aiTestReportDir(projectPath, runId)`). */
+export interface AITestRunTarget {
+  runId: string;
+  reportDir: string;
+}
+
+/** Quote a command-line token for the prompt when it carries a space or `;`. */
+function shellToken(arg: string): string {
+  return /[\s;]/.test(arg) ? `"${arg}"` : arg;
+}
+
 /**
- * Prompt to run the generated tests via UBT and report results.
+ * Prompt to build and run the suite's tests in ONE headless UE boot that writes
+ * UE's automation report to the run's `reportDir`. The app — not the model —
+ * grades every scenario from that report (`record-run-results`); the model's
+ * per-scenario status travels only as a note.
  */
 export function buildRunTestsPrompt(
   suite: TestSuite,
-  ctx: ProjectContext
+  ctx: ProjectContext,
+  run: AITestRunTarget,
 ): string {
   const header = buildProjectContextHeader(ctx, {
     ...moduleKnowledge('ai-behavior'),
@@ -168,25 +185,34 @@ export function buildRunTestsPrompt(
 
   const scenarioList = suite.scenarios.length > 0
     ? `\n### Scenarios in this suite\n${suite.scenarios
-        .map((s) => `- scenarioId ${s.id}: ${s.name}`)
+        .map((s) => `- scenarioId ${s.id}: ${s.name} — test \`${aiScenarioTestPath(suite, s)}\``)
         .join('\n')}\n`
     : '';
+
+  // One RunTests filter per scenario (its S<id>_ prefix); an empty suite runs the class root.
+  const filters = suite.scenarios.length > 0
+    ? suite.scenarios.map((s) => aiScenarioTestPrefix(suite, s))
+    : [`${AI_TEST_ROOT}.${aiTestSlug(suite.targetClass, 'Target')}.`];
+  const uproject = `${ctx.projectPath}\\${getModuleName(ctx.projectName)}.uproject`;
+  const editor = `${getEnginePath(ctx.ueVersion)}\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe`;
+  const args = buildBatchAutomationArgs(filters, uproject, `${run.reportDir}/run.log`, run.reportDir);
+  const command = [editor, ...args].map(shellToken).join(' ');
 
   return `${header}
 
 ## Task: Run AI Behavior Tests
 
-Run the automation tests for suite "${suite.name}" targeting class **${suite.targetClass}**.
+Run the automation tests for suite "${suite.name}" targeting class **${suite.targetClass}** (run \`${run.runId}\`).
 ${scenarioList}
 ### Steps:
-1. Build the project in Test configuration (or Editor if Test is not configured)
-2. Run the automation tests with:
+1. Build the project with the build command above (fix and rebuild on a compile error)
+2. Run ALL of this suite's tests in ONE headless boot with exactly this command:
    \`\`\`
-   UnrealEditor-Cmd.exe <ProjectPath> -ExecCmds="Automation RunTests AI.BehaviorTests.${suite.targetClass}" -Unattended -NoPause -NullRHI -Log
+   ${command}
    \`\`\`
-3. Parse the test output log for pass/fail results
-4. Submit a result for EVERY scenarioId listed above via the callback block below — status "passed" or "failed" (with the failure reason in "output"), or "error" if the test could not run.
+3. UE writes its automation report to \`${run.reportDir}/index.json\`. The app reads that report and grades every scenario from it — do NOT create, edit, move or delete anything under \`${run.reportDir}\`.
+4. Submit a note for EVERY scenarioId listed above via the callback block below — your read of the result ("passed" / "failed" / "error") and a short reason in "output". It is recorded as a note next to the report's verdict; it cannot change the verdict.
 
-If the test file doesn't exist yet, say so, suggest generating tests first, and submit every scenario as "error" with output "test file missing".
+If the test file doesn't exist yet, say so and suggest generating tests first (the app will grade those scenarios as missing from the report).
 Do NOT use TodoWrite.`;
 }

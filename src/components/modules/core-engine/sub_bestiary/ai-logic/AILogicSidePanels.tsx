@@ -4,18 +4,34 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ACCENT_CYAN, STATUS_SUCCESS, STATUS_NEUTRAL,
   withOpacity, OPACITY_20, OPACITY_25, OPACITY_50,
 } from '@/lib/chart-colors';
-import { BT_TREE, DETECTED_ENTITIES } from '../_shared/data';
+import { BT_TREE, DETECTED_ENTITIES, type DetectedEntity } from '../_shared/data';
+import { DEFAULT_SENSE, type SenseProfile } from '@/lib/bestiary/sense-profile';
 
 /* ── Perception Legend ────────────────────────────────────────────────── */
 
-export function PerceptionLegend() {
+/** Legend rows for a sense profile: the primary sense, then any hearing ring. */
+function senseRows(p: SenseProfile) {
+  const rows = [p.shape === 'cone'
+    ? { label: `${p.kind} Cone`, desc: `${p.coneDeg} deg, ${p.radiusCm}cm`, color: withOpacity(ACCENT_CYAN, OPACITY_50), dashed: false }
+    : { label: `${p.kind} Range`, desc: `${p.radiusCm}cm radius`, color: withOpacity(ACCENT_CYAN, OPACITY_25), dashed: true }];
+  if (p.hearingCm != null) {
+    rows.push({ label: 'Hearing Range', desc: `${p.hearingCm}cm radius`, color: withOpacity(ACCENT_CYAN, OPACITY_25), dashed: true });
+  }
+  return rows;
+}
+
+interface PerceptionLegendProps {
+  profile?: SenseProfile;
+  /** Entities with derived detection flags (defaults to the static demo set). */
+  entities?: readonly DetectedEntity[];
+}
+
+export function PerceptionLegend({ profile = DEFAULT_SENSE, entities = DETECTED_ENTITIES }: PerceptionLegendProps) {
+  const ringVerb = profile.shape === 'radius' ? 'Sensed' : 'Heard';
   return (
     <div className="space-y-3 flex-1 min-w-0">
       <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Sense Legend</div>
-      {[
-        { label: 'Sight Cone', desc: '60 deg, 1500cm', color: withOpacity(ACCENT_CYAN, OPACITY_50), dashed: false },
-        { label: 'Hearing Range', desc: '800cm radius', color: withOpacity(ACCENT_CYAN, OPACITY_25), dashed: true },
-      ].map(s => (
+      {senseRows(profile).map(s => (
         <div key={s.label} className="flex items-center gap-2 text-xs">
           <div className="w-5 h-[2px] flex-shrink-0"
             style={{ backgroundColor: s.color, borderTop: s.dashed ? `2px dashed ${s.color}` : undefined }} />
@@ -25,12 +41,12 @@ export function PerceptionLegend() {
       ))}
       <div className="border-t border-border/30 pt-2 space-y-1.5 mt-2">
         <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Detected</div>
-        {DETECTED_ENTITIES.map(e => (
+        {entities.map(e => (
           <div key={e.label} className="flex items-center gap-2 text-xs">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
             <span className="font-medium text-text">{e.label}</span>
             <span className="text-xs text-text-muted">
-              {e.inCone ? 'In sight' : e.inHearing ? 'Heard' : 'Undetected'}
+              {e.inCone ? 'In sight' : e.inHearing ? ringVerb : 'Undetected'}
             </span>
           </div>
         ))}

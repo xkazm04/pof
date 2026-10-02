@@ -1,9 +1,20 @@
 import {
-  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_SUBDUED,
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   ACCENT_PINK, ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
 import type { GraphNode, GraphEdge, BudgetBar } from '@/types/unique-tab-improvements';
 import type { PillItem } from '@/components/ui/InteractivePill';
+import {
+  SCREEN_TRIGGERS, triggerLabel, screenTrigger, performanceBudgets, breakpointWidgets, widgetBindings,
+  animCatalog, zLayers, canonicalContexts, widgetPlacements, widgetZColor, zDepthLabels,
+} from '@/components/modules/core-engine/sub_ui/_shared/hudRegistry';
+
+/*
+ * Widget identity (ids, z-depths, placements, bindings, animations,
+ * breakpoints, context membership) and the overlay triggers are owned by
+ * `hudRegistry.ts`. The widget tables below are projections of it; edit the
+ * registry, not these exports.
+ */
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
@@ -113,14 +124,14 @@ export const HUD_CHILDREN: ScreenNode[] = [
 ];
 
 export const HUD_OVERLAYS: ScreenNode[] = [
-  { id: 'inventory', featureName: 'Inventory screen', inputMode: 'UI', subWidgets: ['WBP_ItemGrid', 'WBP_Tooltip', 'WBP_EquipPanel'], description: 'Grid inventory with drag-and-drop and equipment panel', trigger: 'Tab' },
-  { id: 'char-stats', featureName: 'Character stats screen', inputMode: 'UI', subWidgets: ['WBP_StatRow', 'WBP_AttributeTotal'], description: 'All attributes with base + bonus display', trigger: 'C' },
-  { id: 'pause', featureName: 'Pause/settings menus', inputMode: 'UI', subWidgets: ['WBP_PauseMenu', 'WBP_SettingsPanel'], description: 'Pause menu with graphics, audio, controls settings', trigger: 'Esc' },
+  { id: 'inventory', featureName: 'Inventory screen', inputMode: 'UI', subWidgets: ['WBP_ItemGrid', 'WBP_Tooltip', 'WBP_EquipPanel'], description: 'Grid inventory with drag-and-drop and equipment panel', trigger: screenTrigger('inventory') },
+  { id: 'char-stats', featureName: 'Character stats screen', inputMode: 'UI', subWidgets: ['WBP_StatRow', 'WBP_AttributeTotal'], description: 'All attributes with base + bonus display', trigger: screenTrigger('char-stats') },
+  { id: 'pause', featureName: 'Pause/settings menus', inputMode: 'UI', subWidgets: ['WBP_PauseMenu', 'WBP_SettingsPanel'], description: 'Pause menu with graphics, audio, controls settings', trigger: screenTrigger('pause') },
 ];
 
 export const FLOATING_NODES: ScreenNode[] = [
-  { id: 'enemy-bars', featureName: 'Enemy health bars', inputMode: 'GameAndUI', subWidgets: ['WBP_EnemyHealthBar', 'UWidgetComponent'], description: 'Floating UWidgetComponent with fade-in/out behavior', trigger: 'On damage' },
-  { id: 'damage-numbers', featureName: 'Floating damage numbers', inputMode: 'Game', subWidgets: ['WBP_DamageText', 'WBP_CritText'], description: 'Damage text at hit location, colored by type, crit variant', trigger: 'On hit' },
+  { id: 'enemy-bars', featureName: 'Enemy health bars', inputMode: 'GameAndUI', subWidgets: ['WBP_EnemyHealthBar', 'UWidgetComponent'], description: 'Floating UWidgetComponent with fade-in/out behavior', trigger: screenTrigger('enemy-bars') },
+  { id: 'damage-numbers', featureName: 'Floating damage numbers', inputMode: 'Game', subWidgets: ['WBP_DamageText', 'WBP_CritText'], description: 'Damage text at hit location, colored by type, crit variant', trigger: screenTrigger('damage-numbers') },
 ];
 
 /* ── Flow Graph ────────────────────────────────────────────────────────────── */
@@ -134,15 +145,10 @@ export const FLOW_NODES: GraphNode[] = [
   { id: 'DamageNumbers', label: 'DamageNumbers', group: 'Floating', color: STATUS_ERROR },
 ];
 
+/** HUD -> screen on its trigger; an Input Action screen also closes back to the HUD on the same action. */
 export const FLOW_EDGES: GraphEdge[] = [
-  { source: 'HUD', target: 'Inventory', label: 'Press I' },
-  { source: 'HUD', target: 'CharStats', label: 'Press C' },
-  { source: 'HUD', target: 'Pause', label: 'Press Esc' },
-  { source: 'HUD', target: 'EnemyBars', label: 'On Damage' },
-  { source: 'HUD', target: 'DamageNumbers', label: 'On Hit' },
-  { source: 'Inventory', target: 'HUD', label: 'Press I', style: 'dashed' },
-  { source: 'CharStats', target: 'HUD', label: 'Press C', style: 'dashed' },
-  { source: 'Pause', target: 'HUD', label: 'Press Esc', style: 'dashed' },
+  ...SCREEN_TRIGGERS.map(t => ({ source: 'HUD', target: t.flowNode, label: triggerLabel(t) })),
+  ...SCREEN_TRIGGERS.filter(t => t.action).map(t => ({ source: t.flowNode, target: 'HUD', label: triggerLabel(t), style: 'dashed' as const })),
 ];
 
 export const FLOW_GROUP_COLORS: Record<string, string> = {
@@ -153,12 +159,7 @@ export const FLOW_GROUP_COLORS: Record<string, string> = {
 
 /* ── Performance Budget ────────────────────────────────────────────────────── */
 
-export const PERFORMANCE_BUDGETS: BudgetBar[] = [
-  { label: 'VertexCount', current: 800, max: 2000, unit: '', color: ACCENT_CYAN, threshold: { warn: 1400, danger: 1800 } },
-  { label: 'DrawCalls', current: 12, max: 50, unit: '', color: ACCENT_EMERALD, threshold: { warn: 35, danger: 45 } },
-  { label: 'TextureMemory', current: 24, max: 128, unit: 'MB', color: ACCENT_ORANGE, threshold: { warn: 90, danger: 115 } },
-  { label: 'Bindings', current: 8, max: 20, unit: '', color: ACCENT_VIOLET, threshold: { warn: 14, danger: 18 } },
-];
+export const PERFORMANCE_BUDGETS: BudgetBar[] = performanceBudgets();
 
 /* ── Breakpoints ───────────────────────────────────────────────────────────── */
 
@@ -171,16 +172,7 @@ export const BREAKPOINTS: { label: string; width: number }[] = [
 
 export const BREAKPOINT_PILLS: PillItem[] = BREAKPOINTS.map(bp => ({ id: bp.label, label: bp.label }));
 
-export const BREAKPOINT_WIDGETS: BreakpointWidget[] = [
-  { widget: 'HealthBar', minRes: '720p', scaleMode: 'DPI Scale', status: 'ok' },
-  { widget: 'AbilitySlots', minRes: '720p', scaleMode: 'Anchor Stretch', status: 'ok' },
-  { widget: 'Inventory', minRes: '1080p', scaleMode: 'Fixed Size', status: 'warn' },
-  { widget: 'MiniMap', minRes: '720p', scaleMode: 'Scale Box', status: 'ok' },
-  { widget: 'Tooltip', minRes: '720p', scaleMode: 'DPI Scale', status: 'ok' },
-  { widget: 'DamageNumbers', minRes: '720p', scaleMode: 'World Space', status: 'ok' },
-  { widget: 'QuestTracker', minRes: '1080p', scaleMode: 'Anchor Stretch', status: 'warn' },
-  { widget: 'ChatBox', minRes: '1440p', scaleMode: 'Fixed Size', status: 'error' },
-];
+export const BREAKPOINT_WIDGETS: BreakpointWidget[] = breakpointWidgets();
 
 /* ── Input Mode State Machine ──────────────────────────────────────────────── */
 
@@ -201,16 +193,7 @@ export const SM_EDGES: StateMachineEdge[] = [
 
 /* ── Widget Bindings ───────────────────────────────────────────────────────── */
 
-export const WIDGET_BINDINGS: WidgetBinding[] = [
-  { widget: 'HealthBar', attribute: 'HP', updateMethod: 'Delegate', frequency: 'EveryChange', isStale: false },
-  { widget: 'ManaBar', attribute: 'Mana', updateMethod: 'Delegate', frequency: 'EveryChange', isStale: false },
-  { widget: 'AbilitySlot', attribute: 'Cooldown', updateMethod: 'Timer', frequency: '0.1s', isStale: false },
-  { widget: 'ExperienceBar', attribute: 'XP', updateMethod: 'Delegate', frequency: 'EveryChange', isStale: false },
-  { widget: 'EnemyHealthBar', attribute: 'EnemyHP', updateMethod: 'Delegate', frequency: 'EveryChange', isStale: false },
-  { widget: 'StaminaBar', attribute: 'Stamina', updateMethod: 'Poll', frequency: '0.5s', isStale: true },
-  { widget: 'BuffIcon', attribute: 'ActiveEffects', updateMethod: 'Event', frequency: 'OnApply/Remove', isStale: false },
-  { widget: 'DamageText', attribute: 'DamageValue', updateMethod: 'Event', frequency: 'OnHit', isStale: false },
-];
+export const WIDGET_BINDINGS: WidgetBinding[] = widgetBindings();
 
 /* ── Accessibility ─────────────────────────────────────────────────────────── */
 
@@ -226,26 +209,11 @@ export const A11Y_CATEGORIES: AccessibilityCategory[] = [
 
 /* ── Animation Catalog ─────────────────────────────────────────────────────── */
 
-export const ANIM_CATALOG: AnimTransition[] = [
-  { widget: 'Inventory', openAnim: 'FadeIn', closeAnim: 'FadeOut', duration: '0.3s', easing: 'EaseOut' },
-  { widget: 'CharStats', openAnim: 'SlideRight', closeAnim: 'SlideLeft', duration: '0.25s', easing: 'EaseInOut' },
-  { widget: 'PauseMenu', openAnim: 'ScaleUp', closeAnim: 'ScaleDown', duration: '0.2s', easing: 'EaseOut' },
-  { widget: 'Tooltip', openAnim: 'FadeIn', closeAnim: 'FadeOut', duration: '0.15s', easing: 'Linear' },
-  { widget: 'HealthBar', openAnim: 'SlideDown', closeAnim: 'FadeOut', duration: '0.4s', easing: 'Spring' },
-  { widget: 'DamageNumber', openAnim: 'PopIn', closeAnim: 'FloatUp', duration: '0.8s', easing: 'EaseOut' },
-  { widget: 'EnemyHealthBar', openAnim: 'FadeIn', closeAnim: 'FadeOut', duration: '0.3s', easing: 'EaseInOut' },
-  { widget: 'QuestNotify', openAnim: 'SlideRight', closeAnim: 'SlideRight', duration: '0.5s', easing: 'Spring' },
-];
+export const ANIM_CATALOG: AnimTransition[] = animCatalog();
 
 /* ── Z-Layers ──────────────────────────────────────────────────────────────── */
 
-export const Z_LAYERS: ZLayer[] = [
-  { depth: 0, label: 'GameWorld', widgets: ['Viewport', 'WorldActors'], color: STATUS_SUBDUED },
-  { depth: 1, label: 'HUD', widgets: ['HealthBar', 'ManaBar', 'AbilitySlots', 'MiniMap'], color: ACCENT_PINK },
-  { depth: 2, label: 'FloatingBars', widgets: ['EnemyHealthBar', 'DamageNumbers'], color: ACCENT_VIOLET, hasOverlap: true },
-  { depth: 3, label: 'Overlays', widgets: ['Inventory', 'CharStats', 'QuestTracker'], color: ACCENT_CYAN },
-  { depth: 4, label: 'Modals', widgets: ['PauseMenu', 'SettingsPanel', 'ConfirmDialog'], color: ACCENT_ORANGE },
-];
+export const Z_LAYERS: ZLayer[] = zLayers();
 
 /* ── Localization ──────────────────────────────────────────────────────────── */
 
@@ -261,61 +229,14 @@ export const LANGUAGE_PILLS: PillItem[] = LANGUAGES.map(l => ({ id: l.code, labe
 
 /* ── HUD Context Modes ─────────────────────────────────────────────────────── */
 
-export const HUD_CONTEXTS: HudContext[] = [
-  { name: 'Combat', color: STATUS_ERROR, visible: ['HealthBar', 'ManaBar', 'AbilitySlots', 'EnemyBars', 'DamageNumbers', 'StaminaBar'], hidden: ['MiniMap', 'QuestTracker', 'ChatBox'] },
-  { name: 'Exploration', color: ACCENT_EMERALD, visible: ['HealthBar', 'MiniMap', 'QuestTracker', 'ManaBar'], hidden: ['AbilitySlots', 'EnemyBars', 'DamageNumbers', 'StaminaBar', 'ChatBox'] },
-  { name: 'Dialogue', color: ACCENT_CYAN, visible: ['DialogueBox', 'PortraitFrame', 'ChoiceList'], hidden: ['HealthBar', 'ManaBar', 'AbilitySlots', 'MiniMap', 'EnemyBars', 'DamageNumbers'] },
-  { name: 'Death', color: STATUS_SUBDUED, visible: ['DeathOverlay', 'RespawnButton', 'DeathStats'], hidden: ['HealthBar', 'ManaBar', 'AbilitySlots', 'MiniMap', 'EnemyBars', 'QuestTracker'] },
-  { name: 'Force Focus', color: '#3b82f6', visible: ['WBP_ForceMenu', 'WBP_ForceMeter', 'WBP_TargetLock'], hidden: ['MiniMap', 'QuestTracker', 'ChatBox', 'AbilitySlots'] },
-  { name: 'Lightsaber Combat', color: '#ef4444', visible: ['WBP_ComboCounter', 'WBP_StaminaArc', 'WBP_TargetFrame'], hidden: ['MiniMap', 'QuestTracker', 'ChatBox', 'DialogueBox'] },
-];
+/** Every context with its widget names resolved to registry ids. */
+export const HUD_CONTEXTS: HudContext[] = canonicalContexts();
 
 /* ── Widget Placements ─────────────────────────────────────────────────────── */
 
-export const WIDGET_PLACEMENTS: WidgetPlacement[] = [
-  { id: 'HealthBar', label: 'Health', x: 2, y: 3, w: 18, h: 5, zDepth: 1 },
-  { id: 'ManaBar', label: 'Mana', x: 2, y: 10, w: 14, h: 4, zDepth: 1 },
-  { id: 'StaminaBar', label: 'Stamina', x: 2, y: 16, w: 12, h: 3, zDepth: 1 },
-  { id: 'AbilitySlots', label: 'Abilities', x: 30, y: 88, w: 40, h: 9, zDepth: 1 },
-  { id: 'MiniMap', label: 'MiniMap', x: 82, y: 3, w: 16, h: 20, zDepth: 1 },
-  { id: 'QuestTracker', label: 'Quests', x: 80, y: 26, w: 18, h: 18, zDepth: 3 },
-  { id: 'ChatBox', label: 'Chat', x: 2, y: 70, w: 22, h: 16, zDepth: 3 },
-  { id: 'EnemyBars', label: 'Enemy HP', x: 35, y: 20, w: 14, h: 4, zDepth: 2 },
-  { id: 'DamageNumbers', label: 'Dmg Numbers', x: 45, y: 30, w: 12, h: 5, zDepth: 2 },
-  { id: 'DialogueBox', label: 'Dialogue', x: 10, y: 65, w: 80, h: 22, zDepth: 3 },
-  { id: 'PortraitFrame', label: 'Portrait', x: 3, y: 55, w: 12, h: 20, zDepth: 3 },
-  { id: 'ChoiceList', label: 'Choices', x: 60, y: 45, w: 30, h: 18, zDepth: 3 },
-  { id: 'DeathOverlay', label: 'Death Screen', x: 15, y: 20, w: 70, h: 40, zDepth: 4 },
-  { id: 'RespawnButton', label: 'Respawn', x: 35, y: 65, w: 30, h: 10, zDepth: 4 },
-  { id: 'DeathStats', label: 'Death Stats', x: 30, y: 78, w: 40, h: 12, zDepth: 4 },
-  { id: 'health-globe', label: 'Health Globe', x: 5, y: 80, w: 12, h: 15, zDepth: 5 },
-  { id: 'force-globe', label: 'Force Globe', x: 83, y: 80, w: 12, h: 15, zDepth: 5 },
-  { id: 'skill-bar', label: 'Skill Bar (1-6, Q, R)', x: 25, y: 88, w: 50, h: 8, zDepth: 6 },
-  { id: 'stamina-arc', label: 'Stamina Arc', x: 8, y: 75, w: 8, h: 5, zDepth: 4 },
-  { id: 'combo-counter', label: 'Combo Counter', x: 75, y: 40, w: 10, h: 6, zDepth: 3 },
-  { id: 'loot-feed', label: 'Loot Feed', x: 2, y: 20, w: 15, h: 30, zDepth: 2 },
-];
+export const WIDGET_PLACEMENTS: WidgetPlacement[] = widgetPlacements();
 
-export const WIDGET_Z_COLOR: Record<string, string> = {};
-for (const layer of Z_LAYERS) {
-  for (const w of layer.widgets) {
-    WIDGET_Z_COLOR[w] = layer.color;
-  }
-}
-WIDGET_Z_COLOR['EnemyBars'] = ACCENT_VIOLET;
-WIDGET_Z_COLOR['DamageNumbers'] = ACCENT_VIOLET;
-WIDGET_Z_COLOR['StaminaBar'] = ACCENT_PINK;
-WIDGET_Z_COLOR['ChatBox'] = ACCENT_CYAN;
-WIDGET_Z_COLOR['DialogueBox'] = ACCENT_CYAN;
-WIDGET_Z_COLOR['PortraitFrame'] = ACCENT_CYAN;
-WIDGET_Z_COLOR['ChoiceList'] = ACCENT_CYAN;
-WIDGET_Z_COLOR['DeathOverlay'] = ACCENT_ORANGE;
-WIDGET_Z_COLOR['RespawnButton'] = ACCENT_ORANGE;
-WIDGET_Z_COLOR['DeathStats'] = ACCENT_ORANGE;
+/** Depth colour per widget id, straight from the registry depth table (no per-widget overrides). */
+export const WIDGET_Z_COLOR: Record<string, string> = widgetZColor();
 
-export const Z_DEPTH_LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: 'HUD', color: ACCENT_PINK },
-  2: { label: 'Floating', color: ACCENT_VIOLET },
-  3: { label: 'Overlay', color: ACCENT_CYAN },
-  4: { label: 'Modal', color: ACCENT_ORANGE },
-};
+export const Z_DEPTH_LABELS: Record<number, { label: string; color: string }> = zDepthLabels();

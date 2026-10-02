@@ -1,4 +1,4 @@
-import type { TuningOverrides, AttributeSet, BalanceAlertSeverity } from '@/types/combat-simulator';
+import type { TuningOverrides, AttributeSet } from '@/types/combat-simulator';
 import {
   ENEMY_ARCHETYPES,
   PLAYER_ABILITIES,
@@ -7,7 +7,8 @@ import {
 } from './definitions';
 import { createRNG } from './simulation-engine';
 import { calculateDamage } from './damage';
-import { computeTensionCurve, type TensionCurve } from './tension-curve';
+import { computeTensionCurve, type MeasuredTensionCurve } from './tension-curve';
+import { deriveEncounterFindings, type EncounterFinding } from './encounter-findings';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,10 +44,16 @@ export interface FeedbackEvent {
   color: string;
 }
 
-export interface ChoreographyAlert {
-  severity: BalanceAlertSeverity;
-  message: string;
-  timeSec?: number;
+/** An encounter finding (balance or pacing) — owned by encounter-findings.ts. Match across passes by `kind`. */
+export type ChoreographyAlert = EncounterFinding;
+
+/** How the fight ended for the player — the facts a tuning pass is judged on first. */
+export interface EncounterOutcome {
+  playerDied: boolean;
+  /** Death time rounded to the sim tick label (0.1s); null when the player survives */
+  diedAtSec: number | null;
+  /** Player HP left at the end, as a 0–1 fraction of effective max HP (0 on death) */
+  playerHpEnd: number;
 }
 
 export interface ChoreographySimResult {
@@ -54,8 +61,9 @@ export interface ChoreographySimResult {
   feedbackEvents: FeedbackEvent[];
   alerts: ChoreographyAlert[];
   totalDurationSec: number;
-  /** Continuous dramatic-pacing arc + detected story beats */
-  tensionCurve: TensionCurve;
+  outcome: EncounterOutcome;
+  /** Continuous dramatic-pacing arc + detected story beats (fixed intensity basis) */
+  tensionCurve: MeasuredTensionCurve;
 }
 
 // ── Feedback channel color mapping (caller provides) ────────────────────
@@ -257,76 +265,31 @@ export function simulateEncounter(
     totalDuration = t;
   }
 
-  // Generate alerts
-  const alerts: ChoreographyAlert[] = [];
-  if (skippedEnemies > 0) {
-    alerts.push({
-      severity: 'warning',
-      message: `${skippedEnemies} enemy placement${skippedEnemies > 1 ? 's' : ''} skipped — unknown archetype (renamed or removed). Re-pick the enemy in the encounter.`,
-      timeSec: 0,
-    });
-  }
+  // Findings: the curve is the only pacing detector; encounter-findings owns
+  // every alert (balance from sim facts, pacing promoted 1:1 from issue beats).
   const playerDied = playerHP <= 0;
-  const totalPlayerDmgTaken = damageEvents.filter((e) => e.target === 'Player').reduce((s, e) => s + e.damage, 0);
-
-  if (playerDied && totalDuration < 5) {
-    alerts.push({ severity: 'critical', message: `Player dies in ${totalDuration.toFixed(1)}s — encounter is too punishing`, timeSec: totalDuration });
-  } else if (playerDied) {
-    alerts.push({ severity: 'warning', message: `Player dies at ${totalDuration.toFixed(1)}s — survival not guaranteed`, timeSec: totalDuration });
-  }
-
-  if (totalDuration > 45) {
-    alerts.push({ severity: 'warning', message: 'Encounter lasts 45s+ — combat feels spongy', timeSec: 45 });
-  }
-
-  if (!playerDied && totalDuration < 3 && enemies.length > 0) {
-    alerts.push({ severity: 'info', message: 'Encounter ends in <3s — trivially easy', timeSec: totalDuration });
-  }
-
-  const totalEnemyHP = enemyInstances.reduce((s, e) => s + e.maxHP, 0);
-  if (totalEnemyHP > playerMaxHP * tuning.playerHealthMul * 5) {
-    alerts.push({ severity: 'warning', message: `Combined enemy HP (${totalEnemyHP}) is 5x+ player HP — may feel tedious`, timeSec: 0 });
-  }
-
-  // Temporal alerts: detect DPS spikes and damage droughts
-  const bucketSize = 2;
-  const buckets = new Map<number, { playerDmg: number; enemyDmg: number }>();
-  for (const evt of damageEvents) {
-    const bucket = Math.floor(evt.timeSec / bucketSize) * bucketSize;
-    const b = buckets.get(bucket) ?? { playerDmg: 0, enemyDmg: 0 };
-    if (evt.source === 'Player') b.playerDmg += evt.damage;
-    else b.enemyDmg += evt.damage;
-    buckets.set(bucket, b);
-  }
-  for (const [t, b] of buckets) {
-    if (b.enemyDmg > playerMaxHP * tuning.playerHealthMul * 0.4) {
-      alerts.push({
-        severity: 'critical',
-        message: `Burst damage spike at ${t}s: ${b.enemyDmg} dmg in ${bucketSize}s (${(b.enemyDmg / (playerMaxHP * tuning.playerHealthMul) * 100).toFixed(0)}% of HP)`,
-        timeSec: t,
-      });
-    }
-    if (t > 0 && b.playerDmg === 0 && b.enemyDmg === 0) {
-      alerts.push({ severity: 'info', message: `Dead zone at ${t}–${t + bucketSize}s: no combat activity`, timeSec: t });
-    }
-  }
-
-  // Dramatic tension curve — model emotional pacing on top of the raw damage
-  // signal. Surface its pacing defects (anticlimax / flat pacing) as alerts so
-  // they show alongside the balance issues; dead zones already alert above.
+  const effectivePlayerHp = playerMaxHP * tuning.playerHealthMul;
   const tensionCurve = computeTensionCurve({
     damageEvents,
     totalDurationSec: totalDuration,
-    playerMaxHp: playerMaxHP * tuning.playerHealthMul,
+    playerMaxHp: effectivePlayerHp,
     playerDied,
   });
-  for (const beat of tensionCurve.beats) {
-    if (beat.type === 'anticlimax') {
-      alerts.push({ severity: 'info', message: `Anticlimactic finish: ${beat.detail}`, timeSec: beat.timeSec });
-    } else if (beat.type === 'flat-pacing') {
-      alerts.push({ severity: 'info', message: `Flat pacing: ${beat.detail}`, timeSec: beat.timeSec });
-    }
-  }
+  const alerts = deriveEncounterFindings({
+    damageEvents,
+    durationSec: totalDuration,
+    playerDied,
+    effectivePlayerHp,
+    totalEnemyHp: enemyInstances.reduce((s, e) => s + e.maxHP, 0),
+    enemyCount: enemies.length,
+    skippedEnemies,
+  }, tensionCurve);
 
-  return { damageEvents, feedbackEvents, alerts, totalDurationSec: totalDuration, tensionCurve };
+  const outcome: EncounterOutcome = {
+    playerDied,
+    diedAtSec: playerDied ? Math.round(totalDuration * 10) / 10 : null,
+    playerHpEnd: Math.round(Math.max(0, playerHP / effectivePlayerHp) * 1000) / 1000,
+  };
+
+  return { damageEvents, feedbackEvents, alerts, totalDurationSec: totalDuration, outcome, tensionCurve };
 }

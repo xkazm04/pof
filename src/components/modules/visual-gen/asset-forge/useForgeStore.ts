@@ -12,6 +12,9 @@ import type { ForgeCritique, ForgeFinishState, ForgeGateProjection, ForgeStatusR
 import type { DeliveryRemedy } from '@/lib/visual-gen/delivery-remedy';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider, getProviderById, providerExecution } from '@/lib/visual-gen/providers';
+import type { CollisionPlan, CollisionUse } from '@/lib/visual-gen/ue-import';
+import type { CollisionPlanBasis } from '@/lib/visual-gen/ue-import-job-store';
+import { isTracked, onTrackedChange, startTrackedPoll, stopTracked } from './forgePoller';
 
 export type JobStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'importing';
 export type GenerationMode = 'text-to-3d' | 'image-to-3d';
@@ -80,7 +83,72 @@ export interface GenerationJob {
   remedy?: DeliveryRemedy;
   /** Where the $0 local finish this card offered stands — set only by `finishJob`. */
   finish?: ForgeFinishState;
+  /**
+   * The provider-side task this runner job paid for (cloud Tripo), kept from EVERY status
+   * poll — so a job the server later forgets (a restart 404s it) still holds the handle
+   * `recoverJob` re-collects for free.
+   */
+  providerTaskId?: string;
+  /** The server's word on an errored job: may its paid task still deliver? */
+  recoverable?: boolean;
+  /** The forge 2D image this image-to-3d job was made from (its served name), recorded at
+   *  submit and carried by `retryJob`. Client-side provenance: never sent in the request. */
+  sourceImage?: string;
 }
+
+/**
+ * The image-to-3D reference the Generate tab submits — in the store, not panel state, so a
+ * forge tab switch (which unmounts the panel) cannot drop it. Memory-only. `image-2d` is a
+ * 2D forge result staged by "Make 3D from this image" (`./referenceHandoff`); `upload` is a
+ * file the operator picked. `subject` seeds the prompt builder.
+ */
+export interface ForgeReference {
+  dataUrl: string;
+  source: 'upload' | 'image-2d';
+  sourceName: string;
+  subject?: string;
+}
+
+/** GET /api/visual-gen/ue-import/status — requested collision, its basis, and what was OBSERVED. */
+export interface UeImportStatus {
+  status: 'running' | 'done' | 'error';
+  glbPath: string;
+  use: CollisionUse;
+  assetPath?: string;
+  collision: CollisionPlan | null;
+  planBasis: CollisionPlanBasis | null;
+  shells: number | null;
+  /** Read back from `body_setup` — null means nothing counted it. */
+  collisionElements: number | null;
+  critiqueUnavailable?: boolean;
+  critiqueError?: string;
+  error?: string;
+}
+
+/** Exactly the previewed tuple a Send posts, into the delivery's own folder. */
+export interface UeImportRequest {
+  glbPath: string;
+  use: CollisionUse;
+  assetName: string;
+  assetClass?: string;
+  destPath: string;
+}
+
+/** The forge's one UE import — in the store so a tab switch (panel unmount) cannot lose it. */
+export interface UeImportState {
+  /** The tracked-poll id while the rail is following it; null once it ended or was stopped. */
+  trackId: string | null;
+  jobId: string | null;
+  status: 'idle' | 'sending' | 'running' | 'done' | 'error';
+  /** The last status the server answered — its collision count is the verdict. */
+  result: UeImportStatus | null;
+  error: string | null;
+}
+
+export const UE_IMPORT_IDLE: UeImportState = { trackId: null, jobId: null, status: 'idle', result: null, error: null };
+
+/** The client's patience for a UE import, derived from the server's settle ceiling — never invented. */
+export const UE_IMPORT_POLL_BUDGET_MS = 180_000 + UI_TIMEOUTS.experimentBudgetMargin;
 
 interface ForgeState {
   jobs: GenerationJob[];
@@ -92,10 +160,19 @@ interface ForgeState {
   applyStyleDna: boolean;
   /** Local job ids whose background status poll is currently running. This is the
    *  OPERATOR-VISIBLE mirror of the module-level poller map: the poll deliberately
-   *  outlives the forge module (see `pollingIntervals` below), so it must be
+   *  outlives the forge module (see `./forgePoller`), so it must be
    *  visible and stoppable from the UI rather than being an invisible daemon. */
   activePolls: string[];
+  /** The current (or last) Send to UE — see `startUeImport`. */
+  ueImport: UeImportState;
+  /** The staged image-to-3D reference, or null. */
+  reference: ForgeReference | null;
+  stageReference: (reference: ForgeReference) => void;
+  clearReference: () => void;
 
+  /** POST /api/visual-gen/ue-import, then follow its status on the tracked rail (listed in
+   *  `activePolls`, stoppable, surviving the panel's unmount). One import at a time. */
+  startUeImport: (request: UeImportRequest) => Promise<void>;
   /** Enqueue a `pending` job. ONLY for a caller that immediately drives it to a
    *  terminal state (`submitMcpJob` / `submitLocalJob` do). A `pending` job with no
    *  poller behind it is a phantom: no update, no error, no timeout, and a live
@@ -134,6 +211,11 @@ interface ForgeState {
    *  the same tracked-poller rail as a generation. Never calls a generation route — the
    *  only paid path stays `retryJob`, which still runs on `failed` jobs only. */
   finishJob: (id: string) => Promise<void>;
+  /** Explicit operator click on a `runnerRecoverable` card: POST the job's EXISTING provider
+   *  task id to /api/visual-gen/generate/recover and poll the returned job on the same
+   *  runner rail. Never calls /api/visual-gen/generate — recovery polls and downloads the
+   *  task it already paid for; only `retryJob` buys a new one. */
+  recoverJob: (id: string) => Promise<void>;
   /** Runner-backed generation: POST to /api/visual-gen/generate, then poll /status.
    *  Serves BOTH modes — image-to-3d (TripoSR / Hunyuan3D / Tripo3D, `imageDataUrl`)
    *  and text-to-3d (Tripo3D, `prompt`). The prompt used to be dropped here, which
@@ -143,13 +225,17 @@ interface ForgeState {
    *  `assetClass` is OPTIONAL and omitting it is legitimate: the route then grades
    *  class-blind and says so in the 202's `gradedAs`, which is stored on the job. It was
    *  never sent from the app at all until now, so class-aware grading — fully implemented
-   *  server-side — was unreachable exactly the way text-to-3d had been. */
+   *  server-side — was unreachable exactly the way text-to-3d had been.
+   *
+   *  `origin.sourceImage` names the 2D forge image the reference came from; it is stored
+   *  on the job only, so the request body is the same for an upload and a staged image. */
   submitLocalJob: (
     providerId: string,
     mode: GenerationMode,
     imageDataUrl?: string,
     prompt?: string,
     assetClass?: string,
+    origin?: { sourceImage?: string },
   ) => Promise<void>;
 }
 
@@ -186,7 +272,24 @@ export function mcpReattachable(job: GenerationJob): boolean {
     && !!job.mcpJobId
     && !!mcpProviderOf(job)
     && job.error !== MCP_REMOTE_FAILED_ERROR
-    && !pollingIntervals.has(job.id);
+    && !isTracked(job.id);
+}
+
+/**
+ * Runner providers whose task lives PROVIDER-side and can be re-collected by id — the forge
+ * mirror of the dispatch entries that carry `recover` (a test pins the two sets equal; the
+ * server table is server-only, so it cannot be imported here).
+ */
+export const RECOVERABLE_RUNNER_PROVIDERS: readonly string[] = ['tripo3d'];
+
+/** A failed runner job whose PAID provider task may still deliver: it holds the task id,
+ *  the server did not report a terminal provider verdict, and nothing is polling it. */
+export function runnerRecoverable(job: GenerationJob): boolean {
+  return job.status === 'failed'
+    && RECOVERABLE_RUNNER_PROVIDERS.includes(job.providerId)
+    && !!job.providerTaskId
+    && job.recoverable !== false
+    && !isTracked(job.id);
 }
 
 /** The ledger row shape GET /api/blender-mcp/generate/jobs lists (read defensively). */
@@ -198,18 +301,16 @@ interface LedgerJobView {
 }
 
 /**
- * Track active pollers so they can be cancelled. A poller is a self-scheduling
- * `setTimeout` recursion (NOT a `setInterval`): the next tick is only scheduled
- * after the current async body settles, so polls can never overlap. `stop()`
- * sets `stopped` (so any in-flight body bails before mutating state) and clears
- * the pending timeout (so no further tick fires).
+ * Every background poll rides ONE rail — `startTrackedPoll` in `./forgePoller`, which owns
+ * the tracked registry (formerly `pollingIntervals` here) and the skeleton the three store
+ * loops used to copy: no overlapping ticks, a stop that wins over a late response, and a
+ * guarantee that the poll ENDS.
  *
  * DELIBERATE LIFETIME — READ BEFORE "FIXING": these polls live in a store action,
  * not a React effect, so neither `SuspendContext` nor the module LRU's unmount
  * reaches them. That is INTENTIONAL: a remote 3D generation runs for minutes and
- * is already paid for, so navigating to another module must not abandon it. What
- * was missing — and what the three mechanisms below supply — is a guarantee that
- * it ENDS:
+ * is already paid for, so navigating to another module must not abandon it — and a
+ * UE import boots the editor, so a forge tab switch must not lose its verdict. It ENDS on:
  *   1. terminal remote status (`completed` / `failed`) — the normal exit;
  *   2. `MAX_CONSECUTIVE_POLL_FAILURES` transport misses in a row;
  *   3. `FORGE_POLL_MAX_DURATION_MS` wall-clock deadline — the backstop for a
@@ -218,10 +319,6 @@ interface LedgerJobView {
  * Every running poll is mirrored into `activePolls` so the queue UI can show
  * that background work is still in flight and offer that stop.
  */
-interface Poller {
-  stop: () => void;
-}
-const pollingIntervals = new Map<string, Poller>();
 
 /**
  * Hard ceiling on how long ONE job may be polled (30 min). Provider generations
@@ -231,21 +328,8 @@ const pollingIntervals = new Map<string, Poller>();
  */
 export const FORGE_POLL_MAX_DURATION_MS = 30 * 60_000;
 
-/** Register a running poll: cancellable via the map, visible via `activePolls`. */
-function trackPoller(id: string, stop: () => void): void {
-  pollingIntervals.set(id, { stop });
-  useForgeStore.setState((s) =>
-    s.activePolls.includes(id) ? s : { activePolls: [...s.activePolls, id] },
-  );
-}
-
-/** De-register a finished/stopped poll. Safe to call for an id that isn't tracked. */
-function untrackPoller(id: string): void {
-  pollingIntervals.delete(id);
-  useForgeStore.setState((s) =>
-    s.activePolls.includes(id) ? { activePolls: s.activePolls.filter((p) => p !== id) } : s,
-  );
-}
+/** The tracked-poll id of a UE import — namespaced so it never collides with a queue card. */
+const ueImportTrackId = (jobId: string) => `ue-import:${jobId}`;
 
 export const useForgeStore = create<ForgeState>((set, get) => ({
   jobs: [],
@@ -254,6 +338,27 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   activeStyleDna: null,
   applyStyleDna: true,
   activePolls: [],
+  ueImport: UE_IMPORT_IDLE,
+  reference: null,
+
+  stageReference: (reference) => set({ reference }),
+  clearReference: () => set({ reference: null }),
+
+  startUeImport: async (request) => {
+    const { status, trackId } = get().ueImport;
+    if (status === 'sending' || trackId !== null) return;
+    set({ ueImport: { ...UE_IMPORT_IDLE, status: 'sending' } });
+    const res = await tryApiFetch<{ jobId: string }>('/api/visual-gen/ue-import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      set({ ueImport: { ...UE_IMPORT_IDLE, status: 'error', error: res.error } });
+      return;
+    }
+    trackUeImport(res.data.jobId);
+  },
 
   addJob: (jobData) => {
     const id = `forge-${Date.now()}-${++jobCounter}`;
@@ -275,11 +380,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
 
   removeJob: (id) => {
     // Stop any active polling for this job
-    const poller = pollingIntervals.get(id);
-    if (poller) {
-      poller.stop();
-      untrackPoller(id);
-    }
+    stopTracked(id);
     set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) }));
   },
 
@@ -306,7 +407,9 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       // The `assetClass` rides along too: a retry graded against a different budget than
       // the original submission would report a verdict about a job nobody asked for.
       if (job.mode === 'image-to-3d' && job.imageUrl?.startsWith('data:')) {
-        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt, job.assetClass);
+        // The 2D origin rides along too, so the fresh card still says where its image came from.
+        const origin = job.sourceImage ? { sourceImage: job.sourceImage } : undefined;
+        return () => void get().submitLocalJob(job.providerId, job.mode, job.imageUrl, job.prompt, job.assetClass, origin);
       }
       // Runner-backed text-to-3D: the prompt is the whole input.
       if (job.mode === 'text-to-3d' && job.prompt.trim()) {
@@ -332,13 +435,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const { jobs } = get();
     // Stop polling for any completed/failed jobs being removed
     for (const job of jobs) {
-      if (job.status === 'completed' || job.status === 'failed') {
-        const poller = pollingIntervals.get(job.id);
-        if (poller) {
-          poller.stop();
-          untrackPoller(job.id);
-        }
-      }
+      if (job.status === 'completed' || job.status === 'failed') stopTracked(job.id);
     }
     set((s) => ({
       jobs: s.jobs.filter((j) => j.status !== 'completed' && j.status !== 'failed'),
@@ -346,10 +443,14 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
   },
 
   stopPolling: (id) => {
-    const poller = pollingIntervals.get(id);
-    if (!poller) return;
-    poller.stop();
-    untrackPoller(id);
+    if (!stopTracked(id)) return;
+    if (id === get().ueImport.trackId) {
+      // Stop ends the POLL only: the editor boot is already under way and may still land.
+      set((s) => ({
+        ueImport: { ...s.ueImport, trackId: null, error: 'Tracking stopped by operator — the editor import may still be running.' },
+      }));
+      return;
+    }
     const job = get().jobs.find((j) => j.id === id);
     // A stopped poll must not leave the job reading as still-in-progress: state
     // the truth — tracking ended here, the provider may still be working.
@@ -442,7 +543,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       if (held) {
         // Already queued. Adopt it only if it is in flight with nothing polling it.
         const inFlight = held.status === 'pending' || held.status === 'generating';
-        if (inFlight && !pollingIntervals.has(held.id)) trackMcpJob(held.id, mcpJobId, mcpProvider);
+        if (inFlight && !isTracked(held.id)) trackMcpJob(held.id, mcpJobId, mcpProvider);
         continue;
       }
 
@@ -477,7 +578,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     const job = get().jobs.find((j) => j.id === id);
     if (!job || job.status !== 'completed' || job.remedy?.kind !== 'finish') return;
     // One finish at a time per card, and never on top of a live poll.
-    if (job.finish?.state === 'running' || pollingIntervals.has(id)) return;
+    if (job.finish?.state === 'running' || isTracked(id)) return;
     const { name, dir } = job.remedy;
     get().updateJob(id, { finish: { state: 'running' } });
 
@@ -504,8 +605,38 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     trackFinishJob(id, res.data.jobId);
   },
 
-  submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass) => {
-    const localId = get().addJob({ mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass });
+  recoverJob: async (id) => {
+    const job = get().jobs.find((j) => j.id === id);
+    if (!job || !runnerRecoverable(job)) return;
+    const taskId = job.providerTaskId!;
+    // Leave `failed` BEFORE the await, so a second click cannot start a second recovery.
+    get().updateJob(id, { status: 'generating', progress: 0, error: undefined, recoverable: undefined, completedAt: undefined });
+    const res = await tryApiFetch<{ jobId: string; gradedAs?: string }>('/api/visual-gen/generate/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providerId: job.providerId, taskId, assetClass: job.assetClass }),
+    });
+    if (!get().jobs.some((j) => j.id === id)) return;
+    if (!res.ok) {
+      get().updateJob(id, {
+        status: 'failed',
+        error: `Recover failed: ${res.error} (task ${taskId} was not paid for again)`,
+        completedAt: Date.now(),
+      });
+      return;
+    }
+    get().updateJob(id, {
+      mcpJobId: res.data.jobId,
+      ...(res.data.gradedAs !== undefined ? { gradedAs: res.data.gradedAs } : {}),
+    });
+    trackRunnerJob(id, res.data.jobId);
+  },
+
+  submitLocalJob: async (providerId, mode, imageDataUrl, prompt, assetClass, origin) => {
+    const localId = get().addJob({
+      mode, prompt: prompt ?? '', providerId, imageUrl: imageDataUrl, assetClass,
+      ...(origin?.sourceImage ? { sourceImage: origin.sourceImage } : {}),
+    });
 
     const submit = await tryApiFetch<{
       jobId: string;
@@ -534,233 +665,114 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     get().updateJob(localId, { status: 'generating', mcpJobId: jobId, gradedAs, inputGateNote: inputGate?.note });
     if (prompt?.trim()) get().addToHistory(prompt.trim());
 
-    // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
-    // ticks, `stopped` guards every post-await branch). A poll miss is a TRANSPORT
-    // failure — keep retrying — but cap consecutive misses so a persistent status
-    // endpoint outage fails the job cleanly instead of retrying forever.
-    const MAX_CONSECUTIVE_POLL_FAILURES = 3;
-    let pollFailures = 0;
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const pollStartedAt = Date.now();
-    const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
-    const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
-
-    async function tick() {
-      timer = null;
-      if (stopped) return;
-      // Terminal condition 3: wall-clock deadline (see the poller doc block).
-      if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the local runner.`,
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      // The client type IS the route's projection (`ForgeStatusResponse`), so the
-      // honesty signals the server computes cannot be silently dropped here again.
-      const res = await tryApiFetch<ForgeStatusResponse>(
-        `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
-      );
-      if (stopped) return;
-      if (!res.ok) {
-        pollFailures++;
-        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
-          scheduleNext(); // transient transport miss — keep polling
-          return;
-        }
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Status polling failed ${pollFailures} times in a row: ${res.error}`,
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      pollFailures = 0;
-      const {
-        status, meshPath, error, critique, fidelity,
-        accepted, ungated, gradedAs: polledGradedAs, gateReason, attempts, formatMismatch, renderUrl, remedy,
-      } = res.data;
-      if (status === 'done') {
-        stop();
-        untrackPoller(localId);
-        // `done` is a TRANSPORT outcome. `accepted`/`ungated`/`gateReason` are the
-        // verdict, and all of them ride onto the job so the card can tell apart a mesh
-        // a gate rejected from one nothing ever measured.
-        get().updateJob(localId, {
-          status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
-          critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy,
-          // Refreshed from the store's own record; falls back to the 202's sentence
-          // rather than blanking a line the operator has already read.
-          ...(polledGradedAs !== undefined ? { gradedAs: polledGradedAs } : {}),
-          completedAt: Date.now(),
-        });
-        return;
-      }
-      if (status === 'error') {
-        stop();
-        untrackPoller(localId);
-        get().updateJob(localId, { status: 'failed', error: error ?? 'generation failed', completedAt: Date.now() });
-        return;
-      }
-      scheduleNext();
-    }
-    trackPoller(localId, stop);
-    scheduleNext();
+    trackRunnerJob(localId, jobId);
   },
 }));
 
+/** Mirror the rail's tracked set into the operator-visible `activePolls`. */
+onTrackedChange((id, on) => {
+  useForgeStore.setState((s) => {
+    if (on) return s.activePolls.includes(id) ? s : { activePolls: [...s.activePolls, id] };
+    return s.activePolls.includes(id) ? { activePolls: s.activePolls.filter((p) => p !== id) } : s;
+  });
+});
+
+/** The rail's settings every generation/finish poll shares. */
+const FORGE_RAIL = { deadlineMs: FORGE_POLL_MAX_DURATION_MS, intervalMs: UI_TIMEOUTS.blenderGenPollInterval } as const;
+
 /**
- * The MCP status poll loop for ONE provider job, bound to one local queue entry. Extracted
- * unchanged from `submitMcpJob` so a re-adopted job (`resumeMcpJobs`) and a re-attached one
- * (`reattachJob`) are tracked by the very same loop — same terminal conditions, same
- * auto-import (which the import route now makes idempotent), same operator stop.
+ * The status poll for ONE runner job (`/api/visual-gen/generate/status`), bound to one queue
+ * card — shared by `submitLocalJob` and `recoverJob`. Every poll keeps the provider task id,
+ * so even a job that then 404s (server restart) stays recoverable.
+ */
+function trackRunnerJob(localId: string, jobId: string): void {
+  const get = useForgeStore.getState;
+  // Kept from EVERY poll: once Tripo accepts the task the handle is here, so a later
+  // 404 (server restart) or give-up still leaves a card that can recover it for free.
+  const keepTaskId = ({ providerTaskId }: ForgeStatusResponse) => {
+    if (providerTaskId && get().jobs.find((j) => j.id === localId)?.providerTaskId !== providerTaskId) {
+      get().updateJob(localId, { providerTaskId });
+    }
+  };
+  startTrackedPoll<ForgeStatusResponse>({
+    id: localId,
+    ...FORGE_RAIL,
+    // The client type IS the route's projection (`ForgeStatusResponse`), so the
+    // honesty signals the server computes cannot be silently dropped here again.
+    fetchStatus: () => tryApiFetch<ForgeStatusResponse>(`/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`),
+    isTerminal: (d) => d.status === 'done' || d.status === 'error',
+    onTick: keepTaskId,
+    onTerminal: (d) => {
+      keepTaskId(d);
+      if (d.status === 'error') {
+        // `recoverable` is the server's verdict on the paid task: absent means "no".
+        get().updateJob(localId, {
+          status: 'failed', error: d.error ?? 'generation failed', recoverable: d.recoverable === true, completedAt: Date.now(),
+        });
+        return;
+      }
+      // `done` is a TRANSPORT outcome. `accepted`/`ungated`/`gateReason` are the verdict, and
+      // all of them ride onto the job so the card can tell apart a mesh a gate rejected from
+      // one nothing ever measured.
+      const { meshPath, critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy } = d;
+      get().updateJob(localId, {
+        status: 'completed', progress: 100, resultUrl: meshPath, meshPath,
+        critique, fidelity, accepted, ungated, gateReason, attempts, formatMismatch, renderUrl, remedy,
+        // Refreshed from the store's own record; falls back to the 202's sentence
+        // rather than blanking a line the operator has already read.
+        ...(d.gradedAs !== undefined ? { gradedAs: d.gradedAs } : {}),
+        completedAt: Date.now(),
+      });
+    },
+    onGiveUp: (g) => get().updateJob(localId, {
+      status: 'failed',
+      error: g.reason === 'deadline' ? `${g.message} without a terminal status from the local runner.` : g.message,
+      completedAt: Date.now(),
+    }),
+  });
+}
+
+/**
+ * The MCP status poll for ONE provider job, bound to one local queue entry — shared by
+ * `submitMcpJob`, a re-adopted job (`resumeMcpJobs`) and a re-attached one (`reattachJob`):
+ * same terminal conditions, same auto-import (which the import route makes idempotent).
  */
 function trackMcpJob(localId: string, mcpJobId: string, mcpProvider: McpProvider): void {
   const get = useForgeStore.getState;
-
-  // Start polling for status. A poll miss is a TRANSPORT failure (dev-server
-  // restart, Wi-Fi blip, one 502) — the multi-minute remote generation is
-  // still running and already paid for. Only consecutive misses, or an
-  // explicit remote 'failed', terminate the job.
-  const MAX_CONSECUTIVE_POLL_FAILURES = 3;
-  let pollFailures = 0;
-
-  // Self-scheduling poll loop. We use a recursive `setTimeout` rather than a
-  // `setInterval` with an async body so that the next tick is only scheduled
-  // AFTER the current poll (and its trailing awaits) settle — overlapping
-  // in-flight polls for the same job are therefore impossible. `stopped`
-  // guards every post-await branch so a late-resolving body can't mutate a job
-  // that has already finished or been torn down (prevents the importing →
-  // generating state-flip race), and `timer` is nulled/cleared on stop.
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const pollStartedAt = Date.now();
-
-  const stop = () => {
-    stopped = true;
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  };
-
-  const scheduleNext = () => {
-    if (stopped) return;
-    timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval);
-  };
-
-  async function tick() {
-    // The timeout has fired; this poll is now the only in-flight tick.
-    timer = null;
-    if (stopped) return;
-
-    // Terminal condition 3: wall-clock deadline. A remote job that never
-    // reaches `completed`/`failed` would otherwise be polled forever.
-    if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
-      stop();
-      untrackPoller(localId);
-      get().updateJob(localId, {
-        status: 'failed',
-        error: `Gave up tracking after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status from the provider.`,
-        completedAt: Date.now(),
-      });
-      return;
-    }
-
-    // The MCP status route now projects the SAME verdict axis as the runner route, so
-    // the client type is the transport shape plus that projection — an MCP delivery
-    // can no longer arrive here as a bare status and render as a passed gate.
-    const statusResult = await tryApiFetch<JobStatusResult & ForgeGateProjection>(
+  startTrackedPoll<JobStatusResult & ForgeGateProjection>({
+    id: localId,
+    ...FORGE_RAIL,
+    // The MCP status route projects the SAME verdict axis as the runner route, so an MCP
+    // delivery can never arrive here as a bare status and render as a passed gate.
+    fetchStatus: () => tryApiFetch<JobStatusResult & ForgeGateProjection>(
       `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
-    );
-    if (stopped) return;
-
-    if (!statusResult.ok) {
-      pollFailures++;
-      if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
-        scheduleNext(); // transient — keep polling
+    ),
+    isTerminal: (d) => d.status === 'completed' || d.status === 'failed',
+    onTick: (d) => get().updateJob(localId, { progress: d.progress }),
+    onTerminal: async ({ status, resultUrl, accepted, ungated, gateReason }) => {
+      if (status === 'failed') {
+        get().updateJob(localId, { status: 'failed', error: MCP_REMOTE_FAILED_ERROR, completedAt: Date.now() });
         return;
       }
-      stop();
-      untrackPoller(localId);
-      get().updateJob(localId, {
-        status: 'failed',
-        error: `Status polling failed ${pollFailures} times in a row: ${statusResult.error}`,
-        completedAt: Date.now(),
+      // The poll is already stopped, so none fires during the long import await.
+      get().updateJob(localId, { status: 'importing', progress: 100, resultUrl });
+      const importResult = await tryApiFetch<ImportedObject>('/api/blender-mcp/generate/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: mcpJobId, provider: mcpProvider }),
       });
-      return;
-    }
-    pollFailures = 0;
-
-    const { status, progress, resultUrl, accepted, ungated, gateReason } = statusResult.data;
-
-    if (status === 'completed') {
-      // Stop scheduling BEFORE the long /import await so no poll fires during
-      // import; `stopped` is now set, so any race that re-enters this body
-      // bails immediately.
-      stop();
-      untrackPoller(localId);
-
-      // Auto-import into Blender
-      get().updateJob(localId, {
-        status: 'importing',
-        progress: 100,
-        resultUrl,
-      });
-
-      const importResult = await tryApiFetch<ImportedObject>(
-        '/api/blender-mcp/generate/import',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId: mcpJobId, provider: mcpProvider }),
-        },
-      );
-
-      if (importResult.ok) {
-        get().updateJob(localId, {
-          status: 'completed',
-          // The server's verdict rides onto the job exactly as it does for a runner
-          // job, so ONE queue-card code path serves both. On this path it is always
-          // "delivered, ungated, and here is why nothing measured it" — which is the
-          // truth a bare `completed` was quietly rounding up to a pass.
-          accepted, ungated, gateReason,
-          completedAt: Date.now(),
-        });
-      } else {
-        get().updateJob(localId, {
-          status: 'failed',
-          error: `Import failed: ${importResult.error}`,
-          completedAt: Date.now(),
-        });
-      }
-      return;
-    }
-
-    if (status === 'failed') {
-      stop();
-      untrackPoller(localId);
-      get().updateJob(localId, {
-        status: 'failed',
-        error: MCP_REMOTE_FAILED_ERROR,
-        completedAt: Date.now(),
-      });
-      return;
-    }
-
-    // Still processing — update progress, then schedule the next poll.
-    get().updateJob(localId, { progress });
-    scheduleNext();
-  }
-
-  trackPoller(localId, stop);
-  scheduleNext();
+      get().updateJob(localId, importResult.ok
+        // The server's verdict rides onto the job exactly as for a runner job, so ONE card
+        // code path serves both: "delivered, ungated, and here is why nothing measured it".
+        ? { status: 'completed', accepted, ungated, gateReason, completedAt: Date.now() }
+        : { status: 'failed', error: `Import failed: ${importResult.error}`, completedAt: Date.now() });
+    },
+    onGiveUp: (g) => get().updateJob(localId, {
+      status: 'failed',
+      error: g.reason === 'deadline' ? `${g.message} without a terminal status from the provider.` : g.message,
+      completedAt: Date.now(),
+    }),
+  });
 }
 
 /** What GET /api/visual-gen/mesh-finish/status returns (the fields the card reads). */
@@ -772,63 +784,60 @@ interface FinishStatusView {
 }
 
 /**
- * The poll loop for ONE routed mesh-finish job, bound to the queue card that asked for it.
- * Same termination guarantees as a generation poll (terminal status, consecutive misses,
- * `FORGE_POLL_MAX_DURATION_MS`, operator stop), registered under the card's id so the
- * queue's "Stop tracking" reaches it. It only ever GETs the finish status.
+ * The poll for ONE routed mesh-finish job, bound to the queue card that asked for it,
+ * registered under the card's id so the queue's "Stop tracking" reaches it. It only ever
+ * GETs the finish status.
  */
 function trackFinishJob(localId: string, finishJobId: string): void {
-  const get = useForgeStore.getState;
-  const MAX_CONSECUTIVE_POLL_FAILURES = 3;
-  let pollFailures = 0;
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const pollStartedAt = Date.now();
-  const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
-  const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
-  const end = (finish: ForgeFinishState) => {
-    stop();
-    untrackPoller(localId);
-    get().updateJob(localId, { finish });
-  };
-
-  async function tick() {
-    timer = null;
-    if (stopped) return;
-    if (Date.now() - pollStartedAt >= FORGE_POLL_MAX_DURATION_MS) {
-      end({ state: 'failed', error: `Gave up tracking the finish after ${Math.round(FORGE_POLL_MAX_DURATION_MS / 60_000)} min without a terminal status.` });
-      return;
-    }
-    const res = await tryApiFetch<FinishStatusView>(
-      `/api/visual-gen/mesh-finish/status?jobId=${encodeURIComponent(finishJobId)}`,
-    );
-    if (stopped) return;
-    if (!res.ok) {
-      pollFailures++;
-      if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) { scheduleNext(); return; }
-      end({ state: 'failed', error: `Finish status polling failed ${pollFailures} times in a row: ${res.error}` });
-      return;
-    }
-    pollFailures = 0;
-    const { status, meshPath, error, remediation } = res.data;
-    if (status === 'done') {
-      end({
+  const end = (finish: ForgeFinishState) => useForgeStore.getState().updateJob(localId, { finish });
+  startTrackedPoll<FinishStatusView>({
+    id: localId,
+    ...FORGE_RAIL,
+    fetchStatus: () => tryApiFetch<FinishStatusView>(`/api/visual-gen/mesh-finish/status?jobId=${encodeURIComponent(finishJobId)}`),
+    isTerminal: (d) => d.status === 'done' || d.status === 'error',
+    onTerminal: ({ status, meshPath, error, remediation }) => end(status === 'done'
+      ? {
         state: 'done',
         // The strict before -> after line; absent only if the job was not routed, which
         // this path never starts — so its absence is stated, not papered over.
         summary: remediation?.summary ?? 'finished, but no before -> after re-grade was reported',
         improved: remediation?.improved === true,
         meshPath,
-      });
-      return;
-    }
-    if (status === 'error') {
-      end({ state: 'failed', error: error ?? 'the Blender finish failed' });
-      return;
-    }
-    scheduleNext();
-  }
+      }
+      : { state: 'failed', error: error ?? 'the Blender finish failed' }),
+    onGiveUp: (g) => end({
+      state: 'failed',
+      error: g.reason === 'deadline'
+        ? `Gave up tracking the finish after ${g.minutes} min without a terminal status.`
+        : `Finish status polling failed ${g.misses} times in a row: ${g.lastError}`,
+    }),
+  });
+}
 
-  trackPoller(localId, stop);
-  scheduleNext();
+/**
+ * The UE import's poll (`/api/visual-gen/ue-import/status`) — on the same rail, so it is
+ * listed in `activePolls`, forgives transport misses, and outlives the panel (a forge tab
+ * switch unmounts it). Its deadline is the panel's derived budget, never a new clock.
+ */
+function trackUeImport(jobId: string): void {
+  const set = useForgeStore.setState;
+  const trackId = ueImportTrackId(jobId);
+  // Only the import that is still current may write — a newer Send owns the slice.
+  const settle = (patch: Partial<UeImportState>) => set((s) =>
+    s.ueImport.trackId === trackId ? { ueImport: { ...s.ueImport, trackId: null, ...patch } } : s);
+  set({ ueImport: { trackId, jobId, status: 'running', result: null, error: null } });
+  startTrackedPoll<UeImportStatus>({
+    id: trackId,
+    deadlineMs: UE_IMPORT_POLL_BUDGET_MS,
+    intervalMs: UI_TIMEOUTS.experimentPoll,
+    fetchStatus: () => tryApiFetch<UeImportStatus>(`/api/visual-gen/ue-import/status?jobId=${encodeURIComponent(jobId)}`),
+    isTerminal: (d) => d.status !== 'running',
+    onTick: (d) => set((s) => (s.ueImport.trackId === trackId ? { ueImport: { ...s.ueImport, result: d } } : s)),
+    onTerminal: (d) => settle({ status: d.status, result: d }),
+    onGiveUp: (g) => settle({
+      error: g.reason === 'deadline'
+        ? 'gave up polling — the editor is still running past the budget; the job may still finish'
+        : g.message,
+    }),
+  });
 }

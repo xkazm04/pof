@@ -2,8 +2,27 @@ import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
 import { getAppOrigin } from '@/lib/constants';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
+import { hexToLinearRgb, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
+import {
+  bytesToBase64,
+  derivedChannelSpec,
+  type DerivedMapsResponse,
+  type MapProvenance,
+  type RefusedChannel,
+} from '@/lib/visual-gen/derived-maps';
 import { planMaterialTransfer, type MaterialTransferPlan } from './materialTransfer';
-import { ok, type Result } from '@/types/result';
+import { err, ok, type Result } from '@/types/result';
+
+/** What one "Derive maps from albedo" click did — every slot accounted for. */
+export interface DeriveMapsOutcome {
+  filled: Array<{ channel: TextureChannel; provenance: MapProvenance; method: string }>;
+  /** Slots that already held a map: a derivation never overwrites one. */
+  skipped: Array<{ channel: TextureChannel; reason: string }>;
+  /** Channels the albedo cannot honestly produce, with the reason. */
+  refused: RefusedChannel[];
+}
+
+const TEXTURE_MAPS_ENDPOINT = '/api/texture-maps';
 
 export interface SendToBlenderResult {
   name: string;
@@ -59,16 +78,8 @@ function toPreset(record: MaterialRecordDto): MaterialPreset {
 
 export type PreviewMesh = 'sphere' | 'cube' | 'plane' | 'cylinder';
 
-export type TextureChannel = 'albedo' | 'normal' | 'metallic' | 'roughness' | 'ao';
-
-/** Convert a hex color string like "#c0c0c0" to [r, g, b] in 0-1 range. */
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16) / 255;
-  const g = parseInt(h.substring(2, 4), 16) / 255;
-  const b = parseInt(h.substring(4, 6), 16) / 255;
-  return [r, g, b];
-}
+/** The lab's texture slots — the channel column of `MATERIAL_CHANNELS`. */
+export type TextureChannel = MaterialChannel;
 
 interface MaterialState {
   params: PBRParams;
@@ -98,11 +109,23 @@ interface MaterialState {
   // TextureSlot subscribes to its channel's tick to trigger a Framer Motion
   // highlight when a value is piped in from another panel (e.g. Advanced).
   textureHighlightTick: Record<TextureChannel, number>;
+  /**
+   * Where each slot's map came from. Set only by a derivation; any other
+   * `setTexture` (upload, generation, clear) resets it, so a derived label can
+   * never stick to a user's map.
+   */
+  textureProvenance: Partial<Record<TextureChannel, MapProvenance>>;
 
   setParam: <K extends keyof PBRParams>(key: K, value: PBRParams[K]) => void;
   setParams: (params: Partial<PBRParams>) => void;
   setPreviewMesh: (mesh: PreviewMesh) => void;
-  setTexture: (channel: TextureChannel, url: string | null) => void;
+  setTexture: (channel: TextureChannel, url: string | null, provenance?: MapProvenance) => void;
+  /**
+   * Derive the missing maps from the loaded albedo through the free, local
+   * `/api/texture-maps` (never a paid route). Sends the albedo's BYTES, fills only
+   * EMPTY slots with the served files, and labels each. Runs only when called.
+   */
+  deriveMapsFromAlbedo: () => Promise<Result<DeriveMapsOutcome, string>>;
   /** Fetch the saved presets. Returns the failure so the caller can show it with a retry. */
   loadPresets: () => Promise<Result<MaterialPreset[], string>>;
   /** Persist the current params under `name`. Resolves to the new preset id. */
@@ -152,6 +175,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   aoTexture: null,
 
   textureHighlightTick: { albedo: 0, normal: 0, metallic: 0, roughness: 0, ao: 0 },
+  textureProvenance: {},
 
   setParam: (key, value) =>
     set((s) => ({ params: { ...s.params, [key]: value }, activePresetId: null })),
@@ -161,7 +185,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
   setPreviewMesh: (mesh) => set({ previewMesh: mesh }),
 
-  setTexture: (channel, url) => {
+  setTexture: (channel, url, provenance) => {
     const key = `${channel}Texture` as keyof MaterialState;
     set((s) => ({
       [key]: url,
@@ -169,7 +193,45 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
         ...s.textureHighlightTick,
         [channel]: s.textureHighlightTick[channel] + 1,
       },
+      textureProvenance: { ...s.textureProvenance, [channel]: url ? provenance : undefined },
     } as Partial<MaterialState>));
+  },
+
+  deriveMapsFromAlbedo: async () => {
+    const albedo = get().albedoTexture;
+    if (!albedo) return err('Load an albedo map first: the maps are derived from its pixels.');
+
+    // The server cannot open a blob: URL, so read the bytes here and send them.
+    let albedoBase64: string;
+    try {
+      const res = await fetch(albedo);
+      if (!res.ok) return err(`Could not read the albedo map (HTTP ${res.status}).`);
+      albedoBase64 = bytesToBase64(new Uint8Array(await res.arrayBuffer()));
+    } catch (e) {
+      return err(`Could not read the albedo map: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    const result = await tryApiFetch<DerivedMapsResponse>(TEXTURE_MAPS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ albedoBase64, persist: true }),
+    });
+    if (!result.ok) return result;
+
+    const outcome: DeriveMapsOutcome = { filled: [], skipped: [], refused: result.data.refused };
+    for (const map of result.data.maps) {
+      const slot = derivedChannelSpec(map.channel)?.slot;
+      if (!slot) continue; // height: served, but the lab has no slot for it
+      // Read the slot NOW, not before the round trip: a map the user loaded
+      // meanwhile is theirs and is never overwritten.
+      if (get()[`${slot}Texture`]) {
+        outcome.skipped.push({ channel: slot, reason: `a ${slot} map is already loaded; derived maps fill only empty slots` });
+        continue;
+      }
+      get().setTexture(slot, map.url, map.provenance);
+      outcome.filled.push({ channel: slot, provenance: map.provenance, method: map.method });
+    }
+    return ok(outcome);
   },
 
   loadPresets: async () => {
@@ -239,6 +301,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       roughnessTexture: null,
       aoTexture: null,
       textureHighlightTick: { albedo: 0, normal: 0, metallic: 0, roughness: 0, ao: 0 },
+      textureProvenance: {},
     }),
 
   sendToBlender: async (materialName?: string) => {
@@ -263,7 +326,9 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
     const code = createMaterialScript({
       name,
-      baseColor: hexToRgb(params.baseColor),
+      // Base Color is a scene-linear socket: decode the hex the same way the
+      // preview's colour management does (material-boundary.ts).
+      baseColor: hexToLinearRgb(params.baseColor),
       metallic: params.metallic,
       roughness: params.roughness,
       normalStrength: params.normalStrength,

@@ -1,6 +1,10 @@
+import { compileMachine } from '@/lib/state-machine-compile';
 import type { EditorState, EditorTransition } from './types';
 
 // ── Code Generation ──
+// Every generator emits FROM compileMachine (src/lib/state-machine-compile.ts):
+// the fallback, the priority cascade and the derived flags are the same model
+// the linter checks and the canvas marks as Entry.
 
 // Emitted whenever a generator is asked to produce output for an empty state
 // list. Every exported generator must tolerate `states = []` — the editor
@@ -16,14 +20,13 @@ const EMPTY_STATES_STUB = [
 
 export function generateEnumCode(states: EditorState[]): string {
   if (states.length === 0) return EMPTY_STATES_STUB;
-  const sorted = [...states].sort((a, b) => a.priority - b.priority);
   const lines = [
     'UENUM(BlueprintType)',
     'enum class EARPGAnimState : uint8',
     '{',
   ];
-  for (const s of sorted) {
-    lines.push(`\t${s.name},`);
+  for (const name of compileMachine(states, []).enumMembers) {
+    lines.push(`\t${name},`);
   }
   lines.push('};');
   return lines.join('\n');
@@ -33,10 +36,10 @@ export function generateComputeAnimState(states: EditorState[]): string {
   // Guard: with no states there is no default to fall back to
   // (`sorted[sorted.length - 1]` would be undefined) — return a stub instead.
   if (states.length === 0) return EMPTY_STATES_STUB;
-  // Sort by priority ascending (0 = highest = checked first)
-  const sorted = [...states].sort((a, b) => a.priority - b.priority);
-  const nonDefault = sorted.filter((s) => !s.isDefault);
-  const defaultState = sorted.find((s) => s.isDefault) ?? sorted[sorted.length - 1];
+  // Priority ascending (0 = highest = checked first). The fallback is the
+  // compiled one, so a second Default stays in the cascade instead of vanishing.
+  const { ordered: sorted, cascade, fallback } = compileMachine(states, []);
+  const defaultState = fallback ?? sorted[sorted.length - 1];
 
   const lines = [
     'EARPGAnimState UARPGAnimInstance::ComputeAnimState() const',
@@ -46,7 +49,7 @@ export function generateComputeAnimState(states: EditorState[]): string {
     '',
   ];
 
-  for (const s of nonDefault) {
+  for (const s of cascade) {
     lines.push(`\tif (${s.flag})`);
     lines.push('\t{');
     lines.push(`\t\treturn EARPGAnimState::${s.name};`);
@@ -68,31 +71,29 @@ function generateNativeUpdateTransitionFlags(states: EditorState[], transitions:
     '',
   ];
 
-  // Group useful derivative flags
-  const derivedFlags = new Map<string, string>();
-
-  for (const t of transitions) {
-    const fromState = states.find((s) => s.id === t.from);
-    const toState = states.find((s) => s.id === t.to);
-    if (!fromState || !toState) continue;
-
-    // Check for compound rules that imply derived transition flags
-    if (t.rule.includes('&&') || t.description) {
-      const flagName = `bCan${fromState.name}To${toState.name}`;
-      if (!derivedFlags.has(flagName)) {
-        derivedFlags.set(flagName, `${t.rule}; // ${fromState.name} -> ${toState.name}${t.description ? ` (${t.description})` : ''}`);
-      }
-    }
-  }
-
-  if (derivedFlags.size > 0) {
+  // Compound (or annotated) rules become derived transition flags; every one
+  // is declared in the header section (generateDerivedFlagDeclarations).
+  const { derivedFlags } = compileMachine(states, transitions);
+  if (derivedFlags.length > 0) {
     lines.push('// Derived transition flags');
-    for (const [flag, expr] of derivedFlags) {
-      lines.push(`${flag} = ${expr}`);
+    for (const f of derivedFlags) {
+      lines.push(`${f.name} = ${f.rule}; // ${f.fromName} -> ${f.toName}${f.description ? ` (${f.description})` : ''}`);
     }
     lines.push('');
   }
 
+  return lines.join('\n');
+}
+
+/** Header members for every derived flag the NativeUpdate block assigns. */
+function generateDerivedFlagDeclarations(states: EditorState[], transitions: EditorTransition[]): string {
+  const { derivedFlags } = compileMachine(states, transitions);
+  if (derivedFlags.length === 0) return '// (no derived transition flags)';
+  const lines = ['// Add to the AnimInstance class declaration (.h):'];
+  for (const f of derivedFlags) {
+    lines.push('UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State Machine|Transitions")');
+    lines.push(`bool ${f.name} = false;`);
+  }
   return lines.join('\n');
 }
 
@@ -117,7 +118,8 @@ function generateTransitionRulesComment(states: EditorState[], transitions: Edit
 
 export function generateAnimBPSetup(states: EditorState[], transitions: EditorTransition[]): string {
   if (states.length === 0) return EMPTY_STATES_STUB;
-  const sorted = [...states].sort((a, b) => a.priority - b.priority);
+  const { ordered: sorted, entryId } = compileMachine(states, transitions);
+  const isFallback = (s: EditorState) => s.id === entryId;
   const lines = [
     '// =====================================================',
     '// Animation Blueprint Setup Instructions',
@@ -126,7 +128,7 @@ export function generateAnimBPSetup(states: EditorState[], transitions: EditorTr
     '//',
     '// 1. ENUM SETUP',
     `//    Add ${states.length} states to the EARPGAnimState enum:`,
-    ...sorted.map((s) => `//      - ${s.name} (priority ${s.priority}${s.isDefault ? ', default/fallback' : ', flag: ' + s.flag})`),
+    ...sorted.map((s) => `//      - ${s.name} (priority ${s.priority}${isFallback(s) ? ', default/fallback' : ', flag: ' + s.flag})`),
     '//',
     '// 2. STATE MACHINE',
     '//    In the AnimBP, create a state machine with the following states:',
@@ -147,7 +149,7 @@ export function generateAnimBPSetup(states: EditorState[], transitions: EditorTr
   lines.push('// 4. PRIORITY CASCADE');
   lines.push('//    ComputeAnimState() checks flags in this order:');
   for (const s of sorted) {
-    if (s.isDefault) {
+    if (isFallback(s)) {
       lines.push(`//      ${s.priority}. ${s.name} (default fallback)`);
     } else {
       lines.push(`//      ${s.priority}. ${s.name} — ${s.flag}`);
@@ -176,6 +178,10 @@ export function generateFullCppOutput(states: EditorState[], transitions: Editor
     '// ── ComputeAnimState() Implementation ──',
     '',
     generateComputeAnimState(states),
+    '',
+    '// ── Header: Derived Transition Flag Declarations ──',
+    '',
+    generateDerivedFlagDeclarations(states, transitions),
     '',
     '// ── NativeUpdateAnimation() Transition Flags ──',
     '',

@@ -8,7 +8,11 @@ import {
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { ItemGenome } from '@/types/item-genome';
+import { EVOLUTION_TIERS, MAX_EVOLUTION_TIER, nextTierXP, tierBonus } from '@/lib/item-dna/rules';
 import { AXIS_CONFIGS } from './data';
+
+/** Presentation only: one accent per tier row, indexed by tier - 1. */
+const TIER_COLORS = [STATUS_WARNING, ACCENT_ORANGE, STATUS_SUCCESS];
 
 /* ── Evolution Tab ─────────────────────────────────────────────────────── */
 
@@ -20,7 +24,8 @@ interface EvolutionTabProps {
 export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
   const tier = selected.evolution?.tier ?? 0;
   const xp = selected.evolution?.evolutionXP ?? 0;
-  const thresholds = [100, 500, 2000];
+  const nextXP = nextTierXP(tier);
+  const maxed = tier >= MAX_EVOLUTION_TIER || nextXP === undefined;
 
   return (
     <div className="space-y-3">
@@ -28,7 +33,7 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
         <SectionHeader icon={TrendingUp} label="Item Evolution" color={STATUS_SUCCESS} />
         <p className="text-xs text-text-muted leading-relaxed">
           Items used in combat accumulate evolution XP. At certain thresholds, they tier up --
-          strengthening their dominant trait weights. Tier 0 &rarr; 1 &rarr; 2 &rarr; 3.
+          strengthening their dominant (highest-weight) trait. Tier 0 &rarr; {EVOLUTION_TIERS.map((t) => t.tier).join(' → ')}.
         </p>
         <div className="grid grid-cols-4 gap-2">
           <GlowStat label="Tier" value={tier} color={STATUS_SUCCESS} delay={0} />
@@ -36,13 +41,13 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
           <GlowStat label="Uses" value={selected.evolution?.usageCount ?? 0} color={selected.color} delay={0.1} />
           <GlowStat
             label="Next"
-            value={tier >= 3 ? 'MAX' : `${thresholds[tier] - xp}`}
+            value={maxed ? 'MAX' : `${Math.max(0, nextXP - xp)}`}
             color={STATUS_WARNING}
             delay={0.15}
           />
         </div>
         {/* XP progress bar */}
-        {tier >= 3 ? (
+        {maxed ? (
           <div className="text-xs font-mono uppercase tracking-[0.15em] text-center" style={{ color: STATUS_SUCCESS }}>
             Maximum evolution reached
           </div>
@@ -50,10 +55,10 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
           <div className="space-y-1">
             <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
               <span>Tier {tier}</span>
-              <span>{xp} / {thresholds[tier]} XP</span>
+              <span>{xp} / {nextXP} XP</span>
               <span>Tier {tier + 1}</span>
             </div>
-            <NeonBar pct={(xp / thresholds[tier]) * 100} color={STATUS_SUCCESS} height={8} glow />
+            <NeonBar pct={Math.min(100, (xp / nextXP) * 100)} color={STATUS_SUCCESS} height={8} glow />
           </div>
         )}
         <button
@@ -86,32 +91,31 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
         </BlueprintPanel>
         <BlueprintPanel color={STATUS_SUCCESS} className="p-3 space-y-3">
           <SectionHeader icon={Dna} label="Evolution Thresholds" color={STATUS_SUCCESS} />
-          {[
-            { tier: 1, xp: 100, label: 'Awakened', bonus: '+5% dominant weight', color: STATUS_WARNING },
-            { tier: 2, xp: 500, label: 'Empowered', bonus: '+10% dominant weight', color: ACCENT_ORANGE },
-            { tier: 3, xp: 2000, label: 'Ascended', bonus: '+15% dominant weight', color: STATUS_SUCCESS },
-          ].map((t) => {
-            const currentTier = selected.evolution?.tier ?? 0;
-            const reached = currentTier >= t.tier;
+          {EVOLUTION_TIERS.map((t) => {
+            const reached = tier >= t.tier;
+            const color = TIER_COLORS[t.tier - 1] ?? STATUS_SUCCESS;
+            // Cumulative: the exact bonus evolveGenome has applied once this tier is held.
+            const bonus = `+${Math.round(tierBonus(t.tier) * 100)}% dominant weight`;
             return (
               <motion.div
                 key={t.tier}
+                data-testid="evolution-tier-row"
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: t.tier * 0.1 }}
                 className="flex items-center gap-2 text-xs font-mono px-2 py-1.5 rounded-md"
                 style={{
-                  backgroundColor: reached ? `${t.color}${OPACITY_10}` : 'transparent',
-                  border: `1px solid ${reached ? withOpacity(t.color, OPACITY_25) : 'var(--border)'}`,
+                  backgroundColor: reached ? `${color}${OPACITY_10}` : 'transparent',
+                  border: `1px solid ${reached ? withOpacity(color, OPACITY_25) : 'var(--border)'}`,
                   opacity: reached ? 1 : 0.5,
                 }}
               >
-                <span className="font-bold" style={{ color: reached ? t.color : 'var(--text-muted)' }}>
+                <span className="font-bold" style={{ color: reached ? color : 'var(--text-muted)' }}>
                   T{t.tier}
                 </span>
                 <span className="font-bold text-text">{t.label}</span>
-                <span className="ml-auto text-text-muted">{t.xp} XP</span>
-                <span style={{ color: t.color }}>{t.bonus}</span>
+                <span className="ml-auto text-text-muted" data-testid="evolution-tier-xp">{t.xp} XP</span>
+                <span style={{ color }} data-testid="evolution-tier-bonus">{bonus}</span>
               </motion.div>
             );
           })}

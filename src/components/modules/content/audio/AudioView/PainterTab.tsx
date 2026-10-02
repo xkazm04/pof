@@ -6,16 +6,21 @@ import { ZonePropertyPanel, EmitterPropertyPanel } from '@/components/modules/co
 import { MODULE_COLORS } from '@/lib/constants';
 import type { SceneDraft } from '@/components/modules/content/audio/AudioScenePainter/types';
 import type { AudioSceneDocument, AudioZone } from '@/types/audio-scene';
-import { useSceneBuffer, useSceneZone, useSceneEmitter } from './useSceneBuffer';
+import { useSceneBuffer, useSceneZone, useSceneEmitter, type SceneBuffer } from './useSceneBuffer';
 
 interface PainterTabProps {
   activeDoc: AudioSceneDocument;
   /**
-   * The ONE write of the painter tab: the whole rebased scene. Rejects so the
-   * scene buffer keeps its ops and offers a retry. Canvas gestures and panel
-   * fields both reach it through the same buffer.
+   * The AudioView session's scene buffer (`useSceneSession`), shared with the
+   * other tabs so a tab switch keeps every buffered op. Without it the tab
+   * builds its own buffer over `commitScene` (tests, previews).
    */
-  commitScene: (next: SceneDraft) => Promise<void>;
+  buffer?: SceneBuffer;
+  /**
+   * The self-owned buffer's write: the whole rebased scene. Rejects so the
+   * buffer keeps its ops and offers a retry. Unused when `buffer` is given.
+   */
+  commitScene?: (next: SceneDraft) => Promise<void>;
   setSelectedZoneId: Dispatch<SetStateAction<string | null>>;
   setSelectedEmitterId: Dispatch<SetStateAction<string | null>>;
   selectedZoneId: string | null;
@@ -25,9 +30,12 @@ interface PainterTabProps {
   audioCli: ReturnType<typeof useModuleCLI>;
 }
 
+const noWrite = async () => {};
+
 export function PainterTab({
   activeDoc,
-  commitScene,
+  buffer,
+  commitScene = noWrite,
   setSelectedZoneId,
   setSelectedEmitterId,
   selectedZoneId,
@@ -38,12 +46,19 @@ export function PainterTab({
 }: PainterTabProps) {
   // One edit buffer for the canvas AND the panels (see useSceneBuffer): a panel
   // write carries any buffered gesture, and the canvas redraws a panel slider
-  // on the same frame. Flushed on unmount so a tab switch keeps a pending edit.
+  // on the same frame. With a session `buffer` the self-owned one stays inert
+  // (no base); without it, it is flushed on unmount so a tab switch keeps an edit.
   const serverScene = useMemo<SceneDraft>(
     () => ({ zones: activeDoc.zones, emitters: activeDoc.emitters }),
     [activeDoc.zones, activeDoc.emitters],
   );
-  const scene = useSceneBuffer({ base: serverScene, sceneId: activeDoc.id, write: commitScene, flushOnUnmount: true });
+  const ownBuffer = useSceneBuffer({
+    base: buffer ? null : serverScene,
+    sceneId: activeDoc.id,
+    write: commitScene,
+    flushOnUnmount: !buffer,
+  });
+  const scene = buffer ?? ownBuffer;
   const zoneRecord = useSceneZone(scene, selectedZoneId);
   const emitterRecord = useSceneEmitter(scene, selectedEmitterId);
 

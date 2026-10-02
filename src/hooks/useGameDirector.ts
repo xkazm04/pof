@@ -8,6 +8,8 @@ import type {
   ReproRecord,
 } from '@/types/game-director';
 import type { DirectorStats, HealthTrendPoint } from '@/lib/game-director-db';
+import type { HarnessRunOption, HarnessRunPreview } from '@/lib/game-director/harness-import';
+import type { IngestOutcome } from '@/lib/game-director/external-ingest';
 import { tryApiFetch } from '@/lib/api-utils';
 import { unwrapOr } from '@/types/result';
 import { useCRUD } from './useCRUD';
@@ -19,6 +21,22 @@ interface DirectorData {
 }
 
 const EMPTY: DirectorData = { sessions: [], stats: null, trend: [] };
+
+/** The preview plus the session this run already became (null = never imported). */
+export type HarnessRunPreviewResult = HarnessRunPreview & { ingestedSessionId: string | null };
+
+/**
+ * An import that did not write. `existingSessionId` is set when the refusal is
+ * "this run is already a session" (409), so the caller can open that session.
+ */
+export class HarnessImportError extends Error {
+  constructor(message: string, readonly existingSessionId: string | null) {
+    super(message);
+    this.name = 'HarnessImportError';
+  }
+}
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 const fetchDirectorData = async (): Promise<DirectorData> => {
   const [sessResult, statsResult, trendResult] = await Promise.all([
@@ -55,6 +73,12 @@ export interface UseGameDirectorResult {
     repro?: ReproRecord | null,
   ) => Promise<PlaytestFinding>;
   markFixDispatched: (findingId: string) => Promise<PlaytestFinding>;
+  /** Stored harness runs of a project, each with the session it was imported as. */
+  listHarnessRuns: (projectId: string) => Promise<HarnessRunOption[]>;
+  /** What importing a run would write. Writes nothing; throws the refusal reason. */
+  previewHarnessRun: (runId: string, projectId?: string) => Promise<HarnessRunPreviewResult>;
+  /** Import a run; resolves the new session id (after refreshing), throws {@link HarnessImportError}. */
+  ingestHarnessRun: (runId: string, projectId?: string) => Promise<string>;
 }
 
 export function useGameDirector(): UseGameDirectorResult {
@@ -147,6 +171,45 @@ export function useGameDirector(): UseGameDirectorResult {
     return result.data;
   }, []);
 
+  const listHarnessRuns = useCallback(async (projectId: string): Promise<HarnessRunOption[]> => {
+    const result = await tryApiFetch<HarnessRunOption[]>(
+      `/api/game-director?action=harness-runs&projectId=${encodeURIComponent(projectId)}`,
+    );
+    if (!result.ok) throw new Error(result.error);
+    return result.data;
+  }, []);
+
+  const previewHarnessRun = useCallback(async (runId: string, projectId?: string) => {
+    const result = await tryApiFetch<HarnessRunPreviewResult>('/api/game-director', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ action: 'preview-harness-run', runId, projectId }),
+    });
+    if (!result.ok) throw new Error(result.error);
+    return result.data;
+  }, []);
+
+  const ingestHarnessRun = useCallback(async (runId: string, projectId?: string): Promise<string> => {
+    // Raw fetch, not tryApiFetch: a 409 carries the existing session id in
+    // `details`, and the caller needs it to open that session instead.
+    let body: { success: boolean; data?: IngestOutcome; error?: string; details?: { sessionId?: string } };
+    try {
+      const res = await fetch('/api/game-director', {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ action: 'ingest-harness-run', runId, projectId }),
+      });
+      body = await res.json();
+    } catch (e) {
+      throw new HarnessImportError(e instanceof Error ? e.message : 'Network error', null);
+    }
+    if (!body.success || !body.data) {
+      throw new HarnessImportError(body.error ?? 'Import failed', body.details?.sessionId ?? null);
+    }
+    await refresh();
+    return body.data.sessionId;
+  }, [refresh]);
+
   return {
     sessions: data.sessions,
     stats: data.stats,
@@ -162,5 +225,8 @@ export function useGameDirector(): UseGameDirectorResult {
     getEvents,
     updateTriage,
     markFixDispatched,
+    listHarnessRuns,
+    previewHarnessRun,
+    ingestHarnessRun,
   };
 }

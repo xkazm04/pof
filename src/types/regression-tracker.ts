@@ -75,11 +75,29 @@ export interface RegressionStats extends RegressionStatusCounts {
   activeAlerts: number;
 }
 
+/**
+ * Which pass an analysis ran. `forward`: the session is at or after the newest
+ * session already analyzed, so it may change status (fix, regress, sweep).
+ * `backfill`: it is OLDER than that one, so it only records occurrences — an
+ * older build can never mark fixed what a newer analyzed build still shows.
+ */
+export type RegressionAnalysisMode = 'forward' | 'backfill';
+
+/** A completed session as the tracker's picker sees it. */
+export interface RegressionSessionOption extends PlaytestSession {
+  /** The tracker has analyzed this session (on completion or by hand). */
+  analyzed: boolean;
+  /** The pass analyzing it NOW would run. */
+  analysisMode: RegressionAnalysisMode;
+}
+
 /** Full regression report generated for a session */
 export interface RegressionReport {
   sessionId: string;
   sessionName: string;
   generatedAt: string;
+  /** Which pass ran — see {@link RegressionAnalysisMode}. */
+  mode: RegressionAnalysisMode;
   /** New findings not seen before */
   newFindings: FindingFingerprint[];
   /** Findings that reappeared after being fixed */

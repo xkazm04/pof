@@ -6,6 +6,11 @@
  */
 
 import { ARMOUR_HIT_COEFF } from '@/lib/combat/canon-kernel';
+import {
+  difficultyBand, bandSeverity, fightLengthBand, fightLengthSeverity,
+  SURVIVAL_TARGET, TTK_TARGET_SEC, SURVIVAL_BAND_CUTS,
+  type ReportBand,
+} from '@/lib/balance/encounter-bands';
 import type { SimResults, SimScenario } from './data';
 
 export type HealthSeverity = 'good' | 'info' | 'warning' | 'critical';
@@ -64,116 +69,119 @@ function curveScore(value: number, target: number, tolerance: number): number {
 
 /* ── Survival assessment ─────────────────────────────────────────────────── */
 
+/** "the fair band (60–89% wins)" — how every surface names a survival band. */
+function bandName(band: ReportBand): string {
+  const { easy, fair, tough } = SURVIVAL_BAND_CUTS;
+  const range: Record<ReportBand, string> = {
+    easy: `${pct(easy)}+ wins`,
+    fair: `${pct(fair)}–${Math.round(easy * 100) - 1}% wins`,
+    tough: `${pct(tough)}–${Math.round(fair * 100) - 1}% wins`,
+    brutal: `under ${pct(tough)} wins`,
+  };
+  return `the ${band} band (${range[band]})`;
+}
+
 function assessSurvival(results: SimResults, _scenario: SimScenario): { score: number; finding: HealthFinding } {
   const s = results.survivalRate;
-  const score = curveScore(s, 0.65, 0.55);
+  const score = curveScore(s, SURVIVAL_TARGET, 0.55);
+  const band = difficultyBand(s);
+  const severity = bandSeverity(band);
+  const anchor = { label: 'Survival', value: pct(s) };
 
-  if (s < 0.2) {
-    const boost = Math.min(60, Math.round((0.55 - s) * 100));
-    return {
-      score,
-      finding: {
-        id: 'survival',
-        severity: 'critical',
-        title: 'Players die almost every fight',
-        narrative: `Players survive only ${pct(s)} of these encounters. As-is, this fight will feel unfair and turn players away from the area.`,
-        suggestion: `Try +${boost}% player health, or cut enemy damage by ~${Math.round(boost / 2)}%.`,
-        anchor: { label: 'Survival', value: pct(s) },
-      },
-    };
+  switch (band) {
+    case 'brutal':
+      return {
+        score,
+        finding: {
+          id: 'survival',
+          severity,
+          title: 'Players die almost every fight',
+          narrative: `Players survive only ${pct(s)} of these encounters — ${bandName(band)}. As-is, this fight will feel unfair and turn players away from the area.`,
+          suggestion: `Raise player health or damage, or cut enemy damage — Solve measures the amount that reaches ${pct(SURVIVAL_TARGET)} survival.`,
+          anchor,
+        },
+      };
+    case 'tough':
+      return {
+        score,
+        finding: {
+          id: 'survival',
+          severity,
+          title: 'This fight is too punishing',
+          narrative: `Players die ${pct(1 - s)} of the time here — ${bandName(band)}, below the ${pct(SURVIVAL_TARGET)} target. Most players will get stuck and complain.`,
+          suggestion: `Raise player health or damage, or cut enemy damage — Solve measures the amount that reaches ${pct(SURVIVAL_TARGET)} survival.`,
+          anchor,
+        },
+      };
+    case 'easy':
+      return {
+        score,
+        finding: {
+          id: 'survival',
+          severity,
+          title: 'This fight is a pushover',
+          narrative: `Players win ${pct(s)} of the time — ${bandName(band)} — and barely break a sweat. Trivial encounters waste the player's time and dilute the rest of the content.`,
+          suggestion: `Raise enemy health or damage (Solve measures the amount that brings survival to ${pct(SURVIVAL_TARGET)}), or add one more enemy to the pack.`,
+          anchor,
+        },
+      };
+    case 'fair':
+      return {
+        score,
+        finding: {
+          id: 'survival',
+          severity,
+          title: 'Win rate is in the sweet spot',
+          narrative: `Players win ${pct(s)} of the time — ${bandName(band)}: challenging without feeling unfair. This is the kind of fight that earns a "tough but satisfying" review.`,
+          anchor,
+        },
+      };
   }
-  if (s < 0.45) {
-    const boost = Math.max(10, Math.round((0.6 - s) * 80));
-    return {
-      score,
-      finding: {
-        id: 'survival',
-        severity: 'warning',
-        title: 'This fight is too punishing',
-        narrative: `Players die ${pct(1 - s)} of the time here. That's beyond "challenging" — most players will get stuck and complain.`,
-        suggestion: `Try +${boost}% player health below this level, or +${Math.round(boost / 1.5)}% armor.`,
-        anchor: { label: 'Survival', value: pct(s) },
-      },
-    };
-  }
-  if (s > 0.97) {
-    return {
-      score,
-      finding: {
-        id: 'survival',
-        severity: 'warning',
-        title: 'This fight is a pushover',
-        narrative: `Players win ${pct(s)} of the time and barely break a sweat. Trivial encounters waste the player's time and dilute the rest of the content.`,
-        suggestion: `Try +20% enemy health, or add one more enemy to the pack.`,
-        anchor: { label: 'Survival', value: pct(s) },
-      },
-    };
-  }
-  if (s > 0.85) {
-    return {
-      score,
-      finding: {
-        id: 'survival',
-        severity: 'info',
-        title: 'Comfortable for the player',
-        narrative: `Players win ${pct(s)} of the time. Solid for normal-mode trash, a touch easy for a feature encounter.`,
-        anchor: { label: 'Survival', value: pct(s) },
-      },
-    };
-  }
-  return {
-    score,
-    finding: {
-      id: 'survival',
-      severity: 'good',
-      title: 'Win rate is in the sweet spot',
-      narrative: `Players win ${pct(s)} of the time — challenging without feeling unfair. This is the kind of fight that earns a "tough but satisfying" review.`,
-      anchor: { label: 'Survival', value: pct(s) },
-    },
-  };
 }
 
 /* ── Fight duration (TTK) assessment ─────────────────────────────────────── */
 
 function assessDuration(results: SimResults): { score: number; finding: HealthFinding } {
   const t = results.ttkStats.mean;
-  const score = curveScore(Math.log2(Math.max(0.5, t)), Math.log2(4), 3);
+  const score = curveScore(Math.log2(Math.max(0.5, t)), Math.log2(TTK_TARGET_SEC), 3);
+  const band = fightLengthBand(t);
+  const severity = fightLengthSeverity(band);
 
-  if (t < 1.0) {
+  if (band === 'instant') {
     return {
       score,
       finding: {
         id: 'duration',
-        severity: 'warning',
+        severity,
         title: 'Fights end before they start',
         narrative: `An average encounter wraps up in ${t.toFixed(1)} seconds. There's no time for the player to use abilities or feel like they fought anything.`,
-        suggestion: 'Try +40% enemy health to give combat room to breathe.',
+        suggestion: `Raise enemy health to give combat room to breathe — Solve measures the amount that reaches ~${TTK_TARGET_SEC}s fights.`,
         anchor: { label: 'Avg fight', value: `${t.toFixed(1)}s` },
       },
     };
   }
-  if (t > 45) {
+  if (band === 'stall') {
     return {
       score,
       finding: {
         id: 'duration',
-        severity: 'critical',
+        severity,
         title: 'Fights drag on too long',
         narrative: `An average encounter takes ${t.toFixed(0)} seconds — long enough that players will skip the area or pull aggro and run. Sustained tension turns into boredom.`,
-        suggestion: `Try -${Math.min(50, Math.round((1 - 20 / t) * 100))}% enemy health, or +25% player damage.`,
+        suggestion: `Cut enemy health or raise player damage — Solve measures the amount that brings fights back to ~${TTK_TARGET_SEC}s.`,
         anchor: { label: 'Avg fight', value: `${t.toFixed(0)}s` },
       },
     };
   }
-  if (t > 20) {
+  if (band === 'long') {
     return {
       score,
       finding: {
         id: 'duration',
-        severity: 'warning',
+        severity,
         title: 'Fights run a bit long',
         narrative: `An average encounter takes ${t.toFixed(0)} seconds. Fine for a mini-boss; too slow for routine combat.`,
-        suggestion: 'Try -20% enemy health for trash packs at this level.',
+        suggestion: `Cut enemy health or raise player damage — Solve measures the amount that brings fights back to ~${TTK_TARGET_SEC}s.`,
         anchor: { label: 'Avg fight', value: `${t.toFixed(0)}s` },
       },
     };
@@ -182,7 +190,7 @@ function assessDuration(results: SimResults): { score: number; finding: HealthFi
     score,
     finding: {
       id: 'duration',
-      severity: 'good',
+      severity,
       title: 'Fight length feels right',
       narrative: `An average encounter wraps in ${t.toFixed(1)} seconds — long enough to use a couple of abilities, short enough to keep momentum.`,
       anchor: { label: 'Avg fight', value: `${t.toFixed(1)}s` },
@@ -332,6 +340,11 @@ export function defenceScore(mitigation: number): number {
   return curveScore(mitigation, TARGET_MIT, MIT_TOLERANCE);
 }
 
+/** The armor rating the defence finding recommends: the target ratio × the reference hit, to the nearest 5. */
+export function targetArmorFor(refHit: number): number {
+  return roundTo(ARMOUR_HIT_RATIO_BANDS.target * refHit, 5);
+}
+
 /** "+20% effective health" / "×3 effective health" phrasing for a ratio. */
 function ehpPhrase(ratio: number): string {
   const mult = ehpMultiplierAtRatio(ratio);
@@ -367,7 +380,7 @@ function assessDefense(results: SimResults): { score: number | null; finding: He
   const hit = Math.round(refHit);
   const ratioText = `${ratio.toFixed(ratio < 10 ? 2 : 1)}× the ${hit}-damage reference hit`;
   const anchor = { label: `Armor blocks (vs ${hit} hit)`, value: pct(mit) };
-  const targetArmor = roundTo(ARMOUR_HIT_RATIO_BANDS.target * refHit, 5);
+  const targetArmor = targetArmorFor(refHit);
 
   if (band === 'weak') {
     return {
@@ -418,8 +431,9 @@ function assessWinMargin(results: SimResults, scenario: SimScenario): HealthFind
 
   const avgRemaining = wins.reduce((s, w) => s + w.playerHpRemaining, 0) / wins.length;
   const remainingPct = avgRemaining / playerMaxHp;
+  const band = difficultyBand(results.survivalRate);
 
-  if (remainingPct > 0.85 && results.survivalRate > 0.7) {
+  if (remainingPct > 0.85 && (band === 'easy' || band === 'fair')) {
     return {
       id: 'margin',
       severity: 'info',
@@ -429,7 +443,7 @@ function assessWinMargin(results: SimResults, scenario: SimScenario): HealthFind
       anchor: { label: 'Avg HP on win', value: pct(remainingPct) },
     };
   }
-  if (remainingPct < 0.15 && results.survivalRate > 0.4) {
+  if (remainingPct < 0.15 && band !== 'brutal') {
     return {
       id: 'margin',
       severity: 'warning',
@@ -477,12 +491,12 @@ function buildRecommendations(findings: HealthFinding[]): string[] {
 /* ── Headline + narrative composition ────────────────────────────────────── */
 
 function composeHeadline(grade: HealthGrade, results: SimResults): string {
-  const s = results.survivalRate;
+  const band = difficultyBand(results.survivalRate);
   if (grade === 'A') return 'This encounter is in great shape.';
   if (grade === 'B') return 'Solid encounter with a couple of small adjustments to consider.';
   if (grade === 'C') return 'Workable, but a few rough edges to smooth out.';
-  if (grade === 'D') return s < 0.4 ? 'This fight is too punishing for the player.' : 'This fight needs meaningful retuning.';
-  return s < 0.3 ? 'This encounter is brutally unfair as tuned.' : 'This encounter is well outside the healthy range.';
+  if (grade === 'D') return band === 'brutal' || band === 'tough' ? 'This fight is too punishing for the player.' : 'This fight needs meaningful retuning.';
+  return band === 'brutal' ? 'This encounter is brutally unfair as tuned.' : 'This encounter is well outside the healthy range.';
 }
 
 function composeNarrative(results: SimResults, scenario: SimScenario): string {
@@ -491,25 +505,30 @@ function composeNarrative(results: SimResults, scenario: SimScenario): string {
   const enemyCount = scenario.enemies.reduce((sum, e) => sum + e.count, 0);
   const lvl = scenario.player.level;
 
-  const winPhrase =
-    s > 0.85 ? 'win comfortably' :
-    s > 0.6 ? 'usually win' :
-    s > 0.4 ? 'win about half the time' :
-    s > 0.2 ? 'lose most fights' :
-    'almost always die';
+  const band = difficultyBand(s);
+  const winPhrase: Record<ReportBand, string> = {
+    easy: 'win comfortably',
+    fair: 'usually win',
+    tough: 'win about half the time',
+    brutal: `win only ${Math.round(s * 10)} of 10 fights`,
+  };
 
+  const length = fightLengthBand(t);
   const lengthPhrase =
-    t < 1 ? 'in under a second' :
+    length === 'instant' ? 'in under a second' :
+    length === 'long' ? `over ${Math.round(t)} seconds of sustained combat` :
+    length === 'stall' ? `dragging out past ${Math.round(t)} seconds` :
     t < 3 ? `in about ${t.toFixed(1)} seconds` :
-    t < 10 ? `in roughly ${t.toFixed(0)} seconds` :
-    t < 30 ? `over ${Math.round(t)} seconds of sustained combat` :
-    `dragging out past ${Math.round(t)} seconds`;
+    `in roughly ${t.toFixed(0)} seconds`;
 
-  return `A level ${lvl} player facing ${enemyCount} enemies will ${winPhrase}, with fights resolving ${lengthPhrase}. ${
-    s < 0.45 ? 'Players will feel this area is unfair and may quit before reaching the next checkpoint. ' :
-    s > 0.95 ? 'The encounter offers little resistance — designers should expect players to breeze past without engaging with combat systems. ' :
-    'Pacing is roughly where it should be for an engaging encounter. '
-  }See findings below for specifics and concrete tuning levers.`;
+  const bandSentence: Record<ReportBand, string> = {
+    brutal: 'players will feel this area is unfair and may quit before reaching the next checkpoint.',
+    tough: 'harder than the target — many players will feel this area is unfair and stall here.',
+    easy: 'the encounter offers little resistance — designers should expect players to breeze past without engaging with combat systems.',
+    fair: 'pacing is roughly where it should be for an engaging encounter.',
+  };
+
+  return `A level ${lvl} player facing ${enemyCount} enemies will ${winPhrase[band]}, with fights resolving ${lengthPhrase}. This sits in ${bandName(band)}: ${bandSentence[band]} See findings below for specifics and concrete tuning levers.`;
 }
 
 /* ── Public entry point ──────────────────────────────────────────────────── */

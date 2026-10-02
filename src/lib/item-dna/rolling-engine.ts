@@ -9,14 +9,12 @@ import type {
   DNARollResult, RolledAffix,
   InheritanceResult, EvolutionState, TraitGene,
 } from '@/types/item-genome';
+import {
+  rarityIndex, affixCountRange, scaleByLevel, GOD_ROLL_THRESHOLD,
+  dominantAxis, dominantGene, tierForXP, tierBonus, EVOLUTION_ROLL_BONUS_PER_TIER,
+} from '@/lib/item-dna/rules';
 
-/* ── Rarity hierarchy ──────────────────────────────────────────────────── */
-
-const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] as const;
-
-function rarityIndex(rarity: string): number {
-  return RARITY_ORDER.indexOf(rarity as typeof RARITY_ORDER[number]);
-}
+/* ── Rarity gate (the rules live in rules.ts) ──────────────────────────── */
 
 function meetsRarity(affixMin: string, itemRarity: string): boolean {
   return rarityIndex(affixMin) <= rarityIndex(itemRarity);
@@ -24,16 +22,8 @@ function meetsRarity(affixMin: string, itemRarity: string): boolean {
 
 /* ── Affix count by rarity ─────────────────────────────────────────────── */
 
-const AFFIX_COUNT_RANGES: Record<string, [number, number]> = {
-  Common: [0, 0],
-  Uncommon: [1, 2],
-  Rare: [3, 4],
-  Epic: [4, 5],
-  Legendary: [5, 6],
-};
-
 function rollAffixCount(rarity: string): number {
-  const [min, max] = AFFIX_COUNT_RANGES[rarity] ?? [0, 0];
+  const [min, max] = affixCountRange(rarity);
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
@@ -58,7 +48,7 @@ function calcEffectiveWeight(affix: DNAAffix, genome: ItemGenome): number {
 
   // Evolution bonus: items used frequently develop their dominant traits
   const evoBonus = genome.evolution
-    ? 1 + genome.evolution.tier * 0.15 *
+    ? 1 + genome.evolution.tier * EVOLUTION_ROLL_BONUS_PER_TIER *
       (genome.evolution.dominantTraits.some((t) => affix.tags.includes(t)) ? 1 : 0)
     : 1;
 
@@ -115,10 +105,8 @@ export function rollAffixesWithDNA(
       mutationCount++;
     } else if (isMutation) {
       // Targeted mutation: boost off-type affixes
-      const dominantAxis = genome.traits.reduce((a, b) =>
-        a.weight > b.weight ? a : b
-      ).axis;
-      const offType = remaining.filter((r) => r.affix.axis !== dominantAxis);
+      const dominant = dominantAxis(genome);
+      const offType = remaining.filter((r) => r.affix.axis !== dominant);
       const pool = offType.length > 0 ? offType : remaining;
       const totalW = pool.reduce((s, r) => s + r.effectiveWeight, 0);
       let roll = Math.random() * totalW;
@@ -145,7 +133,7 @@ export function rollAffixesWithDNA(
     // Scale magnitude by item level
     const baseRange = pick.affix.maxValue - pick.affix.minValue;
     const base = pick.affix.minValue + Math.random() * baseRange;
-    const scaled = base * (1 + 0.1 * itemLevel);
+    const scaled = scaleByLevel(base, itemLevel);
 
     rolled.push({
       affix: pick.affix,
@@ -156,10 +144,8 @@ export function rollAffixesWithDNA(
   }
 
   // 4. Calculate coherence score
-  const dominantAxis = genome.traits.reduce((a, b) =>
-    a.weight > b.weight ? a : b
-  ).axis;
-  const onTypeCount = rolled.filter((r) => r.affix.axis === dominantAxis).length;
+  const coherentAxis = dominantAxis(genome);
+  const onTypeCount = rolled.filter((r) => r.affix.axis === coherentAxis).length;
   const coherenceScore = rolled.length > 0 ? onTypeCount / rolled.length : 1;
 
   return {
@@ -220,7 +206,12 @@ export function inheritGenomes(
 /* ── Evolution: strengthen used traits ─────────────────────────────────── */
 
 /**
- * Evolve an item's genome based on usage, strengthening dominant traits.
+ * Evolve an item's genome based on usage, strengthening its dominant trait.
+ *
+ * A tier-up adds tierBonus(newTier) - tierBonus(oldTier) to the dominant
+ * (argmax) gene, so the weight a tier holds never depends on how the XP
+ * arrived. While evolved, dominantTraits tracks the dominant gene's affinity
+ * tags, which is what the roll-time evolution bonus reads.
  */
 export function evolveGenome(
   genome: ItemGenome,
@@ -234,21 +225,18 @@ export function evolveGenome(
   };
 
   const newXP = evo.evolutionXP + usageXP;
-  const xpThresholds = [100, 500, 2000]; // Tier 1, 2, 3
-  let newTier = evo.tier;
-  for (let i = evo.tier; i < xpThresholds.length; i++) {
-    if (newXP >= xpThresholds[i]) newTier = i + 1;
-  }
-
+  const newTier = Math.max(evo.tier, tierForXP(newXP));
   const tierChanged = newTier > evo.tier;
 
-  // Boost dominant trait weights on tier up
+  const dominant = dominantGene(genome.traits);
+  const boost = tierBonus(newTier) - tierBonus(evo.tier);
   const evolvedTraits = genome.traits.map((gene) => {
-    if (tierChanged && gene.weight > 0.5) {
-      return { ...gene, weight: Math.min(1, gene.weight + 0.05 * newTier) };
+    if (tierChanged && gene === dominant) {
+      return { ...gene, weight: Math.min(1, Math.round((gene.weight + boost) * 100) / 100) };
     }
     return gene;
   });
+  const dominantTraits = newTier > 0 && dominant ? [...dominant.affinityTags] : evo.dominantTraits;
 
   return {
     evolved: {
@@ -259,7 +247,7 @@ export function evolveGenome(
         usageCount: evo.usageCount + 1,
         evolutionXP: newXP,
         tier: newTier,
-        dominantTraits: evo.dominantTraits,
+        dominantTraits,
       },
     },
     tierChanged,
@@ -304,10 +292,10 @@ export function simulateRolls(
   itemLevel: number,
   affixPool: DNAAffix[],
   iterations: number,
-  godRollThreshold = 0.85,
+  godRollThreshold = GOD_ROLL_THRESHOLD,
 ): SimulationStats {
   const safeIterations = Math.max(1, Math.floor(iterations));
-  const [, maxCount] = AFFIX_COUNT_RANGES[rarity] ?? [0, 0];
+  const [, maxCount] = affixCountRange(rarity);
 
   const histogram = new Array(10).fill(0) as number[];
   const axisCounts: Record<TraitAxis, number> = {

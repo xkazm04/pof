@@ -30,6 +30,11 @@ export async function GET(req: NextRequest) {
       unwrapSkippedReason: r?.unwrapSkippedReason,
       normalMapPath: r?.normalMapPath,
       aoMapPath: r?.aoMapPath,
+      /** Requested maps refused before baking (e.g. metallic), each with its reason. */
+      bakeSkipped: r?.bakeSkipped,
+      /** Maps whose bake ran and threw, each with Blender's reason — a missing map path
+       *  next to an entry here means "failed", not "never requested". */
+      bakeFailed: r?.bakeFailed,
       facesCulled: r?.facesCulled,
       cullLimitReason: r?.cullLimitReason,
       durationMs: r?.durationMs,

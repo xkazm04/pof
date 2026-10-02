@@ -168,3 +168,52 @@ describe('startUeImportJob', () => {
     expect(getUeImportJob('nope')).toBeUndefined();
   });
 });
+
+// ── One import plan (challenge-2026-09-29b) ──────────────────────────────────
+// The import job was the one gate consumer that skipped `gateRequestFor`: it called the critic
+// with the path ALONE, so at the import — the one moment the correction is meant to be applied —
+// the scale grade was always `unmeasured`.
+describe('startUeImportJob — critiques through the gate request, applies its scale', () => {
+  it('case 4: the critic receives the gateRequestFor deps (size target + upright) for the class', async () => {
+    const critic = vi.fn(async () => critique());
+    const importer = vi.fn(async (): Promise<UeImportResult> => ({ ok: true, assetPath: '/Game/x.x', collisionElements: 1, logs: [] }));
+    startUeImportJob({ glbPath: 'x.glb', use: 'blocking', assetClass: 'character' }, { critic, importer });
+    await settle();
+    expect(critic).toHaveBeenCalledTimes(1);
+    const [path, deps] = critic.mock.calls[0] as unknown as [string, { size?: { targetExtentM: number }; orientation?: { expectUpright: boolean }; stage?: string }];
+    expect(path).toBe('x.glb');
+    expect(deps.size?.targetExtentM).toBe(1.8);
+    expect(deps.orientation?.expectUpright).toBe(true);
+    expect(deps.stage).toBe('raw');
+  });
+
+  it('a mesh-finish output is critiqued as the finished stage', async () => {
+    const critic = vi.fn(async () => critique());
+    const importer = vi.fn(async (): Promise<UeImportResult> => ({ ok: true, assetPath: '/Game/x.x', collisionElements: 1, logs: [] }));
+    startUeImportJob({ glbPath: 'C:/p/generated/mesh-finish/crate_lowpoly.glb', use: 'blocking' }, { critic, importer });
+    await settle();
+    const deps = (critic.mock.calls[0] as unknown as [string, { stage?: string }])[1];
+    expect(deps.stage).toBe('finished');
+  });
+
+  it('hands the importer the derived scale and records the plan on the job', async () => {
+    const scaled = critique({ scale: { verdict: 'off', measuredExtentM: 1, targetExtentM: 1.8, importUniformScale: 1.8 } });
+    const importer = vi.fn(async (): Promise<UeImportResult> => ({
+      ok: true, assetPath: '/Game/x.x', collisionElements: 1, observedExtentCm: 179, logs: [],
+    }));
+    const id = startUeImportJob({ glbPath: 'x.glb', use: 'blocking', assetClass: 'character' }, { critic: async () => scaled, importer });
+    await settle();
+    const job = getUeImportJob(id)!;
+    expect(job.scale).toMatchObject({ derivable: true, factor: 1.8, basis: 'measured' });
+    expect(importer).toHaveBeenCalledWith('x.glb', expect.objectContaining({ scale: { factor: 1.8, targetExtentCm: 180 } }));
+  });
+
+  it('a mesh with no target is imported WITHOUT a scale — never a factor of 1', async () => {
+    const importer = vi.fn(async (): Promise<UeImportResult> => ({ ok: true, assetPath: '/Game/x.x', collisionElements: 1, logs: [] }));
+    const id = startUeImportJob({ glbPath: 'x.glb', use: 'blocking' }, { critic: async () => critique(), importer });
+    await settle();
+    expect(getUeImportJob(id)!.scale?.derivable).toBe(false);
+    const opts = (importer.mock.calls[0] as unknown as [string, Record<string, unknown>])[1];
+    expect(opts).not.toHaveProperty('scale');
+  });
+});

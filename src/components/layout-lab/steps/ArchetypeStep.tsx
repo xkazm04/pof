@@ -22,10 +22,8 @@ import { useLabPipelineStore } from '../labPipelineStore';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { useCanonStore } from '../canonStore';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
-import { withProduceDirection } from '@/lib/catalog/produceDirection';
-import { stampTemplate } from '@/lib/catalog/produceTemplate';
-import { isCliEligible, isLiveProduceEnabled, useLiveProduceMode, describeProduceOutcome, type OneShotStepResult, type ProduceOutcome } from '../labProduceMode';
-import { apiFetch } from '@/lib/api-utils';
+import { useStepProduceDoor } from './shared/useStepProduceDoor';
+import { isCliEligible, useLiveProduceMode } from '../labProduceMode';
 import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
@@ -299,7 +297,6 @@ export function noopFixSuggestion(spec: StepSpec, fixDirection?: string): string
 
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */
 export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
-  const produce = useLabPipelineStore((s) => s.produce);
   const entityArtifacts = useLabPipelineStore((s) => s.byEntity[entity.id]);
   const canonRules = useCanonStore((s) => s.rules);
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
@@ -421,46 +418,11 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       callback: liveEligible && liveMode,
     });
 
-  /**
-   * The ONE dispatch path for a non-gallery step. The operator's typed direction is a real
-   * produce input now: it is forwarded to `spec.produce(entity, direction)` and stamped onto
-   * the artifact (`data.produceDirection`), so the Raw artifact panel shows verbatim what
-   * drove the step instead of the direction vanishing on unmount.
-   *
-   * When live-CLI produce is enabled (opt-in, off by default) AND the archetype is a text
-   * deliverable a CLI session can author, the dispatch goes through the real
-   * `POST /api/one-shot/step` seam and the store adopts what the SERVER persisted. A rejected
-   * call (transport/route error) surfaces its reason with "Retry with same prompt"; a call
-   * that LANDED on a `fail`/`deferred` verdict returns that verdict, so the panel reports the
-   * server's own reason instead of `✓ Recorded` (Rule 4).
-   * Stub mode writes synchronously inside the click (no await before the store write), which
-   * is what keeps the Rule 5 walker green.
-   */
-  const dispatchProduce = async (pctx?: { direction: string; prompt: string }): Promise<ProduceOutcome | void> => {
-    const dir = pctx?.direction ?? '';
-    if (catalogId && isCliEligible(spec.archetype) && isLiveProduceEnabled()) {
-      const res = await apiFetch<OneShotStepResult>('/api/one-shot/step', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          catalogId, entityId: entity.id, stepLabel: step, mode: 'cli', direction: dir,
-          proposal: { name: entity.name, data: entity.data },
-          // INPUTS, not a prompt. The server rebuilds the prompt from the same module the
-          // preview used; these two are the only parts only the panel can know (what is
-          // selected on screen, and which library assets the operator picked).
-          evidence, library: referenced,
-        }),
-      });
-      // Adopt what the server PERSISTED either way — a graded `fail`/`deferred` still wrote
-      // a row, and hiding it would leave the panel showing stale data.
-      produce(entity.id, step, { data: res.artifactData ?? {}, ueAssets: res.ueAssets ?? [] });
-      // …but the server's verdict is the answer, not the fact that the call returned 200.
-      // Discarding `outcome`/`status`/`reason` here is what made a graded fail render
-      // `✓ Recorded`; `describeProduceOutcome` is the one place that projection lives.
-      return describeProduceOutcome(res);
-    }
-    produce(entity.id, step, stampTemplate(catalogId, spec, entity, withProduceDirection(spec.produce(entity, dir), pctx), dir));
-  };
+  // The ONE dispatch path for a non-gallery step — the shared produce door (live one-shot for a
+  // text archetype when live mode is on, else the direction-stamped, TEMPLATE-stamped stub). The
+  // bespoke Items steps go through the same door (`useStaticStep`). Evidence and library picks are
+  // INPUTS only the panel knows; the server rebuilds the prompt from the same builder.
+  const dispatchProduce = useStepProduceDoor({ catalogId, spec, entity, step, evidence, library: referenced });
 
   // One-click "Produce fix": dispatches the corrective direction through the step's OWN
   // prompt logic, reusing the exact state-change path the Produce panel uses (a gallery
@@ -475,8 +437,14 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const runFix = (fixDir?: string) => {
     const dir = fixDir?.trim() || spec.defaultDirection?.trim() || fixDirectionFor(spec, judged);
     if (spec.view.kind === 'gallery') generate(dir, buildPrompt(dir));
-    else void dispatchProduce({ direction: dir, prompt: buildPrompt(dir) })
-      .catch((e: unknown) => logger.error('[ArchetypeStep] produce fix failed', e));
+    else {
+      try {
+        void Promise.resolve(dispatchProduce({ direction: dir, prompt: buildPrompt(dir) }))
+          .catch((e: unknown) => logger.error('[ArchetypeStep] produce fix failed', e));
+      } catch (e) {
+        logger.error('[ArchetypeStep] produce fix failed', e);
+      }
+    }
   };
 
   const cli = (onComplete: CliProduceProps['onComplete']) => (

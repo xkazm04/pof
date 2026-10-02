@@ -5,6 +5,7 @@ import {
   reverbDecaySignature,
   reverbDecayGeometry,
 } from '@/components/modules/content/audio/ReverbDecayGlyph';
+import { REVERB_PARAMS } from '@/lib/audio-scene-acoustics';
 import type { ReverbPreset } from '@/types/audio-scene';
 
 const ALL_PRESETS: ReverbPreset[] = [
@@ -27,10 +28,30 @@ describe('reverbDecaySignature', () => {
     expect(cave).toBeGreaterThan(0.85);
   });
 
-  it('maps the custom preset onto the zone decay time (seconds)', () => {
+  it('case 7: custom maps its seconds on the SAME scale as the table presets', () => {
+    // [guard] the clamp ends and the long-tail ordering still hold
     expect(reverbDecaySignature('custom', 8).decay).toBeCloseTo(1, 5);
     expect(reverbDecaySignature('custom', 0).decay).toBeCloseTo(0.05, 5);
-    expect(reverbDecaySignature('custom', 4).decay).toBeCloseTo(0.5, 5);
+    // 4 s is 4 s: a custom 4 s tail is drawn exactly like underwater (4.0 s)
+    expect(reverbDecaySignature('custom', 4.0).decay).toBe(reverbDecaySignature('underwater').decay);
+  });
+
+  it('case 6: the glyph ranks every table preset by the seconds UE receives (0 inversions)', () => {
+    const table = ALL_PRESETS.filter((p) => p !== 'custom');
+    const inversions: string[] = [];
+    let pairs = 0;
+    for (let i = 0; i < table.length; i++) {
+      for (let j = i + 1; j < table.length; j++) {
+        const [a, b] = [table[i], table[j]];
+        const dt = REVERB_PARAMS[a].decayTime - REVERB_PARAMS[b].decayTime;
+        if (dt === 0) continue;
+        pairs++;
+        const dg = reverbDecaySignature(a).decay - reverbDecaySignature(b).decay;
+        if (Math.sign(dt) !== Math.sign(dg)) inversions.push(`${a} vs ${b}`);
+      }
+    }
+    expect(pairs).toBe(36);
+    expect(inversions).toEqual([]);
   });
 
   it('exposes ripple for underwater/metal and jitter for forest', () => {

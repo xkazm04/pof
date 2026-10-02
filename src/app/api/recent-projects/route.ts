@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
-import crypto from 'crypto';
 import { getDb } from '@/lib/db';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { countAllChecklists } from '@/lib/checklist-progress';
+import { progressRowId, readProgress } from '@/lib/project-progress-db';
 
 interface RecentProjectRow {
   id: string;
@@ -12,14 +13,16 @@ interface RecentProjectRow {
   last_opened_at: string;
 }
 
-function projectId(projectPath: string): string {
-  return crypto.createHash('sha256').update(projectPath.toLowerCase().replace(/\\/g, '/')).digest('hex').slice(0, 16);
-}
-
 /**
  * Read all recent projects (sorted by last opened) and shape them for the
  * client. Shared by GET and by the save/touch POST actions so a mutation can
  * return the freshened list directly — sparing the client a follow-up GET.
+ *
+ * The % comes from the project's REAL progress row (joined on the one row id,
+ * legacy spellings folded — `@/lib/project-progress-db`), counted by the app's own
+ * rule (`countAllChecklists`: declared checklist items only, so an orphan key can
+ * never inflate it). `recent_projects.checklist_json` — the client's snapshot at
+ * switch time — is only the fallback for a project with no progress row at all.
  */
 function loadRecentProjects(db: ReturnType<typeof getDb>) {
   const rows = db.prepare(
@@ -27,15 +30,16 @@ function loadRecentProjects(db: ReturnType<typeof getDb>) {
   ).all() as RecentProjectRow[];
 
   return rows.map((row) => {
-    const checklist: Record<string, Record<string, boolean>> = JSON.parse(row.checklist_json || '{}');
-    let total = 0;
-    let done = 0;
-    for (const moduleItems of Object.values(checklist)) {
-      for (const checked of Object.values(moduleItems)) {
-        total++;
-        if (checked) done++;
+    const progress = readProgress(row.project_path, { quiet: true });
+    let checklist: Record<string, Record<string, boolean>> = progress.checklistProgress;
+    if (!progress.exists) {
+      try {
+        checklist = JSON.parse(row.checklist_json || '{}');
+      } catch {
+        checklist = {};
       }
     }
+    const { done, total } = countAllChecklists(checklist);
     return {
       id: row.id,
       projectName: row.project_name,
@@ -72,7 +76,13 @@ export async function POST(req: NextRequest) {
         return apiError('projectName and projectPath are required', 400);
       }
 
-      const id = projectId(projectPath);
+      // A path already listed keeps the id it was listed under (the client touches /
+      // removes by that id, and project_path is UNIQUE); a new one takes the progress
+      // row id, so the two tables share one key per project.
+      const listed = db.prepare('SELECT id FROM recent_projects WHERE project_path = ?').get(projectPath) as
+        | { id: string }
+        | undefined;
+      const id = listed?.id ?? progressRowId(projectPath);
       const checklistJson = JSON.stringify(checklistProgress ?? {});
 
       db.prepare(`

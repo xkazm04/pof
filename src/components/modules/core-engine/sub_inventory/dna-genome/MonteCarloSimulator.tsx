@@ -9,13 +9,13 @@ import {
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { ItemGenome } from '@/types/item-genome';
 import { simulateRolls, type SimulationStats } from '@/lib/item-dna/rolling-engine';
+import { GOD_ROLL_THRESHOLD } from '@/lib/item-dna/rules';
 import { ACCENT, DEMO_AFFIX_POOL } from './data';
 import { SimulatorResults } from './SimulatorResults';
 
 /* ── Monte Carlo Loot Simulator ────────────────────────────────────────── */
 
 const ITERATION_PRESETS = [1000, 2500, 5000, 10000] as const;
-const GOD_ROLL_THRESHOLD = 0.85;
 
 interface Props {
   genome: ItemGenome;

@@ -6,6 +6,7 @@ import { useNavigationStore } from '@/stores/navigationStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useModuleActions } from '@/hooks/useModuleActions';
+import { useHotkey, useEscapeLayer } from '@/hooks/useHotkey';
 import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
 import { resolveSearchIntents } from './searchIntents';
@@ -47,21 +48,10 @@ export function useGlobalSearchPanel() {
   const { sendPromptToModule } = useModuleActions();
   const prefersReduced = useReducedMotion();
 
-  // ── Keyboard shortcut: Ctrl+K ──
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
-      if (e.key === 'Escape' && open) {
-        e.preventDefault();
-        setOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open]);
+  // ── Keyboard shortcut: Ctrl+K (shell scope — a visible module that owns
+  // mod+k, e.g. the ability Spellbook, outranks it) + Escape as a LIFO layer ──
+  useHotkey('mod+k', () => setOpen((prev) => !prev), { allowInInput: true, id: 'shell.global-search' });
+  useEscapeLayer('global-search', open, () => setOpen(false));
 
   // ── Focus input when opening ──
   useEffect(() => {

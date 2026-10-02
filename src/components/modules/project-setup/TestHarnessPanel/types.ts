@@ -1,5 +1,8 @@
 import type { PofTestSpec, PofTestResult, PofSnapshotDiffReport } from '@/types/pof-bridge';
 
+/** The panel's tabs. 'waiting' (the UE tests deferred gates wait on) is the default. */
+export type HarnessTab = 'waiting' | 'suites' | 'results' | 'snapshots';
+
 // ── Suite types ──────────────────────────────────────────────────────────────
 
 export interface TestSuite {

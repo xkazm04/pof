@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { BuildHealthDashboard } from '@/components/modules/evaluator/BuildHealthDashboard';
-import type { BuildHealthReport } from '@/lib/ue5-bridge/build-health';
+import { RecurringErrorRow } from '@/components/modules/evaluator/BuildHealthDashboard/RecurringErrorRow';
+import type { BuildHealthReport, RecurringError } from '@/lib/ue5-bridge/build-health';
 
 afterEach(cleanup);
 
@@ -27,6 +28,16 @@ function emptyReport(): BuildHealthReport {
   };
 }
 
+function recurring(o: Partial<RecurringError> = {}): RecurringError {
+  return {
+    fingerprint: 'fp-1', pattern: 'Bar', category: 'unresolved-external', message: 'unresolved external symbol "void __cdecl Bar(void)"',
+    occurrences: 2, moduleId: '', errorCode: 'LNK2019', wasResolved: false, lastSeenAt: '2026-05-21T10:00:00Z',
+    lastSeenBuildId: 'b2', stillFailing: true, lane: 'PoFEditor Development Win64', lanes: ['PoFEditor Development Win64'],
+    fixDescription: 'Ensure "Bar" is defined (not just declared) and its module is in Build.cs', buildsScanned: 10,
+    ...o,
+  };
+}
+
 function populatedReport(): BuildHealthReport {
   return {
     summary: {
@@ -49,9 +60,7 @@ function populatedReport(): BuildHealthReport {
       { targetName: 'PoFEditor', builds: 6, successRate: 83, avgDurationMs: 60_000, maxDurationMs: 90_000, lastStatus: 'success' },
       { targetName: 'PoF', builds: 4, successRate: 75, avgDurationMs: 30_000, maxDurationMs: 35_000, lastStatus: 'failed' },
     ],
-    recurringErrors: [
-      { fingerprint: 'fp-1', pattern: 'LNK2019 unresolved external', category: 'unresolved-external', message: 'unresolved external symbol', occurrences: 9, moduleId: 'arpg-combat', errorCode: 'LNK2019', wasResolved: false, lastSeenAt: '2026-05-22T10:00:00Z' },
-    ],
+    recurringErrors: [recurring({ fingerprint: 'fp-1', occurrences: 2 })],
     regressions: [],
     generatedAt: '2026-05-27T10:00:00.000Z',
   };
@@ -78,12 +87,34 @@ describe('BuildHealthDashboard', () => {
     expect(rows[0].getAttribute('data-target')).toBe('PoFEditor');
   });
 
-  it('surfaces recurring error fingerprints from the error-memory DB', () => {
-    const { container } = render(<BuildHealthDashboard initialReport={populatedReport()} />);
+  it("surfaces recurring error fingerprints derived from the builds' diagnostics", () => {
+    const { container, getByTestId } = render(<BuildHealthDashboard initialReport={populatedReport()} />);
     const errorRow = container.querySelector('[data-error-fingerprint="fp-1"]');
     expect(errorRow).toBeTruthy();
     expect(errorRow?.textContent).toContain('LNK2019');
-    expect(errorRow?.textContent).toContain('9'); // occurrences
+    expect(errorRow?.textContent).toContain('in 2 builds');
+    expect(getByTestId('build-health-errors').textContent).toContain('from build diagnostics');
+    expect(getByTestId('build-health-errors').textContent).not.toContain('error memory');
+  });
+
+  it('does not celebrate an empty list when the builds counted errors it could not parse', () => {
+    const report = populatedReport();
+    report.recurringErrors = [];
+    const { getByTestId } = render(<BuildHealthDashboard initialReport={report} />);
+    const card = getByTestId('build-health-errors');
+    expect(card.textContent).not.toContain('No recorded build errors');
+    const unparsed = getByTestId('build-health-errors-unparsed');
+    expect(unparsed.textContent).toContain('5 build errors');
+    expect(unparsed.textContent).toMatch(/no parseable diagnostic/i);
+  });
+
+  it('keeps the all-clear only when the builds counted no errors', () => {
+    const report = populatedReport();
+    report.recurringErrors = [];
+    report.summary = { ...report.summary, totalErrors: 0, avgErrorsPerBuild: 0 };
+    const { getByTestId, queryByTestId } = render(<BuildHealthDashboard initialReport={report} />);
+    expect(getByTestId('build-health-errors').textContent).toContain('No recorded build errors');
+    expect(queryByTestId('build-health-errors-unparsed')).toBeNull();
   });
 
   it('shows a regression alert banner when a regression is detected', () => {
@@ -109,5 +140,34 @@ describe('BuildHealthDashboard', () => {
   it('does not render the regression banner when there are no regressions', () => {
     const { queryByTestId } = render(<BuildHealthDashboard initialReport={populatedReport()} />);
     expect(queryByTestId('build-health-regressions')).toBeNull();
+  });
+});
+
+describe('RecurringErrorRow', () => {
+  it('shows recurrence across builds, the lane, a still-failing marker and the fix hint', () => {
+    const { container } = render(
+      <RecurringErrorRow
+        error={recurring({
+          occurrences: 3,
+          buildsScanned: 10,
+          stillFailing: true,
+          wasResolved: false,
+          lane: 'DidEditor Development Win64',
+          fixDescription: 'Include the header that declares "UFoo"',
+        })}
+      />,
+    );
+    const text = container.textContent ?? '';
+    expect(text).toContain('in 3 builds');
+    expect(text).toContain('DidEditor Development Win64');
+    expect(container.querySelector('[data-still-failing="true"]')?.textContent).toMatch(/still failing/i);
+    expect(container.querySelector('[aria-label="resolved"]')).toBeNull();
+    expect(text).toContain('Include the header that declares "UFoo"');
+  });
+
+  it("shows a fixed marker instead when the lane's latest build no longer carries it", () => {
+    const { container } = render(<RecurringErrorRow error={recurring({ stillFailing: false, wasResolved: true })} />);
+    expect(container.querySelector('[aria-label="resolved"]')).toBeTruthy();
+    expect(container.querySelector('[data-still-failing="true"]')).toBeNull();
   });
 });

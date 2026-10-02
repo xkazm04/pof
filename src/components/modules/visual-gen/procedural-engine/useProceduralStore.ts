@@ -2,38 +2,56 @@ import { create } from 'zustand';
 import type { TerrainConfig } from '@/lib/visual-gen/generators/terrain';
 import type { DungeonConfig, DungeonResult } from '@/lib/visual-gen/generators/dungeon';
 import type { VegetationConfig, ScatterPoint } from '@/lib/visual-gen/generators/vegetation';
-import { DEFAULT_TERRAIN_CONFIG, resolveTerrainBasis } from '@/lib/visual-gen/generators/terrain';
+import { DEFAULT_TERRAIN_CONFIG } from '@/lib/visual-gen/generators/terrain';
 import { DEFAULT_DUNGEON_CONFIG } from '@/lib/visual-gen/generators/dungeon';
 import { DEFAULT_VEGETATION_CONFIG } from '@/lib/visual-gen/generators/vegetation';
-import { tryApiFetch } from '@/lib/api-utils';
-import { terrainToMeshScript } from '@/lib/blender-mcp/scripts/terrain-to-mesh';
-import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
-import { scatterVegetationScript } from '@/lib/blender-mcp/scripts/scatter-vegetation';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
 import { logger } from '@/lib/logger';
+import {
+  diffConfigFields,
+  specOf,
+  type GeneratorConfigs,
+  type GeneratorData,
+  type GeneratorType,
+} from './generatorSpecs';
 
-export type GeneratorType = 'terrain' | 'dungeon' | 'vegetation';
+export type { GeneratorType } from './generatorSpecs';
 
-interface ExportState {
+export interface ExportState {
   isExporting: boolean;
   exportResult: string | null;
   exportError: string | null;
 }
 
-interface ProceduralState {
+/** A generated result bound to the config snapshot that produced it. */
+export interface GeneratorRun<K extends GeneratorType = GeneratorType> {
+  config: GeneratorConfigs[K];
+  data: GeneratorData[K];
+  generatedAt: number;
+}
+
+type RunMap = { [K in GeneratorType]: GeneratorRun<K> | null };
+type ExportMap = Record<GeneratorType, ExportState | null>;
+
+export interface ProceduralState {
   activeGenerator: GeneratorType;
   terrainConfig: TerrainConfig;
   dungeonConfig: DungeonConfig;
   vegetationConfig: VegetationConfig;
 
-  // Preview data
+  // Preview data (the current run's data; also settable directly)
   terrainHeightmap: number[][] | null;
   dungeonResult: DungeonResult | null;
   vegetationPoints: ScatterPoint[] | null;
 
+  /** Each generator's last run with the config it was generated from. */
+  runs: RunMap;
+  /** Export feedback per generator — a terrain export never shows under Dungeon. */
+  exports: ExportMap;
+
   isGenerating: boolean;
 
-  // Blender export state
+  /** Mirror of the LAST export of any generator (kept for existing readers). */
   exportState: ExportState;
 
   setActiveGenerator: (type: GeneratorType) => void;
@@ -46,11 +64,29 @@ interface ProceduralState {
   setGenerating: (generating: boolean) => void;
   clearResults: () => void;
 
-  // Blender export actions
+  /** Generate with the CURRENT config and bind the result to a snapshot of it. */
+  generate: (type: GeneratorType) => Promise<void>;
+  /** Export the run on screen: its data with ITS config, via executeViaMCP. */
+  exportToBlender: (type: GeneratorType) => Promise<void>;
   exportTerrainToBlender: () => Promise<void>;
   exportDungeonToBlender: () => Promise<void>;
   exportVegetationToBlender: () => Promise<void>;
 }
+
+const CONFIG_KEY = {
+  terrain: 'terrainConfig',
+  dungeon: 'dungeonConfig',
+  vegetation: 'vegetationConfig',
+} as const;
+
+const DATA_KEY = {
+  terrain: 'terrainHeightmap',
+  dungeon: 'dungeonResult',
+  vegetation: 'vegetationPoints',
+} as const;
+
+const NO_RUNS: RunMap = { terrain: null, dungeon: null, vegetation: null };
+const NO_EXPORTS: ExportMap = { terrain: null, dungeon: null, vegetation: null };
 
 const INITIAL_EXPORT_STATE: ExportState = {
   isExporting: false,
@@ -58,146 +94,124 @@ const INITIAL_EXPORT_STATE: ExportState = {
   exportError: null,
 };
 
-async function executeBlenderScript(code: string): Promise<{ result?: string; error?: string }> {
-  const res = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
-  });
+export type RunView<K extends GeneratorType = GeneratorType> =
+  | { status: 'none'; staleBecause: string[]; run: null }
+  | { status: 'fresh' | 'stale'; staleBecause: string[]; run: GeneratorRun<K> };
 
-  if (res.ok) {
-    return { result: res.data.output };
-  }
-  return { error: res.error };
+/**
+ * The run `type` exports: the bound run when the preview data IS its data;
+ * otherwise (data set directly, no run) that data under the live config.
+ */
+function exportableRun<K extends GeneratorType>(s: ProceduralState, type: K): GeneratorRun<K> | null {
+  const data = s[DATA_KEY[type]] as GeneratorData[K] | null;
+  if (!data) return null;
+  const run = s.runs[type] as GeneratorRun<K> | null;
+  if (run && run.data === data) return run;
+  return { config: s[CONFIG_KEY[type]] as GeneratorConfigs[K], data, generatedAt: 0 };
 }
 
-export const useProceduralStore = create<ProceduralState>((set, get) => ({
-  activeGenerator: 'terrain',
-  terrainConfig: { ...DEFAULT_TERRAIN_CONFIG },
-  dungeonConfig: { ...DEFAULT_DUNGEON_CONFIG },
-  vegetationConfig: { ...DEFAULT_VEGETATION_CONFIG },
+/** Fresh/stale by field comparison against the live config — not a dirty flag. */
+export function selectRun<K extends GeneratorType>(s: ProceduralState, type: K): RunView<K> {
+  const run = exportableRun(s, type);
+  if (!run) return { status: 'none', staleBecause: [], run: null };
+  const staleBecause = diffConfigFields(run.config, s[CONFIG_KEY[type]]);
+  return { status: staleBecause.length > 0 ? 'stale' : 'fresh', staleBecause, run };
+}
 
-  terrainHeightmap: null,
-  dungeonResult: null,
-  vegetationPoints: null,
-  isGenerating: false,
+export function selectExportFeedback(s: ProceduralState, type: GeneratorType): ExportState | null {
+  return s.exports[type];
+}
 
-  exportState: { ...INITIAL_EXPORT_STATE },
+/** Let the "Generating..." state paint before the generator blocks the thread. */
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve());
+    else setTimeout(resolve, 0);
+  });
+}
 
-  setActiveGenerator: (type) => set({ activeGenerator: type }),
+export const useProceduralStore = create<ProceduralState>((set, get) => {
+  const setExport = (type: GeneratorType, state: ExportState) =>
+    set((s) => ({ exports: { ...s.exports, [type]: state }, exportState: state }));
 
-  setTerrainConfig: (config) =>
-    set((s) => ({ terrainConfig: { ...s.terrainConfig, ...config } })),
+  return {
+    activeGenerator: 'terrain',
+    terrainConfig: { ...DEFAULT_TERRAIN_CONFIG },
+    dungeonConfig: { ...DEFAULT_DUNGEON_CONFIG },
+    vegetationConfig: { ...DEFAULT_VEGETATION_CONFIG },
 
-  setDungeonConfig: (config) =>
-    set((s) => ({ dungeonConfig: { ...s.dungeonConfig, ...config } })),
-
-  setVegetationConfig: (config) =>
-    set((s) => ({ vegetationConfig: { ...s.vegetationConfig, ...config } })),
-
-  setTerrainHeightmap: (heightmap) => set({ terrainHeightmap: heightmap }),
-  setDungeonResult: (result) => set({ dungeonResult: result }),
-  setVegetationPoints: (points) => set({ vegetationPoints: points }),
-  setGenerating: (generating) => set({ isGenerating: generating }),
-
-  clearResults: () => set({
     terrainHeightmap: null,
     dungeonResult: null,
     vegetationPoints: null,
-  }),
+    runs: NO_RUNS,
+    exports: NO_EXPORTS,
+    isGenerating: false,
 
-  exportTerrainToBlender: async () => {
-    const { terrainHeightmap, terrainConfig } = get();
-    if (!terrainHeightmap) return;
+    exportState: { ...INITIAL_EXPORT_STATE },
 
-    // The vertical scale has ONE authority: the config's declared `verticalRangeM`. The
-    // store used to hand-type `heightScale: 10` here — a second, undeclared copy of the
-    // same quantity, applied at the far end of the pipeline where nothing that reasons
-    // about the terrain could see it.
-    const basis = resolveTerrainBasis(terrainConfig);
-    if (!basis.ok) {
-      logger.warn('[procedural-engine] Terrain basis unresolved:', basis.error);
-      set({ exportState: { isExporting: false, exportResult: null, exportError: basis.error } });
-      return;
-    }
-    if (!basis.data.declared) {
-      logger.warn(
-        '[procedural-engine] Terrain config carries no declared basis; exporting with the ' +
-          'legacy fallback — the result is not gradeable for slope.',
+    setActiveGenerator: (type) => set({ activeGenerator: type }),
+
+    setTerrainConfig: (config) =>
+      set((s) => ({ terrainConfig: { ...s.terrainConfig, ...config } })),
+
+    setDungeonConfig: (config) =>
+      set((s) => ({ dungeonConfig: { ...s.dungeonConfig, ...config } })),
+
+    setVegetationConfig: (config) =>
+      set((s) => ({ vegetationConfig: { ...s.vegetationConfig, ...config } })),
+
+    setTerrainHeightmap: (heightmap) => set({ terrainHeightmap: heightmap }),
+    setDungeonResult: (result) => set({ dungeonResult: result }),
+    setVegetationPoints: (points) => set({ vegetationPoints: points }),
+    setGenerating: (generating) => set({ isGenerating: generating }),
+
+    clearResults: () => set({
+      terrainHeightmap: null,
+      dungeonResult: null,
+      vegetationPoints: null,
+      runs: NO_RUNS,
+    }),
+
+    generate: async (type) => {
+      set({ isGenerating: true });
+      await nextFrame();
+      try {
+        const spec = specOf(type);
+        const config = structuredClone(get()[CONFIG_KEY[type]]) as GeneratorConfigs[typeof type];
+        const data = (spec.generate as (c: typeof config) => GeneratorData[typeof type])(config);
+        const run = { config, data, generatedAt: Date.now() };
+        set((s) => ({ runs: { ...s.runs, [type]: run }, [DATA_KEY[type]]: data }));
+      } finally {
+        set({ isGenerating: false });
+      }
+    },
+
+    exportToBlender: async (type) => {
+      const run = exportableRun(get(), type);
+      if (!run) return;
+      const spec = specOf(type);
+      const script = (spec.toExportScript as (d: unknown, c: unknown) => ReturnType<typeof spec.toExportScript>)(
+        run.data,
+        run.config,
       );
-    }
+      if (!script.ok) {
+        logger.warn(`[procedural-engine] ${type} export refused:`, script.error);
+        setExport(type, { isExporting: false, exportResult: null, exportError: script.error });
+        return;
+      }
 
-    set({ exportState: { isExporting: true, exportResult: null, exportError: null } });
-
-    const code = terrainToMeshScript({
-      heightmap: terrainHeightmap,
-      basis: basis.data,
-    });
-
-    const { result, error } = await executeBlenderScript(code);
-    if (error) {
-      logger.warn('[procedural-engine] Terrain export failed:', error);
-    }
-    set({
-      exportState: {
+      setExport(type, { isExporting: true, exportResult: null, exportError: null });
+      const res = await executeViaMCP(spec.exportName, script.data);
+      if (!res.ok) logger.warn(`[procedural-engine] ${type} export failed:`, res.error);
+      setExport(type, {
         isExporting: false,
-        exportResult: result ?? null,
-        exportError: error ?? null,
-      },
-    });
-  },
+        exportResult: res.ok ? res.data.output : null,
+        exportError: res.ok ? null : res.error,
+      });
+    },
 
-  exportDungeonToBlender: async () => {
-    const { dungeonResult } = get();
-    if (!dungeonResult) return;
-
-    set({ exportState: { isExporting: true, exportResult: null, exportError: null } });
-
-    const code = dungeonToGeometryScript({
-      grid: dungeonResult.grid,
-      cellSize: 2,
-      wallHeight: 3,
-    });
-
-    const { result, error } = await executeBlenderScript(code);
-    if (error) {
-      logger.warn('[procedural-engine] Dungeon export failed:', error);
-    }
-    set({
-      exportState: {
-        isExporting: false,
-        exportResult: result ?? null,
-        exportError: error ?? null,
-      },
-    });
-  },
-
-  exportVegetationToBlender: async () => {
-    const { vegetationPoints, vegetationConfig } = get();
-    if (!vegetationPoints) return;
-
-    set({ exportState: { isExporting: true, exportResult: null, exportError: null } });
-
-    const speciesNames: Record<string, string> = {};
-    for (const sp of vegetationConfig.species) {
-      speciesNames[sp.id] = sp.name;
-    }
-
-    const code = scatterVegetationScript({
-      points: vegetationPoints,
-      speciesNames,
-    });
-
-    const { result, error } = await executeBlenderScript(code);
-    if (error) {
-      logger.warn('[procedural-engine] Vegetation export failed:', error);
-    }
-    set({
-      exportState: {
-        isExporting: false,
-        exportResult: result ?? null,
-        exportError: error ?? null,
-      },
-    });
-  },
-}));
+    exportTerrainToBlender: () => get().exportToBlender('terrain'),
+    exportDungeonToBlender: () => get().exportToBlender('dungeon'),
+    exportVegetationToBlender: () => get().exportToBlender('vegetation'),
+  };
+});

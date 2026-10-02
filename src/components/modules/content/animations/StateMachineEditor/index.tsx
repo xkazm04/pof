@@ -1,6 +1,7 @@
 'use client';
 
-import { Diff, Zap, Info, Workflow } from 'lucide-react';
+import { useState } from 'react';
+import { Diff, Zap, Info, Workflow, Upload } from 'lucide-react';
 import {
   ACCENT_ORANGE,
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING,
@@ -13,6 +14,7 @@ import { PropertyPanel } from './PropertyPanel';
 import { WarningsPanel } from './WarningsPanel';
 import { CodeOutputPanel } from './CodeOutputPanel';
 import type { EditorSeed } from './seed';
+import type { ApplyPlan } from './applyPlan';
 
 export type { EditorState, EditorTransition } from './types';
 export type { EditorSeed } from './seed';
@@ -22,13 +24,21 @@ export interface StateMachineEditorProps {
   seed?: EditorSeed | null;
   /** Session draft key — unsaved canvas edits survive an LRU eviction. */
   draftKey?: string;
+  /**
+   * Write a confirmed ready plan to the project (the host's CLI rail). Call
+   * `markApplied` when that run succeeds — the next re-scan then rebases.
+   */
+  onApply?: (plan: ApplyPlan, markApplied: () => void) => void;
+  /** An apply CLI run is in flight. */
+  applyRunning?: boolean;
 }
 export { generateFullCppOutput } from './codegen';
 
 // ── Component ──
 
-export function StateMachineEditor({ seed = null, draftKey }: StateMachineEditorProps = {}) {
+export function StateMachineEditor({ seed = null, draftKey, onApply, applyRunning = false }: StateMachineEditorProps = {}) {
   const editor = useStateMachineEditor({ seed, draftKey });
+  const [confirmingApply, setConfirmingApply] = useState(false);
   const {
     seedSource, seedOrigin, draftRestored,
     drawingTransition,
@@ -38,7 +48,18 @@ export function StateMachineEditor({ seed = null, draftKey }: StateMachineEditor
     showWarnings, setShowWarnings, focusWarning,
     showCode, generatedCode, codeTab, setCodeTab,
     handleExport,
+    applyPlan, markApplied, lastApplyOutcome,
   } = editor;
+
+  // Snapshot-diff transitions are id pairs (`from->to`); show them by name.
+  const transitionNames = (keys: string[]) =>
+    keys.map((k) => k.split('->').map((id) => stateMap.get(id)?.name ?? id).join(' → ')).join(', ');
+  const confirmReady = confirmingApply && applyPlan.status === 'ready';
+  const showChanges = seedSource !== 'template' && (applyPlan.changes.length > 0 || lastApplyOutcome !== null);
+  const confirmApply = () => {
+    setConfirmingApply(false);
+    onApply?.(applyPlan, markApplied);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -67,7 +88,49 @@ export function StateMachineEditor({ seed = null, draftKey }: StateMachineEditor
       </div>
 
       {/* ── Header bar ── */}
-      <EditorToolbar editor={editor} />
+      <EditorToolbar
+        editor={editor}
+        onRequestApply={onApply ? () => setConfirmingApply(true) : undefined}
+        applyRunning={applyRunning}
+      />
+
+      {/* ── Changes vs the seed: the disclosure an apply is confirmed against ── */}
+      {(showChanges || confirmReady) && (
+        <div data-testid="pof-anim-sm-editor-changes" className="rounded-lg border border-border bg-surface-deep px-3 py-2.5 space-y-1.5">
+          <div className="text-xs font-bold text-text flex items-center gap-2">
+            <Upload className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
+            Changes vs {applyPlan.origin ?? 'the project'}
+            <span className="text-text-muted font-normal">({applyPlan.changes.length})</span>
+          </div>
+          {lastApplyOutcome === 'residual' && applyPlan.changes.length > 0 && (
+            <div className="text-2xs" style={{ color: STATUS_WARNING }}>
+              The re-scan after the apply still differs from the canvas, so your draft is kept and these changes remain. (The scan derives priorities from enum order and flags from state names, and cannot see the Default marker.)
+            </div>
+          )}
+          {lastApplyOutcome === 'converged' && applyPlan.changes.length === 0 && (
+            <div className="text-2xs" style={{ color: STATUS_SUCCESS }}>Applied — the re-scan matches the canvas.</div>
+          )}
+          {applyPlan.changes.map((c, i) => (
+            <div key={`${c.kind}-${i}`} className="text-2xs text-text-muted" data-kind={c.kind}>{c.label}</div>
+          ))}
+          {applyPlan.status === 'blocked' && applyPlan.reasons.map((r) => (
+            <div key={r} className="text-2xs" style={{ color: STATUS_ERROR }}>{r}</div>
+          ))}
+          {confirmReady && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={confirmApply}
+                data-testid="pof-anim-sm-editor-apply-confirm"
+                className="px-3 py-1 rounded-lg text-xs font-medium"
+                style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_30}`, color: STATUS_WARNING }}
+              >
+                Write {applyPlan.changes.length} change{applyPlan.changes.length === 1 ? '' : 's'} to {applyPlan.target?.className}
+              </button>
+              <button onClick={() => setConfirmingApply(false)} className="text-2xs text-text-muted hover:text-text">Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Drawing mode indicator ── */}
       {drawingTransition && (
@@ -98,13 +161,13 @@ export function StateMachineEditor({ seed = null, draftKey }: StateMachineEditor
             <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_WARNING }}>~ States:</span> <span className="text-text-muted">{diff.modifiedStates.join(', ')}</span></div>
           )}
           {diff.newTransitions.length > 0 && (
-            <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_SUCCESS }}>+ Transitions:</span> <span className="text-text-muted">{diff.newTransitions.length} added</span></div>
+            <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_SUCCESS }}>+ Transitions:</span> <span className="text-text-muted">{transitionNames(diff.newTransitions)}</span></div>
           )}
           {diff.removedTransitions.length > 0 && (
-            <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_ERROR }}>- Transitions:</span> <span className="text-text-muted">{diff.removedTransitions.length} removed</span></div>
+            <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_ERROR }}>- Transitions:</span> <span className="text-text-muted">{transitionNames(diff.removedTransitions)}</span></div>
           )}
           {diff.modifiedTransitions.length > 0 && (
-            <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_WARNING }}>~ Transitions:</span> <span className="text-text-muted">{diff.modifiedTransitions.length} changed</span></div>
+            <div className="text-2xs"><span className="font-bold" style={{ color: STATUS_WARNING }}>~ Transitions:</span> <span className="text-text-muted">{transitionNames(diff.modifiedTransitions)}</span></div>
           )}
         </div>
       )}

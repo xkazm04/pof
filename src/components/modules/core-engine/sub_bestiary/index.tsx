@@ -19,6 +19,7 @@ import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { renderBestiaryMetric } from './metrics';
 import { NarrativeBreadcrumb } from './NarrativeBreadcrumb';
 import { MicroLabel } from '@/components/ui/MicroLabel';
+import { brainSubject } from '@/lib/bestiary/sense-profile';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -48,8 +49,11 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
   /* Archetype selection & comparison (up to 4) */
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [expandedArchetype, setExpandedArchetype] = useState<string | null>(null);
+  /* An explicit pick on 'Give Them Brains' (null = cleared); undefined follows the selection above. */
+  const [brainPick, setBrainPick] = useState<string | null | undefined>(undefined);
 
   const toggleCompare = useCallback((id: string) => {
+    setBrainPick(undefined);
     setCompareIds(prev => {
       if (prev.includes(id)) return prev.filter(x => x !== id);
       if (prev.length >= 4) return prev;
@@ -65,6 +69,7 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
   const [codegenMod, setCodegenMod] = useState<EliteModifier | null>(null);
 
   const toggleArchetype = useCallback((id: string) => {
+    setBrainPick(undefined);
     setExpandedArchetype(prev => prev === id ? null : id);
   }, []);
 
@@ -130,7 +135,8 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
           )}
           {activeTab === 'ai-logic' && (
             <VisibleSection moduleId={moduleId} sectionId="behavior-tree">
-              <AILogicTab featureMap={featureMap} accent={ACCENT} />
+              <AILogicTab featureMap={featureMap} accent={ACCENT}
+                subjectId={brainSubject(expandedArchetype, compareIds, brainPick)} onSubjectChange={setBrainPick} />
             </VisibleSection>
           )}
           {activeTab === 'encounters' && (

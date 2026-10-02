@@ -3,6 +3,7 @@ import { render, cleanup, screen } from '@testing-library/react';
 import { DiminishingReturnsVisualizer } from '@/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 import type { DRAttribute } from '@/components/modules/core-engine/sub_progression/_shared/data';
+import { DR_CONFIGS } from '@/components/modules/core-engine/sub_progression/_shared/diminishingReturns';
 
 afterEach(cleanup);
 
@@ -41,5 +42,10 @@ describe('DiminishingReturnsVisualizer', () => {
     const { container } = render(<DiminishingReturnsVisualizer attributes={[flat(5)]} />);
     expect(container.querySelector('polyline')).toBeTruthy();
     expect(container.innerHTML).not.toContain('NaN');
+  });
+
+  it('case 6: follows the configs it is handed (soft cap overlay)', () => {
+    render(<DiminishingReturnsVisualizer configs={[{ ...DR_CONFIGS[0], softCap: 45 }]} />);
+    expect(screen.getByText(/Soft Cap: 45 pts/)).toBeTruthy();
   });
 });

@@ -1,14 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { RefreshCw, ScanSearch } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useManifest } from '@/hooks/useManifest';
+import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { TaskFactory } from '@/lib/cli-task';
 import { STATUS_ERROR, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 import { useAnimBpScan } from '../AnimationStateMachine/useAnimBpScan';
 import { StateMachineEditor } from './index';
 import { EDITOR_ACCENT } from './constants';
 import { seedFromScan, seedFromBridge, type EditorSeed } from './seed';
+import { buildApplyPrompt, type ApplyPlan } from './applyPlan';
 
 /**
  * The visual AnimBP state-machine editor, wired to the project.
@@ -21,6 +24,11 @@ import { seedFromScan, seedFromBridge, type EditorSeed } from './seed';
  *
  * The scan is operator-triggered, exactly as in the read-only graph: it walks
  * the project's C++ sources, so it is never fired on mount.
+ *
+ * Apply: a confirmed ready plan is ONE quick-action task on the module's CLI
+ * rail (prompt = `buildApplyPrompt(plan)`). On success the editor is told
+ * (`markApplied`) and the project is re-scanned; the editor rebases onto that
+ * scan only if it matches the canvas. A failed run leaves the draft alone.
  */
 export function StateMachineEditorTab() {
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -43,6 +51,24 @@ export function StateMachineEditorTab() {
   // One draft per project: switching projects must not restore another
   // project's unsaved canvas over this one.
   const draftKey = `anim-sm-editor:${projectPath || 'no-project'}`;
+
+  const markAppliedRef = useRef<(() => void) | null>(null);
+  const applyCli = useModuleCLI({
+    moduleId: 'animations',
+    sessionKey: 'animations-sm-editor-apply',
+    label: 'Apply SM edits',
+    accentColor: EDITOR_ACCENT,
+    onComplete: (success) => {
+      if (!success) return;
+      markAppliedRef.current?.();
+      void handleScan();
+    },
+  });
+  const { execute } = applyCli;
+  const handleApply = useCallback((plan: ApplyPlan, markApplied: () => void) => {
+    markAppliedRef.current = markApplied;
+    void execute(TaskFactory.quickAction('animations', buildApplyPrompt(plan), 'Apply SM edits'));
+  }, [execute]);
 
   return (
     <div className="space-y-3" data-testid="pof-anim-sm-editor-tab">
@@ -73,7 +99,7 @@ export function StateMachineEditorTab() {
         </div>
       )}
 
-      <StateMachineEditor seed={seed} draftKey={draftKey} />
+      <StateMachineEditor seed={seed} draftKey={draftKey} onApply={handleApply} applyRunning={applyCli.isRunning} />
     </div>
   );
 }

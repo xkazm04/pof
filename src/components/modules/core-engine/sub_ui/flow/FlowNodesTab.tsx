@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { Monitor, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ACCENT_PINK, STATUS_WARNING,
@@ -14,10 +14,9 @@ import type { InputMode } from '../_shared/data';
 import { ScreenNodeRow, InputModeBadge } from './ScreenNodeRow';
 import { FlowGraph } from './FlowGraph';
 import { useCatalogEntities } from '@/stores/catalogStore';
-import { useGeneration } from '@/hooks/useGeneration';
-import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { ScreenEntry } from '@/lib/catalog/types';
-import type { GenerationStep } from '@/lib/catalog/recipe';
+import { screenEntityFor, ROOT_SCREEN_NODE } from '@/components/modules/core-engine/sub_ui/flow/screenWorklist';
+import { ScreenLifecycle, ScreenWorklistHeader } from '@/components/modules/core-engine/sub_ui/flow/ScreenLifecycle';
 
 const ACCENT = ACCENT_PINK;
 
@@ -43,44 +42,20 @@ export function FlowNodesTab({
   const hudStatus: FeatureStatus = featureMap.get('Main HUD widget')?.status ?? 'unknown';
   const hudSc = STATUS_COLORS[hudStatus];
 
-  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary screen node. */
+  /* Each row drives its OWN screen-flow catalog entity (screenWorklist.ts); the
+     header counts progress and runs the recipe's next action. */
   const screenEntries = useCatalogEntities('screen-flow') as ScreenEntry[];
-  const entryByNodeId = useMemo(
-    () => new Map(screenEntries.map((e) => [e.data.id, e])),
-    [screenEntries],
-  );
-  const primaryNodeId = expandedNode ?? FLOW_NODES[0]?.id;
-  const primaryEntry =
-    (primaryNodeId != null ? entryByNodeId.get(primaryNodeId) : undefined)
-    ?? screenEntries[0];
-  const gen = useGeneration(primaryEntry!);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
 
   return (
     <motion.div key="flow" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
-      {primaryEntry && (
-        <div className="flex items-center justify-between gap-2 px-1">
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-            {primaryEntry.data.label ?? primaryEntry.data.id}
-          </span>
-          <CatalogLifecycleCell
-            lifecycle={primaryEntry.lifecycle}
-            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
-            busy={gen.isRunning}
-            onRegenerate={() => gen.generate(nextStep)}
-          />
-        </div>
-      )}
+      <ScreenWorklistHeader entries={screenEntries} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="space-y-4">
           <BlueprintPanel color={ACCENT} className="p-4 group">
             <SectionHeader label="HUD Architecture Hub" color={ACCENT} icon={Monitor} />
-            <button onClick={() => onToggleNode('hud-root')} className="w-full text-left relative z-10 focus:outline-none">
+            <button onClick={() => onToggleNode(ROOT_SCREEN_NODE)} className="w-full text-left relative z-10 focus:outline-none">
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-sm transition-colors hover:bg-surface-hover/30" style={{ borderColor: `${withOpacity(ACCENT, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT, OPACITY_10)}` }}>
-                <motion.div animate={{ rotate: expandedNode === 'hud-root' ? 90 : 0 }}>
+                <motion.div animate={{ rotate: expandedNode === ROOT_SCREEN_NODE ? 90 : 0 }}>
                   <ChevronRight className="w-4 h-4" style={{ color: ACCENT }} />
                 </motion.div>
                 <span className="text-sm font-bold text-text">Main HUD Layout</span>
@@ -92,9 +67,9 @@ export function FlowNodesTab({
               </div>
             </button>
             <AnimatePresence>
-              {expandedNode === 'hud-root' && (
+              {expandedNode === ROOT_SCREEN_NODE && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="mt-3 mx-4 p-3 bg-surface-deep/80 rounded-lg border border-border/30 shadow-inner">
+                  <div className="mt-3 mx-4 p-3 bg-surface-deep/80 rounded-lg border border-border/30 shadow-inner space-y-2">
                     {(() => {
                       const row = featureMap.get('Main HUD widget');
                       const def = defs.find((d) => d.featureName === 'Main HUD widget');
@@ -105,6 +80,7 @@ export function FlowNodesTab({
                         </>
                       );
                     })()}
+                    <ScreenLifecycle entity={screenEntityFor(ROOT_SCREEN_NODE, screenEntries)} />
                   </div>
                 </motion.div>
               )}
@@ -113,7 +89,7 @@ export function FlowNodesTab({
               <div className="absolute left-6 top-0 bottom-6 w-px bg-[var(--border)] opacity-30" />
               {HUD_CHILDREN.map((node, i) => (
                 <motion.div key={node.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-                  <ScreenNodeRow node={node} featureMap={featureMap} defs={defs} expandedNode={expandedNode} onToggle={onToggleNode} arrowLabel={node.trigger} highlightColor={getScreenHighlightColor(node.id)} />
+                  <ScreenNodeRow node={node} featureMap={featureMap} defs={defs} expandedNode={expandedNode} onToggle={onToggleNode} arrowLabel={node.trigger} highlightColor={getScreenHighlightColor(node.id)} screenEntity={screenEntityFor(node.id, screenEntries)} />
                 </motion.div>
               ))}
             </div>
@@ -138,7 +114,7 @@ export function FlowNodesTab({
             <div className="space-y-3">
               {HUD_OVERLAYS.map((node, i) => (
                 <motion.div key={node.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                  <ScreenNodeRow node={node} featureMap={featureMap} defs={defs} expandedNode={expandedNode} onToggle={onToggleNode} arrowLabel={node.trigger} fromLabel="HUD" highlightColor={getScreenHighlightColor(node.id)} />
+                  <ScreenNodeRow node={node} featureMap={featureMap} defs={defs} expandedNode={expandedNode} onToggle={onToggleNode} arrowLabel={node.trigger} fromLabel="HUD" highlightColor={getScreenHighlightColor(node.id)} screenEntity={screenEntityFor(node.id, screenEntries)} />
                 </motion.div>
               ))}
             </div>
@@ -149,7 +125,7 @@ export function FlowNodesTab({
             <div className="space-y-3">
               {FLOATING_NODES.map((node, i) => (
                 <motion.div key={node.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                  <ScreenNodeRow node={node} featureMap={featureMap} defs={defs} expandedNode={expandedNode} onToggle={onToggleNode} arrowLabel={node.trigger} highlightColor={getScreenHighlightColor(node.id)} />
+                  <ScreenNodeRow node={node} featureMap={featureMap} defs={defs} expandedNode={expandedNode} onToggle={onToggleNode} arrowLabel={node.trigger} highlightColor={getScreenHighlightColor(node.id)} screenEntity={screenEntityFor(node.id, screenEntries)} />
                 </motion.div>
               ))}
             </div>

@@ -14,14 +14,12 @@
  * the HTTP route — mirroring how `replication-scaffolder.ts` is kept pure.
  */
 
-import { blueprintTypeToCpp, buildEndpointIndex } from '@/lib/blueprint-parser';
+import { buildEndpointIndex } from '@/lib/blueprint-parser';
+import { deriveCppSurface, type CppSurfaceFunction, type EventOverride } from '@/lib/blueprint-cpp-surface';
 import {
   REPLICATION_INCLUDE,
-  buildReplicationInfo,
-  replicationSpecifier,
   lifetimeReplicatedPropsDeclaration,
   lifetimeReplicatedPropsDefinition,
-  onRepDeclarations,
   onRepDefinitions,
 } from '@/lib/replication-scaffolder';
 import type {
@@ -31,6 +29,8 @@ import type {
   BlueprintGraph,
   BlueprintNode,
   BlueprintPin,
+  NodeDisposition,
+  NodeLedgerEntry,
 } from '@/types/blueprint';
 
 /** A C++ identifier — anything else cannot appear as a name, scope, or macro. */
@@ -56,42 +56,13 @@ export function apiMacroFor(moduleName: string): string {
 }
 
 /**
- * A UE engine event this transpiler knows how to override, resolved to the ONE
- * signature used by both the declaration and the definition.
- *
- * The header used to declare `EndPlay` while the source pass only ever defined
- * `BeginPlay`/`Tick` — a declared-but-undefined override is an unresolved
- * external at link time. Both passes now walk the same resolved list, so a
- * declaration without a definition is structurally impossible.
+ * The member model — class name/prefix, UPROPERTY specifiers, the UFUNCTION set,
+ * overrides and replication — lives in `blueprint-cpp-surface.ts`; this module
+ * only RENDERS it. The semantic diff compares against the same record, so the
+ * transpiler's own output round-trips clean. Re-exported for existing callers.
  */
-export interface EventOverride {
-  /** C++ member name. `Tick` becomes `TickComponent` on a UActorComponent. */
-  name: string;
-  /** Parameter list, identical in the declaration and the definition. */
-  params: string;
-  /** Argument list for the `Super::` call in the definition body. */
-  args: string;
-}
-
-export function resolveEventOverride(eventName: string, isComponent = false): EventOverride | null {
-  // UE names the Blueprint-side node `ReceiveBeginPlay`; the C++ override is `BeginPlay`.
-  switch (eventName.replace(/^Receive/, '')) {
-    case 'BeginPlay':
-      return { name: 'BeginPlay', params: '', args: '' };
-    case 'Tick':
-      return isComponent
-        ? {
-            name: 'TickComponent',
-            params: 'float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction',
-            args: 'DeltaTime, TickType, ThisTickFunction',
-          }
-        : { name: 'Tick', params: 'float DeltaTime', args: 'DeltaTime' };
-    case 'EndPlay':
-      return { name: 'EndPlay', params: 'const EEndPlayReason::Type EndPlayReason', args: 'EndPlayReason' };
-    default:
-      return null;
-  }
-}
+export { resolveEventOverride, deriveFunctionSignature } from '@/lib/blueprint-cpp-surface';
+export type { EventOverride } from '@/lib/blueprint-cpp-surface';
 
 export function overrideDeclaration(o: EventOverride): string {
   return `virtual void ${o.name}(${o.params}) override;`;
@@ -101,34 +72,13 @@ export function overrideDefinitionSignature(cppClassName: string, o: EventOverri
   return `void ${cppClassName}::${o.name}(${o.params})`;
 }
 
-/**
- * Derive the C++ parameter list and return type for a Blueprint function from
- * its entry/result nodes. Shared by both the header and source passes so their
- * signatures can never drift apart. Also returns the entry node, which the
- * source pass needs to generate the function body.
- */
-export function deriveFunctionSignature(fn: BlueprintGraph): {
-  params: string[];
-  returnType: string;
-  entryNode: BlueprintNode | undefined;
-} {
-  const entryNode = fn.nodes.find((n) => n.type.includes('FunctionEntry'));
-  const resultNode = fn.nodes.find((n) => n.type.includes('FunctionResult'));
+/** `UFUNCTION(...)` + declaration, indented for the class body. */
+function ufunctionDeclarationLines(fn: CppSurfaceFunction): string[] {
+  return [`\tUFUNCTION(${fn.specifiers.join(', ')})`, `\t${fn.returnType} ${fn.name}(${fn.params.join(', ')});`];
+}
 
-  const params: string[] = [];
-  if (entryNode) {
-    for (const pin of entryNode.pins.filter((p) => p.direction === 'output' && p.type !== 'exec')) {
-      params.push(`${blueprintTypeToCpp(pin.type)} ${pin.name}`);
-    }
-  }
-
-  let returnType = 'void';
-  if (resultNode) {
-    const returnPin = resultNode.pins.find((p) => p.direction === 'input' && p.type !== 'exec');
-    if (returnPin) returnType = blueprintTypeToCpp(returnPin.type);
-  }
-
-  return { params, returnType, entryNode };
+function ufunctionDefinitionSignature(cppClassName: string, fn: CppSurfaceFunction): string {
+  return `${fn.returnType} ${cppClassName}::${fn.name}(${fn.params.join(', ')})`;
 }
 
 export function generateCppFromBlueprint(
@@ -148,25 +98,18 @@ export function generateCppFromBlueprint(
     });
   }
 
-  // Replication scaffolding — drives the GetLifetimeReplicatedProps body,
-  // the ReplicatedUsing specifiers, OnRep handlers, and the UnrealNetwork include.
-  const replication = buildReplicationInfo(asset);
+  // One member model: everything declared below is rendered from it, and the
+  // semantic diff expects exactly this set. Replication scaffolding (the
+  // GetLifetimeReplicatedProps body, ReplicatedUsing, OnRep handlers) rides on
+  // `surface.replication` from `replication-scaffolder.ts`.
+  const surface = deriveCppSurface(asset);
+  const { cppClassName, prefix, isComponent, replication, overrides, unknownEvents } = surface;
   const repProps = replication.properties;
+  const bpFunctions = surface.functions.filter((f) => f.origin === 'bp-function');
+  const customEvents = surface.functions.filter((f) => f.origin === 'custom-event');
+  const onRepHandlers = surface.functions.filter((f) => f.origin === 'onrep-handler');
 
   const parentClass = asset.parentClass;
-  // UHT derives the required class prefix from the parent: UObject-rooted
-  // (components included) take `U`, AActor-rooted take `A`. The old blanket `A`
-  // emitted `AHealthComponent : public UActorComponent`, a prefix error, from
-  // the same function that recognises components one branch later.
-  const isComponent = parentClass === 'UActorComponent' || parentClass.includes('Component');
-  const prefix = isComponent || parentClass.startsWith('U') ? 'U' : 'A';
-
-  // Strip BP_ prefix for C++ class name
-  const cppClassName = asset.className.startsWith('BP_')
-    ? `${prefix}${asset.className.slice(3)}`
-    : asset.className.startsWith('A') || asset.className.startsWith('U')
-      ? asset.className
-      : `${prefix}${asset.className}`;
 
   // An explicitly-prefixed source name we must not rewrite can still disagree
   // with the parent — say so rather than emitting a header UHT will reject.
@@ -175,6 +118,18 @@ export function generateCppFromBlueprint(
       message: `Class "${cppClassName}" carries a "${cppClassName[0]}" prefix but parent "${parentClass}" requires "${prefix}" — `
         + 'UHT rejects a mismatched class prefix. Rename the Blueprint or change its parent.',
       severity: 'error',
+    });
+  }
+  // Every node gets a disposition: the walker records what it reached, events
+  // the surface could not place are refused here, the rest end up `unreached`.
+  const ledger: NodeLedger = new Map();
+  for (const dup of surface.duplicateEvents) {
+    const reason = `duplicate event "${dup.name}" — ${dup.overrideName} is already overridden; this node's logic was not emitted`;
+    recordDisposition(ledger, dup.node.id, 'refused', reason);
+    warnings.push({
+      nodeId: dup.node.id,
+      message: `Duplicate event "${dup.name}" — ${dup.overrideName} is already overridden; this node's logic was not emitted.`,
+      severity: 'warning',
     });
   }
 
@@ -217,71 +172,28 @@ export function generateCppFromBlueprint(
   headerLines.push('');
 
   // Variables → UPROPERTY
-  if (asset.variables.length > 0) {
+  if (surface.properties.length > 0) {
     headerLines.push('\t// ── Properties ──');
     headerLines.push('');
-    for (const v of asset.variables) {
-      const cppType = blueprintTypeToCpp(v.type);
-      const specifiers: string[] = [];
-      if (v.isExposedToEditor) specifiers.push('EditAnywhere');
-      if (v.isReplicated) specifiers.push(replicationSpecifier({ name: v.name, repNotify: v.isRepNotify }));
-      specifiers.push('BlueprintReadWrite');
-      if (v.category) specifiers.push(`Category = "${v.category}"`);
-
-      if (v.tooltip) {
-        headerLines.push(`\t/** ${v.tooltip} */`);
+    for (const p of surface.properties) {
+      if (p.tooltip) {
+        headerLines.push(`\t/** ${p.tooltip} */`);
       }
-      headerLines.push(`\tUPROPERTY(${specifiers.join(', ')})`);
-      headerLines.push(`\t${cppType} ${v.name}${v.defaultValue ? ` = ${v.defaultValue}` : ''};`);
+      headerLines.push(`\tUPROPERTY(${p.specifiers.join(', ')})`);
+      headerLines.push(`\t${p.cppType} ${p.name}${p.defaultValue ? ` = ${p.defaultValue}` : ''};`);
       headerLines.push('');
     }
   }
 
   // Functions → UFUNCTION
-  const declaredFunctions: string[] = [];
-  for (const fn of asset.functions) {
-    const fnName = fn.name.replace(/\s+/g, '');
-    declaredFunctions.push(fnName);
-
-    // Determine return type and params from entry/result nodes
-    const { params, returnType } = deriveFunctionSignature(fn);
-
-    headerLines.push(`\tUFUNCTION(BlueprintCallable, Category = "${asset.className}")`);
-    headerLines.push(`\t${returnType} ${fnName}(${params.join(', ')});`);
+  for (const fn of bpFunctions) {
+    headerLines.push(...ufunctionDeclarationLines(fn));
     headerLines.push('');
   }
 
-  // Event graph events → overrides.
-  //
-  // Resolved ONCE here; the header declares and the source defines from this
-  // same list, so every declaration is guaranteed a matching definition. A
-  // repeated event (e.g. both `BeginPlay` and `ReceiveBeginPlay` present)
-  // collapses to a single override — declaring it twice is a redefinition error.
-  const eventNodes = asset.eventGraph.nodes.filter((n) =>
-    n.type.includes('Event') && !n.type.includes('Custom')
-  );
-  const overrides: { override: EventOverride; node: BlueprintNode }[] = [];
-  const unknownEvents: { name: string; node: BlueprintNode }[] = [];
-  const seenOverrides = new Set<string>();
-  for (const ev of eventNodes) {
-    const eventName = ev.memberName ?? ev.name;
-    const resolved = resolveEventOverride(eventName, isComponent);
-    if (!resolved) {
-      unknownEvents.push({ name: eventName, node: ev });
-      continue;
-    }
-    if (seenOverrides.has(resolved.name)) {
-      warnings.push({
-        nodeId: ev.id,
-        message: `Duplicate event "${eventName}" — ${resolved.name} is already overridden; this node's logic was not emitted.`,
-        severity: 'warning',
-      });
-      continue;
-    }
-    seenOverrides.add(resolved.name);
-    overrides.push({ override: resolved, node: ev });
-  }
-
+  // Event graph events → overrides. The surface resolved them ONCE; the header
+  // declares and the source defines from that same list, so every declaration
+  // is guaranteed a matching definition.
   if (overrides.length > 0 || unknownEvents.length > 0) {
     headerLines.push('protected:');
     headerLines.push('\t// ── Event Overrides ──');
@@ -291,23 +203,20 @@ export function generateCppFromBlueprint(
     }
     for (const unknown of unknownEvents) {
       headerLines.push(`\t// TODO: Override for ${unknown.name}`);
+      recordDisposition(ledger, unknown.node.id, 'refused',
+        `unknown event "${unknown.name}" — no C++ override is known for it, so its exec chain was not walked`);
       warnings.push({ nodeId: unknown.node.id, message: `Unknown event: ${unknown.name}`, severity: 'warning' });
     }
     headerLines.push('');
   }
 
   // Custom events → UFUNCTION
-  const customEvents = asset.eventGraph.nodes.filter((n) =>
-    n.type.includes('CustomEvent') || n.type.includes('K2Node_Event_Custom')
-  );
   if (customEvents.length > 0) {
     headerLines.push('public:');
     headerLines.push('\t// ── Custom Events ──');
     headerLines.push('');
-    for (const ev of customEvents) {
-      const evName = ev.memberName ?? ev.name;
-      headerLines.push(`\tUFUNCTION(BlueprintCallable, Category = "Events")`);
-      headerLines.push(`\tvoid ${evName}();`);
+    for (const fn of customEvents) {
+      headerLines.push(...ufunctionDeclarationLines(fn));
       headerLines.push('');
     }
   }
@@ -319,12 +228,11 @@ export function generateCppFromBlueprint(
     headerLines.push(`\t${lifetimeReplicatedPropsDeclaration()}`);
     headerLines.push('');
 
-    const onRepDecls = onRepDeclarations(repProps);
-    if (onRepDecls.length > 0) {
+    if (onRepHandlers.length > 0) {
       headerLines.push('protected:');
       headerLines.push('\t// ── RepNotify Handlers ──');
-      for (const line of onRepDecls) {
-        headerLines.push(`\t${line}`);
+      for (const fn of onRepHandlers) {
+        headerLines.push(...ufunctionDeclarationLines(fn));
       }
       headerLines.push('');
     }
@@ -356,20 +264,18 @@ export function generateCppFromBlueprint(
     sourceLines.push('{');
     sourceLines.push(`\tSuper::${override.name}(${override.args});`);
     sourceLines.push('');
-    sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings));
+    sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings, ledger));
     sourceLines.push('}');
     sourceLines.push('');
   }
 
   // Function implementations
-  for (const fn of asset.functions) {
-    const fnName = fn.name.replace(/\s+/g, '');
-    const { params, returnType, entryNode } = deriveFunctionSignature(fn);
-
-    sourceLines.push(`${returnType} ${cppClassName}::${fnName}(${params.join(', ')})`);
+  for (const fn of bpFunctions) {
+    const { returnType, entryNode } = fn;
+    sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
     if (entryNode) {
-      sourceLines.push(generateNodeLogic(fn, entryNode, cppClassName, warnings));
+      sourceLines.push(generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger));
     } else {
       sourceLines.push('\t// TODO: Implement function logic');
     }
@@ -381,11 +287,10 @@ export function generateCppFromBlueprint(
   }
 
   // Custom event implementations
-  for (const ev of customEvents) {
-    const evName = ev.memberName ?? ev.name;
-    sourceLines.push(`void ${cppClassName}::${evName}()`);
+  for (const fn of customEvents) {
+    sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
-    sourceLines.push(generateNodeLogic(asset.eventGraph, ev, cppClassName, warnings));
+    sourceLines.push(generateNodeLogic(asset.eventGraph, fn.node, cppClassName, warnings, ledger));
     sourceLines.push('}');
     sourceLines.push('');
   }
@@ -408,9 +313,80 @@ export function generateCppFromBlueprint(
     includes: emittedIncludes,
     warnings,
     nodeCount: asset.eventGraph.nodes.length + asset.functions.reduce((s, f) => s + f.nodes.length, 0),
-    functionCount: asset.functions.length + customEvents.length,
+    functionCount: bpFunctions.length + customEvents.length,
     replication,
+    nodeLedger: finishNodeLedger([asset.eventGraph, ...asset.functions], ledger),
   };
+}
+
+// ─── Node Ledger ─────────────────────────────────────────────────────────────
+
+/** The walker's per-node record, keyed by node id (published as `nodeLedger`). */
+export type NodeLedger = Map<string, { disposition: NodeDisposition; reason?: string }>;
+
+/** A node reached twice keeps its most telling disposition; refusal always shows. */
+const DISPOSITION_RANK: Record<NodeDisposition, number> = {
+  unreached: 0, structural: 1, consumed: 2, emitted: 3, refused: 4,
+};
+
+function recordDisposition(ledger: NodeLedger | undefined, id: string, disposition: NodeDisposition, reason?: string) {
+  if (!ledger) return;
+  const prev = ledger.get(id);
+  if (prev && DISPOSITION_RANK[prev.disposition] >= DISPOSITION_RANK[disposition]) return;
+  ledger.set(id, reason === undefined ? { disposition } : { disposition, reason });
+}
+
+const DISPOSITION_PHRASE: Record<NodeDisposition, string> = {
+  emitted: 'was translated', consumed: 'was translated', structural: 'is a member entry',
+  refused: 'was refused', unreached: 'was never reached',
+};
+
+/**
+ * Publish the ledger in graph order, marking every node the walker never
+ * visited `unreached` — with the node that stands in front of it, so "never
+ * reached" names the refused Branch or unknown event it hides behind.
+ */
+function finishNodeLedger(graphs: BlueprintGraph[], ledger: NodeLedger): NodeLedgerEntry[] {
+  const out: NodeLedgerEntry[] = [];
+  for (const graph of graphs) {
+    const index = buildEndpointIndex(graph.nodes);
+    const execFrom = new Map<string, BlueprintNode>();
+    const valueTo = new Map<string, BlueprintNode>();
+    for (const n of graph.nodes) {
+      for (const p of n.pins) {
+        if (p.direction !== 'output') continue;
+        for (const endpoint of p.linkedTo ?? []) {
+          const target = index.get(endpoint);
+          if (!target || target.id === n.id) continue;
+          if (p.type === 'exec') {
+            if (!execFrom.has(target.id)) execFrom.set(target.id, n);
+          } else if (!valueTo.has(n.id)) {
+            valueTo.set(n.id, target);
+          }
+        }
+      }
+    }
+    const phrase = (n: BlueprintNode) =>
+      `[${n.type}] ${n.name}, which ${DISPOSITION_PHRASE[ledger.get(n.id)?.disposition ?? 'unreached']}`;
+    for (const n of graph.nodes) {
+      const rec = ledger.get(n.id);
+      const base = { nodeId: n.id, nodeType: n.type, name: n.name, graph: graph.name };
+      const withMember = n.memberName ? { ...base, memberName: n.memberName } : base;
+      if (rec) {
+        out.push(rec.reason === undefined ? { ...withMember, disposition: rec.disposition } : { ...withMember, ...rec });
+        continue;
+      }
+      const pred = execFrom.get(n.id);
+      const feeds = valueTo.get(n.id);
+      const reason = pred
+        ? `never reached — its exec path comes from ${phrase(pred)}`
+        : feeds
+          ? `never evaluated — a pure value feeding ${phrase(feeds)}`
+          : 'never reached — not connected to any event or function entry';
+      out.push({ ...withMember, disposition: 'unreached', reason });
+    }
+  }
+  return out;
 }
 
 // ─── Node Logic Generator ───────────────────────────────────────────────────
@@ -423,7 +399,9 @@ export function generateCppFromBlueprint(
  * type, and a `false` result routes the whole node into the honest `// TODO` +
  * warning path instead of guessing.
  */
-export type PinExpression = { ok: true; code: string } | { ok: false; reason: string };
+export type PinExpression =
+  | { ok: true; code: string; /** The VariableGet node read, when the value came over a link. */ source?: BlueprintNode }
+  | { ok: false; reason: string };
 
 /** Matches a C++ numeric literal (including the UE `f` suffix). */
 const NUMERIC_LITERAL = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?[fF]?$/;
@@ -493,7 +471,7 @@ function resolveInputExpression(
   for (const id of links) {
     const src = endpointIndex.get(id);
     if (src?.type.includes('VariableGet') && src.memberName && CPP_IDENTIFIER.test(src.memberName)) {
-      return { ok: true, code: src.memberName };
+      return { ok: true, code: src.memberName, source: src };
     }
   }
   const driver = endpointIndex.get(links[0]);
@@ -512,31 +490,61 @@ function valueInputPins(node: BlueprintNode): BlueprintPin[] {
   );
 }
 
+export interface TranspileFidelity {
+  /** Nodes that were meant to become code (structural event/entry nodes excluded). */
+  total: number;
+  /** Emitted as a statement, or read by one (a consumed VariableGet). */
+  translated: number;
+  refused: number;
+  unreached: number;
+  /** refused + unreached — the residue still to port by hand. */
+  todo: number;
+  /** True when counted from the walker's node ledger; false for the warning fallback. */
+  perNode: boolean;
+  label: string;
+}
+
 /**
- * How much of the graph actually became code.
+ * How much of the graph actually became code — counted from the per-node
+ * ledger the walker writes. A node that raised no warning is NOT translated
+ * unless it was emitted or consumed: a refused Branch's subtree, the chain
+ * behind an unknown event, orphans and unread pure nodes are `unreached`
+ * (not measured), and event/entry nodes are structural and left out of the
+ * denominator.
  *
- * Derived from the warning list — every node the walker refused to translate
- * raises exactly one warning carrying its `nodeId` — so the readout cannot
- * drift from what was emitted. Warnings with no `nodeId` (e.g. a module-name
- * warning) describe the class, not a node, and are not counted as TODOs.
+ * A payload with no ledger (an older result) falls back to the warning-derived
+ * count, the only thing it can state.
  */
 export function describeTranspileFidelity(
-  result: Pick<TranspileResult, 'warnings' | 'nodeCount'>,
-): { total: number; translated: number; todo: number; label: string } {
-  const flagged = new Set(
-    result.warnings.filter((w) => w.nodeId !== undefined).map((w) => w.nodeId),
-  );
-  const total = result.nodeCount;
-  const todo = Math.min(flagged.size, total);
-  const translated = total - todo;
-  return {
-    total,
-    translated,
-    todo,
-    label: todo > 0
-      ? `${translated} of ${total} nodes translated · ${todo} left as TODO`
-      : `${translated} of ${total} nodes translated`,
-  };
+  result: Pick<TranspileResult, 'warnings' | 'nodeCount' | 'nodeLedger'>,
+): TranspileFidelity {
+  if (!result.nodeLedger) {
+    const flagged = new Set(
+      result.warnings.filter((w) => w.nodeId !== undefined).map((w) => w.nodeId),
+    );
+    const total = result.nodeCount;
+    const todo = Math.min(flagged.size, total);
+    const translated = total - todo;
+    return {
+      total, translated, refused: todo, unreached: 0, todo, perNode: false,
+      label: todo > 0
+        ? `${translated} of ${total} nodes translated · ${todo} left as TODO`
+        : `${translated} of ${total} nodes translated`,
+    };
+  }
+  let translated = 0;
+  let refused = 0;
+  let unreached = 0;
+  for (const e of result.nodeLedger) {
+    if (e.disposition === 'emitted' || e.disposition === 'consumed') translated++;
+    else if (e.disposition === 'refused') refused++;
+    else if (e.disposition === 'unreached') unreached++;
+  }
+  const total = translated + refused + unreached;
+  const parts = [`${translated} of ${total} nodes translated`];
+  if (refused > 0) parts.push(`${refused} refused`);
+  if (unreached > 0) parts.push(`${unreached} never reached`);
+  return { total, translated, refused, unreached, todo: refused + unreached, perNode: true, label: parts.join(' · ') };
 }
 
 /**
@@ -544,12 +552,17 @@ export function describeTranspileFidelity(
  * statement body. Unrecognised node types — and any node whose operands cannot
  * be derived from the graph — become `// TODO` comments plus an info-level
  * warning so nothing is silently dropped OR silently invented.
+ *
+ * When a `ledger` is passed, every node the walk reaches is recorded in it
+ * (`emitted` / `consumed` / `structural` / `refused` + reason); every stub
+ * carries `(node <id>)` so a surface can jump from the residue to its line.
  */
 export function generateNodeLogic(
   graph: { nodes: BlueprintNode[] },
   startNode: BlueprintNode,
   _className: string,
   warnings: TranspileWarning[],
+  ledger?: NodeLedger,
 ): string {
   const lines: string[] = [];
   const visited = new Set<string>();
@@ -567,12 +580,28 @@ export function generateNodeLogic(
    */
   function untranslated(node: BlueprintNode, indent: string, reason: string) {
     const member = node.memberName ? ` — ${node.memberName}` : '';
-    lines.push(`${indent}// TODO: [${node.type}] ${node.name}${member} — ${reason}`);
+    stub(node, indent, `[${node.type}] ${node.name}${member}`, reason);
+    recordDisposition(ledger, node.id, 'refused', reason);
     warnings.push({
       nodeId: node.id,
       message: `Node "${node.name}" (${node.type}) needs manual translation: ${reason}`,
       severity: 'info',
     });
+  }
+
+  /**
+   * One `// TODO` line stamped with the node id. Newlines are folded: a node
+   * name or pin default spanning lines would put the rest outside the comment.
+   */
+  function stub(node: BlueprintNode, indent: string, head: string, detail?: string) {
+    const text = `// TODO: ${head} (node ${node.id})${detail ? ` — ${detail}` : ''}`;
+    lines.push(`${indent}${text.replace(/[\r\n]+/g, ' ')}`);
+  }
+
+  /** A statement was written for `node`; any VariableGet it reads was consumed. */
+  function emitted(node: BlueprintNode, reads: PinExpression[]) {
+    recordDisposition(ledger, node.id, 'emitted');
+    for (const r of reads) if (r.ok && r.source) recordDisposition(ledger, r.source.id, 'consumed');
   }
 
   function walk(node: BlueprintNode, indent: string) {
@@ -599,6 +628,7 @@ export function generateNodeLogic(
         : { ok: false as const, reason: 'no string input pin' };
       if (literal.ok && literal.code.startsWith('TEXT(')) {
         lines.push(`${indent}UE_LOG(LogTemp, Log, ${literal.code});`);
+        emitted(node, []);
       } else {
         // The old fallback printed `TEXT("%s")` with no argument — a format
         // string promising a value it never passes.
@@ -622,6 +652,7 @@ export function generateNodeLogic(
         } else {
           const args = exprs.map((e) => (e.ok ? e.code : '')).join(', ');
           lines.push(`${indent}${parent ? `${parent}::` : ''}${node.memberName}(${args});`);
+          emitted(node, exprs);
         }
       }
     } else if (node.type.includes('IfThenElse')) {
@@ -641,6 +672,7 @@ export function generateNodeLogic(
       const elsePin = node.pins.find((p) => p.direction === 'output' && p.name === 'Else');
 
       lines.push(`${indent}if (${condExpr})`);
+      emitted(node, [cond]);
       lines.push(`${indent}{`);
       if (thenPin?.linkedTo) {
         for (const id of thenPin.linkedTo) {
@@ -675,13 +707,19 @@ export function generateNodeLogic(
         untranslated(node, indent, `assignment not emitted — ${value.reason}`);
       } else {
         lines.push(`${indent}${node.memberName} = ${value.code};`);
+        emitted(node, [value]);
       }
     } else if (node.type.includes('SpawnActor')) {
-      lines.push(`${indent}// TODO: SpawnActor — use GetWorld()->SpawnActor<>()`);
+      stub(node, indent, 'SpawnActor', 'use GetWorld()->SpawnActor<>()');
+      recordDisposition(ledger, node.id, 'refused', 'SpawnActor requires manual completion — use GetWorld()->SpawnActor<>()');
       warnings.push({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
     } else if (!node.type.includes('Event') && !node.type.includes('FunctionEntry')) {
-      lines.push(`${indent}// TODO: [${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
+      stub(node, indent, `[${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
+      recordDisposition(ledger, node.id, 'refused', `no translation rule for node type "${node.type}"`);
       warnings.push({ nodeId: node.id, message: `Node type "${node.type}" needs manual translation`, severity: 'info' });
+    } else {
+      // An event or function entry becomes the member itself, not a statement.
+      recordDisposition(ledger, node.id, 'structural');
     }
 
     // Follow exec chain

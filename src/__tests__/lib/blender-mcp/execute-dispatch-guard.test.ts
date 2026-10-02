@@ -35,9 +35,7 @@ const WRAPPER = ['components/modules/visual-gen/blender-pipeline/ScriptRunner.ts
  * the panel — and delete its line here.
  */
 const UNMIGRATED = [
-  'components/modules/visual-gen/procedural-engine/useProceduralStore.ts',
   'components/modules/visual-gen/material-lab/useMaterialStore.ts',
-  'components/modules/visual-gen/auto-rig/AutoRigView/index.tsx',
   'components/modules/content/materials/PostProcessStackBuilder/index.tsx',
   'components/modules/content/materials/MaterialPatternCatalog/index.tsx',
   'components/modules/content/level-design/ProceduralLevelWizard/useProceduralLevelWizard.ts',
@@ -98,6 +96,12 @@ describe('every /api/blender-mcp/execute dispatch goes through executeViaMCP', (
       stale,
       'These no longer fetch the execute route; delete them from UNMIGRATED',
     ).toEqual([]);
+  });
+
+  it('Auto-Rig dispatches through executeViaMCP — its armature is recorded and its receipt read', () => {
+    const autoRig = 'components/modules/visual-gen/auto-rig/AutoRigView/index.tsx';
+    expect(dispatchers).not.toContain(autoRig);
+    expect(fs.readFileSync(path.join(SRC, autoRig), 'utf-8')).toMatch(/executeViaMCP\(/);
   });
 
   it('the Scene Composer no longer dispatches raw — it was the worst offender', () => {

@@ -1,7 +1,12 @@
 import { Plug } from 'lucide-react';
 import type { BridgeManifestSummary } from './types';
 
-export function BridgeManifestCard({ summary, className = '' }: { summary: BridgeManifestSummary; className?: string }) {
+export function BridgeManifestCard({ summary, missingOnDisk, className = '' }: {
+  summary: BridgeManifestSummary;
+  /** /Game entries UE lists with no file in the scanned Content/ (only after a scan). */
+  missingOnDisk?: string[];
+  className?: string;
+}) {
   return (
     <div className={`rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2 ${className}`.trim()}>
       <div className="flex items-center justify-between">
@@ -28,6 +33,16 @@ export function BridgeManifestCard({ summary, className = '' }: { summary: Bridg
       <div className="text-2xs text-text-muted">
         {summary.total} total assets · Last updated {new Date(summary.generatedAt).toLocaleTimeString()}
       </div>
+      {missingOnDisk && missingOnDisk.length > 0 && (
+        <details className="text-2xs text-text-muted">
+          <summary className="cursor-pointer select-none text-amber-400/90">
+            Missing on disk ({missingOnDisk.length})
+          </summary>
+          <ul className="mt-1 space-y-0.5 font-mono max-h-32 overflow-y-auto custom-scrollbar">
+            {missingOnDisk.map((p) => <li key={p} className="truncate" title={p}>{p}</li>)}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

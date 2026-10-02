@@ -4,13 +4,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { Grid3x3, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../../unique-tabs/_design';
 import {
-  spatialItemLookup,
   useActiveStashTab,
   useSpatialInventoryStore,
   useStashTabList,
 } from '@/stores/spatialInventoryStore';
 import { computePackingMetrics } from '@/lib/spatial-inventory';
 import { ACCENT, RARITY_COLORS } from '../../_shared/data';
+import { useInventoryItemLookup } from '../../_shared/useInventoryItems';
 import { SpatialStashGrid } from './SpatialStashGrid';
 import { SpatialStashPalette } from './SpatialStashPalette';
 import {
@@ -32,9 +32,10 @@ export function SpatialStashSection() {
   const renameTab = useSpatialInventoryStore((s) => s.renameTab);
   const reseed = useSpatialInventoryStore((s) => s.reseedActiveTab);
 
+  const lookupItem = useInventoryItemLookup();
   const metrics = useMemo(
-    () => computePackingMetrics(activeTab, (id) => spatialItemLookup(id)),
-    [activeTab],
+    () => computePackingMetrics(activeTab, lookupItem),
+    [activeTab, lookupItem],
   );
 
   const [editingTabId, setEditingTabId] = useState<string | null>(null);

@@ -1,32 +1,21 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { invalidateArtifacts } from '../labArtifactCache';
 import { drainCatalogGates } from '../labArtifactClient';
-import { useLabRunnerStore } from '../labRunnerStore';
+import { batchRunId, useLabRunnerStore, type BatchCancelEffect, type DrainRun } from '../labRunnerStore';
 import { emptyBatchSummary, summarizeBatchDrain, type BatchDrainSummary } from '../batchDrainModel';
 
-export interface BatchEntity { id: string; name: string }
+export type { BatchCancelEffect } from '../labRunnerStore';
 
-/**
- * What a cancel ACTUALLY achieved, resolved once the run finishes. The batch is one
- * uninterruptible editor boot, so a cancel can only ever skip the automatic retry after a
- * lease conflict — and quite often there is no retry left to skip. Reporting that plainly
- * is the difference between an honest control and one that implies it stopped a UE boot.
- */
-export type BatchCancelEffect =
-  /** The 409 retry was suppressed — the cancel removed real remaining work. */
-  | 'skipped-retry'
-  /** The batch had already spent its only attempt: the cancel stopped nothing. */
-  | 'nothing-to-skip';
+export interface BatchEntity { id: string; name: string }
 
 export interface BatchDrainState {
   running: boolean;
   /**
    * A cancel click has REGISTERED for the in-flight run. Distinct from `running:false` —
-   * the boot is still going, we simply know the operator asked to stop. Without it the
-   * button was inert on click and the operator could not tell the request had landed.
+   * the request is still going, we simply know the operator asked to stop.
    */
   cancelRequested: boolean;
   /** What the cancel achieved, once the run resolved. Null when no cancel was requested. */
@@ -39,127 +28,97 @@ export interface BatchDrainState {
   summary: BatchDrainSummary | null;
   /** Total entities queued this run. */
   total: number;
+  /** The catalog this state belongs to — the RUN's catalog, which is the hook's catalog: a run
+   *  is looked up by `batchRunId(catalogId)`, so catalog A's run is never shown as B's.
+   *  Optional so a hand-built state (tests) needs no change. */
+  catalogId?: string;
 }
-
-const IDLE: BatchDrainState = { running: false, cancelRequested: false, cancelEffect: null, activeEntityIds: new Set(), doneEntityIds: new Set(), summary: null, total: 0 };
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** Project a stored run onto the shape the Matrix header renders. */
+function viewOf(run: DrainRun | undefined, catalogId: string): BatchDrainState {
+  if (!run) {
+    return { running: false, cancelRequested: false, cancelEffect: null, activeEntityIds: new Set(), doneEntityIds: new Set(), summary: null, total: 0, catalogId };
+  }
+  const running = run.phase === 'running';
+  return {
+    running,
+    cancelRequested: running && run.cancelRequested,
+    cancelEffect: run.cancelEffect,
+    activeEntityIds: new Set(running ? run.entityIds : []),
+    doneEntityIds: new Set(running ? [] : run.entityIds),
+    summary: run.summary,
+    total: run.entityIds.length,
+    catalogId,
+  };
+}
+
 /**
- * Batch drain of every deferred-gate entity in a catalog in ONE request. The server runs
- * one artifact collection + one grouped editor boot for every gate across the whole set (the
- * all-or-nothing batch lease), so — unlike the old per-entity serial loop — this pays a SINGLE
- * editor boot for the entire catalog, not one per entity. Behaviour:
+ * Run one catalog's batch drain as a STORE-owned job: it records its result in
+ * `labRunnerStore` whether or not any Matrix is mounted, so an operator can leave the Matrix,
+ * switch catalogs, and come back to the run. Behaviour (unchanged contract):
  *
- * - On HTTP 409 (the batch lease is held — another drain has ANY of these entities in flight)
- *   it waits `retryDelayMs` and retries the whole batch once; if still locked it records EVERY
- *   requested entity as locked (`entitiesLocked`) — no silent skip.
- * - The shared artifact cache is invalidated for exactly the DRAINED entities when the batch
- *   resolves (the entity-scoped form also drops the whole-catalog key + summary, so the grid
- *   and the coach refetch server truth); entities this batch never touched keep their cached
- *   rows, because nothing could have changed them.
- * - Cancel is honest about the all-or-nothing contract: the in-flight editor boot cannot be
- *   interrupted, so `cancel()` only prevents the automatic RETRY after a 409 — it never aborts
- *   a running batch. The click still REGISTERS visibly (`cancelRequested`), and when the run
- *   resolves the state reports what the cancel achieved (`cancelEffect`): it skipped the retry,
- *   or it had nothing left to skip. A control that silently did nothing was the lie here.
+ * - ONE request for the whole set (one collection + one grouped runner pass through the bridge).
+ * - On HTTP 409 (the all-or-nothing batch lease is held) it waits `retryDelayMs` and retries
+ *   once; if still locked it records EVERY requested entity as locked — no silent skip.
+ * - The artifact cache is invalidated for exactly the DRAINED entities (the entity-scoped form
+ *   also drops the whole-catalog key + summary, so the grid and coach refetch server truth).
+ * - Cancel cannot interrupt the in-flight request; it only skips the retry, and the finished
+ *   run reports what it achieved (`skipped-retry` / `nothing-to-skip`).
+ *
+ * Resolves without doing anything when this catalog's batch is already live or the set is empty.
+ */
+export async function runBatchDrain(catalogId: string, entities: BatchEntity[], retryDelayMs: number): Promise<void> {
+  if (entities.length === 0) return;
+  const id = batchRunId(catalogId);
+  const ids = entities.map((e) => e.id);
+  const scope = `${catalogId} · ${entities.length} set${entities.length > 1 ? 's' : ''}`;
+  const runner = () => useLabRunnerStore.getState();
+  if (!runner().beginRun({ id, kind: 'batch', catalogId, entityIds: ids, scope, summary: emptyBatchSummary() })) return;
+  const cancelled = () => runner().runs[id]?.cancelRequested === true;
+
+  let summary: BatchDrainSummary;
+  let cancelEffect: BatchCancelEffect | null = null;
+  try {
+    let outcome = await drainCatalogGates(catalogId, ids);
+    // `retrySkipped` records whether a cancel actually REMOVED work.
+    let retrySkipped = false;
+    if (outcome.kind === 'locked') {
+      if (cancelled()) retrySkipped = true;
+      else {
+        await sleep(retryDelayMs);
+        if (cancelled()) retrySkipped = true;
+        else outcome = await drainCatalogGates(catalogId, ids);
+      }
+    }
+    summary = summarizeBatchDrain(entities, outcome);
+    // A cancel that arrived after the only attempt resolved stopped NOTHING — say so.
+    if (cancelled()) cancelEffect = retrySkipped ? 'skipped-retry' : 'nothing-to-skip';
+    for (const e of ids) invalidateArtifacts(catalogId, e);
+  } catch (e) {
+    // drainCatalogGates does not throw; a thrown stub is still recorded, never left running.
+    summary = summarizeBatchDrain(entities, { kind: 'error', reason: e instanceof Error ? e.message : String(e) });
+  }
+  runner().finishRun(id, { summary, cancelEffect });
+}
+
+/**
+ * The Matrix's view of ONE catalog's batch drain. It owns nothing: the run lives in
+ * `labRunnerStore` keyed by `batchRunId(catalogId)`, so unmounting the Matrix mid-run loses
+ * nothing, and changing `catalogId` shows the new catalog's own run (or none) — never the old
+ * catalog's run relabelled. Return shape is unchanged for `MatrixBatchDrain`.
  */
 export function useBatchDrain(catalogId: string, retryDelayMs: number = UI_TIMEOUTS.nextTaskDelay) {
-  const [state, setState] = useState<BatchDrainState>(IDLE);
-  const cancelRef = useRef(false);
-  const runningRef = useRef(false);
-  /** The scope string this hook last published to `labRunnerStore` — the only part of the
-   *  batch's in-flight state that leaves this component (everything else is `useState` and
-   *  dies with the matrix). The header activity surface reads it, so a cancel has to be
-   *  written HERE to be visible there; the ownership guard compares against this ref rather
-   *  than a captured constant so a re-publish never orphans the chip. */
-  const publishedRef = useRef<string | null>(null);
+  const id = batchRunId(catalogId);
+  const run = useLabRunnerStore((s) => s.runs[id]);
+  const state = useMemo(() => viewOf(run, catalogId), [run, catalogId]);
 
-  /**
-   * Request a cancel. It cannot abort the in-flight editor boot (that is a server/runner
-   * capability we do not have), so all it does is suppress the automatic retry after a
-   * lease conflict — but it now SAYS it registered (`cancelRequested`), and the run reports
-   * what the request actually achieved (`cancelEffect`). A cancel outside a live run is a
-   * no-op, so a stale summary can never grow a cancel note.
-   */
-  const cancel = useCallback(() => {
-    if (!runningRef.current) return;
-    cancelRef.current = true;
-    setState((s) => (s.cancelRequested ? s : { ...s, cancelRequested: true }));
-    // Re-publish the header scope so the ONE "what is running" surface shows the registered
-    // cancel too. Without this the request is visible only on the matrix panel that issued
-    // it, and the header would keep reporting a plain drain — true, but less than we know.
-    // Only if the chip is still ours: a concurrent drain may have taken it over.
-    const runner = useLabRunnerStore.getState();
-    if (publishedRef.current && runner.localDrain === publishedRef.current) {
-      const next = `${publishedRef.current} · cancel requested`;
-      publishedRef.current = next;
-      runner.setLocalDrain(next);
-    }
-  }, []);
-
-  const start = useCallback(async (entities: BatchEntity[]) => {
-    if (runningRef.current || entities.length === 0) return;
-    runningRef.current = true;
-    cancelRef.current = false;
-
-    const ids = entities.map((e) => e.id);
-    setState({ running: true, cancelRequested: false, cancelEffect: null, activeEntityIds: new Set(ids), doneEntityIds: new Set(), summary: emptyBatchSummary(), total: entities.length });
-    // Publish this session's batch-drain scope so the header runner chip shows "draining …".
-    const scope = `${catalogId} · ${entities.length} set${entities.length > 1 ? 's' : ''}`;
-    publishedRef.current = scope;
-    useLabRunnerStore.getState().setLocalDrain(scope);
-
-    try {
-      // ONE request for the whole set (one collection + one grouped editor boot).
-      let outcome = await drainCatalogGates(catalogId, ids);
-      // All-or-nothing lease: a 409 refuses the whole batch — retry once, then record all locked.
-      // `retrySkipped` records whether a cancel actually REMOVED work, so the outcome can say
-      // "skipped the retry" only when it really did.
-      let retrySkipped = false;
-      if (outcome.kind === 'locked') {
-        if (cancelRef.current) retrySkipped = true;
-        else {
-          await sleep(retryDelayMs);
-          if (cancelRef.current) retrySkipped = true;
-          else outcome = await drainCatalogGates(catalogId, ids);
-        }
-      }
-
-      const summary = summarizeBatchDrain(entities, outcome);
-      // Invalidate ONLY what this batch could have moved. `collectDeferred` filters the drain
-      // to exactly `ids`, so no other entity's rows can have changed — and the entity-scoped
-      // form of the same call ALSO drops the whole-catalog key (which the matrix grid reads)
-      // and the catalog's summary projection, so the grid and coach still see the new verdicts
-      // immediately. What is preserved is the cached rows of entities the drain never touched:
-      // across the 30 catalogs that currently have a drainable entity, 85% of the cached
-      // artifact bytes (6.34 MB of 7.44 MB) belong to entities a batch drain leaves alone, and
-      // the old whole-catalog form threw all of it away.
-      for (const id of ids) invalidateArtifacts(catalogId, id);
-
-      setState({
-        running: false,
-        cancelRequested: false,
-        // A cancel that arrived after the only attempt had resolved stopped NOTHING — say so
-        // rather than letting the operator read the finished run as "my cancel worked".
-        cancelEffect: cancelRef.current ? (retrySkipped ? 'skipped-retry' : 'nothing-to-skip') : null,
-        activeEntityIds: new Set(), doneEntityIds: new Set(ids), summary, total: entities.length,
-      });
-    } finally {
-      runningRef.current = false;
-      // Only clear the header lease if it is still OURS. A per-entity coach drain (or a
-      // later batch) may have taken the chip over while this batch was in flight — clearing
-      // unconditionally blanked "draining …" while that drain was still live, which is a lie.
-      // Mirrors the per-entity ownership guard in Baseline/useBaseline.ts.
-      const runner = useLabRunnerStore.getState();
-      if (publishedRef.current && runner.localDrain === publishedRef.current) runner.setLocalDrain(null);
-      publishedRef.current = null;
-    }
-  }, [catalogId, retryDelayMs]);
-
-  /** Dismiss the finished run's summary (the matrix header pins it until told otherwise).
-   *  Ignored while a batch is in flight — you can't dismiss a live run's counters. */
-  const reset = useCallback(() => { if (!runningRef.current) setState(IDLE); }, []);
+  const start = useCallback((entities: BatchEntity[]) => runBatchDrain(catalogId, entities, retryDelayMs), [catalogId, retryDelayMs]);
+  /** Register a cancel on this catalog's live run (a no-op outside one). */
+  const cancel = useCallback(() => { useLabRunnerStore.getState().requestCancel(id); }, [id]);
+  /** Dismiss the finished run's summary. Ignored while the batch is in flight. */
+  const reset = useCallback(() => { useLabRunnerStore.getState().dismissRun(id); }, [id]);
 
   return { state, start, cancel, reset };
 }

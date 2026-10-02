@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import { Sliders } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
-import { WEAPONS, parseDamageMidpoint } from '../_shared/data-metrics';
-import type { Weapon, WeaponCategory } from '../_shared/data-metrics';
+import { WEAPONS } from '../_shared/data-metrics';
+import type { WeaponCategory } from '../_shared/data-metrics';
+import { weaponRoster, weaponThroughput } from '@/lib/combat/weapon-throughput';
 
 import { OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_15 } from '@/lib/chart-colors';
 
@@ -19,14 +20,6 @@ interface StatInfluencePanelProps {
   moduleId: string;
 }
 
-function computeDps(weapon: Weapon, str: number, dex: number) {
-  const baseMid = parseDamageMidpoint(weapon.baseDamage);
-  const effectiveDamage = baseMid + (str - 10) * 2;
-  const effectiveSpeed = Math.max(0.3, parseFloat(weapon.attackSpeed) - (dex - 10) * 0.02);
-  const effectiveCrit = parseInt(weapon.critChance) + Math.floor((dex - 10) / 2);
-  return { effectiveDamage, effectiveSpeed, effectiveCrit, dps: effectiveDamage / effectiveSpeed * (1 + effectiveCrit / 100) };
-}
-
 export function StatInfluencePanel({ moduleId: _moduleId }: StatInfluencePanelProps) {
   const [str, setStr] = useState(10);
   const [dex, setDex] = useState(10);
@@ -34,17 +27,14 @@ export function StatInfluencePanel({ moduleId: _moduleId }: StatInfluencePanelPr
 
   const weapon = WEAPONS[selectedIdx];
 
-  const computed = useMemo(() => computeDps(weapon, str, dex), [weapon, str, dex]);
+  // STR/DEX through the one weapon-DPS law (ATTRIBUTE_WEAPON_LAW + canon crit).
+  const computed = useMemo(() => weaponThroughput(weapon, { attributes: { str, dex } }), [weapon, str, dex]);
 
-  const allWeaponDps = useMemo(() => {
-    const entries = WEAPONS.map((w) => ({
-      name: w.name,
-      color: w.color,
-      dps: computeDps(w, str, dex).dps,
-    }));
-    entries.sort((a, b) => b.dps - a.dps);
-    return entries;
-  }, [str, dex]);
+  const allWeaponDps = useMemo(
+    () => weaponRoster(WEAPONS, { attributes: { str, dex } }).rows
+      .map(r => ({ name: r.name, color: r.weapon.color, dps: r.dps })),
+    [str, dex],
+  );
 
   const maxDps = allWeaponDps.length > 0 ? allWeaponDps[0].dps : 1;
 
@@ -99,10 +89,10 @@ export function StatInfluencePanel({ moduleId: _moduleId }: StatInfluencePanelPr
       {/* Computed values */}
       <div className="grid grid-cols-4 gap-2 mt-3">
         {[
-          { label: 'Eff. Damage', value: computed.effectiveDamage.toFixed(1), color: ACCENT },
-          { label: 'Eff. Speed', value: `${computed.effectiveSpeed.toFixed(2)}s`, color: ACCENT },
-          { label: 'Eff. Crit', value: `${computed.effectiveCrit}%`, color: ACCENT },
-          { label: 'DPS', value: computed.dps.toFixed(1), color: weapon.color },
+          { label: 'Eff. Damage', value: computed.ok ? computed.data.damage.toFixed(1) : '—', color: ACCENT },
+          { label: 'Eff. Speed', value: computed.ok ? `${computed.data.intervalSec.toFixed(2)}s` : '—', color: ACCENT },
+          { label: 'Eff. Crit', value: computed.ok ? `${Math.round(computed.data.critChance * 100)}%` : '—', color: ACCENT },
+          { label: 'DPS', value: computed.ok ? computed.data.dps.toFixed(1) : '—', color: weapon.color },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded border p-2 text-center" style={{ borderColor: withOpacity(color, OPACITY_15), backgroundColor: withOpacity(color, OPACITY_5) }}>
             <div className="text-xs font-mono text-text-muted uppercase tracking-[0.1em]">{label}</div>
@@ -110,6 +100,9 @@ export function StatInfluencePanel({ moduleId: _moduleId }: StatInfluencePanelPr
           </div>
         ))}
       </div>
+      {!computed.ok && (
+        <p className="mt-2 text-xs font-mono text-text-muted">Cannot compute: {computed.error}</p>
+      )}
 
       {/* DPS comparison bar chart */}
       <div className="mt-3 pt-3 border-t border-border/30">

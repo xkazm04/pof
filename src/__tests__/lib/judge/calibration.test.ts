@@ -34,6 +34,7 @@ import {
   CALIBRATION_THRESHOLD,
   type CalibrationRun,
   type CalibrationTarget,
+  type CalibrationVerdict,
 } from '@/lib/judge/calibration';
 
 const REPO_ROOT = process.cwd();
@@ -265,6 +266,28 @@ describe('the claim and the code agree', () => {
   });
 });
 
+/**
+ * The guard's rule, applied to any verdict — the live latest run and the fixtures that pin it.
+ * `enforced-fail` fails the build; every not-proven standing must say which flavour it is.
+ */
+function assertCalibrationGuard(v: CalibrationVerdict): void {
+  expect(v.standing, v.message).not.toBe('enforced-fail');
+  if (v.standing === 'enforced-pass') {
+    expect(v.confirmedRate!).toBeGreaterThanOrEqual(CALIBRATION_THRESHOLD);
+    expect(v.confirmedScored).toBeGreaterThanOrEqual(CALIBRATION_MIN_CONFIRMED);
+  } else if (v.standing === 'undersampled') {
+    // Confirmed labels exist but too few to resolve the threshold — not proven, rate reported.
+    expect(v.confirmedScored).toBeGreaterThan(0);
+    expect(v.confirmedScored).toBeLessThan(CALIBRATION_MIN_CONFIRMED);
+    expect(v.message.startsWith('UNDERSAMPLED')).toBe(true);
+  } else {
+    // Not proven — and the verdict must say which flavour of unproven it is, never a rate
+    // that reads as an enforced pass.
+    expect(['unrun', 'stale', 'unscored', 'provisional']).toContain(v.standing);
+    expect(v.confirmedRate).toBeNull();
+  }
+}
+
 describe('GUARD — the judge may not drift past the threshold', () => {
   /**
    * The real enforcement: whatever the last `--calibrate` run on this machine measured, an
@@ -272,18 +295,34 @@ describe('GUARD — the judge may not drift past the threshold', () => {
    * reported here as the honest standing rather than asserted away.
    */
   it('the latest persisted calibration run does not fail the threshold', () => {
-    const latest = latestCalibrationRun();
-    const v = evaluateCalibration(latest, RUBRIC_VERSION);
-    expect(v.standing, v.message).not.toBe('enforced-fail');
-    if (v.standing === 'enforced-pass') {
-      expect(v.confirmedRate!).toBeGreaterThanOrEqual(CALIBRATION_THRESHOLD);
-      expect(v.confirmedScored).toBeGreaterThan(0);
-    } else {
-      // Not proven — and the verdict must say which flavour of unproven it is, never a rate
-      // that reads as an enforced pass.
-      expect(['unrun', 'stale', 'unscored', 'provisional']).toContain(v.standing);
-      expect(v.confirmedRate).toBeNull();
-    }
+    assertCalibrationGuard(evaluateCalibration(latestCalibrationRun(), RUBRIC_VERSION));
+  });
+
+  // The first real labels (the calibration bench) produce 1-9 confirmed targets: `undersampled`
+  // is an honest not-proven standing WITH a reported rate, and must not turn the build red.
+  it('a persisted run of 3 confirmed agreeing labels is undersampled, and the guard accepts it as not proven', () => {
+    const three: CalibrationTarget[] = [0, 1, 2].map((i) => ({ catalogId: 'items', entityId: `item-${i}`, step: '3D Mesh', label: 'shippable' }));
+    const path = tmp();
+    appendCalibrationRun(buildCalibrationRun({
+      targets: three, scores: Object.fromEntries(three.map((t) => [calibrationKey(t), 95])),
+      rubricVersion: RUBRIC_VERSION, model: 'm', effort: 'high', spend: { costUsd: 0, spawns: 3, unknownCost: 0 },
+    }), path);
+    const v = evaluateCalibration(latestCalibrationRun(path), RUBRIC_VERSION);
+    expect(v.standing).toBe('undersampled');
+    expect(v.confirmedScored).toBe(3);
+    expect(() => assertCalibrationGuard(v)).not.toThrow();
+  });
+
+  it('a persisted run of 12 confirmed labels at 50% agreement still fails the guard', () => {
+    const twelve: CalibrationTarget[] = Array.from({ length: 12 }, (_, i) => ({ catalogId: 'items', entityId: `item-${i}`, step: '3D Mesh', label: 'shippable' }));
+    const path = tmp();
+    appendCalibrationRun(buildCalibrationRun({
+      targets: twelve, scores: Object.fromEntries(twelve.map((t, i) => [calibrationKey(t), i < 6 ? 95 : 20])),
+      rubricVersion: RUBRIC_VERSION, model: 'm', effort: 'high', spend: { costUsd: 0, spawns: 12, unknownCost: 0 },
+    }), path);
+    const v = evaluateCalibration(latestCalibrationRun(path), RUBRIC_VERSION);
+    expect(v.standing).toBe('enforced-fail');
+    expect(() => assertCalibrationGuard(v)).toThrow();
   });
 
   it('agreement is measured on the band, and the bands are the ones the judge scores into', () => {
