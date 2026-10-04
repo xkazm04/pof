@@ -16,7 +16,7 @@ interface ModuleDetailPanelProps {
   selected: CellData | null | undefined;
   historyMap: Record<string, ReviewSnapshot[]>;
   onReviewModule?: (moduleId: SubModuleId) => void;
-  /** A review is starting or a batch is running — one batch at a time. */
+  /** A review is starting or a batch is running â€” one batch at a time. */
   reviewDisabled?: boolean;
 }
 

@@ -6,7 +6,7 @@ import type { NexusSignal } from '@/lib/evaluator/nexus-signals';
 /**
  * One module on the map: topology placement + counts, checklist progress, genre
  * coverage, and the durable overlay signals from `projectNexusSignals`
- * (`null` = not measurable / source not ready — never drawn as 0).
+ * (`null` = not measurable / source not ready â€” never drawn as 0).
  */
 export interface NexusNode extends NexusSignal {
   moduleId: SubModuleId;

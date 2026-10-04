@@ -8,7 +8,7 @@ interface StaleReviewsPanelProps {
   customStaleDays: number;
   setCustomStaleDays: (v: number) => void;
   handleBatchReview: () => void;
-  /** A review is starting or a batch is running — the action is unavailable. */
+  /** A review is starting or a batch is running â€” the action is unavailable. */
   isBatchReviewing: boolean;
   /** Why the last review start was refused (e.g. 409 already running), else null. */
   reviewError: string | null;

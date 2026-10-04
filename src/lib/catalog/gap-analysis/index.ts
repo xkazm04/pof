@@ -26,7 +26,7 @@ export function isUnderrepresented(got: number, share: number, total: number): b
 /**
  * A catalog's measured state. The coverage fields are optional on the TYPE because a
  * distribution persisted before they existed (zustand `pof-one-shot-job`) or posted back by
- * a client may lack them — read the basis through `gapBasisOf` (missing = `none`).
+ * a client may lack them â€” read the basis through `gapBasisOf` (missing = `none`).
  * `analyzeCatalog` always fills them (`MeasuredCatalogDistribution`).
  */
 export interface CatalogDistribution {
@@ -39,7 +39,7 @@ export interface CatalogDistribution {
   profile?: string;
   /** Per declared dimension: how many of `total` entities carry it. */
   coverage?: Record<string, DimensionCoverage>;
-  /** Declared dimensions no entity carries — absent, never "balanced". */
+  /** Declared dimensions no entity carries â€” absent, never "balanced". */
   unmeasured?: string[];
   /** Dimensions whose values are all unique (an id list, not a distribution). */
   degenerate?: string[];
