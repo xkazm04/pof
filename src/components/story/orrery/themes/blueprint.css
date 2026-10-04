@@ -1,0 +1,183 @@
+/*
+ * Orrery — theme 2, the translation test.
+ *
+ * The same component re-themed into PoF's house blueprint language, to answer
+ * a real question: does the winner's design survive the house style? This file
+ * is a TOKEN OVERLAY — it redefines every `--or-*` colour token and nothing
+ * else. It needs `orrery.css` loaded, which carries the structural layer
+ * (`[data-orrery-theme]`): geometry, type scale and layout live there and are
+ * shared, so blueprint CANNOT drift structurally. That is the point — the
+ * contract check on this theme should report colour differences and zero
+ * structural ones.
+ *
+ * ── Where the colour comes from ─────────────────────────────────────────────
+ *   Every value below resolves to a CSS variable the product already defines
+ *   in `src/app/globals.css` (`--background`, `--surface`, `--surface-deep`,
+ *   `--border`, `--text`, `--text-muted`, `--text-subtle`, `--schematic-surface`,
+ *   and the category accents `--core` / `--content` / `--systems` /
+ *   `--evaluator` / `--visual-gen` / `--setup`), on its own or through
+ *   `color-mix()`. There is not one colour literal in this file, so the theme
+ *   repaints with the product instead of being a hardcoded dark island — and
+ *   the `no-restricted-syntax` hex rule has nothing to object to.
+ *
+ * ── The accent mapping, and what it costs ───────────────────────────────────
+ *   The winner's seven meaning-bearing accents are remapped onto the house
+ *   palette, keeping each one's JOB and keeping all seven distinguishable:
+ *
+ *     brass   structure / section heads / the level accent  ->  --core
+ *     amber   the live thing: current, pressed, selected    ->  --content
+ *     teal    outbound traversal                            ->  --visual-gen
+ *     violet  inbound traversal                             ->  --systems (lightened)
+ *     rose    endings                                       ->  --evaluator (lightened)
+ *     infl    influence arcs                                ->  systems x evaluator (lightened)
+ *     ok      healthy / measured-good                       ->  --setup
+ *
+ *   One relationship does not survive: in the winner, brass and amber are the
+ *   SAME hue at two luminances (#d9a441 / #f4b942), so "structure" and "live"
+ *   read as one family. The house palette has no such pair, so blueprint pays
+ *   for it with a cool/warm split (blue structure, amber live). It reads as a
+ *   CAD drawing with a warm marker on the live element, which is defensible —
+ *   but it is a change to the design's logic, not just its hue. Reported.
+ *
+ * ── Lightening, and why ─────────────────────────────────────────────────────
+ *   `--systems` (4.25:1), the raw influence magenta (4.09:1) and `--evaluator`
+ *   (4.79:1 but used on lighter tag surfaces) do not clear WCAG AA 4.5:1 as
+ *   text on the blueprint panel. They are mixed toward white until they do.
+ *   The contrast vitest (`src/__tests__/components/story/orrery-theme-contrast.test.ts`)
+ *   parses this file and asserts it, so the lift cannot silently rot.
+ *
+ * ── Texture ─────────────────────────────────────────────────────────────────
+ *   The house surface is the blueprint grid (`src/components/ui/SchematicPanel.tsx`,
+ *   `.grid-bg`). `--or-stage-bg` keeps the winner's radial-gradient GEOMETRY
+ *   (ellipse at 50% 46%, stops at 0/42/80%) and adds a 32px accent grid on top
+ *   of it, the same two crossed linear-gradients SchematicPanel draws. The
+ *   contract only checks `backgroundImage` for presence, so the geometry is
+ *   preserved and the texture is free.
+ */
+
+[data-orrery-theme='blueprint'] {
+  /* Private intermediates — not part of the token contract. */
+  --or-_magenta: color-mix(in srgb, var(--systems) 55%, var(--evaluator) 45%);
+  --or-_grid-ink: color-mix(in srgb, var(--core) 7%, transparent);
+
+  /* ---- floors and ink ---- */
+  --or-bg: var(--schematic-surface);
+  --or-bg2: var(--surface-deep);
+  --or-panel: var(--surface-deep);
+  --or-line: var(--border);
+  --or-line2: color-mix(in srgb, var(--border) 72%, var(--core) 28%);
+  --or-line-hot: color-mix(in srgb, var(--core) 60%, var(--border) 40%);
+  --or-ink: var(--text);
+  --or-ink-hi: color-mix(in srgb, var(--text) 60%, white 40%);
+  --or-mut: var(--text-muted);
+  --or-dim: var(--text-subtle);
+  --or-dim-text: color-mix(in srgb, var(--text-subtle) 90%, white 10%);
+
+  /* ---- the seven meaning-bearing accents ---- */
+  /* --core at full strength measures 4.41:1 on the topbar's own lighter stop,
+     where the brand wordmark sits; lifted until it clears AA (4.94:1). */
+  --or-brass: color-mix(in srgb, var(--core) 92%, white 8%);
+  --or-amber: var(--content);
+  --or-teal: var(--visual-gen);
+  --or-violet: color-mix(in srgb, var(--systems) 75%, white 25%);
+  --or-rose: color-mix(in srgb, var(--evaluator) 78%, white 22%);
+  --or-infl: color-mix(in srgb, var(--or-_magenta) 70%, white 30%);
+  --or-ok: var(--setup);
+
+  /* ---- layered surfaces: same FORM, house hue ---- */
+  --or-topbar-bg: linear-gradient(
+    color-mix(in srgb, var(--core) 9%, var(--surface-deep)),
+    var(--background)
+  );
+  /* The winner's radial geometry, plus the house 32px blueprint grid. */
+  --or-stage-bg:
+    radial-gradient(
+      ellipse at 50% 46%,
+      color-mix(in srgb, var(--core) 14%, var(--surface-deep)) 0%,
+      color-mix(in srgb, var(--core) 5%, var(--surface-deep)) 42%,
+      var(--schematic-surface) 80%
+    ),
+    linear-gradient(var(--or-_grid-ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--or-_grid-ink) 1px, transparent 1px);
+  /* The lightest stop of each layered surface — see orrery.css. */
+  --or-stage-core: color-mix(in srgb, var(--core) 14%, var(--surface-deep));
+  --or-topbar-core: color-mix(in srgb, var(--core) 9%, var(--surface-deep));
+  --or-stage-bg-size: auto, 32px 32px, 32px 32px;
+
+  --or-field-bg: var(--background);
+  --or-float-bg: color-mix(in srgb, var(--surface-deep) 80%, transparent);
+  --or-float-bg-solid: color-mix(in srgb, var(--surface-deep) 93%, transparent);
+  --or-legend-bg: color-mix(in srgb, var(--background) 93%, transparent);
+  --or-popover-bg: var(--surface-deep);
+  --or-popover-line: var(--border);
+  --or-tip-bg: color-mix(in srgb, var(--surface-deep) 96%, transparent);
+  --or-veil: color-mix(in srgb, var(--schematic-surface) 94%, transparent);
+  --or-pressed-bg: color-mix(in srgb, var(--core) 26%, var(--surface-deep));
+  --or-tab-active-bg: color-mix(in srgb, var(--core) 12%, var(--surface-deep));
+  --or-tab-count-bg: color-mix(in srgb, var(--evaluator) 20%, var(--surface-deep));
+  --or-tab-count-ink: color-mix(in srgb, var(--evaluator) 45%, var(--text));
+
+  --or-row-hover: color-mix(in srgb, var(--core) 14%, var(--surface-deep));
+  --or-row-hover-hi: color-mix(in srgb, var(--core) 20%, var(--surface-deep));
+  --or-script-hover: color-mix(in srgb, var(--core) 16%, var(--surface-deep));
+  --or-script-current: color-mix(in srgb, var(--core) 24%, var(--surface-deep));
+
+  --or-reading-bg: color-mix(in srgb, var(--surface-deep) 70%, var(--background));
+  --or-reading-ink: color-mix(in srgb, var(--text) 80%, white 20%);
+  --or-reading-filler-ink: var(--text-muted);
+
+  --or-tag-bg: color-mix(in srgb, var(--surface) 45%, var(--surface-deep));
+  --or-chipw-bg: color-mix(in srgb, var(--surface) 60%, var(--surface-deep));
+  --or-chipw-ink: color-mix(in srgb, var(--core) 25%, var(--text));
+  --or-chipw-pos: color-mix(in srgb, var(--setup) 50%, var(--text));
+  --or-chipw-neg: color-mix(in srgb, var(--evaluator) 35%, var(--text));
+
+  --or-audit-bg: color-mix(in srgb, var(--surface-deep) 80%, var(--background));
+  --or-count-bad-bg: color-mix(in srgb, var(--evaluator) 18%, var(--surface-deep));
+  --or-count-bad-ink: color-mix(in srgb, var(--evaluator) 45%, var(--text));
+  --or-count-warn-bg: color-mix(in srgb, var(--content) 16%, var(--surface-deep));
+  --or-count-warn-ink: color-mix(in srgb, var(--content) 65%, var(--text));
+  --or-count-ok-bg: color-mix(in srgb, var(--setup) 14%, var(--surface-deep));
+  --or-count-ok-ink: color-mix(in srgb, var(--setup) 55%, var(--text));
+
+  --or-chip-warn-line: color-mix(in srgb, var(--content) 55%, var(--border));
+  --or-chip-warn-ink: color-mix(in srgb, var(--content) 65%, var(--text));
+  --or-chip-bad-line: color-mix(in srgb, var(--evaluator) 55%, var(--border));
+  --or-chip-bad-ink: color-mix(in srgb, var(--evaluator) 45%, var(--text));
+  --or-chip-ok-line: color-mix(in srgb, var(--setup) 45%, var(--border));
+  --or-chip-ok-ink: color-mix(in srgb, var(--setup) 55%, var(--text));
+
+  --or-card-bg: color-mix(in srgb, var(--core) 10%, var(--surface-deep));
+  --or-go-bg: color-mix(in srgb, var(--core) 26%, var(--surface-deep));
+  --or-kbd-bg: color-mix(in srgb, var(--surface-deep) 75%, var(--background));
+  --or-bar-track: color-mix(in srgb, var(--surface) 50%, var(--surface-deep));
+  --or-bar-track-none: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--surface) 70%, var(--surface-deep)) 0 4px,
+    var(--surface-deep) 4px 8px
+  );
+  --or-detail-bg: color-mix(in srgb, var(--core) 9%, var(--surface-deep));
+
+  --or-shadow-pop: 0 14px 40px rgb(0 0 0 / 0.8);
+  --or-shadow-tip: 0 8px 24px rgb(0 0 0 / 0.67);
+  --or-shadow-card: 0 12px 38px rgb(0 0 0 / 0.67);
+}
+
+/* The house grid, once more, on the two framed surfaces the winner left flat.
+   `background-image` on the panel would make its `backgroundColor` transparent
+   and move a structural property, so the texture rides a pseudo-element
+   instead and the panel's own surface colour is untouched. */
+[data-orrery-theme='blueprint'] [data-role='orrery-panel'] { position: relative; }
+[data-orrery-theme='blueprint'] [data-role='orrery-panel']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--or-_grid-ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--or-_grid-ink) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+[data-orrery-theme='blueprint'] [data-role='orrery-tabs'],
+[data-orrery-theme='blueprint'] [data-role='orrery-panelbody'] { position: relative; z-index: 1; }

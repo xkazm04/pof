@@ -1,0 +1,865 @@
+/*
+ * Orrery — theme 1, the faithful one.
+ *
+ * A 1:1 translation of the winning prototype of the `storymap` contest
+ * (variant A/3 "Orrery"), chosen by the owner for its compactness and the
+ * smoothness of its navigation. Every colour literal in this file is lifted
+ * verbatim from the winner's `<style>` block; the layered gradients, the
+ * `backdrop-filter`, the `details` marker swap and the popover shadows are
+ * carried in the FORM the winner expressed them, not approximated with the
+ * nearest product token. Approximating them is how the previous promotion
+ * lost 69 computed-style properties, including all three the owner had named.
+ *
+ * ── Structure of this file ──────────────────────────────────────────────────
+ *   1. `[data-orrery-theme]`            the STRUCTURAL layer, shared by both
+ *                                       themes: geometry, type scale, layout.
+ *                                       Nothing here may differ per theme.
+ *   2. `[data-orrery-theme="orrery"]`   the orrery token set (colour only).
+ *
+ *   `blueprint.css` is a TOKEN OVERLAY on the same structural layer: it
+ *   redefines every `--or-*` colour token under `[data-orrery-theme="blueprint"]`
+ *   and adds surface texture, and it needs THIS file loaded (it carries the
+ *   structure). Load order: `orrery.css` first, then `blueprint.css`.
+ *   Switching `data-orrery-theme` on the root repaints the whole surface with
+ *   no component change.
+ *
+ * ── The one deliberate departure: the type floor ────────────────────────────
+ *   The owner said "the font is often too small". The captured contract shows
+ *   `panelSect`/`legendHead` at 11px and `mono`/`chipw`/`kbd` at 11.5px. This
+ *   file lifts the floor to 12px and raises the tier above it one step
+ *   (13.5 -> 14, 13 -> 13.5). 19px titles and 15px reading prose are unchanged.
+ *   `roles.json` records this as `"accept": ["fontSize"]` on the affected roles,
+ *   so the contract check reports it as an owner-accepted departure instead of
+ *   a failure, and the contract stays the winner.
+ *
+ *   Every lifted role PINS its `line-height` to the winner's measured pixel
+ *   value, so the glyphs grow but the box does not: the departure is font-size
+ *   ONLY, exactly as `roles.json` declares it, and the compactness the owner
+ *   chose the variant for is preserved.
+ *
+ * ── DOM contract ────────────────────────────────────────────────────────────
+ *   This sheet styles `[data-role=...]` hooks only — the ones named in
+ *   `.contest/staging/storymap/roles.json`, which the React packages emit.
+ *   Secondary hooks (same naming convention, not measured by the contract)
+ *   are listed beside the rule that uses them. Three structural relationships
+ *   are matched with `:has()` rather than a new hook, so the component authors
+ *   are free to name their own wrappers:
+ *     - the row that holds the stage and the panel side by side
+ *     - the `<details>` that wraps an audit group's `<summary>`
+ *     - the `<details>` whose summary opens the legend
+ */
+
+/* ========================================================================== */
+/* 1. STRUCTURAL LAYER — shared by every theme. Identical values, by design.   */
+/* ========================================================================== */
+
+[data-orrery-theme] {
+  /* Type. The winner's own stacks: the contract measures `fontFamily`, and
+     swapping in the product's Inter/IBM Plex would move all 27 roles. */
+  --or-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --or-mono: ui-monospace, 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace;
+
+  /* The type scale, after the owner's floor lift. `--or-fs-min` IS the floor:
+     nothing in this sheet may be smaller. */
+  --or-fs-title: 19px;   /* panel title        — winner 19,   unchanged      */
+  --or-fs-read: 15px;    /* reading prose      — winner 15,   unchanged      */
+  --or-fs-tool: 15px;    /* stage tool buttons — winner 15,   unchanged      */
+  --or-fs-brand: 15px;   /* brand wordmark     — winner 15,   unchanged      */
+  --or-fs-body: 14px;    /* body / chrome      — winner 14,   unchanged      */
+  --or-fs-row: 14px;     /* relation rows      — winner 13.5, lifted        */
+  --or-fs-sub: 13.5px;   /* kv, crumbs, items  — winner 13,   lifted        */
+  --or-fs-note: 12.5px;  /* notes, tips        — winner 12.5, unchanged      */
+  --or-fs-min: 12px;     /* FLOOR              — winner 11 / 11.5, lifted   */
+
+  /* Line-heights pinned to the winner's measured pixels for every lifted
+     tier, so the glyph grows and the box does not. */
+  --or-lh: 1.45;
+  --or-lh-body: 20.3px;  /* 14   x 1.45 */
+  --or-lh-row: 19.575px; /* 13.5 x 1.45 — winner's relRow box */
+  --or-lh-sub: 18.85px;  /* 13   x 1.45 — winner's crumb / kv box */
+  --or-lh-min: 17.4px;   /* 12   x 1.45 */
+  --or-lh-chipw: 16.675px; /* 11.5 x 1.45 — winner's chipw box */
+  --or-lh-head: 15.95px; /* 11   x 1.45 — winner's section-head box */
+
+  /* Geometry. Blueprint may not change any of these. */
+  --or-r-sm: 4px;
+  --or-r-tag: 5px;
+  --or-r-row: 6px;
+  --or-r-ctl: 7px;
+  --or-r-pop: 8px;
+  --or-r-panel: 9px;
+  --or-r-card: 11px;
+  --or-r-pill: 99px;
+  --or-topbar-h: 54px;
+  --or-panel-w: 372px;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--or-bg);
+  color: var(--or-ink);
+  font: var(--or-fs-body) / var(--or-lh) var(--or-sans);
+}
+
+[data-orrery-theme] *,
+[data-orrery-theme] *::before,
+[data-orrery-theme] *::after { box-sizing: border-box; }
+
+[data-orrery-theme] button,
+[data-orrery-theme] select,
+[data-orrery-theme] input { font: inherit; color: inherit; }
+[data-orrery-theme] button { cursor: pointer; }
+[data-orrery-theme] :focus-visible { outline: 2px solid var(--or-amber); outline-offset: 2px; }
+
+/* Screen-reader-only live region (winner `.sr`). */
+[data-orrery-theme] [data-role='orrery-sr'] {
+  position: absolute !important;
+  width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---- topbar ---------------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-topbar'] {
+  flex: 0 0 auto;
+  height: var(--or-topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--or-line);
+  background-image: var(--or-topbar-bg);
+  position: relative;
+  z-index: 30;
+}
+
+/* The brand row (secondary hook `orrery-brandrow`) and its wordmark. */
+[data-orrery-theme] [data-role='orrery-brandrow'],
+[data-orrery-theme] *:has(> [data-role='orrery-brand']) {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+[data-orrery-theme] [data-role='orrery-brand'] {
+  letter-spacing: 0.22em;
+  font-size: var(--or-fs-brand);
+  color: var(--or-brass);
+  font-weight: 600;
+}
+[data-orrery-theme] [data-role='orrery-brand-sub'] {
+  color: var(--or-dim-text);
+  font-size: var(--or-fs-min);
+  letter-spacing: 0.02em;
+}
+
+/* Labelled control cluster (secondary hook `orrery-ctl`). */
+[data-orrery-theme] [data-role='orrery-ctl'] { display: flex; align-items: center; gap: 6px; }
+[data-orrery-theme] [data-role='orrery-ctl'] label {
+  color: var(--or-dim-text);
+  font-size: var(--or-fs-min);
+  white-space: nowrap;
+}
+[data-orrery-theme] [data-role='orrery-spacer'] { flex: 1; }
+
+/* Fields and chrome buttons share one shape in the winner. */
+[data-orrery-theme] [data-role='orrery-select'],
+[data-orrery-theme] [data-role='orrery-headerbtn'],
+[data-orrery-theme] [data-role='orrery-search'] {
+  background: var(--or-field-bg);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-ctl);
+  padding: 5px 9px;
+  min-height: 32px;
+  font-size: var(--or-fs-body);
+}
+[data-orrery-theme] [data-role='orrery-headerbtn'],
+[data-orrery-theme] [data-role='orrery-search'] { line-height: var(--or-lh-body); }
+[data-orrery-theme] [data-role='orrery-select']:hover,
+[data-orrery-theme] [data-role='orrery-headerbtn']:hover,
+[data-orrery-theme] [data-role='orrery-search']:hover { border-color: var(--or-line-hot); }
+
+[data-orrery-theme] [data-role='orrery-headerbtn'][aria-pressed='true'] {
+  background: var(--or-pressed-bg);
+  border-color: var(--or-brass);
+  color: var(--or-ink-hi);
+}
+/* The influence toggle keeps its own rim when pressed (winner `.btn.on-infl`). */
+[data-orrery-theme] [data-role='orrery-headerbtn'][aria-pressed='true'][data-tone='influence'] {
+  border-color: var(--or-infl);
+}
+
+/* Search box: the input is inset for its icon. */
+[data-orrery-theme] [data-role='orrery-searchbox'] {
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 130px;
+  max-width: 360px;
+}
+[data-orrery-theme] [data-role='orrery-search'] { width: 100%; padding-left: 30px; }
+[data-orrery-theme] [data-role='orrery-searchbox'] svg {
+  position: absolute; left: 9px; top: 9px; color: var(--or-dim-text);
+}
+
+/* Search results popover — the winner's layered shadow, carried as a token. */
+[data-orrery-theme] [data-role='orrery-results'] {
+  position: absolute; top: 36px; left: 0; right: 0; min-width: 300px;
+  background: var(--or-popover-bg);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-pop);
+  box-shadow: var(--or-shadow-pop);
+  max-height: 340px; overflow: auto; z-index: 50;
+  display: none;
+}
+[data-orrery-theme] [data-role='orrery-results'][data-open='1'] { display: block; }
+[data-orrery-theme] [data-role='orrery-result'] {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0;
+  border-bottom: 1px solid var(--or-popover-line);
+  padding: 7px 10px; border-radius: 0;
+}
+[data-orrery-theme] [data-role='orrery-result'][aria-selected='true'],
+[data-orrery-theme] [data-role='orrery-result']:hover { background: var(--or-row-hover-hi); }
+[data-orrery-theme] [data-role='orrery-result'] small {
+  color: var(--or-dim-text);
+  font-family: var(--or-mono);
+  font-size: var(--or-fs-min);  /* winner 11px — lifted to the floor */
+  line-height: var(--or-lh-head);
+  display: block;
+}
+
+/* ---- the stage / panel row ------------------------------------------- */
+
+/* Matched by shape, not by a hook: whichever element holds both. */
+[data-orrery-theme] :has(> [data-role='orrery-stage']):has(> [data-role='orrery-panel']) {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+[data-orrery-theme] [data-role='orrery-stage'] {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  background-image: var(--or-stage-bg);
+  background-size: var(--or-stage-bg-size);
+}
+[data-orrery-theme] [data-role='orrery-canvas'] {
+  position: absolute; inset: 0; outline-offset: -3px; touch-action: none; cursor: grab;
+}
+[data-orrery-theme] [data-role='orrery-canvas'][data-drag='1'] { cursor: grabbing; }
+[data-orrery-theme] [data-role='orrery-canvas'][data-hand='1'] { cursor: pointer; }
+[data-orrery-theme] [data-role='orrery-canvas'] canvas {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block;
+}
+
+/* ---- breadcrumbs ----------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-crumbs'] {
+  position: absolute; left: 12px; top: 10px; right: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+  z-index: 5; pointer-events: none;
+}
+[data-orrery-theme] [data-role='orrery-crumb'],
+[data-orrery-theme] [data-role='orrery-crumb-cur'] {
+  pointer-events: auto;
+  background: var(--or-float-bg);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-row);
+  padding: 2px 9px;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 26px;
+  font-size: var(--or-fs-sub);      /* winner 13px — lifted */
+  line-height: var(--or-lh-sub);    /* pinned to the winner's box */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+[data-orrery-theme] [data-role='orrery-crumb']:hover {
+  border-color: var(--or-amber);
+  color: var(--or-ink-hi);
+}
+[data-orrery-theme] [data-role='orrery-crumb-cur'] {
+  border-color: var(--or-brass);
+  color: var(--or-ink-hi);
+}
+[data-orrery-theme] [data-role='orrery-crumbs'] i {
+  color: var(--or-dim-text); font-style: normal; padding: 0 3px;
+}
+
+/* ---- honesty badges -------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-badges'] {
+  position: absolute; left: 12px; top: 44px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  z-index: 5; max-width: min(560px, 70%);
+}
+[data-orrery-theme] [data-role='orrery-chip'] {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: var(--or-fs-min);
+  line-height: var(--or-lh-min);
+  border: 1px solid var(--or-line2);
+  background: var(--or-float-bg);
+  border-radius: var(--or-r-pill);
+  padding: 1px 9px;
+  color: var(--or-mut);
+  white-space: nowrap;
+}
+[data-orrery-theme] [data-role='orrery-chip'][data-tone='warn'] {
+  border-color: var(--or-chip-warn-line); color: var(--or-chip-warn-ink);
+}
+[data-orrery-theme] [data-role='orrery-chip'][data-tone='bad'] {
+  border-color: var(--or-chip-bad-line); color: var(--or-chip-bad-ink);
+}
+[data-orrery-theme] [data-role='orrery-chip'][data-tone='ok'] {
+  border-color: var(--or-chip-ok-line); color: var(--or-chip-ok-ink);
+}
+
+/* ---- stage tools ----------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-tools'] {
+  position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; z-index: 6;
+}
+[data-orrery-theme] [data-role='orrery-tool'] {
+  min-width: 36px; min-height: 36px;
+  background: var(--or-float-bg-solid);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-ctl);
+  padding: 5px 9px;
+  font-size: var(--or-fs-tool);
+  line-height: 21.75px;             /* 15 x 1.45, the winner's box */
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+[data-orrery-theme] [data-role='orrery-tool']:hover { border-color: var(--or-line-hot); }
+[data-orrery-theme] [data-role='orrery-tool'] span { font-size: var(--or-fs-min); }
+
+/* ---- legend ---------------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-legend'] {
+  position: absolute; left: 12px; bottom: 12px; z-index: 6;
+  max-width: 300px;
+  background: var(--or-legend-bg);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-panel);
+  font-size: var(--or-fs-min);
+  line-height: var(--or-lh-min);
+  color: var(--or-mut);
+}
+[data-orrery-theme] :has(> [data-role='orrery-legend-summary']) > summary,
+[data-orrery-theme] [data-role='orrery-legend'] > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  color: var(--or-ink);
+  list-style: none;
+  display: flex; align-items: center; gap: 6px;
+}
+[data-orrery-theme] [data-role='orrery-legend'] > summary::-webkit-details-marker { display: none; }
+/* The winner's own marker swap — a glyph, not a rotated chevron. */
+[data-orrery-theme] [data-role='orrery-legend'] > summary::before {
+  content: '\25B8';
+  color: var(--or-brass);
+}
+[data-orrery-theme] [data-role='orrery-legend'][open] > summary::before { content: '\25BE'; }
+[data-orrery-theme] [data-role='orrery-legend-body'] {
+  padding: 2px 10px 9px;
+  display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; align-items: center;
+}
+[data-orrery-theme] [data-role='orrery-legend-swatch'] {
+  width: 14px; height: 12px; border-radius: 3px;
+  border: 1px solid rgb(0 0 0 / 0.4);
+  display: inline-block;
+}
+[data-orrery-theme] [data-role='orrery-legend-full'] {
+  grid-column: 1 / -1; margin-top: 3px; color: var(--or-dim-text);
+}
+[data-orrery-theme] [data-role='orrery-legend-head'] {
+  grid-column: 1 / -1;
+  margin: 5px 0 1px;
+  font-size: var(--or-fs-min);      /* winner 11px — lifted to the floor */
+  line-height: var(--or-lh-head);   /* pinned: the glyph grows, the box does not */
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--or-brass);
+  font-weight: 600;
+}
+
+/* ---- hover tip ------------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-tip'] {
+  position: absolute; pointer-events: none; z-index: 8;
+  background: var(--or-tip-bg);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-pop);
+  padding: 6px 10px;
+  font-size: var(--or-fs-note);
+  max-width: 300px;
+  box-shadow: var(--or-shadow-tip);
+}
+[data-orrery-theme] [data-role='orrery-tip'] b {
+  display: block; color: var(--or-ink-hi); font-weight: 600; overflow-wrap: anywhere;
+}
+[data-orrery-theme] [data-role='orrery-tip'] em {
+  font-style: normal; color: var(--or-mut); font-size: var(--or-fs-min);
+}
+
+/* ---- loading dial ---------------------------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-loading'] {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: var(--or-veil);
+  color: var(--or-mut);
+  text-align: center;
+  padding: 30px;
+}
+[data-orrery-theme] [data-role='orrery-loading'][hidden] { display: none; }
+[data-orrery-theme] [data-role='orrery-dial'] {
+  width: 74px; height: 74px; border-radius: 50%;
+  border: 2px solid var(--or-line2);
+  border-top-color: var(--or-brass);
+  animation: or-spin 1.1s linear infinite;
+}
+@keyframes or-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  [data-orrery-theme] [data-role='orrery-dial'] { animation: none; }
+}
+
+/* ========================================================================== */
+/* The inspector panel — the owner said "keeping right side panel as is".      */
+/* ========================================================================== */
+
+[data-orrery-theme] [data-role='orrery-panel'] {
+  width: var(--or-panel-w);
+  flex: 0 0 auto;
+  border-left: 1px solid var(--or-line);
+  background: var(--or-panel);
+  display: flex; flex-direction: column; min-height: 0;
+}
+
+[data-orrery-theme] [data-role='orrery-tabs'] {
+  display: flex;
+  border-bottom: 1px solid var(--or-line);
+}
+[data-orrery-theme] [data-role='orrery-tab-active'],
+[data-orrery-theme] [data-role='orrery-tab-idle'] {
+  flex: 1;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 9px 6px;
+  color: var(--or-mut);
+  border-radius: 0;
+  font-size: var(--or-fs-body);
+  line-height: var(--or-lh-body);
+}
+[data-orrery-theme] [data-role='orrery-tab-active'] {
+  color: var(--or-ink-hi);
+  border-bottom-color: var(--or-brass);
+  background: var(--or-tab-active-bg);
+}
+[data-orrery-theme] [data-role='orrery-tabcount'] {
+  display: inline-block; margin-left: 6px;
+  background: var(--or-tab-count-bg);
+  color: var(--or-tab-count-ink);
+  border-radius: var(--or-r-pill);
+  padding: 0 7px;
+  font-size: var(--or-fs-min);      /* winner 11px — lifted to the floor */
+  line-height: var(--or-lh-head);
+}
+
+[data-orrery-theme] [data-role='orrery-panelbody'] {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 24px;
+  min-height: 0;
+  font-size: var(--or-fs-body);
+  line-height: var(--or-lh-body);
+}
+
+[data-orrery-theme] [data-role='orrery-panel-title'] {
+  margin: 0 0 3px;
+  font-size: var(--or-fs-title);
+  line-height: 1.25;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+[data-orrery-theme] [data-role='orrery-panel-sect'] {
+  margin: 18px 0 6px;
+  font-size: var(--or-fs-min);      /* winner 11px — lifted to the floor */
+  line-height: var(--or-lh-head);   /* pinned to the winner's box */
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--or-brass);
+  font-weight: 600;
+}
+
+[data-orrery-theme] [data-role='orrery-mono'] {
+  font-family: var(--or-mono);
+  font-size: var(--or-fs-min);
+  line-height: var(--or-lh-min);
+  /* PINNED: the style contract measures `mono`'s colour and the owner accepted
+     only a font-size lift on that role, so this one stays the winner's --or-dim
+     even though it measures 4.45:1 — under AA by 0.05. Recorded as a deviation
+     in the contrast test; every other de-emphasised use is --or-dim-text. */
+  color: var(--or-dim);
+  overflow-wrap: anywhere;
+}
+
+[data-orrery-theme] [data-role='orrery-tags'] {
+  display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0;
+}
+[data-orrery-theme] [data-role='orrery-tag'] {
+  font-size: var(--or-fs-min);
+  line-height: var(--or-lh-min);
+  padding: 1px 8px;
+  border-radius: var(--or-r-tag);
+  background: var(--or-tag-bg);
+  border: 1px solid var(--or-line2);
+  color: var(--or-ink);
+}
+[data-orrery-theme] [data-role='orrery-tag'][data-kind='choice'] {
+  border-color: var(--or-amber); color: var(--or-amber);
+}
+[data-orrery-theme] [data-role='orrery-tag'][data-kind='ending'] {
+  border-color: var(--or-rose); color: var(--or-rose);
+}
+[data-orrery-theme] [data-role='orrery-tag'][data-kind='gate'] {
+  border-color: var(--or-violet); color: var(--or-violet);
+}
+
+/* Reading prose — one of the two roles the capture could not reach; its values
+   are the winner's static CSS, quoted in the contract's `_missingNote`. */
+[data-orrery-theme] [data-role='orrery-reading'] {
+  font-size: var(--or-fs-read);
+  line-height: 1.65;
+  color: var(--or-reading-ink);
+  background: var(--or-reading-bg);
+  border: 1px solid var(--or-line);
+  border-radius: var(--or-r-panel);
+  padding: 12px 14px;
+  overflow-wrap: anywhere;
+  max-height: 42vh;
+  overflow: auto;
+}
+/* `synthetic-scale`'s prose is generated filler and must never read as authored. */
+[data-orrery-theme] [data-role='orrery-reading'][data-filler='true'] {
+  color: var(--or-reading-filler-ink);
+}
+
+[data-orrery-theme] [data-role='orrery-note'] {
+  font-size: var(--or-fs-note); color: var(--or-dim-text); margin: 5px 0;
+}
+[data-orrery-theme] [data-role='orrery-note'][data-tone='warn'] { color: var(--or-chip-warn-ink); }
+
+[data-orrery-theme] [data-role='orrery-rels'] { list-style: none; padding: 0; margin: 0; }
+[data-orrery-theme] [data-role='orrery-rels'] > li { margin: 0; }
+[data-orrery-theme] [data-role='orrery-rel'] {
+  display: flex; gap: 7px; align-items: baseline;
+  width: 100%; text-align: left;
+  background: none; border: 0;
+  border-radius: var(--or-r-row);
+  padding: 5px 6px;
+  color: var(--or-ink);
+  font-size: var(--or-fs-row);      /* winner 13.5px — lifted */
+  line-height: var(--or-lh-row);    /* pinned to the winner's box */
+}
+[data-orrery-theme] [data-role='orrery-rel']:hover { background: var(--or-row-hover); }
+[data-orrery-theme] [data-role='orrery-rel-dir'] {
+  color: var(--or-teal); width: 18px; flex: none; text-align: center; font-family: var(--or-mono);
+}
+[data-orrery-theme] [data-role='orrery-rel-dir'][data-dir='in'] { color: var(--or-violet); }
+[data-orrery-theme] [data-role='orrery-rel-dir'][data-dir='influence'] { color: var(--or-infl); }
+[data-orrery-theme] [data-role='orrery-rel'] small {
+  color: var(--or-dim-text); display: block; font-size: var(--or-fs-min);
+}
+
+[data-orrery-theme] [data-role='orrery-chipw'] {
+  display: inline-block;
+  font-family: var(--or-mono);
+  font-size: var(--or-fs-min);      /* winner 11.5px — lifted to the floor */
+  line-height: var(--or-lh-chipw);  /* pinned to the winner's box */
+  background: var(--or-chipw-bg);
+  border-radius: var(--or-r-sm);
+  padding: 0 5px;
+  margin: 1px 3px 1px 0;
+  color: var(--or-chipw-ink);
+}
+[data-orrery-theme] [data-role='orrery-chipw'][data-sign='pos'] { color: var(--or-chipw-pos); }
+[data-orrery-theme] [data-role='orrery-chipw'][data-sign='neg'] { color: var(--or-chipw-neg); }
+
+[data-orrery-theme] [data-role='orrery-kv'] {
+  display: grid; grid-template-columns: auto 1fr; gap: 3px 12px;
+  font-size: var(--or-fs-sub);      /* winner 13px — lifted */
+  line-height: var(--or-lh-sub);    /* pinned to the winner's box */
+}
+[data-orrery-theme] [data-role='orrery-kv'] dt { color: var(--or-dim-text); }
+[data-orrery-theme] [data-role='orrery-kv'] dd { margin: 0; }
+
+/* Reach bars: a measured 0% and an unmeasured row must never look the same. */
+[data-orrery-theme] [data-role='orrery-bars'] {
+  display: grid; grid-template-columns: 96px 1fr 46px; gap: 4px 8px;
+  align-items: center; font-size: var(--or-fs-note);
+}
+[data-orrery-theme] [data-role='orrery-bar'] {
+  height: 9px; border-radius: var(--or-r-tag);
+  background: var(--or-bar-track);
+  overflow: hidden; position: relative;
+}
+[data-orrery-theme] [data-role='orrery-bar'] i { display: block; height: 100%; background: var(--or-teal); }
+/* Unmeasured — hatched, never an empty bar. */
+[data-orrery-theme] [data-role='orrery-bar'][data-measured='false'] { background: var(--or-bar-track-none); }
+
+/* Script list — the second role the capture could not reach; static CSS. */
+[data-orrery-theme] [data-role='orrery-script'] { margin: 0; padding: 0; list-style: none; }
+[data-orrery-theme] [data-role='orrery-script-row'] {
+  display: flex; gap: 9px; width: 100%; text-align: left;
+  background: none; border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  padding: 6px 8px;
+  color: var(--or-ink);
+  font-size: var(--or-fs-body);
+  line-height: 1.5;
+  align-items: flex-start;
+}
+[data-orrery-theme] [data-role='orrery-script-row']:hover { background: var(--or-script-hover); }
+[data-orrery-theme] [data-role='orrery-script-row'][aria-current='true'] {
+  background: var(--or-script-current);
+  border-left-color: var(--or-amber);
+}
+[data-orrery-theme] [data-role='orrery-script-no'] {
+  flex: none; width: 26px; color: var(--or-dim-text);
+  font-family: var(--or-mono); font-size: var(--or-fs-min); padding-top: 2px;
+}
+[data-orrery-theme] [data-role='orrery-script-check'] { color: var(--or-amber); }
+
+/* ---- audit groups ---------------------------------------------------- */
+
+/* Matched by shape: the `<details>` that wraps an audit group's summary. */
+[data-orrery-theme] :has(> [data-role='orrery-audit-group']) {
+  margin: 0 0 4px;
+  border: 1px solid var(--or-line);
+  border-radius: var(--or-r-pop);
+  background: var(--or-audit-bg);
+}
+[data-orrery-theme] [data-role='orrery-audit-group'] {
+  cursor: pointer;
+  padding: 8px 10px;
+  display: flex; gap: 8px; align-items: center;
+  list-style: none;
+  font-size: var(--or-fs-body);
+  line-height: var(--or-lh-body);
+}
+[data-orrery-theme] [data-role='orrery-audit-group']::-webkit-details-marker { display: none; }
+[data-orrery-theme] [data-role='orrery-audit-group'] b {
+  flex: 1; font-weight: 600;
+  font-size: var(--or-fs-row);      /* winner 13.5px — lifted */
+  line-height: var(--or-lh-row);
+}
+[data-orrery-theme] [data-role='orrery-audit-count'] {
+  font-family: var(--or-mono);
+  font-size: var(--or-fs-min);
+  line-height: var(--or-lh-min);
+  border-radius: var(--or-r-pill);
+  padding: 0 8px;
+  background: var(--or-count-bad-bg);
+  color: var(--or-count-bad-ink);
+}
+[data-orrery-theme] [data-role='orrery-audit-count'][data-tone='warn'] {
+  background: var(--or-count-warn-bg); color: var(--or-count-warn-ink);
+}
+[data-orrery-theme] [data-role='orrery-audit-count'][data-tone='zero'] {
+  background: var(--or-count-ok-bg); color: var(--or-count-ok-ink);
+}
+[data-orrery-theme] [data-role='orrery-audit-why'] {
+  font-size: var(--or-fs-note); color: var(--or-dim-text); padding: 0 10px 6px;
+}
+[data-orrery-theme] [data-role='orrery-audit-items'] {
+  margin: 0; padding: 0 4px 6px; list-style: none; max-height: 260px; overflow: auto;
+}
+[data-orrery-theme] [data-role='orrery-audit-item'] {
+  display: block; width: 100%; text-align: left;
+  background: none; border: 0;
+  padding: 5px 8px;
+  border-radius: var(--or-r-tag);
+  font-size: var(--or-fs-sub);      /* winner 13px — lifted */
+  line-height: var(--or-lh-sub);
+  color: var(--or-ink);
+  overflow-wrap: anywhere;
+}
+[data-orrery-theme] [data-role='orrery-audit-item']:hover { background: var(--or-row-hover-hi); }
+
+/* ---- welcome card, empties, keycaps ---------------------------------- */
+
+[data-orrery-theme] [data-role='orrery-wcard'] {
+  position: relative;
+  background: var(--or-card-bg);
+  border: 1px solid var(--or-brass);
+  border-radius: var(--or-r-card);
+  padding: 11px 14px 12px;
+  margin-bottom: 16px;
+  font-size: var(--or-fs-row);      /* winner 13.5px — lifted */
+  line-height: var(--or-lh-row);
+}
+[data-orrery-theme] [data-role='orrery-wcard'] [data-role='orrery-panel-sect'] { margin: 0 0 5px; }
+[data-orrery-theme] [data-role='orrery-wcard'] ul { margin: 0; padding-left: 18px; }
+[data-orrery-theme] [data-role='orrery-wcard'] li { margin: 5px 0; }
+[data-orrery-theme] [data-role='orrery-wcard-close'] {
+  position: absolute; right: 6px; top: 4px;
+  background: none; border: 0; color: var(--or-mut);
+  font-size: 19px; line-height: 1; padding: 2px 7px;
+}
+[data-orrery-theme] [data-role='orrery-wcard-go'] {
+  margin-top: 8px;
+  background: var(--or-go-bg);
+  border: 1px solid var(--or-brass);
+  border-radius: var(--or-r-row);
+  padding: 4px 12px;
+  color: var(--or-ink-hi);
+}
+[data-orrery-theme] [data-role='orrery-empty'] { color: var(--or-mut); padding: 14px 2px; }
+[data-orrery-theme] [data-role='orrery-kbd'] {
+  font-family: var(--or-mono);
+  font-size: var(--or-fs-min);      /* winner 11.5px — lifted to the floor */
+  line-height: var(--or-lh-chipw);
+  border: 1px solid var(--or-line2);
+  border-bottom-width: 2px;
+  border-radius: var(--or-r-sm);
+  padding: 0 5px;
+  background: var(--or-kbd-bg);
+}
+
+/* ---- the fourth level the owner asked for ---------------------------- */
+/* "one additional nested layer on line click ... situation, predecessor,
+   impact". Not in the winner, so NOT in the contract: this is new work,
+   styled from the winner's own popover language so it reads as part of it. */
+[data-orrery-theme] [data-role='orrery-detail'] {
+  background: var(--or-detail-bg);
+  border: 1px solid var(--or-brass);
+  border-radius: var(--or-r-card);
+  box-shadow: var(--or-shadow-card);
+  padding: 12px 14px 14px;
+  margin: 10px 0 14px;
+  font-size: var(--or-fs-sub);
+  line-height: var(--or-lh-sub);
+}
+
+/* ---- the winner's own breakpoints ----------------------------------- */
+
+@media (max-width: 1250px) {
+  [data-orrery-theme] { --or-panel-w: 330px; }
+  [data-orrery-theme] [data-role='orrery-brand-sub'] { display: none; }
+  [data-orrery-theme] [data-role='orrery-ctl'] label { display: none; }
+}
+@media (max-width: 1100px) {
+  [data-orrery-theme] { --or-panel-w: 300px; }
+  [data-orrery-theme] [data-role='orrery-topbar'] { gap: 6px; padding: 0 8px; }
+  [data-orrery-theme] [data-role='orrery-brand'] { letter-spacing: 0.14em; }
+}
+/* The winner shrank the legend body to 11.5px on a short viewport. The floor
+   does not move for a media query: it stays at 12px. */
+@media (max-height: 700px) {
+  [data-orrery-theme] [data-role='orrery-legend-body'] { font-size: var(--or-fs-min); }
+}
+
+/* ========================================================================== */
+/* 2. THE ORRERY TOKEN SET — the winner's palette, verbatim.                   */
+/* ========================================================================== */
+
+[data-orrery-theme='orrery'] {
+  /* The winner's `:root`, unchanged. */
+  --or-bg: #050a14;
+  --or-bg2: #0a1322;
+  --or-panel: #0a1322;
+  --or-line: #1c2c48;
+  --or-line2: #2a4064;
+  --or-ink: #e1e9f7;
+  --or-mut: #93a6c4;
+  --or-dim: #6a7d9c;
+  /* One step brighter than the winner's --dim, so de-emphasised TEXT clears
+     WCAG AA 4.5:1 on every surface it is used on (4.68:1 at worst, against the
+     topbar's lighter stop). The winner's --dim is kept above for the one role
+     whose colour the style contract pins. */
+  --or-dim-text: #7084a4;
+  --or-brass: #d9a441;
+  --or-amber: #f4b942;
+  --or-teal: #4fd1c5;
+  --or-violet: #b58cff;
+  --or-rose: #ec6a82;
+  --or-infl: #ff63d6;
+  --or-ok: #6fd49a;
+
+  /* The one-off literals the winner wrote inline. Each is kept as itself —
+     a layered gradient approximated by the nearest token is the defect this
+     file exists to prevent. */
+  --or-ink-hi: #ffffff;
+  --or-line-hot: #47658f;
+
+  --or-topbar-bg: linear-gradient(#0c1730, #08101f);
+  --or-stage-bg: radial-gradient(ellipse at 50% 46%, #0f1d3a 0%, #0a1428 42%, #050a14 80%);
+  /* The lightest stop of each layered surface, named so a reader (and the
+     contrast test) can resolve what floats ON them. Not used for painting. */
+  --or-stage-bg-size: auto;
+  --or-stage-core: #0f1d3a;
+  --or-topbar-core: #0c1730;
+
+  --or-field-bg: #0b1830;
+  --or-float-bg: #0a1530cc;       /* crumbs + chips, over the blurred stage */
+  --or-float-bg-solid: #0a1530ee; /* stage tool buttons */
+  --or-legend-bg: #091428ee;
+  --or-popover-bg: #0b162b;
+  --or-popover-line: #14223b;
+  --or-tip-bg: #0a1530f5;
+  --or-veil: #050a14f0;
+  --or-pressed-bg: #1b2c4c;
+  --or-tab-active-bg: #0d1a33;
+  --or-tab-count-bg: #3a2530;
+  --or-tab-count-ink: #f2a3b2;
+
+  --or-row-hover: #13234a;
+  --or-row-hover-hi: #15264a;
+  --or-script-hover: #12214a;
+  --or-script-current: #172a52;
+
+  --or-reading-bg: #0d192f;
+  --or-reading-ink: #eaf0fb;
+  --or-reading-filler-ink: #b9c7de;
+
+  --or-tag-bg: #142340;
+  --or-chipw-bg: #1a2a4a;
+  --or-chipw-ink: #cfe0ff;
+  --or-chipw-pos: #a8ecc8;
+  --or-chipw-neg: #f6b3bd;
+
+  --or-audit-bg: #0c172c;
+  --or-count-bad-bg: #2a1f2e;
+  --or-count-bad-ink: #f2a3b2;
+  --or-count-warn-bg: #2c2a1b;
+  --or-count-warn-ink: #f0cf8a;
+  --or-count-ok-bg: #10261e;
+  --or-count-ok-ink: #8fdcb4;
+
+  --or-chip-warn-line: #8a6a2a;
+  --or-chip-warn-ink: #f0cf8a;
+  --or-chip-bad-line: #8a3a4a;
+  --or-chip-bad-ink: #f2a3b2;
+  --or-chip-ok-line: #2f7f62;
+  --or-chip-ok-ink: #9fe0bf;
+
+  --or-card-bg: #101d38;
+  --or-go-bg: #1d3158;
+  --or-kbd-bg: #0e1b34;
+  --or-bar-track: #12213c;
+  --or-bar-track-none: repeating-linear-gradient(135deg, #1a2744 0 4px, #0e182e 4px 8px);
+  --or-detail-bg: #0b1731;
+
+  --or-shadow-pop: 0 14px 40px #000c;
+  --or-shadow-tip: 0 8px 24px #000a;
+  --or-shadow-card: 0 12px 38px #000a;
+}
