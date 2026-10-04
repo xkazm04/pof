@@ -1,0 +1,35 @@
+{
+  "_selectorNote": "chip/headerBtn/panelSect/tag/chipw/auditCount winner selectors were corrected 2026-10-04 after a capture landed on VARIANT elements (a .chip.warn, an aria-pressed button, the welcome card's h3, a .tag.k-ending, a .chipw.pos, an error-tone count). The headerBtn PORT selector also excludes aria-pressed=true, because the winner row is the one unpressed header button (the help button - every toggle defaults on) and the port was matching a pressed toggle: a structural mismatch, fixed in the selector rather than by widening a tolerance. They now name the BASE element - EXCEPT chip and auditCount, which have no base instance in practice (every honesty badge and every audit count that renders carries a tone), so those name the WARN variant explicitly and the port must carry data-tone=warn on them. Promotion doctrine: a structural mismatch is fixed in the SELECTOR and said out loud, never by widening a tolerance.",
+  "_widthNote": "crumb, crumbCur and search accept `width` - NOT a design change, a measurement-validity one. Their rendered width is a function of the document on screen, and the harness cannot show the same document the contract was captured against. Measured on the WINNER ALONE at one viewport across its own three documents (.harness/orrery/widthProbe.mjs): crumbCur 119/69/98 and search 335/302/360 MOVE, while panel 372, topbar 1600, toolBtn 47 and tag 87 stay put. So width on these three roles measures the document, not the port; every other property on them still gates. The `tag` width deviation was NOT accepted on these grounds - tag proved stable at 87 on the winner, which exposed that the harness document declared no node status, and once it did the port matched 87 exactly.",
+  "_note": "Roles for promoting contest winner A/3 'Orrery' into PoF. The owner's stated reasons were compactness, smooth navigation and style, and 'keeping right side panel for metadata as is' - so the panel roles are the hard pass condition. The owner also said 'the font is often too small', so type-size lifts are recorded as accepted overrides rather than failures; the contract stays the winner and the departure stays visible.",
+  "roles": {
+    "topbar":      { "winner": "#top",                              "port": "[data-role=orrery-topbar]" },
+    "brand":       { "winner": "#brand b",                          "port": "[data-role=orrery-brand]",       "accept": ["fontSize"] },
+    "stage":       { "winner": "#stagewrap",                        "port": "[data-role=orrery-stage]" },
+    "crumb":       { "winner": "#crumbs button",                    "port": "[data-role=orrery-crumb]",       "accept": ["fontSize", "width"] },
+    "crumbCur":    { "winner": "#crumbs span.cur",                  "port": "[data-role=orrery-crumb-cur]",   "accept": ["fontSize", "width"] },
+    "chip":        { "winner": "#badges .chip.warn",                "port": "[data-role=orrery-chip][data-tone=warn]",        "accept": ["fontSize"] },
+    "toolBtn":     { "winner": "#tools .btn",                       "port": "[data-role=orrery-tool]" },
+    "headerBtn":   { "winner": "#top .btn:not([aria-pressed=\"true\"])",                         "port": "[data-role=orrery-headerbtn]:not([aria-pressed=\"true\"])" },
+    "select":      { "winner": "#top select",                       "port": "[data-role=orrery-select]" },
+    "search":      { "winner": "#q",                                "port": "[data-role=orrery-search]", "accept": ["width"] },
+    "legend":      { "winner": "#legend",                           "port": "[data-role=orrery-legend]",      "accept": ["fontSize"] },
+    "legendHead":  { "winner": "#legend h4",                        "port": "[data-role=orrery-legend-head]", "accept": ["fontSize"] },
+
+    "panel":       { "winner": "#panel",                            "port": "[data-role=orrery-panel]" },
+    "tabActive":   { "winner": "#tabs button[aria-selected=\"true\"]", "port": "[data-role=orrery-tab-active]" },
+    "tabIdle":     { "winner": "#tabs button[aria-selected=\"false\"]", "port": "[data-role=orrery-tab-idle]" },
+    "panelBody":   { "winner": "#pbody",                            "port": "[data-role=orrery-panelbody]" },
+    "panelTitle":  { "winner": "#pbody h2",                         "port": "[data-role=orrery-panel-title]" },
+    "panelSect":   { "winner": "#pbody > h3",                         "port": "[data-role=orrery-panel-sect]",  "accept": ["fontSize"] },
+    "reading":     { "winner": "#pbody .reading",                   "port": "[data-role=orrery-reading]" },
+    "relRow":      { "winner": "#pbody .rel button",                "port": "[data-role=orrery-rel]",         "accept": ["fontSize"] },
+    "tag":         { "winner": "#pbody .tag:not([class*=\"k-\"])",                       "port": "[data-role=orrery-tag]:not([data-kind])",         "accept": ["fontSize"] },
+    "mono":        { "winner": "#pbody .mono",                      "port": "[data-role=orrery-mono]",        "accept": ["fontSize"] },
+    "kv":          { "winner": "#pbody .kv",                        "port": "[data-role=orrery-kv]",          "accept": ["fontSize"] },
+    "scriptRow":   { "winner": "#pbody .script button",             "port": "[data-role=orrery-script-row]" },
+    "auditGroup":  { "winner": "#pbody .agrp summary",              "port": "[data-role=orrery-audit-group]",  "accept": ["fontSize"] },
+    "auditCount":  { "winner": "#pbody .agrp .cnt.warn",            "port": "[data-role=orrery-audit-count][data-tone=warn]",  "accept": ["fontSize"] },
+    "chipw":       { "winner": "#pbody .chipw:not(.pos):not(.neg)",                     "port": "[data-role=orrery-chipw]",       "accept": ["fontSize"] }
+  }
+}

@@ -1,0 +1,37 @@
+{
+ "note": "Provenance for contract.merged.json - the style contract of contest winner A/3 \"Orrery\", captured at 1600x900 from the unmodified winner across several UI states, because some roles only exist once a node is selected.",
+ "capturedAt": "2026-10-04T12:41:57.723Z",
+ "width": "1600x900",
+ "provenance": {
+  "topbar": "load",
+  "brand": "load",
+  "stage": "load",
+  "crumbCur": "load",
+  "chip": "load",
+  "toolBtn": "load",
+  "headerBtn": "load",
+  "select": "load",
+  "search": "load",
+  "legend": "load",
+  "legendHead": "load",
+  "panel": "load",
+  "tabActive": "load",
+  "tabIdle": "load",
+  "panelBody": "load",
+  "panelTitle": "load",
+  "panelSect": "load",
+  "relRow": "load",
+  "mono": "load",
+  "kv": "load",
+  "crumb": "selected",
+  "tag": "selected",
+  "auditGroup": "audit",
+  "auditCount": "audit"
+ },
+ "missing": [
+  "reading",
+  "scriptRow",
+  "chipw"
+ ],
+ "missingNote": "Not reachable by the scripted drives. Their values are STATIC CSS in the winner index.html, not runtime-computed, and are quoted verbatim in the builder briefs instead: .reading {font-size:15px; line-height:1.65; color:#eaf0fb; background:#0d192f; border:1px solid var(--line); border-radius:9px; padding:12px 14px; max-height:42vh} - .script button {font-size:14px; line-height:1.5; padding:6px 8px; border-left:3px solid transparent; aria-current -> border-left-color var(--amber), background #172a52}."
+}

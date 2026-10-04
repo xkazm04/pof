@@ -54,8 +54,8 @@ import process from 'node:process';
 
 const ROOT = process.cwd();
 const SKILL = path.join(ROOT, '.claude', 'skills', 'contest', 'scripts', 'style-contract.py');
-const ROLES = path.join(ROOT, '.contest', 'staging', 'storymap', 'roles.json');
-const CONTRACT = path.join(ROOT, '.contest', 'staging', 'storymap', 'contract.merged.json');
+const ROLES = path.resolve(ROOT, 'scripts/orrery-contract/roles.json');
+const CONTRACT = path.resolve(ROOT, 'scripts/orrery-contract/contract.json');
 
 /** Properties whose whole purpose is to differ between themes. */
 const COLOUR_PROPS = new Set(['color', 'backgroundColor', 'borderLeftColor']);
@@ -96,11 +96,21 @@ function parseArgs(argv) {
   return o;
 }
 
-/** Group the contract's roles by the UI state they were measured in. */
-function passes(merged, roles) {
-  const prov = merged._provenance ?? {};
+/**
+ * Group the contract's roles by the UI state they were measured in.
+ *
+ * The contract is the instrument's NATIVE shape: a FLAT role dict, exactly as `capture` writes one.
+ * An earlier revision nested it under `roles` beside metadata keys, which made the instrument
+ * iterate the metadata as roles and silently check none of the real ones. Provenance now lives in
+ * the sibling `contract.merged.meta.json`; this reads it from there, and still tolerates the old
+ * embedded form so a stale artifact degrades loudly rather than wrongly.
+ */
+function passes(merged, roles, meta) {
+  const prov = meta?.provenance ?? merged._provenance ?? {};
+  const roleDict = merged.roles ?? merged;
   const byPass = new Map();
-  for (const role of Object.keys(merged.roles)) {
+  for (const role of Object.keys(roleDict)) {
+    if (role.startsWith('_')) continue; // metadata, never a role
     if (!roles[role]) continue; // roles.json dropped it; nothing to check against
     const state = prov[role] ?? 'load';
     if (!byPass.has(state)) byPass.set(state, []);
@@ -175,19 +185,25 @@ function main() {
 
   const merged = JSON.parse(fs.readFileSync(CONTRACT, 'utf-8'));
   const roles = JSON.parse(fs.readFileSync(ROLES, 'utf-8')).roles;
+  // Provenance (which UI state each role was captured in) lives beside the contract, so the
+  // contract itself stays the flat shape the instrument reads.
+  const METurl = CONTRACT.replace(/[.]json$/, '.meta.json');
+  const meta = fs.existsSync(METurl) ? JSON.parse(fs.readFileSync(METurl, 'utf-8')) : null;
+  const captured = merged.roles ?? Object.fromEntries(Object.entries(merged).filter(([k]) => !k.startsWith('_')));
+  const staticOnly = meta?.missing ?? merged._missing ?? [];
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'orrery-contract-'));
-  const allPasses = passes(merged, roles).filter(([name]) => !opts.only || name === opts.only);
+  const allPasses = passes(merged, roles, meta).filter(([name]) => !opts.only || name === opts.only);
 
   process.stdout.write(
     `\nOrrery style contract\n` +
       `  winner contract  ${path.relative(ROOT, CONTRACT)} (captured ${merged._capturedAt} at ${merged._width})\n` +
-      `  roles            ${Object.keys(roles).length} mapped, ${Object.keys(merged.roles).length} captured, ` +
+      `  roles            ${Object.keys(roles).length} mapped, ${Object.keys(captured).length} captured, ` +
       `${(merged._missing ?? []).length} static-CSS only (${(merged._missing ?? []).join(', ')})\n` +
       `  harness          ${opts.url}\n` +
       `  viewport         ${opts.width}\n`,
   );
-  if ((merged._missing ?? []).length) {
+  if (staticOnly.length) {
     process.stdout.write(
       `  NOTE             the static-CSS roles are NOT checked by the instrument; their values\n` +
         `                   are quoted in the contract's _missingNote and ported by hand.\n`,
@@ -205,7 +221,7 @@ function main() {
       // The flattening: the `roles` block, verbatim, nothing added or relaxed.
       fs.writeFileSync(
         flatContract,
-        JSON.stringify(Object.fromEntries(roleNames.map((r) => [r, merged.roles[r]])), null, 2),
+        JSON.stringify(Object.fromEntries(roleNames.map((r) => [r, captured[r]])), null, 2),
       );
       fs.writeFileSync(
         flatRoles,
