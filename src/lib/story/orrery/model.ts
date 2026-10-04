@@ -177,7 +177,10 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
 
   // Subtree minimum rank, so a container orders by when the story first enters it.
   const rankOf = (i: NodeIx) => (rank[i] < 0 ? Number.MAX_SAFE_INTEGER : rank[i]);
-  const minRank = new Int32Array(N + 1).fill(Number.MAX_SAFE_INTEGER);
+  // Float64Array, not Int32Array: `new Int32Array(n).fill(Number.MAX_SAFE_INTEGER)` truncates to -1,
+  // which sorts every UNREACHED subtree first instead of last. Caught by a sibling package noticing
+  // an unreachable line sorting ahead of its conversation's entry.
+  const minRank = new Float64Array(N + 1).fill(Number.MAX_SAFE_INTEGER);
   {
     const post: NodeIx[] = [];
     const st: NodeIx[] = [root];
@@ -351,6 +354,7 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
     raw,
     R,
     idx,
+    root,
     order,
     tr,
     infl,

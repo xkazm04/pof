@@ -185,6 +185,14 @@ export interface OrreryModel {
   /** Node records, length N+1. The last entry is the virtual dataset root. */
   R: OrreryNode[];
   idx: Map<string, NodeIx>;
+  /**
+   * The display root — the node the wheel re-roots on at fit.
+   *
+   * Exposed because two consumers independently guessed it and disagreed: `order[0]` is correct,
+   * `R.length - 1` is the UNUSED virtual record on any document with a single top-level node. One
+   * authority, read by everyone.
+   */
+  root: NodeIx;
   /** Containment order, parents before children. */
   order: NodeIx[];
   /** Traversal edges only — `contains` and `influences` are excluded. */
