@@ -17,6 +17,7 @@ The whole-app architecture, one doc per subsystem:
 | [architecture/state-and-persistence.md](architecture/state-and-persistence.md) | Zustand v5 stores (+ persist gotchas), the SQLite `*-db.ts` layer, the `{success,data}` API envelope |
 | [architecture/runtime-patterns.md](architecture/runtime-patterns.md) | The typed event bus, the `Lifecycle` protocol, the suspend/LRU pattern, and the enforced coding conventions |
 | [architecture/procgen-contract.md](architecture/procgen-contract.md) | The `ProcgenSpec` model: the per-engine ignored-field matrix, the seed/RNG determinism contract, the connectivity repair pass, and the rung each cross-engine parity claim is made at |
+| [architecture/storygraph-standard.md](architecture/storygraph-standard.md) | The `pof.storygraph/1` interchange standard: the closed 7-kind node vocabulary + per-project profile, the state-variable declaration contract, the typed `Cond` grammar, the two validation altitudes (structural findings vs state *leads*), the text/localization budget, and the revision-change classes |
 
 ## Catalog pipeline
 

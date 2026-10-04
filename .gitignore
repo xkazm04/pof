@@ -121,12 +121,21 @@ docs/index.bleve/
 # Links are machine state; the declarations live in .ai/manifest.yaml (`skills:` and `knowledge.domains`).
 /.claude/skills/conform
 /.claude/skills/consult
+/.claude/skills/contest
 /.claude/skills/npm-updates
 /.claude/skills/perfect
 /.claude/skills/scan-sweep
 /.claude/skills/ship-loop
+/.claude/skills/spark
 /.claude/rules/ai-registry-access.md
 /.claude/rules/ai-registry-game-production.md
 /.claude/rules/ai-registry-software-engineering.md
 /.ai/skill-runs.local.jsonl
 # END ai-registry linked skills
+# contest/spark arena + fallback vaults (entries are large and belong to no commit)
+.contest/
+.spark/
+
+# orrery promotion harness (package C) - the harness page + its git-ignored route shim
+.harness/
+/src/app/orrery-harness/
