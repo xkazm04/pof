@@ -57,7 +57,7 @@ export function runSimulation(
   }
 
   // Track active duration-based effects: { effectId, expiresAt }
-  const activeEffects: { effectId: string; expiresAt: number; nextTickAt: number }[] = [];
+  const activeEffects: { effectId: string; expiresAt: number }[] = [];
 
   // Sort queue by trigger time
   const sorted = [...queue].sort((a, b) => a.triggerTime - b.triggerTime);
@@ -87,7 +87,6 @@ export function runSimulation(
           activeEffects.push({
             effectId: eff.id,
             expiresAt: eff.duration === 'infinite' ? Infinity : t + eff.durationSec,
-            nextTickAt: eff.cooldownSec > 0 ? t + eff.cooldownSec : Infinity,
           });
         }
 
@@ -96,24 +95,12 @@ export function runSimulation(
       queueIdx++;
     }
 
-    // 2. Tick active periodic effects
-    for (const ae of activeEffects) {
-      if (t > ae.expiresAt) continue;
-      const eff = effects.find(e => e.id === ae.effectId);
-      if (!eff || eff.cooldownSec <= 0) continue;
-
-      if (t >= ae.nextTickAt - 0.001) {
-        for (const mod of eff.modifiers) {
-          if (mod.operation === 'add') {
-            values[mod.attribute] = (values[mod.attribute] ?? 0) + mod.magnitude;
-          } else {
-            values[mod.attribute] = (values[mod.attribute] ?? 0) * mod.magnitude;
-          }
-        }
-        ae.nextTickAt = t + eff.cooldownSec;
-        events.push(`${eff.name} tick`);
-      }
-    }
+    // 2. (removed) cooldownSec is the ABILITY's cooldown, not a GameplayEffect
+    // Period — codegen.ts never wires it as one, and EffectTimelineEditor draws
+    // the cooldown block AFTER the duration block to match. Re-applying a
+    // duration effect's modifiers every cooldownSec previewed a repeating tick
+    // the generated C++ does not produce. See
+    // ability-blueprint-simulation-cooldown.test.ts.
 
     // 3. Remove expired effects
     for (let i = activeEffects.length - 1; i >= 0; i--) {
