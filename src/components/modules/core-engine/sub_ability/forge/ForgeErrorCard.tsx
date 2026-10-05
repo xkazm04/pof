@@ -40,11 +40,20 @@ export function ForgeErrorCard({
   // Configure-action cards (key / model config) are warnings (amber); the rest are red.
   const tone = card.kind === 'api-key-missing' || card.kind === 'config' ? STATUS_WARNING : ACCENT_RED;
 
+  // 'configure' is shared by two unrelated causes: a missing API key (fixed by
+  // getting one from AI Studio) and a dead/misspelled model name (fixed by a
+  // server-side GEMINI_FORGE_MODEL change — no key page helps). Routing both
+  // to the same external link sent a confused admin to get a key that was
+  // never the problem.
   const onAction = (a: ForgeErrorAction) => {
     if (a === 'retry') onRetry?.();
     else if (a === 'edit-description') onEditDescription?.();
-    else if (a === 'configure') window.open('https://aistudio.google.com/app/apikey', '_blank', 'noopener,noreferrer');
+    else if (a === 'configure') {
+      if (card.kind === 'config') { setShowDetails(true); return; }
+      window.open('https://aistudio.google.com/app/apikey', '_blank', 'noopener,noreferrer');
+    }
   };
+  const configureLabel = card.kind === 'config' ? 'Show the upstream error' : ACTION_LABEL.configure;
 
   return (
     <motion.div
@@ -91,7 +100,7 @@ export function ForgeErrorCard({
                     {a === 'retry' && <RefreshCw size={11} />}
                     {a === 'edit-description' && <Pencil size={11} />}
                     {a === 'configure' && <KeyRound size={11} />}
-                    {ACTION_LABEL[a]}
+                    {a === 'configure' ? configureLabel : ACTION_LABEL[a]}
                   </button>
                 );
               })}
