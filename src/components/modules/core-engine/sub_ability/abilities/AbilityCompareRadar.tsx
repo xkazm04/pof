@@ -143,8 +143,10 @@ export function AbilityCompareRadar() {
         })}
       </div>
 
-      {/* Radar chart + legend */}
-      {primary && (
+      {/* Radar chart + legend — the stated contract is 2-6 abilities; below that
+          say so instead of rendering a silent single-ability "comparison" or a
+          blank panel (ScalableSelector has no minimum-selection concept). */}
+      {primary && selectedAbilities.length >= MIN_COMPARE ? (
         <div className="flex items-center gap-4 justify-center flex-wrap bg-surface-deep/30 rounded-lg p-3">
           <RadarChart
             data={ABILITY_RADAR_AXES.map((axis, i) => ({
@@ -168,6 +170,10 @@ export function AbilityCompareRadar() {
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="text-center text-xs font-mono text-text-muted py-6 bg-surface-deep/30 rounded-lg">
+          Select at least {MIN_COMPARE} abilities to compare on radar.
         </div>
       )}
 
