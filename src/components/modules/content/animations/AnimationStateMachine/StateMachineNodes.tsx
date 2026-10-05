@@ -126,7 +126,7 @@ export function StateMachineNodes({
 
               <div className="flex flex-col items-start truncate leading-none pt-[2px] w-full min-w-0">
                 <span
-                  className="text-[11px] font-bold tracking-wide font-mono truncate w-full"
+                  className="text-xs font-bold tracking-wide font-mono truncate w-full"
                   style={{
                     color: state.completed ? STATUS_SUCCESS : state.isActive ? ANIM_ACCENT : isInSimPath ? ACCENT_ORANGE : 'var(--text)',
                     textShadow: state.isActive || state.completed || isInSimPath ? `0 0 10px ${color}80` : 'none'
@@ -135,7 +135,7 @@ export function StateMachineNodes({
                   {state.label}
                 </span>
                 {state.hasMontage && (
-                  <span className="text-[11px] uppercase tracking-widest font-mono opacity-80 mt-1 block" style={{ color: STATUS_IMPROVED }}>Montage</span>
+                  <span className="text-xs uppercase tracking-widest font-mono opacity-80 mt-1 block" style={{ color: STATUS_IMPROVED }}>Montage</span>
                 )}
               </div>
             </div>
