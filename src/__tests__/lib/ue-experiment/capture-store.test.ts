@@ -32,7 +32,9 @@ function save(id: string, spec: ExperimentSpec, result: Partial<ExperimentResult
   madeIds.push(id);
   saveExperimentRun({
     id,
-    createdAt: '2026-08-19T00:00:00.000Z',
+    // Newest-first listing: stamp "now" so the row always sits at the head of
+    // `listExperimentRuns(500)`, whatever other rows share the DB.
+    createdAt: new Date().toISOString(),
     spec,
     result: { ok: true, logs: [], markers: {}, durationMs: 1, binary: 'b', args: [], ...result },
   });
