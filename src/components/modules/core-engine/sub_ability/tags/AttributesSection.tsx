@@ -134,7 +134,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
       {/* Attribute Relationship Web */}
       <BlueprintPanel color={ACCENT_EMERALD_DARK} className="p-3">
         <SectionHeader icon={Network} label="Attribute Relationship Web" color={ACCENT_EMERALD_DARK} />
-        {isLive && (
+        {!isLive && (
           <p className="text-xs font-mono text-text-muted mt-0.5">Illustrative — static, not derived from live UE5 source.</p>
         )}
         <div className="mt-4 flex justify-center min-h-[200px]">
@@ -145,7 +145,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
       {/* Attribute Growth Projections */}
       <BlueprintPanel color={ACCENT_EMERALD_DARK} className="p-3">
         <SectionHeader icon={BarChart3} label="Attribute Growth Projections (Lv 1-50)" color={ACCENT_EMERALD_DARK} />
-        {isLive && (
+        {!isLive && (
           <p className="text-xs font-mono text-text-muted mt-0.5">Illustrative — static projection, not derived from live UE5 source.</p>
         )}
         <div className="mt-4 min-h-[200px]">
