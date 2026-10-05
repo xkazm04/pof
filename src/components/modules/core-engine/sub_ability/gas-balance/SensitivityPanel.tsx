@@ -36,27 +36,35 @@ export function SensitivityPanel({ show, results, running, onRun }: Props) {
       <p className="text-2xs text-text-muted mt-0.5 mb-2">
         Sweeps each attribute across its range (500 iterations per point) to identify diminishing returns and optimal breakpoints.
       </p>
-      {show && results.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 mt-2">
-          {results.map(sr => {
-            const c = sensColors[sr.attribute] ?? ACCENT;
-            return (
-              <BlueprintPanel key={sr.attribute} color={c} className="p-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-2xs font-bold capitalize" style={{ color: c }}>{sr.attribute}</span>
-                  {sr.diminishingAt !== null && (
-                    <span className="text-2xs flex items-center gap-0.5" style={{ color: STATUS_WARNING }}>
-                      <AlertTriangle className="w-3 h-3" /> DR at {sr.diminishingAt.toFixed(0)}
-                    </span>
-                  )}
-                </div>
-                <SensitivityChart result={sr} color={c} />
-                <div className="text-2xs text-text-muted text-center mt-0.5">DPS vs {sr.attribute}</div>
-              </BlueprintPanel>
-            );
-          })}
-        </div>
-      )}
+      {show && results.length > 0 && (() => {
+        // One shared DPS domain across every mini-chart, so the swing each
+        // attribute produces is comparable at a glance rather than each
+        // chart auto-scaling to its own curve (ai-registry
+        // game-production/tornado-sensitivity-sweeps).
+        const allDps = results.flatMap(r => r.points.map(p => p.dps));
+        const yDomain: [number, number] = [Math.min(...allDps), Math.max(...allDps)];
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 mt-2">
+            {results.map(sr => {
+              const c = sensColors[sr.attribute] ?? ACCENT;
+              return (
+                <BlueprintPanel key={sr.attribute} color={c} className="p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-2xs font-bold capitalize" style={{ color: c }}>{sr.attribute}</span>
+                    {sr.diminishingAt !== null && (
+                      <span className="text-2xs flex items-center gap-0.5" style={{ color: STATUS_WARNING }}>
+                        <AlertTriangle className="w-3 h-3" /> DR at {sr.diminishingAt.toFixed(0)}
+                      </span>
+                    )}
+                  </div>
+                  <SensitivityChart result={sr} color={c} yDomain={yDomain} />
+                  <div className="text-2xs text-text-muted text-center mt-0.5">DPS vs {sr.attribute}</div>
+                </BlueprintPanel>
+              );
+            })}
+          </div>
+        );
+      })()}
     </BlueprintPanel>
   );
 }

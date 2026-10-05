@@ -10,9 +10,12 @@ const SENSITIVITY_ASPECT = 0.4;
 const SENSITIVITY_MIN_H = 100;
 
 /** SVG sensitivity curve chart with hover crosshair and diminishing-returns marker */
-export function SensitivityChart({ result, color }: {
+export function SensitivityChart({ result, color, yDomain }: {
   result: SensitivityResult;
   color: string;
+  /** Shared [min, max] DPS domain across sibling charts, so swing magnitude is
+   *  visually comparable instead of each chart auto-scaling to its own curve. */
+  yDomain?: [number, number];
 }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,8 +38,8 @@ export function SensitivityChart({ result, color }: {
 
   const xMin = pts[0].value;
   const xMax = pts[pts.length - 1].value;
-  const yMin = Math.min(...pts.map(p => p.dps));
-  const yMax = Math.max(...pts.map(p => p.dps));
+  const yMin = yDomain ? yDomain[0] : Math.min(...pts.map(p => p.dps));
+  const yMax = yDomain ? yDomain[1] : Math.max(...pts.map(p => p.dps));
   const yRange = yMax - yMin || 1;
 
   const pad = { l: 40, r: 8, t: 8, b: 20 };
