@@ -28,7 +28,7 @@ export function ParamSlider({
   const sliderLabel = explain && plain ? plain.label : param.name;
 
   return (
-    <div className="px-2.5 py-2 rounded-lg bg-[#0a0a1e] border border-border">
+    <div className="px-2.5 py-2 rounded-lg bg-surface-deep border border-border">
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 min-w-0">
           {explain && plain && (
@@ -41,14 +41,14 @@ export function ParamSlider({
           )}
           {explain && plain ? (
             <span
-              className="text-2xs font-medium text-[#c0c4e0] truncate"
+              className="text-2xs font-medium text-text-muted truncate"
               title={`UE: ${param.ueProperty}`}
             >
               {plain.label}
             </span>
           ) : (
             <>
-              <span className="text-2xs font-mono font-medium text-[#c0c4e0]">{param.name}</span>
+              <span className="text-2xs font-mono font-medium text-text-muted">{param.name}</span>
               <span
                 className="text-2xs px-1 py-0 rounded font-medium uppercase"
                 style={{ backgroundColor: `${color}15`, color: `${color}cc` }}
