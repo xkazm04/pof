@@ -51,9 +51,9 @@ export function StateMachineEditor({ seed = null, draftKey, onApply, applyRunnin
     applyPlan, markApplied, lastApplyOutcome,
   } = editor;
 
-  // Snapshot-diff transitions are id pairs (`from->to`); show them by name.
-  const transitionNames = (keys: string[]) =>
-    keys.map((k) => k.split('->').map((id) => stateMap.get(id)?.name ?? id).join(' → ')).join(', ');
+  // Snapshot-diff transitions already carry resolved "From -> To" labels
+  // (computeDiff resolves names from both snapshots — see DiffResult).
+  const transitionNames = (labels: string[]) => labels.join(', ');
   const confirmReady = confirmingApply && applyPlan.status === 'ready';
   const showChanges = seedSource !== 'template' && (applyPlan.changes.length > 0 || lastApplyOutcome !== null);
   const confirmApply = () => {

@@ -28,13 +28,20 @@ export function computeDiff(
     }
   }
 
-  const newTransitions = currTransitions.filter((t) => !prevTransIds.has(t.id)).map((t) => `${t.from}->${t.to}`);
-  const removedTransitions = prevTransitions.filter((t) => !currTransIds.has(t.id)).map((t) => `${t.from}->${t.to}`);
+  // Resolve endpoint names from BOTH snapshots: a removed transition's state
+  // may itself have been removed (removeState cascades to its transitions),
+  // so looking it up only in the current states map falls back to a raw id.
+  const currStateMap = new Map(currStates.map((s) => [s.id, s]));
+  const resolveStateName = (id: string) => currStateMap.get(id)?.name ?? prevStateMap.get(id)?.name ?? id;
+  const transitionLabel = (t: EditorTransition) => `${resolveStateName(t.from)} -> ${resolveStateName(t.to)}`;
+
+  const newTransitions = currTransitions.filter((t) => !prevTransIds.has(t.id)).map(transitionLabel);
+  const removedTransitions = prevTransitions.filter((t) => !currTransIds.has(t.id)).map(transitionLabel);
   const modifiedTransitions: string[] = [];
   for (const t of currTransitions) {
     const prev = prevTransMap.get(t.id);
     if (prev && (prev.rule !== t.rule || prev.from !== t.from || prev.to !== t.to)) {
-      modifiedTransitions.push(`${t.from}->${t.to}`);
+      modifiedTransitions.push(transitionLabel(t));
     }
   }
 

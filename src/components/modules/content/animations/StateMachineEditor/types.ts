@@ -28,6 +28,9 @@ export interface DiffResult {
   newStates: string[];
   removedStates: string[];
   modifiedStates: string[]; // states with changed properties
+  /** "FromName -> ToName" — resolved by computeDiff from both snapshots, so a
+   *  removed transition still shows its endpoint's name even when that state
+   *  was removed in the same edit. */
   newTransitions: string[];
   removedTransitions: string[];
   modifiedTransitions: string[]; // transitions with changed rules
