@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { ComplianceEvidence } from '@/types/gdd-compliance';
@@ -106,6 +106,13 @@ describe('evidenceAge banding', () => {
 });
 
 describe('runComplianceAudit carries the evidence timestamps', () => {
+  // The audit stamps generatedAt from the wall clock; pin it to NOW so the fixture ages stay valid.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.parse(NOW));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it('reports the oldest and newest review across the measured rows', () => {
     const { module } = combat([
       row('implemented', daysAgo(120)),
