@@ -65,7 +65,9 @@ export function WiringGraphEditor({
     // (canonical ability-owned rules — see @/lib/ability/tag-rules).
     const rulesById = new Map(tagRules.map(r => [r.id, r]));
     for (const { effectId, ruleId } of effectRuleLinks(effects, tagRules)) { const rule = rulesById.get(ruleId); if (!rule) continue; wireList.push({ id: `w-eff-tag-${effectId}-${ruleId}`, fromNode: `eff-${effectId}`, fromPin: `${effectId}-out-tags`, toNode: `tag-${ruleId}`, toPin: `${ruleId}-in`, color: rule.type === 'blocks' ? STATUS_ERROR : rule.type === 'cancels' ? ACCENT_ORANGE : STATUS_SUCCESS, animated: false }); }
-    for (const rel of relationships) { const srcNode = nodeList.find(n => n.id === `attr-${rel.sourceId}`); const tgtNode = nodeList.find(n => n.id === `attr-${rel.targetId}`); if (srcNode && tgtNode) wireList.push({ id: `w-rel-${rel.id}`, fromNode: srcNode.id, fromPin: `${rel.sourceId}-out`, toNode: tgtNode.id, toPin: `${rel.targetId}-out`, color: rel.type === 'scale' ? ACCENT_VIOLET : rel.type === 'clamp' ? STATUS_WARNING : STATUS_SUCCESS, animated: rel.type === 'regen' }); }
+    // 'regen' has no UI path that creates one and no consumer reads it — it
+    // renders identically to 'scale' rather than carrying dead bespoke styling.
+    for (const rel of relationships) { const srcNode = nodeList.find(n => n.id === `attr-${rel.sourceId}`); const tgtNode = nodeList.find(n => n.id === `attr-${rel.targetId}`); if (srcNode && tgtNode) wireList.push({ id: `w-rel-${rel.id}`, fromNode: srcNode.id, fromPin: `${rel.sourceId}-out`, toNode: tgtNode.id, toPin: `${rel.targetId}-out`, color: rel.type === 'clamp' ? STATUS_WARNING : ACCENT_VIOLET, animated: false }); }
     return { nodes: nodeList, wires: wireList };
   }, [attributes, effects, tagRules, relationships]);
 

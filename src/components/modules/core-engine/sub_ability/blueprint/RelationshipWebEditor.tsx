@@ -58,7 +58,10 @@ export function RelationshipWebEditor({
 
   const svgW = 430;
   const svgH = Math.max(200, (Math.max(...[...nodePositions.values()].map(p => p.y)) || 100) + 50);
-  const relColors: Record<AttrRelationship['type'], string> = { scale: ACCENT_VIOLET, clamp: STATUS_WARNING, regen: STATUS_SUCCESS };
+  // 'regen' has no UI path that creates one (handleDrop below only ever writes
+  // 'scale') and no consumer reads it — it renders identically to 'scale'
+  // rather than carrying dead bespoke styling for an unreachable value.
+  const relColors: Record<AttrRelationship['type'], string> = { scale: ACCENT_VIOLET, clamp: STATUS_WARNING, regen: ACCENT_VIOLET };
 
   const handleDragStart = useCallback((attrId: string) => { setDragSource(attrId); }, []);
 
@@ -89,7 +92,7 @@ export function RelationshipWebEditor({
                   stroke={relColors[rel.type]} strokeWidth={1.5} strokeDasharray={rel.type === 'clamp' ? '4 3' : undefined} opacity={0.6} markerEnd="url(#gas-arrow)" />
                 {(rel.type === 'scale' || rel.type === 'regen') && (
                   <circle r={2} fill={relColors[rel.type]} opacity={0.6} className="pointer-events-none">
-                    <animateMotion dur={rel.type === 'regen' ? '1.5s' : '2.5s'} repeatCount="indefinite" path={`M ${from.x + 34},${from.y + 10} L ${to.x},${to.y + 10}`} />
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path={`M ${from.x + 34},${from.y + 10} L ${to.x},${to.y + 10}`} />
                   </circle>
                 )}
                 <text x={(from.x + 34 + to.x) / 2} y={(from.y + to.y) / 2 + 6} fill={relColors[rel.type]} fontSize={7} fontFamily="monospace" textAnchor="middle" className="pointer-events-none">{rel.type}</text>
