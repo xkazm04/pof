@@ -40,7 +40,7 @@ describe('FindingFix', () => {
     const applied = onApply.mock.calls[0][0] as SimScenario;
     expect(applied.player.maxHealth).toBe(Math.round(500 * m));
     expect(applied.enemies).toEqual(BOSS.enemies);
-  }, 30_000);
+  });
 
   it('a finding no single stat can fix says so and offers no Solve', () => {
     render(

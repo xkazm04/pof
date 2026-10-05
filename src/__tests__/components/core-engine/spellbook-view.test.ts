@@ -60,7 +60,7 @@ function liveFixture(): ParsedUE5Data {
 const seed = () => seedSpellbookEntries();
 const staticView = () => buildSpellbookView({ live: null, appTags: [], entries: seed() });
 
-describe('buildSpellbookView — catalog owns the numbers', { timeout: 30_000 }, () => {
+describe('buildSpellbookView — catalog owns the numbers', () => {
   it('case 1: static cooldowns are every seed entry with cooldown > 0; Dodge is 1, no `remaining`', () => {
     const entries = seed();
     const view = buildSpellbookView({ live: null, appTags: [], entries });

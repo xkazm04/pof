@@ -102,5 +102,5 @@ describe('the level-design view keeps the streaming plan across tabs', () => {
     expect(emptyCellAt00(container)).toBeNull();
     expect(zoneNames(container)).toContain('Forest');
     // Renders the whole level-design view; under full-suite load it needs headroom.
-  }, 20_000);
+  });
 });

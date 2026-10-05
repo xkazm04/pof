@@ -83,7 +83,7 @@ describe('killProcessTree kills the REAL child, not just the shell', () => {
     expect(outcome.killed).toBe(true);
     expect(outcome.method).toBe(isWindows ? 'taskkill' : 'process-group');
     expect(outcome.detail).toContain(String(proc.pid));
-  }, 30_000);
+  });
 
   it.runIf(isWindows)('CONTROL: the naive proc.kill(SIGTERM) orphans that same child', async () => {
     const { proc, innerPid } = await spawnShellWrapped();
@@ -100,7 +100,7 @@ describe('killProcessTree kills the REAL child, not just the shell', () => {
     // No — that pid is gone, so clean the orphan up explicitly, by pid.
     await new Promise<void>((resolve) => exec(`taskkill /pid ${innerPid} /T /F`, () => resolve()));
     expect(await waitDead(innerPid)).toBe(true);
-  }, 30_000);
+  });
 
   it('never throws for a process that has no pid', async () => {
     const fake = { pid: undefined, kill: () => false } as unknown as ChildProcess;
@@ -125,7 +125,7 @@ describe('killTimedOutSession states the kill outcome', () => {
     expect(errors[1]).toContain(outcome.method);
     expect(errors[1]).toContain(outcome.detail);
     expect(outcome.killed).toBe(true);
-  }, 30_000);
+  });
 });
 
 describe('the dev-server teardown shares the same helper', () => {
@@ -137,7 +137,7 @@ describe('the dev-server teardown shares the same helper', () => {
     expect(await waitDead(innerPid)).toBe(true);
     expect(outcome?.killed).toBe(true);
     expect(outcome?.method).toBe(isWindows ? 'taskkill' : 'process-group');
-  }, 30_000);
+  });
 
   it('is a no-op when no dev server is running', async () => {
     expect(await killDevServer({ proc: null })).toBeNull();
@@ -151,5 +151,5 @@ describe('the dev-server teardown shares the same helper', () => {
     expect(handle.proc).toBeNull();
     expect(await waitDead(innerPid)).toBe(true);
     expect(await killDevServer(handle)).toBeNull();
-  }, 30_000);
+  });
 });

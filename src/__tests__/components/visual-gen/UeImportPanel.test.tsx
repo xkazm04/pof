@@ -220,7 +220,7 @@ describe('UeImportPanel — the import result', () => {
     expect(screen.getByTestId('ue-import-plan').textContent).toMatch(/MEASURED/i);
     // The observation is its own line, with its own number.
     expect(card.textContent).toMatch(/7 ELEM/);
-  }, 15_000);
+  });
 
   it('a requested collision that was never counted reads NOT COUNTED, not silence', async () => {
     routes({
@@ -242,7 +242,7 @@ describe('UeImportPanel — the import result', () => {
     const card = await screen.findByTestId('ue-import-result', {}, { timeout: 10_000 });
     expect(card.textContent).toMatch(/NOT COUNTED/);
     expect(screen.getByTestId('ue-import-verdict').textContent).toMatch(/FAILED/);
-  }, 15_000);
+  });
 
   it('a decorative import shows "none requested", not a red NOT COUNTED', async () => {
     routes({
@@ -265,7 +265,7 @@ describe('UeImportPanel — the import result', () => {
     const card = await screen.findByTestId('ue-import-result', {}, { timeout: 10_000 });
     expect(card.textContent).toMatch(/none requested/);
     expect(card.textContent).not.toMatch(/NOT COUNTED/);
-  }, 15_000);
+  });
 
   it('surfaces an assumed plan as such when the critic could not run', async () => {
     routes({
@@ -289,7 +289,7 @@ describe('UeImportPanel — the import result', () => {
     await screen.findByTestId('ue-import-result', {}, { timeout: 10_000 });
     expect(screen.getByTestId('ue-import-plan').textContent).toMatch(/ASSUMED/i);
     expect(screen.getByTestId('ue-import-critique-unavailable').textContent).toMatch(/trimesh not installed/);
-  }, 15_000);
+  });
 
   it('reports a start failure instead of leaving the button spinning', async () => {
     routes({ startError: 'no file at a.glb' });

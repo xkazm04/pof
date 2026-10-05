@@ -51,7 +51,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('SaveHeaderAudit — the fix dispatches only on an explicit click', { timeout: 20_000 }, () => {
+describe('SaveHeaderAudit — the fix dispatches only on an explicit click', () => {
   it('click gate: mount + auto-audit + Re-audit never dispatch; Fix dispatches buildSaveFixPrompt(audit) exactly once', async () => {
     render(<SaveHeaderAudit moduleId={MODULE} />);
 

@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('Screen Flow tab - per-row catalog lifecycle', { timeout: 30_000 }, () => {
+describe('Screen Flow tab - per-row catalog lifecycle', () => {
   it('case 5: a verified screen shows its badge and no run button', () => {
     expect(nextRecipeStep(STEPS, 'verified')).toBeNull();
     useCatalogStore.getState().setEntities(

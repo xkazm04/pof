@@ -14,7 +14,6 @@ import type { LevelDesignDocument, RoomNode, UpdateDocPayload } from '@/types/le
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 afterEach(cleanup);
-vi.setConfig({ testTimeout: 20_000 });
 
 beforeAll(() => {
   if (!('ResizeObserver' in globalThis)) {

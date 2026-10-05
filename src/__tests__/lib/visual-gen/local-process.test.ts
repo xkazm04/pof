@@ -205,7 +205,7 @@ describe('runLocalProcess — the one real spawn seam', () => {
     const o = await runLocalProcess(node, ['-e', 'setTimeout(() => {}, 30000)'], { timeoutMs: 300 });
     expect(o.timedOut).toBe(true);
     expect(o.code).toBeNull();
-  }, 20_000);
+  });
 
   it('reports a missing binary as spawnError, not as an exit', async () => {
     const o = await runLocalProcess('pof-no-such-binary-4f2a', [], { timeoutMs: 5_000 });

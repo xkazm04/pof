@@ -170,7 +170,7 @@ describe('the spec survives the tab round trip and the handoff keeps it', () => 
     }
     expect(screen.getByTestId('dungeon-handoff-summary').textContent ?? '').toContain('abc');
     // Renders the whole level-design view (like level-doc-commits); under full-suite load it needs headroom.
-  }, 20_000);
+  });
 });
 
 describe('the wizard dispatches the spec it shows', () => {

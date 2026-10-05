@@ -27,7 +27,7 @@ function Harness({ rows }: { rows: SpellbookCooldownRow[] }) {
   );
 }
 
-describe('CooldownWheel / CooldownFlow — honest cooldowns', { timeout: 30_000 }, () => {
+describe('CooldownWheel / CooldownFlow — honest cooldowns', () => {
   it('case 2 (wheel): cd null renders "CD in GE" and no NaN in strokeDashoffset', () => {
     const { container } = render(<CooldownWheel ability={row(1, null)} maxCd={8} index={0} />);
     expect(screen.getByText('CD in GE')).toBeTruthy();

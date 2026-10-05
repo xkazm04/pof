@@ -83,7 +83,6 @@ describe('POST /api/blender-mcp — status is a probe', () => {
       expect(conn.connected).toBe(false);
       expect(conn.lastProbeError).toBeTruthy();
     },
-    20_000,
   );
 
   it('answers instantly, and sends nothing, when nothing is connected', async () => {

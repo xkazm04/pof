@@ -95,5 +95,5 @@ describe('spawnClaudeSession timeout', () => {
     // The regression: under the old `proc.kill('SIGTERM')` this process was still
     // alive at this point — running, and still spending model budget.
     expect(await waitDead(innerPid)).toBe(true);
-  }, 30_000);
+  });
 });

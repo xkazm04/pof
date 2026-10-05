@@ -118,5 +118,5 @@ describe('runToCoverage', () => {
     expect(idx).toBeGreaterThan(0);
     const below = runItemEconomySim({ ...DEFAULT_ITEM_ECON_CONFIG, maxHours: HORIZON_LADDER[idx - 1] });
     expect(economyVerdicts(below).some((v) => v.state === 'unmeasured')).toBe(true);
-  }, 30_000);
+  });
 });

@@ -24,7 +24,7 @@ afterEach(() => cleanup());
 
 // Each case renders the whole Input tab (abilities grid, table, keyboard); under a
 // parallel full-suite run that can exceed the 5 s default, so the budget is explicit.
-describe('Input tab - one resolved binding state drives every surface', { timeout: 20_000 }, () => {
+describe('Input tab - one resolved binding state drives every surface', () => {
   it('case 4 (render): a stored rebind reaches keycaps, legend and the Features metric', () => {
     store.getState().setBindingOverride('IA_Dodge', 'Ctrl');
     renderTab();

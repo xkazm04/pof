@@ -12,8 +12,6 @@ import type { LevelDesignDocument, RoomNode, SyncDivergence, UpdateDocPayload } 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 afterEach(cleanup);
-// Full-view renders: generous under a loaded parallel suite.
-vi.setConfig({ testTimeout: 20_000 });
 
 beforeAll(() => {
   if (!('ResizeObserver' in globalThis)) {

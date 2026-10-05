@@ -150,5 +150,5 @@ describe('PredictiveBalanceSimulator — tune from the heatmap', () => {
     expect(screen.getByRole('button', { name: 'Lv.10 vs 1x Hollow Knight: 100% survival' })).toBeTruthy();
     expect(screen.queryByText(/Enemy HP ×/)).toBeNull();
     expect(cellButtons()).toHaveLength(4);
-  }, 30000);
+  });
 });

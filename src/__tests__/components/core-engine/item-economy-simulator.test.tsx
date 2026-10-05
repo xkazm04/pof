@@ -78,7 +78,7 @@ describe('Item Economy Simulator — reachable and honest', () => {
     const endPower = screen.getByText('End Power').parentElement!;
     expect(endPower.textContent).toContain('—');
     expect(endPower.textContent).not.toMatch(/\b0\b/);
-  }, 20_000);
+  });
 
   it('Extend horizon adopts the smallest rung that samples the endgame (640 h at the defaults)', async () => {
     render(<ItemEconomySimulator moduleId="arpg-inventory" />);
@@ -93,5 +93,5 @@ describe('Item Economy Simulator — reachable and honest', () => {
     expect(strip).not.toMatch(/UNMEASURED/);
     expect(screen.queryByRole('button', { name: /Extend horizon/ })).toBeNull();
     expect((screen.getByLabelText('Hours') as HTMLInputElement).value).toBe('640');
-  }, 40_000);
+  });
 });

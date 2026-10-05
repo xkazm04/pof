@@ -102,7 +102,7 @@ describe('Back undoes a shell flip', () => {
     await traverse('back');
     expect(new URLSearchParams(window.location.search).get('legacy')).toBe('0');
     expect(readShellPref()).toBe('ecw');
-  }, 30_000);
+  });
 
   it('the legacy header Blueprint switch mirrors it: Back returns to the legacy module', async () => {
     window.history.replaceState({}, '', '/?legacy=1&module=audio');

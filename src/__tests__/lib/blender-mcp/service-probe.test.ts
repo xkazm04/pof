@@ -72,7 +72,6 @@ describe('BlenderMCPService.probe — real bytes, not a cached flag', () => {
       expect(svc.getStatus().connected).toBe(false);
       expect(svc.getStatus().lastProbeError).toBeTruthy();
     },
-    20_000,
   );
 
   it('does not dial, and sends nothing, when we already believe we are disconnected', async () => {
@@ -138,7 +137,6 @@ describe('BlenderMCPService.probe — real bytes, not a cached flag', () => {
       const types = mock!.received.map((c) => c.type);
       expect(types.indexOf('execute_code')).toBeLessThan(types.lastIndexOf('get_scene_info'));
     },
-    30_000,
   );
 });
 
