@@ -40,9 +40,13 @@ export function useAIComboChoreographer() {
   }, [runGenerate]);
 
   const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+      (e) => logger.warn('[combo-choreographer] clipboard write failed', e),
+    );
   }, []);
 
   const comboStats = useMemo(() => {
