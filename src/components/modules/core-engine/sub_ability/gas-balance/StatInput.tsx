@@ -16,14 +16,25 @@ export function StatInput({ label, value, onChange, min, max, step, icon: Icon, 
   unit?: string;
   hint?: string;
 }) {
+  // `min`/`max` are the curated everyday range — but a value that arrived
+  // from outside this component (an imported scenario, validated only
+  // against data.ts's much wider STAT_BOUNDS) can legitimately sit outside
+  // it. A native <input type="range"> silently clamps its displayed value to
+  // [min, max], so without this the slider would render pinned at an
+  // endpoint and the next touch would commit that clamped value, discarding
+  // the imported one. Widening only when the current value demands it keeps
+  // the slider's normal granularity for every in-range edit.
+  const effMin = Math.min(min, value);
+  const effMax = Math.max(max, value);
+
   return (
     <div className="flex items-center gap-1.5 group">
       {Icon && <Icon className="w-3 h-3 flex-shrink-0" style={{ color }} />}
       <span className="text-2xs text-text-muted w-full sm:w-16 truncate">{label}</span>
       <input
         type="range"
-        min={min}
-        max={max}
+        min={effMin}
+        max={effMax}
         step={step ?? 1}
         value={value}
         onChange={e => onChange(Number(e.target.value))}
