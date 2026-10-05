@@ -111,6 +111,57 @@ function describeDrift(before: FixtureFingerprint, after: FixtureFingerprint): s
   return drift;
 }
 
+/** Leftover per-file throwaway DBs: `pof-test-<name>[-<pid>].db` plus SQLite's -wal/-shm sidecars. */
+const STALE_TEST_DB_NAME = /^pof-test-.*\.db(-wal|-shm)?$/;
+
+/** A sweep candidate must be older than this, so a concurrent run in another worktree keeps its live files. */
+export const STALE_TEST_DB_MIN_AGE_MS = 30 * 60 * 1000;
+
+/**
+ * Which entries of the OS temp dir are leftover throwaway test DBs safe to delete.
+ *
+ * Many suites key their DB by pid alone (`pof-test-<name>-<pid>.db`) and never delete it; Windows
+ * reuses pids, so a later run can reopen an earlier run's rows. Pure on purpose — names and
+ * mtimes in, names out — so the selection is unit-testable without a disk.
+ *
+ * Never selects: a name that is not a bare file name (no separators, so nothing outside the temp
+ * dir), anything not matching the pattern (`pof.db`, the `pof-vitest/` dir), anything not older
+ * than the age floor, or this run's own floor DB (`pof-test-<pid>…`, owned by `runDbFiles`).
+ */
+export function selectStaleTestDbs(
+  entries: ReadonlyArray<{ name: string; mtimeMs: number }>,
+  nowMs: number,
+  ownPid: number = process.pid,
+): string[] {
+  const ownStem = `pof-test-${ownPid}`;
+  return entries
+    .filter(({ name, mtimeMs }) => {
+      if (name !== path.basename(name) || !STALE_TEST_DB_NAME.test(name)) return false;
+      if (name.startsWith(`${ownStem}.db`) || name.startsWith(`${ownStem}-w`)) return false;
+      return nowMs - mtimeMs > STALE_TEST_DB_MIN_AGE_MS;
+    })
+    .map((e) => e.name);
+}
+
+/** Delete stale throwaway DBs in the temp dir; returns how many went. Never throws. */
+function sweepStaleTestDbs(): number {
+  const dir = os.tmpdir();
+  // Defensive: never sweep the real DB's directory, whatever TEMP points at.
+  if (path.resolve(dir) === path.dirname(realDbPath())) return 0;
+  let deleted = 0;
+  try {
+    const entries: { name: string; mtimeMs: number }[] = [];
+    for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!d.isFile()) continue;
+      try { entries.push({ name: d.name, mtimeMs: fs.statSync(path.join(dir, d.name)).mtimeMs }); } catch { /* raced away */ }
+    }
+    for (const name of selectStaleTestDbs(entries, Date.now())) {
+      try { fs.rmSync(path.join(dir, name), { force: true }); deleted++; } catch { /* EBUSY/EPERM: in use, leave it */ }
+    }
+  } catch { /* unreadable temp dir: a sweep is a backstop, never a failure */ }
+  return deleted;
+}
+
 let baseline: FixtureFingerprint | null = null;
 
 export default function setup() {
@@ -124,6 +175,9 @@ export default function setup() {
   for (const f of runDbFiles()) {
     if (fs.existsSync(f)) fs.rmSync(f, { force: true });
   }
+
+  // Backstop for the pid-keyed per-file DBs that suites leave behind (see `selectStaleTestDbs`).
+  process.stdout.write(`[vitest.global-setup] swept ${sweepStaleTestDbs()} stale pof-test-* temp DB file(s)\n`);
 
   baseline = fingerprintRealDb();
 
