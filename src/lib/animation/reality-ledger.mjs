@@ -46,7 +46,11 @@ export function classifyKind(gamePath) {
   if (/\/materials?\//.test(lower)) return 'material';
   if (/\/input\//.test(lower)) return 'input';
   const base = gamePath.slice(gamePath.lastIndexOf('/') + 1);
-  if (/^AM_/.test(base) || /montage/i.test(gamePath)) return 'montage';
+  // Name-prefix signals take precedence over the loose 'montage' substring
+  // match below — BP_MontageManager is a blueprint, not a montage, even
+  // though "montage" appears in its name (mirrors the path-segment-override
+  // precedence above; see reality-ledger.test.ts).
+  if (/^AM_/.test(base)) return 'montage';
   if (/^AS_/.test(base)) return 'sequence';
   if (/^ABP_/.test(base)) return 'animBlueprint';
   if (/^SKM_/.test(base)) return 'skeletalMesh';
@@ -55,6 +59,7 @@ export function classifyKind(gamePath) {
   if (/^(BP_|GA_|GE_)/.test(base)) return 'blueprint';
   if (/^(M_|MI_)/.test(base)) return 'material';
   if (/^IA_/.test(base)) return 'input';
+  if (/montage/i.test(gamePath)) return 'montage';
   return 'other';
 }
 

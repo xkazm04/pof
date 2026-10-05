@@ -28,6 +28,14 @@ describe('classifyKind', () => {
   it('falls back to other', () => {
     expect(classifyKind('/Game/Misc/SomeThing')).toBe('other');
   });
+
+  it('classifies by name prefix over a loose "montage" substring match', () => {
+    // "Montage" appears in the name, but BP_ is the asset's real prefix —
+    // the prefix rule must win, mirroring the path-segment-override precedence above.
+    expect(classifyKind('/Game/Blueprints/BP_MontageManager')).toBe('blueprint');
+    // with no recognized prefix, the loose substring match is still the fallback
+    expect(classifyKind('/Game/Animations/SomeMontageAsset')).toBe('montage');
+  });
 });
 
 describe('isLikelyEmptyShell', () => {
