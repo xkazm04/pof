@@ -1,15 +1,34 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { GitCompare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_CYAN,
   withOpacity, OPACITY_10, OPACITY_25, OPACITY_8,
 } from '@/lib/chart-colors';
+import { getCachedHighlight, highlight } from '@/lib/shiki-highlighter';
 import { BlueprintPanel } from '../../unique-tabs/_design';
+
+const LANG = 'cpp';
 
 export function CodePreview({ code, prevCode }: { code: string; prevCode: string | null }) {
   const [showDiff, setShowDiff] = useState(false);
+
+  // Syntax highlighting is only for the plain (non-diff) view — the diff view
+  // colors by added/removed/same instead, via the shared Shiki singleton so
+  // this doesn't duplicate CodeViewer's highlighting path.
+  const cached = useMemo(() => getCachedHighlight(code, LANG), [code]);
+  const [highlighted, setHighlighted] = useState<{ code: string; html: string } | null>(null);
+  const html = highlighted && highlighted.code === code ? highlighted.html : cached;
+
+  useEffect(() => {
+    if (html !== null) return;
+    let cancelled = false;
+    highlight(code, LANG).then((result) => {
+      if (!cancelled) setHighlighted({ code, html: result });
+    });
+    return () => { cancelled = true; };
+  }, [code, html]);
 
   const diffLines = useMemo(() => {
     if (!prevCode || !showDiff) return null;
@@ -68,9 +87,9 @@ export function CodePreview({ code, prevCode }: { code: string; prevCode: string
 
       <BlueprintPanel color={ACCENT_CYAN} className="p-0" noBrackets>
         <div className="max-h-[300px] overflow-auto custom-scrollbar">
-          <pre className="text-2xs font-mono leading-relaxed p-2.5">
-            {diffLines ? (
-              diffLines.map((d, i) => (
+          {diffLines ? (
+            <pre className="text-2xs font-mono leading-relaxed p-2.5">
+              {diffLines.map((d, i) => (
                 <div
                   key={i}
                   className="px-1"
@@ -82,13 +101,13 @@ export function CodePreview({ code, prevCode }: { code: string; prevCode: string
                   <span className="inline-block w-3 text-center opacity-60">{d.type === 'added' ? '+' : d.type === 'removed' ? '-' : ' '}</span>
                   {d.line}
                 </div>
-              ))
-            ) : (
-              code.split('\n').map((line, i) => (
-                <div key={i} className="text-text-muted">{line}</div>
-              ))
-            )}
-          </pre>
+              ))}
+            </pre>
+          ) : html !== null ? (
+            <div className="code-viewer-shiki text-2xs p-2.5" dangerouslySetInnerHTML={{ __html: html }} />
+          ) : (
+            <pre className="text-2xs font-mono leading-relaxed p-2.5 text-text-muted">{code}</pre>
+          )}
         </div>
       </BlueprintPanel>
     </motion.div>
