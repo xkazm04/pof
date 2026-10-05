@@ -51,7 +51,13 @@ export function useTacticalCoverAnalysis() {
     [points],
   );
 
-  const regenerate = useCallback(() => setSeed((s) => s + 1), []);
+  // Regenerating rebuilds `points` at the same indices with new positions/scores,
+  // so a surviving hoveredPoint index would re-attach the tooltip/glow to a
+  // physically different point than the one under the cursor.
+  const regenerate = useCallback(() => {
+    setSeed((s) => s + 1);
+    setHoveredPoint(null);
+  }, []);
 
   // Heatmap arcs — coverage quality around the ring
   const heatmapArcs = useMemo(() => {
