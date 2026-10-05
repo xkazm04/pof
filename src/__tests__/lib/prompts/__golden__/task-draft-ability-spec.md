@@ -1,7 +1,7 @@
 Draft a GAS authoring spec for the spellbook ability "Fireball" (gameplay tag Ability.Fire.Fireball, Offensive/Fire/T2).
 Propose the GameplayEffects it applies and the activation tag rules that gate it, reusing standard GAS conventions for a Fire ability — do NOT invent new systems.
 Designer intent: "Make it a two-stage burn."
-Each effect: id, name (GE_-style), duration ("instant"|"duration"|"infinite"), durationSec, cooldownSec, color (hex), modifiers (each {attribute, operation:"add"|"multiply", magnitude}), grantedTags (string[]).
+Each effect: id, name (GE_-style), duration ("instant"|"duration"|"infinite"), durationSec, cooldownSec, color (hex), modifiers (each {attribute, operation:"add"|"multiply", magnitude}), grantedTags (string[]). cooldownSec is the ABILITY's cooldown (before it can be used again) — never a per-tick/DoT repeat interval; there is no periodic-tick field, so a modifier applies exactly once when the effect triggers.
 Each tag rule: id, sourceTag, targetTag, type ("blocks"|"cancels"|"requires"). Include the standard "blocked while State.Dead / State.Stunned" activation rules.
 This edits ONLY the app-side ability spec — do not modify any UE C++ or assets.
 
