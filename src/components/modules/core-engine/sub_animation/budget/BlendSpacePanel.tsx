@@ -1,6 +1,6 @@
 'use client';
 
-import { ACCENT_CYAN, OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_25 } from '@/lib/chart-colors';
+import { ACCENT_CYAN, STATUS_WARNING, OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_25 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ACCENT, BLEND_CLIPS, BLEND_CURRENT } from '../_shared/data';
 
@@ -18,8 +18,14 @@ export function BlendSpacePanel() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Blend Space Visualizer" color={ACCENT} />
-      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
-        2D blend space mapping Direction vs Speed. Each dot is an animation clip; the pulsing dot shows the current sampled position.
+      <p
+        data-testid="blend-space-measured"
+        data-measured="false"
+        className="text-xs font-mono text-text-muted mt-1 mb-3 leading-relaxed"
+      >
+        <span className="font-bold" style={{ color: STATUS_WARNING }}>ILLUSTRATIVE</span>
+        {' — '}2D blend space mapping Direction vs Speed with example clips; the &quot;current&quot;
+        position is a fixed demo point, not read from a live UE5 animation graph.
       </p>
       <div className="flex justify-center min-h-[200px]">
         <svg width={280} height={190} viewBox="0 0 280 190" className="overflow-visible">

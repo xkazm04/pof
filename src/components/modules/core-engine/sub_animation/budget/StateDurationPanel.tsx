@@ -8,8 +8,14 @@ export function StateDurationPanel() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="State Duration Statistics" color={ACCENT} />
-      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
-        Box-and-whisker distribution of time spent in each animation state (seconds).
+      <p
+        data-testid="state-duration-measured"
+        data-measured="false"
+        className="text-xs font-mono text-text-muted mt-1 mb-3 leading-relaxed"
+      >
+        <span className="font-bold" style={{ color: STATUS_WARNING }}>ILLUSTRATIVE</span>
+        {' — '}a design-time example box-and-whisker distribution (seconds), not sampled from any
+        running UE5 session.
       </p>
       <div className="space-y-3">
         {STATE_DURATIONS.map((d) => {

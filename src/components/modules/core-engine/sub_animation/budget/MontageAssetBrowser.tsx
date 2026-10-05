@@ -55,8 +55,15 @@ export function MontageAssetBrowser() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Montage Asset Browser" color={ACCENT} />
-      <p className="text-xs font-mono text-text-muted mt-1 mb-1">
-        {ALL_MONTAGES.length} montages &middot; {TOTAL_MONTAGE_MEMORY.toFixed(1)} MB total
+      <p
+        data-testid="montage-browser-measured"
+        data-measured="false"
+        className="text-xs font-mono text-text-muted mt-1 mb-1 leading-relaxed"
+      >
+        <span className="font-bold" style={{ color: STATUS_WARNING }}>SEED CATALOG</span>
+        {' — '}these {ALL_MONTAGES.length} montages are PoF&apos;s illustrative design-time set
+        ({TOTAL_MONTAGE_MEMORY.toFixed(1)} MB target), not a read of your project&apos;s actual
+        Content/ folder. Frame counts and memory sizes below are not measured.
       </p>
 
       {/* Category memory summary bar */}
