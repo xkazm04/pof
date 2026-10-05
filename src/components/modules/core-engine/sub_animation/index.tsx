@@ -7,7 +7,7 @@ import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
-import type { AnimationEntry } from '@/lib/catalog/types';
+import type { AnimationEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import { ALL_MONTAGES } from './_shared/data';
 import {
   TabHeader,
@@ -28,6 +28,20 @@ import {
   RetargetingTabContent,
   BudgetTabContent,
 } from './AnimTabContent';
+
+// useGeneration needs a concrete entity, but the state-graph catalog can be
+// genuinely empty (before seeding/fetch resolves) — then `primaryEntry` is
+// undefined and no backing entry exists to generate. The (Re)generate
+// affordance stays gated on a real `primaryEntry` below, so this placeholder
+// is never actually dispatched (same pattern as CatalogGearTab's EMPTY_ITEM_ENTRY).
+const EMPTY_MONTAGE_ENTRY: StoredCatalogEntity = {
+  id: '',
+  catalogId: 'state-graph',
+  name: '',
+  categoryPath: [],
+  tags: [],
+  lifecycle: 'planned',
+};
 
 /* ── Narrative Breadcrumb steps ────────────────────────────────────────── */
 
@@ -71,7 +85,7 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
   const primaryEntry =
     (primaryMontageId != null ? entryByMontageId.get(primaryMontageId) : undefined)
     ?? animEntries[0];
-  const gen = useGeneration(primaryEntry!);
+  const gen = useGeneration(primaryEntry ?? EMPTY_MONTAGE_ENTRY);
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
