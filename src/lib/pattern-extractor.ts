@@ -474,10 +474,3 @@ export function extractAntiPatterns(): { extracted: number; updated: number } {
 
   return { extracted, updated };
 }
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Structured Entity Extraction has moved to `structured-insights.ts`.
-// Re-exported here for backward compatibility with existing importers.
-// ══════════════════════════════════════════════════════════════════════════════
-
-export { extractStructuredEntities } from './structured-insights';
