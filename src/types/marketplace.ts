@@ -153,6 +153,20 @@ export interface AcquiredAsset {
   assetId: string;
   assetName: string;
   acquiredAt: string;
+  /**
+   * Where the asset came from and what it cost at the moment of acquisition —
+   * captured here because `MarketplaceAsset.source`/`.price` can change or
+   * the catalog entry can disappear, so this is the only durable record.
+   * Optional on existing rows written before this field existed.
+   */
+  source?: MarketplaceSource;
+  price?: number;
+  /**
+   * Licence terms under which the asset was acquired. No source in this app
+   * currently supplies this value — left undefined (unknown) rather than a
+   * guessed default; wire it once a real source exists.
+   */
+  licence?: string;
   /** Local Content/ path if installed */
   contentPath?: string;
   /** Whether integration code was generated */
