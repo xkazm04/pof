@@ -7,7 +7,12 @@ export interface Obstacle {
   /** World-space position relative to threat center */
   x: number;
   y: number;
-  /** For walls: width/height; for pillars: radius; for elevation: height */
+  /**
+   * For walls: width/height; for elevation: footprint width/height.
+   * For pillars: `w` is a DIAMETER (rendered as r = w / 2 in CoverObstacles,
+   * and halved the same way for the cover-check blocking radius in helpers.ts)
+   * — not a radius, despite the field name.
+   */
   w: number;
   h: number;
   elevation?: number;
