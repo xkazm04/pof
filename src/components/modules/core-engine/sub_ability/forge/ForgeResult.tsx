@@ -11,6 +11,7 @@ import {
   ACCENT_GREEN, ACCENT_EMERALD_DARK, MODULE_COLORS,
   OVERLAY_WHITE, OPACITY_4, withOpacity,
 } from '@/lib/chart-colors';
+import { downloadBlob } from '@/lib/download';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { RadarChart } from '../../unique-tabs/_shared';
 import { ABILITY_RADAR_AXES } from '../_shared/AbilitySpellbook.data';
@@ -48,17 +49,11 @@ export function ForgeResult({ ability, existingRadar }: {
     },
   ], [existingRadar, ability]);
 
+  // Two real files, each under its own name — the button's own label promises
+  // ".h/.cpp", not one blob of both concatenated and mislabeled as cpp.
   const handleDownload = useCallback(() => {
-    const blob = new Blob(
-      [`// ${ability.className}.h\n${ability.headerCode}\n\n// ${ability.className}.cpp\n${ability.cppCode}`],
-      { type: 'text/plain' },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${ability.className}.cpp`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([ability.headerCode], { type: 'text/plain' }), `${ability.className}.h`);
+    downloadBlob(new Blob([ability.cppCode], { type: 'text/plain' }), `${ability.className}.cpp`);
   }, [ability]);
 
   return (
