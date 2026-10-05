@@ -12,6 +12,7 @@ import { useAITesting } from '@/hooks/useAITesting';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectStore } from '@/stores/projectStore';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { getAppOrigin } from '@/lib/constants';
 import {
   buildGenerateTestsPrompt,
   buildSingleScenarioTestPrompt,
@@ -219,7 +220,7 @@ export function AIBehaviorView() {
             scenarioDescription: scenario.description,
             targetClass: activeSuite.targetClass,
           },
-          window.location.origin,
+          getAppOrigin(),
           'Auto-detect Stimuli'
         )
       );
@@ -251,7 +252,7 @@ export function AIBehaviorView() {
       });
     }
     testRunCli.execute(
-      TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run', runId)
+      TaskFactory.runAITests('ai-behavior', activeSuite, getAppOrigin(), 'AI Test Run', runId)
     );
   }, [activeSuite, projectPath, testRunCli, bulkUpdateScenarioStatus, retry]);
 
