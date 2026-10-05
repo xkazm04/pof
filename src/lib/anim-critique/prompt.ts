@@ -42,7 +42,7 @@ function samplingBlock(s: FilmstripSampling | undefined): string {
     ? `every ${s.stride}${s.stride === 2 ? 'nd' : s.stride === 3 ? 'rd' : 'th'} captured frame (a uniform stride of ${s.stride})`
     : `NOT uniform — consecutive frames you see are ${s.gaps.join('-')} captured frames apart`;
   return `
-SAMPLING (read this before you judge timing): you are seeing ${s.kept} of the ${s.available} frames that were captured. Their spacing is ${spacing}. The frames in between were removed by the sampler, not missing from the motion: do NOT lower the timing score, and do NOT cite a "jump with no in-between", for a gap the sampling can explain. Judge timing only on rhythm that survives this sampling — a pose that has clearly not moved, or an abrupt change far larger than the neighbouring steps.
+SAMPLING (read this before you judge timing or weight): you are seeing ${s.kept} of the ${s.available} frames that were captured. Their spacing is ${spacing}. The frames in between were removed by the sampler, not missing from the motion: do NOT lower the timing score, and do NOT cite a "jump with no in-between", for a gap the sampling can explain. An impact can also fall entirely between two kept frames — if you see no frame at the moment of contact, do NOT lower the weight score for "no sense of impact"; judge weight on the acceleration and follow-through you CAN see across the kept frames. Judge timing only on rhythm that survives this sampling — a pose that has clearly not moved, or an abrupt change far larger than the neighbouring steps.
 `;
 }
 

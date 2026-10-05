@@ -62,6 +62,12 @@ describe('buildCritiquePrompt states the sampling', () => {
     expect(p).toMatch(/do not.*(timing|penali|defect)/);
   });
 
+  it('also forbids scoring a missed impact as a weight defect, scoped to the SAMPLING block itself (ai-registry "Density is a dial": an impact that falls between sampled frames reads as having no weight, and that defect belongs to the sampler, not the motion)', () => {
+    const p = buildCritiquePrompt(SAMPLED);
+    const samplingBlock = p.slice(p.indexOf('SAMPLING ('), p.indexOf('The motion is:'));
+    expect(samplingBlock.toLowerCase()).toMatch(/do not.*(lower|penali).*weight/);
+  });
+
   it('is byte-identical to the old prompt when the whole strip is shown', () => {
     const full = { ...CTX, sampling: { kept: 6, available: 6, uniform: true, stride: 1, gaps: [1] } };
     expect(buildCritiquePrompt(full)).toBe(buildCritiquePrompt(CTX));
