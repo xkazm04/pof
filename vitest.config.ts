@@ -15,10 +15,11 @@ export default defineConfig({
     setupFiles: ['vitest.worker-env.ts', 'src/__tests__/setup.ts'],
     // The 5 s default is a laptop-idle number: the full suite runs ~1800 jsdom files on 16
     // workers, where a slow-but-correct test (a synchronous `src/` walk, a first DB bootstrap, a
-    // large layout-lab render) routinely needs more and timed out only under that load. 30 s keeps
-    // a real hang failing in well under a minute without flaking on contention.
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    // LayoutLab Matrix render that takes ~12 s even solo) needs far more under that load and
+    // timed out only there. 60 s still fails a real hang inside a minute. A per-file `timeout`
+    // BELOW this overrides it and re-introduces the flake — don't add one under 60 s.
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     environment: 'jsdom',
     // THE containment floor: `src/lib/db.ts` reads `POF_DB_PATH || ~/.pof/pof.db`, so a suite
     // that touches SQLite without opting into an override wrote into the operator's real
