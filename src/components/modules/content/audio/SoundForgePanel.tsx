@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useState, type ReactElement } from 'react';
 import { Zap, Loader2 } from 'lucide-react';
 import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -299,11 +299,20 @@ function PlanLine({ library, target, plan, missingSetId }: {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * The label text here used to be decorative — no `htmlFor`, no `id` on the
+ * control — so a screen reader announced "combobox"/"edit text" with no name
+ * unless the call site separately patched an `aria-label` on (only some of)
+ * them (Kind, Variations, Target set, Set name). Provider, Duration, Event
+ * key, Surface and Prompt never got that patch. Associating the label here,
+ * once, fixes every Field instead of the next one needing its own patch.
+ */
+function Field({ label, children }: { label: string; children: ReactElement }) {
+  const id = useId();
   return (
     <div>
-      <label className="block text-2xs uppercase tracking-wider text-text-muted mb-1 font-semibold">{label}</label>
-      {children}
+      <label htmlFor={id} className="block text-2xs uppercase tracking-wider text-text-muted mb-1 font-semibold">{label}</label>
+      {isValidElement(children) ? cloneElement(children, { id }) : children}
     </div>
   );
 }
