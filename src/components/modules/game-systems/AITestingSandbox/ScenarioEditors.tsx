@@ -153,7 +153,10 @@ export function ExpectedActionsEditor({
                 <input
                   type="number"
                   value={ea.timeoutSeconds}
-                  onChange={(e) => onUpdate(idx, { timeoutSeconds: Number(e.target.value) || 5 })}
+                  onChange={(e) => {
+                    const raw = Number(e.target.value) || 5;
+                    onUpdate(idx, { timeoutSeconds: Math.min(60, Math.max(1, raw)) });
+                  }}
                   className="w-10 bg-surface-deep border border-border rounded text-xs text-text px-1.5 py-0.5 outline-none text-center"
                   min={1}
                   max={60}
