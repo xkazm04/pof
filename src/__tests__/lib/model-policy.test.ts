@@ -107,6 +107,15 @@ describe('live-dispatch model wiring (WS0)', () => {
     expect(args).toContain('--effort');
   });
 
+  it('governs the one-shot propose/refine dispatches the same way as one-shot-step', () => {
+    // propose and refine generate the same kind of text-proposal payload as step's
+    // CLI mode; they were left unmapped when one-shot-step was wired, so they kept
+    // spawning unpinned (the same "sole unpinned CLI produce" bug step/route.ts's
+    // own comment describes, just on its two siblings instead).
+    expect(taskClassForDispatchType('one-shot-propose')).toBe('produce-text');
+    expect(taskClassForDispatchType('one-shot-refine')).toBe('produce-text');
+  });
+
   it('unpinned resolution appends no model/effort args', () => {
     const choice = resolveDispatchModelChoice({ taskType: 'checklist' });
     const args = buildCliArgs(choice);

@@ -119,7 +119,12 @@ export function taskClassForDispatchType(taskType: string | undefined | null): T
     // Quality Program's policy governed every other dispatch and not this one. It is
     // gated to text archetypes (brief/graph/rules, `CLI_ELIGIBLE_ARCHETYPES`), which is
     // exactly what `produce-text` describes.
+    // 'one-shot-propose'/'one-shot-refine' (POST /api/one-shot/propose, /refine) generate
+    // the same kind of text proposal payload and were left out of this mapping when it
+    // was added — they kept spawning unpinned.
     case 'one-shot-step':
+    case 'one-shot-propose':
+    case 'one-shot-refine':
       return 'produce-text';
     case 'generate-gas-effects':
     case 'run-ai-tests':

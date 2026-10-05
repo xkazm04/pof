@@ -4,6 +4,7 @@ import { buildRefinePrompt } from '@/lib/one-shot/design-prompts';
 import { validateProposal } from '@/lib/one-shot/validate-proposal';
 import { seededEntities } from '@/lib/catalog/seed';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
+import { resolveDispatchModelChoice } from '@/lib/model-policy';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import type { OneShotProposal } from '@/stores/oneShotJobStore';
@@ -30,8 +31,14 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildRefinePrompt(catalogId, distribution, prior, userInput);
 
+    // Quality Program: govern this dispatch the same way one-shot-step's CLI produce
+    // is governed — it was previously unpinned, spawning on whatever model the CLI
+    // session defaulted to.
+    const { model, effort } = resolveDispatchModelChoice({ taskType: 'one-shot-refine' });
     const executionId = startExecution(PROJECT_PATH, prompt, undefined, undefined, {
       enableMcp: true,
+      ...(model ? { model } : {}),
+      ...(effort ? { effort } : {}),
       attribution: { moduleId: catalogId, taskType: 'one-shot-refine', taskLabel: `Refine ${catalogId}` },
     });
     const parsed = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
