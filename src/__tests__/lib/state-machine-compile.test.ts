@@ -117,6 +117,12 @@ describe('compileMachine — acceptance (card animation-state-machine-editor/A)'
     }
   });
 
+  it('6b. generateFullCppOutput is deterministic on identical input (no embedded timestamp)', () => {
+    const a = generateFullCppOutput(DEFAULT_STATES, DEFAULT_TRANSITIONS);
+    const b = generateFullCppOutput(DEFAULT_STATES, DEFAULT_TRANSITIONS);
+    expect(a).toBe(b);
+  });
+
   it('7. [guard] DEFAULT_STATES ComputeAnimState is byte-identical and the lint kinds are unchanged', () => {
     expect(generateComputeAnimState(DEFAULT_STATES)).toBe(BASE_COMPUTE);
     const warnings = validateStateMachine(DEFAULT_STATES, DEFAULT_TRANSITIONS, KNOWN_FLAGS);
