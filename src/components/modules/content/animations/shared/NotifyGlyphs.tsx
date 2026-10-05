@@ -68,7 +68,7 @@ export function NotifyBarLabel({
     >
       <Icon className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
       {!compact && (
-        <span className="text-[10px] font-mono font-bold tracking-tight">{glyph.abbrev}</span>
+        <span className="text-2xs font-mono font-bold tracking-tight">{glyph.abbrev}</span>
       )}
     </span>
   );
@@ -94,7 +94,7 @@ export function NotifyLegendChip({
 }) {
   const swatch = size === 'xs' ? 'w-2 h-2' : 'w-2.5 h-2.5';
   const iconCls = size === 'xs' ? 'w-2.5 h-2.5' : 'w-3 h-3';
-  const text = size === 'xs' ? 'text-[10px]' : 'text-2xs';
+  const text = 'text-2xs';
   return (
     <span className="inline-flex items-center gap-1 text-text-muted">
       <span className={`${swatch} rounded-sm flex-shrink-0`} style={{ backgroundColor: color, opacity: 0.7 }} />
