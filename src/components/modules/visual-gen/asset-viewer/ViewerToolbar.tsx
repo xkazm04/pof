@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import { Upload, Grid3x3, Compass, RotateCcw, Camera, Box } from 'lucide-react';
+import { Upload, Grid3x3, Compass, RotateCcw, Camera } from 'lucide-react';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { RenderMode } from './useViewerStore';
 
@@ -46,7 +46,8 @@ export function ViewerToolbar({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Revoke previous URL if any
+    // The previously-loaded blob URL (if any) is revoked by useViewerStore.setModel,
+    // which owns modelUrl and is the only place that knows what it was.
     const url = URL.createObjectURL(file);
     onFileLoad(url, file.name);
 

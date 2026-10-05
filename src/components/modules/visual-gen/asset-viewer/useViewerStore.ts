@@ -51,6 +51,21 @@ interface ViewerState {
   reset: () => void;
 }
 
+/**
+ * Revoke `url` if it is a browser-local blob URL this viewer itself created via
+ * `URL.createObjectURL` (a locally-picked file). Never revoke a served URL — library
+ * assets and `Studio3D`'s generated-asset picker point `setModel` at `/api/...` paths,
+ * and revoking one of those would do nothing to the served file but is still the wrong
+ * call to make on a URL this store did not mint.
+ *
+ * `setModel` used to overwrite `modelUrl` with no cleanup at all: loading several local
+ * files in one session (the toolbar's "Load Model" button) leaked one Object URL — and
+ * the File bytes it pins in memory — per load, for the life of the page.
+ */
+export function revokeIfBlobUrl(url: string | null | undefined): void {
+  if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
 const INITIAL_STATE = {
   modelUrl: null,
   modelName: null,
@@ -65,7 +80,7 @@ const INITIAL_STATE = {
   loadError: null as string | null,
 };
 
-export const useViewerStore = create<ViewerState>((set) => ({
+export const useViewerStore = create<ViewerState>((set, get) => ({
   ...INITIAL_STATE,
 
   /**
@@ -75,15 +90,22 @@ export const useViewerStore = create<ViewerState>((set) => ({
    * count describes the previous model, and a 42 MB mesh takes seconds to resolve, so
    * leaving it behind put A's numbers under B's name for the whole window. A URL implies
    * `loading` — "asked for and not here yet" is never `idle`.
+   *
+   * Revokes the OUTGOING `modelUrl` first (see {@link revokeIfBlobUrl}) — unless it is
+   * also the incoming one, which would revoke the URL out from under the load already
+   * using it.
    */
-  setModel: (url, name = null) =>
+  setModel: (url, name = null) => {
+    const prev = get().modelUrl;
+    if (prev !== url) revokeIfBlobUrl(prev);
     set({
       modelUrl: url,
       modelName: name,
       stats: null,
       loadState: url ? 'loading' : 'idle',
       loadError: null,
-    }),
+    });
+  },
   setRenderMode: (mode) => set({ renderMode: mode }),
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleAxes: () => set((s) => ({ showAxes: !s.showAxes })),
@@ -102,5 +124,8 @@ export const useViewerStore = create<ViewerState>((set) => ({
 
   setAssetClass: (assetClass) => set({ assetClass }),
   setTargetExtentM: (targetExtentM) => set({ targetExtentM }),
-  reset: () => set(INITIAL_STATE),
+  reset: () => {
+    revokeIfBlobUrl(get().modelUrl);
+    set(INITIAL_STATE);
+  },
 }));
