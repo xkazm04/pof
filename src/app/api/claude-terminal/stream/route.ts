@@ -48,6 +48,13 @@ export async function GET(request: NextRequest) {
 
   const encoder = new TextEncoder();
   let isStreamClosed = false;
+  // Shared with cancel() below — a client disconnect (tab closed, navigated away)
+  // fires ReadableStream's cancel(), a sibling of start() with no access to anything
+  // declared inside it. Without these refs, cancel() could only flip isStreamClosed
+  // and had to wait for the heartbeat's own next 15s tick, or the subscription's next
+  // emitted event, to notice and clean up.
+  let unsubscribeRef: (() => void) | null = null;
+  let heartbeatIntervalRef: ReturnType<typeof setInterval> | undefined;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -133,7 +140,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Subscribe to future events (event-driven, no polling)
-      const unsubscribe = subscribeToExecution(activeExecutionId!, (cliEvent) => {
+      const unsubscribe = unsubscribeRef = subscribeToExecution(activeExecutionId!, (cliEvent) => {
         if (isStreamClosed) { unsubscribe?.(); return; }
         if (cliEvent.type === 'stdout') return;
         // Live events are appended before listeners run: the position is where it landed.
@@ -152,7 +159,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Heartbeat to keep the connection alive
-      const heartbeatInterval = setInterval(() => {
+      const heartbeatInterval = heartbeatIntervalRef = setInterval(() => {
         if (isStreamClosed) { clearInterval(heartbeatInterval); unsubscribe(); return; }
         try {
           sendEvent({ type: 'heartbeat', data: { executionId: activeExecutionId, timestamp: Date.now() }, timestamp: Date.now() });
@@ -173,7 +180,11 @@ export async function GET(request: NextRequest) {
       }, 6100000); // Slightly longer than the 100-minute execution timeout
     },
     cancel() {
+      // The client disconnected (tab closed, navigated away) — clean up immediately
+      // rather than leaving the heartbeat and subscription to notice on their own.
       isStreamClosed = true;
+      if (heartbeatIntervalRef) clearInterval(heartbeatIntervalRef);
+      unsubscribeRef?.();
     },
   });
 
