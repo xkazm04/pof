@@ -22,10 +22,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Throwaway DB — the live one carries a judging campaign's verdicts (see the note in
-// pipeline-artifacts-post.test.ts).
+// pipeline-artifacts-post.test.ts). Keyed by pid, and Windows reuses pids — so delete any file a
+// finished run left at this path BEFORE an import can open it, or the test inherits its rows.
 vi.hoisted(() => {
   const dir = process.env.TEMP || process.env.TMPDIR || '/tmp';
-  process.env.POF_DB_PATH = `${dir}/pof-test-verdict-binding-${process.pid}.db`;
+  const dbPath = `${dir}/pof-test-verdict-binding-${process.pid}.db`;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- vi.hoisted runs before ESM imports
+  const fs = require('node:fs') as typeof import('node:fs');
+  for (const f of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
+    try { fs.rmSync(f, { force: true }); } catch { /* best effort */ }
+  }
+  process.env.POF_DB_PATH = dbPath;
 });
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { POST as postArtifact } from '@/app/api/pipeline-artifacts/route';
