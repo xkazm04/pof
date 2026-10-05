@@ -127,7 +127,7 @@ export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabI
   );
 }
 
-function TabRenameInput({
+export function TabRenameInput({
   currentLabel,
   onCommit,
   onCancel,
@@ -138,6 +138,11 @@ function TabRenameInput({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(currentLabel);
+  // Escape unmounts this input (via onCancel -> editingTabId=null), and removing
+  // a focused element from the DOM fires a native blur — which would otherwise
+  // re-trigger onBlur's commit right after the cancel. This ref is set
+  // synchronously before onCancel so the blur handler can tell the difference.
+  const cancellingRef = useRef(false);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -155,10 +160,14 @@ function TabRenameInput({
         if (e.key === 'Enter') {
           onCommit(value);
         } else if (e.key === 'Escape') {
+          cancellingRef.current = true;
           onCancel();
         }
       }}
-      onBlur={() => onCommit(value)}
+      onBlur={() => {
+        if (cancellingRef.current) return;
+        onCommit(value);
+      }}
       onClick={(e) => e.stopPropagation()}
       className="bg-transparent border-b border-text-muted outline-none text-xs text-text w-full min-w-[40px] max-w-[120px]"
       maxLength={30}
