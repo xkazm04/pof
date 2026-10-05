@@ -18,10 +18,12 @@ export const formatCd = (cd: number) => `${cd}s`;
  * `cd: null` (duration lives only in a GE blueprint) draws an empty dashed ring
  * labelled "CD in GE" instead of dividing by an unknown.
  */
-export function CooldownWheel({ ability, maxCd, index }: {
+export function CooldownWheel({ ability, maxCd, index, selected = false }: {
   ability: Pick<SpellbookCooldownRow, 'name' | 'cd' | 'color'>;
   maxCd: number;
   index: number;
+  /** True when this wheel mirrors the ability currently shown in the detail view above it. */
+  selected?: boolean;
 }) {
   const size = 56;
   const strokeW = 5;
@@ -32,10 +34,17 @@ export function CooldownWheel({ ability, maxCd, index }: {
 
   return (
     <motion.div
-      className="flex flex-col items-center gap-1.5"
+      className="flex flex-col items-center gap-1.5 rounded-lg px-1.5 py-1 border"
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.05 }}
+      style={selected ? {
+        backgroundColor: withOpacity(ability.color, OPACITY_6),
+        borderColor: withOpacity(ability.color, OPACITY_25),
+      } : {
+        borderColor: 'transparent',
+      }}
+      data-selected={selected || undefined}
     >
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>

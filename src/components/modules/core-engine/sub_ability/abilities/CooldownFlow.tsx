@@ -86,7 +86,7 @@ export function CooldownFlow() {
       {/* Overview, capped so a large catalog does not render a wall of wheels */}
       <div className="flex items-center gap-4 justify-center flex-wrap mt-4 pt-3 border-t border-border/30">
         {rows.slice(0, OVERVIEW_CAP).map((ab, i) => (
-          <CooldownWheel key={ab.id} ability={ab} maxCd={maxCd} index={i} />
+          <CooldownWheel key={ab.id} ability={ab} maxCd={maxCd} index={i} selected={ab.id === current.id} />
         ))}
         {hidden > 0 && (
           <span className="text-xs font-mono text-text-muted">+{hidden} more, pick one above</span>

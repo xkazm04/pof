@@ -51,4 +51,13 @@ describe('CooldownWheel / CooldownFlow — honest cooldowns', { timeout: 30_000 
     expect(detail).toContain('Ability 2');
     expect(detail).not.toMatch(/NaN|undefined/);
   });
+
+  it('highlights the overview wheel matching the selected ability, and only that one', () => {
+    const { container } = render(<Harness rows={[row(1), row(2), row(3)]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ability 2' }));
+
+    const selectedWheels = container.querySelectorAll('[data-selected="true"]');
+    expect(selectedWheels.length).toBe(1);
+    expect(selectedWheels[0].textContent).toContain('Ability 2');
+  });
 });
