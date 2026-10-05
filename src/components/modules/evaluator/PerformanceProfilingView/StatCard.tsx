@@ -1,20 +1,4 @@
-'use client';
-
-import { KPICard } from '@/components/ui/KPICard';
-
-// ── Stat Card ───────────────────────────────────────────────────────────────
-
-export function StatCard({ icon, value, label, color }: {
-  icon: React.ReactNode;
-  value: string | number;
-  label: string;
-  color: string;
-}) {
-  return (
-    <KPICard
-      icon={icon}
-      label={label}
-      value={<span className={color}>{value}</span>}
-    />
-  );
-}
+// Identical to AssetScoutView's StatCard (same KPICard wrapper, same props) —
+// re-exported rather than duplicated. TabBtn is not re-exported since nothing
+// here uses it.
+export { StatCard } from '../AssetScoutView/StatCard';
