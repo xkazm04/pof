@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useRef, useEffect, useMemo } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, GizmoHelper, GizmoViewport, Environment, Center } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -14,10 +14,59 @@ import { ViewportStatus } from './ViewportStatus';
 
 // ── Model component that loads from URL ──────────────────────────────────────
 
+/**
+ * Switch one mesh's material for a render-mode change, disposing whichever solid/
+ * wireframe material `applyRenderMode` itself created last time (never the original —
+ * that one belongs to the loaded glTF and must survive every mode switch).
+ *
+ * `solid`/`wireframe` used to allocate a fresh `THREE.Material` on every call with no
+ * disposal of the one it replaced — toggling render mode repeatedly in one session leaked
+ * a compiled material (and its GPU program) per switch. `created` is the ref that lets this
+ * function recognise "mine to dispose" without ever touching the original.
+ */
+export function applyRenderMode(
+  child: THREE.Mesh,
+  renderMode: RenderMode,
+  original: THREE.Material | THREE.Material[] | undefined,
+  created: Set<THREE.Material>,
+): void {
+  const disposeIfOwned = () => {
+    const current = child.material;
+    const mats = Array.isArray(current) ? current : current ? [current] : [];
+    for (const m of mats) {
+      if (created.has(m)) {
+        m.dispose();
+        created.delete(m);
+      }
+    }
+  };
+  switch (renderMode) {
+    case 'textured': {
+      disposeIfOwned();
+      if (original) child.material = original;
+      break;
+    }
+    case 'solid': {
+      disposeIfOwned();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.6, metalness: 0.1 });
+      created.add(mat);
+      child.material = mat;
+      break;
+    }
+    case 'wireframe': {
+      disposeIfOwned();
+      const mat = new THREE.MeshBasicMaterial({ wireframe: true, color: 0x06b6d4 });
+      created.add(mat);
+      child.material = mat;
+      break;
+    }
+  }
+}
+
 function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode }) {
   const groupRef = useRef<THREE.Group>(null);
   const originalMaterials = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
-  const { scene: threeScene } = useThree();
+  const createdMaterials = useRef<Set<THREE.Material>>(new Set());
   const reportLoaded = useViewerStore((s) => s.reportLoaded);
   const reportLoadError = useViewerStore((s) => s.reportLoadError);
   const clearStats = useViewerStore((s) => s.clearStats);
@@ -75,35 +124,17 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
 
     loadedScene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-
-      switch (renderMode) {
-        case 'textured': {
-          const orig = originalMaterials.current.get(child);
-          if (orig) child.material = orig;
-          break;
-        }
-        case 'solid': {
-          child.material = new THREE.MeshStandardMaterial({
-            color: 0x888888,
-            roughness: 0.6,
-            metalness: 0.1,
-          });
-          break;
-        }
-        case 'wireframe': {
-          child.material = new THREE.MeshBasicMaterial({
-            wireframe: true,
-            color: 0x06b6d4,
-          });
-          break;
-        }
-      }
+      applyRenderMode(child, renderMode, originalMaterials.current.get(child), createdMaterials.current);
     });
   }, [loadedScene, renderMode]);
 
-  // Cleanup on unmount — clear the inspector stats so a removed model isn't checked.
+  // Cleanup on unmount — dispose any solid/wireframe material this component created
+  // (never the originals, which belong to the loaded glTF), then clear the inspector
+  // stats so a removed model isn't checked.
   useEffect(() => {
     return () => {
+      for (const m of createdMaterials.current) m.dispose();
+      createdMaterials.current.clear();
       originalMaterials.current.clear();
       clearStats();
     };
