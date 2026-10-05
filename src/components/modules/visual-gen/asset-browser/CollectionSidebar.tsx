@@ -5,6 +5,7 @@ import { Layers, Star, FolderPlus, Pencil, Trash2, Check, X } from 'lucide-react
 import type { Collection } from '@/types/asset-library';
 import { useAssetLibraryStore } from '@/components/modules/visual-gen/asset-browser/useAssetLibraryStore';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface CollectionSidebarProps {
   collections: Collection[];
@@ -23,6 +24,9 @@ export function CollectionSidebar({ collections, totalCount, favoriteCount }: Co
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  /** A collection awaiting delete confirmation — delete is irreversible and the
+   *  asset-remove button beside it (LibraryAssetCard) routes through the same dialog. */
+  const [pendingDelete, setPendingDelete] = useState<Collection | null>(null);
 
   const isAll = !filter.collectionId && !filter.favoritesOnly;
   const isFavorites = !!filter.favoritesOnly;
@@ -119,7 +123,7 @@ export function CollectionSidebar({ collections, totalCount, favoriteCount }: Co
                 <Pencil size={12} />
               </button>
               <button
-                onClick={() => deleteCollection(c.id)}
+                onClick={() => setPendingDelete(c)}
                 aria-label={`Delete ${c.name}`}
                 className={`p-1 rounded text-text-muted hover:text-red-400 ${VISUAL_GEN_FOCUS_RING}`}
               >
@@ -133,6 +137,20 @@ export function CollectionSidebar({ collections, totalCount, favoriteCount }: Co
       {collections.length === 0 && !creating && (
         <p className="text-2xs text-text-muted px-2 py-1">No collections yet.</p>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => (pendingDelete ? deleteCollection(pendingDelete.id) : undefined)}
+        title="Delete this collection?"
+        description={
+          pendingDelete
+            ? `This deletes "${pendingDelete.name}" (${pendingDelete.assetCount} asset${pendingDelete.assetCount === 1 ? '' : 's'}). The assets themselves stay in the library — only the collection is removed. This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        busyLabel="Deleting…"
+      />
     </aside>
   );
 }

@@ -10,6 +10,7 @@ import { VariantPicker } from '@/components/modules/visual-gen/asset-browser/Var
 import type { PickTarget } from '@/components/modules/visual-gen/asset-browser/useAssetBrowserStore';
 import { isListingUrl } from '@/lib/visual-gen/download-variants';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface LibraryAssetCardProps {
   asset: LibraryAsset;
@@ -18,6 +19,8 @@ interface LibraryAssetCardProps {
 
 export function LibraryAssetCard({ asset, collections }: LibraryAssetCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Removing a library asset is irreversible — confirm before it, same as collection delete. */
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const toggleFavorite = useAssetLibraryStore((s) => s.toggleFavorite);
   const removeAsset = useAssetLibraryStore((s) => s.removeAsset);
   const addToCollection = useAssetLibraryStore((s) => s.addToCollection);
@@ -105,7 +108,7 @@ export function LibraryAssetCard({ asset, collections }: LibraryAssetCardProps) 
             <FolderPlus size={14} />
           </button>
           <button
-            onClick={() => removeAsset(asset.id)}
+            onClick={() => setConfirmingRemove(true)}
             aria-label={`Remove ${asset.name} from library`}
             className={`p-1.5 rounded-full bg-surface-secondary text-red-400 hover:brightness-110 ${VISUAL_GEN_FOCUS_RING}`}
           >
@@ -141,6 +144,16 @@ export function LibraryAssetCard({ asset, collections }: LibraryAssetCardProps) 
       )}
 
       {listing && <VariantPicker target={picking ? pickTarget : null} onClose={() => setPicking(false)} />}
+
+      <ConfirmDialog
+        open={confirmingRemove}
+        onClose={() => setConfirmingRemove(false)}
+        onConfirm={() => removeAsset(asset.id)}
+        title="Remove this asset from the library?"
+        description={`This removes "${asset.name}" from your library${asset.collectionIds.length > 0 ? ` and from ${asset.collectionIds.length} collection${asset.collectionIds.length === 1 ? '' : 's'}` : ''}. This cannot be undone.`}
+        confirmLabel="Remove"
+        busyLabel="Removing…"
+      />
 
       {/* Info */}
       <div className="p-2">
