@@ -197,6 +197,10 @@ export function buildUE5MaterialInstance(input: UE5MaterialInstanceInput): UE5Ma
   const notExported: UE5Dropped[] = [];
 
   const textureSrgb: string[] = [];
+  // sRGB is a property of the TEXTURE asset, the role is a property of the slot. One
+  // asset wired into two roles of opposite colour space cannot be right in both, and
+  // conforming it to the second role would silently break the first.
+  const spaceByAsset = new Map<string, { space: string; label: string }>();
   for (const spec of MATERIAL_CHANNELS) {
     const resolved = resolveChannelSource(input.textures?.[spec.channel], 'ue5');
     if (!resolved) continue;
@@ -204,6 +208,15 @@ export function buildUE5MaterialInstance(input: UE5MaterialInstanceInput): UE5Ma
       notExported.push({ label: `${spec.ueParameter} texture`, reason: resolved.reason });
       continue;
     }
+    const prior = spaceByAsset.get(resolved.assetPath);
+    if (prior && prior.space !== spec.colourSpace) {
+      notExported.push({
+        label: `${spec.ueParameter} texture`,
+        reason: `"${resolved.assetPath}" is already the ${prior.label} texture (${prior.space}); one asset cannot sample as both ${prior.space} and ${spec.colourSpace}. Import a separate copy for this slot.`,
+      });
+      continue;
+    }
+    spaceByAsset.set(resolved.assetPath, { space: spec.colourSpace, label: spec.ueParameter });
     parameters.push({ name: spec.ueParameter, kind: 'texture', value: resolved.assetPath });
     textureSrgb.push(`    "${spec.ueParameter}": ${spec.colourSpace === 'srgb' ? 'True' : 'False'},`);
   }
@@ -237,7 +250,10 @@ TEXTURES = {
 ${textures.length ? textures.map((p) => `    "${p.name}": "${p.value}",`).join('\n') : '    # no imported UE texture assets - see the export report'}
 }
 # Per-role colour space from the lab's channel table: colour maps sample as
-# sRGB, data maps (normal/metallic/roughness/AO) must not.
+# sRGB, data maps (normal/metallic/roughness/AO) must not. UE imports every
+# texture sRGB=True unless it detects a normal map, so this edge APPLIES the
+# role's flag - a warning here left the fix to whoever remembered it, on every
+# delivery.
 TEXTURE_SRGB = {
 ${textureSrgb.length ? textureSrgb.join('\n') : '    # no textures'}
 }
@@ -276,9 +292,11 @@ def build():
             unsupported.append("%s (asset %s not found)" % (name, path))
             continue
         if texture.get_editor_property("srgb") != TEXTURE_SRGB[name]:
-            unreal.log_warning(
-                "%s: %s imports with sRGB=%s but its role needs sRGB=%s - it will sample wrong."
-                % (ASSET_PATH, path, texture.get_editor_property("srgb"), TEXTURE_SRGB[name])
+            texture.set_editor_property("srgb", TEXTURE_SRGB[name])
+            unreal.EditorAssetLibrary.save_asset(path)
+            unreal.log(
+                "%s: set sRGB=%s on %s for its %s role (it imported with the default)."
+                % (ASSET_PATH, TEXTURE_SRGB[name], path, name)
             )
         if not lib.set_material_instance_texture_parameter_value(instance, name, texture):
             unsupported.append(name)

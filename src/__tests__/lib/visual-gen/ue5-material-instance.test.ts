@@ -93,6 +93,27 @@ describe('buildUE5MaterialInstance', () => {
     expect(emitted.script).toContain('set_material_instance_texture_parameter_value');
   });
 
+  it('applies each texture role\'s sRGB flag at the edge instead of warning about it', () => {
+    // UE imports every texture sRGB=True unless it detects a normal map. A warning left
+    // metallic/roughness/AO sampling wrong until someone remembered to fix each one.
+    const script = build({
+      textures: { albedo: '/Game/T/T_A', normal: '/Game/T/T_N', metallic: '/Game/T/T_M', roughness: '/Game/T/T_R', ao: '/Game/T/T_AO' },
+    }).script;
+    expect(script).toContain('"Albedo": True,');
+    for (const role of ['Normal', 'Metallic', 'Roughness', 'AO']) expect(script).toContain(`"${role}": False,`);
+    expect(script).toContain('texture.set_editor_property("srgb", TEXTURE_SRGB[name])');
+    expect(script).toContain('unreal.EditorAssetLibrary.save_asset(path)');
+    expect(script).not.toContain('it will sample wrong');
+  });
+
+  it('refuses one texture asset wired into roles of opposite colour space', () => {
+    const emitted = build({ textures: { albedo: '/Game/T/T_Mask', ao: '/Game/T/T_Mask', roughness: '/Game/T/T_Mask' } });
+    // Albedo (sRGB) binds first; the linear roles would flip the shared flag, so each is named.
+    expect(emitted.notExported.map((d) => d.label)).toEqual(['Roughness texture', 'AO texture']);
+    for (const d of emitted.notExported) expect(d.reason).toContain('already the Albedo texture');
+    expect(emitted.parameters.filter((p) => p.kind === 'texture').map((p) => p.name)).toEqual(['Albedo']);
+  });
+
   it('authors a stand-in master only when the project has none', () => {
     const script = build().script;
     expect(script).toContain('does_asset_exist(PARENT_MATERIAL)');
