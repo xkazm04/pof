@@ -307,7 +307,7 @@ function PlanLine({ library, target, plan, missingSetId }: {
  * key, Surface and Prompt never got that patch. Associating the label here,
  * once, fixes every Field instead of the next one needing its own patch.
  */
-function Field({ label, children }: { label: string; children: ReactElement }) {
+function Field({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
   const id = useId();
   return (
     <div>

@@ -43,7 +43,8 @@ describe('applyRenderMode disposes materials it created', () => {
 
   it('disposes the last created material when switching back to textured, and never disposes the original', () => {
     const mesh = makeMesh();
-    const original = mesh.material;
+    // makeMesh() builds the mesh around ONE MeshStandardMaterial, never an array.
+    const original = mesh.material as THREE.Material;
     const originalDisposeSpy = vi.spyOn(original, 'dispose');
     const created = new Set<THREE.Material>();
 

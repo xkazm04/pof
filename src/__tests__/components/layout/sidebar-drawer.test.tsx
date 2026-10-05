@@ -27,7 +27,7 @@ describe('Sidebar — inline rendering', () => {
   });
 
   it('omits SidebarL2 when sidebarMode is not full', () => {
-    useNavigationStore.setState({ sidebarMode: 'rail' });
+    useNavigationStore.setState({ sidebarMode: 'collapsed' });
     render(<Sidebar />);
     expect(screen.getByTestId('l1-stub')).toBeTruthy();
     expect(screen.queryByTestId('l2-stub')).toBeNull();
