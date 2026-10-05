@@ -37,9 +37,11 @@ afterEach(cleanup);
 describe('NightlyBuildScheduler', () => {
   it('renders the fetched schedule status', async () => {
     render(<NightlyBuildScheduler profiles={[profile]} />);
-    await waitFor(() => expect(screen.getByText('Scheduled builds off')).toBeTruthy());
+    // Wait on a value that only the FETCHED status carries: 'Scheduled builds off' is also the
+    // placeholder shown before the fetch lands, so waiting on it resolved early under load.
     // current HEAD is shown short
-    expect(screen.getByText('abc12345')).toBeTruthy();
+    expect(await screen.findByText('abc12345')).toBeTruthy();
+    expect(screen.getByText('Scheduled builds off')).toBeTruthy();
     // profile appears in the dropdown
     expect(screen.getByText('Win64 Shipping (Win64)')).toBeTruthy();
   });
