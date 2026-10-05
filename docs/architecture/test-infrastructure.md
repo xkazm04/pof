@@ -70,6 +70,10 @@ still follow `core.autocrlf` (git will warn about LF→CRLF on them; that is exp
 
 **Rule.** `*.snap` stays LF. Never remove or narrow the rule, and never commit a CRLF snapshot.
 
+## 4. Pid-keyed throwaway DBs are deleted before they open, and swept after
+
+**Rule.** A throwaway test DB keyed only by `process.pid` (`${dir}/pof-test-<name>-${process.pid}.db`) must be deleted — file, `-wal`, `-shm` — inside `vi.hoisted` *before* any import can open it: Windows reuses pids, so a later run otherwise reopens an earlier run's rows (on 2026-10-06 TEMP held 12,821 leftover `pof-test-*` files; 59 `verdict-binding` DBs, one already reopened with 2 history rows). `judge-verdict-content-binding.test.ts` does this; 73 other files still use the bare pid shape and have not been converted. `vitest.global-setup.ts` is the backstop: at setup it deletes top-level temp-dir files matching `/^pof-test-.*.db(-wal|-shm)?$/` older than 30 minutes (the age floor keeps a concurrent run's live files) via the pure `selectStaleTestDbs` (tested in `stale-test-db-sweep.test.ts`), never this run's own floor DB, and logs the count. The sweep is the backstop, not a licence to skip the delete-before-open.
+
 ## Recording a new test-infra decision
 
 Add a section here (context with commit SHAs, decision, consequences, rule) and one `DECISION` line to `.claude/fleet-memory.md`.
