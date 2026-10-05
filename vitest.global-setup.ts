@@ -21,10 +21,25 @@ import path from 'node:path';
  * this is the floor, not a ceiling.
  *
  * Keyed by the vitest process's own pid so two `npm run validate` runs in this shared
- * checkout cannot fight over one SQLite file.
+ * checkout cannot fight over one SQLite file. Each worker then narrows it to its own file
+ * (`pof-test-<pid>-w<pool>.db`, set by `vitest.worker-env.ts`) so parallel files in ONE run do not
+ * share a database either.
  */
 export function testDbPath(): string {
   return path.join(os.tmpdir(), 'pof-vitest', `pof-test-${process.pid}.db`);
+}
+
+/** The run's floor DB plus every per-worker DB (and their WAL/SHM sidecars) that may exist. */
+function runDbFiles(): string[] {
+  const floor = testDbPath();
+  const dir = path.dirname(floor);
+  const stem = path.basename(floor, '.db');
+  const files = [floor, `${floor}-wal`, `${floor}-shm`];
+  if (!fs.existsSync(dir)) return files;
+  for (const name of fs.readdirSync(dir)) {
+    if (name.startsWith(`${stem}-w`)) files.push(path.join(dir, name));
+  }
+  return files;
 }
 
 /** The database this guard is protecting — the one `db.ts` falls back to. */
@@ -106,7 +121,7 @@ export default function setup() {
   // reads depend on whatever the last one happened to write.
   const file = testDbPath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  for (const f of [file, `${file}-wal`, `${file}-shm`]) {
+  for (const f of runDbFiles()) {
     if (fs.existsSync(f)) fs.rmSync(f, { force: true });
   }
 
@@ -116,7 +131,7 @@ export default function setup() {
     const after = fingerprintRealDb();
     // Clean up this run's throwaway DB. Best-effort: a leftover temp file is not worth
     // failing a green suite over, and the next run deletes it anyway.
-    for (const f of [file, `${file}-wal`, `${file}-shm`]) {
+    for (const f of runDbFiles()) {
       try { if (fs.existsSync(f)) fs.rmSync(f, { force: true }); } catch { /* best effort */ }
     }
     if (!baseline || !after) return;
