@@ -1,0 +1,3 @@
+# Vitest rewrites a snapshot whose line endings differ from what it serialises (LF). With
+# core.autocrlf=true a checkout writes CRLF, so a full test run dirtied every .snap file.
+*.snap text eol=lf
