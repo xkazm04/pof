@@ -1,4 +1,5 @@
 import { Volume2 } from 'lucide-react';
+import { withOpacity, OPACITY_25 } from '@/lib/chart-colors';
 
 export function PropPill({
   icon: Icon,
@@ -16,7 +17,7 @@ export function PropPill({
       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-2xs font-semibold border"
       style={{
         backgroundColor: `${color}15`,
-        borderColor: `${color}40`,
+        borderColor: withOpacity(color, OPACITY_25),
         color,
       }}
     >
