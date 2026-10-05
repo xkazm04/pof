@@ -4,13 +4,27 @@ import { useMemo } from 'react';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
-import type { BestiaryEntry } from '@/lib/catalog/types';
+import type { BestiaryEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import type { ArchetypeConfig } from '../_shared/data';
 
 interface PrimaryArchetypeLifecycleProps {
   expandedArchetype: string | null;
   filteredArchetypes: ArchetypeConfig[];
 }
+
+// useGeneration needs a concrete entity, but the bestiary catalog can be
+// genuinely empty (before seeding/fetch resolves) — then `primaryEntry` is
+// undefined. The (Re)generate affordance stays gated on a real `primaryEntry`
+// via the early return below, so this placeholder is never actually
+// dispatched (same pattern as CatalogGearTab's EMPTY_ITEM_ENTRY).
+const EMPTY_BESTIARY_ENTRY: StoredCatalogEntity = {
+  id: '',
+  catalogId: 'bestiary',
+  name: '',
+  categoryPath: [],
+  tags: [],
+  lifecycle: 'planned',
+};
 
 /**
  * folder-09 R3 UI: lifecycle + (Re)generate for the primary archetype.
@@ -29,7 +43,7 @@ export function PrimaryArchetypeLifecycle({
   const primaryEntry =
     (primaryArchetypeId != null ? entryByArchetypeId.get(primaryArchetypeId) : undefined)
     ?? bestiaryEntries[0];
-  const gen = useGeneration(primaryEntry!);
+  const gen = useGeneration(primaryEntry ?? EMPTY_BESTIARY_ENTRY);
 
   if (!primaryEntry) return null;
 

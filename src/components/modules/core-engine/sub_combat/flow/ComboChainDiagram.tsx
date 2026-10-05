@@ -13,10 +13,24 @@ import type { WeaponCategory } from '../_shared/data-metrics';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
-import type { CombatInteractionEntry } from '@/lib/catalog/types';
+import type { CombatInteractionEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 
 const CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const PAGE_SIZE = 6;
+
+// useGeneration needs a concrete entity, but the combat-map catalog can be
+// genuinely empty (before seeding/fetch resolves) — then `primaryEntry` is
+// undefined. The (Re)generate affordance below is already gated on a real
+// `primaryEntry`, so this placeholder is never actually dispatched (same
+// pattern as CatalogGearTab's EMPTY_ITEM_ENTRY).
+const EMPTY_COMBO_ENTRY: StoredCatalogEntity = {
+  id: '',
+  catalogId: 'combat-map',
+  name: '',
+  categoryPath: [],
+  tags: [],
+  lifecycle: 'planned',
+};
 
 export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
   const sc = STATUS_COLORS[status];
@@ -43,7 +57,7 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
   const primaryEntry =
     (primaryComboId != null ? entryByComboId.get(primaryComboId) : undefined)
     ?? comboEntries[0];
-  const gen = useGeneration(primaryEntry!);
+  const gen = useGeneration(primaryEntry ?? EMPTY_COMBO_ENTRY);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
