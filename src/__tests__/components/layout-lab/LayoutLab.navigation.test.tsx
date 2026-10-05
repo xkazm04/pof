@@ -78,8 +78,8 @@ const matrixGrid = (container: HTMLElement, selector: string) =>
  */
 // Each case renders the whole LayoutLab and swaps to the Matrix (a full entity×step grid) —
 // legitimately heavy, and CPU-starved when the suite runs many files in parallel workers.
-// A generous timeout keeps these deterministic under load (they pass in well under 1s solo).
-describe('LayoutLab navigation state truth', { timeout: 20000 }, () => {
+// No local timeout: the file inherits the global budget in vitest.config.ts (the Matrix render here is ~12 s solo, so a 20 s override flaked under full-suite load).
+describe('LayoutLab navigation state truth', () => {
   afterEach(cleanup);
   beforeEach(() => {
     useLabPipelineStore.setState({ byEntity: {} });

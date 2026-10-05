@@ -56,7 +56,7 @@ function traverse(dir: 'back' | 'forward'): Promise<void> {
   });
 }
 
-describe('LayoutLab — lab locations have addresses', { timeout: 20000 }, () => {
+describe('LayoutLab — lab locations have addresses', () => {
   afterEach(cleanup);
   beforeEach(() => {
     useLabPipelineStore.setState({ byEntity: {} });

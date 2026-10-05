@@ -37,7 +37,7 @@ import { useLabPipelineStore } from '@/components/layout-lab/labPipelineStore';
 import { resolveCatalogSteps } from '@/components/layout-lab/catalogManifest';
 import { useCatalogStore } from '@/stores/catalogStore';
 
-describe('LayoutLab clamps the step index against the open entity\'s own list', { timeout: 20000 }, () => {
+describe('LayoutLab clamps the step index against the open entity\'s own list', () => {
   afterEach(cleanup);
   beforeEach(() => { useLabPipelineStore.setState({ byEntity: {} }); localStorage.clear(); });
 

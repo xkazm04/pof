@@ -48,7 +48,7 @@ import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 
 const readPrefs = () => JSON.parse(localStorage.getItem('pof-lab-prefs') ?? '{}');
 
-describe('LayoutLab — the pendingNavigation door lands on the Catalogs view', { timeout: 20000 }, () => {
+describe('LayoutLab — the pendingNavigation door lands on the Catalogs view', () => {
   afterEach(cleanup);
   beforeEach(() => {
     useLabPipelineStore.setState({ byEntity: {} });
