@@ -7,6 +7,7 @@ import {
   gateInputImage,
   thresholdsFor,
   GRADER_THRESHOLDS,
+  summarizeInputGate,
 } from '@/lib/visual-gen/input-gate';
 
 const PNG_URL = `data:image/png;base64,${Buffer.from('fake-png').toString('base64')}`;
@@ -140,5 +141,21 @@ describe("gateInputImage grades on the answering model's line", () => {
       { vision: answer('SCORE=10; DEFECTS=none; VERDICT=Ideal.', 'qwen3.8:27b') });
     if (!card.ok) throw new Error('expected ok card');
     expect(card.verdict).toBe('pass');
+  });
+
+  it("reports whose line the verdict was read on, and says when it was not fitted to the grader", async () => {
+    const reply = 'SCORE=6; DEFECTS=none; VERDICT=Fine.';
+    const fitted = summarizeInputGate(await gateInputImage({ mime: 'image/png', base64: 'x' }, { vision: answer(reply, 'qwen3.8:27b') }));
+    const borrowed = summarizeInputGate(await gateInputImage({ mime: 'image/png', base64: 'x' }, { vision: answer(reply, 'gemma4:12b') }));
+    const unnamed = summarizeInputGate(await gateInputImage({ mime: 'image/png', base64: 'x' }, { vision: async () => reply }));
+    if (!fitted.ran || !borrowed.ran || !unnamed.ran) throw new Error('expected ran outcomes');
+    expect(fitted).toMatchObject({ model: 'qwen3.8:27b', thresholdsFrom: 'grader', verdict: 'fail' });
+    expect(fitted.note).toMatch(/line fitted to qwen3\.8:27b/);
+    // Same reply, another grader: a line measured on a different model decides it, and the report says so.
+    expect(borrowed).toMatchObject({ model: 'gemma4:12b', thresholdsFrom: 'default', verdict: 'warn' });
+    expect(borrowed.note).toMatch(/default line, not fitted to gemma4:12b/);
+    expect(unnamed.thresholdsFrom).toBe('default');
+    expect(unnamed).not.toHaveProperty('model');
+    expect(unnamed.note).toMatch(/grader unnamed/);
   });
 });

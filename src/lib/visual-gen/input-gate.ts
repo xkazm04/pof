@@ -146,8 +146,27 @@ export interface InputGateDeps {
  * unavailable gate says so and the image is stamped as submitted ungated.
  */
 export type InputGateOutcome =
-  | { ran: true; verdict: Scorecard['verdict']; score: number; reasons: string[]; overridden?: boolean; note: string }
+  | {
+      ran: true;
+      verdict: Scorecard['verdict'];
+      score: number;
+      reasons: string[];
+      overridden?: boolean;
+      note: string;
+      /** The grader that answered, when the seam named one. */
+      model?: string;
+      /** Whose line the verdict was read on. A verdict is a (grader, line) pair: 'default'
+       *  under a named model is a line fitted to a different grader, and the report says so. */
+      thresholdsFrom?: GateCard['thresholdsFrom'];
+    }
   | { ran: false; unavailable?: boolean; note: string };
+
+/** The note's line clause: which grader's operating point produced the verdict. Pure. */
+function lineClause(card: GateCard): string {
+  if (card.thresholdsFrom === 'grader') return `line fitted to ${card.model}`;
+  if (card.thresholdsFrom === 'caller') return 'line set by the caller';
+  return card.model !== undefined ? `default line, not fitted to ${card.model}` : 'default line, grader unnamed';
+}
 
 /** The gate could not run at all (no key, transport failure, unparseable reply). Pure. */
 export function inputGateUnavailable(reason: string): InputGateOutcome {
@@ -168,9 +187,12 @@ export function summarizeInputGate(card: GateCard | GateFailure): InputGateOutco
     verdict: card.verdict,
     score: card.score,
     reasons,
+    ...(card.model !== undefined ? { model: card.model } : {}),
+    thresholdsFrom: card.thresholdsFrom,
     note:
       `input gate ${card.verdict.toUpperCase()} (score ${card.score}/100)` +
-      (reasons.length ? `: ${reasons.join('; ')}` : ''),
+      (reasons.length ? `: ${reasons.join('; ')}` : '') +
+      ` [${lineClause(card)}]`,
   };
 }
 
