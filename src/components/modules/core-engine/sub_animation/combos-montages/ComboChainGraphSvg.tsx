@@ -89,7 +89,16 @@ export function ComboChainGraphSvg({ graph, selectedNodeId, onSelectNode, select
         const isSelected = selectedNodeId === node.id;
         const cx = node.lx + NODE_W / 2;
         return (
-          <g key={node.id} onClick={() => onSelectNode?.(isSelected ? null : node.id)} className="cursor-pointer">
+          <g
+            key={node.id}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            aria-label={`${node.name}${node.sub ? `, ${node.sub}` : ''}`}
+            className="cursor-pointer"
+            onClick={() => onSelectNode?.(isSelected ? null : node.id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectNode?.(isSelected ? null : node.id); } }}
+          >
             <rect x={node.lx} y={node.ly - 24} width={NODE_W} height={47} rx={6}
               fill={isSelected ? withOpacity(ACCENT, OPACITY_20) : withOpacity(ACCENT, OPACITY_8)}
               stroke={isSelected ? ACCENT : withOpacity(ACCENT, OPACITY_30)}
