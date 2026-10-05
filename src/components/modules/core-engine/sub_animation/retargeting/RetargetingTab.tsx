@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { OVERLAY_WHITE, withOpacity, OPACITY_4, OPACITY_6, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
+import { OVERLAY_WHITE, STATUS_WARNING, withOpacity, OPACITY_4, OPACITY_6, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { PipelineFlow } from '../../unique-tabs/_shared';
 import {
@@ -43,8 +43,14 @@ function RetargetPipelineStatus() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Retarget Pipeline Status" color={ACCENT} />
-      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
-        Detailed status of each retarget pipeline stage. Click a step to see details.
+      <p
+        data-testid="retarget-pipeline-status-measured"
+        data-measured="false"
+        className="text-xs font-mono text-text-muted mt-1 mb-3 leading-relaxed"
+      >
+        <span className="font-bold" style={{ color: STATUS_WARNING }}>ILLUSTRATIVE</span>
+        {' — '}a design-time example of each retarget pipeline stage, not a live read of any
+        running commandlet. Click a step to see its (illustrative) detail.
       </p>
       <div className="space-y-1.5">
         {RETARGET_PIPELINE_STEPS.map((step, i) => {
@@ -100,8 +106,14 @@ function RootMotionTrajectory() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Root Motion Trajectory Preview" color={ACCENT} />
-      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
-        Top-down view of root motion paths per montage. Line thickness indicates velocity.
+      <p
+        data-testid="root-motion-trajectory-measured"
+        data-measured="false"
+        className="text-xs font-mono text-text-muted mt-1 mb-3 leading-relaxed"
+      >
+        <span className="font-bold" style={{ color: STATUS_WARNING }}>ILLUSTRATIVE</span>
+        {' — '}a design-time example of root motion paths per montage, not sampled from a live
+        UE5 session. Line thickness indicates velocity in the example data.
       </p>
       <div className="flex items-center gap-4">
         <svg width={120} height={120} viewBox="0 0 120 120" className="overflow-visible flex-shrink-0">

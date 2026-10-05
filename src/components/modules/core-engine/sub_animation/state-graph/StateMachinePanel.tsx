@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { Activity, ChevronDown } from 'lucide-react';
-import { withOpacity, OPACITY_8 } from '@/lib/chart-colors';
+import { STATUS_WARNING, withOpacity, OPACITY_8 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import { ACCENT, STATE_GROUPS, STATE_NODES, type StateNode } from '../_shared/data';
@@ -33,8 +33,16 @@ export function StateMachinePanel({ featureMap }: StateMachinePanelProps) {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="AnimBP State Machine" icon={Activity} color={ACCENT} />
-      <p className="text-xs font-mono text-text-muted mb-3">
-        {totalStates} states across {STATE_GROUPS.length} groups &middot; {GRAPH_EDGES.reduce((s, e) => s + e.count, 0)} cross-group transitions
+      <p
+        data-testid="state-machine-panel-measured"
+        data-measured="false"
+        className="text-xs font-mono text-text-muted mb-3 leading-relaxed"
+      >
+        <span className="font-bold" style={{ color: STATUS_WARNING }}>ILLUSTRATIVE</span>
+        {' — '}a design-time example AnimBP graph ({totalStates} states across {STATE_GROUPS.length} groups
+        &middot; {GRAPH_EDGES.reduce((s, e) => s + e.count, 0)} cross-group transitions), not read from your
+        project&apos;s actual state machine. Status dots below are real (from the feature matrix); the
+        graph shape itself is not.
       </p>
 
       {/* SVG State Group Graph */}
