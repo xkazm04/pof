@@ -55,8 +55,11 @@ describe('GameDesignDocView — live architecture diagram', () => {
     const { container } = render(<GameDesignDocView />);
     fireEvent.click(sectionHeader()); // expand to mount the diagram
 
-    await waitFor(() => expect(container.querySelector('.node')).toBeTruthy());
-    const node = container.querySelector('.node') as HTMLElement;
+    // Wait for the INTERACTIVE node, not just any `.node`: mermaid injects the SVG first and the
+    // component adds role="button" to module nodes in a later pass, so under load a bare `.node`
+    // wait resolves before the node is clickable.
+    await waitFor(() => expect(container.querySelector('.node[role="button"]')).toBeTruthy());
+    const node = container.querySelector('.node[role="button"]') as HTMLElement;
     expect(node.getAttribute('role')).toBe('button'); // module nodes are interactive
 
     fireEvent.click(node);
