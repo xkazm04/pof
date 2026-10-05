@@ -19,7 +19,7 @@
  *
  * Pure: no I/O, no React.
  */
-import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
+import type { EditorEffect, GASLoadoutSlot, TagRule } from '@/lib/gas-codegen';
 
 /** Why a rule could not become one of the bound ability's activation rules. */
 export type DropReason =
@@ -108,4 +108,57 @@ export function effectRuleLinks(effects: readonly EditorEffect[], rules: readonl
     }
   }
   return links;
+}
+
+/** Per-rule validation verdict for the Tag Rules editor. */
+export interface RuleValidation {
+  /** The gating tag doesn't match any effect-granted tag or loadout cooldown tag. */
+  gateUnmatched: boolean;
+  /** A human-readable note naming the contradicting rule, or null. */
+  conflict: string | null;
+}
+
+function tagMatchesKnown(tag: string, knownTags: ReadonlySet<string>): boolean {
+  if (!tag || tag.endsWith('.')) return false;
+  for (const known of knownTags) { if (tagsOverlap(tag, known)) return true; }
+  return false;
+}
+
+/**
+ * Every gating tag an effect grants or a loadout slot's cooldown tag names —
+ * the universe a rule's gating tag is checked against for "Unmatched".
+ */
+export function knownGatingTags(effects: readonly EditorEffect[], loadout: readonly GASLoadoutSlot[]): Set<string> {
+  const tags = new Set<string>();
+  for (const eff of effects) { for (const t of eff.grantedTags) if (t) tags.add(t); }
+  for (const slot of loadout) { if (slot.cooldownTag) tags.add(slot.cooldownTag); }
+  return tags;
+}
+
+/**
+ * Validate every rule against the known gating-tag universe: `gateUnmatched`
+ * when its gating tag matches nothing an effect grants or a loadout cooldown
+ * names (a wildcard-ending tag like `State.` is never judged), `conflict` when
+ * another rule on the same ability opposes it (`blocks` vs `requires`) on an
+ * overlapping gating tag.
+ */
+export function validateRules(
+  rules: readonly TagRule[],
+  effects: readonly EditorEffect[],
+  loadout: readonly GASLoadoutSlot[],
+): Map<string, RuleValidation> {
+  const knownTags = knownGatingTags(effects, loadout);
+  const map = new Map<string, RuleValidation>();
+  for (const rule of rules) {
+    const gate = ruleGatingTag(rule);
+    const gateUnmatched = gate.length > 0 && !gate.endsWith('.') && !tagMatchesKnown(gate, knownTags);
+    let conflict: string | null = null;
+    if (rule.type === 'blocks' || rule.type === 'requires') {
+      const oppositeType = rule.type === 'blocks' ? 'requires' : 'blocks';
+      const contradicting = rules.find((other) => other.id !== rule.id && other.type === oppositeType && tagsOverlap(other.sourceTag, rule.sourceTag) && tagsOverlap(ruleGatingTag(other), gate));
+      if (contradicting) conflict = `Conflicts with "${ruleSentence(contradicting)}"`;
+    }
+    map.set(rule.id, { gateUnmatched, conflict });
+  }
+  return map;
 }

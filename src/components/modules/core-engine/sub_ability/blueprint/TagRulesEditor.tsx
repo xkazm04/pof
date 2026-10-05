@@ -10,15 +10,9 @@ import {
 } from '@/lib/chart-colors';
 import { useCollectionEditor } from '@/hooks/useCollectionEditor';
 import type { TagRule, EditorEffect, GASLoadoutSlot } from '@/lib/gas-codegen';
-import { RULE_VERB, ruleGatingTag, ruleSentence, tagsOverlap } from '@/lib/ability/tag-rules';
+import { RULE_VERB, ruleSentence, validateRules } from '@/lib/ability/tag-rules';
 
 const UNMATCHED_TITLE = 'Unmatched: no effect or loadout grants this gating tag';
-
-function tagMatchesKnown(tag: string, knownTags: Set<string>): boolean {
-  if (!tag || tag.endsWith('.')) return false;
-  for (const known of knownTags) { if (tagsOverlap(tag, known)) return true; }
-  return false;
-}
 
 /**
  * Edits the bound ability's own activation rules, in the canonical ability-owned
@@ -44,28 +38,7 @@ export function TagRulesEditor({
 
   const ruleColors: Record<TagRule['type'], string> = { blocks: STATUS_ERROR, cancels: ACCENT_ORANGE, requires: STATUS_SUCCESS };
 
-  const knownTags = useMemo(() => {
-    const tags = new Set<string>();
-    for (const eff of effects) { for (const t of eff.grantedTags) if (t) tags.add(t); }
-    for (const slot of loadout) { if (slot.cooldownTag) tags.add(slot.cooldownTag); }
-    return tags;
-  }, [effects, loadout]);
-
-  const validations = useMemo(() => {
-    const map = new Map<string, { gateUnmatched: boolean; conflict: string | null }>();
-    for (const rule of rules) {
-      const gate = ruleGatingTag(rule);
-      const gateUnmatched = gate.length > 0 && !gate.endsWith('.') && !tagMatchesKnown(gate, knownTags);
-      let conflict: string | null = null;
-      if (rule.type === 'blocks' || rule.type === 'requires') {
-        const oppositeType = rule.type === 'blocks' ? 'requires' : 'blocks';
-        const contradicting = rules.find(other => other.id !== rule.id && other.type === oppositeType && tagsOverlap(other.sourceTag, rule.sourceTag) && tagsOverlap(ruleGatingTag(other), gate));
-        if (contradicting) conflict = `Conflicts with "${ruleSentence(contradicting)}"`;
-      }
-      map.set(rule.id, { gateUnmatched, conflict });
-    }
-    return map;
-  }, [rules, knownTags]);
+  const validations = useMemo(() => validateRules(rules, effects, loadout), [rules, effects, loadout]);
 
   return (
     <div className="space-y-2">
