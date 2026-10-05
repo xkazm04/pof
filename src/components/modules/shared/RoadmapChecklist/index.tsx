@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Info, Flag, CheckSquare, LayoutList, Rows3 } from 'lucide-react';
 import type { SubModuleId } from '@/types/modules';
 import { PRIORITY_CONFIG } from './constants';
@@ -40,6 +41,14 @@ export function RoadmapChecklist({
   } = useRoadmapChecklist(items, subModuleId);
   // On demand only: nothing is verified or ticked until a panel button is clicked.
   const disk = useDiskCheck(subModuleId, items);
+
+  // `items` can change while the menu is open (module switch, checklist reload):
+  // resolve the target once so a vanished item renders no menu instead of `undefined`.
+  const contextItem = contextMenu ? items.find((i) => i.id === contextMenu.itemId) : undefined;
+  const staleContextMenu = !!contextMenu && !contextItem;
+  useEffect(() => {
+    if (staleContextMenu) closeContextMenu();
+  }, [staleContextMenu, closeContextMenu]);
 
   return (
     <div className="space-y-4">
@@ -237,12 +246,12 @@ export function RoadmapChecklist({
       )}
 
       {/* Context menu */}
-      {contextMenu && (
+      {contextMenu && contextItem && (
         <ChecklistContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          item={items.find((i) => i.id === contextMenu.itemId)!}
-          itemIndex={items.findIndex((i) => i.id === contextMenu.itemId)}
+          item={contextItem}
+          itemIndex={items.indexOf(contextItem)}
           isChecked={!!progress[contextMenu.itemId]}
           verification={verification[contextMenu.itemId]}
           accentColor={accentColor}
