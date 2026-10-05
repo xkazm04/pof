@@ -1,5 +1,8 @@
 import { Film, RefreshCw, Scan, Play, RotateCcw, Plug, Monitor, LayoutTemplate } from 'lucide-react';
-import { ACCENT_ORANGE, STATUS_SUCCESS } from '@/lib/chart-colors';
+import {
+  ACCENT_ORANGE, STATUS_SUCCESS, ACCENT_EMERALD, ACCENT_EMERALD_DARK,
+  withOpacity, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_40,
+} from '@/lib/chart-colors';
 import { ExplainToggle } from '@/components/animations/explain';
 import { ANIM_ACCENT, GRAPH_PROVENANCE } from './constants';
 import { resolveGraphProvenance } from './helpers';
@@ -58,7 +61,7 @@ export function StateMachineHeader({
               data-testid="graph-provenance"
               data-provenance={provenance}
               title={label}
-              className={`text-[11px] px-2 py-0.5 rounded border flex items-center gap-1 ${
+              className={`text-xs px-2 py-0.5 rounded border flex items-center gap-1 ${
                 isBridge
                   ? 'bg-green-500/20 text-green-300 border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
                   : 'bg-violet-500/20 text-violet-300 border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]'
@@ -127,10 +130,10 @@ export function StateMachineHeader({
             disabled={!blenderConnected || blenderExporting || displayStates.length === 0}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 shadow-lg"
             style={{
-              backgroundColor: 'rgba(16,185,129,0.12)',
-              color: 'rgb(52,211,153)',
-              border: '1px solid rgba(16,185,129,0.4)',
-              boxShadow: '0 0 10px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
+              backgroundColor: withOpacity(ACCENT_EMERALD_DARK, OPACITY_12),
+              color: ACCENT_EMERALD,
+              border: `1px solid ${withOpacity(ACCENT_EMERALD_DARK, OPACITY_40)}`,
+              boxShadow: `0 0 10px ${withOpacity(ACCENT_EMERALD_DARK, OPACITY_20)}, inset 0 0 10px ${withOpacity(ACCENT_EMERALD_DARK, OPACITY_10)}`,
             }}
             title={!blenderConnected ? 'Connect to Blender first' : 'Export state machine as NLA tracks in Blender'}
           >
