@@ -14,13 +14,27 @@ import {
 } from '../_shared/data';
 import { useSpellbookEntries } from '@/stores/catalogStore';
 import { LifecycleBadge } from '@/components/catalog/LifecycleBadge';
-import type { LifecycleState } from '@/lib/catalog/types';
+import type { LifecycleState, StoredCatalogEntity } from '@/lib/catalog/types';
 import { useGeneration } from '@/hooks/useGeneration';
 import { AbilityCompareSelector } from './AbilityCompareSelector';
 
 const DEFAULT_SELECTED = ['off-fire-01', 'off-ice-01', 'off-ltn-01', 'def-phy-03'];
 const MAX_COMPARE = 6;
 const MIN_COMPARE = 2;
+
+// useGeneration needs a concrete entity, but the spellbook catalog can be
+// genuinely empty (before seeding/fetch resolves) — then `primaryEntry` is
+// undefined. The (Re)generate affordance below is gated on a real
+// `primaryEntry`, so this placeholder is never actually dispatched (same
+// pattern as ComboChainDiagram's EMPTY_COMBO_ENTRY).
+const EMPTY_ABILITY_ENTRY: StoredCatalogEntity = {
+  id: '',
+  catalogId: 'spellbook',
+  name: '',
+  categoryPath: [],
+  tags: [],
+  lifecycle: 'planned',
+};
 
 export function AbilityCompareRadar() {
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -49,8 +63,8 @@ export function AbilityCompareRadar() {
   const primary = selectedAbilities[primaryIdx] ?? selectedAbilities[0];
 
   // folder-09: dispatch generation for the primary compared ability.
-  const primaryEntry = (entries.find((e) => e.id === primary?.id) ?? entries[0])!;
-  const gen = useGeneration(primaryEntry);
+  const primaryEntry = entries.find((e) => e.id === primary?.id) ?? entries[0];
+  const gen = useGeneration(primaryEntry ?? EMPTY_ABILITY_ENTRY);
 
   return (
     <SurfaceCard level={2} className="p-3 relative overflow-hidden">
@@ -58,7 +72,7 @@ export function AbilityCompareRadar() {
       <div className="flex items-center justify-between mb-3">
         <SectionLabel icon={Sparkles} label="Ability Comparison Radar" color={ACCENT_PURPLE_BOLD} />
         <div className="flex items-center gap-2">
-        {gen.nextStep && (
+        {primaryEntry && gen.nextStep && (
         <button
           onClick={() => gen.generate()}
           disabled={gen.isRunning}
@@ -68,7 +82,7 @@ export function AbilityCompareRadar() {
             borderColor: withOpacity(ACCENT_GREEN, OPACITY_25),
             color: ACCENT_GREEN,
           }}
-          title={`Generate "${primaryEntry?.name}" into UE — next step: ${gen.nextStep}`}
+          title={`Generate "${primaryEntry.name}" into UE — next step: ${gen.nextStep}`}
         >
           <Sparkles className="w-3.5 h-3.5" />
           {gen.isRunning ? 'Generating…' : `(Re)generate · ${gen.nextStep}`}
