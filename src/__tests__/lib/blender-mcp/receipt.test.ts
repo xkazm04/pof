@@ -104,9 +104,27 @@ describe('generators end in exactly one receipt', () => {
     expect(code.split(RECEIPT_MARKER)).toHaveLength(2);
     expect(code).toContain('__import__("json").dumps(');
     expect(code.indexOf(RECEIPT_MARKER)).toBeGreaterThan(code.indexOf('raise RuntimeError'));
-    const out = printedReceipt(code);
+    const out = printedReceipt(code, { _meshes: 3, True: true });
     expect(readReceipt(out, 'export', { path: 'C:/x.fbx' })).toMatchObject({ state: 'confirmed' });
     expect(code).not.toContain('POF_EXPORT_FINISHED=');
+  });
+
+  it('export-scene reads the written file back, and raises on a mismatch BEFORE the receipt', () => {
+    // FINISHED says the operator ran, not what the file holds: on Blender 4.2.1 an
+    // unscoped glTF export wrote a side scene's object beside the hero, and an empty
+    // scene wrote a valid zero-mesh file, both FINISHED (intake-1005-z8xh A/B).
+    const glb = exportSceneScript({ outputPath: 'C:/x.glb', format: 'gltf' });
+    expect(glb).toContain('use_active_scene=True');
+    expect(glb).toContain('extra-scenes');
+    expect(glb).toContain('foreign-objects');
+    const fbx = exportSceneScript({ outputPath: 'C:/x.fbx', format: 'fbx' });
+    expect(fbx).toContain('bpy.ops.import_scene.fbx(filepath=_path)');
+    for (const code of [glb, fbx]) {
+      expect(code).toContain('empty-export');
+      const failed = code.indexOf("raise RuntimeError('export read-back failed");
+      expect(failed).toBeGreaterThan(code.indexOf("if 'FINISHED' not in status:"));
+      expect(code.indexOf(RECEIPT_MARKER)).toBeGreaterThan(failed);
+    }
   });
 });
 
