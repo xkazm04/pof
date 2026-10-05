@@ -160,7 +160,7 @@ node scripts/anim-critique.mjs --dir <frames> --intent "…" --provider qwen
 | `shots/veo_gen.mjs` | Veo generation (legacy; superseded by Leonardo below) |
 | `shots/leo_video_gen.mjs` | **Leonardo Hailuo 2.3 video gen** (t2v / i2v), download-then-delete — the Gemini-free generator |
 | `src/lib/leonardo.ts` | `generateVideo` (hailuo-2_3 T2V) + `generateVideoFromImage` (hailuo-2_3-fast I2V) + cleanup |
-| `src/lib/anim-critique/qwen.ts` | Qwen vision seam + measured quota fallback chain (qwen3.8-27b→3.7-flash→3.6-flash→3.8-max→3.6-plus→3.7-plus) |
+| `src/lib/anim-critique/qwen.ts` | Qwen vision seam + measured quota fallback chain (qwen3.7-flash→3.8-27b→3.8-max→3.6-flash→3.6-plus→3.7-plus) |
 | `shots/mha_capture.py` | ingest + body-only solve + export (the 5 fixes #1–3 here) |
 | `shots/mha_retarget.py` | IK rig + retargeter (op stack) + batch retarget (fix #4) |
 | `shots/veo_manny.json` | render scenario (`play_anim`) |
