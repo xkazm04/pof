@@ -29,14 +29,6 @@ export function toDottedTag(tag: string): string {
   return t.replace(/_+/g, '.');
 }
 
-/**
- * Dotted tag string → C++ identifier (`Ability.Fireball` → `Ability_Fireball`).
- * The inverse of {@link toDottedTag}, for code that must name the engine symbol.
- */
-export function toCppTagName(tag: string): string {
-  return (tag ?? '').trim().replace(/\./g, '_');
-}
-
 /** Normalize a list to the dotted dialect, dropping empties and de-duping (order kept). */
 export function toDottedTags(tags: readonly string[]): string[] {
   const seen = new Set<string>();

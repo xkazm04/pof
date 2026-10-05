@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toDottedTag, toCppTagName, toDottedTags } from '@/lib/ability/tag-dialect';
+import { toDottedTag, toDottedTags } from '@/lib/ability/tag-dialect';
 
 describe('tag-dialect — one mapper for both spellings', () => {
   it('C++ identifier → dotted tag string', () => {
@@ -20,11 +20,6 @@ describe('tag-dialect — one mapper for both spellings', () => {
 
   it('collapses repeated underscores rather than emitting empty segments', () => {
     expect(toDottedTag('Ability__Fire')).toBe('Ability.Fire');
-  });
-
-  it('toCppTagName is the inverse', () => {
-    expect(toCppTagName('Ability.Fire.Fireball')).toBe('Ability_Fire_Fireball');
-    expect(toDottedTag(toCppTagName('Ability.Fire.Fireball'))).toBe('Ability.Fire.Fireball');
   });
 
   it('toDottedTags normalizes, drops empties and de-dupes, keeping order', () => {
