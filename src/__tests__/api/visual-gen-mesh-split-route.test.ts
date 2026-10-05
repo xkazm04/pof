@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * Wiring + refusal guard for the split endpoint.
@@ -12,7 +15,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const runMeshSplit = vi.fn();
 vi.mock('@/lib/visual-gen/mesh-split', () => ({ runMeshSplit: (...a: unknown[]) => runMeshSplit(...a) }));
 // No fs mock: the route's existence check is part of what is under test, so it runs
-// against a real file that this repo ships under `generated/`.
+// against a real (empty) file. `generated/` is gitignored, so the file is created in a
+// throwaway temp dir that `process.cwd()` is pointed at for each test.
 const REAL = 'props__crate.glb';
 const REAL_DIR = 'meshes';
 
@@ -23,14 +27,34 @@ async function post(body: unknown) {
 }
 
 describe('POST /api/visual-gen/mesh-split', () => {
-  beforeEach(() => runMeshSplit.mockReset());
+  let root: string;
+
+  beforeEach(() => {
+    runMeshSplit.mockReset();
+    root = mkdtempSync(join(tmpdir(), 'mesh-split-route-'));
+    mkdirSync(join(root, 'generated', REAL_DIR), { recursive: true });
+    writeFileSync(join(root, 'generated', REAL_DIR, REAL), '');
+    vi.spyOn(process, 'cwd').mockReturnValue(root);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('returns 404 and never runs the split when the basename does not exist', async () => {
+    const res = await post({ name: 'props__missing.glb', dir: REAL_DIR });
+    expect(res.status).toBe(404);
+    expect(runMeshSplit).not.toHaveBeenCalled();
+  });
 
   it('writes only inside the allow-listed split dir and never lets a caller name a path', async () => {
     runMeshSplit.mockResolvedValue({ ok: true, parts: [], durationMs: 1 });
     await post({ name: REAL, dir: REAL_DIR });
     const spec = runMeshSplit.mock.calls[0][0] as { inputPath: string; outputDir: string; prefix: string };
-    expect(spec.inputPath.endsWith(`generated/${REAL_DIR}/${REAL}`)).toBe(true);
-    expect(spec.outputDir.endsWith('generated/mesh-split')).toBe(true);
+    const base = root.replaceAll('\\', '/');
+    expect(spec.inputPath).toBe(`${base}/generated/${REAL_DIR}/${REAL}`);
+    expect(spec.outputDir).toBe(`${base}/generated/mesh-split`);
     expect(spec.prefix).toBe('props__crate');
   });
 
