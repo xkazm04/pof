@@ -9,6 +9,7 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { apiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import type { AudioSceneDocument } from '@/types/audio-scene';
 import type { GeneratedFile, CodeGenResult } from '@/lib/audio-codegen';
 import { UI_TIMEOUTS, MODULE_COLORS } from '@/lib/constants';
@@ -61,9 +62,13 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
   }, [doc.id, moduleName, apiMacro]);
 
   const handleCopy = useCallback(async (file: GeneratedFile) => {
-    await navigator.clipboard.writeText(file.content);
-    setCopiedFile(file.filename);
-    setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
+    try {
+      await navigator.clipboard.writeText(file.content);
+      setCopiedFile(file.filename);
+      setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
+    } catch (err) {
+      logger.warn('audio-codegen copy failed', { file: file.filename, err });
+    }
   }, []);
 
   const handleCopyAll = useCallback(async () => {
@@ -71,9 +76,13 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
     const allContent = result.files.map(f =>
       `// ═══════════════════════════════════════════\n// File: ${f.filename}\n// ═══════════════════════════════════════════\n\n${f.content}`
     ).join('\n\n');
-    await navigator.clipboard.writeText(allContent);
-    setCopiedFile('__all__');
-    setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
+    try {
+      await navigator.clipboard.writeText(allContent);
+      setCopiedFile('__all__');
+      setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
+    } catch (err) {
+      logger.warn('audio-codegen copy-all failed', { err });
+    }
   }, [result]);
 
   // Group files by category
