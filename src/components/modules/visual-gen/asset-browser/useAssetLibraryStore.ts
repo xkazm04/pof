@@ -107,7 +107,20 @@ export const useAssetLibraryStore = create<AssetLibraryState>((set, get) => ({
 
   removeAsset: async (id) => {
     const res = await tryApiFetch<{ deleted: string }>(`${LIBRARY_URL}/${id}`, { method: 'DELETE' });
-    if (res.ok) set((s) => ({ assets: s.assets.filter((a) => a.id !== id) }));
+    if (!res.ok) return;
+    // The deleted asset's own membership — addToCollection/removeFromCollection both keep
+    // each collection's assetCount in step with membership; a full delete must too, or the
+    // sidebar keeps counting an asset that no longer exists.
+    set((s) => {
+      const removed = s.assets.find((a) => a.id === id);
+      const memberOf = new Set(removed?.collectionIds ?? []);
+      return {
+        assets: s.assets.filter((a) => a.id !== id),
+        collections: memberOf.size === 0
+          ? s.collections
+          : s.collections.map((c) => (memberOf.has(c.id) ? { ...c, assetCount: Math.max(0, c.assetCount - 1) } : c)),
+      };
+    });
   },
 
   createCollection: async (name) => {
