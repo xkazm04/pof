@@ -13,6 +13,7 @@
  *   npx tsx scripts/readiness/inventory.ts --level R0         # only cells at R0
  *   npx tsx scripts/readiness/inventory.ts --engine Claude,Code
  *   npx tsx scripts/readiness/inventory.ts --state waiting    # reached|waiting|blocked
+ *   npx tsx scripts/readiness/inventory.ts --route text       # at-r3|text|model-blocked|other-gate
  *   npx tsx scripts/readiness/inventory.ts --json             # machine-readable (fleet dispatch)
  *   npx tsx scripts/readiness/inventory.ts --json --level R0 --engine Claude,Code
  */
@@ -25,6 +26,7 @@ import { buildSwimlane, type StepMeta } from '@/lib/status/statusModel';
 import { readinessOf, READINESS_NAME, LADDER, type ReadinessLevel } from '@/lib/status/readiness';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import { routeOf, summarizeRoutes, ROUTES, type ReadinessRoute } from '@/lib/status/readinessRoute';
 
 const DB_PATH = process.env.POF_DB_PATH ?? join(homedir(), '.pof', 'pof.db');
 
@@ -88,6 +90,8 @@ export interface InventoryRow {
   step: string;
   engine: string;
   level: ReadinessLevel;
+  /** Which way this cell can be worked — see `@/lib/status/readinessRoute`. */
+  route: ReadinessRoute;
   state: 'reached' | 'waiting' | 'blocked';
   because: string;
   /** The acceptance tier, kept as evidence-class metadata (never a second rating). */
@@ -130,6 +134,7 @@ export function buildInventory(): InventoryRow[] {
         step: cell.label,
         engine: cell.engine,
         level: r.level,
+        route: routeOf({ engine: cell.engine, judge: cell.judge, level: r.level, state: r.state }),
         state: r.state,
         because: r.because,
         ...(cell.tier ? { tier: cell.tier } : {}),
@@ -150,6 +155,7 @@ function main() {
   const levelFilter = arg('level');
   const engineFilter = arg('engine');
   const stateFilter = arg('state');
+  const routeFilter = arg('route');
   if (levelFilter) {
     const want = new Set(levelFilter.split(',').map((s) => s.trim()));
     rows = rows.filter((r) => want.has(r.level));
@@ -159,6 +165,13 @@ function main() {
     rows = rows.filter((r) => want.has(r.engine.toLowerCase()));
   }
   if (stateFilter) rows = rows.filter((r) => r.state === stateFilter);
+  if (routeFilter) {
+    const want = new Set(routeFilter.split(',').map((s) => s.trim()));
+    for (const w of want) {
+      if (!(ROUTES as readonly string[]).includes(w)) throw new Error(`unknown --route "${w}" (${ROUTES.join('|')})`);
+    }
+    rows = rows.filter((r) => want.has(r.route));
+  }
 
   if (has('json')) {
     process.stdout.write(JSON.stringify({ total, matched: rows.length, rows }, null, 2));
@@ -185,9 +198,16 @@ function main() {
   out.push(`  ⋯  WAITING     ${String(byState.get('waiting') ?? 0).padStart(4)}  (gate declared, never run)`);
   out.push(`  ✕  BLOCKED     ${String(byState.get('blocked') ?? 0).padStart(4)}  (checker or judge condemned)`);
   out.push('');
+  const rs = summarizeRoutes(all);
+  out.push('GOAL 1 — every text-route pipeline item reaches R3');
+  out.push(`  R3+ ${rs['at-r3']} of ${rs.total}`);
+  out.push(`  text-route below R3  ${String(rs.text).padStart(4)}  (Claude engine or llm-panel judge, via the claude CLI)`);
+  out.push(`  model-blocked        ${String(rs['model-blocked']).padStart(4)}  (needs a commercial/local model — recorded, never attempted)`);
+  out.push(`  other-gate           ${String(rs['other-gate']).padStart(4)}  (UE runtime, code, packaging, human)`);
+  out.push('');
 
-  if (levelFilter || engineFilter || stateFilter) {
-    out.push(`MATCHED ${rows.length} step(s)  [level=${levelFilter ?? '*'} engine=${engineFilter ?? '*'} state=${stateFilter ?? '*'}]`);
+  if (levelFilter || engineFilter || stateFilter || routeFilter) {
+    out.push(`MATCHED ${rows.length} step(s)  [level=${levelFilter ?? '*'} engine=${engineFilter ?? '*'} state=${stateFilter ?? '*'} route=${routeFilter ?? '*'}]`);
     out.push('');
     const byCatalog = new Map<string, InventoryRow[]>();
     for (const r of rows) {
