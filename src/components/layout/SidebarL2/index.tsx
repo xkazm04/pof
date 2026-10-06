@@ -31,6 +31,8 @@ export function SidebarL2() {
     handleKeyDown,
   } = useSidebarL2();
 
+  const hasActiveItem = subModules.some((mod) => mod.id === activeSubModule);
+
   return (
     <AnimatePresence mode="wait">
       {category && subModules.length > 0 && (
@@ -75,9 +77,11 @@ export function SidebarL2() {
                 )}
               </div>
             </div>
+            {/* Roving tabindex: the active item (else the first) is the list's single tab stop. */}
             <StaggerContainer ref={listRef} className="flex-1 overflow-y-auto py-2" role="listbox" aria-label={`${category.label} modules`}>
-              {subModules.map((mod) => {
+              {subModules.map((mod, i) => {
                 const isActive = activeSubModule === mod.id;
+                const isTabStop = hasActiveItem ? isActive : i === 0;
                 const Icon = mod.icon;
                 const isPlanItem = mod.id === 'core-engine-plan';
                 return (
@@ -88,6 +92,7 @@ export function SidebarL2() {
                     onClick={() => setActiveSubModule(mod.id)}
                     onKeyDown={handleKeyDown}
                     role="option"
+                    tabIndex={isTabStop ? 0 : -1}
                     aria-selected={isActive}
                     aria-label={mod.label}
                     className={`

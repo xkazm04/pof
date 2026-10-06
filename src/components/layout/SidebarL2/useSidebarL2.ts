@@ -151,17 +151,19 @@ export function useSidebarL2() {
     });
   }, [activeCategory, triggerSnapPulse]);
 
+  // Roving tabindex listbox: one tab stop (see index.tsx); arrows wrap, Home/End jump to the ends.
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>('button[data-sidebar-item]');
-      if (!buttons || buttons.length === 0) return;
-      const idx = Array.from(buttons).indexOf(e.currentTarget);
-      const next = e.key === 'ArrowDown'
-        ? buttons[(idx + 1) % buttons.length]
-        : buttons[(idx - 1 + buttons.length) % buttons.length];
-      next?.focus();
-    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>('button[data-sidebar-item]');
+    if (!buttons || buttons.length === 0) return;
+    const idx = Array.from(buttons).indexOf(e.currentTarget);
+    let nextIdx: number;
+    if (e.key === 'Home') nextIdx = 0;
+    else if (e.key === 'End') nextIdx = buttons.length - 1;
+    else if (e.key === 'ArrowDown') nextIdx = (idx + 1) % buttons.length;
+    else nextIdx = (idx - 1 + buttons.length) % buttons.length;
+    buttons[nextIdx]?.focus();
   }, []);
 
   return {
