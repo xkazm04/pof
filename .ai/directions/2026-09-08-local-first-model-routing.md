@@ -488,3 +488,7 @@ The fix is not a shorter clock for the UI — that treats the symptom and re-int
 The synchronous rows below it are correct as they are: their callers are scripts, the harness
 and the CLI, which want the answer and can afford to wait — which is precisely the case this
 policy was written for.
+
+## Paused 2026-10-07
+
+The operator's text-only rule (text LLM through the claude CLI only; no commercial services and no local models) pauses this direction; nothing in it is withdrawn. Step 2 (the arena) and any ollama, Gemini or Qwen routing wait until the operator lifts the rule. The DECISION is recorded in `.claude/fleet-memory.md`.
