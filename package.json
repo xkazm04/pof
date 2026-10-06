@@ -26,6 +26,7 @@
     "ledger": "node scripts/animation-ledger.mjs",
     "check:tokens": "node scripts/token-parity.mjs",
     "kpi:matrix": "node --no-warnings scripts/kpi-matrix-freshness.mjs",
+    "review:module": "node --no-warnings scripts/review-module.mjs",
     "kpi:sweep": "node --no-warnings scripts/kpi-scan-sweep-debt.mjs"
   },
   "dependencies": {
