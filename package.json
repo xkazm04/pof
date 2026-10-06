@@ -25,7 +25,8 @@
     "snapshot:ue-schema": "npx tsx scripts/snapshot-ue-schema.ts",
     "ledger": "node scripts/animation-ledger.mjs",
     "check:tokens": "node scripts/token-parity.mjs",
-    "kpi:matrix": "node --no-warnings scripts/kpi-matrix-freshness.mjs"
+    "kpi:matrix": "node --no-warnings scripts/kpi-matrix-freshness.mjs",
+    "kpi:sweep": "node --no-warnings scripts/kpi-scan-sweep-debt.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",
