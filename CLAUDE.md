@@ -35,8 +35,12 @@ Rules for every session:
    (`- [YYYY-MM-DD] [area] KIND: one sentence`) — a DECISION and/or DELIVERED,
    plus a CONVENTION only if you established a genuinely reusable pattern.
 3. **Never** paste logs, diffs, or file contents into it; never rewrite or
-   delete other sessions' lines (except pruning oldest DELIVERED lines when
-   the file exceeds ~200 lines).
+   delete other sessions' lines. The one exception is the cap: the file holds
+   at most 200 **entries** (`- [date] [area] KIND:` lines; the header does not
+   count). Past that, `node scripts/fleet-memory-cap.mjs --prune` moves the
+   oldest DELIVERED lines verbatim to `.claude/fleet-memory-archive.md` (append-only,
+   nothing is lost). DECISION and CONVENTION lines are never pruned; if they alone
+   exceed the cap the script fails and a human retires superseded ones.
 4. Appending is the only edit mode — if your tooling can't append safely,
    skip the write rather than risk clobbering parallel writers.
 5. **Commit it scoped:** `git commit --only .claude/fleet-memory.md -m '...'` —
