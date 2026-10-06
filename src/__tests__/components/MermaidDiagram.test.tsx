@@ -52,9 +52,10 @@ describe('MermaidDiagram', () => {
     const root = container.firstChild as HTMLElement;
     expect(root.getAttribute('role')).toBe('group');
 
-    await waitFor(() => expect(container.querySelector('.node')).toBeTruthy());
+    // Wait for the wired state itself: role/tabindex/listeners are attached by a second
+    // passive effect that can run after the SVG commit, so `.node` existing is not enough.
+    await waitFor(() => expect(container.querySelector('.node')?.getAttribute('role')).toBe('button'));
     const node = container.querySelector('.node') as HTMLElement;
-    expect(node.getAttribute('role')).toBe('button');
     expect(node.getAttribute('tabindex')).toBe('0');
     fireEvent.click(node);
     expect(onNodeClick).toHaveBeenCalledWith('flowchart-arpg_combat-1');
@@ -66,7 +67,8 @@ describe('MermaidDiagram', () => {
     const { container } = render(
       <MermaidDiagram code="graph TD" ariaLabel="Architecture" onNodeClick={onNodeClick} />
     );
-    await waitFor(() => expect(container.querySelector('.node')).toBeTruthy());
+    // role=button is set in the same effect that attaches the keydown listener.
+    await waitFor(() => expect(container.querySelector('.node')?.getAttribute('role')).toBe('button'));
     fireEvent.keyDown(container.querySelector('.node') as HTMLElement, { key: 'Enter' });
     expect(onNodeClick).toHaveBeenCalledWith('flowchart-arpg_combat-1');
   });
@@ -84,6 +86,7 @@ describe('MermaidDiagram', () => {
     );
     await waitFor(() => expect(container.querySelector('.node')).toBeTruthy());
     const node = container.querySelector('.node') as HTMLElement;
+    // Negative assertion: it cannot detect the wiring effect not having run yet.
     expect(node.getAttribute('role')).toBeNull();
     fireEvent.click(node);
     expect(onNodeClick).not.toHaveBeenCalled();
