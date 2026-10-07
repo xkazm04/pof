@@ -32,6 +32,7 @@ import { readsDirection } from '@/lib/catalog/stepSpec';
 import { collectStepEvidence } from './shared/stepEvidence';
 import { StepLibraryPicker } from './shared/StepLibraryPicker';
 import { libraryAttachmentLines, addReference, removeReference } from './shared/libraryReference';
+import { useJudgeVerdictDesk } from './ux/useJudgeVerdictDesk';
 import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
@@ -400,6 +401,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // switch only appears where flipping it actually changes what the next click does, and
   // so `buildPrompt` knows whether to preview the dispatch envelope.
   const liveEligible = !!catalogId && isCliEligible(spec.archetype);
+  // PROTOTYPE, opt-in via `?ux=judge-verdict` (read in useUxVariant): lays the blocking judge verdict out for the decision; without the flag it hands back `acceptance` untouched, no panel, no seed.
+  const desk = useJudgeVerdictDesk({ t, catalogId, entityId: entity.id, step, acceptance, fixEffect, liveEligible });
 
   /**
    * The step's produce prompt — built by the SHARED `buildStepProducePrompt`, which the
@@ -448,8 +451,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   };
 
   const cli = (onComplete: CliProduceProps['onComplete']) => (
-    <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
-      defaultDirection={spec.defaultDirection} note={spec.produceNote}
+    <CliProduce key={desk.seedKey} t={t} label={`Produce ${spec.label}`} rows={3}
+      defaultDirection={desk.seed ?? spec.defaultDirection} note={spec.produceNote}
       liveEligible={liveEligible}
       attachments={[...evidence.map((e) => `${e.kind} · ${e.url}`), ...libraryAttachmentLines(referenced)]}
       fields={
@@ -526,7 +529,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // Every generic step exposes its stored payload verbatim — produce bodies write far more
   // than any View renders or Checker grades (wiringContract, notes, breakdowns), and none of
   // it was reachable from the UI. Collapsed by default; serialized only when expanded.
-  panels = [...panels, { label: 'Raw artifact', node: (
+  panels = [...desk.panels, ...panels, { label: 'Raw artifact', node: (
     <>
       <RawArtifactDisclosure t={t} data={data} ueAssets={art?.ueAssets} verdict={art} />
       {/* The versions this step's re-produces superseded. Server-side, because the local
@@ -551,7 +554,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           {linkRes.label}: {linkRes.detail}{linkRes.reason ? ` — ${linkRes.reason}` : ''}
         </div>
       )}
-      <StepFrame t={t} acceptance={acceptance} panels={panels}
+      <StepFrame t={t} acceptance={desk.acceptance} panels={panels}
         catalogId={catalogId} step={step}
         // A gallery step's `selected(...)` gate is an L1 HUMAN-selection claim, but
         // `appendBatch` auto-picks the first candidate — so the strip says which it was.
