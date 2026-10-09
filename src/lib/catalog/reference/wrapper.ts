@@ -68,7 +68,7 @@ export function projectionHash(entity: IngestedEntity): string {
 /** Pure: one table's text → wrappers + everything the loop needs to judge the mapping. */
 export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, text: string, now = new Date().toISOString()): TableWrapResult {
   const technique = getTechnique(spec.technique);
-  const table = technique.read(text);
+  const table = technique.read(text, { file: spec.file });
   // A derivation is code: its version (code revision + the laws it reads) is part of the mapping version, or an edit to
   // it would leave every row "unchanged" and never re-project (D29).
   const hasProjectionOptions = spec.displayName !== undefined || spec.keyPrefix !== undefined || spec.keyDecode !== undefined;

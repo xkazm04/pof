@@ -7,8 +7,14 @@
  * palettes, levels (DUN) and audio (WAV inside an MPQ) would each be another technique with
  * another `assetKind`. Only the ones that exist are registered — an entry here is a promise
  * that `read` works, so a technique is added when it is built, not when it is imagined.
+ *
+ * `source-code` (/zelda, 2026-10-09): a decompilation has no design tables, so its reader takes
+ * one C++ file and yields one record per class / struct / union definition — the record shape
+ * is documented in `ingest/cppDecls.ts`. It needs the file's path (the record carries it), which
+ * is why `read` takes an optional context; the table readers ignore it.
  */
 import { parseTsv, type TsvTable } from '@/lib/catalog/ingest/tsv';
+import { parseCppDecls } from '@/lib/catalog/ingest/cppDecls';
 
 /** Transpose an Attribute-or-Variable/Value table into the single record consumed by FieldMap. */
 export function parseTsvKv(text: string): TsvTable {
@@ -66,7 +72,13 @@ export function parseTsvKv(text: string): TsvTable {
 }
 
 /** What kind of game asset a technique reads. Grows as techniques are built. */
-export type AssetKind = 'table';
+export type AssetKind = 'table' | 'source-code';
+
+/** What a reader may know beyond the bytes: where they came from. */
+export interface ReadContext {
+  /** Path relative to the source's data root. */
+  file: string;
+}
 
 export interface ReadingTechnique {
   id: string;
@@ -74,7 +86,7 @@ export interface ReadingTechnique {
   version: number;
   assetKind: AssetKind;
   describe: string;
-  read(text: string): TsvTable;
+  read(text: string, ctx?: ReadContext): TsvTable;
 }
 
 export const TECHNIQUES: Record<string, ReadingTechnique> = {
@@ -83,7 +95,7 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
     version: 1,
     assetKind: 'table',
     describe: 'Tab-separated design table, header row first, no quoting (DevilutionX assets/txtdata).',
-    read: parseTsv,
+    read: (text) => parseTsv(text),
   },
   'tsv-kv': {
     id: 'tsv-kv',
@@ -91,6 +103,13 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
     assetKind: 'table',
     describe: 'Transposed Attribute-or-Variable/Value TSV projected as one record whose keys are columns.',
     read: parseTsvKv,
+  },
+  'cpp-decls': {
+    id: 'cpp-decls',
+    version: 1,
+    assetKind: 'source-code',
+    describe: 'One C++ header or source file → one record per class/struct/union definition: path, namespace, bases, member function and field NAMES (ingest/cppDecls.ts).',
+    read: (text, ctx) => parseCppDecls(text, { file: ctx?.file ?? '' }),
   },
 };
 

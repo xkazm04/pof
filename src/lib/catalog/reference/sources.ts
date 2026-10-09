@@ -35,9 +35,15 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
+import { BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
-  /** Path relative to the source's data root: `monsters/monstdat.tsv`. */
+  /**
+   * Path relative to the source's data root: `monsters/monstdat.tsv` — or a GLOB over it
+   * (`src/Game/Actor/Player/**` + `/*.{h,cpp}`; see `pathCoverage.isGlobPattern`). A glob spec reads
+   * every matching file with the same technique and map; each file's records keep their own
+   * path as wrapper identity, and the run summary reports the spec once, with its file counts.
+   */
   file: string;
   catalogId: string;
   /** Key into `TECHNIQUES`. */
@@ -82,6 +88,8 @@ export interface ReferenceSource {
   tables: ReferenceTableSpec[];
   /** Metadata-only registries checked for upstream entries with no registered table. */
   manifests?: ReferenceManifestSpec[];
+  /** The upstream commit the data root must be at — a code reference is read at a pin. */
+  pin?: string;
 }
 
 export const DIABLO1: ReferenceSource = {
@@ -139,7 +147,25 @@ export const DIABLO1: ReferenceSource = {
   }],
 };
 
-export const REFERENCE_SOURCES: Record<string, ReferenceSource> = { [DIABLO1.id]: DIABLO1 };
+/**
+ * Breath of the Wild, read from the zeldaret/botw decompilation (/zelda). Its specs are GLOBS over
+ * the C++ tree, one per area mapped so far; `BOTW_DESCOPES` (ingest/botw.ts) holds what PoF does not
+ * need, and `scripts/zelda/status.ts` derives the covered / descoped / open file counts from both.
+ */
+export const BOTW: ReferenceSource = {
+  id: 'botw',
+  game: BOTW_SOURCE.sourceGame,
+  project: BOTW_SOURCE.sourceProject,
+  licenceNote: BOTW_SOURCE.licenceNote,
+  idPrefix: 'botw',
+  // No canon profile is registered for it yet; nothing is promoted until one is (/zelda Decisions).
+  canonProfile: 'botw',
+  obtain: BOTW_OBTAIN,
+  pin: BOTW_PIN,
+  tables: [],
+};
+
+export const REFERENCE_SOURCES: Record<string, ReferenceSource> = { [DIABLO1.id]: DIABLO1, [BOTW.id]: BOTW };
 
 export function getReferenceSource(id: string): ReferenceSource {
   const s = REFERENCE_SOURCES[id];

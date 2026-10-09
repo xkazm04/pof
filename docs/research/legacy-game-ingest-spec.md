@@ -26,6 +26,32 @@ turned this into a long-running loop whose product is the adjustments. W00 lande
   for those columns is a step artifact (decision D3), and PoF's canon injects its own world into every
   produce prompt, which a Diablo replication needs a profile for (D5).
 
+## Follow-up (2026-10-09): `/zelda` — a CODE reference (Breath of the Wild)
+
+The second source is a different class of reference: **zeldaret/botw**, a C++ decompilation with
+no design tables and no assets. Its design lives in the shape of the code, so the chassis gained:
+
+- **Technique `cpp-decls@1`** (asset kind `source-code`, `ingest/cppDecls.ts`) — one `.h`/`.cpp`
+  file → one record per class / struct / union definition: `file`, `line`, `kind`, `name`,
+  `qualifiedName` (the key), `namespace`, `outer`, `templateParams`, `bases`, and the NAMES of its
+  member functions and fields. A tokenizer, not a parser: comments, literals, macro bodies,
+  `#if 0` blocks and every function body are skipped; of a conditional only the first branch is
+  read. Unbalanced braces / stray `}` / unterminated comments are REPORTED as malformed, an
+  oversized file is REFUSED, and a file with no definitions yields zero rows — three different
+  spellings, per the `import-normalization` subject.
+- **Glob specs** — a `ReferenceTableSpec.file` may be a glob (`src/Game/Actor/Player/**/*.{h,cpp}`).
+  Each matched file is wrapped on its own (its path is its wrappers' identity) and the run summary
+  reports the spec once with `files: { matched, withoutRecords, refused }`. A glob matching nothing
+  is `missing`. Table specs are untouched.
+- **Source `botw`** (`reference/sources.ts`, mapping + pin + descopes in `ingest/botw.ts`) — id prefix
+  `botw`, pinned commit, licence note: reference-only learning, Nintendo-derived decompilation,
+  nothing ships and no code, identifier, string or value from it enters this repo (the repo carries
+  path globs and PoF's analysis only). Wrap-only until a `botw` canon profile exists.
+- **Path coverage** (`reference/pathCoverage.ts`) — every file of the tree is covered (a spec glob
+  reads it), descoped (a glob with a reason) or open, derived at the pin; `terminationVerdict` is the
+  loop's STOP rule. Scripts: `scripts/zelda/ingest.ts` and `scripts/zelda/status.ts`; the loop is
+  `.claude/skills/zelda/`, its memory the vault's `Zelda/`.
+
 ## The question, and the answer
 
 Can PoF ingest an old RPG's data files into its catalog structure — and would doing so
