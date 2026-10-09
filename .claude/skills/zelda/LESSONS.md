@@ -99,3 +99,17 @@ and media generation were dropped with those sections.
 - **Survey a slice area per file SHAPE, not only per kind.** Predicting the records-per-file
   pattern (73 × class + definition, 5 × class, 1 × class + enum …) pins the reader's behaviour at
   the file level, so a matching total cannot hide two compensating misses.
+
+## 1.0 — 2026-10-09 — pof (W03)
+- **Survey out-of-line owners per file pair, not only per file.** A definition record's key carries
+  no file, so one owner defined inline in a header AND in its source yields a duplicate id. Count
+  such owners in the grep survey and predict `dupes` from it; W03 predicted its one duplicate before
+  ingesting. Never split a spec to make the per-spec counter read 0 — the entity ids still collide.
+- **Count what the reader cannot see as part of the prediction.** Enumerations written as one macro
+  call and undecompiled classes (a constructor, a kind tag, one padding member) look like nothing or
+  like ordinary records in the census; only the survey shows them. Say per area how many there are,
+  and never cite a padding-only class record as record-level evidence of a system's behaviour.
+- **Check the census against the map before the store sees the area.** One in-memory run of the
+  same reader (a throw-away script, console output only) after the predictions are written lets the
+  map be kept or corrected before the first store ingest, so a map fix never shows up as a
+  `reprojected` count on the area's own first rounds.
