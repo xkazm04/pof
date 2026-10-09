@@ -68,3 +68,18 @@ and media generation were dropped with those sections.
 - **Never write a vault note through `node -e "…"` in bash** — backticks in the text become command
   substitutions and silently delete words (W00's W01 proposal lost its technique name). Use the
   Write tool for prose.
+
+## 1.0 — 2026-10-09 — pof (W01)
+- **Predict with an instrument that shares no code with the reader.** A grep survey of the area
+  (owners per `.cpp`, `enum` tokens, destructors) predicted every W01 number exactly (199 = 199,
+  0 enums, 1 record-less file). Probing the new reader over the area first would have made the
+  prediction a copy of the result.
+- **A reader upgrade runs BESIDE the old walk, never inside it.** New record kinds read the chunk
+  the old walk already built and never change how a chunk is classified; then `rawChanged 0` on the
+  area plus an unchanged tree-wide count of the old kinds (4449 = 4449) prove the old records did
+  not move. A lexer fix that would help the old kinds too (F6) waits for its own measured re-read.
+- **When a reader version adds records, existing tests pin the old contract.** Keep each old
+  assertion verbatim over the old kinds and add an exact assertion for the new — never loosen one
+  to fit, and say which ones you touched.
+- **Never find "new-version records" by technique label** — the store does not relabel rows whose
+  raw did not move (F5); select by `kind`.
