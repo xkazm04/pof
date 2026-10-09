@@ -105,6 +105,47 @@ export const PARAM_GROUP_CLASS_MAP: FieldMap = botwClassMap({
     + 'fixed attribute sheet and have no field for "the named parameters an object type carries" nor for that vocabulary'),
 });
 
+/* ── status-effects ← src/KingSystem/Chemical/** (W03) ────────────────── */
+
+/**
+ * The chemistry rule-book: a per-object chemistry body (shapes and rigid parts behind two read-only
+ * interfaces) and one configuration class holding three property tables — elements, materials and
+ * the world's propagation rates. Wrapped under `status-effects`, the catalog that already names
+ * elements (vault Decisions Z-D14), though most of the area has no PoF home at all.
+ */
+export const CHEMISTRY_CLASS_MAP: FieldMap = botwClassMap({
+  bases: dropped('parameter-serialisation and debug-node machinery, plus two read-only interfaces over the per-object '
+    + 'chemistry body: how the code is wired, not something a designer authors'),
+  methods: dropped('on class records, accessors over the parameters `fields` already names, lookup-by-name and parse '
+    + 'machinery, and numbered attribute-flag queries whose meanings the decompilation does not recover; on definition '
+    + 'records, constructors, destructors and that same machinery — no behaviour a catalog could hold'),
+  fields: gap('no home for a chemistry PROPERTY model: the property records hold an element\'s physical state, a '
+    + 'material\'s thermal, electric and burn constants and the element each reaction turns it into, the world\'s global '
+    + 'propagation rates, and a per-object body (mass, volume, burn-out time); status-effects authors effects applied to a '
+    + 'target and has no field for any of them'),
+});
+
+/* ── zone-map ← src/KingSystem/World/** (W03) ─────────────────────────── */
+
+/**
+ * The world simulation: a hub that owns nine world jobs (clock, sky, a scheduled sky event, weather,
+ * temperature, wind, environment look, depth of field, chemistry), the per-climate parameter tables,
+ * and the closed vocabularies of weather, climate and moon phase. Wrapped under `zone-map`, where a
+ * region and its authored mood live (vault Decisions Z-D14); the simulation itself has no PoF home.
+ */
+export const WORLD_CLASS_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for a world-simulation ROSTER: the managers are each a kind of one world-job base, and the '
+    + 'job-kind enum names the roster; zone-map authors one region and has no field for which world simulations run over it'),
+  methods: gap('no home for the world\'s QUERY CONTRACT: on class records the hub answers per-position questions (rain, '
+    + 'temperature by height for day and night, wind, ignition level, climate) and the clock answers moon phase and the '
+    + 'periodic reset night; definition records carry their implementations. zone-map steps author a static region and '
+    + 'publish nothing other systems can ask'),
+  fields: gap('no home for CLIMATE and LOOK parameters or their vocabularies: a per-climate record holds weather odds, '
+    + 'temperature bands by altitude, moisture, wind power and ignition level; environment and sky records hold fog, bloom '
+    + 'and cloud palettes per time and weather; enum records list weather kinds, climate regions and moon phases. zone-map '
+    + 'has one authored mood and no climate, weather or time-of-day field (many names here are offset placeholders, F3)'),
+});
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**

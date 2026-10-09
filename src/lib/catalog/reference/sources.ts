@@ -35,7 +35,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CHEMISTRY_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -168,6 +168,10 @@ export const BOTW: ReferenceSource = {
     { file: 'src/Game/Actor/Player/**/*.{h,cpp}', catalogId: 'player-movement', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: PLAYER_CLASS_MAP },
     // W02: the per-object parameter-group library → items, the largest share of its groups (wrap only).
     { file: 'src/KingSystem/Resource/GeneralParamList/**/*.{h,cpp}', catalogId: 'items', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: PARAM_GROUP_CLASS_MAP },
+    // W03: the chemistry rule-book → status-effects, the catalog that names elements (wrap only).
+    { file: 'src/KingSystem/Chemical/**/*.{h,cpp}', catalogId: 'status-effects', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CHEMISTRY_CLASS_MAP },
+    // W03: the world simulation (climate, weather, clock, look) → zone-map, where a region lives (wrap only).
+    { file: 'src/KingSystem/World/**/*.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: WORLD_CLASS_MAP },
   ],
 };
 
