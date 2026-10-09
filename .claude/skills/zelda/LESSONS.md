@@ -50,3 +50,21 @@ and media generation were dropped with those sections.
   relaxed assertion is a red flag.
 - **The same misread recurs across fresh readers.** When a misreading recurs, encode the verified
   fact so the next reader does not re-derive it.
+
+## 1.0 — 2026-10-09 — pof (W00)
+- **Predict an area from its own shape, not the tree's average.** The whole-tree ratio (1.16
+  records per header) predicted 220 Player records; Player is one-action-per-file and gave 200. In
+  range, but on the low edge for a reason a per-area count would have shown.
+- **A coverage table must be proven to partition the tree.** The first cut of Coverage.md silently
+  missed 44 files: the "Action F, not Fork" alternation excluded every `Fo…` name. Only the
+  partition check (0 overlaps, 0 unowned, sum = total) caught it. Generate rows with a script that
+  reports both, never by hand.
+- **Close a wave with an ingest AFTER its notes are written.** The STOP rule compares recorded
+  rounds, and the vault counts ride on the ingest run; an ingest before the notes leaves the
+  learning invisible until the next wave and makes that wave look like it moved.
+- **Label an upgrade's evidence level.** Record-level (wrapped records) and structure-level
+  (directory and file names only) findings read the same in a note; the frontmatter `level:` keeps
+  a 'no PoF home' row from being mistaken for an analysed system.
+- **Never write a vault note through `node -e "…"` in bash** — backticks in the text become command
+  substitutions and silently delete words (W00's W01 proposal lost its technique name). Use the
+  Write tool for prose.
