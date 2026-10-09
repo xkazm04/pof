@@ -146,6 +146,28 @@ export const WORLD_CLASS_MAP: FieldMap = botwClassMap({
     + 'has one authored mood and no climate, weather or time-of-day field (many names here are offset placeholders, F3)'),
 });
 
+/* ── state-graph ← src/Game/Actor/Horse/** (W04) ──────────────────────── */
+
+/**
+ * The mount's behaviour-node library: one header per node — a selector that picks what the mount
+ * does next, or an action it runs (wander, wait, turn, swim, eat, buck a rider off, keep the saddle
+ * and reins in step with the rider) — and one source per node implementing its lifecycle. Wrapped
+ * under `state-graph`, where a behaviour's states live (vault Decisions Z-D18), though the mount
+ * itself has no PoF home.
+ */
+export const MOUNT_CLASS_MAP: FieldMap = botwClassMap({
+  bases: gap('state-graph has one flat kind of state: each mount node is a kind of one of two engine node bases — a '
+    + 'selector that decides on entry, or an action that runs — and a few extend another node to inherit its tunables; '
+    + 'the catalog has no node-kind field and no "this state extends that state" link'),
+  methods: gap('no home for a node\'s TICK RULE: a class record declares only the fixed node lifecycle (load parameters, '
+    + 'init, enter, per-frame update, leave) plus construction, and its definition record implements the same set; which '
+    + 'hooks a node overrides is the design bit — selectors never update per frame, most actions do — and state-graph '
+    + 'models enter / exit hook points but neither a per-frame update nor a decide-on-entry selector'),
+  fields: gap('no home for PER-STATE PARAMETERS: every field is a parameter handle — static tunables per actor type '
+    + '(speeds, distances, wait ranges, gait limits) or dynamic per-call inputs (a target position, a target actor, rider '
+    + 'and mount links); state-graph keeps one blackboard key set per graph and no tunables or inputs per state'),
+});
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**

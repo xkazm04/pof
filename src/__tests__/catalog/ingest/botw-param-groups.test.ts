@@ -80,7 +80,7 @@ const spec = BOTW.tables.find((t) => t.file.startsWith(`${AREA}/`));
 
 describe('BOTW parameter-group spec (W02)', () => {
   it('is registered once, as the second BOTW spec, wrap-only under items', () => {
-    expect(BOTW.tables).toHaveLength(4);
+    expect(BOTW.tables).toHaveLength(5);
     expect(spec).toMatchObject({ file: `${AREA}/**/*.{h,cpp}`, catalogId: 'items', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
   });
 
