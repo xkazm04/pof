@@ -47,8 +47,10 @@ npx tsx scripts/zelda/status.ts --root "$ROOT" [--json] [--depth N]   # coverage
 - **Coverage is derived, never written down.** `status.ts` walks the clone's `src/` at the pin and
   classifies every file: covered (a spec glob reads it), descoped (a `BOTW_DESCOPES` glob, with its
   reason), or open. Both tools REFUSE a missing root and a clone whose HEAD is not the pin.
-- **Wrap only.** Nothing is promoted into `catalog_entities` until a `botw` canon profile exists —
-  the produce prompts would otherwise inject PoF's own world into a Zelda entity (the /diablo D5 trap).
+- **Wrap only, for the loop's whole life** (vault Decisions Z-D9, App Master 2026-10-09). Nothing is
+  promoted into `catalog_entities` and no `botw` canon profile is registered: the product is upgrade
+  findings, and a promoted entity would carry botw-derived names into produce prompts against the
+  reference-only rule. Only the operator can reverse this.
 
 ## BOOT (every session)
 

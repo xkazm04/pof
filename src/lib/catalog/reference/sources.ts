@@ -158,7 +158,8 @@ export const BOTW: ReferenceSource = {
   project: BOTW_SOURCE.sourceProject,
   licenceNote: BOTW_SOURCE.licenceNote,
   idPrefix: 'botw',
-  // No canon profile is registered for it yet; nothing is promoted until one is (/zelda Decisions).
+  // No canon profile is registered for it, by decision: /zelda is wrap-only for its whole life and
+  // nothing is ever promoted (vault Decisions Z-D9). The label stays — it is stamped in provenance.
   canonProfile: 'botw',
   obtain: BOTW_OBTAIN,
   pin: BOTW_PIN,
