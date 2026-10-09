@@ -35,7 +35,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE } from '@/lib/catalog/ingest/botw';
+import { BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, PLAYER_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -162,7 +162,10 @@ export const BOTW: ReferenceSource = {
   canonProfile: 'botw',
   obtain: BOTW_OBTAIN,
   pin: BOTW_PIN,
-  tables: [],
+  tables: [
+    // W00: the player's action / AI-node library → player-movement (wrap only).
+    { file: 'src/Game/Actor/Player/**/*.{h,cpp}', catalogId: 'player-movement', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: PLAYER_CLASS_MAP },
+  ],
 };
 
 export const REFERENCE_SOURCES: Record<string, ReferenceSource> = { [DIABLO1.id]: DIABLO1, [BOTW.id]: BOTW };

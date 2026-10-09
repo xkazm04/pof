@@ -16,7 +16,7 @@
  * class definition (see `cppDecls.ts`). Its columns are fixed by the reader, and every one is
  * classified below, so a column the reader gains becomes an `unclassified` defect, not a loss.
  */
-import { dropped, mapped, type FieldMap, type FieldRule } from '@/lib/catalog/ingest/fieldMap';
+import { dropped, gap, mapped, type FieldMap, type FieldRule } from '@/lib/catalog/ingest/fieldMap';
 import type { Descope } from '@/lib/catalog/reference/pathCoverage';
 
 /** The commit every record, count and finding is read at. BOOT refuses any other HEAD. */
@@ -64,6 +64,16 @@ export function botwClassMap(gaps: ClassGaps): FieldMap {
   };
 }
 
+
+/* ── player-movement ← src/Game/Actor/Player/** (W00) ──────────────────── */
+
+export const PLAYER_CLASS_MAP: FieldMap = botwClassMap({
+  bases: gap('player-movement has no behaviour taxonomy: the reference player is a library of action and '
+    + 'AI-node classes, each a KIND of a shared node base; the catalog holds one locomotion set and no "kind of action" field'),
+  methods: gap('no home for what a player behaviour can DO (enter/leave/update hooks, queries): player-movement '
+    + 'steps verify UE assets (mesh, clips, input) and never model behaviours'),
+  fields: gap('no home for per-behaviour STATE (timers, links, cached targets): the catalog has no state model to hold it'),
+});
 
 /* ── descopes ───────────────────────────────────────────────────────────── */
 

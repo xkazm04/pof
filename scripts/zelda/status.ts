@@ -5,7 +5,7 @@
  * still OPEN; the wrappers held per catalog; the trend across recorded rounds; and whether the
  * termination rule is met.
  *
- *   npx tsx scripts/zelda/status.ts --root <botw clone> [--depth 3] [--open N] [--vault <dir>] [--json]
+ *   npx tsx scripts/zelda/status.ts --root <botw clone> [--depth 3] [--open N] [--files] [--vault <dir>] [--json]
  *
  * Coverage is derived from the tree at the pin every time — never read back from a stored number —
  * so a glob that stops matching or a descope that swallows too much moves a count visibly.
@@ -62,12 +62,17 @@ if (!coverage.specs.length) console.log('  (none yet)');
 console.log('\ndescopes:');
 for (const d of coverage.descopes) console.log(`  ${String(d.files).padStart(5)}  ${d.pattern} — ${d.reason}${d.files === 0 ? '   ← MATCHES NOTHING' : ''}`);
 
-console.log('\nwrappers held:');
-for (const w of wrapped) console.log(`  ${w.catalogId.padEnd(16)} ${String(w.wrappers).padStart(6)}  ${w.file}`);
+console.log('\nwrappers held (per catalog; --files lists every file):');
+const byCatalog = new Map<string, { wrappers: number; files: number }>();
+for (const w of wrapped) {
+  const row = byCatalog.get(w.catalogId) ?? { wrappers: 0, files: 0 };
+  row.wrappers += w.wrappers;
+  row.files++;
+  byCatalog.set(w.catalogId, row);
+}
+for (const [catalogId, row] of byCatalog) console.log(`  ${catalogId.padEnd(16)} ${String(row.wrappers).padStart(6)} records from ${row.files} file(s)`);
 if (!wrapped.length) console.log('  (none — run scripts/zelda/ingest.ts)');
-const byCatalog = new Map<string, number>();
-for (const w of wrapped) byCatalog.set(w.catalogId, (byCatalog.get(w.catalogId) ?? 0) + w.wrappers);
-if (byCatalog.size) console.log(`  per catalog: ${[...byCatalog].map(([c, n]) => `${c} ${n}`).join(' · ')}`);
+if (flag('files')) for (const w of wrapped) console.log(`    ${String(w.wrappers).padStart(4)}  ${w.file}`);
 
 console.log('\nrounds (newest first):');
 for (const r of rounds) {
