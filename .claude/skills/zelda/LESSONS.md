@@ -83,3 +83,19 @@ and media generation were dropped with those sections.
   to fit, and say which ones you touched.
 - **Never find "new-version records" by technique label** — the store does not relabel rows whose
   raw did not move (F5); select by `kind`.
+
+## 1.0 — 2026-10-09 — pof (W02)
+- **Classify a column from THIS area's census, never by inheriting another area's verdict.** The
+  same `methods` column is a gap in Player (behaviour hooks) and a drop in the parameter-group
+  library (constructor 157 · name accessor 80 · nothing that carries design). Run the census of
+  every design column over the stored records before keeping the map.
+- **A spec that spans catalogs names one: assign every kind to the single catalog it would live
+  in and take the plurality.** Write the whole distribution into the Decision — it is learning in
+  itself (here: 13 of 79 groups have NO PoF home), and it makes the label reversible with a known
+  `reprojected` count.
+- **Regenerate Coverage rows with `scripts/zelda/coverage-rows.ts`, every wave.** It re-derives
+  each row from the vault's own row globs and refuses a broken partition. Its first run caught a
+  relative `except` glob that hand-checks had read correctly for two waves (346 false overlaps).
+- **Survey a slice area per file SHAPE, not only per kind.** Predicting the records-per-file
+  pattern (73 × class + definition, 5 × class, 1 × class + enum …) pins the reader's behaviour at
+  the file level, so a matching total cannot hide two compensating misses.
