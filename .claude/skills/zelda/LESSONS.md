@@ -113,3 +113,14 @@ and media generation were dropped with those sections.
   same reader (a throw-away script, console output only) after the predictions are written lets the
   map be kept or corrected before the first store ingest, so a map fix never shows up as a
   `reprojected` count on the area's own first rounds.
+
+## 1.0 — 2026-10-09 — pof (W04)
+- **Survey what a source DOES, not only what it declares, before calling evidence "behaviour".** The
+  census reads the declared and defined function SETS and is blind to an empty body; one grep for a
+  branch or loop per source showed the mount's 36 node bodies are pass-through stubs (and 25 of
+  ≈ 2800 generic node sources hold any control flow). Say "inventory and tunables" until that count
+  says otherwise, and put the count in the wave survey.
+- **A synthetic fixture copies the area's shape, so check its NAMES against the clone before the first
+  test run, not only before the commit.** Mirroring a node library pulled the engine's lifecycle hook
+  names into the fixture; the whole-word clone grep caught them and one type name. Coin every
+  identifier (hooks, bases, parameter types, member suffixes) and grep the fixture alone first.
