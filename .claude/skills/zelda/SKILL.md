@@ -35,6 +35,7 @@ the only real failure.
 ROOT="C:/Users/kazda/kiro/reference/botw"       # blobless sparse clone (src + data), pinned in State.md
 npx tsx scripts/zelda/ingest.ts --root "$ROOT"  # wrap every mapped spec (idempotent) + store report
 npx tsx scripts/zelda/status.ts --root "$ROOT" [--json] [--depth N]   # coverage per area, trend, STOP rule
+npx tsx scripts/zelda/coverage-rows.ts --root "$ROOT" [--all]  # re-derive Coverage.md rows from its globs + partition check
 ```
 
 - **Library:** `src/lib/catalog/ingest/cppDecls.ts` (the `cpp-decls` reader — record shape documented
