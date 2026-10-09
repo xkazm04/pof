@@ -85,7 +85,7 @@ private:
     expect(first.store).toEqual({ created: 3, rawChanged: 0, reprojected: 0, unchanged: 0 });
     const wrappers = listWrappers(db, { sourceId: 'botw' });
     const ids = wrappers.map((w) => w.entity.id);
-    expect(ids).toEqual(['botw-sample::act::Leap', 'botw-sample::act::Runner::(definitions)', 'botw-sample::act::Runner']);
+    expect(ids).toEqual(['botw-sample::act::Leap', 'botw-sample::act::Runner::(definitions@src/Game/Actor/Player/demoRunner.cpp)', 'botw-sample::act::Runner']);
     expect(wrappers[1].raw).toMatchObject({ kind: 'definition', name: 'Runner', methods: 'start;isDone' });
 
     const second = ingestSourceFromDir('botw', 'clone', deps());

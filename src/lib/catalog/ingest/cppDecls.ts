@@ -1,5 +1,5 @@
 /**
- * Declaration reader for C++ headers and sources — the `cpp-decls` reading technique (v2).
+ * Declaration reader for C++ headers and sources — the `cpp-decls` reading technique (v3).
  *
  * A decompilation carries no design tables: its design lives in the SHAPE of the code — which
  * classes exist, what they derive from, what they can do and what state they keep. This reader
@@ -17,15 +17,17 @@
  *
  * Record shape (every value a string, lists joined with `CPP_LIST_SEP`). Three record families
  * share the SAME eleven columns — v2 added kinds, never a column, so a v1 class record reads
- * byte-identically under v2:
+ * byte-identically under v2; v3 changed only the definition key and added a second source of
+ * `enum` records, so every class / struct / union record and every v2 enum record reads
+ * byte-identically under v3:
  *
  * | column           | class · struct · union                       | `enum`                        | `definition` (out-of-line)                       |
  * |------------------|----------------------------------------------|-------------------------------|--------------------------------------------------|
  * | `file`           | path relative to the source root (from the reader context) | same            | same                                             |
- * | `line`           | 1-based line of the class-key                | line of `enum`                | line of the owner's first defined function       |
- * | `kind`           | `class` · `struct` · `union`                 | `enum` (plain and scoped)     | `definition`                                     |
+ * | `line`           | 1-based line of the class-key                | line of `enum` (or of the enumeration macro's name) | line of the owner's first defined function |
+ * | `kind`           | `class` · `struct` · `union`                 | `enum` (plain, scoped, or one macro call) | `definition`                         |
  * | `name`           | as written, with a specialization's arguments (`Box<int>`) or an out-of-line qualifier (`Outer::Inner`) | as written | the OWNER as written (`Owner`, `Outer::Owner`, `Box<T>`) |
- * | `qualifiedName`  | `namespace::outer::name` — the record's key  | `namespace::outer::name`      | `namespace::owner::(definitions)` — see below    |
+ * | `qualifiedName`  | `namespace::outer::name` — the record's key  | `namespace::outer::name`      | `namespace::owner::(definitions@<file>)` — see below |
  * | `namespace`      | enclosing namespaces joined with `::` (`''` = global, `(anonymous)`) | same  | namespaces enclosing the definitions             |
  * | `outer`          | enclosing class chain joined with `::` (`''` when not nested) | same         | `''` — definitions sit at namespace scope        |
  * | `templateParams` | the template parameter list (`''` when not a template) | `''`               | the first templated definition's parameter list  |
@@ -33,18 +35,32 @@
  * | `methods`        | member function NAMES in declaration order, overloads collapsed | `''`       | defined function NAMES in order, overloads collapsed |
  * | `fields`         | data member NAMES in declaration order (static members included) | enumerator NAMES in order — never their values | `''`        |
  *
- * A `definition` record's key ends in the synthetic segment `CPP_DEFINITIONS_SEGMENT`
- * (`(definitions)`): it can never be a C++ name, so the owner's own class record — in the same
- * file or in its header — keeps its key and the two never collide. Strip the segment to pair a
- * definition record with its class record. The reader cannot tell a namespace from a class by
- * syntax, so a free function defined with a namespace qualifier outside its namespace block
- * (`ns::fn() {…}`) reads as a definition of owner `ns`.
+ * A `definition` record's key ends in a synthetic segment that names the DEFINING FILE,
+ * `(definitions@<file>)` (`cppDefinitionsSegment`; plain `(definitions)` when the reader is given no
+ * file). It can never be a C++ name, so the owner's own class record — in the same file or in its
+ * header — keeps its key and the two never collide; and since v3 (vault Decision Z-D22) an owner
+ * whose members are defined out of line in TWO files (a header and its source, or two sources)
+ * yields two distinct keys. The identity is minted from the record's own file alone — never from
+ * which other files an ingest reads — because a foreign owner name is unique within a file, not
+ * across files. Strip the last `::(…)` segment to pair a definition record with its class record.
+ * The reader cannot tell a namespace from a class by syntax, so a free function defined with a
+ * namespace qualifier outside its namespace block (`ns::fn() {…}`) reads as a definition of owner `ns`.
+ *
+ * An enumeration written as ONE macro call (v3) is an `enum` record too. It is recognised by its
+ * argument SHAPE, never by the macro's name: at the start of a declaration, at namespace or class
+ * scope, an upper-case macro call with at least two arguments, every argument one bare identifier
+ * (no keyword; a line-splice backslash is whitespace), the first starting upper-case and not the
+ * enclosing class's own name → the first argument is the enumeration's name and the rest are its
+ * enumerator names. A one-argument macro, a call whose arguments carry any other token, a lower-case
+ * first argument, and a type-information macro that repeats its class's name are not enumerations.
+ * It reads BESIDE the walk: the call stays in the chunk exactly as v2 stripped it.
  *
  * Not records, by design: forward declarations (an opaque `enum E : int;` included), anonymous
  * enums, unqualified free functions, classes and enums local to a function body (bodies are
- * skipped), and anonymous class / union members — their members fold into the enclosing class,
- * which is where C++ puts them. Of a preprocessor conditional only the FIRST branch is read
- * (`#if 0` blocks are skipped, their `#else` read), so a decompilation's matching / non-matching
+ * skipped), anonymous class / union members — their members fold into the enclosing class,
+ * which is where C++ puts them — and an enumeration macro whose enumerators carry explicit values
+ * (`Name = value` is not a bare identifier). Of a preprocessor conditional only the FIRST branch is
+ * read (`#if 0` blocks are skipped, their `#else` read), so a decompilation's matching / non-matching
  * twin branches cannot double a member or unbalance the braces. Disclosed losses: function bodies
  * and parameter lists, enumerator values and an enum's underlying type are never read.
  */
@@ -52,8 +68,11 @@ import type { MalformedRow, TsvRefusal, TsvTable } from './tsv';
 
 export const CPP_LIST_SEP = ';';
 
-/** The last segment of a `definition` record's key — never a C++ name, so never a class's key. */
+/** The last segment of a `definition` record's key when no file is known — never a C++ name, so never a class's key. */
 export const CPP_DEFINITIONS_SEGMENT = '(definitions)';
+
+/** v3: the last segment of a `definition` record's key names the defining file, so one owner defined in two files keeps two identities. */
+export const cppDefinitionsSegment = (file: string): string => (file ? `(definitions@${file})` : CPP_DEFINITIONS_SEGMENT);
 
 export const CPP_RECORD_COLUMNS = [
   'file', 'line', 'kind', 'name', 'qualifiedName', 'namespace', 'outer',
@@ -665,7 +684,7 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     if (!rec) {
       rec = {
         line: def.line, kind: 'definition', name: def.owner, namespace: ns, outer: '', templateParams: '',
-        bases: [], methods: [], fields: [], key: `${owner}::${CPP_DEFINITIONS_SEGMENT}`,
+        bases: [], methods: [], fields: [], key: `${owner}::${cppDefinitionsSegment(ctx.file)}`,
       };
       definitions.set(owner, rec);
     }
@@ -679,6 +698,23 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     records.push({
       line: head.line, kind: 'enum', name: head.name, namespace: nsPath(), outer: outerPath(), templateParams: '',
       bases: [], methods: [], fields: enumeratorNames(toks.slice(open + 1, close)),
+    });
+  };
+  // v3, also beside the walk: an enumeration written as one macro call (see the header comment).
+  const noteMacroEnum = (at: number): void => {
+    if (stripPrefixes(tail(chunk)).toks.length) return;
+    const close = closeOf(toks, at + 1, '(', ')');
+    if (close === -1) return;
+    const args = splitTopLevel(toks.slice(at + 2, close).filter((t) => t.t !== '\\'));
+    if (args.length < 2 || args.some((a) => a.length !== 1 || !isWord(a[0].t) || NOT_A_NAME.has(a[0].t))) return;
+    const [name, ...enumerators] = args.map((a) => a[0].t);
+    const enclosing = currentClass()?.name.replace(/<.*$/, '').split('::').pop();
+    if (!/^[A-Z]/.test(name) || name === enclosing) return;
+    const fields: string[] = [];
+    pushUnique(fields, enumerators);
+    records.push({
+      line: toks[at].line, kind: 'enum', name, namespace: nsPath(), outer: outerPath(), templateParams: '',
+      bases: [], methods: [], fields,
     });
   };
   const isDefaulted = (): boolean => {
@@ -752,6 +788,7 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
       continue;
     }
 
+    if (isMacroName(tok.t) && toks[i + 1]?.t === '(') noteMacroEnum(i);
     chunk.push(tok);
   }
 

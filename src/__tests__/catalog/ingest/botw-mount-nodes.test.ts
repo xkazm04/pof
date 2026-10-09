@@ -151,17 +151,17 @@ describe('BOTW mount spec (W04)', () => {
       expect(wrapped.map((w) => w.raw.kind).sort()).toEqual(['class', 'class', 'class', 'definition', 'definition', 'definition']);
       expect(wrapped.map((w) => w.entity.id).sort()).toEqual([
         'botw-demo::steed::GaitPicker',
-        'botw-demo::steed::GaitPicker::(definitions)',
+        'botw-demo::steed::GaitPicker::(definitions@src/Game/Actor/Horse/AI/demoGaitPicker.cpp)',
         'botw-demo::steed::GrazeStep',
-        'botw-demo::steed::GrazeStep::(definitions)',
+        'botw-demo::steed::GrazeStep::(definitions@src/Game/Actor/Horse/Action/demoGrazeStep.cpp)',
         'botw-demo::steed::SlowGrazeStep',
-        'botw-demo::steed::SlowGrazeStep::(definitions)',
+        'botw-demo::steed::SlowGrazeStep::(definitions@src/Game/Actor/Horse/Action/demoSlowGrazeStep.cpp)',
       ]);
       const raw = (id: string) => wrapped.find((w) => w.entity.id === id)?.raw;
       expect(raw('botw-demo::steed::GaitPicker')).toMatchObject({ bases: 'PickerNode', methods: 'GaitPicker;~GaitPicker;beginStint;readKnobs', fields: 'mPickDelay' });
       expect(raw('botw-demo::steed::GrazeStep')).toMatchObject({ bases: 'StepNode', fields: 'mChewTime;mPasture' });
       expect(raw('botw-demo::steed::SlowGrazeStep')).toMatchObject({ bases: 'GrazeStep', fields: '' });
-      expect(raw('botw-demo::steed::GrazeStep::(definitions)')).toMatchObject({ methods: 'GrazeStep;beginStint;tickStint;readKnobs' });
+      expect(raw('botw-demo::steed::GrazeStep::(definitions@src/Game/Actor/Horse/Action/demoGrazeStep.cpp)')).toMatchObject({ methods: 'GrazeStep;beginStint;tickStint;readKnobs' });
 
       expect(listWrappers(db, { sourceId: 'botw', catalogId: 'player-movement' })).toHaveLength(1);
 

@@ -3,7 +3,7 @@
 // from any reference project.
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
-import { CPP_DEFINITIONS_SEGMENT, CPP_LIST_SEP, CPP_RECORD_COLUMNS, parseCppDecls } from '@/lib/catalog/ingest/cppDecls';
+import { CPP_LIST_SEP, CPP_RECORD_COLUMNS, parseCppDecls } from '@/lib/catalog/ingest/cppDecls';
 import { botwClassMap } from '@/lib/catalog/ingest/botw';
 import { gap } from '@/lib/catalog/ingest/fieldMap';
 import { ingestSourceFromDir } from '@/lib/catalog/reference/ingestSource';
@@ -111,20 +111,20 @@ void ::kiln::Oven::Rack::lift() {}
     const table = read(SOURCE);
     expect(table.malformed).toEqual([]);
     expect(table.rows.map((r) => [r.kind, r.qualifiedName])).toEqual([
-      ['definition', 'kiln::Oven::(definitions)'],
-      ['definition', 'kiln::Oven::Rack::(definitions)'],
-      ['definition', 'kiln::Tray<T>::(definitions)'],
+      ['definition', 'kiln::Oven::(definitions@demo/kiln.cpp)'],
+      ['definition', 'kiln::Oven::Rack::(definitions@demo/kiln.cpp)'],
+      ['definition', 'kiln::Tray<T>::(definitions@demo/kiln.cpp)'],
     ]);
     const rows = byKey(SOURCE);
-    expect(rows['kiln::Oven::(definitions)']).toEqual({
-      file: 'demo/kiln.cpp', line: '8', kind: 'definition', name: 'Oven', qualifiedName: 'kiln::Oven::(definitions)',
+    expect(rows['kiln::Oven::(definitions@demo/kiln.cpp)']).toEqual({
+      file: 'demo/kiln.cpp', line: '8', kind: 'definition', name: 'Oven', qualifiedName: 'kiln::Oven::(definitions@demo/kiln.cpp)',
       namespace: 'kiln', outer: '', templateParams: '', bases: '', fields: '',
       // constructor, defaulted destructor, overloads collapsed, operators, then the definition
       // written with its namespace outside the namespace block.
       methods: ['Oven', '~Oven', 'fire', 'operator==', 'operator>=', 'operator()', 'operator bool', 'cool'].join(CPP_LIST_SEP),
     });
-    expect(rows['kiln::Oven::Rack::(definitions)']).toMatchObject({ name: 'Oven::Rack', methods: 'slide;lift' });
-    expect(rows['kiln::Tray<T>::(definitions)']).toMatchObject({ name: 'Tray<T>', templateParams: 'typename T', methods: 'load;~Tray' });
+    expect(rows['kiln::Oven::Rack::(definitions@demo/kiln.cpp)']).toMatchObject({ name: 'Oven::Rack', methods: 'slide;lift' });
+    expect(rows['kiln::Tray<T>::(definitions@demo/kiln.cpp)']).toMatchObject({ name: 'Tray<T>', templateParams: 'typename T', methods: 'load;~Tray' });
   });
 
   it('never reads a body, a parameter list or a literal, and no free function becomes a record', () => {
@@ -143,7 +143,7 @@ void Bellows::pump() {}
     const rows = read(SAME_FILE).rows;
     expect(rows.map((r) => [r.kind, r.qualifiedName])).toEqual([
       ['class', 'kiln::Bellows'],
-      ['definition', `kiln::Bellows::${CPP_DEFINITIONS_SEGMENT}`],
+      ['definition', 'kiln::Bellows::(definitions@demo/kiln.cpp)'],
     ]);
     expect(new Set(rows.map((r) => r.qualifiedName)).size).toBe(rows.length);
   });
@@ -156,7 +156,7 @@ template <typename T> inline void Crate<T>::open() {}
 }`;
     expect(read(HEADER, 'demo/crate.h').rows.map((r) => [r.kind, r.qualifiedName, r.methods])).toEqual([
       ['struct', 'kiln::Crate', 'open;close'],
-      ['definition', 'kiln::Crate<T>::(definitions)', 'open'],
+      ['definition', 'kiln::Crate<T>::(definitions@demo/crate.h)', 'open'],
     ]);
   });
 });
@@ -195,24 +195,31 @@ describe('cpp-decls@2 through the wrapper store', () => {
     expect(first.store).toEqual({ created: 5, rawChanged: 0, reprojected: 0, unchanged: 0 });
     const wrappers = listWrappers(db, { sourceId: SOURCE_SPEC.id });
     expect(wrappers.map((w) => [w.wrapperId, w.technique, w.raw.kind])).toEqual([
-      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot', 'cpp-decls@2', 'struct'],
-      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot::(definitions)', 'cpp-decls@2', 'definition'],
-      ['cppv2-fixture:src/Kiln/oven.cpp:kiln::Oven::(definitions)', 'cpp-decls@2', 'definition'],
-      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven', 'cpp-decls@2', 'class'],
-      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven::Stage', 'cpp-decls@2', 'enum'],
+      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot', 'cpp-decls@3', 'struct'],
+      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot::(definitions@src/Kiln/inline.h)', 'cpp-decls@3', 'definition'],
+      ['cppv2-fixture:src/Kiln/oven.cpp:kiln::Oven::(definitions@src/Kiln/oven.cpp)', 'cpp-decls@3', 'definition'],
+      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven', 'cpp-decls@3', 'class'],
+      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven::Stage', 'cpp-decls@3', 'enum'],
     ]);
     expect(wrappers.map((w) => w.entity.id)).toEqual([
-      'cv2-kiln::Pot', 'cv2-kiln::Pot::(definitions)', 'cv2-kiln::Oven::(definitions)', 'cv2-kiln::Oven', 'cv2-kiln::Oven::Stage',
+      'cv2-kiln::Pot', 'cv2-kiln::Pot::(definitions@src/Kiln/inline.h)', 'cv2-kiln::Oven::(definitions@src/Kiln/oven.cpp)', 'cv2-kiln::Oven', 'cv2-kiln::Oven::Stage',
     ]);
     expect(wrappers.find((w) => w.entity.id === 'cv2-kiln::Oven::Stage')!.entity.data).toMatchObject({ declKind: 'enum', outer: 'Oven' });
-    expect(wrappers.find((w) => w.entity.id === 'cv2-kiln::Oven::(definitions)')!.raw.methods).toBe('Oven;fire');
+    expect(wrappers.find((w) => w.entity.id === 'cv2-kiln::Oven::(definitions@src/Kiln/oven.cpp)')!.raw.methods).toBe('Oven;fire');
 
     const second = ingestSourceFromDir(SOURCE_SPEC.id, 'root', deps());
     expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 5 });
   });
 
-  it('can still fail: the same owner defined in two files of one namespace is a reported duplicate id', () => {
+  // v2 reported this as a duplicate id (vault Findings F9); v3 mints the defining file into the key.
+  it('keys the same owner defined in two files of one namespace apart: no duplicate id (cpp-decls@3)', () => {
     files['src/Kiln/oven2.cpp'] = 'namespace kiln { void Oven::rest() {} }';
+    const run = ingestSourceFromDir(SOURCE_SPEC.id, 'root', deps());
+    expect(run.tables[0].duplicateKeys).toBe(0);
+  });
+
+  it('can still fail: the same class defined in two files of one namespace is a reported duplicate id', () => {
+    files['src/Kiln/oven2.h'] = 'namespace kiln { class Oven { void rest(); }; }';
     const run = ingestSourceFromDir(SOURCE_SPEC.id, 'root', deps());
     expect(run.tables[0].duplicateKeys).toBe(1);
   });

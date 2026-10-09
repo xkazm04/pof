@@ -57,8 +57,8 @@ namespace demo::kiln {
 KilnLedger::Ember::Ember() = default;
 void KilnLedger::readLedger() {}
 }`,
-  // An enumeration written as one macro call stays invisible; the scoped enum after it is read and
-  // the forward declaration is not a record: one enum record.
+  // cpp-decls@3 (W05): an enumeration written as one macro call is read by its argument shape, the
+  // scoped enum after it is read too, and the forward declaration is not a record: two enum records.
   [`${WORLD}/demoSkyKinds.h`]: `
 namespace demo::skies {
 DEMO_LISTING(Watch, Firstlight, Lastlight)
@@ -177,41 +177,43 @@ describe('BOTW chemistry + world specs (W03)', () => {
         duplicateKeys: 0, malformed: 0, files: { matched: 4, withoutRecords: 0, refused: [] },
       });
       expect(first.tables.find((t) => t.file === world!.file)).toMatchObject({
-        catalogId: 'zone-map', status: 'ingested', rows: 5, unclassified: [], declaredButAbsent: [],
+        catalogId: 'zone-map', status: 'ingested', rows: 6, unclassified: [], declaredButAbsent: [],
         duplicateKeys: 0, malformed: 0, files: { matched: 4, withoutRecords: 1, refused: [] },
       });
-      expect(first.store).toEqual({ created: 15, rawChanged: 0, reprojected: 0, unchanged: 0 });
+      expect(first.store).toEqual({ created: 16, rawChanged: 0, reprojected: 0, unchanged: 0 });
 
       const chemWrapped = listWrappers(db, { sourceId: 'botw', catalogId: 'status-effects' });
       expect(chemWrapped.map((w) => w.raw.kind).sort()).toEqual(['class', 'class', 'class', 'definition', 'definition', 'definition', 'struct', 'struct']);
       expect(chemWrapped.map((w) => w.entity.id).sort()).toEqual([
         'botw-demo::kiln::IKilnHull',
         'botw-demo::kiln::KilnHull',
-        'botw-demo::kiln::KilnHull::(definitions)',
+        'botw-demo::kiln::KilnHull::(definitions@src/KingSystem/Chemical/demoKilnHull.cpp)',
         'botw-demo::kiln::KilnLedger',
-        'botw-demo::kiln::KilnLedger::(definitions)',
+        'botw-demo::kiln::KilnLedger::(definitions@src/KingSystem/Chemical/demoKilnLedger.cpp)',
         'botw-demo::kiln::KilnLedger::Ember',
-        'botw-demo::kiln::KilnLedger::Ember::(definitions)',
+        'botw-demo::kiln::KilnLedger::Ember::(definitions@src/KingSystem/Chemical/demoKilnLedger.cpp)',
         'botw-demo::kiln::KilnLedger::Stuff',
       ]);
 
       const worldWrapped = listWrappers(db, { sourceId: 'botw', catalogId: 'zone-map' });
-      expect(worldWrapped.map((w) => w.raw.kind).sort()).toEqual(['class', 'definition', 'enum', 'enum', 'struct']);
+      expect(worldWrapped.map((w) => w.raw.kind).sort()).toEqual(['class', 'definition', 'enum', 'enum', 'enum', 'struct']);
       expect(worldWrapped.map((w) => w.entity.id).sort()).toEqual([
         'botw-demo::skies::Overcast',
         'botw-demo::skies::SkyTicker',
-        'botw-demo::skies::SkyTicker::(definitions)',
+        'botw-demo::skies::SkyTicker::(definitions@src/KingSystem/World/demoSkyTicker.cpp)',
         'botw-demo::skies::SkyTicker::Bell',
         'botw-demo::skies::SkyTicker::Lunation',
+        'botw-demo::skies::Watch',
       ]);
       expect(worldWrapped.find((w) => w.entity.id === 'botw-demo::skies::Overcast')?.raw).toMatchObject({ kind: 'enum', fields: 'Bright;Mizzle;Squall' });
-      expect(worldWrapped.find((w) => w.entity.id === 'botw-demo::skies::SkyTicker::(definitions)')?.raw).toMatchObject({ methods: 'SkyTicker;isSquallAt' });
+      expect(worldWrapped.find((w) => w.entity.id === 'botw-demo::skies::SkyTicker::(definitions@src/KingSystem/World/demoSkyTicker.cpp)')?.raw).toMatchObject({ methods: 'SkyTicker;isSquallAt' });
+      expect(worldWrapped.find((w) => w.entity.id === 'botw-demo::skies::Watch')?.raw).toMatchObject({ kind: 'enum', fields: 'Firstlight;Lastlight' });
 
       expect(listWrappers(db, { sourceId: 'botw', catalogId: 'player-movement' })).toHaveLength(1);
       expect(listWrappers(db, { sourceId: 'botw', catalogId: 'items' })).toHaveLength(1);
 
       const second = ingestSourceFromDir('botw', 'clone', deps());
-      expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 15 });
+      expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 16 });
     });
   });
 });

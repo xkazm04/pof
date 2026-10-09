@@ -67,7 +67,7 @@ FORGE_CHECK_SIZE(Lantern, 0x40);
   it('is registered as a source-code technique and reads through the technique table with the file path', () => {
     const technique = getTechnique('cpp-decls');
     expect(technique.assetKind).toBe('source-code');
-    expect(techniqueLabel(technique)).toBe('cpp-decls@2');
+    expect(techniqueLabel(technique)).toBe('cpp-decls@3');
     expect(technique.read(HEADER, { file: 'x/y.h' }).rows[0].file).toBe('x/y.h');
   });
 });
@@ -210,7 +210,7 @@ Machine::Machine() : mA(1), mB{2}, Base<int>{3} {
     expect(classRows(NOISY).map((r) => r.qualifiedName)).toEqual(['Enabled', 'Twin', 'Quoted', 'CBridge']);
     // v2: the out-of-line constructor is a definition record; the free function and every
     // body-local class stay invisible.
-    expect(table.rows.map((r) => r.qualifiedName)).toEqual(['Enabled', 'Twin', 'Quoted', 'CBridge', 'sys::Machine::(definitions)']);
+    expect(table.rows.map((r) => r.qualifiedName)).toEqual(['Enabled', 'Twin', 'Quoted', 'CBridge', 'sys::Machine::(definitions@demo/forge.h)']);
     expect(table.rows[4]).toMatchObject({ kind: 'definition', name: 'Machine', methods: 'Machine', fields: '' });
     const rows = byName(NOISY);
     expect(rows.Twin.methods).toBe('tick');

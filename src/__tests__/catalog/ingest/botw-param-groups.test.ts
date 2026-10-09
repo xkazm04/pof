@@ -133,11 +133,11 @@ describe('BOTW parameter-group spec (W02)', () => {
       expect(kinds).toEqual(['class', 'class', 'class', 'definition', 'definition', 'definition', 'enum', 'struct']);
       expect(wrapped.map((w) => w.entity.id).sort()).toEqual([
         'botw-demo::params::BladeGroup',
-        'botw-demo::params::BladeGroup::(definitions)',
+        'botw-demo::params::BladeGroup::(definitions@src/KingSystem/Resource/GeneralParamList/demoGroupBlade.h)',
         'botw-demo::params::BladeGroup::Edge',
-        'botw-demo::params::BladeGroup::Edge::(definitions)',
+        'botw-demo::params::BladeGroup::Edge::(definitions@src/KingSystem/Resource/GeneralParamList/demoGroupExtras.cpp)',
         'botw-demo::params::CritterGroup',
-        'botw-demo::params::CritterGroup::(definitions)',
+        'botw-demo::params::CritterGroup::(definitions@src/KingSystem/Resource/GeneralParamList/demoGroupExtras.cpp)',
         'botw-demo::params::GroupKind',
         'botw-demo::params::TunableGroup',
       ]);
