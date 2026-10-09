@@ -34,10 +34,10 @@ public:
 protected:
     int mGlow = 0;
     float mFuel{1.5f};
-    uint32_t mFlags : 4, mMode : 2;
+    uint32_t mBits : 4, mMode : 2;
     Ember* mSpark, *mSecondSpark;
     void (*mOnDim)(int level);
-    char mLabel[16];
+    char mTagText[16];
     static constexpr int cMaxGlow = 9;
 };
 FORGE_CHECK_SIZE(Lantern, 0x40);
@@ -57,7 +57,7 @@ FORGE_CHECK_SIZE(Lantern, 0x40);
     });
     expect(list(lantern.bases)).toEqual(['Light', 'Counted<Lantern,2>']);
     expect(list(lantern.methods)).toEqual(['Lantern', '~Lantern', 'kindle', 'operator==', 'operator bool', 'create', 'glow']);
-    expect(list(lantern.fields)).toEqual(['mGlow', 'mFuel', 'mFlags', 'mMode', 'mSpark', 'mSecondSpark', 'mOnDim', 'mLabel', 'cMaxGlow']);
+    expect(list(lantern.fields)).toEqual(['mGlow', 'mFuel', 'mBits', 'mMode', 'mSpark', 'mSecondSpark', 'mOnDim', 'mTagText', 'cMaxGlow']);
   });
 
   it('is registered as a source-code technique and reads through the technique table with the file path', () => {

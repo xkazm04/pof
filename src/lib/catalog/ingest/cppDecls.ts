@@ -445,7 +445,7 @@ function classifyMember(chunk: Tok[]): Members {
   if (paren !== -1) {
     const close = closeOf(toks, paren, '(', ')');
     const inner = close === -1 ? [] : toks.slice(paren + 1, close);
-    // `void (*mCallback)(int)` / `void (Foo::*mFn)()` — a pointer-to-function FIELD.
+    // `void (*mOnDone)(int)` / `void (Foo::*mFn)()` — a pointer-to-function FIELD.
     if (inner.length && (inner[0].t === '*' || inner[0].t === '&' || inner.some((t, j) => t.t === '*' && inner[j - 1]?.t === '::'))) {
       const name = lastName(inner);
       return name ? { methods: [], fields: [name] } : none;

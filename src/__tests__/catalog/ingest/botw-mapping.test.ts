@@ -59,12 +59,12 @@ public:
     void start();
     bool isDone() const;
 private:
-    float mTimer = 0;
+    float mTicksLeft = 0;
 };
 }`,
     'src/Game/Actor/Player/demoRunner.cpp': 'namespace sample::act { void Runner::start() {} bool Runner::isDone() const { return true; } }',
-    'src/Game/Actor/Player/Moves/demoLeap.h': 'namespace sample::act { struct Leap : NodeBase { int mHeight; }; }',
-    'src/Game/Actor/Player/CMakeLists.txt': 'target_sources(x PRIVATE a.cpp)',
+    'src/Game/Actor/Player/Moves/demoLeap.h': 'namespace sample::act { struct Leap : NodeBase { int mApex; }; }',
+    'src/Game/Actor/Player/CMakeLists.txt': '# synthetic build file',
     'src/Game/Actor/Enemy/demoOther.h': 'class NotPlayer {};',
   };
   let db: Database.Database;

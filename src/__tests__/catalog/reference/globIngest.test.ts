@@ -33,7 +33,7 @@ void Hero::climb() {}
 `,
   'src/Hero/Moves/glide.h': `
 namespace demo::hero {
-struct Glide : MoveBase { int mLift; struct Wind { float speed; }; };
+struct Glide : GaitBase { int mLift; struct Wind { float speed; }; };
 class Hero {};   // the same name defined again in another file
 }
 `,
