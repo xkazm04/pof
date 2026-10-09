@@ -124,3 +124,22 @@ and media generation were dropped with those sections.
   test run, not only before the commit.** Mirroring a node library pulled the engine's lifecycle hook
   names into the fixture; the whole-word clone grep caught them and one type name. Coin every
   identifier (hooks, bases, parameter types, member suffixes) and grep the fixture alone first.
+
+## 1.0 — 2026-10-10 — pof (W05)
+- **A re-key is not finished when the per-spec counter reads `dupes 0`.** The store never deletes, so
+  a changed key shows as `created` and leaves the old row holding the old entity id. Back up with
+  SQLite's own backup, write the stale count in the wave note, retire only through
+  `scripts/zelda/retire-stale.ts --expect <N>`, and end with a whole-source SQL check that no entity
+  id is held twice.
+- **When the survey and the reader disagree, read the disputed record's source line before blaming
+  either.** W05's one miss (25 predicted, 26 read) was the SURVEY's: its statement buffer did not reset
+  at an access label after a macro line. Build a survey's scope rules from C++ semantics (access labels,
+  line splices), not from the area's usual layout, and re-run it after the fix so the two agree call
+  for call.
+- **A test that pins a defect must move when the defect is fixed.** Before a reader wave, grep the
+  tests for the defect's own words ("stays invisible", "duplicate id") and list those assertions in
+  the wave note as moving, with their exact new values — they are neither a label nor a key, so a
+  brief that allows only those will not have named them.
+- **Negative-control a shape rule one clause at a time.** Loosen each condition alone (argument
+  count, case, keyword, valued argument, enclosing name) and show each loosening turns a test red; a
+  rule whose clauses are only tested together can lose one unseen.
