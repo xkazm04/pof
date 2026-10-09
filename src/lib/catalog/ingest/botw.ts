@@ -16,7 +16,8 @@
  * class definition (see `cppDecls.ts`). Its columns are fixed by the reader, and every one is
  * classified below, so a column the reader gains becomes an `unclassified` defect, not a loss.
  */
-import { dropped, mapped, type FieldMap, type FieldRule } from './fieldMap';
+import { dropped, mapped, type FieldMap, type FieldRule } from '@/lib/catalog/ingest/fieldMap';
+import type { Descope } from '@/lib/catalog/reference/pathCoverage';
 
 /** The commit every record, count and finding is read at. BOOT refuses any other HEAD. */
 export const BOTW_PIN = '49c6b5c18344de6555163b3af7044970ad9d7c5e';
@@ -63,3 +64,24 @@ export function botwClassMap(gaps: ClassGaps): FieldMap {
   };
 }
 
+
+/* ── descopes ───────────────────────────────────────────────────────────── */
+
+/**
+ * Paths PoF does not need, each with the reason in PoF's own words. Only descopes the loop is
+ * sure of: engine infrastructure UE already provides, platform services a PC UE title has no
+ * counterpart for, and the decompilation's own build/tooling files. Anything doubtful stays
+ * OPEN — an undecided file is honest; a wrong descope hides a system.
+ */
+export const BOTW_DESCOPES: readonly Descope[] = [
+  { pattern: 'src/**/CMakeLists.txt', reason: 'build wiring of the decompilation project — no game design in it' },
+  { pattern: 'src/.clang-tidy', reason: 'lint configuration of the decompilation project' },
+  { pattern: 'src/**/.gitkeep', reason: 'empty placeholder file' },
+  { pattern: 'src/**/*.py', reason: 'a helper script of the decompilation project, not game code' },
+  { pattern: 'src/KingSystem/Utils/**', reason: 'containers, bit fields, hashing, threads, a binary-YAML reader — C++/UE Core provides all of it' },
+  { pattern: 'src/KingSystem/Framework/**', reason: 'boot, root task and worker threads — UE’s engine loop and task graph' },
+  { pattern: 'src/KingSystem/Graphics/**', reason: 'a renderer component — UE’s renderer is not something PoF designs' },
+  { pattern: 'src/KingSystem/Terrain/**', reason: 'the terrain engine — UE Landscape / World Partition' },
+  { pattern: 'src/KingSystem/Mii/**', reason: 'a console avatar service with no counterpart in a PC UE title' },
+  { pattern: 'src/KingSystem/Resource/*', reason: 'archive loading, resource caches, heaps and load tasks — UE’s asset manager and streaming (the param-file readers in Resource/ subfolders stay open: they carry data schemas)' },
+];
