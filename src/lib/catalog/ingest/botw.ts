@@ -84,6 +84,27 @@ export const PLAYER_CLASS_MAP: FieldMap = botwClassMap({
     + 'vocabulary (an enum record\'s enumerator names): the catalog has no state model and no enumerated-kind field to hold either'),
 });
 
+/* ── items ← src/KingSystem/Resource/GeneralParamList/** (W02) ─────────── */
+
+/**
+ * The per-object parameter-group library: each class is one typed group of tunable parameters
+ * (a weapon group, an armour group, an enemy group, a liftable group …) and an object is composed
+ * from several of them, picked from one closed list of group kinds. Wrapped under `items` — the
+ * catalog holding the largest share of the groups (vault Decisions Z-D11) — but the schema
+ * question it asks spans items, bestiary and props alike.
+ */
+export const PARAM_GROUP_CLASS_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for COMPOSITION: every group is a kind of one shared parameter-group base and an object '
+    + 'carries several groups chosen from a closed list; PoF gives an entity one fixed attribute sheet per catalog and '
+    + 'no "which parameter groups does this object carry" field'),
+  methods: dropped('a group declares only its constructor and a name accessor, and its out-of-line definition record '
+    + 'names only that constructor or a per-index registration helper: parameter-registration machinery, not design — '
+    + 'each parameter\'s key and default sit in the bodies, which the reader never reads'),
+  fields: gap('no home for a PARAMETER SCHEMA: a class record\'s fields are the named tunables of one group, and the '
+    + 'enum record\'s enumerator names are the closed vocabulary of group kinds; items, bestiary and props each author a '
+    + 'fixed attribute sheet and have no field for "the named parameters an object type carries" nor for that vocabulary'),
+});
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**
