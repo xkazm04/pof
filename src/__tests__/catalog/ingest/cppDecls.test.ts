@@ -9,6 +9,10 @@ import { getTechnique, techniqueLabel } from '@/lib/catalog/reference/techniques
 const list = (cell: string | undefined) => (cell ? cell.split(CPP_LIST_SEP) : []);
 const read = (text: string) => parseCppDecls(text, { file: 'demo/forge.h' });
 const byName = (text: string) => Object.fromEntries(read(text).rows.map((r) => [r.qualifiedName, r]));
+// v2 added enum and out-of-line definition records beside the class records; the v1 assertions
+// below still hold, unchanged, over the class / struct / union records.
+const CLASS_KINDS = new Set(['class', 'struct', 'union']);
+const classRows = (text: string) => read(text).rows.filter((r) => CLASS_KINDS.has(r.kind));
 
 describe('cpp-decls reader — classes and members', () => {
   const HEADER = `
@@ -63,7 +67,7 @@ FORGE_CHECK_SIZE(Lantern, 0x40);
   it('is registered as a source-code technique and reads through the technique table with the file path', () => {
     const technique = getTechnique('cpp-decls');
     expect(technique.assetKind).toBe('source-code');
-    expect(techniqueLabel(technique)).toBe('cpp-decls@1');
+    expect(techniqueLabel(technique)).toBe('cpp-decls@2');
     expect(technique.read(HEADER, { file: 'x/y.h' }).rows[0].file).toBe('x/y.h');
   });
 });
@@ -93,13 +97,23 @@ struct Gauge::Needle2 : Base {};
 
   it('tracks nested, inline, anonymous and compact namespaces, and nested classes', () => {
     const rows = byName(NESTED);
-    expect(Object.keys(rows).sort()).toEqual([
+    expect(classRows(NESTED).map((r) => r.qualifiedName).sort()).toEqual([
       'Gauge::Needle2',
       'a::b::c::Deep',
       'outer::(anonymous)::Hidden',
       'outer::inner::v2::Gauge',
       'outer::inner::v2::Gauge::Needle',
     ]);
+    // v2: the nested enum is a record of its own (and still adds nothing to Gauge's fields).
+    expect(Object.keys(rows).sort()).toEqual([
+      'Gauge::Needle2',
+      'a::b::c::Deep',
+      'outer::(anonymous)::Hidden',
+      'outer::inner::v2::Gauge',
+      'outer::inner::v2::Gauge::Needle',
+      'outer::inner::v2::Gauge::Unit',
+    ]);
+    expect(rows['outer::inner::v2::Gauge::Unit']).toMatchObject({ kind: 'enum', outer: 'Gauge', fields: 'Bar;Psi' });
     expect(rows['outer::inner::v2::Gauge::Needle']).toMatchObject({ outer: 'Gauge', namespace: 'outer::inner::v2', fields: 'angle' });
     expect(list(rows['outer::inner::v2::Gauge'].fields)).toEqual(['asInt', 'asFloat', 'needle']);
     expect(rows['Gauge::Needle2'].bases).toBe('Base');
@@ -193,7 +207,11 @@ Machine::Machine() : mA(1), mB{2}, Base<int>{3} {
   it('skips comments, macro bodies, disabled and twin branches, literals and function bodies', () => {
     const table = read(NOISY);
     expect(table.malformed).toEqual([]);
-    expect(table.rows.map((r) => r.qualifiedName)).toEqual(['Enabled', 'Twin', 'Quoted', 'CBridge']);
+    expect(classRows(NOISY).map((r) => r.qualifiedName)).toEqual(['Enabled', 'Twin', 'Quoted', 'CBridge']);
+    // v2: the out-of-line constructor is a definition record; the free function and every
+    // body-local class stay invisible.
+    expect(table.rows.map((r) => r.qualifiedName)).toEqual(['Enabled', 'Twin', 'Quoted', 'CBridge', 'sys::Machine::(definitions)']);
+    expect(table.rows[4]).toMatchObject({ kind: 'definition', name: 'Machine', methods: 'Machine', fields: '' });
     const rows = byName(NOISY);
     expect(rows.Twin.methods).toBe('tick');
     expect(rows.Twin.fields).toBe('mTwin');
@@ -206,9 +224,13 @@ Machine::Machine() : mA(1), mB{2}, Base<int>{3} {
     const empty = read('');
     expect(empty).toEqual({ columns: [...CPP_RECORD_COLUMNS], rows: [], malformed: [] });
 
-    const declarationsOnly = read('#pragma once\nnamespace z { class Later; enum class Mode { A }; int f(int); }\n');
+    const declarationsOnly = read('#pragma once\nnamespace z { class Later; enum class Mode : int; int f(int); }\n');
     expect(declarationsOnly.rows).toEqual([]);
     expect(declarationsOnly.malformed).toEqual([]);
+    // v1 counted `enum class Mode { A }` among the declarations; v2 reads it as the enum definition it is (F1).
+    const withEnumBody = read('#pragma once\nnamespace z { class Later; enum class Mode { A }; int f(int); }\n');
+    expect(withEnumBody.rows.map((r) => [r.kind, r.qualifiedName, r.fields])).toEqual([['enum', 'z::Mode', 'A']]);
+    expect(withEnumBody.malformed).toEqual([]);
 
     const broken = read('namespace z {\nclass Open {\n  int x;\n');
     expect(broken.malformed.map((m) => m.raw)).toEqual([

@@ -77,15 +77,18 @@ private:
 
   it('wraps the Player area into player-movement and is idempotent on re-ingest', () => {
     const first = ingestSourceFromDir('botw', 'clone', deps());
+    // cpp-decls@2: the .cpp's out-of-line definitions are a third record, keyed apart from the class.
     expect(first.tables[0]).toMatchObject({
-      catalogId: 'player-movement', status: 'ingested', rows: 2, unclassified: [],
-      files: { matched: 3, withoutRecords: 1, refused: [] },
+      catalogId: 'player-movement', status: 'ingested', rows: 3, unclassified: [], duplicateKeys: 0,
+      files: { matched: 3, withoutRecords: 0, refused: [] },
     });
-    expect(first.store).toEqual({ created: 2, rawChanged: 0, reprojected: 0, unchanged: 0 });
-    const ids = listWrappers(db, { sourceId: 'botw' }).map((w) => w.entity.id);
-    expect(ids).toEqual(['botw-sample::act::Leap', 'botw-sample::act::Runner']);
+    expect(first.store).toEqual({ created: 3, rawChanged: 0, reprojected: 0, unchanged: 0 });
+    const wrappers = listWrappers(db, { sourceId: 'botw' });
+    const ids = wrappers.map((w) => w.entity.id);
+    expect(ids).toEqual(['botw-sample::act::Leap', 'botw-sample::act::Runner::(definitions)', 'botw-sample::act::Runner']);
+    expect(wrappers[1].raw).toMatchObject({ kind: 'definition', name: 'Runner', methods: 'start;isDone' });
 
     const second = ingestSourceFromDir('botw', 'clone', deps());
-    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 2 });
+    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 3 });
   });
 });

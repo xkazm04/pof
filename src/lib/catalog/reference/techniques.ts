@@ -106,9 +106,11 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
   },
   'cpp-decls': {
     id: 'cpp-decls',
-    version: 1,
+    version: 2,
     assetKind: 'source-code',
-    describe: 'One C++ header or source file → one record per class/struct/union definition: path, namespace, bases, member function and field NAMES (ingest/cppDecls.ts).',
+    describe: 'One C++ header or source file → one record per class/struct/union definition (path, namespace, bases, member function and field NAMES), '
+      + 'per enum definition (enumerator NAMES, never values), and per owner class whose member functions the file defines out of line '
+      + '(function NAMES, keyed `owner::(definitions)`) — same columns for every kind (ingest/cppDecls.ts).',
     read: (text, ctx) => parseCppDecls(text, { file: ctx?.file ?? '' }),
   },
 };

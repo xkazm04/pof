@@ -13,7 +13,8 @@
  * physics-driven interaction, a stamina-gated traversal kit, cooking) — so every place PoF's
  * module set has no home for one of its systems is a design or feature upgrade worth knowing.
  * There are no design TABLES to read, only code, so the technique is `cpp-decls`: one record per
- * class definition (see `cppDecls.ts`). Its columns are fixed by the reader, and every one is
+ * class or enum definition, and one per owner of out-of-line definitions in a file (see
+ * `cppDecls.ts`). Its columns are fixed by the reader, and every one is
  * classified below, so a column the reader gains becomes an `unclassified` defect, not a loss.
  */
 import { dropped, gap, mapped, type FieldMap, type FieldRule } from '@/lib/catalog/ingest/fieldMap';
@@ -47,7 +48,13 @@ export interface ClassGaps {
   fields: FieldRule;
 }
 
-/** Every `cpp-decls` column classified; the three that carry design meaning are per-area. */
+/**
+ * Every `cpp-decls` column classified; the three that carry design meaning are per-area. The map
+ * covers all three record families of `cpp-decls@2` (class / enum / definition, see the record-shape
+ * table in `cppDecls.ts`): they share the columns, so an area's gap reasons must name what each
+ * column holds for each kind — `methods` is also an owner's out-of-line definitions, `fields` also
+ * an enum's enumerator names.
+ */
 export function botwClassMap(gaps: ClassGaps): FieldMap {
   return {
     file: dropped('the path is the wrapper identity and provenance.sourceFile already'),
@@ -70,9 +77,11 @@ export function botwClassMap(gaps: ClassGaps): FieldMap {
 export const PLAYER_CLASS_MAP: FieldMap = botwClassMap({
   bases: gap('player-movement has no behaviour taxonomy: the reference player is a library of action and '
     + 'AI-node classes, each a KIND of a shared node base; the catalog holds one locomotion set and no "kind of action" field'),
-  methods: gap('no home for what a player behaviour can DO (enter/leave/update hooks, queries): player-movement '
-    + 'steps verify UE assets (mesh, clips, input) and never model behaviours'),
-  fields: gap('no home for per-behaviour STATE (timers, links, cached targets): the catalog has no state model to hold it'),
+  methods: gap('no home for what a player behaviour can DO (enter/leave/update hooks, queries) — declared on a class '
+    + 'record, implemented on its out-of-line definition record: player-movement steps verify UE assets (mesh, clips, input) '
+    + 'and never model behaviours'),
+  fields: gap('no home for per-behaviour STATE (timers, links, cached targets) on a class record, nor for a closed '
+    + 'vocabulary (an enum record\'s enumerator names): the catalog has no state model and no enumerated-kind field to hold either'),
 });
 
 /* ── descopes ───────────────────────────────────────────────────────────── */

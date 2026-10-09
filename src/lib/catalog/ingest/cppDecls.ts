@@ -1,10 +1,11 @@
 /**
- * Declaration reader for C++ headers and sources — the `cpp-decls` reading technique.
+ * Declaration reader for C++ headers and sources — the `cpp-decls` reading technique (v2).
  *
  * A decompilation carries no design tables: its design lives in the SHAPE of the code — which
  * classes exist, what they derive from, what they can do and what state they keep. This reader
- * turns one `.h` / `.cpp` file into one record per class / struct / union DEFINITION so that
- * shape can ride the same wrapper store, `FieldMap` audit and re-projection count as a TSV row.
+ * turns one `.h` / `.cpp` file into one record per class / struct / union / enum DEFINITION, plus
+ * one record per owner class whose member functions the file defines out of line, so that shape
+ * can ride the same wrapper store, `FieldMap` audit and re-projection count as a TSV row.
  *
  * It is deliberately NOT a C++ parser. It tokenizes (comments, string literals and
  * preprocessor lines removed), tracks namespace / class scopes by brace, and skips every
@@ -14,32 +15,45 @@
  * oversized file is REFUSED, and a file with no definitions yields zero rows with the full
  * column list — never a silent shrug.
  *
- * Record shape (every value a string, lists joined with `CPP_LIST_SEP`):
+ * Record shape (every value a string, lists joined with `CPP_LIST_SEP`). Three record families
+ * share the SAME eleven columns — v2 added kinds, never a column, so a v1 class record reads
+ * byte-identically under v2:
  *
- * | column           | meaning                                                                    |
- * |------------------|----------------------------------------------------------------------------|
- * | `file`           | path relative to the source root (from the reader context)                 |
- * | `line`           | 1-based line of the class-key                                               |
- * | `kind`           | `class` · `struct` · `union`                                               |
- * | `name`           | as written, with a specialization's arguments (`Box<int>`) or an           |
- * |                  | out-of-line qualifier (`Outer::Inner`)                                     |
- * | `qualifiedName`  | `namespace::outer::name` — the record's key within its file                |
- * | `namespace`      | enclosing namespaces joined with `::` (`''` = global, `(anonymous)`)       |
- * | `outer`          | enclosing class chain joined with `::` (`''` when not nested)              |
- * | `templateParams` | the template parameter list (`''` when not a template)                     |
- * | `bases`          | base classes, access / `virtual` stripped                                  |
- * | `methods`        | member function NAMES in declaration order, overloads collapsed            |
- * | `fields`         | data member NAMES in declaration order (static members included)           |
+ * | column           | class · struct · union                       | `enum`                        | `definition` (out-of-line)                       |
+ * |------------------|----------------------------------------------|-------------------------------|--------------------------------------------------|
+ * | `file`           | path relative to the source root (from the reader context) | same            | same                                             |
+ * | `line`           | 1-based line of the class-key                | line of `enum`                | line of the owner's first defined function       |
+ * | `kind`           | `class` · `struct` · `union`                 | `enum` (plain and scoped)     | `definition`                                     |
+ * | `name`           | as written, with a specialization's arguments (`Box<int>`) or an out-of-line qualifier (`Outer::Inner`) | as written | the OWNER as written (`Owner`, `Outer::Owner`, `Box<T>`) |
+ * | `qualifiedName`  | `namespace::outer::name` — the record's key  | `namespace::outer::name`      | `namespace::owner::(definitions)` — see below    |
+ * | `namespace`      | enclosing namespaces joined with `::` (`''` = global, `(anonymous)`) | same  | namespaces enclosing the definitions             |
+ * | `outer`          | enclosing class chain joined with `::` (`''` when not nested) | same         | `''` — definitions sit at namespace scope        |
+ * | `templateParams` | the template parameter list (`''` when not a template) | `''`               | the first templated definition's parameter list  |
+ * | `bases`          | base classes, access / `virtual` stripped    | `''` — never the underlying type | `''`                                          |
+ * | `methods`        | member function NAMES in declaration order, overloads collapsed | `''`       | defined function NAMES in order, overloads collapsed |
+ * | `fields`         | data member NAMES in declaration order (static members included) | enumerator NAMES in order — never their values | `''`        |
  *
- * Not records, by design: forward declarations, enums, classes local to a function body (bodies
- * are skipped), and anonymous class / union members — their members fold into the enclosing
- * class, which is where C++ puts them. Of a preprocessor conditional only the FIRST branch is
- * read (`#if 0` blocks are skipped, their `#else` read), so a decompilation's matching / non-
- * matching twin branches cannot double a member or unbalance the braces.
+ * A `definition` record's key ends in the synthetic segment `CPP_DEFINITIONS_SEGMENT`
+ * (`(definitions)`): it can never be a C++ name, so the owner's own class record — in the same
+ * file or in its header — keeps its key and the two never collide. Strip the segment to pair a
+ * definition record with its class record. The reader cannot tell a namespace from a class by
+ * syntax, so a free function defined with a namespace qualifier outside its namespace block
+ * (`ns::fn() {…}`) reads as a definition of owner `ns`.
+ *
+ * Not records, by design: forward declarations (an opaque `enum E : int;` included), anonymous
+ * enums, unqualified free functions, classes and enums local to a function body (bodies are
+ * skipped), and anonymous class / union members — their members fold into the enclosing class,
+ * which is where C++ puts them. Of a preprocessor conditional only the FIRST branch is read
+ * (`#if 0` blocks are skipped, their `#else` read), so a decompilation's matching / non-matching
+ * twin branches cannot double a member or unbalance the braces. Disclosed losses: function bodies
+ * and parameter lists, enumerator values and an enum's underlying type are never read.
  */
 import type { MalformedRow, TsvRefusal, TsvTable } from './tsv';
 
 export const CPP_LIST_SEP = ';';
+
+/** The last segment of a `definition` record's key — never a C++ name, so never a class's key. */
+export const CPP_DEFINITIONS_SEGMENT = '(definitions)';
 
 export const CPP_RECORD_COLUMNS = [
   'file', 'line', 'kind', 'name', 'qualifiedName', 'namespace', 'outer',
@@ -72,6 +86,8 @@ interface Rec {
   bases: string[];
   methods: string[];
   fields: string[];
+  /** A `definition` record's key; class and enum records derive theirs from the path. */
+  key?: string;
 }
 
 type Scope =
@@ -491,6 +507,108 @@ function namespaceName(chunk: Tok[]): string {
   return name || '(anonymous)';
 }
 
+/** The part of a chunk after its last skipped inline block — the declaration a `{` belongs to. */
+function tail(chunk: Tok[]): Tok[] {
+  for (let k = chunk.length - 1; k >= 0; k--) if (chunk[k].t === '{}') return chunk.slice(k + 1);
+  return chunk;
+}
+
+/** `[typedef] enum [class|struct] [attrs] Name [: underlying]` before a `{` → its name; null if anonymous or not an enum. */
+function enumHead(segment: Tok[]): { name: string; line: number } | null {
+  const toks = stripPrefixes(segment).toks;
+  let k = toks[0]?.t === 'typedef' ? 1 : 0;
+  if (toks[k]?.t !== 'enum') return null;
+  const line = toks[k].line;
+  k++;
+  if (toks[k]?.t === 'class' || toks[k]?.t === 'struct') k++;
+  for (;;) {
+    if (toks[k]?.t === '[' && toks[k + 1]?.t === '[') {
+      const end = closeOf(toks, k, '[', ']');
+      if (end === -1) return null;
+      k = end + 1;
+    } else if (isWord(toks[k]?.t ?? '') && toks[k + 1]?.t === '(') {
+      const end = closeOf(toks, k + 1, '(', ')');
+      if (end === -1) return null;
+      k = end + 1;
+    } else break;
+  }
+  const parts: Tok[] = [];
+  while (k < toks.length && (isWord(toks[k].t) || toks[k].t === '::')) {
+    if (parts.length && isWord(toks[k].t) && isWord(parts[parts.length - 1].t)) return null;
+    parts.push(toks[k]);
+    k++;
+  }
+  // Only the underlying type may follow the name — and it is never read.
+  if (k < toks.length && toks[k].t !== ':') return null;
+  const name = join(parts.filter((t, j) => !(j === 0 && t.t === '::')));
+  return name && isWord(parts[parts.length - 1].t) ? { name, line } : null;
+}
+
+/** The enumerator NAMES of an enum body (the tokens between its braces); values are never read. */
+function enumeratorNames(body: Tok[]): string[] {
+  const names: string[] = [];
+  for (const part of splitTopLevel(body)) if (isWord(part[0].t)) pushUnique(names, [part[0].t]);
+  return names;
+}
+
+/** Index of the `<` opening the angle group closed by the `>` at `close`, scanning backwards; -1 if none. */
+function openAngleOf(toks: Tok[], close: number): number {
+  let depth = 0;
+  for (let k = close; k >= 0; k--) {
+    if (toks[k].t === '>') depth++;
+    else if (toks[k].t === '<' && --depth === 0) return k;
+  }
+  return -1;
+}
+
+interface OutOfLine {
+  owner: string;
+  fn: string;
+  line: number;
+  templateParams: string;
+}
+
+/**
+ * The lexer splits `>=`, `>>` and `>>=` (v1 lexing, kept so class records re-read byte-identically);
+ * after `operator` they are one symbol, and an unfused `=` would read as an initializer.
+ */
+function fuseOperatorSymbols(toks: Tok[]): Tok[] {
+  const out: Tok[] = [];
+  for (let k = 0; k < toks.length; k++) {
+    if (toks[k].t !== '>' || out[out.length - 1]?.t !== 'operator') { out.push(toks[k]); continue; }
+    let symbol = '>';
+    while (symbol.length < 3 && !symbol.endsWith('=') && (toks[k + 1]?.t === '>' || toks[k + 1]?.t === '=')) symbol += toks[++k].t;
+    out.push({ t: symbol, line: toks[k].line });
+  }
+  return out;
+}
+
+/** `[template<…>] ret Owner::fn(…)` (also `Ns::Owner<T>::~Owner`, `Owner::operator==`) → owner + function name; null otherwise. */
+function outOfLineDefinition(segment: Tok[]): OutOfLine | null {
+  const { toks, templateParams } = stripPrefixes(fuseOperatorSymbols(segment));
+  const paren = functionParen(toks);
+  if (paren === -1) return null;
+  const fn = functionName(toks, paren);
+  if (!fn) return null;
+  let start = paren - 1;
+  if (fn.startsWith('operator')) while (start > 0 && toks[start].t !== 'operator') start--;
+  else if (fn.startsWith('~')) start = paren - 2;
+  const segments: Tok[][] = [];
+  let k = start - 1;
+  while (toks[k]?.t === '::') {
+    const end = k - 1;
+    let j = end;
+    if (toks[j]?.t === '>') j = openAngleOf(toks, j) - 1;
+    const word = toks[j]?.t ?? '';
+    if (j < 0 || !isWord(word) || NOT_A_NAME.has(word) || word === 'operator') break;
+    segments.unshift(toks.slice(j, end + 1));
+    k = j - 1;
+  }
+  if (segments.length === 0) return null;
+  const owner = segments.map((s) => join(s)).join('::');
+  return { owner, fn, line: toks[start].line, templateParams };
+}
+
 /* ── the reader ─────────────────────────────────────────────────────────── */
 
 function refused(limit: 'maxBytes' | 'maxRows', maximum: number, observed: number): TsvTable {
@@ -534,10 +652,47 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     malformed.push({ line: toks[at].line, expected: 0, actual: 1, raw: 'unbalanced braces: block never closes' });
     return toks.length;
   };
+  // v2 records ride BESIDE the v1 walk: they read the chunk, never change how it is classified,
+  // so every class / struct / union record stays exactly what v1 read.
+  const definitions = new Map<string, Rec>();
+  const noteDefinition = (): void => {
+    if (currentClass()) return;
+    const def = outOfLineDefinition(tail(chunk));
+    if (!def) return;
+    const ns = nsPath();
+    const owner = [ns, def.owner].filter(Boolean).join('::');
+    let rec = definitions.get(owner);
+    if (!rec) {
+      rec = {
+        line: def.line, kind: 'definition', name: def.owner, namespace: ns, outer: '', templateParams: '',
+        bases: [], methods: [], fields: [], key: `${owner}::${CPP_DEFINITIONS_SEGMENT}`,
+      };
+      definitions.set(owner, rec);
+    }
+    rec.templateParams ||= def.templateParams;
+    pushUnique(rec.methods, [def.fn]);
+  };
+  const noteEnum = (open: number): void => {
+    const head = enumHead(tail(chunk));
+    const close = head ? closeOf(toks, open, '{', '}') : -1;
+    if (!head || close === -1) return;
+    records.push({
+      line: head.line, kind: 'enum', name: head.name, namespace: nsPath(), outer: outerPath(), templateParams: '',
+      bases: [], methods: [], fields: enumeratorNames(toks.slice(open + 1, close)),
+    });
+  };
+  const isDefaulted = (): boolean => {
+    const last = chunk[chunk.length - 1]?.t;
+    return chunk[chunk.length - 2]?.t === '=' && (last === 'default' || last === 'delete');
+  };
 
   for (let i = 0; i < toks.length; i++) {
     const tok = toks[i];
-    if (tok.t === ';') { flush(); continue; }
+    if (tok.t === ';') {
+      if (isDefaulted()) noteDefinition();
+      flush();
+      continue;
+    }
     if (ACCESS.has(tok.t) && toks[i + 1]?.t === ':') { flush(); i++; continue; }
 
     if (tok.t === '}') {
@@ -561,7 +716,9 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     }
 
     if (tok.t === '{') {
+      noteEnum(i);
       const { action, templateParams } = classifyBrace(chunk);
+      if (action === 'inline' || action === 'block') noteDefinition();
       if (action === 'inline') {
         chunk.push({ t: '{}', line: tok.line });
         i = skipBlock(i);
@@ -604,6 +761,7 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     if (open.kind === 'class' && open.rec.name) records.push(open.rec);
   }
 
+  records.push(...definitions.values());
   if (records.length > limits.maxRecords) return refused('maxRows', limits.maxRecords, records.length);
 
   records.sort((a, b) => a.line - b.line);
@@ -612,7 +770,7 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     line: String(r.line),
     kind: r.kind,
     name: r.name,
-    qualifiedName: [r.namespace, r.outer, r.name].filter(Boolean).join('::'),
+    qualifiedName: r.key ?? [r.namespace, r.outer, r.name].filter(Boolean).join('::'),
     namespace: r.namespace,
     outer: r.outer,
     templateParams: r.templateParams,

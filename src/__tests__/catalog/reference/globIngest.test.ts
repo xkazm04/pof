@@ -78,13 +78,15 @@ describe('glob spec ingest', () => {
   it('wraps every matching file, keeps each record on its own path, and summarises the spec once', () => {
     const run = ingestSourceFromDir(SOURCE.id, 'root', deps(db));
     const [hero, nowhere] = run.tables;
+    // cpp-decls@2: hero.cpp's out-of-line definitions are a fifth record, so no file is record-less.
     expect(hero).toMatchObject({
-      file: 'src/Hero/**/*.{h,cpp}', status: 'ingested', rows: 4,
+      file: 'src/Hero/**/*.{h,cpp}', status: 'ingested', rows: 5,
       unclassified: [], declaredButAbsent: [], malformed: 0, mapped: 5, gaps: 3,
-      files: { matched: 3, withoutRecords: 1, refused: [] },
+      files: { matched: 3, withoutRecords: 0, refused: [] },
     });
     expect(hero.coverage).toBeCloseTo(5 / 11);
-    // `demo::hero::Hero` is defined in two files: two wrappers, one reported duplicate id.
+    // `demo::hero::Hero` is defined in two files: two wrappers, one reported duplicate id — and the
+    // definition record of the same owner adds none.
     expect(hero.duplicateKeys).toBe(1);
     // A glob that matches nothing is a finding, never an empty success.
     expect(nowhere).toMatchObject({ status: 'missing', rows: 0, files: { matched: 0, withoutRecords: 0, refused: [] } });
@@ -94,23 +96,24 @@ describe('glob spec ingest', () => {
       'glob-fixture:src/Hero/Moves/glide.h:demo::hero::Glide',
       'glob-fixture:src/Hero/Moves/glide.h:demo::hero::Glide::Wind',
       'glob-fixture:src/Hero/Moves/glide.h:demo::hero::Hero',
+      'glob-fixture:src/Hero/hero.cpp:demo::hero::Hero::(definitions)',
       'glob-fixture:src/Hero/hero.h:demo::hero::Hero',
     ]);
     const heroWrapper = wrappers.find((w) => w.file === 'src/Hero/hero.h')!;
-    expect(heroWrapper.technique).toBe('cpp-decls@1');
+    expect(heroWrapper.technique).toBe('cpp-decls@2');
     expect(heroWrapper.raw).toMatchObject({ file: 'src/Hero/hero.h', bases: 'Pawn', methods: 'dash;climb', fields: 'mStamina' });
     expect(heroWrapper.entity).toMatchObject({
       id: 'gx-demo::hero::Hero', name: 'Hero', catalogId: 'player-movement',
       data: { declKind: 'class', qualifiedName: 'demo::hero::Hero', namespace: 'demo::hero' },
       provenance: { sourceFile: 'src/Hero/hero.h', sourceRow: 'qualifiedName=demo::hero::Hero', licenceNote: 'synthetic test fixture' },
     });
-    expect(run.store).toEqual({ created: 4, rawChanged: 0, reprojected: 0, unchanged: 0 });
+    expect(run.store).toEqual({ created: 5, rawChanged: 0, reprojected: 0, unchanged: 0 });
   });
 
   it('is idempotent: a second ingest of the same tree reports everything unchanged', () => {
     ingestSourceFromDir(SOURCE.id, 'root', deps(db));
     const second = ingestSourceFromDir(SOURCE.id, 'root', deps(db, { now: '2026-10-10T00:00:00.000Z' }));
-    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 4 });
+    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 5 });
   });
 
   it('a mapping change re-projects exactly the records whose projection moved, and nothing else', () => {
@@ -120,10 +123,13 @@ describe('glob spec ingest', () => {
     spec.map = { ...CLASS_MAP, methods: mapped('data.methods[]', split(';')) };
     try {
       const run = ingestSourceFromDir(SOURCE.id, 'root', deps(db));
-      // Only Hero declares methods; the other three project identically under the new map.
-      expect(run.store).toEqual({ created: 0, rawChanged: 0, reprojected: 1, unchanged: 3 });
+      // Only Hero's class record and its definition record carry methods; the other three project
+      // identically under the new map.
+      expect(run.store).toEqual({ created: 0, rawChanged: 0, reprojected: 2, unchanged: 3 });
       const hero = listWrappers(db, { sourceId: SOURCE.id }).find((w) => w.file === 'src/Hero/hero.h')!;
       expect(hero.entity.data.methods).toEqual(['dash', 'climb']);
+      const defs = listWrappers(db, { sourceId: SOURCE.id }).find((w) => w.file === 'src/Hero/hero.cpp')!;
+      expect(defs.entity.data.methods).toEqual(['dash', 'climb']);
     } finally {
       spec.map = original;
     }

@@ -31,10 +31,18 @@ turned this into a long-running loop whose product is the adjustments. W00 lande
 The second source is a different class of reference: **zeldaret/botw**, a C++ decompilation with
 no design tables and no assets. Its design lives in the shape of the code, so the chassis gained:
 
-- **Technique `cpp-decls@1`** (asset kind `source-code`, `ingest/cppDecls.ts`) — one `.h`/`.cpp`
+- **Technique `cpp-decls@2`** (asset kind `source-code`, `ingest/cppDecls.ts`) — one `.h`/`.cpp`
   file → one record per class / struct / union definition: `file`, `line`, `kind`, `name`,
   `qualifiedName` (the key), `namespace`, `outer`, `templateParams`, `bases`, and the NAMES of its
-  member functions and fields. A tokenizer, not a parser: comments, literals, macro bodies,
+  member functions and fields. Version 2 (W01) added two record kinds in the SAME eleven columns,
+  so every v1 class record re-reads byte-identically: `enum` (plain or scoped, at namespace scope
+  or nested; the enumerator NAMES ride `fields` — never a value, never the underlying type; an
+  opaque or anonymous enum is not a record) and `definition` (one per owner class whose member
+  functions a file defines out of line — constructors, destructors, operators, template owners and
+  `= default` included; the function NAMES ride `methods`, overloads collapsed, never a body or a
+  parameter list). A definition record's key is the owner's qualified name plus the synthetic
+  segment `(definitions)`, which is never a C++ name, so it cannot collide with the owner's class
+  record. A tokenizer, not a parser: comments, literals, macro bodies,
   `#if 0` blocks and every function body are skipped; of a conditional only the first branch is
   read. Unbalanced braces / stray `}` / unterminated comments are REPORTED as malformed, an
   oversized file is REFUSED, and a file with no definitions yields zero rows — three different
