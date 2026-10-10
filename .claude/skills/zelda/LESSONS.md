@@ -348,3 +348,17 @@ and media generation were dropped with those sections.
 - **Filter stored records by the raw JSON's `kind`, not by `key_kind`** (it reads `column` for every botw row), and take the area from the file path.
 - **Anchor an `Edit` on text copied from `grep -n` of the file, not retyped.** Two anchors typed from memory failed on a wrapped line's punctuation.
   LESSONS.md is all CRLF and the Edit tool kept it so (350 of 350 lines after the append): check with `grep -c` before reaching for a converter.
+
+## 1.0 — 2026-10-10 — pof (W17 part 1)
+- **A row that does not follow its neighbour breaks the previous row's adjacency assertion, and its own gap assertion must look only BACKWARD.** M–O's test says "my
+  first initial is the letter after the earlier row's last"; T–Z registers after M–O but P–S lie between, so the new test asserts consecutive-among-themselves, first
+  after the earlier last, and every gap letter unread by the specs registered up to and including the row (rows registered later are excluded by position, so the P–R and
+  S waves do not turn it red). Put no fixture in the gap and derive the open-initial fixture from what no spec reads.
+- **A glob initial with no file stays in the glob.** Y has no file at the pin, but the coverage row is written over it, so dropping it would make the two tools disagree.
+  The border-probe tests are path-address tests and keep passing; just never assert that every initial has a file.
+- **A delegated survey calibrated on the settled rows is again the fast path** (~6 minutes for a script that reproduced two rows exactly): hand over the targets, re-run
+  both rows yourself, then run the new row. The throw-away helpers (home assignment, users search, key collisions) are small files written with the Write tool.
+- **Never put a stray `cat` ahead of a heredoc in one shell call.** `cat > /dev/null; node - <<EOF` waited on the terminal until the harness killed it at its time limit;
+  the payload never ran. Make the edit with the Edit tool when it is a few lines.
+- **Open a file-copy of the backup for the rehearsal, not a serialized buffer of a WAL store** (`new Database(buffer)` failed with "unable to open database file");
+  back up first with the backup API, then copy that file to a temp path and run the full ingest twice on the copy.
