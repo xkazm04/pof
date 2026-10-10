@@ -147,14 +147,12 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the fourth row, named by a stem, read by both techniques (W13)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one stem glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(5);
-    // The next row's spec directly follows this one and ends the cpp-decls block; this row's twin is directly followed by
-    // the next row's twin, which is the last table.
+    expect(ROW_SPECS).toHaveLength(6);
+    // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin. Which
+    // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D65).
     expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
-    expect(BOTW.tables.indexOf(LATER)).toBe(DECL_SPECS.length - 1);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(LATER_TWIN);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);

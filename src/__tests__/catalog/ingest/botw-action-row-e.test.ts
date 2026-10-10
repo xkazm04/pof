@@ -111,7 +111,7 @@ const STAY_OPEN = Object.keys(FILES)
 
 describe('BOTW generic behaviour-node rows: the third row, read by both techniques (W12)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(5);
+    expect(ROW_SPECS).toHaveLength(6);
     // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin. Which
     // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D61).
     expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
