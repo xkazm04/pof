@@ -295,3 +295,26 @@ and media generation were dropped with those sections.
 - **When a wave is split, the first part ends at the store-side wrap and the note says which half owns each claim.** Put the claims in the
   note before the slice (they were), the real numbers in a section headed "part 1", and the learning pass as the State resume point — the
   next run then reads claims from the 833 stored records and touches neither the store nor the repo.
+
+## 1.0 — 2026-10-10 — pof (W15 part 2)
+- **The first learning pass run on its own from stored records: the records carried every COUNT but not three things — bodies, parents in
+  unwrapped rows, and anything outside `src/Game/Actor/Action`.** Bodies, the 23 parents of the row in rows not yet wrapped, and the AI
+  folder's names came from the clone, read-only, and each claim says which part did. Plan a learning pass as "store first, then name the clone
+  reads in the claim"; none of it needed a write.
+- **Validate a clone-built parent index against the store before trusting it.** The index of class heads over the Action folder agreed with
+  the store's class records on all 972 classes both hold (same first parent, 0 disagreements); only then were its 23 extra links used. Also
+  confirm a "no acting hook in the chain" node's chain really ends at the engine base through store-held nodes (here all 7 do), because a
+  store-only walk is blind past a parent the store lacks.
+- **A survey's COUNT can be exact while its explanation is wrong; check the holder, not the number.** The prediction (3 nodes inherit an
+  acting hook, 2 from a T–Z base) matched on 10 / 7 / 3, but the chain showed the T–Z node declares no hook itself and the hook comes from
+  the player folder's action base: the library crosses an area, which no count would have shown. Print the chain of every inherited case.
+- **Do not force a name-classified count to a survey's number.** The completion-policy handles came to 15 on 11 nodes by a strict rule
+  against the survey's 18 on 14; the 3-and-3 gap could not be reproduced from names. Report the rule, the count and the gap, and give the
+  verdict PARTLY with the kinds list complete — never tune the rule until it matches.
+- **A class name containing a word is not a reference to the thing the word names.** Eighteen AI-folder pairs are named for riding, yet no
+  AI source names an Action-side rider node: the link is tree data. Grep what a file REFERENCES, not what it is called, before a note says one
+  side "runs" the other.
+- **Append a multi-claim section by anchoring on the paragraph's LAST line.** An `Edit` anchored on a substring in the middle of claim 5's
+  paragraph pushed claims 6 and 7 into it, with the paragraph's tail left below them; found by grepping the claim numbers' line order, fixed
+  by moving the tail. Grep the headings' order after any multi-paragraph edit of a note. And write throw-away scripts with the Write tool: a
+  heredoc stripped the backslashes from a regex and the script did not even parse.
