@@ -89,7 +89,7 @@ const specFor = (folder: string) => BOTW.tables.find((t) => t.file.startsWith(`$
 
 describe('BOTW camera node specs (W07)', () => {
   it('registers one spec per half, wrap-only and sharing one map: shots under cutscenes, choosers under dialog-trees', () => {
-    expect(BOTW.tables).toHaveLength(28);
+    expect(BOTW.tables).toHaveLength(30);
     expect(specFor(SHOTS)).toMatchObject({ file: `${SHOTS}/**/*.{h,cpp}`, catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(specFor(CHOOSERS)).toMatchObject({ file: `${CHOOSERS}/**/*.{h,cpp}`, catalogId: 'dialog-trees', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(specFor(SHOTS)!.map).toBe(CAMERA_SHOT_NODE_MAP);

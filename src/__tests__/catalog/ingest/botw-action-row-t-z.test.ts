@@ -1,8 +1,8 @@
 // W17: the eighth generic behaviour-node row (Backlog item 8): seven single initials in the shape of the first rows —
 // <prefix>{<initial>,…}*.{h,cpp}, no stem and no enumeration — that do NOT start after the seventh row's last one: the
 // initials between them belong to rows registered later, so they stay unread for now (vault Decisions Z-D74 – Z-D77). It is
-// read by BOTH source-code techniques over that one glob — a cpp-decls spec under the shared node map at the end of the
-// cpp-decls block, and its cpp-handles twin last, both in the row's own catalog. The glob must read the row's code
+// read by BOTH source-code techniques over that one glob — a cpp-decls spec under the shared node map (it ended the
+// cpp-decls block until the next row registered) and its cpp-handles twin (last until then), both in the row's own catalog. The glob must read the row's code
 // files and nothing else, and must share no file with any earlier spec (an overlap would wrap one file twice under one id).
 // One initial of the row has no file at the pin; no test here asserts that every initial has one.
 // Some of the row's nodes extend a node of another area, so one fixture node here names a parent the mount's spec reads.
@@ -25,9 +25,11 @@ const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
 // Pinned to this row by position among the row specs (vault Z-D57): the eighth row spec, the seventh before it.
 const SPEC = ROW_SPECS[7];
 const EARLIER = ROW_SPECS[6];
+const LATER = ROW_SPECS[8];
 const twinOf = (file: string) => BOTW.tables.find((t) => t.technique === 'cpp-handles' && t.file === file)!;
 const TWIN = twinOf(SPEC.file);
 const EARLIER_TWIN = twinOf(EARLIER.file);
+const LATER_TWIN = twinOf(LATER.file);
 const MOUNT = DECL_SPECS.find((t) => t.map === MOUNT_CLASS_MAP)!;
 const MOUNT_AREA = MOUNT.file.slice(0, MOUNT.file.indexOf('/**'));
 const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
@@ -157,12 +159,14 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 }
 
 describe('BOTW generic behaviour-node rows: the eighth row, seven initials after a gap, read by both techniques (W17)', () => {
-  it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(8);
+  it('is followed directly by the next row\'s spec and its handle twin by the next row\'s twin: one glob, one catalog, the two shared maps', () => {
+    expect(ROW_SPECS).toHaveLength(9);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
-    expect(BOTW.tables.indexOf(SPEC)).toBe(DECL_SPECS.length - 1);
+    // The next row's spec directly follows this one (it ends the cpp-decls block), and this row's twin is directly followed by
+    // the next row's twin (which is the last table); the newest row's test asserts the ends (vault Z-D82).
+    expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(EARLIER_TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(TWIN);
+    expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
@@ -182,7 +186,7 @@ describe('BOTW generic behaviour-node rows: the eighth row, seven initials after
     expect(FIRST > EARLIER_LAST).toBe(true);
     expect(GAP.length).toBeGreaterThan(0);
     expect(GAP.length).toBe(FIRST.charCodeAt(0) - EARLIER_LAST.charCodeAt(0) - 1);
-    const laterFiles = new Set(ROW_SPECS.slice(8).map((s) => s.file)); // rows registered after this one (none yet), both techniques
+    const laterFiles = new Set(ROW_SPECS.slice(8).map((s) => s.file)); // rows registered after this one (the S row sits at [8]), both techniques
     const registered = BOTW.tables.filter((t) => !laterFiles.has(t.file));
     expect(registered).toContain(SPEC);
     for (const c of [...GAP, ...GAP.map((g) => g.toLowerCase())]) {

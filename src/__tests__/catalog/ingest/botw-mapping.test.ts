@@ -28,8 +28,8 @@ describe('BOTW source contract', () => {
     expect(BOTW.tables.length).toBeGreaterThan(0);
     // W11 (vault Z-D46): a second source-code technique, cpp-handles, reads the node areas' globs again with its own
     // columns. Every spec reads one of the two, and each map classifies every column of ITS technique.
-    expect(BOTW.tables.filter((t) => t.technique === 'cpp-decls')).toHaveLength(17);
-    expect(BOTW.tables.filter((t) => t.technique === 'cpp-handles')).toHaveLength(11);
+    expect(BOTW.tables.filter((t) => t.technique === 'cpp-decls')).toHaveLength(18);
+    expect(BOTW.tables.filter((t) => t.technique === 'cpp-handles')).toHaveLength(12);
     for (const spec of BOTW.tables) {
       expect(spec.file.startsWith(`${BOTW_TREE}/`)).toBe(true);
       expect(['cpp-decls', 'cpp-handles']).toContain(spec.technique);
