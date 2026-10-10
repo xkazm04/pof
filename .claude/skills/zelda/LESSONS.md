@@ -204,3 +204,20 @@ and media generation were dropped with those sections.
 - **When a brief's crude number does not reproduce, do not copy it and do not silently replace it.** Give your two
   witnesses, the nearest grep that comes close, and say that none reproduces it. W09's "about 464 handles, 75 headers
   with none" matched no grep tried; two instruments agreed on 550 and 56.
+
+## 1.0 — 2026-10-10 — pof (W10)
+- **Write a heuristic's RULES into the vault the wave it is built, not only its score.** W09 recorded "420 of 550" and
+  deleted the script; W10, asked to apply it unchanged, had to recover the rules from the run transcript. A number that
+  a later wave must re-measure out of sample is only reproducible if its instrument is written down in prose.
+- **Calibrate a fresh survey on the previous wave's area before trusting it on the new one.** Rerun unchanged over A–B,
+  W10's new scope tracker had to reproduce every W09 number (550 · 126 · 85 / 97 · 6 shells · 1113 · 420 of 550) before
+  any C–D number was written. A survey that cannot reproduce settled numbers is not a witness for new ones.
+- **Re-measure an in-sample score out of sample before it orders the backlog.** The type heuristic tuned on A–B fell
+  from 76 % to 64 % on C–D, and the loss sat in the kind whose share doubled between rows. A recovery rate quoted to
+  defer a reader item is a claim about the NEXT row, so test it there first.
+- **Count families from the base-class graph or by reading, never by a name-prefix grep.** Shipped names misspell their
+  own family stem (F19); a prefix grep silently drops the misspelled member while its parent link still names the
+  family.
+- **Derive a "stays open" fixture from what NO spec reads, at run time.** A fixture built as "the next initial after my
+  row" is swallowed by the next row's spec (the W06 lesson in another shape). Compute it from every registered spec, so
+  a later wave moves no count in it.
