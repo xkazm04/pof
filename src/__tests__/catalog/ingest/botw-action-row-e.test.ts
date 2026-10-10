@@ -18,9 +18,13 @@ import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
 const DECL_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-decls');
 const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
-const SPEC = ROW_SPECS.at(-1)!;
-const EARLIER = ROW_SPECS.at(-2)!;
+// Pinned to this row by position among the row specs (vault Z-D57): the third row spec, the second before it. A later
+// row's spec follows this one, so "the last row spec" no longer names this row.
+const SPEC = ROW_SPECS[2];
+const EARLIER = ROW_SPECS[1];
+const LATER = ROW_SPECS[3];
 const TWIN = BOTW.tables.find((t) => t.technique === 'cpp-handles' && t.file === SPEC.file)!;
+const LATER_TWIN = BOTW.tables.find((t) => t.technique === 'cpp-handles' && t.file === LATER.file)!;
 const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
 // A row glob's file part: <prefix>{<initial>,…}*.{<ext>,…}
 const shapeOf = (file: string) => /^([^{}*/]*)\{([A-Z](?:,[A-Z])*)\}\*\.\{([a-z]+(?:,[a-z]+)*)\}$/.exec(file.slice(FOLDER.length + 1));
@@ -106,10 +110,14 @@ const STAY_OPEN = Object.keys(FILES)
 
 describe('BOTW generic behaviour-node rows: the third row, read by both techniques (W12)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(3);
-    expect(BOTW.tables.indexOf(SPEC)).toBe(DECL_SPECS.length - 1);
+    expect(ROW_SPECS).toHaveLength(4);
+    // The next row's spec directly follows this one and ends the cpp-decls block; this row's twin is directly followed by
+    // the next row's twin, which is the last table.
+    expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
+    expect(BOTW.tables.indexOf(LATER)).toBe(DECL_SPECS.length - 1);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
-    expect(BOTW.tables.at(-1)).toBe(TWIN);
+    expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
+    expect(BOTW.tables.at(-1)).toBe(LATER_TWIN);
     expect(SPEC).toMatchObject({ catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);

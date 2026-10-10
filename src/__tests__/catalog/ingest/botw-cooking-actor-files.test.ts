@@ -117,7 +117,7 @@ const specFor = (area: string) => BOTW.tables.find((t) => t.file.startsWith(`${a
 
 describe('BOTW cooking and per-object parameter-file specs (W06)', () => {
   it('registers one spec per area, wrap-only: cooking under crafting-recipes, the file area under props', () => {
-    expect(BOTW.tables).toHaveLength(18);
+    expect(BOTW.tables).toHaveLength(20);
     expect(specFor(KITCHEN)).toMatchObject({ file: `${KITCHEN}/**/*.{h,cpp}`, catalogId: 'crafting-recipes', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(specFor(KITCHEN)!.map).toBe(COOKING_CLASS_MAP);
     expect(specFor(FILES_AREA)).toMatchObject({ file: `${FILES_AREA}/**/*.{h,cpp}`, catalogId: 'props', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
