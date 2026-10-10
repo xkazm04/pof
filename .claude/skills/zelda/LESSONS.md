@@ -221,3 +221,20 @@ and media generation were dropped with those sections.
 - **Derive a "stays open" fixture from what NO spec reads, at run time.** A fixture built as "the next initial after my
   row" is swallowed by the next row's spec (the W06 lesson in another shape). Compute it from every registered spec, so
   a later wave moves no count in it.
+
+## 1.0 — 2026-10-10 — pof (W11)
+- **When new information has no honest column in the reader, add a TECHNIQUE over the same globs, not a kind.** A kind
+  rides the existing columns, so it only qualifies when each column keeps its meaning; a scope word and a declared type had
+  none. Measure the rejected design's cost anyway (W11 bumped the old technique against a copy of the store: 0 moved), so
+  the choice rests on honesty, not on a count nobody took.
+- **Rehearse the store round against a COPY of the real store.** Copy the source rows into `:memory:` and run the full
+  ingest there twice: it predicts `created · rawChanged · reprojected · unchanged`, stale and the id check against the
+  store's real state, not only the area's census, and it costs nothing to throw away.
+- **Pin a byte-identity fixture with the BASE commit's reader.** When a fixture grows after the change, re-run the old reader
+  on it (`git show <base>:<reader>` into a throw-away module) before re-pinning, so the "before" rows are never produced by
+  the code under test.
+- **The clone check tokenizes hex literals as identifiers** (the digits after `0x` read as an `x…` word), so a fixture's coined numbers collide
+  with the clone's. Coin one distinctive value, check it against the clone, and use it everywhere.
+- **The prose rule covers every interpreter, not only `node -e`.** A python heredoc that edits vault notes or test text can
+  rewrite escapes silently (W11 lost a quote escape in a test string that way); edit prose with the Edit or Write tool, and
+  re-read any note an interpreter touched.
