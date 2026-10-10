@@ -12,7 +12,14 @@
 
 import { ORRERY_GEOMETRY } from '@/lib/story/orrery/layout';
 import type { OrreryNode } from '@/lib/story/orrery';
-import { TAU, chordControl, impactBarLength, ringInner, sectorTouchesRect } from '@/components/story/orrery/render/geometry';
+import {
+  TAU,
+  chordControl,
+  chordTouchesRect,
+  impactBarLength,
+  ringInner,
+  sectorTouchesRect,
+} from '@/components/story/orrery/render/geometry';
 import { aggregatedEdges, ancestorAtDepth } from '@/components/story/orrery/render/derive';
 import { anchorOfRep } from '@/components/story/orrery/render/hitTest';
 import { circlePath, segmentPath } from '@/components/story/orrery/render/ctx';
@@ -37,16 +44,12 @@ export function drawHierChords(ctx: CanvasRenderingContext2D, input: SceneInput)
     if (!p1) continue;
     const p2 = anchorOfRep(view, e.b);
     if (!p2) continue;
-    if (
-      (p1.x < rect.x0 && p2.x < rect.x0) ||
-      (p1.x > rect.x1 && p2.x > rect.x1) ||
-      (p1.y < rect.y0 && p2.y < rect.y0) ||
-      (p1.y > rect.y1 && p2.y > rect.y1)
-    ) {
-      continue;
-    }
     // Weight bands, so a bundle of 20 edges reads heavier than a single hop without 20 strokes.
     const weight = e.n >= 20 ? 3 : e.n >= 4 ? 2 : e.n >= 2 ? 1 : 0;
+    const c = chordControl(p1.x, p1.y, p2.x, p2.y);
+    // Culled on the curve's own box, not its ends: the chord dives inward past both of them.
+    const pad = (0.8 + weight * 0.9) / cam.scale / 2;
+    if (!chordTouchesRect(p1.x, p1.y, c.cx, c.cy, p2.x, p2.y, pad, rect)) continue;
     const key = `${e.kind}${weight}`;
     let bucket = buckets.get(key);
     if (!bucket) {
@@ -54,7 +57,6 @@ export function drawHierChords(ctx: CanvasRenderingContext2D, input: SceneInput)
       buckets.set(key, bucket);
     }
     bucket.path.moveTo(p1.x, p1.y);
-    const c = chordControl(p1.x, p1.y, p2.x, p2.y);
     bucket.path.quadraticCurveTo(c.cx, c.cy, p2.x, p2.y);
     drawn++;
   }

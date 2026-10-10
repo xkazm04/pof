@@ -16,6 +16,7 @@ import { ORRERY_GEOMETRY } from '@/lib/story/orrery/layout';
 import type { NodeIx } from '@/lib/story/orrery';
 import {
   chordControl,
+  chordTouchesRect,
   dockPoint,
   impactBarLength,
   sectorTouchesRect,
@@ -157,10 +158,12 @@ export function drawFlatDial(ctx: CanvasRenderingContext2D, input: SceneInput): 
 
 /** Direct traversal edges on the dial — few enough at dial scale to draw one at a time, with heads. */
 function drawFlatChords(ctx: CanvasRenderingContext2D, input: SceneInput): number {
-  const { view, cam, palette } = input;
+  const { view, cam, palette, rect } = input;
   const model = view.model;
   const flat = model.flat;
   if (!flat) return 0;
+  // The arrowhead is the widest thing a chord draws, so it is the stroke pad the cull allows.
+  const pad = 6 / cam.scale;
   const paths = {
     then: new Path2D(),
     option: new Path2D(),
@@ -189,6 +192,7 @@ function drawFlatChords(ctx: CanvasRenderingContext2D, input: SceneInput): numbe
     if (!p1 || !p2) continue;
     const kind = chordKindOf(e.kind);
     const c = chordControl(p1.x, p1.y, p2.x, p2.y);
+    if (!chordTouchesRect(p1.x, p1.y, c.cx, c.cy, p2.x, p2.y, pad, rect)) continue;
     paths[kind].moveTo(p1.x, p1.y);
     paths[kind].quadraticCurveTo(c.cx, c.cy, p2.x, p2.y);
     heads.push({ cx: c.cx, cy: c.cy, x: p2.x, y: p2.y, kind });
