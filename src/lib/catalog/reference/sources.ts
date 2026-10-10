@@ -35,7 +35,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CHEMISTRY_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -174,6 +174,10 @@ export const BOTW: ReferenceSource = {
     { file: 'src/KingSystem/World/**/*.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: WORLD_CLASS_MAP },
     // W04: the mount's behaviour-node library → state-graph, the plurality home of its nodes (wrap only).
     { file: 'src/Game/Actor/Horse/**/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: MOUNT_CLASS_MAP },
+    // W06: the cooking engine → crafting-recipes, the home of most of its records (wrap only).
+    { file: 'src/Game/Cooking/**/*.{h,cpp}', catalogId: 'crafting-recipes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: COOKING_CLASS_MAP },
+    // W06: the per-object parameter files → props, the largest share among real catalogs (wrap only).
+    { file: 'src/KingSystem/Resource/Actor/**/*.{h,cpp}', catalogId: 'props', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: ACTOR_FILE_CLASS_MAP },
   ],
 };
 

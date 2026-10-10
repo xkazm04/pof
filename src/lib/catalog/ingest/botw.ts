@@ -168,6 +168,58 @@ export const MOUNT_CLASS_MAP: FieldMap = botwClassMap({
     + 'and mount links); state-graph keeps one blackboard key set per graph and no tunables or inputs per state'),
 });
 
+/* ── crafting-recipes ← src/Game/Cooking/** (W06) ─────────────────────── */
+
+/**
+ * The cooking engine: one class that turns a handful of ingredients into a dish — it matches a recipe
+ * by ingredient name or tag, sums what each ingredient contributes, rolls a critical bonus, applies
+ * seasoning and recipe bonuses, clamps the result and derives its sell price — plus the dish it
+ * produces and the closed list of effect kinds a dish can carry. Wrapped under `crafting-recipes`, the
+ * home of most of its records (vault Decisions Z-D26). Its bodies are real behaviour; the reader keeps
+ * only their names.
+ */
+export const COOKING_CLASS_MAP: FieldMap = botwClassMap({
+  bases: dropped('empty in this area: the engine, its dish and its argument records derive from nothing, so the '
+    + 'column carries no value to hold'),
+  methods: gap('no home for a COOKING PROCEDURE: the engine\'s class record declares the named steps of a cook (match a '
+    + 'recipe by ingredient name or tag, sum ingredient contributions, roll a critical bonus, add seasoning and recipe '
+    + 'bonuses, clamp, price, fall back to a failed dish) and its definition record implements them; crafting-recipes maps '
+    + 'a fixed input list to a fixed output and has no field for the steps that derive an output from its inputs'),
+  fields: gap('no home for a cooked RESULT schema or the procedure\'s tunables: the dish record holds its ingredients, '
+    + 'restored health, effect kind, strength and duration, sell price and a critical flag; the engine holds per-effect '
+    + 'caps, multipliers and bonus durations and per-ingredient-count price and success tables; the enum record lists the '
+    + 'effect kinds. crafting-recipes gives an output a heal and a duration and has no effect vocabulary, no per-effect cap '
+    + 'and no price derived from its inputs'),
+});
+
+/* ── props ← src/KingSystem/Resource/Actor/** (W06) ───────────────────── */
+
+/**
+ * The per-object parameter FILES: an object names, slot by slot, one file of each kind it needs — its
+ * interaction checks, its animation list and graph, its model list, perception, damage response,
+ * ragdoll, drop, shop and recipe tables, icon framing, appearance conditions, chemistry body and its
+ * parameter-group list (the W02 library). Wrapped under `props`, the catalog holding the largest share
+ * of its records among real catalogs (vault Decisions Z-D26), though the largest group of all — the
+ * animation graph — has no catalog home.
+ */
+export const ACTOR_FILE_CLASS_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for the KIND hierarchies the area declares: interaction checks (one base and a kind per test — line '
+    + 'of sight, screen, sphere / fan / cylinder / box areas, angle, weight, riding, swimming, carrying, fire contact, '
+    + 'under water …), animation-graph nodes (sequence, selector, blender, asset) with their per-node extension parsers, '
+    + 'and the entry kinds of an object\'s behaviour program (a selector or action, a behaviour, a query); props has one '
+    + 'interaction-type field and no check kinds, and no catalog holds an animation graph or a behaviour program. The '
+    + 'other bases are parameter-file and resource machinery'),
+  methods: gap('no home for the per-object QUERY contract: beside parse and accessor machinery and numbered hooks whose '
+    + 'names are not recovered (F3), the class records ask named questions of an object\'s files — each interaction check\'s '
+    + 'own test, roll a drop from a named table or fall back to the normal one, the damage rate of a damage source, the '
+    + 'reaction to a source at a size, whether the object carries a tag — and the definition records implement them, '
+    + 'mostly as parsers; the catalogs author static sheets and publish no queries'),
+  fields: gap('no home for the per-object parameter FILES: a class record is one file kind an object links by name and '
+    + 'its fields that file\'s named parameters, the link record\'s fields are its slots per file kind, and the enum records '
+    + 'list check kinds, link slots, extension kinds, damage sizes and damage sources; no catalog has a field for which '
+    + 'files an object carries or for their schemas (some names are offset placeholders, F3)'),
+});
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**

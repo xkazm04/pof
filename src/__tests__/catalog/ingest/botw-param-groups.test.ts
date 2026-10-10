@@ -80,16 +80,17 @@ const spec = BOTW.tables.find((t) => t.file.startsWith(`${AREA}/`));
 
 describe('BOTW parameter-group spec (W02)', () => {
   it('is registered once, as the second BOTW spec, wrap-only under items', () => {
-    expect(BOTW.tables).toHaveLength(5);
+    expect(BOTW.tables).toHaveLength(7);
     expect(spec).toMatchObject({ file: `${AREA}/**/*.{h,cpp}`, catalogId: 'items', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
   });
 
   it('reads the parameter-group folder and nothing else', () => {
     expect(expandGlob(Object.keys(FILES), spec!.file)).toEqual(AREA_FILES);
     const cov = computePathCoverage(Object.keys(FILES), BOTW.tables.map((t) => t.file), BOTW_DESCOPES);
-    // 5 area files + 1 Player file covered; the top-level Resource file descoped; the two siblings open.
-    expect(cov).toMatchObject({ total: 9, covered: 6, descoped: 1, open: 2 });
-    expect(cov.openFiles).toEqual(['src/KingSystem/Resource/Actor/demoActorParams.h', 'src/KingSystem/Resource/GeneralParamListDraft/demoDraft.h']);
+    // 5 area files + 1 Player file + the Resource/Actor sibling (read by the W06 parameter-file spec) covered;
+    // the top-level Resource file descoped; the look-alike sibling open.
+    expect(cov).toMatchObject({ total: 9, covered: 7, descoped: 1, open: 1 });
+    expect(cov.openFiles).toEqual(['src/KingSystem/Resource/GeneralParamListDraft/demoDraft.h']);
     expect(cov.specs.find((s) => s.pattern === spec!.file)?.files).toBe(5);
   });
 
@@ -120,13 +121,13 @@ describe('BOTW parameter-group spec (W02)', () => {
 
     it('wraps every record kind with 0 unclassified columns, and a second ingest moves nothing', () => {
       const first = ingestSourceFromDir('botw', 'clone', deps());
-      expect([...new Set(reads)].sort()).toEqual([...AREA_FILES, 'src/Game/Actor/Player/demoRunner.h'].sort());
+      expect([...new Set(reads)].sort()).toEqual([...AREA_FILES, 'src/Game/Actor/Player/demoRunner.h', 'src/KingSystem/Resource/Actor/demoActorParams.h'].sort());
       const area = first.tables.find((t) => t.file === spec!.file);
       expect(area).toMatchObject({
         catalogId: 'items', status: 'ingested', rows: 8, unclassified: [], declaredButAbsent: [],
         duplicateKeys: 0, malformed: 0, files: { matched: 5, withoutRecords: 1, refused: [] },
       });
-      expect(first.store).toEqual({ created: 9, rawChanged: 0, reprojected: 0, unchanged: 0 });
+      expect(first.store).toEqual({ created: 10, rawChanged: 0, reprojected: 0, unchanged: 0 });
 
       const wrapped = listWrappers(db, { sourceId: 'botw', catalogId: 'items' });
       const kinds = wrapped.map((w) => w.raw.kind).sort();
@@ -143,9 +144,10 @@ describe('BOTW parameter-group spec (W02)', () => {
       ]);
       expect(wrapped.find((w) => w.raw.kind === 'enum')?.raw).toMatchObject({ name: 'GroupKind', fields: 'Blade;Critter' });
       expect(listWrappers(db, { sourceId: 'botw', catalogId: 'player-movement' })).toHaveLength(1);
+      expect(listWrappers(db, { sourceId: 'botw', catalogId: 'props' })).toHaveLength(1);
 
       const second = ingestSourceFromDir('botw', 'clone', deps());
-      expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 9 });
+      expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 10 });
     });
   });
 });
