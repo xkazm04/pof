@@ -238,3 +238,16 @@ and media generation were dropped with those sections.
 - **The prose rule covers every interpreter, not only `node -e`.** A python heredoc that edits vault notes or test text can
   rewrite escapes silently (W11 lost a quote escape in a test string that way); edit prose with the Edit or Write tool, and
   re-read any note an interpreter touched.
+
+## 1.0 — 2026-10-10 — pof (W12)
+- **A brief's list of moving assertions is a claim; derive the list from the tests' own selectors.** A new spec moves every
+  assertion over a filter it joins (`map === X`, `technique === Y`), in every file that filters that way. W12's brief named
+  `ROW_SPECS` in the W09 test and missed the identical filter in the W10 test. Grep the tests for each predicate the new spec
+  satisfies and list every count over it before the first run.
+- **Rule a catalog from the candidate pipelines' STEPS, not from their names.** W12 counted three fog commands as "no home"
+  until the learning pass read `cutscenes.ts`, whose Lighting step already holds fog density and time of day. Read the step
+  contents of every catalog a node group might belong in before the distribution is written, or the Decision records a
+  correction after the store round.
+- **When a row shows a new shape, measure it on the earlier rows before calling it the row's.** 35 E nodes declare no acting
+  hook; the same calibrated survey found 12 in A–B and 34 in C–D, which turned a row note into a library finding (F22) and
+  corrected an earlier wave's reading of "no per-frame update" as one shape.
