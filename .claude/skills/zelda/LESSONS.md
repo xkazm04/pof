@@ -283,3 +283,15 @@ and media generation were dropped with those sections.
   time, but it must still be disclosed. Run ingest, status and the stale check as separate calls.
 - **String literals are tokens too.** The clone check flagged the lower-case alphabet written as a literal (the repo held only the
   upper-case one). Derive a literal from one the repo already holds, rather than typing a new one.
+
+## 1.0 — 2026-10-10 — pof (W15 part 1)
+- **A derived initial is computed with the repo's own glob matcher, never taken from a brief.** The W15 brief said the first open initial
+  moves H → M; `expandGlob` over the registered specs, run once without and once with the new specs, said F both times (the bare F probe
+  is read by neither the stem spec nor the enumerated F + G spec). Run that two-line check before any fixture is touched.
+- **A released wave resumes from its own note, and its unrun code is a draft, not a delivery.** Read the salvage line by line, write each
+  file again in the live worktree, and run it before believing it: the released run's new test compared `expandGlob`'s SORTED result with an
+  unsorted probe list and was red on the first run, and its header claimed a clone check no evidence backed. Drop a claim until you have
+  earned it; compare globbed lists sorted.
+- **When a wave is split, the first part ends at the store-side wrap and the note says which half owns each claim.** Put the claims in the
+  note before the slice (they were), the real numbers in a section headed "part 1", and the learning pass as the State resume point — the
+  next run then reads claims from the 833 stored records and touches neither the store nor the repo.
