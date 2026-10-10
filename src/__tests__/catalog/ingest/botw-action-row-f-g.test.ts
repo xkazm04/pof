@@ -155,15 +155,13 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the fifth row, an enumerated glob beside the stem, read by both techniques (W14)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(6);
+    expect(ROW_SPECS).toHaveLength(7);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
-    // The next row's spec directly follows this one and ends the cpp-decls block; this row's twin is directly followed by
-    // the next row's twin, which is the last table (vault Z-D65).
+    // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin; which
+    // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D65, Z-D72).
     expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
-    expect(BOTW.tables.indexOf(LATER)).toBe(DECL_SPECS.length - 1);
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(EARLIER_TWIN) + 1);
     expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(LATER_TWIN);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
