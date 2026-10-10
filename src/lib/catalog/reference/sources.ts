@@ -35,7 +35,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { ACTOR_FILE_CLASS_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -182,6 +182,9 @@ export const BOTW: ReferenceSource = {
     // the camera selectors → dialog-trees, each the plurality of its half among real catalogs (wrap only).
     { file: 'src/Game/Actor/Camera/Action/**/*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CAMERA_SHOT_NODE_MAP },
     { file: 'src/Game/Actor/Camera/AI/**/*.{h,cpp}', catalogId: 'dialog-trees', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CAMERA_SHOT_NODE_MAP },
+    // W09: the generic node rows, one spec per row under one shared map. Action A–B (flat folder, initials A
+    // and B only) → state-graph, the plurality of its nodes among real catalogs (wrap only).
+    { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
   ],
 };
 

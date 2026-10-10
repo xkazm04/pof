@@ -245,6 +245,30 @@ export const CAMERA_SHOT_NODE_MAP: FieldMap = botwClassMap({
     + 'field (most nodes have no field at all; some names are offset placeholders, F3)'),
 });
 
+/* ── shared: the generic behaviour-node rows ← src/Game/Actor/Action/** (W09) ── */
+
+/**
+ * The generic behaviour-node library: one header per node and one source implementing it, the shape of
+ * every Action and AI row of the tree. ONE catalog-neutral map for all of those rows (vault Decisions
+ * Z-D20, Z-D39): each row is its own spec with its own plurality `catalogId`, so a reason here never
+ * names a catalog. A row whose census departs from this shape gets its own map instead.
+ */
+export const BEHAVIOUR_NODE_ROW_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for a behaviour-node KIND hierarchy: every node is a kind of one of the engine\'s node bases (an '
+    + 'action that runs, or a selector that decides on entry), directly or through another node of the library whose '
+    + 'tunables it inherits, often several levels deep and across rows; no PoF catalog has a node-kind field or a '
+    + '"this node extends that node" link'),
+  methods: gap('no home for a node\'s TICK RULE: a class record declares construction and the fixed node lifecycle (load '
+    + 'parameters, init, enter, per-frame update, leave), and its definition record implements the same set; which hooks '
+    + 'a node overrides is the design bit (selectors never update per frame, most actions do), and a few nodes are shells '
+    + 'that declare construction only, variants that differ by name alone. Bodies are stubs (F12); no PoF catalog models '
+    + 'a per-frame update, a decide-on-entry selector or a node\'s hook set'),
+  fields: gap('no home for PER-NODE PARAMETERS: the fields are mostly parameter handles — static tunables per actor type, '
+    + 'dynamic per-call inputs (a target position, a target actor, links), per-placement values and variables shared '
+    + 'across a behaviour tree — beside a little runtime state and some offset placeholders (F3); no PoF catalog has a '
+    + 'per-node parameter schema, and the record keeps each handle\'s name, never its type (F7)'),
+});
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**
