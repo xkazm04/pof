@@ -1,7 +1,7 @@
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 import { MIN_PROSE } from '@/lib/catalog/acceptance/wiringCheckers';
-import { requiredFieldLine, requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
+import { gradedFieldClosure, requiredFieldLine, requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
 import type { WiringRequirement } from '@/lib/knowledge/wiring-requirements';
 import type { RuleCategory } from '@/lib/catalog/canon/types';
 import type { CatalogPipeline, StepSpec } from '@/lib/catalog/stepSpec';
@@ -147,21 +147,42 @@ export const CONTRACT_RULE =
   `placeholder ("TBD"/"TODO"/"n/a"), any claim under ${MIN_PROSE} characters, and a \`verification\` line that ` +
   `names no acceptance tier (L0–L4). Name the REAL registration + trigger site.`;
 
+/** How a graded field that no requirement tag describes is stated: by name, with how it is judged. */
+export const VALUE_GRADED_LINE =
+  'graded on its VALUE by a rule not described in this list (a canon law or a derived check) — write it under exactly this key';
+
+/** Fields the chassis owns rather than any one step (the store folds a produce's `links` into `data.links`). */
+const CHASSIS_FIELD_LINES: Readonly<Record<string, string>> = {
+  links: ' (only if you declare it): JSON array of `{ catalogId, entityId }`, each an existing entity',
+};
+
+/** The closure as a sum whose terms are counted, never typed. Stated only when some field is not described. */
+export function requiredFieldsTotalLine(c: { total: number; listed: string[]; rest: string[] }): string {
+  return `Graded: ${c.total} top-level field(s) = ${c.listed.length} described + ${c.rest.length} named.`;
+}
+
 /** Render one step's own contract + criteria as a prompt block. '' when it declares none. */
 export function stepContractBlock(spec: StepSpec, entity: LabEntity): string {
   const reqs = stepContractRequirements(spec, entity);
   const criteria = stepCriteriaLines(spec, entity).slice(0, MAX_CRITERIA_LINES);
   const graded = requiredFieldsOf(spec.accept, entity.canonProfile);
-  if (!reqs.length && !criteria.length && !graded.length) return '';
+  const closure = gradedFieldClosure(spec, graded);
+  if (!reqs.length && !criteria.length && !graded.length && !closure.rest.length) return '';
+  // The wiring rule is an instruction, so it needs a reader too: only a step that declares a contract or
+  // grades one gets it (2026-10-10: 119 of 258 prompts asked for a `wiringContract` nothing graded).
+  const rule = reqs.length || graded.some((r) => r.field.endsWith('wiringContract')) ? CONTRACT_RULE : '';
 
   const head = '# ACCEPTANCE CONTRACT FOR THIS STEP (you are graded against it)';
   const blocks: string[] = [];
   // FIRST, so the size cap below can never drop it: the exact keys the checker grades. Without this
   // a producer nests correct values under its own keys and fails (/diablo W02c: 102 of 114 steps).
-  if (graded.length) {
+  // Stated as a closure (graded = described + named), so a field no tag describes is still named.
+  if (graded.length || closure.rest.length) {
     blocks.push([
       '## Required fields (graded — use these exact keys)',
+      ...(closure.rest.length ? [requiredFieldsTotalLine(closure)] : []),
       ...graded.map(requiredFieldLine),
+      ...closure.rest.map((f) => `- \`${f}\`${CHASSIS_FIELD_LINES[f] ?? `: ${VALUE_GRADED_LINE}`}`),
     ].join('\n'));
   }
   for (const r of reqs) {
@@ -180,7 +201,7 @@ export function stepContractBlock(spec: StepSpec, entity: LabEntity): string {
 
   // Size cap: keep whole blocks while they fit; report honestly what was dropped.
   const kept: string[] = [];
-  let used = head.length + CONTRACT_RULE.length;
+  let used = head.length + rule.length;
   for (const b of blocks) {
     if (used + b.length + 4 > MAX_STEP_CONTRACT_CHARS) break;
     kept.push(b);
@@ -189,7 +210,7 @@ export function stepContractBlock(spec: StepSpec, entity: LabEntity): string {
   const dropped = blocks.length - kept.length;
   if (!kept.length) return '';
   const tail = dropped > 0 ? `_(${dropped} further contract block(s) omitted — prompt size cap.)_` : '';
-  return [head, ...kept, tail, CONTRACT_RULE].filter(Boolean).join('\n\n');
+  return [head, ...kept, tail, rule].filter(Boolean).join('\n\n');
 }
 
 /**
