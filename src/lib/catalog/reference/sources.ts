@@ -188,6 +188,9 @@ export const BOTW: ReferenceSource = {
     // W10: Action C–D (flat folder, initials C and D only), same shared map → cutscenes, the plurality of this
     // row's nodes among real catalogs (event actor commands); each row earns its own label (wrap only).
     { file: 'src/Game/Actor/Action/action{C,D}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W12: Action E (flat folder, initial E only), same shared map → cutscenes, the plurality of this row's nodes among
+    // real catalogs (scripted-event commands, Z-D51); its handle twin is the last spec below (wrap only).
+    { file: 'src/Game/Actor/Action/action{E}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W11: the parameter handles of every node area that declares them, read by a SECOND technique over the same globs
     // (cpp-handles — one record per handle: name, scope word, declared type; Z-D46 – Z-D48). One spec per handle-bearing
     // glob, each in its twin spec's catalog, all under one catalog-neutral map; covers no new file (wrap only).
@@ -196,6 +199,8 @@ export const BOTW: ReferenceSource = {
     { file: 'src/Game/Actor/Camera/Action/**/*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/Action/action{C,D}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    // W12: Action E's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D51).
+    { file: 'src/Game/Actor/Action/action{E}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };
 
