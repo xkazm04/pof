@@ -188,3 +188,19 @@ and media generation were dropped with those sections.
 - **When a file stays open for a later slice, say what the reader will see of it.** If the design lives in
   constructor arguments or bodies (F17), a slice yields names only; write that into the Backlog item so the
   next wave's prediction and its "record-level" claim are honest.
+
+## 1.0 — 2026-10-10 — pof (W09)
+- **Check every COINED fixture name against the clone directly, not only through the diff method.** The diff method
+  exempts a clone hit the repo already holds at the base commit, so a coined type name that is also an ordinary word
+  passes it. W09's fixture passed the diff method with 0 new hits, yet two of its coined type names were clone
+  identifiers. List the names you coined and grep each whole-word at the pin; rename on any hit.
+- **A shared map hides a row that departs from it, so adopt it per row only after a column-by-column match.** The store
+  reports `unclassified 0` and the same column coverage for every row under one map, whatever the row holds. Each row's
+  wave note must set its census (hook set, shells, stubs, field shares) beside each reason of the map and say it fits,
+  before the store sees the row.
+- **Before ordering a reader item against breadth, measure what the loss costs.** Count the lost attribute by kind
+  (W09: parameter types by type kind), test how much a cheap heuristic recovers, and ask whether the fix is additive (no
+  re-read of earlier rows). That turns "do the reader item first?" into a number and a cost, not a preference.
+- **When a brief's crude number does not reproduce, do not copy it and do not silently replace it.** Give your two
+  witnesses, the nearest grep that comes close, and say that none reproduces it. W09's "about 464 handles, 75 headers
+  with none" matched no grep tried; two instruments agreed on 550 and 56.
