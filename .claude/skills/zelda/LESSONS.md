@@ -143,3 +143,18 @@ and media generation were dropped with those sections.
 - **Negative-control a shape rule one clause at a time.** Loosen each condition alone (argument
   count, case, keyword, valued argument, enclosing name) and show each loosening turns a test red; a
   rule whose clauses are only tested together can lose one unseen.
+
+## 1.0 — 2026-10-10 — pof (W06)
+- **Before adding a spec, grep the existing tests' fixtures for paths under its glob.** Earlier waves
+  park synthetic "sibling stays open" files beside their own area; a later spec covers and READS them,
+  so those coverage, read-list and store assertions must move. W06's glob swallowed W02's
+  `Resource/Actor` sibling (four assertions beyond the brief's three). List them in the wave note with
+  their exact new values before the first test run; never move the fixture to dodge them.
+- **Split a source's control flow by function kind before calling it behaviour.** "Sources with any
+  branch or loop" over-reads parsers: 25 of 28 parameter-file sources had control flow, but 266 of
+  their 369 statements were parse code. Count per function (parse / create vs the rest) and say
+  "schema and query contract" unless the rest is real — as Cooking's was (178 of 207).
+- **Run the clone-identifier check on a new map's reason strings BEFORE the store sees the area.** A
+  reason is part of the map's content hash: rewording one after the area round changes the map version
+  the store and the wave note already record. Grep the prose of the maps (and the fixture) first, then
+  ingest.
