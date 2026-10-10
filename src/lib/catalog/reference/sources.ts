@@ -185,6 +185,9 @@ export const BOTW: ReferenceSource = {
     // W09: the generic node rows, one spec per row under one shared map. Action A–B (flat folder, initials A
     // and B only) → state-graph, the plurality of its nodes among real catalogs (wrap only).
     { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W10: Action C–D (flat folder, initials C and D only), same shared map → cutscenes, the plurality of this
+    // row's nodes among real catalogs (event actor commands); each row earns its own label (wrap only).
+    { file: 'src/Game/Actor/Action/action{C,D}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
   ],
 };
 

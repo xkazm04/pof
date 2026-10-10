@@ -21,7 +21,9 @@ const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
 const SHAPE = /^([^{}*/]*)\{([A-Z](?:,[A-Z])*)\}\*\.\{([a-z]+(?:,[a-z]+)*)\}$/.exec(SPEC.file.slice(FOLDER.length + 1));
 const [, PREFIX, INITIALS, EXTS] = SHAPE ?? ['', '', '', ''];
 const [FIRST, SECOND] = INITIALS.split(',');
-const NEXT = String.fromCharCode(INITIALS.split(',').at(-1)!.charCodeAt(0) + 1);
+// The first initial that no spec over the row folder reads (W10: once a later row's spec reads the letter after
+// this row's last initial, a fixed "next letter" would be covered by it).
+const NEXT = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].find((i) => BOTW.tables.every((t) => !expandGlob([`${FOLDER}/${PREFIX}${i}Probe.h`], t.file).length))!;
 const rowFile = (initial: string, tail: string, ext: string) => `${FOLDER}/${PREFIX}${initial}${tail}.${ext}`;
 
 const TRAIL = { h: rowFile(FIRST, 'rdentTrek', 'h'), cpp: rowFile(FIRST, 'rdentTrek', 'cpp') };
@@ -85,8 +87,8 @@ const STAY_OPEN = Object.keys(FILES).filter((f) => !ROW.includes(f) && !f.endsWi
 
 describe('BOTW generic behaviour-node rows (W09)', () => {
   it('registers the first row: one wrap-only spec under the shared node map, a flat glob over two initials', () => {
-    expect(BOTW.tables).toHaveLength(10);
-    expect(ROW_SPECS).toHaveLength(1);
+    expect(BOTW.tables).toHaveLength(11);
+    expect(ROW_SPECS).toHaveLength(2);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(SHAPE).not.toBeNull();
     expect(INITIALS.split(',')).toHaveLength(2);
