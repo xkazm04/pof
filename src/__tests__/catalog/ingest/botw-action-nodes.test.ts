@@ -72,9 +72,10 @@ BriskTrek::BriskTrek(const Kit& kit) : ArdentTrek(kit) {}
 }`,
   // The folder's build file: descoped, never read.
   [`${FOLDER}/CMakeLists.txt`]: 'wireDemoFolder(ardentTrek.cpp)\n',
-  // Stay open: another initial, a lower-case initial, another extension, the mount test's synthetic file,
-  // a deeper folder, and a look-alike sibling folder whose name starts with the row folder's name.
-  [rowFile(NEXT, 'almTrek', 'h')]: 'namespace demo { class CalmTrek { int mCalmPace; }; }',
+  // Stay open: another initial (the very probe that derives it, so no spec reads it by construction — W14: a later row
+  // reads some lower-case continuations of that initial), a lower-case initial, another extension, the mount test's
+  // synthetic file, a deeper folder, and a look-alike sibling folder whose name starts with the row folder's name.
+  [rowFile(NEXT, 'Probe', 'h')]: 'namespace demo { class CalmTrek { int mCalmPace; }; }',
   [rowFile(FIRST.toLowerCase(), 'rdentDraft', 'h')]: 'namespace demo { class LowDraft { int mLowPace; }; }',
   [rowFile(FIRST, 'rdentNotes', 'txt')]: 'synthetic notes',
   [`${FOLDER}/demoRoveStep.h`]: 'namespace demo { class RoveStep : public StepNode { float mRoveSpan; }; }',
@@ -87,8 +88,8 @@ const STAY_OPEN = Object.keys(FILES).filter((f) => !ROW.includes(f) && !f.endsWi
 
 describe('BOTW generic behaviour-node rows (W09)', () => {
   it('registers the first row: one wrap-only spec under the shared node map, a flat glob over two initials', () => {
-    expect(BOTW.tables).toHaveLength(20);
-    expect(ROW_SPECS).toHaveLength(4);
+    expect(BOTW.tables).toHaveLength(22);
+    expect(ROW_SPECS).toHaveLength(5);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(SHAPE).not.toBeNull();
     expect(INITIALS.split(',')).toHaveLength(2);

@@ -195,6 +195,11 @@ export const BOTW: ReferenceSource = {
     // action), same shared map → state-graph, the plurality of this row's nodes among real catalogs (Z-D55); its handle
     // twin is the last spec below (wrap only).
     { file: 'src/Game/Actor/Action/actionFork*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W14: the fifth row (flat folder: the stem row's initial WITHOUT the stem, and the next initial), same shared map →
+    // state-graph, the plurality of this row's nodes among real catalogs (Z-D59). The glob language has no negation, so the
+    // first half is an enumeration of the continuations present at the pin, proven disjoint from the stem spec; its handle
+    // twin is the last spec below (wrap only).
+    { file: 'src/Game/Actor/Action/action{Fa,Fi,Fl,Fr,Fol,Forb,Forc,Fore,G}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W11: the parameter handles of every node area that declares them, read by a SECOND technique over the same globs
     // (cpp-handles — one record per handle: name, scope word, declared type; Z-D46 – Z-D48). One spec per handle-bearing
     // glob, each in its twin spec's catalog, all under one catalog-neutral map; covers no new file (wrap only).
@@ -207,6 +212,8 @@ export const BOTW: ReferenceSource = {
     { file: 'src/Game/Actor/Action/action{E}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     // W13: the fourth row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D55).
     { file: 'src/Game/Actor/Action/actionFork*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    // W14: the fifth row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D59).
+    { file: 'src/Game/Actor/Action/action{Fa,Fi,Fl,Fr,Fol,Forb,Forc,Fore,G}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };
 

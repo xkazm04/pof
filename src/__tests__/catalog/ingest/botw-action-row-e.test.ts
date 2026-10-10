@@ -94,9 +94,10 @@ EchoRite::~EchoRite() = default;
   [`${FOLDER}/CMakeLists.txt`]: 'wireDemoFolder(emberRite.cpp)\n',
   // Read by the EARLIER row's spec (and its handle twin, which finds no handle in it), never by this row's.
   [EARLIER_ROW]: 'namespace demo { class DashRite { int mAshPace; }; }',
-  // Stay open: an initial no spec reads, a lower-case initial, another extension, the mount test's synthetic file,
-  // a deeper folder, and a look-alike sibling folder whose name starts with the row folder's name.
-  [rowFile(OPEN_INITIAL, 'ableRite', 'h')]: 'namespace demo { class FarRite { int mFarPace; }; }',
+  // Stay open: an initial no spec reads (the very probe that derives it, so no spec reads it by construction — W14: a
+  // later row reads some lower-case continuations of that initial), a lower-case initial, another extension, the mount
+  // test's synthetic file, a deeper folder, and a look-alike sibling folder whose name starts with the row folder's name.
+  [rowFile(OPEN_INITIAL, 'Probe', 'h')]: 'namespace demo { class FarRite { int mFarPace; }; }',
   [rowFile(INITIAL.toLowerCase(), 'mberDraft', 'h')]: 'namespace demo { class LowRite { int mLowPace; }; }',
   [rowFile(INITIAL, 'mberNotes', 'txt')]: 'synthetic notes',
   [`${FOLDER}/demoRoveStep.h`]: 'namespace demo { class RoveStep : public StepNode { float mRoveSpan; }; }',
@@ -110,14 +111,12 @@ const STAY_OPEN = Object.keys(FILES)
 
 describe('BOTW generic behaviour-node rows: the third row, read by both techniques (W12)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(4);
-    // The next row's spec directly follows this one and ends the cpp-decls block; this row's twin is directly followed by
-    // the next row's twin, which is the last table.
+    expect(ROW_SPECS).toHaveLength(5);
+    // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin. Which
+    // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D61).
     expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
-    expect(BOTW.tables.indexOf(LATER)).toBe(DECL_SPECS.length - 1);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(LATER_TWIN);
     expect(SPEC).toMatchObject({ catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
