@@ -389,3 +389,18 @@ and media generation were dropped with those sections.
 - **Derive the home groups' counts from the same script that prints the groups.** A first rule pulled the two knock-back-shock reactions into `spellbook` by a `Shock` substring; reading the printed groups
   caught it before the note was final (spellbook 39 → 37, state-graph 118 → 120) and every dependent number (handles per home, family-unit units, the margin) was re-run, not edited by hand.
 - **`retire-stale.ts` refuses without `--root`** (it read nothing); give it the clone like the other tools, and say so once in the note rather than counting the refused call as a round.
+
+## 1.0 — 2026-10-10 — pof (W18 part 2)
+- **A learning pass needs no repo module and no file in the worktree.** The store opens read-only with better-sqlite3 required by absolute path from the main checkout, the clone is read with `fs`, and a class index of every header plus a chain walk is a scratch script
+  outside both trees. Part 1 copied two scripts into the worktree root to resolve the `@/` alias; that is never needed for a read-only pass. Write the scripts with the Write tool: a bash heredoc carrying regex escapes or quotes failed twice (nothing written) and `sed -i` on an
+  escaped regex stripped the backslashes.
+- **Calibrate the instrument by reproducing the PREVIOUS wave's whole-tree figure before measuring the new one.** The same index and chain walk gave W17's 594 links / 69 unstored / 144 chains exactly, and only then the new 695 / 34 / 47; validate the index against the store first (1966 of 1973
+  classes, 0 disagreements). A reproduced old number is the cheapest proof that a new one is not an artefact.
+- **When two notes disagree by one on a count, they usually count different things: run the reader under BOTH definitions and report both.** M–O's 171 versus 172 was one node (arithmetic and a message send, no branch): 172 branch-free sources, 171 sources holding nothing but base calls and
+  registrations. One definition per wave, stated, and an erratum line rather than a rewrite. A first reader flagged a fourth M–O source that was only a registration call with a numeric suffix in its name; read the leftover bucket before reporting the split.
+- **Never write a sub-count or a "none of them is X" from memory — run the grouping or the relation first.** My first draft of claim 2 carried invented gap sub-counts ("about 36", "6") and the sentence "no outside extender is a stem-row side action"; the grouping gave 38 / 6 / 4 / 9 and the extender query found 2 stem
+  side actions. A loose word list also matched the ordinal "Second…" in five names ("Sec"); anchor word lists at the end of the name or on a boundary and read the hits before counting them.
+- **A per-place yield changes the recommendation, not just the table.** By row, the two small folders stayed invisible; by place the area folder is 87.5 % per file against P–R's 9.2 %, and after S the three together close the whole stopgap (34 → 0 links, 47 → 0 chains) in one wave. Report the
+  "alone" and the "together" figures for every candidate, with the label rulings each one needs.
+- **The records carried claims 1 (counts), 2 (handle side), 4's 33 declared, 5 and 6 (split, bases, handles) alone; the clone was needed for named parts only:** the 216-of-219 body count and the 3 real sources, the cook one-shot's behaviour, the parents in the area, P–R and NPC places, the extenders, the
+  factory and the whole-word mention search. A claim whose prediction held on every count can still hold a wrong detail (the sender finishes at once; its timing is the send's): check each predicted kind against the record.
