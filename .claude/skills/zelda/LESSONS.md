@@ -158,3 +158,17 @@ and media generation were dropped with those sections.
   reason is part of the map's content hash: rewording one after the area round changes the map version
   the store and the wave note already record. Grep the prose of the maps (and the fixture) first, then
   ingest.
+
+## 1.0 — 2026-10-10 — pof (W07)
+- **Cross-check every survey column with a one-line crude grep before writing it as a prediction.** W07's
+  scope tracker read brace-initialised members (`x{}`) as blocks and counted 5 fields where a member-line
+  grep counted 19; the disagreement was caught before the wave note, so the prediction stayed exact. A
+  survey that is the only instrument for a column has no witness — give each column a second, dumber one.
+- **In a node area, count SHELLS (classes that declare construction only) beside stub bodies.** F12 says a
+  stub's hook set is still real; in the camera area 60 of 68 nodes had no hook set and no parameter at all.
+  The shell share decides what "record-level" can mean for the area (inventory only, or inventory plus
+  tick rule and tunables), so put it in the survey and the upgrade note's level line.
+- **When the halves of an area land in different catalogs, split the spec by half but keep ONE map.** The
+  census is one shape; two maps would fork reasons that must stay equal. Write the merge reversal into the
+  Decision with its cost (`reprojected` of the smaller half, no raw or id change — wrapper and entity ids
+  carry the record's file and key, never the catalog).
