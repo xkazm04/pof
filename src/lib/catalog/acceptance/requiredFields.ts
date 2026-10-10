@@ -9,7 +9,10 @@
  * in the checkers; this reads it back out.
  */
 import { allOfMembers } from './combinators';
+import { SOURCED_FIELD } from './sourced';
+import { TEMPLATE_FIELD } from './template';
 import type { Checker } from './types';
+import type { StepSpec } from '@/lib/catalog/stepSpec';
 
 const REQUIRED_FIELDS = Symbol.for('pof.requiredFields');
 
@@ -60,6 +63,67 @@ export function requiredFieldsOf(checker: Checker, canonProfile?: string | null)
   };
   visit(checker);
   return [...byField.values()];
+}
+
+const READ_PROBE_ENTITY = { id: 'graded-fields-probe', name: 'Graded Fields Probe', lifecycle: 'planned' as const, data: {} };
+const readCache = new WeakMap<object, GradedRead>();
+
+/** The top-level keys a checker read, and whether its verdict on the stub was `deferred`. */
+export interface GradedRead { fields: readonly string[]; deferred: boolean }
+
+/**
+ * Every TOP-LEVEL field a step's checker actually READS — the total the Required fields list is
+ * a part of. Tags are opt-in, so `requiredFieldsOf` is only the checkers that state their keys:
+ * measured 2026-10-10, 58 of 259 graded steps read a field their prompt never named as a key
+ * (19 on value laws such as `pricePowerRatio` and `integratedLUFS`, the rest `links`), and the
+ * reason-text guard could not see them because a value law's pending reason names no "missing:".
+ *
+ * Recorded by running `accept` over a Proxy of the step's own produce stub, the same recorder the
+ * fleet spec linter uses (rule e). Only the KEYS the checker touches are kept — never a stub value,
+ * so no entity's content reaches another's prompt (D12). The stub only gets the checker past its
+ * early returns; a step whose produce or accept throws contributes nothing.
+ */
+export function gradedFieldsOf(spec: Pick<StepSpec, 'produce' | 'accept'>): GradedRead {
+  const hit = readCache.get(spec);
+  if (hit) return hit;
+  const read = new Set<string>();
+  let deferred = false;
+  try {
+    const out = spec.produce(READ_PROBE_ENTITY);
+    const data = { ...((out.data ?? {}) as Record<string, unknown>) };
+    const links = (out as { links?: unknown }).links;
+    if (links != null && data.links == null) data.links = links;
+    const graded = (k: string | symbol): k is string => typeof k === 'string' && k !== SOURCED_FIELD && k !== TEMPLATE_FIELD;
+    const proxy = new Proxy(data, {
+      get(t, k) { if (graded(k)) read.add(k); return Reflect.get(t, k); },
+      has(t, k) { if (graded(k)) read.add(k); return Reflect.has(t, k); },
+    });
+    deferred = spec.accept(proxy).status === 'deferred';
+  } catch {
+    read.clear();
+  }
+  const result = { fields: [...read], deferred };
+  readCache.set(spec, result);
+  return result;
+}
+
+/**
+ * The closure the prompt states: graded = described + named + settled later, every count derived.
+ * `listed` are the top-level fields the tagged requirements describe. The other reads get a
+ * disposition, never silence: on a step whose stub verdict is `deferred` they are `settledLater`
+ * (an L3/L4 runner or the gallery selection writes them, so a producer must NOT be told to - the
+ * same exemption the spec linter's rule e makes); otherwise they are `rest`, named in the prompt.
+ */
+export function gradedFieldClosure(
+  spec: Pick<StepSpec, 'produce' | 'accept'>,
+  required: readonly RequiredFields[],
+): { total: number; listed: string[]; rest: string[]; settledLater: string[] } {
+  const listed = [...new Set(required.map((r) => r.field.split('.')[0]))];
+  const { fields, deferred } = gradedFieldsOf(spec);
+  const unlisted = fields.filter((f) => !listed.includes(f));
+  const rest = deferred ? [] : unlisted;
+  const settledLater = deferred ? unlisted : [];
+  return { total: listed.length + rest.length + settledLater.length, listed, rest, settledLater };
 }
 
 /** One prompt line per requirement — the exact field names and what the checker needs of them. */
