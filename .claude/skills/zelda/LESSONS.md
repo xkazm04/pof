@@ -318,3 +318,16 @@ and media generation were dropped with those sections.
   paragraph pushed claims 6 and 7 into it, with the paragraph's tail left below them; found by grepping the claim numbers' line order, fixed
   by moving the tail. Grep the headings' order after any multi-paragraph edit of a note. And write throw-away scripts with the Write tool: a
   heredoc stripped the backslashes from a regex and the script did not even parse.
+
+## 1.0 — 2026-10-10 — pof (W16 part 1)
+- **A negative control must widen the glob into an initial ANOTHER spec owns.** Widening both M–O specs to include P, which no spec reads yet,
+  left every test green: the new test derives its initials from the glob, so a wider glob is just a different (consistent) row. Widening into
+  the lower neighbour (L, H–L's last initial) went red, 8 tests in 2 files. The control proves the disjointness test only when the added
+  letter is already read elsewhere; try the owned neighbour first and keep the unowned one only as a documented non-control.
+- **Calibrating a delegated instrument is cheap and decisive: give the author the settled numbers as targets and re-run both rows yourself.**
+  The survey script was written by a sub-agent from the previous note's description, reproduced H–L and F + G exactly on its first run, and I
+  re-ran both calibration rows before using one number. The write-up (survey → classification → predictions) then took about 15 minutes, so a
+  one-run part 1 fits the policy's hour with the seam never reached. Say in the note who wrote the instrument.
+- **Predict the store census from the survey and check it against the stored RAW columns, not only the ingest summary.** The 678 rows' scope
+  words, type kinds, bases (106 qualified, 68 bare), fields (332) and methods (959 / 959) were summed from the stored `raw` JSON after the round
+  and equalled the survey line for line; a summary that only says "created 678" cannot show a mapped-but-wrong column.
