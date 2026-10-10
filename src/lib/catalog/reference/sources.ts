@@ -35,7 +35,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { ACTOR_FILE_CLASS_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -178,6 +178,10 @@ export const BOTW: ReferenceSource = {
     { file: 'src/Game/Cooking/**/*.{h,cpp}', catalogId: 'crafting-recipes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: COOKING_CLASS_MAP },
     // W06: the per-object parameter files → props, the largest share among real catalogs (wrap only).
     { file: 'src/KingSystem/Resource/Actor/**/*.{h,cpp}', catalogId: 'props', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: ACTOR_FILE_CLASS_MAP },
+    // W07: the camera's node library, one spec per half (one map): event and gameplay camera actions → cutscenes,
+    // the camera selectors → dialog-trees, each the plurality of its half among real catalogs (wrap only).
+    { file: 'src/Game/Actor/Camera/Action/**/*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CAMERA_SHOT_NODE_MAP },
+    { file: 'src/Game/Actor/Camera/AI/**/*.{h,cpp}', catalogId: 'dialog-trees', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CAMERA_SHOT_NODE_MAP },
   ],
 };
 

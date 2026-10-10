@@ -220,6 +220,31 @@ export const ACTOR_FILE_CLASS_MAP: FieldMap = botwClassMap({
     + 'files an object carries or for their schemas (some names are offset placeholders, F3)'),
 });
 
+/* ── cutscenes + dialog-trees ← src/Game/Actor/Camera/** (W07) ────────── */
+
+/**
+ * The camera's behaviour-node library: one header per node — a selector that picks the camera mode,
+ * or a camera action (follow, aim, lock on, climb, ride, scripted event shots, conversation shots) —
+ * and one source per node. Two specs share this map: the action half under `cutscenes`, the selector
+ * half under `dialog-trees`, each the plurality of its half among real catalogs (vault Decisions
+ * Z-D30), though the gameplay cameras themselves have no PoF home. Most nodes are bare shells.
+ */
+export const CAMERA_SHOT_NODE_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for a camera-behaviour KIND hierarchy: every node is a kind of one of the engine\'s two node bases '
+    + '(a selector that decides on entry, or an action that runs), and most extend another camera node several levels deep '
+    + '(an event-shot family, a conversation family, a tracking family); cutscenes and dialog-trees describe a shot as free '
+    + 'text and have no camera-behaviour kind and no "this camera extends that camera" link'),
+  methods: gap('no home for a camera node\'s TICK RULE or its scoped overrides: a class record declares construction and, '
+    + 'on a few nodes, the fixed node lifecycle (load parameters, init, enter, per-frame update, leave), and its definition '
+    + 'record implements the same set; only the family bases tick per frame, and the clip-plane overrides set a value on '
+    + 'enter and restore it on leave. Most nodes declare construction only (bodies are stubs, F12); neither catalog has a '
+    + 'per-frame camera update nor an override scoped to a beat'),
+  fields: gap('no home for CAMERA PARAMETERS: the few fields are parameter handles — static per-context camera preset '
+    + 'names and a family flag, and dynamic event inputs (focus distance range, near and far clip, a blend time); '
+    + 'cutscenes and dialog-trees hold a shot and a blend as prose and have no typed camera preset, focus, clip or blend '
+    + 'field (most nodes have no field at all; some names are offset placeholders, F3)'),
+});
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**
