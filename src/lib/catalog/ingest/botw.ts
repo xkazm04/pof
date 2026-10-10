@@ -264,4 +264,39 @@ export const BOTW_DESCOPES: readonly Descope[] = [
   { pattern: 'src/KingSystem/Terrain/**', reason: 'the terrain engine — UE Landscape / World Partition' },
   { pattern: 'src/KingSystem/Mii/**', reason: 'a console avatar service with no counterpart in a PC UE title' },
   { pattern: 'src/KingSystem/Resource/*', reason: 'archive loading, resource caches, heaps and load tasks — UE’s asset manager and streaming (the param-file readers in Resource/ subfolders stay open: they carry data schemas)' },
+
+  // W08 descope review (vault Z-D34 – Z-D36): every file below was read, header and source. Narrow
+  // file-level globs, because each of these folders also holds a file that stays open (a data
+  // schema, a map-kind table, a drop contract) or a build file descoped for another reason; the one
+  // folder-level glob is a folder whose every file shares the reason.
+
+  // Platform services a PC UE title has no counterpart for.
+  { pattern: 'src/KingSystem/System/{Account,AutoDim,VideoRecorder}.{h,cpp}', reason: 'a console account handle, screen auto-dimming and frame-capture recording — platform services a PC UE title has no counterpart for' },
+  { pattern: 'src/Game/{E3Mgr,NXArgs,SystemPauseMgr}.{h,cpp}', reason: 'a trade-show demo mode, console launch parameters and the console’s system-suspend protocol (wait, pause and hide the HUD around the OS overlay, then restore) — platform services, not the in-game pause menu' },
+  { pattern: 'src/KingSystem/System/{PlayReportMgr,ProductReporter}.{h,cpp}', reason: 'platform telemetry — play-time counters, control-mode tallies and event reports sent to the console’s report service; no game design' },
+  { pattern: 'src/Game/gamePlayReport.{h,cpp}', reason: 'game-side telemetry events (a collectible found, a dungeon entered, a quest step, an item picked up) sent to the platform report service — no game design' },
+
+  // Developer and debug tooling, stubbed out of the shipped game.
+  { pattern: 'src/KingSystem/System/{CameraEditor,CurrentResNameMgr,DebugFinder,Hio,KingEditor,MessageCapture,Patrol,Revision,Terminal}.{h,cpp}', reason: 'developer tooling stubbed out of the shipped game — in-game editors, a debug terminal, host I/O, an object finder, message capture, build revision info, a current-resource probe and automated test-play' },
+  { pattern: 'src/KingSystem/System/{DebugMessage,GameConfig,StringBoard}.h', reason: 'debug message records, a debug string board and the developer build configuration — developer tooling' },
+  { pattern: 'src/KingSystem/ksysDebugInput.{h,cpp}', reason: 'a debug-input frame counter — developer tooling with no player-facing design' },
+
+  // Engine infrastructure UE already provides.
+  { pattern: 'src/KingSystem/ksys.{h,cpp}', reason: 'boot wiring — app pre-initialisation, the actor-creation worker setup and a global game-over flag accessor; UE’s engine loop and game instance' },
+  { pattern: 'src/KingSystem/System/{BasicProfiler,MemoryProfiler,HavokWorkerMgr,SystemTimers,Timer,VFR,VFRValue}.{h,cpp}', reason: 'profilers, physics worker threads, frame counters and the variable-frame-rate delta and time-dilation clock — UE’s stats, task graph and world time dilation' },
+  { pattern: 'src/KingSystem/System/CoreInfo.h', reason: 'the fixed CPU core count that sizes per-core arrays — threading infrastructure' },
+  { pattern: 'src/KingSystem/System/{OverlayArena,OverlayArenaSystem,StarterPackMgr}.{h,cpp}', reason: 'memory arenas, the heap layout and boot / title pack loading — UE’s allocator, asset manager and streaming' },
+  { pattern: 'src/KingSystem/System/OverlayArenaSystem{S1,S2}.h', reason: 'two helper interfaces of the memory-arena system (suspend and resume threads around compaction) — memory infrastructure' },
+  { pattern: 'src/KingSystem/System/UI/**', reason: 'UI layout archives, message packs and per-language font loading — UE’s asset manager with UMG and font assets' },
+  { pattern: 'src/KingSystem/System/OcclusionQueryCylinder.{h,cpp}', reason: 'a renderer occlusion query — UE’s renderer is not something PoF designs' },
+  { pattern: 'src/KingSystem/Volante/vltLayerMgrTask.cpp', reason: 'heap helpers and debug heap holders — memory infrastructure C++/UE Core provides' },
+  { pattern: 'src/KingSystem/Sound/snd{Mgr,Resource}.{h,cpp}', reason: 'the sound engine’s output channel layout and its heaps — UE’s audio mixer (the per-actor sound settings and music definitions beside them stay open, as does the per-actor sound behaviour folder)' },
+
+  // Physics-engine binding. The physics DATA schemas in the same folder stay open: per-character
+  // body parameters, contact-report slots, the material-pair and contact-layer tables, the
+  // per-object physics composition and the impact rule.
+  { pattern: 'src/KingSystem/Physics/System/phys{ClosestPointQuery,ClosestPointQueryWithInfo,QueryContactPointInfo,RayCast,RayCastBodyQuery,RayCastForRequest,RayCastRequestMgr,ShapeCast,ShapeCastWithInfo,Phantom}.{h,cpp}', reason: 'physics-engine binding — closest-point, ray and shape-cast queries and box overlap volumes; UE’s Chaos scene queries and overlap components' },
+  { pattern: 'src/KingSystem/Physics/System/phys{CollisionInfo,ContactLayerCollisionInfo,ContactLayerCollisionInfoGroup,ContactListener,ContactPointInfo,LayerContactPointInfo,EntityContactListener,SensorContactListener}.{h,cpp}', reason: 'physics-engine binding — contact listeners and colliding-pair tracking that apply the material and layer tables to solver contacts; UE’s Chaos contact callbacks and hit events (the tables stay open)' },
+  { pattern: 'src/KingSystem/Physics/System/phys{GroupFilter,EntityGroupFilter,SensorGroupFilter}.{h,cpp}', reason: 'physics-engine binding — the collision-filter bit packing and pair tests behind the contact layers; UE’s collision channels and responses (the layer matrix stays open)' },
+  { pattern: 'src/KingSystem/Physics/System/phys{System,InstanceSet,UserTag}.{h,cpp}', reason: 'physics-engine binding — the physics world singleton, the per-object runtime instance built from the parameter set, and body callbacks; UE’s physics scene and body instances (the parameter set stays open)' },
 ];
