@@ -35,7 +35,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -188,6 +188,14 @@ export const BOTW: ReferenceSource = {
     // W10: Action C–D (flat folder, initials C and D only), same shared map → cutscenes, the plurality of this
     // row's nodes among real catalogs (event actor commands); each row earns its own label (wrap only).
     { file: 'src/Game/Actor/Action/action{C,D}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W11: the parameter handles of every node area that declares them, read by a SECOND technique over the same globs
+    // (cpp-handles — one record per handle: name, scope word, declared type; Z-D46 – Z-D48). One spec per handle-bearing
+    // glob, each in its twin spec's catalog, all under one catalog-neutral map; covers no new file (wrap only).
+    { file: 'src/Game/Actor/Player/**/*.{h,cpp}', catalogId: 'player-movement', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    { file: 'src/Game/Actor/Horse/**/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    { file: 'src/Game/Actor/Camera/Action/**/*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    { file: 'src/Game/Actor/Action/action{C,D}*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };
 

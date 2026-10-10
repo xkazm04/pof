@@ -12,9 +12,14 @@
  * one C++ file and yields one record per class / struct / union definition — the record shape
  * is documented in `ingest/cppDecls.ts`. It needs the file's path (the record carries it), which
  * is why `read` takes an optional context; the table readers ignore it.
+ *
+ * `cpp-handles` (/zelda W11, 2026-10-10): a second reader over the same C++ files. It keeps what `cpp-decls`
+ * cannot hold in its columns — each parameter handle's name with its scope word and its declared type
+ * (`ingest/cppHandles.ts`) — as records of its own, so every `cpp-decls` record reads byte-identically.
  */
 import { parseTsv, type TsvTable } from '@/lib/catalog/ingest/tsv';
 import { parseCppDecls } from '@/lib/catalog/ingest/cppDecls';
+import { parseCppHandles } from '@/lib/catalog/ingest/cppHandles';
 
 /** Transpose an Attribute-or-Variable/Value table into the single record consumed by FieldMap. */
 export function parseTsvKv(text: string): TsvTable {
@@ -113,6 +118,16 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
       + 'and per owner class whose member functions the file defines out of line (function NAMES, keyed `owner::(definitions@<file>)` so one owner '
       + 'defined in two files keeps two identities) — same columns for every kind (ingest/cppDecls.ts).',
     read: (text, ctx) => parseCppDecls(text, { file: ctx?.file ?? '' }),
+  },
+  'cpp-handles': {
+    id: 'cpp-handles',
+    version: 1,
+    assetKind: 'source-code',
+    describe: 'One C++ header → one record per parameter HANDLE: a class data member declared alone on the line directly below a full-line '
+      + 'comment that starts with a lower-case word and ends in a hex number — the member NAME, its owner class, the comment\'s first word as '
+      + 'written (the scope the handle is bound in) and the declared type as written with the kind C++ keywords alone decide; never the '
+      + 'number in the comment, an initialiser or a registration argument. Keyed `owner::member::(handle@<file>)` (ingest/cppHandles.ts).',
+    read: (text, ctx) => parseCppHandles(text, { file: ctx?.file ?? '' }),
   },
 };
 

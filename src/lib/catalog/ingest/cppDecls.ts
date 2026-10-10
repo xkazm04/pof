@@ -63,6 +63,11 @@
  * read (`#if 0` blocks are skipped, their `#else` read), so a decompilation's matching / non-matching
  * twin branches cannot double a member or unbalance the braces. Disclosed losses: function bodies
  * and parameter lists, enumerator values and an enum's underlying type are never read.
+ *
+ * A second reader shares this lexer and walk (`cppHandles.ts`, the `cpp-handles` technique): it passes
+ * `CppWalkHooks` to `walkCppDecls`, which then also collects the line comments the lexer drops and
+ * reports every member statement of a class. Both are side channels — the token stream and the records
+ * above are exactly what `parseCppDecls` returns without hooks.
  */
 import type { MalformedRow, TsvRefusal, TsvTable } from './tsv';
 
@@ -93,6 +98,38 @@ export const DEFAULT_CPP_LIMITS: Readonly<CppLimits> = { maxBytes: 1024 * 1024, 
 interface Tok {
   t: string;
   line: number;
+}
+
+/** A `//` comment the lexer dropped, kept on the side for a sharing reader. */
+export interface CppLineComment {
+  line: number;
+  /** The text after `//`, as written. */
+  text: string;
+  /** No token precedes it on its line. */
+  ownLine: boolean;
+}
+
+/** One member statement of a class (ended by `;`), as this reader classifies it — reported, never a record here. */
+export interface CppMemberStatement {
+  /** Line of the first token after the stripped prefixes (template heads, attributes, upper-case macro calls). */
+  firstLine: number;
+  /** Line of the `;` that ends it. */
+  endLine: number;
+  namespace: string;
+  /** The enclosing class chain, the member's own class last (`Outer::Inner`). */
+  owner: string;
+  methods: string[];
+  fields: string[];
+  /** For ONE data member alone: the tokens before its name, joined as written; `''` otherwise. */
+  declaredType: string;
+  /** That member is declared with an array bound (the bound itself is never read). */
+  array: boolean;
+}
+
+export interface CppWalkHooks {
+  /** Receives every `//` comment in an emitted region, in order. */
+  comments?: CppLineComment[];
+  onMember?: (member: CppMemberStatement) => void;
 }
 
 interface Rec {
@@ -146,7 +183,7 @@ function directive(text: string, conds: CondFrame[]): void {
   else if (word === 'endif' && top >= 0) conds.pop();
 }
 
-function lex(text: string, malformed: MalformedRow[]): Tok[] {
+function lex(text: string, malformed: MalformedRow[], comments?: CppLineComment[]): Tok[] {
   const toks: Tok[] = [];
   const conds: CondFrame[] = [];
   const emitting = (): boolean => conds.every((c) => c === 'emit');
@@ -182,7 +219,11 @@ function lex(text: string, malformed: MalformedRow[]): Tok[] {
     atLineStart = false;
 
     if (ch === '/' && text[i + 1] === '/') {
+      const start = i + 2;
       while (i < n && text[i] !== '\n') i++;
+      if (comments && emitting()) {
+        comments.push({ line, text: text.slice(start, i).replace(/\r$/, ''), ownLine: toks[toks.length - 1]?.line !== line });
+      }
       continue;
     }
     if (ch === '/' && text[i + 1] === '*') {
@@ -500,6 +541,23 @@ function classifyMember(chunk: Tok[]): Members {
   return { methods: [], fields };
 }
 
+/** A member chunk as a sharing reader sees it: `classifyMember`'s reading, plus the declared type of a lone data member. */
+function describeMember(chunk: Tok[]): Pick<CppMemberStatement, 'firstLine' | 'methods' | 'fields' | 'declaredType' | 'array'> {
+  const toks = stripPrefixes(chunk).toks;
+  const { methods, fields } = classifyMember(chunk);
+  const base = { firstLine: toks[0]?.line ?? chunk[0].line, methods, fields, declaredType: '', array: false };
+  const declarators = splitTopLevel(toks);
+  if (methods.length || fields.length !== 1 || declarators.length !== 1) return base;
+  const declarator = declarators[0];
+  const lv = levels(declarator);
+  const stop = declarator.findIndex((t, k) => lv[k].nest === 0 && lv[k].angle === 0
+    && (t.t === '=' || t.t === '{}' || t.t === '[' || t.t === ':'));
+  const head = stop === -1 ? declarator : declarator.slice(0, stop);
+  const at = head.map((t) => t.t).lastIndexOf(fields[0]);
+  if (at <= 0) return base;
+  return { ...base, declaredType: join(head.slice(0, at)), array: stop !== -1 && declarator[stop].t === '[' };
+}
+
 type BraceAction = 'inline' | 'namespace' | 'transparent' | 'block' | ClassHead;
 
 function classifyBrace(chunk: Tok[]): { action: BraceAction; templateParams: string } {
@@ -640,12 +698,20 @@ const pushUnique = (list: string[], names: string[]): void => {
 };
 
 export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, overrides: Partial<CppLimits> = {}): TsvTable {
+  return walkCppDecls(text, ctx, overrides);
+}
+
+/**
+ * `parseCppDecls` with side channels for a reader that shares this lexer and walk (see the header comment):
+ * the returned table is the same with or without `hooks`.
+ */
+export function walkCppDecls(text: string, ctx: CppReadContext, overrides: Partial<CppLimits>, hooks: CppWalkHooks = {}): TsvTable {
   const limits = { ...DEFAULT_CPP_LIMITS, ...overrides };
   const bytes = Buffer.byteLength(text, 'utf8');
   if (bytes > limits.maxBytes) return refused('maxBytes', limits.maxBytes, bytes);
 
   const malformed: MalformedRow[] = [];
-  const toks = lex(text, malformed);
+  const toks = lex(text, malformed, hooks.comments);
   const records: Rec[] = [];
   const scopes: Scope[] = [{ kind: 'namespace', name: '' }];
   let chunk: Tok[] = [];
@@ -726,6 +792,9 @@ export function parseCppDecls(text: string, ctx: CppReadContext = { file: '' }, 
     const tok = toks[i];
     if (tok.t === ';') {
       if (isDefaulted()) noteDefinition();
+      if (hooks.onMember && currentClass() && chunk.length) {
+        hooks.onMember({ ...describeMember(chunk), endLine: tok.line, namespace: nsPath(), owner: outerPath() });
+      }
       flush();
       continue;
     }

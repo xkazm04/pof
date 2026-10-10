@@ -269,6 +269,33 @@ export const BEHAVIOUR_NODE_ROW_MAP: FieldMap = botwClassMap({
     + 'per-node parameter schema, and the record keeps each handle\'s name, never its type (F7)'),
 });
 
+/* ── parameter handles ← the node areas' headers, read by `cpp-handles` (W11) ── */
+
+/**
+ * The parameter-handle records (`ingest/cppHandles.ts`): one per member a scope comment sits directly above, read by a
+ * SECOND technique over the node areas' globs, so the `cpp-decls` maps above never see these columns and every
+ * `cpp-decls` record stays byte-identical (vault Decisions Z-D46). ONE map for every handle spec, catalog-neutral: the
+ * records have one shape whichever area or catalog they sit in (Z-D48). The three design columns are gaps — the home
+ * they wait for is a per-node parameter schema with a scope and a type per parameter.
+ */
+export const PARAMETER_HANDLE_MAP: FieldMap = {
+  file: dropped('the path is the wrapper identity and provenance.sourceFile already'),
+  line: dropped('a position inside a decompiled file, not a design value'),
+  kind: mapped('data.declKind'),
+  name: mapped('name'),
+  qualifiedName: mapped('data.qualifiedName'),
+  namespace: mapped('data.namespace'),
+  owner: mapped('data.owner'),
+  marker: gap('no home for a parameter\'s SCOPE: the word written above each handle says when its value is bound — per actor '
+    + 'type, per call (in some areas two distinct per-call words), per placed instance, or shared across one behaviour tree; no '
+    + 'PoF catalog has a per-node parameter schema with a scope field'),
+  declaredType: gap('no home for a parameter\'s TYPE: the declared type as written — a pointer to a keyword type (a number, a '
+    + 'flag, a character string, an untyped address) or a library or engine type (a text, a three-vector, an engine link); no PoF '
+    + 'catalog has a typed per-node parameter field'),
+  typeKind: gap('no home for a parameter\'s TYPE KIND: what C++ keywords alone decide (real, integer, boolean, character, void), '
+    + 'or named when a library or engine type decides it — the same missing typed parameter field'),
+};
+
 /* ── descopes ───────────────────────────────────────────────────────────── */
 
 /**

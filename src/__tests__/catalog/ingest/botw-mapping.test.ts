@@ -7,8 +7,10 @@ import Database from 'better-sqlite3';
 import { BOTW_DESCOPES, BOTW_PIN, BOTW_TREE, PLAYER_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 import { auditColumns } from '@/lib/catalog/ingest/fieldMap';
 import { CPP_RECORD_COLUMNS } from '@/lib/catalog/ingest/cppDecls';
+import { CPP_HANDLE_COLUMNS } from '@/lib/catalog/ingest/cppHandles';
 import { ingestSourceFromDir } from '@/lib/catalog/reference/ingestSource';
 import { BOTW, DIABLO1, getReferenceSource } from '@/lib/catalog/reference/sources';
+import { getTechnique } from '@/lib/catalog/reference/techniques';
 import { computePathCoverage } from '@/lib/catalog/reference/pathCoverage';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
@@ -24,11 +26,16 @@ describe('BOTW source contract', () => {
 
   it('reads only source-code specs inside the in-scope tree, and classifies every reader column', () => {
     expect(BOTW.tables.length).toBeGreaterThan(0);
+    // W11 (vault Z-D46): a second source-code technique, cpp-handles, reads the node areas' globs again with its own
+    // columns. Every spec reads one of the two, and each map classifies every column of ITS technique.
+    expect(BOTW.tables.filter((t) => t.technique === 'cpp-decls')).toHaveLength(11);
+    expect(BOTW.tables.filter((t) => t.technique === 'cpp-handles')).toHaveLength(5);
     for (const spec of BOTW.tables) {
       expect(spec.file.startsWith(`${BOTW_TREE}/`)).toBe(true);
-      expect(spec.technique).toBe('cpp-decls');
+      expect(['cpp-decls', 'cpp-handles']).toContain(spec.technique);
+      expect(getTechnique(spec.technique).assetKind).toBe('source-code');
       expect(spec.keyColumn).toBe('qualifiedName');
-      const audit = auditColumns([...CPP_RECORD_COLUMNS], spec.map);
+      const audit = auditColumns([...(spec.technique === 'cpp-decls' ? CPP_RECORD_COLUMNS : CPP_HANDLE_COLUMNS)], spec.map);
       expect(audit.unclassified).toEqual([]);
       expect(audit.declaredButAbsent).toEqual([]);
     }
