@@ -266,3 +266,20 @@ and media generation were dropped with those sections.
 - **The spec glob language has no negation, so a row defined against another spec's stem is an enumeration.** Write it from the
   continuations the pin actually holds, and prove it by the partition check AND a test that the two specs of one technique read disjoint
   files — an overlap would wrap one file twice under one wrapper id.
+
+## 1.0 — 2026-10-10 — pof (W14)
+- **Prove two prefix globs disjoint by argument, then by probes.** `<p>{a,…}*` and `<p><stem>*` can share a name only if an alternative
+  and the stem begin one another — assert that for every alternative, then sweep border probes (every head of the stem followed by every
+  letter, both cases). The argument covers names no sample would think of; the probes show the globs really read files. W14's negative
+  control (one alternative widened into the stem) turned the test red.
+- **A derived "stays open" fixture must BE the probe it was derived from, not the probe's first letter plus a tail.** W10's rule kept the
+  open INITIAL right, but three fixtures added a lower-case tail after it, and an enumerated glob read all three. Build the fixture path
+  from the exact probe string the derivation tested, so no later spec can read it without also changing the derivation.
+- **When a row holds whole species families, put the family sensitivity into the plurality ruling from the start.** The concept rule
+  (a walk is a state whoever walks) and the unit rule (a family is one bestiary entry) gave state-graph 47 and bestiary 77 on the same
+  179 nodes; earlier rows used both rules unnamed. Write both counts and say which rule the label follows.
+- **Every store-touching command runs alone, in the skill's order.** A convenience re-run chained into the same shell line (W14: a second
+  BOOT ingest, and an idempotence round before `status.ts`) is a recorded round in the history the STOP rule reads. It moved no number this
+  time, but it must still be disclosed. Run ingest, status and the stale check as separate calls.
+- **String literals are tokens too.** The clone check flagged the lower-case alphabet written as a literal (the repo held only the
+  upper-case one). Derive a literal from one the repo already holds, rather than typing a new one.
