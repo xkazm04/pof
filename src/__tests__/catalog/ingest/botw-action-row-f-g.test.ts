@@ -155,7 +155,7 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the fifth row, an enumerated glob beside the stem, read by both techniques (W14)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(7);
+    expect(ROW_SPECS).toHaveLength(8);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin; which
     // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D65, Z-D72).

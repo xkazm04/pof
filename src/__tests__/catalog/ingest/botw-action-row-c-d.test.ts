@@ -96,7 +96,7 @@ const STAY_OPEN = Object.keys(FILES)
 
 describe('BOTW generic behaviour-node rows: the second row (W10)', () => {
   it('appends the second row after the first: same folder, prefix and extensions, the next initials, the shared map', () => {
-    expect(ROW_SPECS).toHaveLength(7);
+    expect(ROW_SPECS).toHaveLength(8);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
     expect(SPEC).toMatchObject({ catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName' });

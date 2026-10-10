@@ -26,6 +26,8 @@ const EARLIER = ROW_SPECS[5];
 const twinOf = (file: string) => BOTW.tables.find((t) => t.technique === 'cpp-handles' && t.file === file)!;
 const TWIN = twinOf(SPEC.file);
 const EARLIER_TWIN = twinOf(EARLIER.file);
+const LATER = ROW_SPECS[7];
+const LATER_TWIN = twinOf(LATER.file);
 const MOUNT = DECL_SPECS.find((t) => t.map === MOUNT_CLASS_MAP)!;
 const MOUNT_AREA = MOUNT.file.slice(0, MOUNT.file.indexOf('/**'));
 const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
@@ -154,11 +156,13 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the seventh row, three initials, read by both techniques (W16)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(7);
+    expect(ROW_SPECS).toHaveLength(8);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
-    expect(BOTW.tables.indexOf(SPEC)).toBe(DECL_SPECS.length - 1);
+    // The next row's spec directly follows this one (it ends the cpp-decls block), and this row's twin is directly followed by
+    // the next row's twin (which is the last table); the newest row's test asserts the ends (vault Z-D77).
+    expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(EARLIER_TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(TWIN);
+    expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);

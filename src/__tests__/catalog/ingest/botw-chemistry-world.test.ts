@@ -107,7 +107,7 @@ const world = specFor(WORLD);
 
 describe('BOTW chemistry + world specs (W03)', () => {
   it('registers one spec per folder, wrap-only: Chemical under status-effects, World under zone-map', () => {
-    expect(BOTW.tables).toHaveLength(26);
+    expect(BOTW.tables).toHaveLength(28);
     expect(chem).toMatchObject({ file: `${CHEM}/**/*.{h,cpp}`, catalogId: 'status-effects', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(world).toMatchObject({ file: `${WORLD}/**/*.{h,cpp}`, catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(chem!.map).toBe(CHEMISTRY_CLASS_MAP);
