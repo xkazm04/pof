@@ -362,3 +362,19 @@ and media generation were dropped with those sections.
   the payload never ran. Make the edit with the Edit tool when it is a few lines.
 - **Open a file-copy of the backup for the rehearsal, not a serialized buffer of a WAL store** (`new Database(buffer)` failed with "unable to open database file");
   back up first with the backup API, then copy that file to a temp path and run the full ingest twice on the copy.
+
+## 1.0 — 2026-10-10 — pof (W17 part 2)
+- **The records carried four claims alone (2's handle side, 4, 5, 6 and 1's counts); the clone was needed for named parts only:** the 138-of-138 stub count (732 bodies), the S and P–R ancestors in
+  the deepest chain and in the update-hook holders, the 69 unstored parents and the 33 extenders. Name each clone read in its claim; nothing needed more than a read.
+- **Index every header of the clone, validate it against the store, and measure the stopgap by the PLACE of the parent file, not by row.** One index over all 3842 headers agreed with 1747 of the 1754
+  stored classes (the 7 misses were nested classes) and put the whole remainder in one pass: S 40 · P–R 17 · the area folder 10 · the NPC folder 2. Framed by row, the two small folders (16 and 14 open files)
+  would have stayed invisible; by place they are the best yield per file (62.5 % and 14 %), which changes how the closing wave of F18 is planned.
+- **Never write a sub-count of a gap, or a "no X in other rows" claim, from memory of a printed list.** My first draft of claim 2's gap carried two category counts I had not computed (11 and 15); the
+  grouping script gave 8 and 20. Run the grouping, then write the sentence. The same slip would have kept "34 extenders": the part-1 note's total did not equal its own by-row list (33); recount from the list.
+- **Read a classifier's leftover bucket before reporting its split.** The body reader left 6 load bodies as "other"; all six were registrations through a third call name, which made the split the survey's
+  exactly (58 + 47). A "6 unexplained" would have read as a defect.
+- **A predicted sharpening is still a claim: check each note against the record.** Claim 6 listed U044 and U051 for the wait-for-UI commands; only U051 gained (6 of 8 waits take no argument at all, so
+  U044's argument schema learns nothing). Say which prediction failed even when every count held.
+- **Before re-reading a judgment call "from the factory, the extenders and the tree data", check that each source carries any grouping.** The node factory is an alphabetical include list plus a table in hash
+  order, the clone's `data/` holds symbol tables not tree data, and the 12 nodes concerned have 0 extenders and 0 mentions: three greps settle that the call stays a call, and a same-word hit (a bullet-move
+  class containing the water-explode word) is another class (F19).
