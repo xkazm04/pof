@@ -251,3 +251,18 @@ and media generation were dropped with those sections.
 - **When a row shows a new shape, measure it on the earlier rows before calling it the row's.** 35 E nodes declare no acting
   hook; the same calibrated survey found 12 in A–B and 34 in C–D, which turned a row note into a library finding (F22) and
   corrected an earlier wave's reading of "no per-frame update" as one shape.
+
+## 1.0 — 2026-10-10 — pof (W13)
+- **A row's name says what its nodes ARE only after you find the node that uses them.** The brief and Coverage called the stem row
+  "branching nodes"; the census found 0 nodes with children, and the composite that runs them sat in the engine folder. Before matching
+  a map to a row's supposed shape, grep for the row's stem OUTSIDE the row and read the user, so the map question is asked of the right
+  nodes.
+- **Count a hook-set shape through the parent chain, not per node.** "Declares no acting hook" over-counted "action not recovered": the
+  four such nodes of W13 and four of W12's 81 inherit an acting hook from a parent. Any per-node hook census (shells, tick rule, F22) walks
+  the node's ancestors inside its namespace before it is written down.
+- **Pin a row's test to its row by position among the row specs, never by "last".** Every row test that selects itself with `.at(-1)`
+  breaks when the next row appends (W13 re-pinned W12's). A new row test takes `ROW_SPECS[i]` for its own index from the start, and its
+  "ends the block" assertion is moved by the next wave to "is followed by the next row".
+- **The spec glob language has no negation, so a row defined against another spec's stem is an enumeration.** Write it from the
+  continuations the pin actually holds, and prove it by the partition check AND a test that the two specs of one technique read disjoint
+  files — an overlap would wrap one file twice under one wrapper id.
