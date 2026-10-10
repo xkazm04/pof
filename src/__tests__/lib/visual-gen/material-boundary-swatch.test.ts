@@ -120,6 +120,10 @@ describe('per-role table: colour space is declared once, per channel', () => {
     const blenderSrc = fs.readFileSync(path.join(SRC, 'lib/blender-mcp/scripts/create-material.ts'), 'utf8');
     expect(blenderSrc).not.toContain('"Non-Color"');
     expect(blenderSrc).not.toContain('"sRGB"');
+    // The headless bake script takes each role's colour space as an argument.
+    const bakeSrc = fs.readFileSync(path.join(SRC, '../scripts/visual-gen/pof_mesh_finish.py'), 'utf8');
+    expect(bakeSrc).not.toContain('"Non-Color"');
+    expect(bakeSrc).not.toContain('"sRGB"');
     const previewSrc = fs.readFileSync(
       path.join(SRC, 'components/modules/visual-gen/material-lab/MaterialPreview.tsx'), 'utf8',
     );

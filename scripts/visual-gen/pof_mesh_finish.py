@@ -66,7 +66,15 @@ def parse_args():
     p.add_argument("--uv-mode", choices=["smart", "pack-existing"], default="smart")
     p.add_argument("--bake", default="")
     p.add_argument("--bake-size", type=int, default=1024)
+    # kind=<colourspace>,... from material-boundary.ts, the one per-role table. This
+    # script states no colour space of its own.
+    p.add_argument("--colorspace", default="")
     return p.parse_args(argv)
+
+
+def parse_colorspaces(value):
+    pairs = (item.split("=", 1) for item in value.split(",") if "=" in item)
+    return {kind.strip(): name.strip() for kind, name in pairs if name.strip()}
 
 
 def clear_scene():
@@ -483,10 +491,9 @@ def emit_uv_stretch(obj):
     marker("UV_STRETCH_DEGENERATE", stats["degenerate"])
 
 
-def new_bake_image(name, size, non_color):
+def new_bake_image(name, size, colorspace):
     img = bpy.data.images.new(name, width=size, height=size, alpha=False)
-    if non_color:
-        img.colorspace_settings.name = "Non-Color"
+    img.colorspace_settings.name = colorspace
     return img
 
 
@@ -547,12 +554,16 @@ BAKE_TYPES = {
     "roughness": "ROUGHNESS",
 }
 
-# Data maps must not be colour-managed; only base colour is sRGB.
-NON_COLOR_MAPS = ("normal", "roughness")
 
+def bake_high_to_low(high, low, kind, size, out_dir, stem, colorspace):
+    """Cycles selected-to-active bake: high-poly detail -> low-poly UVs.
 
-def bake_high_to_low(high, low, kind, size, out_dir, stem):
-    """Cycles selected-to-active bake: high-poly detail -> low-poly UVs."""
+    `colorspace` is the role's, from the caller's table. A bake with none is refused:
+    a byte image defaults to sRGB, so a guessed role writes a data map through the
+    display curve and the PNG looks no different from a correct one.
+    """
+    if not colorspace:
+        raise ValueError("no colour space stated for the %s map; refusing to guess" % kind)
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 8 if kind == "ao" else 1
@@ -565,7 +576,7 @@ def bake_high_to_low(high, low, kind, size, out_dir, stem):
         scene.render.bake.use_pass_indirect = False
         scene.render.bake.use_pass_color = True
 
-    image = new_bake_image("pof_bake_%s" % kind, size, kind in NON_COLOR_MAPS)
+    image = new_bake_image("pof_bake_%s" % kind, size, colorspace)
     mat = ensure_bake_material(low)
     node = bake_target_node(mat, image)
 
@@ -672,11 +683,12 @@ def main():
     else:
         marker("UV", 0)
 
+    colorspaces = parse_colorspaces(args.colorspace)
     for kind in bake_kinds:
         if kind not in BAKE_TYPES:
             continue
         try:
-            path = bake_high_to_low(high, low, kind, args.bake_size, out_dir, stem)
+            path = bake_high_to_low(high, low, kind, args.bake_size, out_dir, stem, colorspaces.get(kind))
             marker("BAKE_%s" % kind.upper(), path)
         except Exception as exc:  # a failed bake must not fake a finished mesh
             marker("BAKE_%s_ERROR" % kind.upper(), str(exc))
