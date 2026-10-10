@@ -378,3 +378,14 @@ and media generation were dropped with those sections.
 - **Before re-reading a judgment call "from the factory, the extenders and the tree data", check that each source carries any grouping.** The node factory is an alphabetical include list plus a table in hash
   order, the clone's `data/` holds symbol tables not tree data, and the 12 nodes concerned have 0 extenders and 0 mentions: three greps settle that the call stays a call, and a same-word hit (a bullet-move
   class containing the water-explode word) is another class (F19).
+
+## 1.0 — 2026-10-10 — pof (W18 part 1)
+- **A row registered below its registration predecessor pins position by registration, and derives both alphabetic neighbours from the specs registered BEFORE it.** The lower neighbour is the greatest single
+  initial below the row's first among `ROW_SPECS.slice(0, i)`, the letters between are unread by every spec registered up to and including the row (rows after it excluded by position), and the upper
+  neighbour must be `letterAfter(LAST, 1)` and be read by exactly the predecessor's spec and twin. Neither "first > earlier last" nor "first = letter after earlier last" is copied; the predecessor's own end-of-block
+  assertions become "directly followed by the next row" (M–O's form).
+- **A negative control into an unowned letter is not always green.** Widening both specs into T (owned) turned 11 tests in 4 files red; widening into R (owned by no spec) turned exactly one red — the new
+  test's own `INITIALS.toHaveLength(1)` shape assertion, never the disjointness or gap tests. Report which assertion caught it; a one-initial row has that extra guard, a multi-initial row (W16) had none.
+- **Derive the home groups' counts from the same script that prints the groups.** A first rule pulled the two knock-back-shock reactions into `spellbook` by a `Shock` substring; reading the printed groups
+  caught it before the note was final (spellbook 39 → 37, state-graph 118 → 120) and every dependent number (handles per home, family-unit units, the margin) was re-run, not edited by hand.
+- **`retire-stale.ts` refuses without `--root`** (it read nothing); give it the clone like the other tools, and say so once in the note rather than counting the refused call as a round.
