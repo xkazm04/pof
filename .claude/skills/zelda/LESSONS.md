@@ -172,3 +172,19 @@ and media generation were dropped with those sections.
   census is one shape; two maps would fork reasons that must stay equal. Write the merge reversal into the
   Decision with its cost (`reprojected` of the smaller half, no raw or id change — wrapper and entity ids
   carry the record's file and key, never the catalog).
+
+## 1.0 — 2026-10-10 — pof (W08)
+- **Before calling a folder "engine only", grep for EVERY schema idiom, not the one the brief names.** A
+  parameter-object grep found the sound folder's 2 schemas; the per-actor sound settings are a third, read as
+  keys from a binary table inside one-line accessors. A crude witness for "is there design here" needs one
+  pattern per way the source stores data (parameter handles, table-key reads, initialiser lists of defaults).
+- **A descope test derives its names from the patterns at run time; the clone check covers the test's own
+  filters too.** Spelling a descoped file name in a fixture copies a clone identifier; deriving it from
+  `BOTW_DESCOPES` does not. W08's first clone check still caught a folder name inside the test's selection
+  regex — select by pattern SHAPE (ends in a code extension, sits in a named folder) instead of listing folders.
+- **A descope wave still learns, also from what it descopes.** Infrastructure files can carry evidence about a
+  DESIGN elsewhere (a memory check that forces the world reset early); read them for that before writing the
+  glob, and record the finding as structure-level with the descoped path as evidence.
+- **When a file stays open for a later slice, say what the reader will see of it.** If the design lives in
+  constructor arguments or bodies (F17), a slice yields names only; write that into the Backlog item so the
+  next wave's prediction and its "record-level" claim are honest.
