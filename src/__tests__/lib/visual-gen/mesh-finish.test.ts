@@ -140,6 +140,17 @@ describe('buildMeshFinishArgs', () => {
     expect(args).not.toContain('--bake');
   });
 
+  it('states each bake colour space from the per-role table, so AO is baked linear', () => {
+    // The script used to hold its own linear list (normal, roughness) and baked AO
+    // through the sRGB curve: measured in Blender 4.2 on a fixture, a linear reader of
+    // the AO png was off by 0.119 mean across the occluded band; from the table, 0.0009.
+    const args = buildMeshFinishArgs('s.py', { ...SPEC, unwrap: true, bake: ['diffuse', 'normal', 'ao', 'roughness'] });
+    expect(args[args.indexOf('--colorspace') + 1]).toBe(
+      'diffuse=sRGB,normal=Non-Color,ao=Non-Color,roughness=Non-Color',
+    );
+    expect(buildMeshFinishArgs('s.py', SPEC)).not.toContain('--colorspace');
+  });
+
   it('passes only the bakeable maps, so an unsupported one never reaches Blender', () => {
     const args = buildMeshFinishArgs('s.py', { ...SPEC, unwrap: true, bake: ['diffuse', 'metallic', 'roughness'] });
     expect(args[args.indexOf('--bake') + 1]).toBe('diffuse,roughness');

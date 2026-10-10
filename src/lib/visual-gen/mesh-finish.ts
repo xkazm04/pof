@@ -18,6 +18,7 @@ import { bakeSizeForExtent } from './texel-density';
 import { blenderNotFound, fixedBlenderCandidates, locateBlender, type BlenderSeams } from './blender-locate';
 import { processFailureReason, runLocalProcess, type ProcessOutcome } from '@/lib/visual-gen/local-process';
 import { readMarkerBlock } from '@/lib/visual-gen/script-markers';
+import { channelSpec, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
 
 /** Above this face count an auto-unwrap explodes into unusable island counts
  *  (and routinely hangs/crashes the unwrapper) — the high-poly is never the
@@ -35,6 +36,20 @@ export type BakeMap = 'normal' | 'ao' | 'diffuse' | 'roughness' | 'metallic';
 /** Maps Cycles can bake as a native pass. `metallic` is deliberately absent —
  *  see `bakePlan`. */
 export const BAKEABLE_MAPS = ['normal', 'ao', 'diffuse', 'roughness'] as const;
+
+/** The material role each bake writes. A Cycles DIFFUSE colour pass is the albedo. */
+const BAKE_CHANNEL: Record<BakeMap, MaterialChannel> = {
+  diffuse: 'albedo', normal: 'normal', ao: 'ao', roughness: 'roughness', metallic: 'metallic',
+};
+
+/**
+ * `kind=<Blender colourspace>` per bake, read from the one per-role table. The script
+ * used to hold its own list of linear maps, which left AO out: every baked AO was
+ * written through the sRGB curve and read back linear by the glTF occlusion slot.
+ */
+export function bakeColourSpaceArg(bakes: readonly BakeMap[]): string {
+  return bakes.map((kind) => `${kind}=${channelSpec(BAKE_CHANNEL[kind]).blenderColorspace}`).join(',');
+}
 
 /**
  * Crease angle (degrees) for the auto-smooth pass. Edges sharper than this stay hard,
@@ -467,6 +482,7 @@ export function buildMeshFinishArgs(scriptPath: string, spec: MeshFinishSpec): s
   if (plan.unwrap && bakes.length) {
     args.push('--bake', bakes.join(','));
     args.push('--bake-size', String(resolveBakeSize(spec)));
+    args.push('--colorspace', bakeColourSpaceArg(bakes));
   }
   return args;
 }
