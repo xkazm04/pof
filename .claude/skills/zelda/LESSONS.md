@@ -331,3 +331,20 @@ and media generation were dropped with those sections.
 - **Predict the store census from the survey and check it against the stored RAW columns, not only the ingest summary.** The 678 rows' scope
   words, type kinds, bases (106 qualified, 68 bare), fields (332) and methods (959 / 959) were summed from the stored `raw` JSON after the round
   and equalled the survey line for line; a summary that only says "created 678" cannot show a mapped-but-wrong column.
+
+## 1.0 — 2026-10-10 — pof (W16 part 2)
+- **The records carried every COUNT of four claims alone; the clone was needed for bodies, parents in unwrapped rows and a folder no spec reads.**
+  F22 (all 17 cases at depth 0), the commerce and world-name census, the vehicle and stable census and the handle side of the completion policy came
+  from the store; the 171-of-174 stub count and three real bodies, the 14 + 11 borrowed parents, the 20 extenders in unwrapped rows and the NPC
+  folder's two nodes came from the clone. Name each clone read in its claim; a validated index (1146 shared classes, 0 disagreements) came first.
+- **Before recommending the next row, measure the WHOLE remaining stopgap, not the last wave's.** The claim asked "9 of 23"; the useful number for
+  the choice was the tree-wide one (89 of 528 library links unresolved, by row: S 35, T-Z 27, P-R 15), computed from every stored class against the
+  clone index in one pass. It turned a "which row next" opinion into a per-file yield (T-Z 9.8 %, S 8.0 %, P-R 7.7 %).
+- **Do not carry a previous row's theme into a new row's write-up from memory.** I wrote "stem-row side actions built on this row's moves" (true in
+  W14 and W15) before checking; listing the 50 extenders' file names showed none was. Grep the file names behind any "again" sentence.
+- **When a count depends on a name rule, give both rules if the survey's set came from reading.** The 22 commerce nodes (survey) were 18 by commerce
+  words and 22 only with four outfit commands; the 7 handles were 3 and 7. Stating both, and which one is the concept set, kept the claim honest
+  without tuning the rule to 22.
+- **Filter stored records by the raw JSON's `kind`, not by `key_kind`** (it reads `column` for every botw row), and take the area from the file path.
+- **Anchor an `Edit` on text copied from `grep -n` of the file, not retyped.** Two anchors typed from memory failed on a wrapped line's punctuation.
+  LESSONS.md is all CRLF and the Edit tool kept it so (350 of 350 lines after the append): check with `grep -c` before reaching for a converter.
