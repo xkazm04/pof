@@ -225,7 +225,9 @@ export const BOTW: ReferenceSource = {
     { file: 'src/Game/Actor/Area/Action/*.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W19: the NPC folder (the talk, turn, wait and lerp commands of a conversation), same shared map, catalog fixed by the App
     // Master's ruling (Z-D84, Z-D85); it ends the cpp-decls block. Its sibling AI folder stays open (an AI row reads it later).
-    { file: 'src/Game/Actor/NPC/Action/*.{h,cpp}', catalogId: 'dialog-trees', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // The folder began under dialog-trees and moved to state-graph by Z-D87 (c) and Z-D88: its nodes start a conversation by id
+    // (a hook) and wait, turn and lerp (states), none of them the content of a dialog-trees step.
+    { file: 'src/Game/Actor/NPC/Action/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W11: the parameter handles of every node area that declares them, read by a SECOND technique over the same globs
     // (cpp-handles — one record per handle: name, scope word, declared type; Z-D46 – Z-D48). One spec per handle-bearing
     // glob, each in its twin spec's catalog, all under one catalog-neutral map; covers no new file (wrap only).
@@ -249,10 +251,10 @@ export const BOTW: ReferenceSource = {
     // W18: the ninth row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D80).
     { file: 'src/Game/Actor/Action/action{S}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     // W19: the tenth row's handles and the two folders' handles, over the same globs as their cpp-decls twins and in their
-    // catalogs (Z-D85); the NPC folder's twin is last.
+    // catalogs (Z-D85); the NPC folder's twin is last, and moved with its decls spec to state-graph (Z-D87 (c), Z-D88).
     { file: 'src/Game/Actor/Action/action{P,Q,R}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/Area/Action/*.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
-    { file: 'src/Game/Actor/NPC/Action/*.{h,cpp}', catalogId: 'dialog-trees', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    { file: 'src/Game/Actor/NPC/Action/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };
 

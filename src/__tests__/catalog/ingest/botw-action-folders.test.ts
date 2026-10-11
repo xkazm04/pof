@@ -161,7 +161,7 @@ describe('BOTW node folders: the area-volume folder and the NPC folder, read by 
     expect(BOTW.tables.at(-1)).toBe(NPC_TWIN);
     expect(HANDLE_SPECS.at(-1)).toBe(NPC_TWIN);
     expect(AREA_SPEC).toMatchObject({ catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
-    expect(NPC_SPEC).toMatchObject({ catalogId: 'dialog-trees', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
+    expect(NPC_SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     for (const [spec, twin] of [[AREA_SPEC, AREA_TWIN], [NPC_SPEC, NPC_TWIN]] as const) {
       expect(twin).toMatchObject({ file: spec.file, catalogId: spec.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
       expect(spec.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
@@ -239,18 +239,18 @@ describe('BOTW node folders: the area-volume folder and the NPC folder, read by 
       duplicateKeys: 0, malformed: 0, files: { matched: 4, withoutRecords: 3, refused: [] },
     });
     expect(first.tables[BOTW.tables.indexOf(NPC_SPEC)]).toMatchObject({
-      file: NPC_SPEC.file, catalogId: 'dialog-trees', status: 'ingested', rows: 4, unclassified: [], declaredButAbsent: [],
+      file: NPC_SPEC.file, catalogId: 'state-graph', status: 'ingested', rows: 4, unclassified: [], declaredButAbsent: [],
       duplicateKeys: 0, malformed: 0, files: { matched: 4, withoutRecords: 0, refused: [] },
     });
     expect(first.tables[BOTW.tables.indexOf(NPC_TWIN)]).toMatchObject({
-      file: NPC_SPEC.file, catalogId: 'dialog-trees', status: 'ingested', rows: 3, unclassified: [], declaredButAbsent: [],
+      file: NPC_SPEC.file, catalogId: 'state-graph', status: 'ingested', rows: 3, unclassified: [], declaredButAbsent: [],
       duplicateKeys: 0, malformed: 0, files: { matched: 4, withoutRecords: 2, refused: [] },
     });
     // 4 + 4 node records, 2 + 3 handle records, and the one node record each of the Action-folder file and the camera file.
     expect(first.store).toEqual({ created: 15, rawChanged: 0, reprojected: 0, unchanged: 0 });
 
     const byKey = (a: Record<string, string>, b: Record<string, string>) => a.qualifiedName.localeCompare(b.qualifiedName);
-    for (const [files, catalogId, handleCount] of [[AREA_ROW, 'zone-map', 2], [NPC_ROW, 'dialog-trees', 3]] as const) {
+    for (const [files, catalogId, handleCount] of [[AREA_ROW, 'zone-map', 2], [NPC_ROW, 'state-graph', 3]] as const) {
       const rows = listWrappers(db, { sourceId: 'botw', catalogId }).filter((w) => files.includes(w.raw.file));
       const nodes = rows.filter((w) => w.raw.kind !== 'handle');
       const handles = rows.filter((w) => w.raw.kind === 'handle');
