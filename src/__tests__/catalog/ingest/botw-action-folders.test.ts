@@ -177,7 +177,7 @@ describe('BOTW node folders: the area-volume folder, the NPC folder and the NPC\
   it('ROW_SPECS, FOLDER_SPECS and the AI row specs partition the shared-map decls specs: exactly three folders (area, NPC, NPC AI), the AI rows directly after the NPC folder, the NPC\'s AI folder directly after them and ending the block', () => {
     expect(ROW_SPECS).toHaveLength(10);
     expect(FOLDER_SPECS).toHaveLength(3);
-    expect(AI_ROW_SPECS).toHaveLength(6);
+    expect(AI_ROW_SPECS).toHaveLength(7);
     expect(ROW_SPECS.length + FOLDER_SPECS.length + AI_ROW_SPECS.length).toBe(SHARED_DECLS.length);
     // none dropped, none counted twice, in registration order: the Action rows, the area folder, the NPC folder, the AI rows, the NPC's AI folder
     expect(SHARED_DECLS).toEqual([...ROW_SPECS, AREA_SPEC, NPC_SPEC, ...AI_ROW_SPECS, NPC_AI_SPEC]);

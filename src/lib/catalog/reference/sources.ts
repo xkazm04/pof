@@ -263,6 +263,12 @@ export const BOTW: ReferenceSource = {
     // plurality of this row's nodes among real catalogs, robust under every reading of its selectors (Z-D109). Registered
     // directly after the fifth AI row and before the NPC's AI folder, which keeps the end of the block (Z-D96 (d)).
     { file: 'src/Game/Actor/AI/ai{T,U,V,W,X,Y,Z}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W27: the seventh row of the AI folder (the air-creature, animal, assassin, arrow and attack families' own nodes, a handful of
+    // selectors, and ONE header that is no behaviour node: a data-manager helper beside its source; two consecutive initials, the
+    // first capital of the alphabet among them, in the brace form), same shared map, state-graph on the concept rule: the plurality
+    // of this row's nodes among real catalogs, robust under every reading of its selectors (Z-D111). Registered directly after the
+    // sixth AI row and before the NPC's AI folder, which keeps the end of the block (Z-D96 (d)).
+    { file: 'src/Game/Actor/AI/ai{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W21: the NPC's AI folder (a flat folder of the AI node shape beside the NPC's Action folder), same shared map and the NPC
     // folder's catalog; it ends the cpp-decls block (Z-D93). Its handle twin is the last spec below (wrap only).
     { file: 'src/Game/Actor/NPC/AI/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
@@ -310,6 +316,9 @@ export const BOTW: ReferenceSource = {
     // W26: the sixth AI row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D109), directly after the
     // fifth AI row's twin and before the NPC's AI folder's twin, which stays last.
     { file: 'src/Game/Actor/AI/ai{T,U,V,W,X,Y,Z}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    // W27: the seventh AI row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D111), directly after the
+    // sixth AI row's twin and before the NPC's AI folder's twin, which stays last.
+    { file: 'src/Game/Actor/AI/ai{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/NPC/AI/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };

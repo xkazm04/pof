@@ -1,9 +1,9 @@
 // W26: the sixth row of the AI folder (Backlog item 8's AI half): SEVEN consecutive initials, in the brace form of the earlier AI
-// rows' shape — <prefix>{<a>,…,<g>}*.{h,cpp}, no stem — registered directly after the fifth AI row and directly followed by the NPC's
-// AI folder, which keeps the end of the cpp-decls block (vault Decisions Z-D96 (d), Z-D108). It is read by BOTH source-code
-// techniques over that one glob — a cpp-decls spec under the shared node map and its cpp-handles twin, both in the row's own
-// catalog. This is the NEWEST AI row, so its test keeps "exactly six AI rows": the guard that nothing slipped in after it (the next
-// AI wave moves that to "the first six", as the fifth row's test moved). The glob must read the row's code files and nothing else,
+// rows' shape — <prefix>{<a>,…,<g>}*.{h,cpp}, no stem — registered directly after the fifth AI row and directly followed by the next
+// AI row (the seventh, W27), the NPC's AI folder keeping the end of the cpp-decls block (vault Decisions Z-D96 (d), Z-D108,
+// Z-D111). It is read by BOTH source-code techniques over that one glob — a cpp-decls spec under the shared node map and
+// its cpp-handles twin, both in the row's own catalog. The first six AI rows are pinned here (the newest AI row's test keeps
+// "exactly seven": the guard that nothing slipped in after it, as this row's test kept "exactly six" until W27). The glob must read the row's code files and nothing else,
 // and must share no file with any other spec (an overlap would wrap one file twice under one id). Every path below — the AI folder,
 // its prefix, its initials, the neighbour folders, the Action prefix — is DERIVED from the registered specs at run time, and the
 // row is pinned by POSITION (the spec directly after the fifth AI row), never by "last" and never by an absolute index. This is the
@@ -51,6 +51,8 @@ const PREV = AI_ROWS[4];
 const PREV_TWIN = twinOf(PREV.file);
 const SPEC = DECL_SPECS[DECL_SPECS.indexOf(PREV) + 1];
 const TWIN = twinOf(SPEC.file);
+const NEXT = DECL_SPECS[DECL_SPECS.indexOf(SPEC) + 1];
+const NEXT_TWIN = twinOf(NEXT.file);
 const filePart = (file: string) => file.slice(dirOf(file).length + 1);
 // An AI row glob's file part: <prefix>{<initial>,…}*.{<ext>,…}; the Action rows' alternatives are capital and lower-case letters.
 const AI_SHAPE = /^([a-z]+)\{([A-Z](?:,[A-Z])*)\}\*\.\{([a-z]+(?:,[a-z]+)*)\}$/;
@@ -252,18 +254,19 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 const openInitials = (specs: readonly Spec[]) => UPPER.filter((c) => !readersOf(aiFile(c, 'Probe', 'h'), specs).length);
 
 describe('BOTW AI behaviour-node rows: the sixth row, seven initials, read by both techniques (W26)', () => {
-  it('is the sixth AI row: directly after the fifth AI row\'s spec and directly followed by the NPC\'s AI folder spec; its twin likewise: one glob, one catalog, the two shared maps', () => {
-    expect(AI_ROWS).toHaveLength(6); // exactly six AI row specs: the guard that nothing slipped in after this row (a later AI row moves this to "the first six")
-    expect(AI_ROWS).toEqual([FIRST_AI, SECOND_AI, THIRD_AI, FOURTH_AI, PREV, SPEC]);
+  it('is the sixth AI row: directly after the fifth AI row\'s spec and directly followed by the next AI row\'s spec; its twin likewise: one glob, one catalog, the two shared maps', () => {
+    expect(AI_ROWS.slice(0, 6)).toEqual([FIRST_AI, SECOND_AI, THIRD_AI, FOURTH_AI, PREV, SPEC]); // the first six AI row specs (the newest AI row's test keeps "exactly seven")
     expect(dirOf(SPEC.file)).toBe(AI_DIR);
     expect(SHARED_DECLS.indexOf(SPEC)).toBe(SHARED_DECLS.indexOf(PREV) + 1);
     expect(DECL_SPECS.indexOf(SPEC)).toBe(DECL_SPECS.indexOf(PREV) + 1);
-    expect(DECL_SPECS.indexOf(NPC_AI_SPEC)).toBe(DECL_SPECS.indexOf(SPEC) + 1); // directly followed by the NPC's AI folder (it ends the block)
+    expect(DECL_SPECS.indexOf(NEXT)).toBe(DECL_SPECS.indexOf(SPEC) + 1); // directly followed by the next AI row's spec (the NPC's AI folder keeps the end of the block)
     expect(DECL_SPECS.indexOf(NPC_AI_SPEC)).toBe(DECL_SPECS.length - 1);
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(PREV_TWIN) + 1);
-    expect(BOTW.tables.indexOf(NPC_AI_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
+    expect(BOTW.tables.indexOf(NEXT_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1); // directly followed by the next AI row's twin
     expect(BOTW.tables.at(-1)).toBe(NPC_AI_TWIN); // the NPC's AI twin stays last of the table
-    expect(dirOf(NPC_AI_SPEC.file)).toBe(NPC_AI_DIR); // the next spec is the NPC's AI folder, not a seventh AI row
+    expect(AI_ROWS[6]).toBe(NEXT); // the next spec is the seventh AI row, in the AI folder
+    expect(dirOf(NEXT.file)).toBe(AI_DIR);
+    expect(dirOf(NPC_AI_SPEC.file)).toBe(NPC_AI_DIR); // the NPC's AI folder is found by its folder, after every AI row
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
