@@ -91,7 +91,7 @@ const STAY_OPEN = Object.keys(FILES).filter((f) => !ROW.includes(f) && !f.endsWi
 
 describe('BOTW generic behaviour-node rows (W09)', () => {
   it('registers the first row: one wrap-only spec under the shared node map, a flat glob over two initials', () => {
-    expect(BOTW.tables).toHaveLength(46);
+    expect(BOTW.tables).toHaveLength(48);
     expect(ROW_SPECS).toHaveLength(10);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(SHAPE).not.toBeNull();
