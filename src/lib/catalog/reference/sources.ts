@@ -224,10 +224,15 @@ export const BOTW: ReferenceSource = {
     // map, catalog fixed by the App Master's ruling (placed volumes and area tags; Z-D84, Z-D85). Registered after the tenth row.
     { file: 'src/Game/Actor/Area/Action/*.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W19: the NPC folder (the talk, turn, wait and lerp commands of a conversation), same shared map, catalog fixed by the App
-    // Master's ruling (Z-D84, Z-D85); it ends the cpp-decls block. Its sibling AI folder stays open (an AI row reads it later).
+    // Master's ruling (Z-D84, Z-D85); it ended the cpp-decls block until the first AI row. Its sibling AI folder stays open (an AI row reads it later).
     // The folder began under dialog-trees and moved to state-graph by Z-D87 (c) and Z-D88: its nodes start a conversation by id
     // (a hook) and wait, turn and lerp (states), none of them the content of a dialog-trees step.
     { file: 'src/Game/Actor/NPC/Action/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W20: the first row of the AI folder (the Action library's counterpart: tree roots, selectors and the creatures' own
+    // behaviour nodes; two initials, the AI file prefix), same shared map, state-graph on the concept rule — the plurality
+    // of this row's nodes among real catalogs, selectors counted as guards (Z-D90). Registered after the NPC folder; it ends the
+    // cpp-decls block (Z-D89). Its handle twin is the last spec below (wrap only).
+    { file: 'src/Game/Actor/AI/ai{G,H}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W11: the parameter handles of every node area that declares them, read by a SECOND technique over the same globs
     // (cpp-handles — one record per handle: name, scope word, declared type; Z-D46 – Z-D48). One spec per handle-bearing
     // glob, each in its twin spec's catalog, all under one catalog-neutral map; covers no new file (wrap only).
@@ -255,6 +260,8 @@ export const BOTW: ReferenceSource = {
     { file: 'src/Game/Actor/Action/action{P,Q,R}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/Area/Action/*.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/NPC/Action/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    // W20: the first AI row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D90); last of the table.
+    { file: 'src/Game/Actor/AI/ai{G,H}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };
 

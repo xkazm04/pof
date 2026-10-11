@@ -2,8 +2,9 @@
 // Z-D85). Each is a flat folder read by BOTH source-code techniques over one glob directly in the folder (`<folder>/*.{h,cpp}`):
 // a cpp-decls spec under the SHARED node map, and a cpp-handles twin, in the catalog the App Master ruled. They are not rows of
 // the Action folder, so the nine row tests select their ROW_SPECS by PLACE (the shared-map decls specs directly in the Action
-// folder), and this test selects the rest: FOLDER_SPECS = the shared-map decls specs outside that folder. The three lists are
-// asserted to partition the shared-map decls specs, so no spec can drop out of both lists unseen. Every path below is DERIVED from
+// folder), and this test selects the rest: FOLDER_SPECS = the shared-map decls specs in neither the Action folder nor the AI folder
+// (W20: the AI rows have their own test and registered after the folders). The three lists (Action rows, folders, AI rows) are
+// asserted to partition the shared-map decls specs, so no spec can drop out of all of them unseen. Every path below is DERIVED from
 // the registered specs at run time (the folders from the globs, the Action prefix from the row globs, the neighbour folders from
 // the camera specs and the folders' own parents); every line of C++, every name and the one hex value in it was coined for this test.
 import { describe, expect, it } from 'vitest';
@@ -22,13 +23,21 @@ const HANDLE_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-handles');
 const SHARED_DECLS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
 const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
 const ACTION_DIR = dirOf(SHARED_DECLS[0].file);
-// The Action folder's rows (by PLACE) and the folder specs registered after them.
+// The neighbour folders, derived: the camera specs' folders, and the AI folder the camera's own second folder name gives beside
+// the Action folder (W20: the AI folder holds the AI rows, which this test does not own — their test does).
+const CAMERA_DIRS = [...new Set(BOTW.tables.filter((t) => t.map === CAMERA_SHOT_NODE_MAP).map((t) => t.file.slice(0, t.file.indexOf('/**'))))];
+const SIBLING_NAME = CAMERA_DIRS.map((d) => d.slice(d.lastIndexOf('/') + 1)).find((n) => n !== ACTION_DIR.slice(ACTION_DIR.lastIndexOf('/') + 1))!;
+const AI_DIR = `${dirOf(ACTION_DIR)}/${SIBLING_NAME}`;
+// The Action folder's rows (by PLACE), the AI folder's rows (by PLACE), and the folder specs: the shared-map decls specs in neither.
 const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === ACTION_DIR);
-const FOLDER_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) !== ACTION_DIR);
+const AI_ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === AI_DIR);
+const FOLDER_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) !== ACTION_DIR && dirOf(t.file) !== AI_DIR);
 const twinOf = (file: string) => BOTW.tables.find((t) => t.technique === 'cpp-handles' && t.file === file)!;
 const [AREA_SPEC, NPC_SPEC] = FOLDER_SPECS;
 const AREA_TWIN = twinOf(AREA_SPEC.file);
 const NPC_TWIN = twinOf(NPC_SPEC.file);
+const [AI_SPEC] = AI_ROW_SPECS;
+const AI_TWIN = twinOf(AI_SPEC.file);
 const LAST_ROW = ROW_SPECS.at(-1)!;
 const AREA_DIR = dirOf(AREA_SPEC.file);
 const NPC_DIR = dirOf(NPC_SPEC.file);
@@ -40,8 +49,6 @@ const UPPER = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 const LOWER = UPPER.map((c) => c.toLowerCase());
 // The neighbour folders, derived: each folder's parent, the camera specs' folders, and the sibling the camera's own second
 // folder name gives inside the NPC folder's parent (the NPC folder's AI sibling).
-const CAMERA_DIRS = [...new Set(BOTW.tables.filter((t) => t.map === CAMERA_SHOT_NODE_MAP).map((t) => t.file.slice(0, t.file.indexOf('/**'))))];
-const SIBLING_NAME = CAMERA_DIRS.map((d) => d.slice(d.lastIndexOf('/') + 1)).find((n) => n !== ACTION_DIR.slice(ACTION_DIR.lastIndexOf('/') + 1))!;
 const NPC_SIBLING = `${dirOf(NPC_DIR)}/${SIBLING_NAME}`;
 const nameIn = (dir: string, stem: string, ext: string) => `${dir}/${PREFIX}${stem}.${ext}`;
 
@@ -141,15 +148,16 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 }
 
 describe('BOTW node folders: the area-volume folder and the NPC folder, read by both techniques under the shared node map (W19)', () => {
-  it('FOLDER_SPECS and ROW_SPECS partition the shared-map decls specs: exactly two folders, the last two of the cpp-decls block, area then NPC', () => {
+  it('ROW_SPECS, FOLDER_SPECS and the AI row specs partition the shared-map decls specs: exactly two folders, directly after the Action rows, area then NPC, the first AI row directly after them', () => {
     expect(ROW_SPECS).toHaveLength(10);
     expect(FOLDER_SPECS).toHaveLength(2);
-    expect(ROW_SPECS.length + FOLDER_SPECS.length).toBe(SHARED_DECLS.length);
-    expect([...ROW_SPECS, ...FOLDER_SPECS]).toEqual(SHARED_DECLS); // none dropped, none counted twice, in registration order
-    expect(DECL_SPECS.slice(-2)).toEqual(FOLDER_SPECS);
+    expect(AI_ROW_SPECS).toHaveLength(1);
+    expect(ROW_SPECS.length + FOLDER_SPECS.length + AI_ROW_SPECS.length).toBe(SHARED_DECLS.length);
+    expect([...ROW_SPECS, ...FOLDER_SPECS, ...AI_ROW_SPECS]).toEqual(SHARED_DECLS); // none dropped, none counted twice, in registration order
+    expect(DECL_SPECS.slice(-3, -1)).toEqual(FOLDER_SPECS); // the two folders sit directly before the AI row, which ends the block
     expect(DECL_SPECS.indexOf(AREA_SPEC)).toBe(DECL_SPECS.indexOf(LAST_ROW) + 1);
     expect(DECL_SPECS.indexOf(NPC_SPEC)).toBe(DECL_SPECS.indexOf(AREA_SPEC) + 1);
-    expect(DECL_SPECS.indexOf(NPC_SPEC)).toBe(DECL_SPECS.length - 1); // the NPC folder ends the cpp-decls block
+    expect(DECL_SPECS.indexOf(AI_SPEC)).toBe(DECL_SPECS.indexOf(NPC_SPEC) + 1); // the NPC folder is directly followed by the first AI row's spec
     // The row globs keep the action-prefix row shape, all in one folder: nothing is loosened.
     for (const s of ROW_SPECS) expect(ROW_SHAPE.exec(rowPart(s.file))?.[1]).toBe(PREFIX);
     for (const s of FOLDER_SPECS) expect(ROW_SHAPE.exec(s.file.slice(dirOf(s.file).length + 1))).toBeNull(); // a folder glob has no initial
@@ -158,8 +166,7 @@ describe('BOTW node folders: the area-volume folder and the NPC folder, read by 
   it('registers each folder with its twin right after the previous place\'s twin, in the ruled catalog, the NPC twin last', () => {
     expect(BOTW.tables.indexOf(AREA_TWIN)).toBe(BOTW.tables.indexOf(twinOf(LAST_ROW.file)) + 1);
     expect(BOTW.tables.indexOf(NPC_TWIN)).toBe(BOTW.tables.indexOf(AREA_TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(NPC_TWIN);
-    expect(HANDLE_SPECS.at(-1)).toBe(NPC_TWIN);
+    expect(BOTW.tables.indexOf(AI_TWIN)).toBe(BOTW.tables.indexOf(NPC_TWIN) + 1); // the NPC twin is directly followed by the first AI row's twin
     expect(AREA_SPEC).toMatchObject({ catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(NPC_SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     for (const [spec, twin] of [[AREA_SPEC, AREA_TWIN], [NPC_SPEC, NPC_TWIN]] as const) {
