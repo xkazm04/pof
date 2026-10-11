@@ -19,7 +19,10 @@ import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
 const DECL_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-decls');
 const HANDLE_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-handles');
-const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 // Pinned to this row by position among the row specs (vault Z-D57): the seventh row spec, the sixth before it.
 const SPEC = ROW_SPECS[6];
 const EARLIER = ROW_SPECS[5];
@@ -57,7 +60,7 @@ const FG_ROW = rowFile(altsOf(ROW_SPECS[4].file)[0], 'MarimbaHarp', 'h');
 const EARLIER_ROW = rowFile(EARLIER_LAST, 'MarimbaGate', 'h');
 const NEXT_ROW_OPEN = rowFile(letterAfter(LAST, 1), 'MarimbaNext', 'h');
 const MOUNT_FILE = `${MOUNT_AREA}/demoMarimbaMount.h`;
-const OTHER_ROWS = [ONE_ROW, STEM_ROW, FG_ROW, EARLIER_ROW, MOUNT_FILE];
+const OTHER_ROWS = [ONE_ROW, STEM_ROW, FG_ROW, EARLIER_ROW, NEXT_ROW_OPEN, MOUNT_FILE];
 
 const FILES: Record<string, string> = {
   // A node with a parameter of each of the four scopes the row uses, the lifecycle hooks, and one runtime counter.
@@ -121,7 +124,8 @@ void MarimbaTrail::tuneMarimba() { MarimbaMount::tuneMarimba(); bindPeg(&mMarimb
   [STEM_ROW]: 'namespace demo { class FoldMarimba { int mFoldPeg; }; }',
   [FG_ROW]: 'namespace demo { class HarpMarimba { int mHarpPeg; }; }',
   [EARLIER_ROW]: 'namespace demo { class GateMarimba { int mGatePeg; }; }',
-  // Stay open: the first file of the initial after the row's last one (no spec reads it yet).
+  // The first file of the initial after the row's last one: it stayed open until a later wave registered the row that owns that initial
+  // (W19: the P–R row); it is read by exactly that row's spec and its twin, never by this row's.
   [NEXT_ROW_OPEN]: 'namespace demo { class NextMarimba { int mNextPeg; }; }',
   // Stay open: the probe of the first initial no spec reads, a lower-case initial, another extension, a deeper folder, and a
   // look-alike sibling folder whose name starts with the row folder's name.
@@ -156,7 +160,7 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the seventh row, three initials, read by both techniques (W16)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(9);
+    expect(ROW_SPECS).toHaveLength(10);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     // The next row's spec directly follows this one (it ends the cpp-decls block), and this row's twin is directly followed by
     // the next row's twin (which is the last table); the newest row's test asserts the ends (vault Z-D77).
@@ -223,9 +227,15 @@ describe('BOTW generic behaviour-node rows: the seventh row, three initials, rea
     expect(expandGlob(Object.keys(FILES), MOUNT.file)).toEqual([MOUNT_FILE]);
     expect(expandGlob(Object.keys(FILES), EARLIER.file)).toEqual([EARLIER_ROW]);
     expect(expandGlob(Object.keys(FILES), ROW_SPECS[4].file)).toEqual([FG_ROW]);
+    // The initial after the row's last is owned by exactly one later-registered row (its spec and its twin), never by this row.
+    const NEXT_OWNERS = BOTW.tables.filter((s) => expandGlob([NEXT_ROW_OPEN], s.file).length);
+    expect(NEXT_OWNERS).toHaveLength(2);
+    expect(NEXT_OWNERS.map((s) => s.technique).sort()).toEqual(['cpp-decls', 'cpp-handles']);
+    expect(NEXT_OWNERS).not.toContain(SPEC);
+    expect(NEXT_OWNERS).not.toContain(TWIN);
     const cov = computePathCoverage(Object.keys(FILES), BOTW.tables.map((t) => t.file), BOTW_DESCOPES);
-    // 4 row files + the five earlier specs' files covered; the build file descoped; the 6 others open.
-    expect(cov).toMatchObject({ total: 16, covered: 9, descoped: 1, open: 6 });
+    // 4 row files + the six other specs' files covered (the next initial's file among them); the build file descoped; the 5 others open.
+    expect(cov).toMatchObject({ total: 16, covered: 10, descoped: 1, open: 5 });
     expect(cov.openFiles).toEqual(STAY_OPEN);
     expect(cov.specs.find((s) => s.pattern === SPEC.file)?.files).toBe(4);
   });
@@ -251,8 +261,8 @@ describe('BOTW generic behaviour-node rows: the seventh row, three initials, rea
       file: SPEC.file, catalogId: 'state-graph', status: 'ingested', rows: 5, unclassified: [], declaredButAbsent: [],
       duplicateKeys: 0, malformed: 0, files: { matched: 4, withoutRecords: 2, refused: [] },
     });
-    // 4 node records + 5 handle records of the row, and one node record from each of the four other specs' files.
-    expect(first.store).toEqual({ created: 14, rawChanged: 0, reprojected: 0, unchanged: 0 });
+    // 4 node records + 5 handle records of the row, and one node record from each of the five other specs' files.
+    expect(first.store).toEqual({ created: 15, rawChanged: 0, reprojected: 0, unchanged: 0 });
 
     const rows = listWrappers(db, { sourceId: 'botw', catalogId: 'state-graph' }).filter((w) => ROW.includes(w.raw.file));
     const nodes = rows.filter((w) => w.raw.kind !== 'handle');
@@ -288,14 +298,14 @@ describe('BOTW generic behaviour-node rows: the seventh row, three initials, rea
     expect(node(`botw-demo::marimba::MarimbaTrail::(definitions@${TRAIL.cpp})`)).toMatchObject({ methods: 'MarimbaTrail;tuneMarimba' });
     expect(node('botw-demo::marimba::MarimbaMount')).toMatchObject({ kind: 'class', file: MOUNT_FILE });
     expect(listWrappers(db, { sourceId: 'botw', catalogId: 'state-graph' }).some((w) => w.raw.file === MOUNT_FILE)).toBe(true);
-    expect(new Set(listWrappers(db, { sourceId: 'botw' }).map((w) => w.entity.id)).size).toBe(14);
+    expect(new Set(listWrappers(db, { sourceId: 'botw' }).map((w) => w.entity.id)).size).toBe(15);
   });
 
   it('a second ingest over the same tree moves nothing', () => {
     const db = new Database(':memory:');
     const first = ingestSourceFromDir('botw', 'clone', syntheticDeps(db, []));
-    expect(first.store.created).toBe(14);
+    expect(first.store.created).toBe(15);
     const second = ingestSourceFromDir('botw', 'clone', syntheticDeps(db, []));
-    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 14 });
+    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 15 });
   });
 });

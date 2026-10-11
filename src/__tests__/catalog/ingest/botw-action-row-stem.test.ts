@@ -19,7 +19,10 @@ import { BOTW } from '@/lib/catalog/reference/sources';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
 const DECL_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-decls');
-const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 const SPEC = ROW_SPECS[3];
 const EARLIER = ROW_SPECS[2];
 // W14: the next row's spec — the rest of the stem's initial, enumerated — follows this one (vault Z-D61).
@@ -147,7 +150,7 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the fourth row, named by a stem, read by both techniques (W13)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one stem glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(9);
+    expect(ROW_SPECS).toHaveLength(10);
     // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin. Which
     // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D65).
     expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);

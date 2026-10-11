@@ -14,7 +14,10 @@ import { computePathCoverage, expandGlob } from '@/lib/catalog/reference/pathCov
 import { BOTW, REFERENCE_SOURCES } from '@/lib/catalog/reference/sources';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
-const ROW_SPECS = BOTW.tables.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = BOTW.tables.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 const SPEC = ROW_SPECS[0];
 const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
 // The row glob's file part: <prefix>{<initial>,…}*.{<ext>,…}
@@ -88,8 +91,8 @@ const STAY_OPEN = Object.keys(FILES).filter((f) => !ROW.includes(f) && !f.endsWi
 
 describe('BOTW generic behaviour-node rows (W09)', () => {
   it('registers the first row: one wrap-only spec under the shared node map, a flat glob over two initials', () => {
-    expect(BOTW.tables).toHaveLength(30);
-    expect(ROW_SPECS).toHaveLength(9);
+    expect(BOTW.tables).toHaveLength(36);
+    expect(ROW_SPECS).toHaveLength(10);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(SHAPE).not.toBeNull();
     expect(INITIALS.split(',')).toHaveLength(2);

@@ -21,7 +21,10 @@ import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
 const DECL_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-decls');
 const HANDLE_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-handles');
-const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 // Pinned to this row by position among the row specs (vault Z-D57): the eighth row spec, the seventh before it.
 const SPEC = ROW_SPECS[7];
 const EARLIER = ROW_SPECS[6];
@@ -160,7 +163,7 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 
 describe('BOTW generic behaviour-node rows: the eighth row, seven initials after a gap, read by both techniques (W17)', () => {
   it('is followed directly by the next row\'s spec and its handle twin by the next row\'s twin: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(9);
+    expect(ROW_SPECS).toHaveLength(10);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     // The next row's spec directly follows this one (it ends the cpp-decls block), and this row's twin is directly followed by
     // the next row's twin (which is the last table); the newest row's test asserts the ends (vault Z-D82).
@@ -186,7 +189,7 @@ describe('BOTW generic behaviour-node rows: the eighth row, seven initials after
     expect(FIRST > EARLIER_LAST).toBe(true);
     expect(GAP.length).toBeGreaterThan(0);
     expect(GAP.length).toBe(FIRST.charCodeAt(0) - EARLIER_LAST.charCodeAt(0) - 1);
-    const laterFiles = new Set(ROW_SPECS.slice(8).map((s) => s.file)); // rows registered after this one (the S row sits at [8]), both techniques
+    const laterFiles = new Set(ROW_SPECS.slice(8).map((s) => s.file)); // rows registered after this one (the S row sits at [8], P–R at [9]), both techniques
     const registered = BOTW.tables.filter((t) => !laterFiles.has(t.file));
     expect(registered).toContain(SPEC);
     for (const c of [...GAP, ...GAP.map((g) => g.toLowerCase())]) {

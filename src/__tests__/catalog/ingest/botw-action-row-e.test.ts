@@ -17,7 +17,10 @@ import { BOTW } from '@/lib/catalog/reference/sources';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
 const DECL_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-decls');
-const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 // Pinned to this row by position among the row specs (vault Z-D57): the third row spec, the second before it. A later
 // row's spec follows this one, so "the last row spec" no longer names this row.
 const SPEC = ROW_SPECS[2];
@@ -111,7 +114,7 @@ const STAY_OPEN = Object.keys(FILES)
 
 describe('BOTW generic behaviour-node rows: the third row, read by both techniques (W12)', () => {
   it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(9);
+    expect(ROW_SPECS).toHaveLength(10);
     // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin. Which
     // spec ends the cpp-decls block and which twin is last is asserted by the newest row's test (vault Z-D61).
     expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);

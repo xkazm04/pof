@@ -4,8 +4,8 @@
 // "my first initial comes after the earlier row's last" (the eighth row's) nor "directly after it" (the seventh's): it
 // asserts its REGISTRATION position, its lower alphabetic neighbour among the specs registered before it, the letters strictly
 // between (owned by rows registered later, so unread now) and the contiguity with the row above it. It is read by BOTH
-// source-code techniques over that one glob — a cpp-decls spec under the shared node map ending the cpp-decls block, and its
-// cpp-handles twin last, both in the row's own catalog. The glob must read the row's code files and nothing else, and must share
+// source-code techniques over that one glob — a cpp-decls spec under the shared node map (followed by the next row's spec), and its
+// cpp-handles twin (followed by the next row's twin), both in the row's own catalog. The glob must read the row's code files and nothing else, and must share
 // no file with any earlier spec (an overlap would wrap one file twice under one id). Every row path below — the prefix, the
 // initial, the earlier rows' alternatives — is DERIVED from the registered specs at run time; every line of C++, every name and
 // the one hex value in it was coined for this test.
@@ -22,13 +22,18 @@ import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
 const DECL_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-decls');
 const HANDLE_SPECS = BOTW.tables.filter((t) => t.technique === 'cpp-handles');
-const ROW_SPECS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = DECL_SPECS.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 // Pinned to this row by position among the row specs (vault Z-D57): the ninth row spec, the eighth registered before it.
 const SPEC = ROW_SPECS[8];
 const EARLIER = ROW_SPECS[7];
 const twinOf = (file: string) => BOTW.tables.find((t) => t.technique === 'cpp-handles' && t.file === file)!;
 const TWIN = twinOf(SPEC.file);
 const EARLIER_TWIN = twinOf(EARLIER.file);
+const LATER = ROW_SPECS[9];
+const LATER_TWIN = twinOf(LATER.file);
 const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
 const filePart = (file: string) => file.slice(FOLDER.length + 1);
 // A row glob's file part: <prefix>{<alternative>,…}*.{<ext>,…} or <prefix><stem>*.{<ext>,…}; an alternative is a capital and
@@ -159,12 +164,14 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 }
 
 describe('BOTW generic behaviour-node rows: the ninth row, one initial registered below its predecessor, read by both techniques (W18)', () => {
-  it('ends the cpp-decls block with the row and appends its handle twin last: one glob, one catalog, the two shared maps', () => {
-    expect(ROW_SPECS).toHaveLength(9);
+  it('is directly followed by the next row spec and its handle twin by the next row twin: one glob, one catalog, the two shared maps', () => {
+    expect(ROW_SPECS).toHaveLength(10);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
-    expect(BOTW.tables.indexOf(SPEC)).toBe(DECL_SPECS.length - 1);
+    // The next row's spec directly follows this one, and this row's twin is directly followed by the next row's twin; the newest
+    // place's test asserts the ends of both blocks (vault Z-D84).
+    expect(BOTW.tables.indexOf(LATER)).toBe(BOTW.tables.indexOf(SPEC) + 1);
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(EARLIER_TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(TWIN);
+    expect(BOTW.tables.indexOf(LATER_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
@@ -193,7 +200,7 @@ describe('BOTW generic behaviour-node rows: the ninth row, one initial registere
     // for both extensions and two tails, for both techniques. Rows registered later (by position) may own them.
     expect(BETWEEN.length).toBeGreaterThan(0);
     expect(BETWEEN.length).toBe(FIRST.charCodeAt(0) - BELOW.charCodeAt(0) - 1);
-    const laterFiles = new Set(ROW_SPECS.slice(9).map((s) => s.file)); // rows registered after this one (none yet), both techniques
+    const laterFiles = new Set(ROW_SPECS.slice(9).map((s) => s.file)); // rows registered after this one (the P–R row sits at [9]), both techniques
     const registered = BOTW.tables.filter((t) => !laterFiles.has(t.file));
     expect(registered).toContain(SPEC);
     expect(registered).toContain(TWIN);

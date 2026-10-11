@@ -14,7 +14,10 @@ import { computePathCoverage, expandGlob } from '@/lib/catalog/reference/pathCov
 import { BOTW } from '@/lib/catalog/reference/sources';
 import { listWrappers } from '@/lib/catalog/reference/wrappers-db';
 
-const ROW_SPECS = BOTW.tables.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const SHARED_DECLS = BOTW.tables.filter((t) => t.map === BEHAVIOUR_NODE_ROW_MAP);
+const dirOf = (file: string) => file.slice(0, file.lastIndexOf('/'));
+// The Action folder's rows, selected by PLACE (W19): the shared-map decls specs whose glob lies directly in the first one's folder; the folder specs registered after them are read by their own test.
+const ROW_SPECS = SHARED_DECLS.filter((t) => dirOf(t.file) === dirOf(SHARED_DECLS[0].file));
 const [EARLIER, SPEC] = ROW_SPECS;
 const FOLDER = SPEC.file.slice(0, SPEC.file.lastIndexOf('/'));
 // A row glob's file part: <prefix>{<initial>,…}*.{<ext>,…}
@@ -96,7 +99,7 @@ const STAY_OPEN = Object.keys(FILES)
 
 describe('BOTW generic behaviour-node rows: the second row (W10)', () => {
   it('appends the second row after the first: same folder, prefix and extensions, the next initials, the shared map', () => {
-    expect(ROW_SPECS).toHaveLength(9);
+    expect(ROW_SPECS).toHaveLength(10);
     expect(BOTW.tables.indexOf(SPEC)).toBe(BOTW.tables.indexOf(EARLIER) + 1);
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
     expect(SPEC).toMatchObject({ catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
