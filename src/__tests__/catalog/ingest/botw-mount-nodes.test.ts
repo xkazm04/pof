@@ -93,7 +93,7 @@ const spec = BOTW.tables.find((t) => t.file.startsWith(`${AREA}/`));
 
 describe('BOTW mount spec (W04)', () => {
   it('registers one spec for the area, wrap-only, under state-graph', () => {
-    expect(BOTW.tables).toHaveLength(52);
+    expect(BOTW.tables).toHaveLength(54);
     expect(spec).toMatchObject({ file: `${AREA}/**/*.{h,cpp}`, catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(spec!.map).toBe(MOUNT_CLASS_MAP);
   });
