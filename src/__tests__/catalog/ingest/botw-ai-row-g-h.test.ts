@@ -1,6 +1,6 @@
 // W20: the first row of the AI folder (Backlog item 8's AI half): TWO consecutive initials in the brace form of the Action rows'
-// shape, with the AI file prefix — <prefix>{<a>,<b>}*.{h,cpp}, no stem — registered after the two Action-library folders and
-// ending the cpp-decls block (vault Decisions Z-D89, Z-D90). It is read by BOTH source-code techniques over that one glob — a
+// shape, with the AI file prefix — <prefix>{<a>,<b>}*.{h,cpp}, no stem — registered after the two Action-library folders
+// (vault Decisions Z-D89, Z-D90; W21 registered the second AI row and the NPC's AI folder after it, Z-D93). It is read by BOTH source-code techniques over that one glob — a
 // cpp-decls spec under the shared node map and its cpp-handles twin, both in the row's own catalog. The glob must read the
 // row's code files and nothing else, and must share no file with any other spec (an overlap would wrap one file twice under
 // one id). Every path below — the AI folder, its prefix, its initials, the neighbour folders, the Action prefix — is DERIVED from
@@ -140,7 +140,7 @@ void TapirTrail::tuneTapir() { TapirLead::tuneTapir(); bindPeg(&mTapirMute_s, "T
   [`${AI_DIR}/coinedDeep/${PREFIX}${FIRST}TapirDeep.h`]: 'namespace demo { class DeepTapir { int mDeepPeg; }; }',
   [`${AI_DIR}Draft/${PREFIX}${FIRST}TapirTwin.h`]: 'namespace demo { class TwinTapir { int mTwinPeg; }; }',
   [aiFile(FIRST, 'TapirNpc', 'h', NPC_AI_DIR)]: 'namespace demo { class NpcTapir { int mNpcPeg; }; }',
-  [aiFile(FIRST, 'TapirNpc', 'cpp', NPC_AI_DIR)]: 'namespace demo { class NpcTapir { int mNpcPeg; }; }',
+  [aiFile(FIRST, 'TapirNpc', 'cpp', NPC_AI_DIR)]: 'namespace demo { class NpcTapirSrc { int mNpcPeg; }; }',
   [aiFile(FIRST, 'TapirUp', 'h', dirOf(AI_DIR))]: 'namespace demo { class UpTapir { int mUpPeg; }; }',
 };
 
@@ -179,15 +179,14 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 const openInitials = (specs: readonly Spec[]) => UPPER.filter((c) => !readersOf(aiFile(c, 'Probe', 'h'), specs).length);
 
 describe('BOTW AI behaviour-node rows: the first row, two initials, read by both techniques (W20)', () => {
-  it('sits directly after the NPC folder spec and ends the cpp-decls block; its twin directly after the NPC twin and is last: one glob, one catalog, the two shared maps', () => {
-    expect(AI_ROWS).toEqual([SPEC]); // exactly one AI row spec so far (the next AI row's wave moves this and the two end-of-block claims)
+  it('sits directly after the NPC folder spec and is directly followed by the second AI row\'s spec; its twin directly after the NPC twin and directly followed by the second row\'s twin: one glob, one catalog, the two shared maps', () => {
+    expect(AI_ROWS[0]).toBe(SPEC); // the first AI row spec (W21: a second AI row follows; its wave moved the 'exactly one' claim)
     expect(dirOf(SPEC.file)).toBe(AI_DIR);
     expect(SHARED_DECLS.indexOf(SPEC)).toBe(ROW_SPECS.length + FOLDER_SPECS.length);
     expect(DECL_SPECS.indexOf(SPEC)).toBe(DECL_SPECS.indexOf(NPC_SPEC) + 1);
-    expect(DECL_SPECS.indexOf(SPEC)).toBe(DECL_SPECS.length - 1); // ends the cpp-decls block
+    expect(DECL_SPECS.indexOf(AI_ROWS[1])).toBe(DECL_SPECS.indexOf(SPEC) + 1); // directly followed by the next AI row (it no longer ends the block)
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(NPC_TWIN) + 1);
-    expect(BOTW.tables.at(-1)).toBe(TWIN); // last of BOTW.tables, in the same catalog as its decls spec
-    expect(HANDLE_SPECS.at(-1)).toBe(TWIN);
+    expect(BOTW.tables.indexOf(twinOf(AI_ROWS[1].file))).toBe(BOTW.tables.indexOf(TWIN) + 1); // directly followed by the next AI row's twin (no longer last)
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);
