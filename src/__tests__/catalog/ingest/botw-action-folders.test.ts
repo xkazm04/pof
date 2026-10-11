@@ -76,9 +76,11 @@ const NPC_AI = { alarm: nameIn(NPC_AI_DIR, 'HeronAlarm', 'h'), alarmCpp: nameIn(
 const ROW_FILE = `${ACTION_DIR}/${PREFIX}${altsOf(ROW_SPECS[0].file)[0]}HeronRow.h`;
 const CAM_FILE = nameIn(CAMERA_DIRS[0], 'HeronCam', 'h');
 // The AI folder's first initial that no registered spec reads (derived with the matcher, so a later AI row moves it, not the test):
-// the fixture IS the probe string the derivation tested, and stays open for every folder spec.
+// capitals first, then lower case once every capital is read (the last AI row closes the last capital, and a capital-only search
+// would then find nothing). The fixture IS the probe string the derivation tested, and stays open for every folder spec.
 const aiProbe = (c: string, ext = 'h') => `${AI_DIR}/${AI_PREFIX}${c}Probe.${ext}`;
-const AI_OPEN = UPPER.find((c) => !BOTW.tables.some((s) => expandGlob([aiProbe(c)], s.file).length))!;
+const readsNone = (c: string) => !BOTW.tables.some((s) => expandGlob([aiProbe(c)], s.file).length);
+const AI_OPEN = UPPER.find(readsNone) ?? LOWER.find(readsNone)!;
 const AI_NEIGHBOUR = aiProbe(AI_OPEN);
 
 const FILES: Record<string, string> = {
@@ -273,6 +275,8 @@ describe('BOTW node folders: the area-volume folder, the NPC folder and the NPC\
     expect(cov).toMatchObject({ total: all.length, covered: 12, descoped: 2, open: STAY_OPEN.length });
     expect(cov.openFiles).toEqual(STAY_OPEN);
     expect(cov.openFiles).toContain(AI_NEIGHBOUR);
+    expect(AI_OPEN).toBeDefined();
+    expect(BOTW.tables.some((s) => expandGlob([AI_NEIGHBOUR], s.file).length)).toBe(false);
     expect(cov.specs.find((s) => s.pattern === AREA_SPEC.file)?.files).toBe(4);
     expect(cov.specs.find((s) => s.pattern === NPC_SPEC.file)?.files).toBe(4);
     expect(cov.specs.find((s) => s.pattern === NPC_AI_SPEC.file)?.files).toBe(2);
