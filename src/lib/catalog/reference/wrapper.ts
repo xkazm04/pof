@@ -75,7 +75,10 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   const baseVersion = hasProjectionOptions
     ? contentHash({ map: spec.map, rowIds: spec.rowIds, displayName: spec.displayName, keyPrefix: spec.keyPrefix, keyDecode: spec.keyDecode })
     : spec.rowIds ? contentHash({ map: spec.map, rowIds: spec.rowIds }) : mappingVersion(spec.map);
-  const version = spec.derive ? `${baseVersion}+${spec.derive.version()}` : baseVersion;
+  // A source's run-level link pass is code too (baseLinks.ts): its version joins every spec whose technique it reads, so a
+  // row it rewrites carries a stamp it did not carry before (vault Decisions Z-D97 (e)).
+  const passVersions = (source.linkPasses ?? []).filter((p) => p.technique === spec.technique).map((p) => p.version);
+  const version = [spec.derive ? `${baseVersion}+${spec.derive.version()}` : baseVersion, ...passVersions].join('+');
   const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
     kind: 'ingest', sourceGame: source.game, sourceProject: source.project,
     sourceFile, sourceRow, licenceNote: source.licenceNote, ingestedAt: now,

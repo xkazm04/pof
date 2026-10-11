@@ -237,7 +237,7 @@ export function ingestSourceFromDir(sourceId: string, dataRoot: string, deps: In
     });
   }
 
-  const { wrappers, report: links } = resolveLinks(all, source.idPrefix);
+  const { wrappers, report: links } = resolveLinks(all, source.idPrefix, source.linkPasses);
   const store = upsertWrappers(deps.db, wrappers);
   const summary = { sourceId, dataRoot, tables, manifests, links, store };
   const runId = recordRun(deps.db, sourceId, deps.runExtras ? { ...summary, ...deps.runExtras } : summary);

@@ -8,11 +8,13 @@
  * a guessed id would produce a link that resolves nowhere and looks fine.
  */
 import type { CatalogLink } from '@/lib/catalog/types';
+import type { RunLinkPass } from './baseLinks';
 import type { ReferenceWrapper } from './wrapper';
 
 export interface UnresolvedLink {
   wrapperId: string;
   role: string;
+  /** The target's catalog; `''` when no record names the target, so its catalog is unknown (a source pass's marker). */
   catalogId: string;
   ref: string;
 }
@@ -20,6 +22,8 @@ export interface UnresolvedLink {
 export interface LinkReport {
   resolved: number;
   unresolved: UnresolvedLink[];
+  /** Present only when a source pass found a target name held by more than one record (it resolves nothing). */
+  ambiguous?: string[];
 }
 
 const BASE_ITEM_FILE = 'items/itemdat.tsv';
@@ -80,9 +84,24 @@ function addMissileSpriteLinks(wrappers: ReferenceWrapper[]): ReferenceWrapper[]
   });
 }
 
-/** Pure. Returns new wrappers; the inputs are not mutated. */
-export function resolveLinks(wrappers: ReferenceWrapper[], idPrefix: string): { wrappers: ReferenceWrapper[]; report: LinkReport } {
-  const linkedWrappers = addMissileSpriteLinks(addBaseItemLinks(wrappers));
+/**
+ * Pure. Returns new wrappers; the inputs are not mutated. A source's own passes (`baseLinks.ts`) run first over the whole
+ * run; a link they write already carries its target's id and is counted by the "already resolved" branch below, and what
+ * they cannot resolve is a marker outside `links`, joined to the report here, so this loop never sees it.
+ */
+export function resolveLinks(
+  wrappers: ReferenceWrapper[], idPrefix: string, passes: readonly RunLinkPass[] = [],
+): { wrappers: ReferenceWrapper[]; report: LinkReport } {
+  let passed = wrappers;
+  const passUnresolved: UnresolvedLink[] = [];
+  const ambiguous: string[] = [];
+  for (const pass of passes) {
+    const result = pass.run(passed);
+    passed = result.wrappers;
+    passUnresolved.push(...result.unresolved);
+    ambiguous.push(...result.ambiguous);
+  }
+  const linkedWrappers = addMissileSpriteLinks(addBaseItemLinks(passed));
   const ids = new Map<string, Set<string>>();
   for (const w of linkedWrappers) {
     (ids.get(w.catalogId) ?? ids.set(w.catalogId, new Set()).get(w.catalogId)!).add(w.entity.id);
@@ -115,5 +134,7 @@ export function resolveLinks(wrappers: ReferenceWrapper[], idPrefix: string): { 
     });
     return { ...w, entity: { ...w.entity, links } };
   });
+  report.unresolved.push(...passUnresolved);
+  if (ambiguous.length) report.ambiguous = ambiguous;
   return { wrappers: out, report };
 }

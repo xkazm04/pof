@@ -12,6 +12,7 @@ import { UNIQUE_ITEM_MAP } from '@/lib/catalog/ingest/diablo1UniqueItems';
 import { UNIQUE_MAP } from '@/lib/catalog/ingest/diablo1Uniques';
 import { slug, type StringDecodeStep } from '@/lib/catalog/ingest/decode';
 import { MONSTER_DERIVE, affixDerive, type DeriveSpec } from './derive';
+import { CPP_DECLS_PARENT_PASS, type RunLinkPass } from './baseLinks';
 import { AFFIX_MAP } from '@/lib/catalog/ingest/diablo1Affixes';
 import {
   QUEST_DERIVE,
@@ -90,6 +91,8 @@ export interface ReferenceSource {
   manifests?: ReferenceManifestSpec[];
   /** The upstream commit the data root must be at — a code reference is read at a pin. */
   pin?: string;
+  /** Run-level link passes over every wrapper of one run, before the generic link loop (`baseLinks.ts`). */
+  linkPasses?: readonly RunLinkPass[];
 }
 
 export const DIABLO1: ReferenceSource = {
@@ -163,6 +166,9 @@ export const BOTW: ReferenceSource = {
   canonProfile: 'botw',
   obtain: BOTW_OBTAIN,
   pin: BOTW_PIN,
+  // W22: a bare first base becomes an 'extends' link to its parent's record, or an explicit unresolved marker, on the
+  // child's projection (F18, vault Decisions Z-D97, Z-D98); the pass's version joins every cpp-decls spec's stamp.
+  linkPasses: [CPP_DECLS_PARENT_PASS],
   tables: [
     // W00: the player's action / AI-node library → player-movement (wrap only).
     { file: 'src/Game/Actor/Player/**/*.{h,cpp}', catalogId: 'player-movement', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: PLAYER_CLASS_MAP },
