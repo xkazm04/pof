@@ -242,6 +242,11 @@ export const BOTW: ReferenceSource = {
     // fork nodes; two initials again), same shared map, state-graph on the concept rule: the plurality of this row's nodes among
     // real catalogs, robust under every reading of its selectors (Z-D94). Registered directly after the first AI row (Z-D93).
     { file: 'src/Game/Actor/AI/ai{E,F}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
+    // W23: the third row of the AI folder (the composite kit — sequence, switch and select nodes — and several creature
+    // families' own nodes; one initial, in the brace form), same shared map, state-graph on the concept rule: the plurality of
+    // this row's nodes among real catalogs, robust under the verbatim selector readings (Z-D99). Registered directly after the
+    // second AI row and before the NPC's AI folder, which keeps the end of the block (Z-D96 (d)).
+    { file: 'src/Game/Actor/AI/ai{S}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
     // W21: the NPC's AI folder (a flat folder of the AI node shape beside the NPC's Action folder), same shared map and the NPC
     // folder's catalog; it ends the cpp-decls block (Z-D93). Its handle twin is the last spec below (wrap only).
     { file: 'src/Game/Actor/NPC/AI/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
@@ -277,6 +282,9 @@ export const BOTW: ReferenceSource = {
     // W21: the second AI row's handles and the NPC's AI folder's handles, over the same globs as their cpp-decls twins and in their
     // catalogs (Z-D93, Z-D94); the NPC's AI folder's twin is last of the table.
     { file: 'src/Game/Actor/AI/ai{E,F}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
+    // W23: the third AI row's handles, over the same glob as its cpp-decls twin and in its catalog (Z-D99), directly after the
+    // second AI row's twin and before the NPC's AI folder's twin, which stays last.
+    { file: 'src/Game/Actor/AI/ai{S}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
     { file: 'src/Game/Actor/NPC/AI/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-handles', keyColumn: 'qualifiedName', map: PARAMETER_HANDLE_MAP },
   ],
 };

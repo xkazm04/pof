@@ -31,17 +31,20 @@ const CAMERA_DIRS = [...new Set(BOTW.tables.filter((t) => t.map === CAMERA_SHOT_
 const SIBLING_NAME = CAMERA_DIRS.map((d) => d.slice(d.lastIndexOf('/') + 1)).find((n) => n !== ACTION_DIR.slice(ACTION_DIR.lastIndexOf('/') + 1))!;
 const AI_DIR = `${dirOf(ACTION_DIR)}/${SIBLING_NAME}`;
 const CAMERA_AI_DIR = CAMERA_DIRS.find((d) => d.endsWith(`/${SIBLING_NAME}`))!;
-// Pinned to this row by position: after the Action rows come the two folders, the first AI row directly after them, this row
-// directly after that one, and the NPC's AI folder directly after this row.
+// Pinned to this row by position: after the Action rows come the two folders, the first AI row directly after them and this row
+// directly after that one. The spec directly after this row is the next AI row (a later wave's), and the NPC's AI folder is found by
+// its FOLDER, never by an absolute index (a later AI row registers before it and moves its index).
 const NPC_SPEC = SHARED_DECLS[ROW_SPECS.length + 1];
 const PREV = SHARED_DECLS[ROW_SPECS.length + 2];
 const PREV_TWIN = twinOf(PREV.file);
 const SPEC = SHARED_DECLS[ROW_SPECS.length + 3];
 const TWIN = twinOf(SPEC.file);
-const NPC_AI_SPEC = SHARED_DECLS[ROW_SPECS.length + 4];
-const NPC_AI_TWIN = twinOf(NPC_AI_SPEC.file);
+const NEXT = DECL_SPECS[DECL_SPECS.indexOf(SPEC) + 1];
+const NEXT_TWIN = twinOf(NEXT.file);
 const AI_ROWS = SHARED_DECLS.filter((t) => dirOf(t.file) === AI_DIR);
 const NPC_AI_DIR = `${dirOf(dirOf(NPC_SPEC.file))}/${SIBLING_NAME}`;
+const NPC_AI_SPEC = SHARED_DECLS.find((t) => dirOf(t.file) === NPC_AI_DIR)!;
+const NPC_AI_TWIN = twinOf(NPC_AI_SPEC.file);
 const filePart = (file: string) => file.slice(dirOf(file).length + 1);
 // An AI row glob's file part: <prefix>{<initial>,…}*.{<ext>,…}; the Action rows' alternatives are capital and lower-case letters.
 const AI_SHAPE = /^([a-z]+)\{([A-Z](?:,[A-Z])*)\}\*\.\{([a-z]+(?:,[a-z]+)*)\}$/;
@@ -186,15 +189,17 @@ function syntheticDeps(db: Database.Database, reads: string[]) {
 const openInitials = (specs: readonly Spec[]) => UPPER.filter((c) => !readersOf(aiFile(c, 'Probe', 'h'), specs).length);
 
 describe('BOTW AI behaviour-node rows: the second row, two initials, read by both techniques (W21)', () => {
-  it('is the second AI row: directly after the first AI row\'s spec and directly followed by the NPC\'s AI folder spec; its twin likewise: one glob, one catalog, the two shared maps', () => {
-    expect(AI_ROWS).toEqual([PREV, SPEC]); // exactly two AI row specs so far, the first AI row then this one
+  it('is the second AI row: directly after the first AI row\'s spec and directly followed by the next AI row\'s spec; its twin likewise: one glob, one catalog, the two shared maps', () => {
+    expect(AI_ROWS.slice(0, 2)).toEqual([PREV, SPEC]); // the first two AI row specs are the first AI row then this one (later rows follow)
     expect(dirOf(SPEC.file)).toBe(AI_DIR);
     expect(SHARED_DECLS.indexOf(SPEC)).toBe(SHARED_DECLS.indexOf(PREV) + 1);
     expect(DECL_SPECS.indexOf(SPEC)).toBe(DECL_SPECS.indexOf(PREV) + 1);
-    expect(DECL_SPECS.indexOf(NPC_AI_SPEC)).toBe(DECL_SPECS.indexOf(SPEC) + 1); // directly followed by the NPC's AI folder (it ends the block)
+    expect(DECL_SPECS.indexOf(NEXT)).toBe(DECL_SPECS.indexOf(SPEC) + 1); // directly followed by the next AI row's spec (the NPC's AI folder keeps the end of the block)
     expect(BOTW.tables.indexOf(TWIN)).toBe(BOTW.tables.indexOf(PREV_TWIN) + 1);
-    expect(BOTW.tables.indexOf(NPC_AI_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1);
-    expect(dirOf(NPC_AI_SPEC.file)).toBe(NPC_AI_DIR); // the next spec is the NPC's AI folder, not a third AI row
+    expect(BOTW.tables.indexOf(NEXT_TWIN)).toBe(BOTW.tables.indexOf(TWIN) + 1); // directly followed by the next AI row's twin
+    expect(AI_ROWS[2]).toBe(NEXT); // the next spec is the third AI row, in the AI folder
+    expect(dirOf(NEXT.file)).toBe(AI_DIR);
+    expect(dirOf(NPC_AI_SPEC.file)).toBe(NPC_AI_DIR); // the NPC's AI folder is found by its folder, after every AI row
     expect(SPEC).toMatchObject({ catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName' });
     expect(TWIN).toMatchObject({ file: SPEC.file, catalogId: SPEC.catalogId, technique: 'cpp-handles', keyColumn: 'qualifiedName' });
     expect(SPEC.map).toBe(BEHAVIOUR_NODE_ROW_MAP);

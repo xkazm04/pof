@@ -30,18 +30,18 @@ const [H, CPP, EMPTY_H] = Object.keys(FILES);
 
 describe('BOTW parameter-handle specs (W11)', () => {
   it('appends one cpp-handles spec per handle-bearing glob after the cpp-decls specs, each beside its twin and in its catalog', () => {
-    expect(DECL_SPECS).toHaveLength(24);
-    expect(HANDLE_SPECS).toHaveLength(18);
+    expect(DECL_SPECS).toHaveLength(25);
+    expect(HANDLE_SPECS).toHaveLength(19);
     expect(BOTW.tables.slice(DECL_SPECS.length)).toEqual(HANDLE_SPECS);
     const twins = HANDLE_SPECS.map((s) => twinOf(s.file));
     for (const [i, spec] of HANDLE_SPECS.entries()) {
       expect(spec).toMatchObject({ technique: 'cpp-handles', keyColumn: 'qualifiedName', catalogId: twins[i]!.catalogId });
       expect(spec.map).toBe(PARAMETER_HANDLE_MAP);
     }
-    // The twins are the player, mount and camera-action specs and the ten generic rows, the two folders, the two AI rows and the NPC's AI folder, in registration order.
-    expect(new Set(twins).size).toBe(18);
+    // The twins are the player, mount and camera-action specs and the ten generic rows, the two folders, the three AI rows and the NPC's AI folder, in registration order.
+    expect(new Set(twins).size).toBe(19);
     expect(twins.map((t) => DECL_SPECS.indexOf(t!))).toEqual([...twins.map((t) => DECL_SPECS.indexOf(t!))].sort((a, b) => a - b));
-    expect(twins.map((t) => t!.map)).toEqual([PLAYER_CLASS_MAP, MOUNT_CLASS_MAP, CAMERA_SHOT_NODE_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP]);
+    expect(twins.map((t) => t!.map)).toEqual([PLAYER_CLASS_MAP, MOUNT_CLASS_MAP, CAMERA_SHOT_NODE_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP, BEHAVIOUR_NODE_ROW_MAP]);
     // Of the two camera specs only the action half declares handles; the selector half declares none.
     expect(DECL_SPECS.filter((t) => t.map === CAMERA_SHOT_NODE_MAP)).toHaveLength(2);
   });

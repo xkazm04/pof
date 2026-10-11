@@ -177,14 +177,14 @@ describe('BOTW node folders: the area-volume folder, the NPC folder and the NPC\
   it('ROW_SPECS, FOLDER_SPECS and the AI row specs partition the shared-map decls specs: exactly three folders (area, NPC, NPC AI), the AI rows directly after the NPC folder, the NPC\'s AI folder directly after them and ending the block', () => {
     expect(ROW_SPECS).toHaveLength(10);
     expect(FOLDER_SPECS).toHaveLength(3);
-    expect(AI_ROW_SPECS).toHaveLength(2);
+    expect(AI_ROW_SPECS).toHaveLength(3);
     expect(ROW_SPECS.length + FOLDER_SPECS.length + AI_ROW_SPECS.length).toBe(SHARED_DECLS.length);
     // none dropped, none counted twice, in registration order: the Action rows, the area folder, the NPC folder, the AI rows, the NPC's AI folder
     expect(SHARED_DECLS).toEqual([...ROW_SPECS, AREA_SPEC, NPC_SPEC, ...AI_ROW_SPECS, NPC_AI_SPEC]);
     expect(DECL_SPECS.indexOf(AREA_SPEC)).toBe(DECL_SPECS.indexOf(LAST_ROW) + 1);
     expect(DECL_SPECS.indexOf(NPC_SPEC)).toBe(DECL_SPECS.indexOf(AREA_SPEC) + 1);
     expect(DECL_SPECS.indexOf(AI_ROW_SPECS[0])).toBe(DECL_SPECS.indexOf(NPC_SPEC) + 1); // the NPC folder is directly followed by the first AI row's spec
-    expect(DECL_SPECS.indexOf(AI_ROW_SPECS[1])).toBe(DECL_SPECS.indexOf(AI_ROW_SPECS[0]) + 1);
+    for (const [i, row] of AI_ROW_SPECS.entries()) if (i > 0) expect(DECL_SPECS.indexOf(row)).toBe(DECL_SPECS.indexOf(AI_ROW_SPECS[i - 1]) + 1); // each AI row directly follows the previous one
     expect(DECL_SPECS.indexOf(NPC_AI_SPEC)).toBe(DECL_SPECS.indexOf(AI_ROW_SPECS.at(-1)!) + 1); // directly after the last AI row's spec …
     expect(DECL_SPECS.indexOf(NPC_AI_SPEC)).toBe(DECL_SPECS.length - 1); // … and ending the cpp-decls block
     // The row globs keep the action-prefix row shape, all in one folder: nothing is loosened.
@@ -196,7 +196,7 @@ describe('BOTW node folders: the area-volume folder, the NPC folder and the NPC\
     expect(BOTW.tables.indexOf(AREA_TWIN)).toBe(BOTW.tables.indexOf(twinOf(LAST_ROW.file)) + 1);
     expect(BOTW.tables.indexOf(NPC_TWIN)).toBe(BOTW.tables.indexOf(AREA_TWIN) + 1);
     expect(BOTW.tables.indexOf(AI_TWINS[0])).toBe(BOTW.tables.indexOf(NPC_TWIN) + 1); // the NPC twin is directly followed by the first AI row's twin
-    expect(BOTW.tables.indexOf(AI_TWINS[1])).toBe(BOTW.tables.indexOf(AI_TWINS[0]) + 1);
+    for (const [i, twin] of AI_TWINS.entries()) if (i > 0) expect(BOTW.tables.indexOf(twin)).toBe(BOTW.tables.indexOf(AI_TWINS[i - 1]) + 1); // each AI row's twin directly follows the previous row's
     expect(BOTW.tables.indexOf(NPC_AI_TWIN)).toBe(BOTW.tables.indexOf(AI_TWINS.at(-1)!) + 1); // directly after the last AI row's twin …
     expect(BOTW.tables.at(-1)).toBe(NPC_AI_TWIN); // … and last of BOTW.tables, in the same catalog as its decls spec
     expect(HANDLE_SPECS.at(-1)).toBe(NPC_AI_TWIN);
