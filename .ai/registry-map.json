@@ -6072,7 +6072,11 @@
           "revision": 52,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/packaging/package-flow.ts:120 From a blocked pre-flight, one override event starts the cook and does not record which failing check was waived.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:6e635d76a310aa4b",
+          "evaluatedRevision": 53
         },
         {
           "subject": "settings",
@@ -7656,7 +7660,11 @@
           "revision": 52,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 When a step has no acceptance checker, the write-through persists pass, so the absence of a grader is stored as a passed gate.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:6e635d76a310aa4b",
+          "evaluatedRevision": 53
         },
         {
           "subject": "agent-memory",
@@ -9310,7 +9318,11 @@
           "revision": 52,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 A judge verdict with no provenance is counted as current quality, so a pass that was never bound to the content on record still raises the standing pass total.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:6e635d76a310aa4b",
+          "evaluatedRevision": 53
         },
         {
           "subject": "eval-harness",
@@ -10562,7 +10574,11 @@
           "revision": 52,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 Resolve all marks every finding currently in the active list resolved without a verification scan and without a per-finding waiver record.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:6e635d76a310aa4b",
+          "evaluatedRevision": 53
         },
         {
           "subject": "codebase-scanning",
@@ -23193,7 +23209,11 @@
           "revision": 52,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:212 One boolean override spends a generation through every failing input-gate defect, and the viewer scorer can still return pass after it fills in the topology facts those rules test.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:6e635d76a310aa4b",
+          "evaluatedRevision": 53
         },
         {
           "subject": "generated-mesh-acceptance",

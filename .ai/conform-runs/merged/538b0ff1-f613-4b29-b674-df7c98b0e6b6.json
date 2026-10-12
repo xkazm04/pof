@@ -1,0 +1,382 @@
+{
+ "schema": "conform-run/1",
+ "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+ "subject": "quality-gates",
+ "evaluatedAt": "2026-10-12T22:16:02.881107+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "code-quality-evaluation",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 A judge verdict with no provenance is counted as current quality, so a pass that was never bound to the content on record still raises the standing pass total.",
+   "techniques": [
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 Missing provenance is treated as standing, so an unbound pass counts as current quality."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/PatternLibraryView/AuthorPatternModal.tsx:94 Typing a description is enough to mint verified; the flag is not checked for meaning."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:187 Zero findings is rendered as passed, including when modules failed to evaluate and therefore produced no findings."
+    },
+    {
+     "technique": "oracle-frozen-during-repair",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:105 A remedy's CLI completion re-runs the oracle; the fixer's exit is not the verdict."
+    }
+   ]
+  },
+  {
+   "context": "visual-gen-mesh-quality-gates",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/input-gate.ts:212 One boolean override spends a generation through every failing input-gate defect, and the viewer scorer can still return pass after it fills in the topology facts those rules test.",
+   "techniques": [
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/input-gate.ts:212 overrideInputGate is a presence flag; it does not name a defect code or site, and the generate route honors it for any fail."
+    },
+    {
+     "technique": "vacuous-by-evaluation",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/mesh-score.ts:255 scoreGeometry feeds the topology rules facts it just set clean, then returns scoreMesh's verdict, which can be pass."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-score.ts:203 Only fail-severity findings change the verdict to fail; warn never does, and summarizeGate accepts warn."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/face-budget.ts:25 A missing budget or measurement is unmeasured, and an unavailable critique is ungated rather than accepted."
+    },
+    {
+     "technique": "false-positive-economics",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/view-critique.ts:167 One moderate view warns after a known-good control was condemned; two views are required to fail."
+    },
+    {
+     "technique": "excess-indicts-the-instrument",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/view-critique.ts:15 A control that failed every view was read as a prompt defect and the detector was narrowed."
+    },
+    {
+     "technique": "decidable-in-a-window",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/sheet-gate.ts:48 Blank-cell detection was measured as non-separable and left unnamed as a verdict rather than given a noisy threshold."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-critique.ts:170 An unavailable critic is ungated, not accepted, and an unparseable vision reply is ok:false rather than a score."
+    },
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:11 The image check runs on the spend path before a provider call; I did not find a second rung that repeats that same check."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/world-scale.ts:137 A scale miss names the import scale to apply, computed from the measured and target extents."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-fetch.ts:88 The admission ceiling is derived from the grader's own maxFacesWarn rather than a second copied number."
+    },
+    {
+     "technique": "renameable-detector-keys",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/polycount-presets.ts:228 An unknown class name does not silently become a class; the report says it was graded class-blind."
+    },
+    {
+     "technique": "prose-rule-drift",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:6 Input-prep rules that had lived only in prompts are scored by the input gate before spend."
+    },
+    {
+     "technique": "enforcement-binding",
+     "verdict": "conformant",
+     "evidence": "src/app/api/visual-gen/generate/route.ts:147 The generate route calls inputGateRefusal and returns 400 on a produced fail, so the check is bound to the spend."
+    },
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-fetch.ts:171 A missing declared triangle count is unmeasured; the grade is the loaded mesh, not the container's own number."
+    },
+    {
+     "technique": "shared-substrate-check-partition",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/view-critique.ts:7 The view gate is a vision pass over renders; it is not a second check on the trimesh judgment."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/mesh-score.ts:99 The geometry gate does not require a human-judged text field; VLM defects are deliberately left uncoded."
+    }
+   ],
+   "registryProposal": "scoreGeometry returns a pass/warn/fail verdict after substituting the topology facts the topology rules test. vacuous-by-evaluation tells the author to seed a counterexample per rule; it does not require a partial scorer's own verdict to name the rules that substitution made unfalsifiable. GATE_ONLY_CODES is a sibling export, not part of the verdict."
+  },
+  {
+   "context": "build-history-config",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/packaging/package-flow.ts:120 From a blocked pre-flight, one override event starts the cook and does not record which failing check was waived.",
+   "techniques": [
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "deviation",
+     "evidence": "src/lib/packaging/package-flow.ts:120 The Package anyway control is a single override of the whole blocked pre-flight, not one waiver per failing check."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "src/lib/packaging/package-flow.ts:86 A requested kind that has not run blocks the cook; the blocked copy says there is no verdict so no cook."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/lib/packaging/package-flow.ts:82 A summary for a different map set does not release this cook."
+    },
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "src/lib/packaging/package-flow.ts:21 The press starts on the fast kind; slower checks are a later measuring step, not the first cook."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "src/lib/packaging/package-flow.ts:25 canCook ignores unrun checks, and decide() separately blocks requested kinds that are still unmeasured, so the flag is not the whole exit path."
+    },
+    {
+     "technique": "enforcement-binding",
+     "verdict": "conformant",
+     "evidence": "src/lib/packaging/package-flow.ts:106 A press enters measuring and cooks only when decide() releases it; the button is not a direct cook."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:63 The block names the profile and tells the operator to run the missing checks, and the button is Run missing checks, then cook."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:71 Build-scope state, level, and word come from the shared classifier; this file only rewrites the sentence."
+    }
+   ]
+  },
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 When a step has no acceptance checker, the write-through persists pass, so the absence of a grader is stored as a passed gate.",
+   "techniques": [
+    {
+     "technique": "gate-liveness",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 labGrade returns null when no checker resolves, and that null is persisted as pass."
+    },
+    {
+     "technique": "enforcement-binding",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/labCheckerContext.ts:128 No checker is an inapplicable check reported as success; a throw is kept off that path, the null is not."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:141 A missing checker is not marked ungraded, while a thrown checker is failed and prefixed UNGRADED."
+    },
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/labContentDrift.ts:17 Drift and the verdict bridge share stepContentHash; the lab no longer keeps a second provenance strip."
+    },
+    {
+     "technique": "shared-substrate-check-partition",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/labAcceptance.ts:41 Two graders on the same labels were collapsed so the lab cannot read a step higher than the server checker."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/statusLanguage.ts:52 Glyph, word, and color for a status are taken from one map shared by the banner, chips, matrix, and coach."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/statusLanguage.ts:22 unproduced is a distinct display state from pending, so never-produced is not the same cell as still-resolving."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/Baseline/index.tsx:74 The header lifecycle is derived and cannot write an acceptance verdict; verified comes from a drained L3/L4 gate."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:107 A thrown checker is stored with the thrown reason and an explicit statement that it is not a content verdict."
+    }
+   ]
+  },
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 Resolve all marks every finding currently in the active list resolved without a verification scan and without a per-finding waiver record.",
+   "techniques": [
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 One click resolves every active finding. The request is a list of ids and a resolved flag, not a waiver that names one finding's rule."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:84 The client keeps the newest 100 findings, so Resolve all and the on-screen population are the cap, not the scan."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:110 A scan whose report was not recorded is status unrecorded, and a verification with no record resolves nothing."
+    },
+    {
+     "technique": "oracle-frozen-during-repair",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:63 A fix that exits 0 does not resolve the finding; only a later scan that no longer reports it does."
+    },
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:113 Scans from other projects are counted and excluded from this panel instead of reading as zero history."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-12T22:16:02.881107+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "fabrication-economics",
+    "gate-liveness",
+    "oracle-frozen-during-repair",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 1,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T22:16:02.881107+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "decidable-in-a-window",
+    "enforcement-binding",
+    "excess-indicts-the-instrument",
+    "fabrication-economics",
+    "false-positive-economics",
+    "gate-laddering",
+    "gate-liveness",
+    "policy-projection",
+    "prose-rule-drift",
+    "refusal-names-a-reachable-remedy",
+    "renameable-detector-keys",
+    "self-reported-gate-inputs",
+    "severity-by-construction",
+    "shared-substrate-check-partition",
+    "unmeasurable-criteria",
+    "vacuous-by-evaluation",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-mesh-quality-gates",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T22:16:02.881107+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "enforcement-binding",
+    "gate-laddering",
+    "gate-liveness",
+    "policy-projection",
+    "refusal-names-a-reachable-remedy",
+    "severity-by-construction",
+    "unmeasurable-criteria",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 1,
+   "context": "build-history-config",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T22:16:02.881107+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "enforcement-binding",
+    "gate-liveness",
+    "match-the-resolved-artifact",
+    "policy-projection",
+    "refusal-names-a-reachable-remedy",
+    "severity-by-construction",
+    "shared-substrate-check-partition",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T22:16:02.881107+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "gate-liveness",
+    "match-the-resolved-artifact",
+    "oracle-frozen-during-repair",
+    "policy-projection",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 1,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
