@@ -30,7 +30,7 @@ const [H, CPP, EMPTY_H] = Object.keys(FILES);
 
 describe('BOTW parameter-handle specs (W11)', () => {
   it('appends one cpp-handles spec per handle-bearing glob after the cpp-decls specs, each beside its twin and in its catalog', () => {
-    expect(DECL_SPECS).toHaveLength(37);
+    expect(DECL_SPECS).toHaveLength(40);
     expect(HANDLE_SPECS).toHaveLength(25);
     expect(BOTW.tables.slice(DECL_SPECS.length)).toEqual(HANDLE_SPECS);
     const twins = HANDLE_SPECS.map((s) => twinOf(s.file));

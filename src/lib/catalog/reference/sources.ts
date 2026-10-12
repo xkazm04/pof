@@ -36,7 +36,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, DATA_SCHEMA_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, DATA_SCHEMA_CLASS_MAP, MANAGER_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -205,6 +205,19 @@ export const BOTW: ReferenceSource = {
     // The drop-spawn contract's two flags → items, which owns the durability and bonus roll the dropped item carries (a 0 : 0 tie
     // over catalogs, broken by what the file carries).
     { file: 'src/Game/gameItemUtils.{h,cpp}', catalogId: 'items', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
+    // W31: the expansion-content folders, three singleton managers under ONE catalog-neutral map (no handle twin: the files hold
+    // no handle, F17). The game folder's two managers have two homes, so they are named by stem; the engine folder's two code
+    // files share one home, so a folder glob is honest there (its build file is not a code file). Registered after the 7a block
+    // and before the node rows (Z-D123 (h)).
+    // The difficulty-mode manager and its rule-change vocabulary → bestiary, whose rarity step holds the enemy multipliers (the
+    // module has no catalog of its own).
+    { file: 'src/Game/AOC/aocHardModeManager.{h,cpp}', catalogId: 'bestiary', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: MANAGER_CLASS_MAP },
+    // The per-boss rematch tally → achievements, whose trigger step holds a capped progress counter (a 2 : 1 plurality over the
+    // bestiary, which holds the boss element kinds).
+    { file: 'src/Game/AOC/aocChampionBalladManager.{h,cpp}', catalogId: 'achievements', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: MANAGER_CLASS_MAP },
+    // The expansion-content manager (version gating, file routing, per-expansion positions and flags) → save-points, whose
+    // versioning step holds the version checks (4 : 1 : 1 over zone-map and quests).
+    { file: 'src/KingSystem/AOC/*.{h,cpp}', catalogId: 'save-points', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: MANAGER_CLASS_MAP },
     // W09: the generic node rows, one spec per row under one shared map. Action A–B (flat folder, initials A
     // and B only) → state-graph, the plurality of its nodes among real catalogs (wrap only).
     { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },

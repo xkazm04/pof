@@ -271,6 +271,31 @@ export const DATA_SCHEMA_CLASS_MAP: FieldMap = botwClassMap({
     + 'catalog has a typed parameter field for any of them'),
 });
 
+/* ── managers ← the files item 7b kept open, three places (W31) ───────── */
+
+/**
+ * The expansion-content files: a difficulty-mode manager, a per-boss rematch tally and an expansion-content manager. ONE
+ * catalog-neutral map for all three places (the W07 precedent): each place is its own spec with its own plurality
+ * `catalogId`, so a reason here never names a catalog. These are standalone singleton managers that switch rules and keep
+ * a per-play state, not tunable schemas and not nodes, so neither the data-schema map nor a node map applies. The reader
+ * keeps names only, never a default, a value or a count (F17), and the rules sit in bodies it never reads (F14).
+ */
+export const MANAGER_CLASS_MAP: FieldMap = botwClassMap({
+  bases: dropped('none of these records names a base class (the managers are standalone singletons and their helper structs '
+    + 'stand alone), so the column is empty here and nothing is lost by dropping it'),
+  methods: gap('no home for a manager\'s RULE and ROUTING CONTRACT: a class record names the switches it flips, the multiplier '
+    + 'and counter lookups, the predicates that decide whether a rule applies to a given actor and the choices that route an '
+    + 'asset by the installed expansion version; definition records carry the same names; the rules themselves (which actors '
+    + 'count, by how much, from which version) live in bodies the reader never reads (F14), and no catalog authors a mode '
+    + 'switch, a tally or a version gate as a callable rule'),
+  fields: gap('no home for a manager\'s PER-PLAY STATE and its vocabularies: a class record\'s fields are switch bit sets, '
+    + 'multiplier and counter arrays, saved-game flag handles, a version and its flags and a row per expansion position; struct '
+    + 'records hold a position with an unlock flag, a name-to-flag row and a file buffer; enum records list the rule changes, '
+    + 'the multiplier kinds, the element kinds, the version-flag names and the version errors; only the NAMES are kept, never '
+    + 'a default, a value or a count (F17), and no catalog has a typed field for a switch set, a persisted tally or a '
+    + 'version-flag set'),
+});
+
 /* ── shared: the generic behaviour-node rows ← src/Game/Actor/Action/** (W09) ── */
 
 /**
