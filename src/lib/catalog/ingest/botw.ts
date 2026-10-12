@@ -245,6 +245,32 @@ export const CAMERA_SHOT_NODE_MAP: FieldMap = botwClassMap({
     + 'field (most nodes have no field at all; some names are offset placeholders, F3)'),
 });
 
+/* ── data schemas ← the files item 7 kept open, six places (W30) ───────── */
+
+/**
+ * The data schemas W08 kept open: a physics body profile and its pair tables, the music controllers and the per-object sound
+ * settings, the stage-kind record, a HUD query surface and a drop contract. ONE catalog-neutral map for all six places (the
+ * W07 precedent): each place is its own spec with its own plurality `catalogId`, so a reason here never names a catalog. A
+ * data schema is a table, a controller's tunables or a closed vocabulary — it has no per-node lifecycle, so neither node map
+ * applies. The reader keeps names only, never a default, a range or a label (F17).
+ */
+export const DATA_SCHEMA_CLASS_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for a SCHEMA KIND hierarchy: the parameter-file machinery bases (a parameter list, a parameter object, a '
+    + 'parameter file, a host-I/O node) say how a file is read, not what it holds, but a family of controllers each extends ONE '
+    + 'shared controller base, and a few extend a second-level base, to inherit its tunables; no PoF catalog has a "this schema '
+    + 'extends that schema" link or a kind field for a controller family'),
+  methods: gap('no home for a schema\'s QUERY and LOAD CONTRACT: beside constructors, destructors and parse machinery, a class '
+    + 'record names the lookups other systems ask (a material pair\'s friction and bounce, a sub-material\'s sound surface, a '
+    + 'track\'s category priority, the current map\'s kind) and, for the per-object sound settings, one accessor per setting — the '
+    + 'only place those settings\' names appear — and definition records carry their implementations; catalogs author static '
+    + 'sheets and publish no queries'),
+  fields: gap('no home for a TUNABLE schema or its vocabularies: a class record\'s fields are the named parameters of one table or '
+    + 'controller (a body\'s mass, volume, shapes and water response; a track\'s waits, fades, odds and thresholds; a map\'s kind '
+    + 'flags) beside the pools, handles and locks of its loader, and an enum record\'s enumerators are a closed vocabulary (a '
+    + 'locomotion class, a map kind, a spawn flag); only the NAMES are kept — never a default, a range or a label (F17) — and no '
+    + 'catalog has a typed parameter field for any of them'),
+});
+
 /* ── shared: the generic behaviour-node rows ← src/Game/Actor/Action/** (W09) ── */
 
 /**

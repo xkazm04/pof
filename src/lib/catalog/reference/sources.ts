@@ -36,7 +36,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, DATA_SCHEMA_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -188,6 +188,23 @@ export const BOTW: ReferenceSource = {
     // the camera selectors → dialog-trees, each the plurality of its half among real catalogs (wrap only).
     { file: 'src/Game/Actor/Camera/Action/**/*.{h,cpp}', catalogId: 'cutscenes', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CAMERA_SHOT_NODE_MAP },
     { file: 'src/Game/Actor/Camera/AI/**/*.{h,cpp}', catalogId: 'dialog-trees', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: CAMERA_SHOT_NODE_MAP },
+    // W30: the files item 7 kept open, six data-schema places under ONE catalog-neutral map (no handle twin: the files hold no handle and
+    // the reader keeps names only, F17). Each glob names exactly its open files, because the folders also hold descoped engine
+    // files that a folder glob would count as covered (Z-D119 (c)). The registration stays before the node rows (Z-D119 (f)).
+    // The physics tables and the body profile → props, the nearest fields being a prop's collision preset and mass (a thin
+    // plurality over materials; the module has no catalog of its own).
+    { file: 'src/KingSystem/Physics/System/phys{CharacterControllerParam,ContactInfoParam,ContactMgr,MaterialTable,ParamSet,SystemData}.{h,cpp}', catalogId: 'props', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
+    // The per-object sound settings → props, whose audio step holds an impact cue per prop (the audio module has no catalog).
+    { file: 'src/KingSystem/Sound/sndInfoData.{h,cpp}', catalogId: 'props', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
+    // The music definition table and the situation controllers → music, every record a music-track entity.
+    { file: 'src/KingSystem/Sound/sndMusic{Definition,Info}.{h,cpp}', catalogId: 'music', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
+    // The stage-kind record and its closed list of stage kinds → zone-map, the only catalog of regions.
+    { file: 'src/KingSystem/System/StageInfo.{h,cpp}', catalogId: 'zone-map', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
+    // The HUD's query surface into the inventory → hud-elements (free-function declarations only: the pair yields no record).
+    { file: 'src/KingSystem/System/UIGlue.{h,cpp}', catalogId: 'hud-elements', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
+    // The drop-spawn contract's two flags → items, which owns the durability and bonus roll the dropped item carries (a 0 : 0 tie
+    // over catalogs, broken by what the file carries).
+    { file: 'src/Game/gameItemUtils.{h,cpp}', catalogId: 'items', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: DATA_SCHEMA_CLASS_MAP },
     // W09: the generic node rows, one spec per row under one shared map. Action A–B (flat folder, initials A
     // and B only) → state-graph, the plurality of its nodes among real catalogs (wrap only).
     { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },
