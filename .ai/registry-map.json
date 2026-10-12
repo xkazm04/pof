@@ -17168,7 +17168,11 @@
           "revision": 24,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/test-gate-runner/drain-lease.ts:62 Different entity-scoped drains can execute concurrently against the same non-reentrant UE editor because lease conflicts follow artifact scope instead of editor identity.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:5521806124d93882",
+          "evaluatedRevision": 26
         },
         {
           "subject": "agent-memory",
@@ -21686,7 +21690,11 @@
           "revision": 24,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:196 When all scenario executions return null and no snapshots run, the suite reports passed despite receiving no test results.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:5521806124d93882",
+          "evaluatedRevision": 26
         },
         {
           "subject": "eval-harness",

@@ -251,6 +251,79 @@
           "evidence": "src/app/api/filesystem/scan-project/route.ts:470 Discovers MCP servers from .mcp.json without positional command auditing or code execution consent validation."
         }
       ]
+    },
+    "940bbe98-a8c3-4d5e-b4e5-c447578e2123/test-harness": {
+      "context": "ue5-bridge-monitoring",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:08:44.326Z",
+      "worker": "40b4e7e0-253f-41c0-9006-af05a498d492",
+      "techniques": [
+        {
+          "technique": "history-driven-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:167 The scenario loop awaits each execution sequentially; it does not distribute this suite across workers."
+        },
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:184 Null execution results are omitted at line 168; every([]) is true, so an unavailable bridge can produce a green suite with zero returned results."
+        },
+        {
+          "technique": "suite-partitioning",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:168 Selected scenarios that return null disappear from the reported denominator; completion is not reconciled against the scenario population."
+        }
+      ]
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/test-harness": {
+      "context": "quality-evaluation-api",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:08:44.326Z",
+      "techniques": [
+        {
+          "technique": "approval-snapshots-with-guarded-update",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/visual-gate.ts:309 Normal verification defaults to recording missing golden images; the generated suite has no integrity assertion requiring recording to be off."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/visual-gate.ts:352 The missing/unparseable result-file branch substitutes subprocess success for observed product results; verifier.ts:365 invokes this gate."
+        }
+      ],
+      "withdrawn": {
+        "worker": "40b4e7e0-253f-41c0-9006-af05a498d492",
+        "state": "deviation",
+        "at": "2026-10-12T21:09:57.172755+00:00",
+        "reason": "reviewer (sonnet): The evidence says verifier.ts:365 invokes executeVisualGate, but verifier.ts has no such call (the only caller outside visual-gate.ts is change-router.ts). The visual-gate.ts file is also outside this API-route context."
+      }
+    },
+    "89b3215f-69e9-4aa4-8c8b-27316cccc59d/test-harness": {
+      "context": "observation-testing",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:08:44.326Z",
+      "worker": "40b4e7e0-253f-41c0-9006-af05a498d492",
+      "techniques": [
+        {
+          "technique": "history-driven-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/test-gate-runner/drain.ts:271 Within a drain pass, jobs execute sequentially rather than being sharded across workers."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/drain-lease.ts:62 Distinct entity keys do not conflict, despite sharing the editor; drain-lease.test.ts:60 explicitly preserves concurrent disjoint-entity drains."
+        }
+      ]
     }
   }
 }
