@@ -1,0 +1,175 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+  "subject": "agent-memory",
+  "evaluatedAt": "2026-10-12T23:10:58.434049+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "status-health-dashboard",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/status/StatusTabs.tsx:15 Searching context files for memory, recall, episodic, and consolidation returns only UI filter state and audio RAM limits, showing this module is a static artifact and pipeline status visualization dashboard where the agent-memory subject's precondition does not hold.",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/status/StatusTabs.tsx:15 Status dashboard tablist manages navigation views rather than operative agent working memory."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/status/statusModel.ts:57 Static step-facts map audits engine generators without maintaining a durable agent memory store subject to decay."
+        }
+      ]
+    },
+    {
+      "context": "pipeline-step-components",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/layout-lab/steps/index.ts:33 Searching context files for memory, recall, episodic, and consolidation returns zero hits, confirming that this module is a React component registry for catalog step inspection and editing where the agent-memory subject's precondition does not hold.",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/index.ts:33 Step component registry renders manual UI panels without maintaining an operative agent working memory."
+        },
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/index.ts:19 Pipeline steps are hardcoded UI components rather than capabilities promoted from distilled agent memories."
+        }
+      ]
+    },
+    {
+      "context": "cli-terminal-shell",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/cli/skills.ts:36 Searching context files for memory, recall, episodic, and consolidation returns only transient in-memory UI state and gameplay combat notes in skills.ts, showing that this module is an interactive terminal frontend and static skill-pack manifest (SKILL_PACKS) without an operative working memory or durable memory store, so the agent-memory subject's precondition does not hold.",
+      "techniques": [
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/skills.ts:36 Skills are hardcoded prompt text templates rather than dynamically promoted capabilities from agent observations."
+        },
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:36 Session store tracks terminal UI state and connection IDs rather than a rolling synthesized operative working memory."
+        }
+      ]
+    },
+    {
+      "context": "inventory-genome-economy",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Searching context files for memory, recall, episodic, and consolidation returns zero hits (only an unrelated UI action prompt note in EconomySourcingTab.tsx:35), proving that this module is an in-game item genome editor and economy sourcing UI (SUB_TABS) where the agent-memory subject's precondition does not hold.",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Sub-tab navigation structure serves an in-game trait editor without maintaining agent working memory."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:30 Genome trait axes define static gameplay stats and do not manage an agent memory store requiring decay."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-memory",
+      "context": "project-ops-api",
+      "reason": "withdrawn after review: reviewer (sonnet): The technique text says getRelevantErrors has no importance scoring, but src/lib/error-memory-db.ts:200-216 scores each error by log occurrences, a recency bonus, an unresolved bonus and a module match bonus; the stated 'no decay or importance scoring' claim is contradicted, and the 'occurrences >= "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-12T23:10:58.434049+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "coverage-instrumentation",
+        "cross-context-promotion",
+        "decay-and-forgetting",
+        "durable-store-failure-posture",
+        "episodic-capture",
+        "memory-governance",
+        "recall-injection"
+      ],
+      "deviations": 1,
+      "context": "project-ops-api",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T23:10:58.434049+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "decay-and-forgetting",
+        "working-memory"
+      ],
+      "deviations": 0,
+      "context": "status-health-dashboard",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T23:10:58.434049+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "procedure-promotion",
+        "working-memory"
+      ],
+      "deviations": 0,
+      "context": "pipeline-step-components",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T23:10:58.434049+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "procedure-promotion",
+        "working-memory"
+      ],
+      "deviations": 0,
+      "context": "cli-terminal-shell",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T23:10:58.434049+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "decay-and-forgetting",
+        "working-memory"
+      ],
+      "deviations": 0,
+      "context": "inventory-genome-economy",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

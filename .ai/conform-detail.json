@@ -595,6 +595,142 @@
           "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:113 Scans from other projects are counted and excluded from this panel instead of reading as zero history."
         }
       ]
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/agent-memory": {
+      "context": "project-ops-api",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:10:58.434Z",
+      "techniques": [
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:32 Errors are upserted into SQLite indefinitely without decay, importance scoring, demotion tiers, or category caps, keeping stale build errors in memory forever."
+        },
+        {
+          "technique": "cross-context-promotion",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:47 getRelevantErrors promotes errors across modules if occurrences >= 3, which counts occurrences within a single module rather than recurrence across distinct module contexts."
+        },
+        {
+          "technique": "recall-injection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:48 Returns candidate errors without reporting the considered/eligible candidate count, budget limit, or distinguishing empty from failed recall."
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:27 Fingerprinting flattens raw errors into message hashes while stripping episode boundaries, tool execution context, and session trace provenance."
+        },
+        {
+          "technique": "memory-governance",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:23 Validates only parameter presence on the write path, omitting review gates, human confirmation, or proposal staging for stored errors."
+        },
+        {
+          "technique": "coverage-instrumentation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:61 Reports aggregate statistics computed solely over existing error rows without tracking the population of build runs or uncaptured failures."
+        },
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:69 Catches internal failures and returns an opaque 500 response without distinguishing parse failure, corrupt database posture, or fallback recovery."
+        }
+      ],
+      "registryProposal": "The standard's cross-context-promotion technique assumes distinct storage tables or namespaces per context; when a single table holds records from multiple contexts (e.g. unique on module_id and fingerprint), a query on local occurrence counts can accidentally masquerade as cross-context recurrence unless the schema explicitly tracks distinct context sightings.",
+      "withdrawn": {
+        "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+        "state": "deviation",
+        "at": "2026-10-12T23:11:56.826835+00:00",
+        "reason": "reviewer (sonnet): The technique text says getRelevantErrors has no importance scoring, but src/lib/error-memory-db.ts:200-216 scores each error by log occurrences, a recency bonus, an unresolved bonus and a module match bonus; the stated 'no decay or importance scoring' claim is contradicted, and the 'occurrences >= "
+      }
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/agent-memory": {
+      "context": "status-health-dashboard",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:10:58.434Z",
+      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/status/StatusTabs.tsx:15 Status dashboard tablist manages navigation views rather than operative agent working memory."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/status/statusModel.ts:57 Static step-facts map audits engine generators without maintaining a durable agent memory store subject to decay."
+        }
+      ]
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/agent-memory": {
+      "context": "pipeline-step-components",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:10:58.434Z",
+      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/index.ts:33 Step component registry renders manual UI panels without maintaining an operative agent working memory."
+        },
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/index.ts:19 Pipeline steps are hardcoded UI components rather than capabilities promoted from distilled agent memories."
+        }
+      ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/agent-memory": {
+      "context": "cli-terminal-shell",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:10:58.434Z",
+      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "techniques": [
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/skills.ts:36 Skills are hardcoded prompt text templates rather than dynamically promoted capabilities from agent observations."
+        },
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:36 Session store tracks terminal UI state and connection IDs rather than a rolling synthesized operative working memory."
+        }
+      ]
+    },
+    "47435999-6b28-447c-93bb-73c02717477e/agent-memory": {
+      "context": "inventory-genome-economy",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:10:58.434Z",
+      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Sub-tab navigation structure serves an in-game trait editor without maintaining agent working memory."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:30 Genome trait axes define static gameplay stats and do not manage an agent memory store requiring decay."
+        }
+      ]
     }
   }
 }
