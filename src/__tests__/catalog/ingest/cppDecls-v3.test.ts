@@ -86,6 +86,8 @@ describe('cpp-decls@3 — an enumeration written as one macro call', () => {
     expect(table.malformed).toEqual([]);
     expect(table.rows.map((r) => [r.kind, r.qualifiedName, r.fields])).toEqual([
       ['enum', 'tessel::Grainage', 'Grainsome;Grainmid;Grainfew'],
+      // since v4 a valued call whose values are one unsigned literal each is read by name (it was no record under v3)
+      ['enum', 'tessel::Lustreness', 'Lustredull;Lustrebright'],
       // a call spread over two lines is still one call
       ['enum', 'tessel::Burrstone', 'Burrlow;Burrhigh'],
       ['class', 'tessel::Gravelwright', 'mHeftage'],
@@ -95,7 +97,7 @@ describe('cpp-decls@3 — an enumeration written as one macro call', () => {
       file: 'src/Tessel/grain.h', line: '3', kind: 'enum', name: 'Grainage', qualifiedName: 'tessel::Grainage',
       namespace: 'tessel', outer: '', templateParams: '', bases: '', methods: '', fields: 'Grainsome;Grainmid;Grainfew',
     });
-    expect(table.rows[3]).toMatchObject({ outer: 'Gravelwright', line: '14' });
+    expect(table.rows[4]).toMatchObject({ outer: 'Gravelwright', line: '14' });
   });
 
   it('negative control: a class that contains such a macro or sits beside one keeps a byte-identical class record', () => {
@@ -104,8 +106,8 @@ describe('cpp-decls@3 — an enumeration written as one macro call', () => {
     expect(withoutMacros).toEqual([GRAVELWRIGHT]);
     expect(withMacros.filter((r) => r.kind === 'class')).toEqual([GRAVELWRIGHT]);
     // Any loosening of the shape rule (one argument, a lower-case first argument, a keyword argument,
-    // a valued enumerator, or the enclosing class's own name first) adds a record here.
-    expect(withMacros).toHaveLength(4);
+    // or the enclosing class's own name first) adds a record here; the valued call is read since v4.
+    expect(withMacros).toHaveLength(5);
   });
 
   it('reads a line-spliced call (a trailing backslash is whitespace)', () => {
@@ -140,8 +142,8 @@ describe('cpp-decls@3 through the wrapper store', () => {
 
   it('holds one owner\'s three definition records under three entity ids, and a second ingest is idempotent', () => {
     const first = ingestSourceFromDir(SOURCE_SPEC.id, 'root', deps());
-    expect(first.tables[0]).toMatchObject({ status: 'ingested', rows: 8, duplicateKeys: 0, unclassified: [], malformed: 0 });
-    expect(first.store).toEqual({ created: 8, rawChanged: 0, reprojected: 0, unchanged: 0 });
+    expect(first.tables[0]).toMatchObject({ status: 'ingested', rows: 9, duplicateKeys: 0, unclassified: [], malformed: 0 });
+    expect(first.store).toEqual({ created: 9, rawChanged: 0, reprojected: 0, unchanged: 0 });
     const wrappers = listWrappers(db, { sourceId: SOURCE_SPEC.id });
     expect(wrappers.filter((w) => w.raw.kind === 'definition').map((w) => w.entity.id)).toEqual([
       'cv3-tessel::Pumicer::(definitions@src/Tessel/pumicer.cpp)',
@@ -149,9 +151,9 @@ describe('cpp-decls@3 through the wrapper store', () => {
       'cv3-tessel::Pumicer::(definitions@src/Tessel/pumicerScour.cpp)',
     ]);
     expect(new Set(wrappers.map((w) => w.entity.id)).size).toBe(wrappers.length);
-    expect(wrappers.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+    expect(wrappers.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
 
     const second = ingestSourceFromDir(SOURCE_SPEC.id, 'root', deps());
-    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 8 });
+    expect(second.store).toEqual({ created: 0, rawChanged: 0, reprojected: 0, unchanged: 9 });
   });
 });

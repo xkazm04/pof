@@ -186,7 +186,7 @@ describe('BOTW generic behaviour-node rows: the third row, read by both techniqu
       const declsOnly = ROW.flatMap((f) => parseCppDecls(FILES[f], { file: f }).rows);
       const byKey = (a: Record<string, string>, b: Record<string, string>) => a.qualifiedName.localeCompare(b.qualifiedName);
       expect(nodes.map((w) => w.raw).sort(byKey)).toEqual([...declsOnly].sort(byKey));
-      expect(nodes.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+      expect(nodes.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
       expect(nodes.map((w) => w.entity.id).sort()).toEqual([
         'botw-demo::rite::EchoRite',
         `botw-demo::rite::EchoRite::(definitions@${SHELL.cpp})`,

@@ -67,7 +67,7 @@ FORGE_CHECK_SIZE(Lantern, 0x40);
   it('is registered as a source-code technique and reads through the technique table with the file path', () => {
     const technique = getTechnique('cpp-decls');
     expect(technique.assetKind).toBe('source-code');
-    expect(techniqueLabel(technique)).toBe('cpp-decls@3');
+    expect(techniqueLabel(technique)).toBe('cpp-decls@4');
     expect(technique.read(HEADER, { file: 'x/y.h' }).rows[0].file).toBe('x/y.h');
   });
 });

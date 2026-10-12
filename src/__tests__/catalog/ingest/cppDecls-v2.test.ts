@@ -195,11 +195,11 @@ describe('cpp-decls@2 through the wrapper store', () => {
     expect(first.store).toEqual({ created: 5, rawChanged: 0, reprojected: 0, unchanged: 0 });
     const wrappers = listWrappers(db, { sourceId: SOURCE_SPEC.id });
     expect(wrappers.map((w) => [w.wrapperId, w.technique, w.raw.kind])).toEqual([
-      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot', 'cpp-decls@3', 'struct'],
-      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot::(definitions@src/Kiln/inline.h)', 'cpp-decls@3', 'definition'],
-      ['cppv2-fixture:src/Kiln/oven.cpp:kiln::Oven::(definitions@src/Kiln/oven.cpp)', 'cpp-decls@3', 'definition'],
-      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven', 'cpp-decls@3', 'class'],
-      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven::Stage', 'cpp-decls@3', 'enum'],
+      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot', 'cpp-decls@4', 'struct'],
+      ['cppv2-fixture:src/Kiln/inline.h:kiln::Pot::(definitions@src/Kiln/inline.h)', 'cpp-decls@4', 'definition'],
+      ['cppv2-fixture:src/Kiln/oven.cpp:kiln::Oven::(definitions@src/Kiln/oven.cpp)', 'cpp-decls@4', 'definition'],
+      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven', 'cpp-decls@4', 'class'],
+      ['cppv2-fixture:src/Kiln/oven.h:kiln::Oven::Stage', 'cpp-decls@4', 'enum'],
     ]);
     expect(wrappers.map((w) => w.entity.id)).toEqual([
       'cv2-kiln::Pot', 'cv2-kiln::Pot::(definitions@src/Kiln/inline.h)', 'cv2-kiln::Oven::(definitions@src/Kiln/oven.cpp)', 'cv2-kiln::Oven', 'cv2-kiln::Oven::Stage',

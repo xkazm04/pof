@@ -311,7 +311,7 @@ describe('BOTW AI behaviour-node rows: the first row, two initials, read by both
     // The node records are exactly what cpp-decls returns on its own, file by file.
     const declsOnly = ROW.flatMap((f) => parseCppDecls(FILES[f], { file: f }).rows);
     expect(nodes.map((w) => w.raw).sort(byKey)).toEqual([...declsOnly].sort(byKey));
-    expect(nodes.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+    expect(nodes.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
     expect(nodes.map((w) => w.entity.id).sort()).toEqual([
       'botw-demo::tapir::TapirLead',
       `botw-demo::tapir::TapirLead::(definitions@${LEAD.cpp})`,

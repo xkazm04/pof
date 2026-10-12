@@ -1,5 +1,5 @@
 /**
- * Declaration reader for C++ headers and sources — the `cpp-decls` reading technique (v3).
+ * Declaration reader for C++ headers and sources: the `cpp-decls` reading technique (v4).
  *
  * A decompilation carries no design tables: its design lives in the SHAPE of the code — which
  * classes exist, what they derive from, what they can do and what state they keep. This reader
@@ -48,18 +48,24 @@
  *
  * An enumeration written as ONE macro call (v3) is an `enum` record too. It is recognised by its
  * argument SHAPE, never by the macro's name: at the start of a declaration, at namespace or class
- * scope, an upper-case macro call with at least two arguments, every argument one bare identifier
- * (no keyword; a line-splice backslash is whitespace), the first starting upper-case and not the
- * enclosing class's own name → the first argument is the enumeration's name and the rest are its
- * enumerator names. A one-argument macro, a call whose arguments carry any other token, a lower-case
- * first argument, and a type-information macro that repeats its class's name are not enumerations.
+ * scope, an upper-case macro call with at least two arguments, the first one bare identifier
+ * (no keyword; a line-splice backslash is whitespace) that starts upper-case and is not the
+ * enclosing class's own name, and every other argument one bare identifier too → the first
+ * argument is the enumeration's name and the rest are its enumerator names. v4 adds exactly one
+ * argument form: an enumerator may be three tokens, a bare identifier, `=` and ONE unsigned integer
+ * literal token (decimal digits, or `0x` and hex digits), and a call may mix bare and valued
+ * enumerators. The name is kept and the value is never read or stored. A signed value, an
+ * expression (a shift, a sum, parentheses), an identifier value, a literal with a suffix and a
+ * valued first argument are not read, so a call carrying one is not an enumeration. A one-argument
+ * macro, a call whose arguments carry any other token, a lower-case first argument, and a
+ * type-information macro that repeats its class's name are not enumerations either.
  * It reads BESIDE the walk: the call stays in the chunk exactly as v2 stripped it.
  *
  * Not records, by design: forward declarations (an opaque `enum E : int;` included), anonymous
  * enums, unqualified free functions, classes and enums local to a function body (bodies are
- * skipped), anonymous class / union members — their members fold into the enclosing class,
- * which is where C++ puts them — and an enumeration macro whose enumerators carry explicit values
- * (`Name = value` is not a bare identifier). Of a preprocessor conditional only the FIRST branch is
+ * skipped), anonymous class / union members (their members fold into the enclosing class,
+ * which is where C++ puts them) and an enumeration macro whose enumerators carry any value other
+ * than one unsigned integer literal (see v4 above). Of a preprocessor conditional only the FIRST branch is
  * read (`#if 0` blocks are skipped, their `#else` read), so a decompilation's matching / non-matching
  * twin branches cannot double a member or unbalance the braces. Disclosed losses: function bodies
  * and parameter lists, enumerator values and an enum's underlying type are never read.
@@ -165,6 +171,8 @@ const MULTI_PUNCT = ['<<=', '...', '::', '->', '==', '!=', '<=', '&&', '||', '+=
 
 const isWord = (t: string): boolean => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(t);
 const isMacroName = (t: string): boolean => /^[A-Z][A-Z0-9_]+$/.test(t);
+/** v4: the only enumerator value a macro enumeration may carry and still be read: one unsigned integer token (decimal, or `0x` and hex digits). */
+const UNSIGNED_LITERAL = /^(?:0[xX][0-9A-Fa-f]+|[0-9]+)$/;
 
 /* ── lexing ─────────────────────────────────────────────────────────────── */
 
@@ -772,7 +780,10 @@ export function walkCppDecls(text: string, ctx: CppReadContext, overrides: Parti
     const close = closeOf(toks, at + 1, '(', ')');
     if (close === -1) return;
     const args = splitTopLevel(toks.slice(at + 2, close).filter((t) => t.t !== '\\'));
-    if (args.length < 2 || args.some((a) => a.length !== 1 || !isWord(a[0].t) || NOT_A_NAME.has(a[0].t))) return;
+    const bareName = (a: Tok[]): boolean => isWord(a[0].t) && !NOT_A_NAME.has(a[0].t);
+    const isBare = (a: Tok[]): boolean => a.length === 1 && bareName(a);
+    const isEnumerator = (a: Tok[]): boolean => isBare(a) || (a.length === 3 && bareName(a) && a[1].t === '=' && UNSIGNED_LITERAL.test(a[2].t));
+    if (args.length < 2 || !isBare(args[0]) || !args.slice(1).every(isEnumerator)) return;
     const [name, ...enumerators] = args.map((a) => a[0].t);
     const enclosing = currentClass()?.name.replace(/<.*$/, '').split('::').pop();
     if (!/^[A-Z]/.test(name) || name === enclosing) return;

@@ -100,7 +100,7 @@ describe('glob spec ingest', () => {
       'glob-fixture:src/Hero/hero.h:demo::hero::Hero',
     ]);
     const heroWrapper = wrappers.find((w) => w.file === 'src/Hero/hero.h')!;
-    expect(heroWrapper.technique).toBe('cpp-decls@3');
+    expect(heroWrapper.technique).toBe('cpp-decls@4');
     expect(heroWrapper.raw).toMatchObject({ file: 'src/Hero/hero.h', bases: 'Pawn', methods: 'dash;climb', fields: 'mStamina' });
     expect(heroWrapper.entity).toMatchObject({
       id: 'gx-demo::hero::Hero', name: 'Hero', catalogId: 'player-movement',

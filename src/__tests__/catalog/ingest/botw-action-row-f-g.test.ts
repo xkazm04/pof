@@ -250,7 +250,7 @@ describe('BOTW generic behaviour-node rows: the fifth row, an enumerated glob be
     // The node records are exactly what cpp-decls returns on its own, file by file.
     const declsOnly = ROW.flatMap((f) => parseCppDecls(FILES[f], { file: f }).rows);
     expect(nodes.map((w) => w.raw).sort(byKey)).toEqual([...declsOnly].sort(byKey));
-    expect(nodes.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+    expect(nodes.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
     expect(nodes.map((w) => w.entity.id).sort()).toEqual([
       'botw-demo::harp::HarpLead',
       `botw-demo::harp::HarpLead::(definitions@${LEAD.cpp})`,

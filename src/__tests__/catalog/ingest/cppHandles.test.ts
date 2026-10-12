@@ -136,7 +136,7 @@ describe('cpp-handles@1 — one record per parameter handle', () => {
     const technique = getTechnique('cpp-handles');
     expect(technique.assetKind).toBe('source-code');
     expect(techniqueLabel(technique)).toBe('cpp-handles@1');
-    expect(techniqueLabel(getTechnique('cpp-decls'))).toBe('cpp-decls@3');
+    expect(techniqueLabel(getTechnique('cpp-decls'))).toBe('cpp-decls@4');
     expect(technique.read(LANTERNWICK_H, { file: 'x/y.h' }).rows[0].file).toBe('x/y.h');
   });
 

@@ -220,7 +220,7 @@ describe('BOTW generic behaviour-node rows: the fourth row, named by a stem, rea
     const byKey = (a: Record<string, string>, b: Record<string, string>) => a.qualifiedName.localeCompare(b.qualifiedName);
     const declsOnly = ROW.flatMap((f) => parseCppDecls(FILES[f], { file: f }).rows);
     expect(nodes.map((w) => w.raw).sort(byKey)).toEqual([...declsOnly].sort(byKey));
-    expect(nodes.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+    expect(nodes.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
     expect(nodes.map((w) => w.entity.id).sort()).toEqual([
       'botw-demo::vane::QuillVane',
       `botw-demo::vane::QuillVane::(definitions@${LEAD.cpp})`,

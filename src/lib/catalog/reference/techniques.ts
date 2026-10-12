@@ -111,12 +111,13 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
   },
   'cpp-decls': {
     id: 'cpp-decls',
-    version: 3,
+    version: 4,
     assetKind: 'source-code',
     describe: 'One C++ header or source file → one record per class/struct/union definition (path, namespace, bases, member function and field NAMES), '
-      + 'per enum definition — written with `enum` or as one upper-case macro call recognised by its argument shape (enumerator NAMES, never values) — '
+      + 'per enum definition, written with `enum` or as one upper-case macro call recognised by its argument shape (enumerator NAMES, never values; '
+      + 'v4 also reads an enumerator written as a name, `=` and one unsigned integer literal, keeping the name only), '
       + 'and per owner class whose member functions the file defines out of line (function NAMES, keyed `owner::(definitions@<file>)` so one owner '
-      + 'defined in two files keeps two identities) — same columns for every kind (ingest/cppDecls.ts).',
+      + 'defined in two files keeps two identities), with the same columns for every kind (ingest/cppDecls.ts).',
     read: (text, ctx) => parseCppDecls(text, { file: ctx?.file ?? '' }),
   },
   'cpp-handles': {

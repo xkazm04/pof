@@ -332,7 +332,7 @@ describe('BOTW node folders: the area-volume folder, the NPC folder and the NPC\
       // The node records are exactly what cpp-decls returns on its own, file by file.
       expect(nodes.map((w) => w.raw).sort(byKey)).toEqual([...files.flatMap((f) => parseCppDecls(FILES[f], { file: f }).rows)].sort(byKey));
       expect(nodes).toHaveLength(nodeCount);
-      expect(nodes.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+      expect(nodes.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
       // The handle records are exactly what cpp-handles returns on its own; the runtime counter is no handle.
       expect(handles.map((w) => w.raw).sort(byKey)).toEqual([...files.flatMap((f) => parseCppHandles(FILES[f], { file: f }).rows)].sort(byKey));
       expect(handles).toHaveLength(handleCount);

@@ -197,7 +197,7 @@ describe('BOTW item-7 data-schema specs (W30)', () => {
 
       const all = listWrappers(db, { sourceId: 'botw' });
       expect(new Set(all.map((w) => w.entity.id)).size).toBe(all.length);
-      expect(all.every((w) => w.technique === 'cpp-decls@3')).toBe(true); // no cpp-handles record anywhere
+      expect(all.every((w) => w.technique === 'cpp-decls@4')).toBe(true); // no cpp-handles record anywhere
       expect([...new Set(all.map((w) => w.raw.kind))].sort()).toEqual(['class', 'definition', 'enum', 'struct']);
       expect(new Set(all.map((w) => w.mappingVersion)).size).toBe(1); // one new stamp for the whole wave
       const byCatalog = (id: string) => listWrappers(db, { sourceId: 'botw', catalogId: id }).length;

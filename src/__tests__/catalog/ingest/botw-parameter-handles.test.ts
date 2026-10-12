@@ -96,7 +96,7 @@ describe('BOTW parameter-handle specs (W11)', () => {
       const expected = [H, CPP, EMPTY_H].flatMap((f) => parseCppDecls(FILES[f], { file: f }).rows);
       expect(declRows.map((w) => w.raw).sort((a, b) => a.qualifiedName.localeCompare(b.qualifiedName)))
         .toEqual(expected.sort((a, b) => a.qualifiedName.localeCompare(b.qualifiedName)));
-      expect(declRows.every((w) => w.technique === 'cpp-decls@3')).toBe(true);
+      expect(declRows.every((w) => w.technique === 'cpp-decls@4')).toBe(true);
 
       const handleRows = rows.filter((w) => w.raw.kind === 'handle');
       expect(handleRows.map((w) => w.raw)).toEqual(expect.arrayContaining(parseCppHandles(LANTERNWICK_H, { file: H }).rows));
