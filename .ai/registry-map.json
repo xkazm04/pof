@@ -2518,7 +2518,11 @@
           "revision": 30,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/one-shot/step/route.ts:276 The one-shot execution route invokes autonomous agent runs with MCP tools enabled while bypassing consent and write-freshness gates.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "agent-runtime-assembly",
@@ -5545,7 +5549,11 @@
           "revision": 30,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:98 The service connects to a local TCP socket rather than using standard streams, exposing an unauthenticated network listener on localhost.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "quality-gates",
@@ -19976,7 +19984,11 @@
           "revision": 30,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 The save-system module is purely a client-side React UI component for Unreal Engine save-game schema design, diffing, and budget tracking, without any tool protocol host or server integration.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "supply-chain",
@@ -22132,7 +22144,11 @@
           "revision": 30,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/blender-mcp/execute/route.ts:11 Exposes an unauthenticated HTTP route executing arbitrary Python code strings directly in Blender without positional auditing, grammar bounds, or transport-level access controls.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "codebase-scanning",
@@ -22234,7 +22250,11 @@
           "revision": 30,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:4 This context implements human-facing editor state inspection and property syncing via WebSocket rather than an MCP tool protocol server or client.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "test-harness",

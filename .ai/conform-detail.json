@@ -116,6 +116,141 @@
           "evidence": "the app ships one fixed dark palette with no [data-theme] block or prefers-color-scheme handling in src/app/globals.css — there is no second theme's bindings to keep complete"
         }
       ]
+    },
+    "d6a661e1-369c-4819-85cf-0a6c31282ef6/mcp-tools": {
+      "context": "blender-mcp-bridge",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T19:51:48.477Z",
+      "worker": "1dc80ee5-8a0e-4ee8-bf4e-e81806f73cf4",
+      "techniques": [
+        {
+          "technique": "transport-selection",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/types.ts:33 Binds to a raw TCP port (9876) on localhost rather than using stdio child process for a local tool."
+        },
+        {
+          "technique": "server-composition",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:233 Serializes all commands sequentially on a single socket promise chain because the wire protocol lacks JSON-RPC request-id multiplexing."
+        },
+        {
+          "technique": "ambient-selection-is-not-an-argument",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/scripts/auto-weights.ts:16 Manipulates Blender's ambient active object state directly instead of passing explicit identities across calls."
+        },
+        {
+          "technique": "authentication-and-scoping",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:105 Connects to the Blender socket without presenting or verifying per-consumer capability tokens or scopes."
+        },
+        {
+          "technique": "fluent-syntax-bounded-grammar",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:424 Passes arbitrary raw Python code directly to Blender's execute_code without a bounded grammar or parser."
+        }
+      ]
+    },
+    "0b31785f-a922-4da7-ac3f-bcf06c56f97f/mcp-tools": {
+      "context": "ue5-state-sync",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T19:51:48.477Z",
+      "worker": "1dc80ee5-8a0e-4ee8-bf4e-e81806f73cf4",
+      "techniques": [
+        {
+          "technique": "server-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:4 LiveStateSyncPanel is a React component streaming UE5 editor metrics over WebSocket for human developers, not an MCP tool protocol."
+        },
+        {
+          "technique": "write-freshness-gate",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:21 Direct property push hook updates editor properties over internal WebSocket rather than MCP write tools."
+        }
+      ]
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/mcp-tools": {
+      "context": "save-system",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T19:51:48.477Z",
+      "worker": "1dc80ee5-8a0e-4ee8-bf4e-e81806f73cf4",
+      "techniques": [
+        {
+          "technique": "server-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 SaveDataSchema is an interactive frontend React view for game save data architectures, not an MCP tool protocol server."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/index.tsx:39 Tab navigation defines UI views rather than tool definitions or schemas for an agent runtime."
+        }
+      ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/mcp-tools": {
+      "context": "ai-developer-tools-api",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T19:51:48.477Z",
+      "worker": "1dc80ee5-8a0e-4ee8-bf4e-e81806f73cf4",
+      "techniques": [
+        {
+          "technique": "client-integration",
+          "verdict": "deviation",
+          "evidence": "src/app/api/one-shot/step/route.ts:276 Enables autonomous MCP execution without configuring host-side consent gates, executing with dangerously-skip-permissions enabled by default in CLI service."
+        },
+        {
+          "technique": "write-freshness-gate",
+          "verdict": "deviation",
+          "evidence": "src/app/api/one-shot/step/route.ts:228 Persists step artifact updates without requiring or validating a content hash mark from a prior read of the artifact."
+        },
+        {
+          "technique": "untrusted-result-handling",
+          "verdict": "deviation",
+          "evidence": "src/app/api/claude-terminal/query/route.ts:64 Dispatches execution without human consent gates on escalating actions or provenance tracking on returned outputs."
+        }
+      ]
+    },
+    "ec9c55a2-90ee-463e-bf53-7fcad9dd29b7/mcp-tools": {
+      "context": "ue5-filesystem",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T19:51:48.477Z",
+      "worker": "1dc80ee5-8a0e-4ee8-bf4e-e81806f73cf4",
+      "techniques": [
+        {
+          "technique": "fluent-syntax-bounded-grammar",
+          "verdict": "deviation",
+          "evidence": "src/app/api/blender-mcp/execute/route.ts:11 Accepts raw Python code strings and passes them directly to Blender for execution without parsing or bounding the grammar."
+        },
+        {
+          "technique": "transport-selection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/blender-mcp/route.ts:13 Connects to an unauthenticated TCP socket on localhost instead of running over standard streams."
+        },
+        {
+          "technique": "authentication-and-scoping",
+          "verdict": "deviation",
+          "evidence": "src/app/api/blender-mcp/execute/route.ts:6 Exposes code execution over an HTTP endpoint without per-consumer capability tokens or scope verification."
+        },
+        {
+          "technique": "client-integration",
+          "verdict": "deviation",
+          "evidence": "src/app/api/filesystem/scan-project/route.ts:470 Discovers MCP servers from .mcp.json without positional command auditing or code execution consent validation."
+        }
+      ]
     }
   }
 }

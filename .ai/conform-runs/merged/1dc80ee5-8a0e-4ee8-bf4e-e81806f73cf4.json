@@ -1,0 +1,219 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1dc80ee5-8a0e-4ee8-bf4e-e81806f73cf4",
+ "subject": "mcp-tools",
+ "evaluatedAt": "2026-10-12T19:51:48.477921+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "blender-mcp-bridge",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/blender-mcp/service.ts:98 The service connects to a local TCP socket rather than using standard streams, exposing an unauthenticated network listener on localhost.",
+   "techniques": [
+    {
+     "technique": "transport-selection",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/types.ts:33 Binds to a raw TCP port (9876) on localhost rather than using stdio child process for a local tool."
+    },
+    {
+     "technique": "server-composition",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/service.ts:233 Serializes all commands sequentially on a single socket promise chain because the wire protocol lacks JSON-RPC request-id multiplexing."
+    },
+    {
+     "technique": "ambient-selection-is-not-an-argument",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/scripts/auto-weights.ts:16 Manipulates Blender's ambient active object state directly instead of passing explicit identities across calls."
+    },
+    {
+     "technique": "authentication-and-scoping",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/service.ts:105 Connects to the Blender socket without presenting or verifying per-consumer capability tokens or scopes."
+    },
+    {
+     "technique": "fluent-syntax-bounded-grammar",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/service.ts:424 Passes arbitrary raw Python code directly to Blender's execute_code without a bounded grammar or parser."
+    }
+   ]
+  },
+  {
+   "context": "ue5-state-sync",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:4 This context implements human-facing editor state inspection and property syncing via WebSocket rather than an MCP tool protocol server or client.",
+   "techniques": [
+    {
+     "technique": "server-composition",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:4 LiveStateSyncPanel is a React component streaming UE5 editor metrics over WebSocket for human developers, not an MCP tool protocol."
+    },
+    {
+     "technique": "write-freshness-gate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:21 Direct property push hook updates editor properties over internal WebSocket rather than MCP write tools."
+    }
+   ]
+  },
+  {
+   "context": "save-system",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 The save-system module is purely a client-side React UI component for Unreal Engine save-game schema design, diffing, and budget tracking, without any tool protocol host or server integration.",
+   "techniques": [
+    {
+     "technique": "server-composition",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 SaveDataSchema is an interactive frontend React view for game save data architectures, not an MCP tool protocol server."
+    },
+    {
+     "technique": "tool-schema-design",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_save/index.tsx:39 Tab navigation defines UI views rather than tool definitions or schemas for an agent runtime."
+    }
+   ]
+  },
+  {
+   "context": "ai-developer-tools-api",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/one-shot/step/route.ts:276 The one-shot execution route invokes autonomous agent runs with MCP tools enabled while bypassing consent and write-freshness gates.",
+   "techniques": [
+    {
+     "technique": "client-integration",
+     "verdict": "deviation",
+     "evidence": "src/app/api/one-shot/step/route.ts:276 Enables autonomous MCP execution without configuring host-side consent gates, executing with dangerously-skip-permissions enabled by default in CLI service."
+    },
+    {
+     "technique": "write-freshness-gate",
+     "verdict": "deviation",
+     "evidence": "src/app/api/one-shot/step/route.ts:228 Persists step artifact updates without requiring or validating a content hash mark from a prior read of the artifact."
+    },
+    {
+     "technique": "untrusted-result-handling",
+     "verdict": "deviation",
+     "evidence": "src/app/api/claude-terminal/query/route.ts:64 Dispatches execution without human consent gates on escalating actions or provenance tracking on returned outputs."
+    }
+   ]
+  },
+  {
+   "context": "ue5-filesystem",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/blender-mcp/execute/route.ts:11 Exposes an unauthenticated HTTP route executing arbitrary Python code strings directly in Blender without positional auditing, grammar bounds, or transport-level access controls.",
+   "techniques": [
+    {
+     "technique": "fluent-syntax-bounded-grammar",
+     "verdict": "deviation",
+     "evidence": "src/app/api/blender-mcp/execute/route.ts:11 Accepts raw Python code strings and passes them directly to Blender for execution without parsing or bounding the grammar."
+    },
+    {
+     "technique": "transport-selection",
+     "verdict": "deviation",
+     "evidence": "src/app/api/blender-mcp/route.ts:13 Connects to an unauthenticated TCP socket on localhost instead of running over standard streams."
+    },
+    {
+     "technique": "authentication-and-scoping",
+     "verdict": "deviation",
+     "evidence": "src/app/api/blender-mcp/execute/route.ts:6 Exposes code execution over an HTTP endpoint without per-consumer capability tokens or scope verification."
+    },
+    {
+     "technique": "client-integration",
+     "verdict": "deviation",
+     "evidence": "src/app/api/filesystem/scan-project/route.ts:470 Discovers MCP servers from .mcp.json without positional command auditing or code execution consent validation."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-12T19:51:48.477921+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "ambient-selection-is-not-an-argument",
+    "authentication-and-scoping",
+    "fluent-syntax-bounded-grammar",
+    "server-composition",
+    "transport-selection"
+   ],
+   "deviations": 1,
+   "context": "blender-mcp-bridge",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-12T19:51:48.477921+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "server-composition",
+    "write-freshness-gate"
+   ],
+   "deviations": 0,
+   "context": "ue5-state-sync",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-12T19:51:48.477921+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "server-composition",
+    "tool-schema-design"
+   ],
+   "deviations": 0,
+   "context": "save-system",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-12T19:51:48.477921+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "client-integration",
+    "untrusted-result-handling",
+    "write-freshness-gate"
+   ],
+   "deviations": 1,
+   "context": "ai-developer-tools-api",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-12T19:51:48.477921+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "authentication-and-scoping",
+    "client-integration",
+    "fluent-syntax-bounded-grammar",
+    "transport-selection"
+   ],
+   "deviations": 1,
+   "context": "ue5-filesystem",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
