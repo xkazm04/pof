@@ -141,6 +141,44 @@ export function sectorTouchesRect(
 }
 
 /**
+ * Does the quadratic chord `p1 -> c -> p2`, stroked `pad` wide either side, touch `rect`? The
+ * chord culling predicate.
+ *
+ * A chord dives toward the centre, so its two ends are not its bound: the curve can cross the rect
+ * while both ends sit off one side of it, and an end-only test drops it from the overscan band a
+ * pan blits from. The box here is the curve's exact one — both ends plus the per-axis turning
+ * point — so it is correct rather than merely conservative, like the sector test above.
+ */
+export function chordTouchesRect(
+  x1: number,
+  y1: number,
+  cx: number,
+  cy: number,
+  x2: number,
+  y2: number,
+  pad: number,
+  rect: WorldRect,
+): boolean {
+  const span = (a: number, c: number, b: number): [number, number] => {
+    let lo = Math.min(a, b);
+    let hi = Math.max(a, b);
+    const d = a - 2 * c + b;
+    if (d !== 0) {
+      const t = (a - c) / d;
+      if (t > 0 && t < 1) {
+        const v = (1 - t) * (1 - t) * a + 2 * (1 - t) * t * c + t * t * b;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    }
+    return [lo - pad, hi + pad];
+  };
+  const [x0, xe] = span(x1, cx, x2);
+  const [y0, ye] = span(y1, cy, y2);
+  return !(xe < rect.x0 || x0 > rect.x1 || ye < rect.y0 || y0 > rect.y1);
+}
+
+/**
  * Control point for a chord bundled through the interior: the nearer radius pulled toward the
  * centre by how far apart the two ends are, so short hops stay near the rim and long ones dive.
  * Lifted from the prototype so the bundle reads the same.
