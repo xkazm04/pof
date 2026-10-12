@@ -156,12 +156,14 @@ export const WORLD_CLASS_MAP: FieldMap = botwClassMap({
  * itself has no PoF home.
  */
 export const MOUNT_CLASS_MAP: FieldMap = botwClassMap({
-  bases: gap('state-graph has one flat kind of state: each mount node is a kind of one of two engine node bases — a '
-    + 'selector that decides on entry, or an action that runs — and a few extend another node to inherit its tunables; '
-    + 'the catalog has no node-kind field and no "this state extends that state" link'),
+  bases: gap('state-graph has one flat kind of state: each mount node is a kind of one of two engine node bases (the '
+    + 'action base for the movers, a general AI base for the rest, neither of which says whether a node decides or acts), '
+    + 'and a few extend another node to inherit its tunables; the store keeps that as an extends link on the wrapper, '
+    + 'but state-graph has no node-kind field and no inheritance link between states'),
   methods: gap('no home for a node\'s TICK RULE: a class record declares only the fixed node lifecycle (load parameters, '
     + 'init, enter, per-frame update, leave) plus construction, and its definition record implements the same set; which '
-    + 'hooks a node overrides is the design bit — selectors never update per frame, most actions do — and state-graph '
+    + 'hooks a node overrides is the design bit (the mount\'s movers mostly update per frame, its AI-base nodes and its '
+    + 'selector do not), and state-graph '
     + 'models enter / exit hook points but neither a per-frame update nor a decide-on-entry selector'),
   fields: gap('no home for PER-STATE PARAMETERS: every field is a parameter handle — static tunables per actor type '
     + '(speeds, distances, wait ranges, gait limits) or dynamic per-call inputs (a target position, a target actor, rider '
@@ -233,7 +235,8 @@ export const CAMERA_SHOT_NODE_MAP: FieldMap = botwClassMap({
   bases: gap('no home for a camera-behaviour KIND hierarchy: every node is a kind of one of the engine\'s two node bases '
     + '(a selector that decides on entry, or an action that runs), and most extend another camera node several levels deep '
     + '(an event-shot family, a conversation family, a tracking family); cutscenes and dialog-trees describe a shot as free '
-    + 'text and have no camera-behaviour kind and no "this camera extends that camera" link'),
+    + 'text and have no camera-behaviour kind and no inheritance link between shots (the store keeps one on the wrapper, '
+    + 'the catalogs\' entities none)'),
   methods: gap('no home for a camera node\'s TICK RULE or its scoped overrides: a class record declares construction and, '
     + 'on a few nodes, the fixed node lifecycle (load parameters, init, enter, per-frame update, leave), and its definition '
     + 'record implements the same set; only the family bases tick per frame, and the clip-plane overrides set a value on '
@@ -309,13 +312,19 @@ export const BEHAVIOUR_NODE_ROW_MAP: FieldMap = botwClassMap({
     + 'action that runs in the action library, rarely a second action base; a general AI node in the AI library, whether it '
     + 'acts, decides on entry or only branches, or for a few a fork that runs its children at once), directly or through '
     + 'another node of the library whose '
-    + 'tunables it inherits, often several levels deep and across rows; no PoF catalog has a node-kind field or a '
-    + '"this node extends that node" link'),
+    + 'tunables it inherits, often several levels deep and across rows; no PoF catalog has a node-kind field or an '
+    + 'inheritance link between its entities (the store keeps each bare first parent as an extends link on the wrapper, '
+    + 'or an explicit unresolved marker, but no catalog\'s entity schema holds it)'),
   methods: gap('no home for a node\'s TICK RULE: a class record declares construction and the fixed node lifecycle (load '
-    + 'parameters, init, enter, per-frame update, leave), and its definition record implements the same set; which hooks '
+    + 'parameters, init, enter, per-frame update, leave), on a few nodes also a few hooks beyond it (a message handler, '
+    + 'completion and state queries), and its definition record implements the same set; which hooks '
     + 'a node overrides is the design bit (most nodes of the action library override the per-frame update, while almost '
     + 'none of the AI library does, selector or not), and a few nodes are shells '
-    + 'that declare construction only, variants that differ by name alone. Bodies are stubs (F12); no PoF catalog models '
+    + 'that declare construction only, mostly variants that differ from a sibling by name alone, rarely a root with '
+    + 'nothing in it. Bodies are stubs (F12), apart from the rare node that does real work (a cooking entry, a '
+    + 'selector\'s own test, a forwarded query); the AI folder also holds one data-manager helper that is not a node (a '
+    + 'class with no base, no construction and no lifecycle, a short real body and a nested message struct), so these '
+    + 'sentences describe nodes, not it; no PoF catalog models '
     + 'a per-frame update, a decide-on-entry selector or a node\'s hook set'),
   fields: gap('no home for PER-NODE PARAMETERS: the fields are mostly parameter handles — static tunables per actor type, '
     + 'dynamic per-call inputs (a target position, a target actor, links), per-placement values and variables shared '
