@@ -73,7 +73,8 @@
  * A second reader shares this lexer and walk (`cppHandles.ts`, the `cpp-handles` technique): it passes
  * `CppWalkHooks` to `walkCppDecls`, which then also collects the line comments the lexer drops and
  * reports every member statement of a class. Both are side channels — the token stream and the records
- * above are exactly what `parseCppDecls` returns without hooks.
+ * above are exactly what `parseCppDecls` returns without hooks. A third reader (`cppRegistrations.ts`, the
+ * `cpp-registrations` technique) takes the `onBody` hook, which hands it each skipped out-of-line function body.
  */
 import type { MalformedRow, TsvRefusal, TsvTable } from './tsv';
 
@@ -132,10 +133,29 @@ export interface CppMemberStatement {
   array: boolean;
 }
 
+/** One token of a skipped function body, with its 1-based line. */
+export interface CppBodyToken {
+  t: string;
+  line: number;
+}
+
+/** The body of an out-of-line member-function definition, which the walk skips; reported, never a record here. */
+export interface CppSkippedBody {
+  namespace: string;
+  /** The owner as written (`Owner`, `Outer::Owner`, `Box<T>`). */
+  owner: string;
+  /** The defined function's name as written. */
+  fn: string;
+  /** The tokens between the body's braces, in order. */
+  toks: readonly CppBodyToken[];
+}
+
 export interface CppWalkHooks {
   /** Receives every `//` comment in an emitted region, in order. */
   comments?: CppLineComment[];
   onMember?: (member: CppMemberStatement) => void;
+  /** Receives each skipped body of an out-of-line member-function definition at namespace scope, in order. */
+  onBody?: (body: CppSkippedBody) => void;
 }
 
 interface Rec {
@@ -863,8 +883,11 @@ export function walkCppDecls(text: string, ctx: CppReadContext, overrides: Parti
       }
       // A function body, an enum, or any other block: the declaration before it is recorded,
       // the block itself is skipped whole.
+      const def = hooks.onBody && !currentClass() ? outOfLineDefinition(tail(chunk)) : null;
       flush();
-      i = skipBlock(i);
+      const end = skipBlock(i);
+      if (def && hooks.onBody) hooks.onBody({ namespace: nsPath(), owner: def.owner, fn: def.fn, toks: toks.slice(i + 1, end) });
+      i = end;
       continue;
     }
 

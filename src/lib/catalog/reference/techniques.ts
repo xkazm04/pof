@@ -16,10 +16,14 @@
  * `cpp-handles` (/zelda W11, 2026-10-10): a second reader over the same C++ files. It keeps what `cpp-decls`
  * cannot hold in its columns — each parameter handle's name with its scope word and its declared type
  * (`ingest/cppHandles.ts`) — as records of its own, so every `cpp-decls` record reads byte-identically.
+ *
+ * `cpp-registrations` (/zelda W32): a third reader, over C++ sources, for the registration call that binds a handle
+ * the header declares without a scope comment (`ingest/cppRegistrations.ts`); it reads the member's name, never a value.
  */
 import { parseTsv, type TsvTable } from '@/lib/catalog/ingest/tsv';
 import { parseCppDecls } from '@/lib/catalog/ingest/cppDecls';
 import { parseCppHandles } from '@/lib/catalog/ingest/cppHandles';
+import { parseCppRegistrations } from '@/lib/catalog/ingest/cppRegistrations';
 
 /** Transpose an Attribute-or-Variable/Value table into the single record consumed by FieldMap. */
 export function parseTsvKv(text: string): TsvTable {
@@ -129,6 +133,16 @@ export const TECHNIQUES: Record<string, ReadingTechnique> = {
       + 'written (the scope the handle is bound in) and the declared type as written with the kind C++ keywords alone decide; never the '
       + 'number in the comment, an initialiser or a registration argument. Keyed `owner::member::(handle@<file>)` (ingest/cppHandles.ts).',
     read: (text, ctx) => parseCppHandles(text, { file: ctx?.file ?? '' }),
+  },
+  'cpp-registrations': {
+    id: 'cpp-registrations',
+    version: 1,
+    assetKind: 'source-code',
+    describe: 'One C++ source file → one record per parameter REGISTRATION: a statement inside the body of an out-of-line member-function definition '
+      + 'that is one call, whose first argument is the address of one bare member name (`&member`) - the member NAME, its owner class, the '
+      + 'callee as written (the scope witness) and the enclosing function name; never an argument after the first, a value, or any other '
+      + 'statement of the body. Keyed `owner::member::(registration@<file>)` (ingest/cppRegistrations.ts).',
+    read: (text, ctx) => parseCppRegistrations(text, { file: ctx?.file ?? '' }),
   },
 };
 
