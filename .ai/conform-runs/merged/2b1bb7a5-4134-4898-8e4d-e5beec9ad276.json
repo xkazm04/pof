@@ -1,0 +1,132 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2b1bb7a5-4134-4898-8e4d-e5beec9ad276",
+ "subject": "realtime-combat-semantics",
+ "evaluatedAt": "2026-10-13T12:34:12.424582+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "combat-dodge-timeline",
+   "subject": "realtime-combat-semantics",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/HitMarkerEditor.tsx:50 The dodge preview decides avoidance solely by interval membership without trigger grades or build-derived magnitude scaling, collapsing the required two-axis defense model.",
+   "techniques": [
+    {
+     "technique": "active-defense-two-axis-split",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/HitMarkerEditor.tsx:50 Outcome is binary timing membership; editable duration and stamina parameters are not connected to character stats, gear, or trigger grades."
+    },
+    {
+     "technique": "real-time-timers-with-an-escapable-window",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:89 Playback advances in elapsed seconds, authored phases use seconds, and frame counts are derived; the self-started dodge needs no imposed-zone escape window."
+    }
+   ]
+  },
+  {
+   "context": "combat-simulator",
+   "subject": "realtime-combat-semantics",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/combat/simulation-engine.ts:350 The simulator gates actions through separate health and stun checks rather than a shared combatant state-tag gate, omitting the required observable death model.",
+   "techniques": [
+    {
+     "technique": "death-via-state-tag-not-input-disable",
+     "verdict": "deviation",
+     "evidence": "src/lib/combat/simulation-engine.ts:350 Action, targeting, and encounter checks independently consult numeric health; the entity and fight loop contain no shared dead tag or blocked-tag set."
+    },
+    {
+     "technique": "hit-dedup-per-swing",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/combat/simulation-engine.ts:371 Each action resolves an atomic target list rather than a sweeping or lingering contact volume."
+    },
+    {
+     "technique": "single-source-of-health-truth",
+     "verdict": "deviation",
+     "evidence": "src/lib/combat/simulation-engine.ts:538 Buffs can write health through AttributeKey while damage separately subtracts health; these writes bypass a common health apply, clamp, and death hook."
+    },
+    {
+     "technique": "start-protection-window",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/combat/simulation-engine.ts:308 The simulated opening deliberately staggers enemy attacks, matching the standard's staggered-opening exclusion."
+    }
+   ]
+  },
+  {
+   "context": "ability-spellbook-core",
+   "subject": "realtime-combat-semantics",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:941 The spellbook authors periodic damage but displays magnitude, duration, and period without publishing total intake, omitting a required timer-review quantity.",
+   "techniques": [
+    {
+     "technique": "real-time-timers-with-an-escapable-window",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:941 Burn specifies 8 damage per tick, 6 seconds, and a 1-second period; EffectsSection displays those inputs but does not derive and publish the standard's 48-point total."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "realtime-combat-semantics",
+   "context": "combat-damage-pipeline",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "realtime-combat-semantics",
+   "context": "hud-damage-and-navigation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T12:34:12.424582+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "realtime-combat-semantics"
+   ],
+   "techniques": [
+    "active-defense-two-axis-split",
+    "real-time-timers-with-an-escapable-window"
+   ],
+   "deviations": 1,
+   "context": "combat-dodge-timeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T12:34:12.424582+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "realtime-combat-semantics"
+   ],
+   "techniques": [
+    "death-via-state-tag-not-input-disable",
+    "hit-dedup-per-swing",
+    "single-source-of-health-truth",
+    "start-protection-window"
+   ],
+   "deviations": 1,
+   "context": "combat-simulator",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T12:34:12.424582+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "realtime-combat-semantics"
+   ],
+   "techniques": [
+    "real-time-timers-with-an-escapable-window"
+   ],
+   "deviations": 1,
+   "context": "ability-spellbook-core",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

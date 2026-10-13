@@ -2218,7 +2218,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:941 The spellbook authors periodic damage but displays magnitude, duration, and period without publishing total intake, omitting a required timer-review quantity.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mcp-tools",
@@ -9770,7 +9774,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/HitMarkerEditor.tsx:50 The dodge preview decides avoidance solely by interval membership without trigger grades or build-derived magnitude scaling, collapsing the required two-axis defense model.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
@@ -10054,7 +10062,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:350 The simulator gates actions through separate health and stun checks rather than a shared combatant state-tag gate, omitting the required observable death model.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "game-economy-tuning",

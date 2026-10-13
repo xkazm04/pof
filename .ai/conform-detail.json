@@ -2558,6 +2558,74 @@
         "at": "2026-10-13T11:46:38.723864+00:00",
         "reason": "reviewer (sonnet): The CombatNav.tsx:12 technique anchor is wrong: 'features' is a member of the CombatSubtab union (_shared/data.ts:14), so that cast is a literal-type annotation, not a bypass. The usePacingPaths, Python-generator and loop claims were fine."
       }
+    },
+    "24d18aef-2104-4889-9d67-d20a91d5fdea/realtime-combat-semantics": {
+      "context": "combat-dodge-timeline",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:34:12.424Z",
+      "worker": "2b1bb7a5-4134-4898-8e4d-e5beec9ad276",
+      "techniques": [
+        {
+          "technique": "active-defense-two-axis-split",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/HitMarkerEditor.tsx:50 Outcome is binary timing membership; editable duration and stamina parameters are not connected to character stats, gear, or trigger grades."
+        },
+        {
+          "technique": "real-time-timers-with-an-escapable-window",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:89 Playback advances in elapsed seconds, authored phases use seconds, and frame counts are derived; the self-started dodge needs no imposed-zone escape window."
+        }
+      ]
+    },
+    "d0b455c1-6b16-44d0-99c7-4e3e444b5ea8/realtime-combat-semantics": {
+      "context": "combat-simulator",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:34:12.424Z",
+      "worker": "2b1bb7a5-4134-4898-8e4d-e5beec9ad276",
+      "techniques": [
+        {
+          "technique": "death-via-state-tag-not-input-disable",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:350 Action, targeting, and encounter checks independently consult numeric health; the entity and fight loop contain no shared dead tag or blocked-tag set."
+        },
+        {
+          "technique": "hit-dedup-per-swing",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/combat/simulation-engine.ts:371 Each action resolves an atomic target list rather than a sweeping or lingering contact volume."
+        },
+        {
+          "technique": "single-source-of-health-truth",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:538 Buffs can write health through AttributeKey while damage separately subtracts health; these writes bypass a common health apply, clamp, and death hook."
+        },
+        {
+          "technique": "start-protection-window",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/combat/simulation-engine.ts:308 The simulated opening deliberately staggers enemy attacks, matching the standard's staggered-opening exclusion."
+        }
+      ]
+    },
+    "4a2ff90c-3fc1-4692-929c-98b8ecb796ac/realtime-combat-semantics": {
+      "context": "ability-spellbook-core",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:34:12.424Z",
+      "worker": "2b1bb7a5-4134-4898-8e4d-e5beec9ad276",
+      "techniques": [
+        {
+          "technique": "real-time-timers-with-an-escapable-window",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:941 Burn specifies 8 damage per tick, 6 seconds, and a 1-second period; EffectsSection displays those inputs but does not derive and publish the standard's 48-point total."
+        }
+      ]
     }
   }
 }
