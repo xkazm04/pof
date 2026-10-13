@@ -1,0 +1,177 @@
+{
+  "schema": "conform-run/1",
+  "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+  "subject": "supply-chain",
+  "evaluatedAt": "2026-10-13T02:20:45.271068+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "module-topology-graph",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Searched module-topology-graph files for supply-chain terms (archive, lockfile, pickle, deserializ, license, vendor, secret) yielding zero hits, and useDependencyGraph proves this graph models internal game module prerequisite topologies rather than third-party package dependencies.",
+      "techniques": [
+        {
+          "technique": "dependency-policy-gates",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/types.ts:9 Dependencies are gameplay feature prerequisites and blockers within SelectedFeatureDetail, not package manifest entries or advisory gates."
+        },
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:52 GraphCanvas renders pure SVG markers for internal module block status; it does not parse, scan, or execute untrusted code or binaries."
+        },
+        {
+          "technique": "verification-scope",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/NodeDeepDivePanel.tsx:43 Verification checks here represent module internal eval health score display, not package checksum or artifact signature verification scope."
+        }
+      ],
+      "registryProposal": "Disambiguate internal module prerequisite topology graphs from external software package dependency supply-chain graphs in registry keyword groundings."
+    },
+    {
+      "context": "procedural-scene-tools",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:31 Searched procedural-scene-tools files for supply-chain terms (archive, tar, unzip, lockfile, pickle, deserializ) yielding zero hits, and ImportAutomationView demonstrates this context generates local UE5 python import script templates from procedural configs rather than unpacking third-party archives or managing package dependencies.",
+      "techniques": [
+        {
+          "technique": "archive-extraction-safety",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:36 Generated UE5 import scripts are copied directly to the clipboard; no archive files (zip/tar) are accepted, unpacked, or extracted."
+        },
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:43 Procedural state stores purely numeric heightmap matrices and geometry configs in memory; no deserialization of untrusted payloads or models is performed."
+        },
+        {
+          "technique": "build-time-dependency-tier",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:55 SceneExporter provides export format options for local 3D assets rather than introducing build-time dependency tiers or compiler toolchain plugins."
+        }
+      ]
+    },
+    {
+      "context": "save-system",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:19 Searched save-system files for supply-chain terms (archive, tar, lockfile, pickle, deserializ, license, vendor, secret) finding only local UI storage icons and serialization timing labels, and data-panels.ts confirms this module manages Unreal USaveGame schema version compatibility rather than third-party package dependencies or unsafe deserialization.",
+      "techniques": [
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/advanced/SerializationProfiler.tsx:22 Serialization profiler measures execution latency against a millisecond budget for save games; no untrusted format decoding or pickle deserialization is executed."
+        },
+        {
+          "technique": "signature-preserving-patching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/schema/SaveDiffViewer.tsx:33 SaveDiffViewer compares property differences between two character save slots; it does not patch third-party binary artifacts or preserve code signatures."
+        },
+        {
+          "technique": "one-version-decays-to-a-floor",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/slots/IntegrityValidator.tsx:33 IntegrityValidator maps over local validation checks to confirm single save file structure, not multi-repository dependency floor convergence."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "supply-chain",
+      "context": "code-quality-evaluation",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors are incidental: DeepEvalResults/constants.tsx:12 is only a severity-token map and ProgressPanel.tsx:36 only renders progress text, so neither shows the claim that evaluation is static and never compiles or executes code."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "build-history-config",
+      "reason": "withdrawn after review: reviewer (sonnet): The 'zero hits' search claim is contradicted: BuildConfigSelector/ProfileEditor.tsx, which the evidence itself cites, has an 'Archive Directory' field and an 'Archive' toggle, and constants.ts:17 only lists build-config options without showing the supply-chain precondition is absent."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T02:20:45.271068+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "dependency-policy-gates",
+        "reading-is-not-running",
+        "verification-scope"
+      ],
+      "deviations": 0,
+      "context": "module-topology-graph",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T02:20:45.271068+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "archive-extraction-safety",
+        "build-time-dependency-tier",
+        "unsafe-deserialization-off-by-default"
+      ],
+      "deviations": 0,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T02:20:45.271068+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "reading-is-not-running",
+        "scheduled-deep-analysis",
+        "secret-scanning-architecture"
+      ],
+      "deviations": 0,
+      "context": "code-quality-evaluation",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T02:20:45.271068+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "one-version-decays-to-a-floor",
+        "signature-preserving-patching",
+        "unsafe-deserialization-off-by-default"
+      ],
+      "deviations": 0,
+      "context": "save-system",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T02:20:45.271068+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "build-time-dependency-tier",
+        "dependency-policy-gates",
+        "toolchain-floor-drift"
+      ],
+      "deviations": 0,
+      "context": "build-history-config",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

@@ -17046,7 +17046,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Searched module-topology-graph files for supply-chain terms (archive, lockfile, pickle, deserializ, license, vendor, secret) yielding zero hits, and useDependencyGraph proves this graph models internal game module prerequisite topologies rather than third-party package dependencies.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "module-design",
@@ -18122,7 +18126,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:31 Searched procedural-scene-tools files for supply-chain terms (archive, tar, unzip, lockfile, pickle, deserializ) yielding zero hits, and ImportAutomationView demonstrates this context generates local UE5 python import script templates from procedural configs rather than unpacking third-party archives or managing package dependencies.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "generated-asset-world-scale",
@@ -20052,7 +20060,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:19 Searched save-system files for supply-chain terms (archive, tar, lockfile, pickle, deserializ, license, vendor, secret) finding only local UI storage icons and serialization timing labels, and data-panels.ts confirms this module manages Unreal USaveGame schema version compatibility rather than third-party package dependencies or unsafe deserialization.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-memory",

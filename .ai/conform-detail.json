@@ -808,6 +808,147 @@
       "evaluatedTs": "2026-10-13T01:28:21.100Z",
       "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
       "techniques": []
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/supply-chain": {
+      "context": "module-topology-graph",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+      "techniques": [
+        {
+          "technique": "dependency-policy-gates",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/types.ts:9 Dependencies are gameplay feature prerequisites and blockers within SelectedFeatureDetail, not package manifest entries or advisory gates."
+        },
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:52 GraphCanvas renders pure SVG markers for internal module block status; it does not parse, scan, or execute untrusted code or binaries."
+        },
+        {
+          "technique": "verification-scope",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/NodeDeepDivePanel.tsx:43 Verification checks here represent module internal eval health score display, not package checksum or artifact signature verification scope."
+        }
+      ],
+      "registryProposal": "Disambiguate internal module prerequisite topology graphs from external software package dependency supply-chain graphs in registry keyword groundings."
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/supply-chain": {
+      "context": "procedural-scene-tools",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+      "techniques": [
+        {
+          "technique": "archive-extraction-safety",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:36 Generated UE5 import scripts are copied directly to the clipboard; no archive files (zip/tar) are accepted, unpacked, or extracted."
+        },
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:43 Procedural state stores purely numeric heightmap matrices and geometry configs in memory; no deserialization of untrusted payloads or models is performed."
+        },
+        {
+          "technique": "build-time-dependency-tier",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:55 SceneExporter provides export format options for local 3D assets rather than introducing build-time dependency tiers or compiler toolchain plugins."
+        }
+      ]
+    },
+    "8234e336-4af3-4c49-9e31-9740282bdde2/supply-chain": {
+      "context": "code-quality-evaluation",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "techniques": [
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/constants.tsx:12 Evaluation findings are collected via static rule analysis and categorized by UI severity tokens; inspected C++ code is never compiled or executed during evaluation."
+        },
+        {
+          "technique": "scheduled-deep-analysis",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/ProgressPanel.tsx:36 ProgressPanel monitors interactive user-initiated 4-pass evaluation progress in the UI, not automated recurring background cron scans of third-party dependencies."
+        },
+        {
+          "technique": "secret-scanning-architecture",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/constants.ts:20 Pattern categories inspect architectural C++ gameplay idioms (e.g. class hierarchies and GAS integration), not commit-time secret scanning or credential pattern matching."
+        }
+      ],
+      "withdrawn": {
+        "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+        "state": "not-applicable",
+        "at": "2026-10-13T02:22:28.311299+00:00",
+        "reason": "reviewer (sonnet): The anchors are incidental: DeepEvalResults/constants.tsx:12 is only a severity-token map and ProgressPanel.tsx:36 only renders progress text, so neither shows the claim that evaluation is static and never compiles or executes code."
+      }
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/supply-chain": {
+      "context": "save-system",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+      "techniques": [
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/advanced/SerializationProfiler.tsx:22 Serialization profiler measures execution latency against a millisecond budget for save games; no untrusted format decoding or pickle deserialization is executed."
+        },
+        {
+          "technique": "signature-preserving-patching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/schema/SaveDiffViewer.tsx:33 SaveDiffViewer compares property differences between two character save slots; it does not patch third-party binary artifacts or preserve code signatures."
+        },
+        {
+          "technique": "one-version-decays-to-a-floor",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/slots/IntegrityValidator.tsx:33 IntegrityValidator maps over local validation checks to confirm single save file structure, not multi-repository dependency floor convergence."
+        }
+      ]
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/supply-chain": {
+      "context": "build-history-config",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "techniques": [
+        {
+          "technique": "dependency-policy-gates",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:34 PreflightGateBlock checks map cook measurements before starting packaging; it does not gate pull requests or builds on package lockfile vulnerabilities."
+        },
+        {
+          "technique": "toolchain-floor-drift",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/ProfileEditor.tsx:69 ProfileEditor configures user-selected deployment platform targets (e.g. Win64, Linux); it does not pin or verify compiler runtime toolchain minimum floors."
+        },
+        {
+          "technique": "build-time-dependency-tier",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:39 buildScope manages query scope descriptions for historical build count reporting, not build-time dependency categorization or compilation tiering."
+        }
+      ],
+      "withdrawn": {
+        "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+        "state": "not-applicable",
+        "at": "2026-10-13T02:22:28.352708+00:00",
+        "reason": "reviewer (sonnet): The 'zero hits' search claim is contradicted: BuildConfigSelector/ProfileEditor.tsx, which the evidence itself cites, has an 'Archive Directory' field and an 'Archive' toggle, and constants.ts:17 only lists build-config options without showing the supply-chain precondition is absent."
+      }
     }
   }
 }
