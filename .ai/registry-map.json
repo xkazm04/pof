@@ -7505,7 +7505,11 @@
           "revision": 24,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:59 Overlapping drain requests for the same catalog scope are immediately rejected with a 409 error rather than being enqueued or scheduled through a concurrency coordinator.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
+          "evaluatedRevision": 26
         },
         {
           "subject": "catalog-pipeline-authoring",
@@ -7759,7 +7763,11 @@
           "revision": 24,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/labRunnerStore.ts:87 Drain run history and worker states are stored purely in transient Zustand memory, causing all fleet execution state to be lost on page reload.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
+          "evaluatedRevision": 26
         },
         {
           "subject": "mcp-tools",
@@ -8913,7 +8921,11 @@
           "revision": 24,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:184 When reaching the session limit, idle terminal sessions are recycled by reassigning their session ID instead of managing distinct session entities, and if all sessions are busy the store spawns beyond MAX_SESSIONS without admission control.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
+          "evaluatedRevision": 26
         },
         {
           "subject": "prompt-assembly",
@@ -16676,7 +16688,11 @@
           "revision": 24,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:100 Competing checklist task dispatches against an active terminal session are silently dropped without queuing or caller rejection, risking task loss and leaving the user unaware of unexecuted instructions.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
+          "evaluatedRevision": 26
         },
         {
           "subject": "agent-cli-transport",
@@ -20975,7 +20991,11 @@
           "revision": 24,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/status/ModelsView.tsx:81 Task class routing and judging allocate exclusively between models within the Claude family, preventing independent multi-model panel verification.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
+          "evaluatedRevision": 26
         },
         {
           "subject": "aaa-craft-rubric-authoring",

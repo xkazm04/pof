@@ -2834,6 +2834,151 @@
           "evidence": "src/lib/visual-gen/reference-roles.ts:181 The complete assembler filters unknown roles and sorts recognized roles, but never enforces one reference per role or exactly one identity master."
         }
       ]
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/fleet-orchestration": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:14:46.342Z",
+      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "techniques": [
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:100 Dispatches drop silently when a session is busy rather than queueing, tracking concurrency tickets, or returning an explicit busy rejection."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:65 Checklist item completion is marked true purely on Claude CLI report in onComplete without inspecting drop point files, build logs, or verifying artifacts parent-side."
+        },
+        {
+          "technique": "heterogeneous-model-panels",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleReviewCli.ts:111 Review tasks and downstream implementation tasks run through the same Claude Code CLI instance, coupling the reviewer and the generator to the same model family without cross-provider decorrelation."
+        }
+      ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/fleet-orchestration": {
+      "context": "cli-terminal-shell",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:14:46.342Z",
+      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "techniques": [
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:184 Session IDs are recycled from idle entries to reuse terminal tabs instead of treating each session lifecycle as an immutable registered record."
+        },
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:458 Rehydration blindly resets all running sessions to idle without reconciling against surviving background processes or verifying actual process state."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/runArbiter.ts:37 Correctly treats an unreachable observation as unknown/wait rather than fabricating an execution failure."
+        },
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/runArbiter.ts:38 When a session drop point/record is missing, it arbitrates outcomeUnknown rather than assuming success or fabricating an end state."
+        }
+      ]
+    },
+    "3cfee2b0-99a9-45c8-a31a-b4dfa89c2d97/fleet-orchestration": {
+      "context": "catalog-pipeline-api",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:14:46.342Z",
+      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "techniques": [
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "deviation",
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:59 Pipeline drain requests fail immediately upon collision with a 409 status code rather than using a dispatch queue or worker lane admission control."
+        },
+        {
+          "technique": "substrate-reconciliation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:137 Entity deletion purges SQLite artifact records but leaves compiled Unreal Engine asset files on disk, failing substrate cleanup."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:41 Strictly discards the client-reported pass/fail status and re-evaluates the submitted artifact data using the server-side Checker."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 Explicitly aggregates all step artifacts and execution summaries upon batch completion."
+        }
+      ]
+    },
+    "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/fleet-orchestration": {
+      "context": "catalog-pipeline-state",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:14:46.342Z",
+      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "techniques": [
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labRunnerStore.ts:87 State is kept in memory without persistent storage or write-ahead logging, failing to survive UI reloads."
+        },
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labRunnerStore.ts:31 Uses a coarse binary phase ('running' | 'done') instead of the standard closed vocabulary (unstarted, running, completed, dead, unknown, etc.)."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/batchDrainModel.ts:85 Consolidates run outcomes and entity details into an auditable summary record."
+        }
+      ]
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/fleet-orchestration": {
+      "context": "status-health-dashboard",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:14:46.342Z",
+      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "techniques": [
+        {
+          "technique": "heterogeneous-model-panels",
+          "verdict": "deviation",
+          "evidence": "src/components/status/ModelsView.tsx:81 Tasks and judges are configured exclusively within Claude tiers (Haiku/Sonnet/Opus) rather than decorrelated across heterogeneous model providers."
+        },
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:41 Defines a domain-specific 8-state grading taxonomy that tracks artifact pipeline health rather than fleet worker lifecycles."
+        },
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:602 Requires that a passing verdict be verified against current artifact provenance, degrading unproven or stale claims to not-proven."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:615 Enforces that completion claims meet strict numerical evaluation rubrics before marking a cell verified."
+        }
+      ]
     }
   }
 }
