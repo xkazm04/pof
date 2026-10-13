@@ -36,7 +36,7 @@ import {
 import { OBJECT_MAP } from '@/lib/catalog/ingest/diablo1Objects';
 import { MISSILE_MAP } from '@/lib/catalog/ingest/diablo1Missiles';
 import { MISSILE_SPRITE_MAP } from '@/lib/catalog/ingest/diablo1MissileSprites';
-import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, DATA_SCHEMA_CLASS_MAP, MANAGER_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PLAYER_CLASS_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
+import { ACTOR_FILE_CLASS_MAP, BEHAVIOUR_NODE_ROW_MAP, BOTW_OBTAIN, BOTW_PIN, BOTW_SOURCE, CAMERA_SHOT_NODE_MAP, CHEMISTRY_CLASS_MAP, COOKING_CLASS_MAP, DATA_SCHEMA_CLASS_MAP, MANAGER_CLASS_MAP, MOUNT_CLASS_MAP, PARAM_GROUP_CLASS_MAP, PARAMETER_HANDLE_MAP, PARAMETER_REGISTRATION_MAP, PLAYER_CLASS_MAP, QUERY_NODE_ROW_MAP, WORLD_CLASS_MAP } from '@/lib/catalog/ingest/botw';
 
 export interface ReferenceTableSpec {
   /**
@@ -218,6 +218,13 @@ export const BOTW: ReferenceSource = {
     // The expansion-content manager (version gating, file routing, per-expansion positions and flags) → save-points, whose
     // versioning step holds the version checks (4 : 1 : 1 over zone-map and quests).
     { file: 'src/KingSystem/AOC/*.{h,cpp}', catalogId: 'save-points', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: MANAGER_CLASS_MAP },
+    // W32: the condition-query folder (161 nodes, one engine query base, no chain), a PAIR over one glob: its declarations under
+    // the query-node map and the parameter registrations its loading hooks make under the registration map (the third reader,
+    // Z-D127). state-graph on the full ordered name rule (35 of 161, the guards its graph reads; items 32 and vendors 19 follow);
+    // the pair is registered after the 7b block and before the generic node rows, so the node rows and their handle twins keep
+    // their places (Z-D130).
+    { file: 'src/Game/Actor/Query/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: QUERY_NODE_ROW_MAP },
+    { file: 'src/Game/Actor/Query/*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-registrations', keyColumn: 'qualifiedName', map: PARAMETER_REGISTRATION_MAP },
     // W09: the generic node rows, one spec per row under one shared map. Action A–B (flat folder, initials A
     // and B only) → state-graph, the plurality of its nodes among real catalogs (wrap only).
     { file: 'src/Game/Actor/Action/action{A,B}*.{h,cpp}', catalogId: 'state-graph', technique: 'cpp-decls', keyColumn: 'qualifiedName', map: BEHAVIOUR_NODE_ROW_MAP },

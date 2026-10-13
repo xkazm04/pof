@@ -8,6 +8,7 @@ import { BOTW_DESCOPES, BOTW_PIN, BOTW_TREE, PLAYER_CLASS_MAP } from '@/lib/cata
 import { auditColumns } from '@/lib/catalog/ingest/fieldMap';
 import { CPP_RECORD_COLUMNS } from '@/lib/catalog/ingest/cppDecls';
 import { CPP_HANDLE_COLUMNS } from '@/lib/catalog/ingest/cppHandles';
+import { CPP_REGISTRATION_COLUMNS } from '@/lib/catalog/ingest/cppRegistrations';
 import { ingestSourceFromDir } from '@/lib/catalog/reference/ingestSource';
 import { BOTW, DIABLO1, getReferenceSource } from '@/lib/catalog/reference/sources';
 import { getTechnique } from '@/lib/catalog/reference/techniques';
@@ -28,14 +29,16 @@ describe('BOTW source contract', () => {
     expect(BOTW.tables.length).toBeGreaterThan(0);
     // W11 (vault Z-D46): a second source-code technique, cpp-handles, reads the node areas' globs again with its own
     // columns. Every spec reads one of the two, and each map classifies every column of ITS technique.
-    expect(BOTW.tables.filter((t) => t.technique === 'cpp-decls')).toHaveLength(40);
+    expect(BOTW.tables.filter((t) => t.technique === 'cpp-decls')).toHaveLength(41);
     expect(BOTW.tables.filter((t) => t.technique === 'cpp-handles')).toHaveLength(25);
+    expect(BOTW.tables.filter((t) => t.technique === 'cpp-registrations')).toHaveLength(1);
     for (const spec of BOTW.tables) {
       expect(spec.file.startsWith(`${BOTW_TREE}/`)).toBe(true);
-      expect(['cpp-decls', 'cpp-handles']).toContain(spec.technique);
+      expect(['cpp-decls', 'cpp-handles', 'cpp-registrations']).toContain(spec.technique); // W32: a third reader, one spec
       expect(getTechnique(spec.technique).assetKind).toBe('source-code');
       expect(spec.keyColumn).toBe('qualifiedName');
-      const audit = auditColumns([...(spec.technique === 'cpp-decls' ? CPP_RECORD_COLUMNS : CPP_HANDLE_COLUMNS)], spec.map);
+      const columns = { 'cpp-decls': CPP_RECORD_COLUMNS, 'cpp-handles': CPP_HANDLE_COLUMNS, 'cpp-registrations': CPP_REGISTRATION_COLUMNS }[spec.technique]!;
+      const audit = auditColumns([...columns], spec.map);
       expect(audit.unclassified).toEqual([]);
       expect(audit.declaredButAbsent).toEqual([]);
     }

@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
 import {
-  BEHAVIOUR_NODE_ROW_MAP, BOTW_DESCOPES, CAMERA_SHOT_NODE_MAP, DATA_SCHEMA_CLASS_MAP, MANAGER_CLASS_MAP, MOUNT_CLASS_MAP, PLAYER_CLASS_MAP,
+  BEHAVIOUR_NODE_ROW_MAP, BOTW_DESCOPES, CAMERA_SHOT_NODE_MAP, DATA_SCHEMA_CLASS_MAP, MANAGER_CLASS_MAP, MOUNT_CLASS_MAP, PARAMETER_REGISTRATION_MAP, PLAYER_CLASS_MAP, QUERY_NODE_ROW_MAP,
 } from '@/lib/catalog/ingest/botw';
 import { auditColumns } from '@/lib/catalog/ingest/fieldMap';
 import { CPP_RECORD_COLUMNS, parseCppDecls } from '@/lib/catalog/ingest/cppDecls';
@@ -84,7 +84,9 @@ describe('BOTW item-7b manager specs (W31)', () => {
     expect(SCHEMA).toHaveLength(6);
     expect(at[0]).toBe(BOTW.tables.indexOf(SCHEMA[5]) + 1); // directly after the 7a block's last spec
     const firstRow = BOTW.tables.find((t) => t.map === BEHAVIOUR_NODE_ROW_MAP)!;
-    expect(BOTW.tables.indexOf(firstRow)).toBe(at[2] + 1);
+    // W32: the Query row's pair (a decls spec and its registration spec) sits between this block and the first generic node row.
+    expect(BOTW.tables.filter((t) => t.map === QUERY_NODE_ROW_MAP || t.map === PARAMETER_REGISTRATION_MAP)).toHaveLength(2);
+    expect(BOTW.tables.indexOf(firstRow)).toBe(at[2] + 1 + 2);
     // The NPC's AI decls spec still ends the cpp-decls block, its twin is still last of the table, and every handle spec follows the block.
     const lastDecl = DECLS.at(-1)!;
     expect(lastDecl.map).toBe(BEHAVIOUR_NODE_ROW_MAP);

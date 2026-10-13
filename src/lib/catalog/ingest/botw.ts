@@ -299,6 +299,30 @@ export const MANAGER_CLASS_MAP: FieldMap = botwClassMap({
     + 'version-flag set'),
 });
 
+/* ── query nodes ← the condition folder (W32) ──────────────────────────── */
+
+/**
+ * The condition-query node library: one header per condition and one source implementing it. Every class derives the ONE
+ * engine query base and none extends another node, its fixed hook set is construction, destruction, ONE evaluation hook
+ * and (on most nodes) a loading hook, and there is no per-frame update, so the generic behaviour-node map is wrong for it
+ * (three of its sentences are false here; vault Decisions Z-D129). ONE catalog-neutral map for the whole folder: the spec
+ * carries the plurality `catalogId`, so a reason here never names a catalog. The answer is computed in a body the reader
+ * never reads (F14), and the parameters' scope is read from the registration records, not from the header (F20).
+ */
+export const QUERY_NODE_ROW_MAP: FieldMap = botwClassMap({
+  bases: gap('no home for a CONDITION KIND: every node in the row is a kind of the engine\'s one query base (none of an action '
+    + 'base, none of a general AI node) and none extends another node, so the column is one value repeated; no PoF catalog has '
+    + 'a node-kind field for a condition, and the catalogs hold a rule as free text, not as a node kind'),
+  methods: gap('no home for a condition\'s EVALUATION and LOADING contract: a class record declares construction, destruction, '
+    + 'ONE evaluation hook that returns the answer and, on most nodes, a loading hook (declared once, defined once per host: '
+    + 'the behaviour host and the event-flow host); there is no node lifecycle and no per-frame update; the answer is computed '
+    + 'in a body the reader never reads (F14); no PoF catalog models a callable condition'),
+  fields: gap('no home for a condition\'s PARAMETERS: the fields are plain members that a loading hook registers by address, one '
+    + 'call per member (most nodes that hold any hold one or two, a few up to ten, and more than half hold none); the SCOPE of '
+    + 'a parameter is not written in the header (F20) and is read from the registration records; no PoF catalog has a typed '
+    + 'per-condition parameter field'),
+});
+
 /* ── shared: the generic behaviour-node rows ← src/Game/Actor/Action/** (W09) ── */
 
 /**
@@ -357,6 +381,28 @@ export const PARAMETER_HANDLE_MAP: FieldMap = {
     + 'catalog has a typed per-node parameter field'),
   typeKind: gap('no home for a parameter\'s TYPE KIND: what C++ keywords alone decide (real, integer, boolean, character, void), '
     + 'or named when a library or engine type decides it — the same missing typed parameter field'),
+};
+
+/* ── parameter registrations ← the Query folder's sources, read by `cpp-registrations` (W32) ── */
+
+/**
+ * The parameter-registration records (`ingest/cppRegistrations.ts`): one per call in a loading hook's body that binds a
+ * member by address, read by a THIRD technique over the same glob as its `cpp-decls` twin, so the twin's records never
+ * move (vault Decisions Z-D127, Z-D128). ONE catalog-neutral map, its own because the handle map has no `call` and no
+ * `function` column (the Z-D48 argument: one map per record shape). The two design columns are gaps.
+ */
+export const PARAMETER_REGISTRATION_MAP: FieldMap = {
+  file: dropped('the path is the wrapper identity and provenance.sourceFile already'),
+  line: dropped('a position inside a decompiled file, not a design value'),
+  kind: mapped('data.declKind'),
+  name: mapped('name'),
+  qualifiedName: mapped('data.qualifiedName'),
+  namespace: mapped('data.namespace'),
+  owner: mapped('data.owner'),
+  call: gap('no home for HOW a parameter is bound: the callee names the way a value is loaded (three words in the row, each one '
+    + 'scope or source), the fact the header never writes; no PoF catalog has a binding field on a parameter'),
+  function: gap('no home for WHICH loading hook registered the parameter (the row has one function name, defined once per host); '
+    + 'no PoF catalog has a per-host parameter list'),
 };
 
 /* ── descopes ───────────────────────────────────────────────────────────── */

@@ -30,9 +30,12 @@ const [H, CPP, EMPTY_H] = Object.keys(FILES);
 
 describe('BOTW parameter-handle specs (W11)', () => {
   it('appends one cpp-handles spec per handle-bearing glob after the cpp-decls specs, each beside its twin and in its catalog', () => {
-    expect(DECL_SPECS).toHaveLength(40);
+    expect(DECL_SPECS).toHaveLength(41);
     expect(HANDLE_SPECS).toHaveLength(25);
-    expect(BOTW.tables.slice(DECL_SPECS.length)).toEqual(HANDLE_SPECS);
+    // W32: the Query row's cpp-registrations spec sits inside the pre-handle block (beside its decls twin), so the handle specs are
+    // the tail of the table, not the slice after the cpp-decls count.
+    expect(BOTW.tables.slice(-HANDLE_SPECS.length)).toEqual(HANDLE_SPECS);
+    expect(BOTW.tables.slice(0, -HANDLE_SPECS.length).filter((t) => t.technique !== 'cpp-decls').map((t) => t.technique)).toEqual(['cpp-registrations']);
     const twins = HANDLE_SPECS.map((s) => twinOf(s.file));
     for (const [i, spec] of HANDLE_SPECS.entries()) {
       expect(spec).toMatchObject({ technique: 'cpp-handles', keyColumn: 'qualifiedName', catalogId: twins[i]!.catalogId });
