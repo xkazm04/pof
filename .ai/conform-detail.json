@@ -2725,6 +2725,115 @@
           "evidence": "src/app/api/filesystem/scan-assets/route.ts:179 Traversal excludes directories and stops at 2000 assets, but AssetScanResult reports neither the enumerated population nor exclusion counts and reasons."
         }
       ]
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/image-to-3d-input-gating": {
+      "context": "image-generation",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:46:40.604Z",
+      "techniques": [
+        {
+          "technique": "canonical-pose-rule",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:32 The complete rubric lacks frontal-angle, foreshortening and head-orientation checks, and does not prescribe their mandatory failures."
+        },
+        {
+          "technique": "reference-role-tagging",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:17 The closed role set has no separate colour and material roles; its style role supplies lighting, mood and material together."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:37 Defect classes are unrestricted and VERDICT is explicitly prose rather than a closed token."
+        }
+      ],
+      "withdrawn": {
+        "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
+        "state": "deviation",
+        "at": "2026-10-13T21:47:09.349635+00:00",
+        "reason": "reviewer (sonnet): The claims rest on input-gate.ts and reference-roles.ts, and neither is among this context's files (generated-assets, providers, style-dna and similar), so the verdict is about a different context."
+      }
+    },
+    "71f2dcdd-a894-4fda-a381-1ca0388f2b51/image-to-3d-input-gating": {
+      "context": "visual-gen-core",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:46:40.604Z",
+      "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
+      "techniques": [
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:137 The multiview-to-3d mode bypasses this gate; the traced dispatch validates view data URLs and starts the job without consistency checks."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:130 The implemented refusal helper rejects only fail, so middle-band warnings generate without preparation, re-gating or an explicit override."
+        }
+      ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/image-to-3d-input-gating": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:46:40.604Z",
+      "techniques": [
+        {
+          "technique": "canonical-pose-rule",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:32 The rubric omits the required frontal-angle, foreshortening and head-orientation failure rules."
+        },
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/mesh-views.ts:189 These multiple views inspect an already generated mesh; they are not a reconstruction-source reference set."
+        },
+        {
+          "technique": "part-cut-planning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/mesh-split.ts:188 This operation separates delivered independent objects rather than planning separately commissioned parts of one complex subject."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:56 The parser accepts arbitrary defect strings without closed-class validation; the refusal helper also permits middle-band warnings."
+        },
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:105 Verdict depends solely on the aggregate score, so a reported cropped or frame-edge subject cannot force the required hard failure."
+        }
+      ],
+      "withdrawn": {
+        "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
+        "state": "deviation",
+        "at": "2026-10-13T21:47:09.399233+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on input-gate.ts:208 and :56, which are not among this context's files. The in-context anchors, mesh-views.ts and mesh-split.ts, only show that those files are unrelated to input gating."
+      }
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/image-to-3d-input-gating": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:46:40.604Z",
+      "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
+      "techniques": [
+        {
+          "technique": "reference-role-tagging",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:181 The complete assembler filters unknown roles and sorts recognized roles, but never enforces one reference per role or exactly one identity master."
+        }
+      ]
     }
   }
 }

@@ -1,0 +1,125 @@
+{
+  "schema": "conform-run/1",
+  "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
+  "subject": "image-to-3d-input-gating",
+  "evaluatedAt": "2026-10-13T21:46:40.604773+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "visual-gen-core",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/app/api/visual-gen/generate/route.ts:137 The generation endpoint gates only single-image mode, allowing multi-view jobs to start without individual-view or set-consistency judgments.",
+      "techniques": [
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:137 The multiview-to-3d mode bypasses this gate; the traced dispatch validates view data URLs and starts the job without consistency checks."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:130 The implemented refusal helper rejects only fail, so middle-band warnings generate without preparation, re-gating or an explicit override."
+        }
+      ]
+    },
+    {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/reference-roles.ts:181 The reference assembler emits every recognized reference without rejecting duplicate identity roles, allowing a prompt to declare multiple masters.",
+      "techniques": [
+        {
+          "technique": "reference-role-tagging",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:181 The complete assembler filters unknown roles and sorts recognized roles, but never enforces one reference per role or exactly one identity master."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "procedural-scene-tools",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "image-generation",
+      "reason": "withdrawn after review: reviewer (sonnet): The claims rest on input-gate.ts and reference-roles.ts, and neither is among this context's files (generated-assets, providers, style-dna and similar), so the verdict is about a different context."
+    },
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "visual-gen-mesh-quality-gates",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation rests on input-gate.ts:208 and :56, which are not among this context's files. The in-context anchors, mesh-views.ts and mesh-split.ts, only show that those files are unrelated to input gating."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T21:46:40.604773+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "canonical-pose-rule",
+        "reference-role-tagging",
+        "score-defect-verdict-protocol"
+      ],
+      "deviations": 1,
+      "context": "image-generation",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T21:46:40.604773+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "multi-view-master-reference",
+        "score-defect-verdict-protocol"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-core",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T21:46:40.604773+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "canonical-pose-rule",
+        "multi-view-master-reference",
+        "part-cut-planning",
+        "score-defect-verdict-protocol",
+        "single-subject-plain-background"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T21:46:40.604773+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "reference-role-tagging"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-rigging-conformance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
