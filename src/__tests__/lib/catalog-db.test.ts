@@ -24,3 +24,21 @@ describe('rowToLifecycle', () => {
     expect(rec.lastVerifiedAt).toBeUndefined();
   });
 });
+
+describe('rowToLifecycle - a corrupt ue_assets blob (parity with rowToEntity and the feature-matrix reader)', () => {
+  const base = { catalog_id: 'spellbook', entity_id: 'x', lifecycle: 'planned', last_test_result: null, last_verified_at: null };
+
+  it('does not throw on unparseable JSON - one bad row must not fail the whole list', () => {
+    expect(() => rowToLifecycle({ ...base, ue_assets: '{not json' })).not.toThrow();
+    expect(rowToLifecycle({ ...base, ue_assets: '{not json' }).ueAssets).toEqual([]);
+  });
+
+  it('returns an array even when the blob is valid JSON of another shape (callers spread it)', () => {
+    expect(rowToLifecycle({ ...base, ue_assets: '{"a":1}' }).ueAssets).toEqual([]);
+    expect(rowToLifecycle({ ...base, ue_assets: '"str"' }).ueAssets).toEqual([]);
+  });
+
+  it('keeps only string paths from a mixed array', () => {
+    expect(rowToLifecycle({ ...base, ue_assets: '["/Game/A", 3, null]' }).ueAssets).toEqual(['/Game/A']);
+  });
+});

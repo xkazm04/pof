@@ -23,13 +23,29 @@ function ensureTable() {
   tableEnsured = true;
 }
 
+/**
+ * The `ue_assets` blob as a string[]. Same degrade-don't-throw contract as `rowToEntity`
+ * and the feature-matrix reader: a corrupt or wrong-shaped blob reads as "no recorded assets"
+ * (and is logged), never as an exception that fails every row in the list.
+ */
+function parseUeAssets(raw: unknown, catalogId: string, entityId: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse((raw as string) || '[]');
+    if (Array.isArray(parsed)) return parsed.filter((a): a is string => typeof a === 'string');
+  } catch {
+    /* fall through to the logged fallback */
+  }
+  logger.error(`catalog_lifecycle: unparseable ue_assets for ${catalogId}/${entityId}`);
+  return [];
+}
+
 /** Column row → LifecycleRecord. Pure (exported for unit test). */
 export function rowToLifecycle(row: Record<string, unknown>): LifecycleRecord {
   return {
     catalogId: row.catalog_id as string,
     entityId: row.entity_id as string,
     lifecycle: row.lifecycle as LifecycleState,
-    ueAssets: JSON.parse((row.ue_assets as string) || '[]'),
+    ueAssets: parseUeAssets(row.ue_assets, row.catalog_id as string, row.entity_id as string),
     lastTestResult: (row.last_test_result as TestResult | null) ?? undefined,
     lastVerifiedAt: (row.last_verified_at as string | null) ?? undefined,
   };
