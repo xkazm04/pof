@@ -104,10 +104,25 @@ export interface RecordSpendInput {
   recordedAt?: string;
 }
 
+/** A figure the budget guard sums: finite and non-negative, else 0 (never subtracts from the total). */
+function spendFigure(n: number | undefined): number {
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * The guard reads `recorded_at` as a UTC ISO prefix (`substr(recorded_at, 1, 10)`), so the
+ * write must store exactly that shape: an offset or non-ISO stamp is re-expressed as the UTC
+ * instant it names, and one that names no instant falls back to now - recorded, and counted.
+ */
+function utcRecordedAt(raw: string | undefined): string {
+  const ms = raw === undefined ? Number.NaN : Date.parse(raw);
+  return new Date(Number.isNaN(ms) ? Date.now() : ms).toISOString();
+}
+
 export function recordSpend(input: RecordSpendInput): SpendRecord {
   ensureCliSpendTables();
   const db = getDb();
-  const recordedAt = input.recordedAt ?? new Date().toISOString();
+  const recordedAt = utcRecordedAt(input.recordedAt);
   // Derive status from success when the caller doesn't specify one (keeps the
   // legacy client shape working) — a failed run defaults to 'failed'.
   const status = input.status ?? (input.success === false ? 'failed' : 'completed');
@@ -123,12 +138,12 @@ export function recordSpend(input: RecordSpendInput): SpendRecord {
       input.taskType ?? 'interactive',
       input.taskLabel ?? null,
       input.sessionKey ?? null,
-      input.costUsd,
-      input.tokensIn,
-      input.tokensOut,
-      input.cacheReadTokens ?? 0,
-      input.cacheCreationTokens ?? 0,
-      input.durationMs ?? 0,
+      spendFigure(input.costUsd),
+      Math.round(spendFigure(input.tokensIn)),
+      Math.round(spendFigure(input.tokensOut)),
+      Math.round(spendFigure(input.cacheReadTokens)),
+      Math.round(spendFigure(input.cacheCreationTokens)),
+      Math.round(spendFigure(input.durationMs)),
       input.success === false ? 0 : 1,
       status,
       recordedAt,
