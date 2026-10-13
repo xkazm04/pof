@@ -87,7 +87,7 @@ export function resolveEmitterCue(em: SoundEmitter, bindings: AudioAssetBindings
     return {
       cuePath: binding.cuePath,
       provenance: 'imported',
-      comment: `// Cue path from the recorded UE import of audio set "${binding.setName}".`,
+      comment: `// Cue path from the recorded UE import of audio set "${cppComment(binding.setName)}".`,
     };
   }
 
@@ -102,7 +102,7 @@ export function resolveEmitterCue(em: SoundEmitter, bindings: AudioAssetBindings
   const placeholder = `/Game/Audio/SC_${pascalCase(em.name)}`;
   const why = em.assetSetId
     ? binding
-      ? `audio set "${binding.setName}" is bound to this emitter but has NO recorded UE import`
+      ? `audio set "${cppComment(binding.setName)}" is bound to this emitter but has NO recorded UE import`
       : `this emitter is bound to audio set ${em.assetSetId}, which no longer exists`
     : 'nothing is bound to this emitter and no path was typed';
   return {
@@ -119,6 +119,19 @@ export function resolveEmitterCue(em: SoundEmitter, bindings: AudioAssetBindings
 
 function safeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^(\d)/, '_$1');
+}
+
+/**
+ * User text inside a C++ string literal: backslash first (so the escapes added next
+ * are not themselves doubled), then the quote; line breaks collapse to a space.
+ */
+function cppString(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n\u2028\u2029]+/g, ' ');
+}
+
+/** User text inside a `//` or block comment: one line, and unable to close the block. */
+function cppComment(text: string): string {
+  return text.replace(/[\r\n\u2028\u2029]+/g, ' ').replace(/\*\//g, '* /');
 }
 
 function pascalCase(name: string): string {
@@ -338,7 +351,7 @@ function generateAttenuationCpp(zones: AudioZone[], moduleName: string): Generat
   const zoneInits = zones.map(zone => {
     const name = safeName(zone.name);
     const inner = Math.max(zone.attenuationRadius * 0.3, 50);
-    return `\t// Zone: ${zone.name} (${zone.reverbPreset}, radius: ${zone.attenuationRadius}uu)
+    return `\t// Zone: ${cppComment(zone.name)} (${zone.reverbPreset}, radius: ${zone.attenuationRadius}uu)
 \t{
 \t\tUSoundAttenuation* Att = CreateAttenuationAsset(this, FName(TEXT("${name}")), ${inner.toFixed(0)}.f, ${zone.attenuationRadius.toFixed(0)}.f);
 \t\tZoneAttenuations.Add(FName(TEXT("${name}")), Att);
@@ -455,7 +468,7 @@ function generateAudioVolumeCpp(doc: AudioSceneDocument, moduleName: string): Ge
       `CustomReverb.LateDelay = ${reverb.lateDelay}f;`,
     ].map(l => `\n *   Vol_${name}->${l}`).join('') : '';
     return `/*
- * Zone: ${zone.name}
+ * Zone: ${cppComment(zone.name)}
  * Shape: ${zone.shape}, Reverb: ${zone.reverbPreset}, Occlusion: ${zone.occlusionMode}
  * Position: (${zone.x}, ${zone.y}), Attenuation: ${zone.attenuationRadius}uu, Priority: ${zone.priority}
  *
@@ -611,7 +624,7 @@ function generateEmitterSpawnerCpp(
 \t\tFEmitterDefinition Def;
 \t\tDef.EmitterName = FName(TEXT("${name}"));
 \t\t${cue.comment}
-\t\tDef.SoundCue = TSoftObjectPtr<USoundCue>(FSoftObjectPath(TEXT("${cue.cuePath}")));
+\t\tDef.SoundCue = TSoftObjectPtr<USoundCue>(FSoftObjectPath(TEXT("${cppString(cue.cuePath)}")));
 \t\tDef.WorldPosition = FVector(${(em.x * EMITTER_SCALE).toFixed(0)}.f, ${(em.y * EMITTER_SCALE).toFixed(0)}.f, 0.f);
 \t\tDef.VolumeMultiplier = ${em.volumeMultiplier.toFixed(2)}f;
 \t\tDef.PitchMin = ${em.pitchMin.toFixed(2)}f;
@@ -773,7 +786,7 @@ function generateMetaSoundCpp(zones: AudioZone[], moduleName: string): Generated
     return `\t{
 \t\tFAmbientLayerConfig Config;
 \t\tConfig.ZoneName = FName(TEXT("${name}"));
-\t\tConfig.SoundscapeDescription = TEXT("${zone.soundscapeDescription.replace(/"/g, '\\"').replace(/\n/g, ' ')}");
+\t\tConfig.SoundscapeDescription = TEXT("${cppString(zone.soundscapeDescription)}");
 ${fade}
 \t\tLayerConfigs.Add(Config);
 \t}`;
@@ -846,7 +859,7 @@ void UProceduralAmbientManager::CrossfadeToLayer(FName FromZone, FName ToZone)
 // ─── 6. Scene Manager ─────────────────────────────────────────────────────────
 
 function generateSceneManagerHeader(doc: AudioSceneDocument, apiMacro: string): GeneratedFile {
-  const content = `// Auto-generated from POF Audio Scene Editor — Scene: ${doc.name}
+  const content = `// Auto-generated from POF Audio Scene Editor — Scene: ${cppComment(doc.name)}
 #pragma once
 
 #include "CoreMinimal.h"
@@ -887,7 +900,7 @@ private:
 }
 
 function generateSceneManagerCpp(doc: AudioSceneDocument, moduleName: string): GeneratedFile {
-  const content = `// Auto-generated from POF Audio Scene Editor — Scene: ${doc.name}
+  const content = `// Auto-generated from POF Audio Scene Editor — Scene: ${cppComment(doc.name)}
 #include "AudioSceneManager.h"
 
 void UAudioSceneManager::Initialize(FSubsystemCollectionBase& Collection)
