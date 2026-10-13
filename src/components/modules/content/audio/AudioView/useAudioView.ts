@@ -155,9 +155,12 @@ export function useAudioView() {
     // Creating opens the new scene: send the open scene's buffered ops first.
     sceneBuffer.flush();
     setIsCreating(true);
-    await createDoc({ name: newDocName.trim() });
-    setNewDocName('');
-    setIsCreating(false);
+    try {
+      const created = await createDoc({ name: newDocName.trim() });
+      if (created) setNewDocName('');
+    } finally {
+      setIsCreating(false);
+    }
   }, [newDocName, createDoc, sceneBuffer]);
 
   // ── Generate ──

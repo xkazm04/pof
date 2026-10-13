@@ -18,10 +18,12 @@ const scene: AudioSceneDocument = {
 
 const clis = new Map<string, { sendPrompt: ReturnType<typeof vi.fn>; isRunning: boolean }>();
 
+const createDocMock = vi.fn();
+
 vi.mock('@/hooks/useAudioScene', () => ({
   useAudioScene: () => ({
     docs: [scene], summary: null, activeDoc: scene, isLoading: false, error: null,
-    retry: vi.fn(), setActiveDocId: vi.fn(), createDoc: vi.fn(), updateDoc: vi.fn(),
+    retry: vi.fn(), setActiveDocId: vi.fn(), createDoc: createDocMock, updateDoc: vi.fn(),
     commitDoc: vi.fn().mockResolvedValue(undefined), deleteDoc: vi.fn(), refetch: vi.fn(),
   }),
 }));
@@ -46,7 +48,10 @@ vi.mock('@/hooks/useModuleReviewCli', () => ({
 
 import { useAudioView } from '@/components/modules/content/audio/AudioView/useAudioView';
 
-beforeEach(() => clis.clear());
+beforeEach(() => {
+  clis.clear();
+  createDocMock.mockReset();
+});
 
 describe('useAudioView — the event prompt carries the open scene budget', () => {
   it('sends one prompt stating the scene pool 40 and voice limit 20', () => {
@@ -60,3 +65,34 @@ describe('useAudioView — the event prompt carries the open scene budget', () =
     expect(prompt).toMatch(/voice limit of 20\b/);
   });
 });
+
+describe('useAudioView — handleCreateDoc error recovery', () => {
+  it('preserves newDocName when createDoc returns null and clears it only on success', async () => {
+    createDocMock.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 99, name: 'Dungeon' });
+    const { result } = renderHook(() => useAudioView());
+
+    act(() => result.current.setNewDocName('Dungeon'));
+    await act(async () => { await result.current.handleCreateDoc(); });
+
+    expect(result.current.isCreating).toBe(false);
+    expect(result.current.newDocName).toBe('Dungeon');
+
+    await act(async () => { await result.current.handleCreateDoc(); });
+    expect(result.current.isCreating).toBe(false);
+    expect(result.current.newDocName).toBe('');
+  });
+
+  it('resets isCreating and preserves newDocName when createDoc rejects', async () => {
+    createDocMock.mockRejectedValueOnce(new Error('SQLITE_BUSY'));
+    const { result } = renderHook(() => useAudioView());
+
+    act(() => result.current.setNewDocName('Boss Arena'));
+    await act(async () => {
+      await result.current.handleCreateDoc().catch(() => {});
+    });
+
+    expect(result.current.isCreating).toBe(false);
+    expect(result.current.newDocName).toBe('Boss Arena');
+  });
+});
+
