@@ -949,6 +949,116 @@
         "at": "2026-10-13T02:22:28.352708+00:00",
         "reason": "reviewer (sonnet): The 'zero hits' search claim is contradicted: BuildConfigSelector/ProfileEditor.tsx, which the evidence itself cites, has an 'Archive Directory' field and an 'Archive' toggle, and constants.ts:17 only lists build-config options without showing the supply-chain precondition is absent."
       }
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/game-economy-tuning": {
+      "context": "inventory-economy-simulator",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T03:19:23.655Z",
+      "worker": "b4045deb-e4a9-4aa9-bf5b-2274b210df72",
+      "techniques": [
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/item-economy-engine.ts:299 This engine applies nominal income and spending, then clamps negative balances without recording the resulting accounting discrepancy or evaluating a balance band."
+        },
+        {
+          "technique": "intransitive-equilibrium-solving",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/economy/item-economy-engine.ts:326 Equipment selection uses a transitive scalar power comparison, rather than counter-matchup payoffs and usage mixtures."
+        },
+        {
+          "technique": "rarity-inflation-and-affix-saturation-alerts",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/item-economy-verdicts.ts:171 The five detectors and coverage handling exist, but inflation measures rare-or-better share against early progression instead of current top-tier drop rate against a design baseline."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/item-economy-engine.ts:243 DEFAULT_FAUCETS includes the vendor-sale converter with a declared item input, but this reduction ignores node kind and input-leg consumption."
+        }
+      ]
+    },
+    "ddb8a1b1-4393-4887-a986-8b5e81ae6ae2/game-economy-tuning": {
+      "context": "loot-simulation",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T03:19:23.655Z",
+      "worker": "b4045deb-e4a9-4aa9-bf5b-2274b210df72",
+      "techniques": [
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/economy/EconomySummaryGrid.tsx:16 Gold/Hour is a literal profile value; the inspected economy panels provide no source/drain throughput calculation or band verdict behind it."
+        },
+        {
+          "technique": "rarity-inflation-and-affix-saturation-alerts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/MonteCarloSim.tsx:36 Rarity simulation reports count distributions without mid/endgame progression, a design-baseline inflation comparison, or separate decay verdicts that identify missing measurements."
+        }
+      ]
+    },
+    "074a6d1f-3e33-45a5-8144-5ef2af335d36/game-economy-tuning": {
+      "context": "loot-affix-core",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T03:19:23.655Z",
+      "worker": "b4045deb-e4a9-4aa9-bf5b-2274b210df72",
+      "techniques": [
+        {
+          "technique": "rarity-inflation-and-affix-saturation-alerts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/AffixRollSimulator/index.tsx:132 The weighted pool is sampled and frequencies are normalized, but neither the hook nor renderer supplies a saturation severity, threshold comparison, or unmeasured verdict."
+        }
+      ]
+    },
+    "ca5add2a-febe-405e-a1dc-2597c8e9d14a/game-economy-tuning": {
+      "context": "economy-simulator",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T03:19:23.655Z",
+      "worker": "b4045deb-e4a9-4aa9-bf5b-2274b210df72",
+      "techniques": [
+        {
+          "technique": "economy-philosophy-multipliers",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/simulation-engine.ts:352 The reward multiplier scales every rarity-selection weight equally and therefore cancels during normalization, while actual drop frequency ignores it; the generosity axis does not govern actual reward frequency."
+        },
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/simulation-engine.ts:328 The declared death-penalty drain frequency is 1.5 occurrences/hour, but execution instead uses a separate level-dependent probability and ignores that frequency, so the specification does not describe actual drain throughput."
+        },
+        {
+          "technique": "progression-curve-shape-tests",
+          "verdict": "deviation",
+          "evidence": "src/lib/balance/canon-conformance.ts:168 The checker evaluates consecutive-ratio variation but returns immediately for a constant-ratio family without checking its growth parameter against the parsed canonical base, omitting the required subsequent coefficient check."
+        },
+        {
+          "technique": "structural-economy-simulation-before-numbers",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/simulation-engine.ts:294 The loop/converter economy is simulated directly with authored frequencies, agent efficiency, and stochastic draws; searches found no preceding deterministic unit-rate topology walk."
+        },
+        {
+          "technique": "tornado-sensitivity-sweeps",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/EconomySimulatorView/TornadoSection.tsx:28 The sweep applies one uniform 50% range to base amounts without per-input plausibility provenance or justification of equal uncertainty widths, so the ranking is not grounded in decision-specific ranges."
+        },
+        {
+          "technique": "wealth-concentration-and-price-imbalance-alerts",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/simulation-engine.ts:637 Gini alerts exist, but the price detector combines a half-cap price with income from metrics[Math.floor(metrics.length / 2)], rather than evaluating both at the same progression point."
+        }
+      ],
+      "registryProposal": "Resolve the denominator conflict in faucet-sink-balance-band.md: lines 35-38 normalize net flow by faucet throughput, whereas procedure lines 67-70 require the larger of inflow and outflow."
     }
   }
 }

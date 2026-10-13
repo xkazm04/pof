@@ -11533,7 +11533,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/economy/simulation-engine.ts:637 The triviality detector prices goods at half the configured level cap while using income from the middle time sample, so its price and income can describe different progression points.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "encounter-balance-simulation",
@@ -13852,7 +13856,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/economy/item-economy-engine.ts:243 The inventory engine counts vendor-sale conversion output as unconditional gold income without consuming its declared item input, leaving the receiving economy funded by unmetered stock.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-memory",
@@ -15530,7 +15538,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/AffixRollSimulator/index.tsx:132 The affix pool audit displays sampled frequencies using category colors but does not flag a modifier exceeding the standard's 20% saturation threshold.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "module-design",
@@ -15932,7 +15944,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/economy/EconomySummaryGrid.tsx:16 The economy summary displays fixed gold-per-hour strings rather than a result derived from enumerated sources and drains with a measured balance band.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "encounter-balance-simulation",
