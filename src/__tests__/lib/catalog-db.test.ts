@@ -1,5 +1,3 @@
-import { describe, it, expect } from 'vitest';
-import { rowToLifecycle } from '@/lib/catalog-db';
 import { describe, it, expect, vi } from 'vitest';
 import Database from 'better-sqlite3';
 
@@ -16,7 +14,7 @@ vi.mock('@/lib/db', async (importOriginal) => {
   };
 });
 
-import { rowToLifecycle, rowToEntity, upsertLifecycle, upsertEntity } from '@/lib/catalog-db';
+import { rowToLifecycle, upsertLifecycle, upsertEntity } from '@/lib/catalog-db';
 
 describe('rowToLifecycle', () => {
   it('maps a full row', () => {
