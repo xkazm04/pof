@@ -263,3 +263,33 @@ describe('CombatSimulatorView — scenarioSignature normalization', () => {
   });
 });
 
+describe('CombatSimulatorView — ScenarioBuilder ability selection parity', () => {
+  it('counts only selected abilities present in available abilities and keeps Select all enabled when a catalog ability is unselected', () => {
+    const prevAbilities = storeState.abilities;
+    try {
+      storeState.abilities = [
+        { id: 'ga-melee-attack', name: 'Melee Attack', type: 'melee', baseDamage: 10, cooldownSec: 1, manaCost: 0, range: 2, isAoE: false },
+        { id: 'ga-custom-slash', name: 'Custom Slash', type: 'melee', baseDamage: 15, cooldownSec: 2, manaCost: 0, range: 2, isAoE: false },
+      ];
+      render(<CombatSimulatorView />);
+      // Only 1 of the 2 available abilities ('ga-melee-attack') is in default selectedAbilities (which has 5 IDs)
+      expect(screen.getByText('(1/2)')).toBeTruthy();
+
+      // Even if 5 abilities are in the catalog (matching selectedAbilities.length === 5) with 1 unselected custom ability, Select all must remain enabled
+      cleanup();
+      storeState.abilities = [
+        { id: 'ga-melee-attack', name: 'Melee Attack', type: 'melee', baseDamage: 10, cooldownSec: 1, manaCost: 0, range: 2, isAoE: false },
+        { id: 'ga-combo-finisher', name: 'Combo Finisher', type: 'melee', baseDamage: 20, cooldownSec: 3, manaCost: 0, range: 2, isAoE: false },
+        { id: 'ga-dodge', name: 'Dodge', type: 'dodge', baseDamage: 0, cooldownSec: 4, manaCost: 0, range: 0, isAoE: false },
+        { id: 'ga-fireball', name: 'Fireball', type: 'ranged', baseDamage: 25, cooldownSec: 3, manaCost: 10, range: 10, isAoE: false },
+        { id: 'ga-custom-slash', name: 'Custom Slash', type: 'melee', baseDamage: 15, cooldownSec: 2, manaCost: 0, range: 2, isAoE: false },
+      ];
+      render(<CombatSimulatorView />);
+      expect(screen.getByText('(4/5)')).toBeTruthy();
+      const selectAllBtn = screen.getByRole('button', { name: 'Select all' }) as HTMLButtonElement;
+      expect(selectAllBtn.disabled).toBe(false);
+    } finally {
+      storeState.abilities = prevAbilities;
+    }
+  });
+});

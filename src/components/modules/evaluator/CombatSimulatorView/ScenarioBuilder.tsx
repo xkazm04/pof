@@ -41,6 +41,7 @@ export function ScenarioBuilder({
         ? selectedAbilities.filter((x) => x !== id)
         : [...selectedAbilities, id],
     );
+  const selectedCount = abilities.filter((a) => selectedAbilities.includes(a.id)).length;
 
   return (
     <SurfaceCard className="p-4">
@@ -97,13 +98,13 @@ export function ScenarioBuilder({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-2xs text-text-muted font-medium">
-              Abilities <span className="text-cyan-400">({selectedAbilities.length}/{abilities.length})</span>
+              Abilities <span className="text-cyan-400">({selectedCount}/{abilities.length})</span>
             </label>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setSelectedAbilities(abilities.map((a) => a.id))}
-                disabled={selectedAbilities.length === abilities.length}
+                disabled={abilities.length === 0 || selectedCount === abilities.length}
                 className="px-1.5 py-0.5 rounded text-2xs text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Select all
@@ -111,7 +112,7 @@ export function ScenarioBuilder({
               <button
                 type="button"
                 onClick={() => setSelectedAbilities([])}
-                disabled={selectedAbilities.length === 0}
+                disabled={selectedCount === 0}
                 className="px-1.5 py-0.5 rounded text-2xs text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Clear
