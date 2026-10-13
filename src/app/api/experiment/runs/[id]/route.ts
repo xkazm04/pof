@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getExperimentRun, deleteExperimentRun } from '@/lib/ue-experiment/experiment-db';
 
 /** GET /api/experiment/runs/:id — a persisted run's full detail (for A-B compare). */
@@ -21,7 +22,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
  * history is that an old baseline is still there to compare against). This is the explicit,
  * user-driven counterpart to that decision — the reason `deleteExperimentRun` exists.
  */
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const { id } = await params;
     if (!deleteExperimentRun(id)) return apiError('experiment run not found', 404);
