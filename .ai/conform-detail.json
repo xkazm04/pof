@@ -731,6 +731,53 @@
           "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:30 Genome trait axes define static gameplay stats and do not manage an agent memory store requiring decay."
         }
       ]
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/eval-harness": {
+      "context": "quality-evaluation-api",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T00:06:40.636Z",
+      "worker": "e76977a5-196c-4685-9227-bffcb822ca01",
+      "techniques": [
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:342 The executor runs these tools in ctx.projectPath with permission skipping; searches of the harness implementation found no declared holdout or enumeration protecting its measurement surfaces."
+        },
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/run-diff.ts:151 diffRuns reports whole-run spend, duration and session deltas, with no both-succeeded subset or its denominator; the API returns this result directly."
+        }
+      ]
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/eval-harness": {
+      "context": "status-health-dashboard",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T00:06:40.636Z",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "scripts/model-benchmark.ts:79 The benchmark persists candidate identity and score but omits the judge identity and rubric version; the opened BenchmarkSample schema and database table provide no fields for them."
+        },
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "scripts/model-benchmark.ts:89 The complete benchmark main path selects and can persist the highest median without repeats, a within-condition SD, an instrument-resolution check or a draw outcome."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e76977a5-196c-4685-9227-bffcb822ca01",
+        "state": "deviation",
+        "at": "2026-10-13T00:08:35.421505+00:00",
+        "reason": "reviewer (sonnet): The anchor scripts/model-benchmark.ts is not among the context's paths (src/components/status/* and the dev-inspector files); the status components never call it, so the verdict is about the benchmark producer, not this context's code."
+      }
     }
   }
 }

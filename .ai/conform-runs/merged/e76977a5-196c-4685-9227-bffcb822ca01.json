@@ -1,0 +1,83 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e76977a5-196c-4685-9227-bffcb822ca01",
+  "subject": "eval-harness",
+  "evaluatedAt": "2026-10-13T00:06:40.636324+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "quality-evaluation-api",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/harness/run-diff.ts:151 The run-diff endpoint compares total spend across runs without also reporting a comparison restricted to outcomes where both succeeded.",
+      "techniques": [
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:342 The executor runs these tools in ctx.projectPath with permission skipping; searches of the harness implementation found no declared holdout or enumeration protecting its measurement surfaces."
+        },
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/run-diff.ts:151 diffRuns reports whole-run spend, duration and session deltas, with no both-succeeded subset or its denominator; the API returns this result directly."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "eval-harness",
+      "context": "ue5-bridge-monitoring",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "ai-behavior-testing",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "catalog-browser-ui",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "status-health-dashboard",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor scripts/model-benchmark.ts is not among the context's paths (src/components/status/* and the dev-inspector files); the status components never call it, so the verdict is about the benchmark producer, not this context's code."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T00:06:40.636324+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "candidate-write-access",
+        "outcome-conditioned-cost"
+      ],
+      "deviations": 1,
+      "context": "quality-evaluation-api",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T00:06:40.636324+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "judge-stability",
+        "resolution-precondition"
+      ],
+      "deviations": 1,
+      "context": "status-health-dashboard",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
