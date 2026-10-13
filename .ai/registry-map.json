@@ -8735,7 +8735,11 @@
           "revision": 8,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:28 This folder only formats already-typed LogEntry rows; a search of src/components/cli/TerminalOutput found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, or claude.cmd.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "terminal-multiplexing",
@@ -8905,7 +8909,11 @@
           "revision": 8,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/suggestionIntents.ts:150 On any unsuccessful run except a collect prompt, Retry starts a fresh Claude session and resends the original prompt, so a crash or timeout drops the stored thread instead of keeping it until the child says the thread is gone or poisoned.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "fleet-orchestration",
@@ -9098,7 +9106,11 @@
           "revision": 8,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/cli-task.ts:152 The shared structured-answer parser keeps the first @@CALLBACK block and JSON.parses it once, so an echoed example can beat the real answer and no extraction rung is recorded.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "terminal-multiplexing",
@@ -16708,7 +16720,11 @@
           "revision": 8,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:185 These hooks only hand a prompt to a mounted terminal tab; a search of src/hooks found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, or claude.cmd.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "eval-harness",
@@ -17861,7 +17877,11 @@
           "revision": 8,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/checklist/complete/route.ts:13 These routes record checklist completion, spend, and task rows, and the only process they launch is UnrealBuildTool; the listed route directories contain no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, or claude.cmd.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-runtime-assembly",

@@ -2979,6 +2979,287 @@
           "evidence": "src/lib/status/statusModel.ts:615 Enforces that completion claims meet strict numerical evaluation rubrics before marking a cell verified."
         }
       ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/agent-cli-transport": {
+      "context": "cli-terminal-shell",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:49:56.871Z",
+      "worker": "e0abd0f7-aec9-4b3a-a733-bd8042538550",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/dispatchHealth.ts:4 Health here counts dispatch bus events, not whether the agent binary is installed or authorized."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/CompactTerminal.tsx:33 The POST carries module and task labels for the spend ledger, not a seat-versus-key choice."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:529 The shell consumes an already-typed host SSE result; it does not parse the CLI stdout dialect."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:504 Edit and Write are recorded after they appear on the stream; this module never sets a scan or edit stance."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:836 The shell stores the model the server already resolved; it holds no dated CLI capability table."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:840 A failed query POST becomes an error phase; this reducer does not choose an alternate provider or a deterministic floor."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalHeader.tsx:118 The header prints the model string and does not assert stance, billing, or sandbox posture from the child."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:500 Tool events are appended as completed log rows; the SSE switch has no mid-turn approval request to answer."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/suggestionIntents.ts:150 Failed-task Retry unbinds the thread for every error. The persisted claudeSessionId stays null: setClaudeSessionId has no call site, and the live id is only useTaskQueue memory."
+        }
+      ]
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/agent-cli-transport": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:49:56.871Z",
+      "worker": "e0abd0f7-aec9-4b3a-a733-bd8042538550",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:203 The only pre-call check is a spend-budget verdict, not an install or auth probe of the agent binary."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useCliSpend.ts:41 This reads a spend dashboard; it does not choose seat versus metered billing."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useChecklistCLI.ts:63 The hook consumes a callback status that was already settled; it does not parse CLI stdout."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleActions.ts:41 The dispatch is a prompt string to a tab, with no read-only or edit stance."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleReviewCli.ts:154 A review task is built and executed with no dated CLI capability lookup."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleActions.ts:39 That fallback is a terminal-ready timer, not a rung for a missing agent binary."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:257 Skill ids are stored on the tab for later prompt injection; nothing asks the model to echo a delivery token."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleReviewCli.ts:128 A fix task is launched through the module CLI with no permission-request handler."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:66 sessionKey matches a UI tab, and these hooks never pass a child thread id back to the agent."
+        }
+      ]
+    },
+    "2a39555c-9199-48bf-b54a-6a13db05036c/agent-cli-transport": {
+      "context": "cli-terminal-system",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:49:56.871Z",
+      "worker": "e0abd0f7-aec9-4b3a-a733-bd8042538550",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-dispatch.ts:21 This function posts a window event when a tab is mounted; it does not probe the binary or its login."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-spend-db.ts:51 The spend table stores cost after the run; it does not strip or inject a billing key."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "deviation",
+          "evidence": "src/lib/cli-task.ts:152 One regex takes the first marker, then a single JSON.parse. There is no last-block preference, fenced-block rung, or rung telemetry."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-task.ts:311 Read-only here selects which prompt section is attached, not a CLI mode that cannot write."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "deviation",
+          "evidence": "src/lib/cli-task.ts:92 The structured-report shape is prompt text, with no verification date, tool version, or native schema-constraint flag."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-dispatch.ts:18 The timer covers a tab that never announces ready, not an absent agent binary."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-dispatch.ts:26 The event carries the prompt and task type, not argv, env, or an auth record observed from the child."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-task.ts:33 The answer path is a marker in the model text, not a mid-turn permission callback."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "src/types/cli-task-registry.ts:23 The id kept here is a server execution to kill, not a child thread to resume."
+        }
+      ]
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/agent-cli-transport": {
+      "context": "cli-terminal-output",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:49:56.871Z",
+      "worker": "e0abd0f7-aec9-4b3a-a733-bd8042538550",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:119 The hook groups log rows for paint; it never asks whether an agent binary can answer."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:74 The only credential-shaped action is copying selected text to the clipboard."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:28 Input is an already-typed LogEntry; this truncates it for display and does not parse a CLI envelope."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/constants.ts:26 Edit is an icon for a tool name that already ran, not a write denial."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/constants.ts:19 Tool rows are icon mappings, not dated CLI capability cells."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:25 fallback here is a color class for an unknown log type, not a missing-binary rung."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:76 This pulls UE class and file names out of display text, not the child's argv, env, or auth record."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:93 A text selection becomes a fix prompt; there is no pending approval bound to a child permission request."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:271 resume is the caption for the Ctrl+Enter shortcut, not a stored child thread id."
+        }
+      ]
+    },
+    "6540a636-c13b-4437-a682-d5c71b7d71b4/agent-cli-transport": {
+      "context": "platform-services-api",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T22:49:56.871Z",
+      "worker": "e0abd0f7-aec9-4b3a-a733-bd8042538550",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/packaging/preflight/route.ts:51 The binary this route resolves is UnrealBuildTool, not a coding-agent CLI."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/cli-spend/route.ts:56 The route reports recorded cost and the model-policy pin; it does not strip or inject an API key."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/checklist/complete/route.ts:34 The body is an application completion record, not a CLI result envelope."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/packaging/preflight/route.ts:55 Those flags are UnrealBuildTool arguments, not an agent read-only or edit stance."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/cli-spend/route.ts:60 This reads the app model policy for a cost plan; it is not a dated matrix of CLI flag support."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/scenario/route.ts:15 That refusal is a missing Scenario texture key, not a rung under an absent agent CLI."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/cli-task-registry/route.ts:98 The registry stores an execution id for later kill; it does not read the child's argv, env, or auth report."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/notify/gate/route.ts:75 This sends a webhook for a catalog gate-verdict sample, not a verdict back to a child permission request."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/cli-task-registry/route.ts:23 sessionId filters task-registry rows; it is not passed back as a child thread to resume."
+        }
+      ],
+      "registryProposal": "The golden path already assigns live token rendering to streaming-output and process mechanics to subprocess-lifecycle, but it never says prompt dispatchers, log painters, and callback HTTP routes are outside this subject, so those slices get scored as if they were the spawn adapter."
     }
   }
 }
