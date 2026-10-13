@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { cloneElement, useCallback, useEffect, useId, useMemo, useState, type ReactElement } from 'react';
 import { Trash2, Upload, RefreshCw, Loader2, Star, Search, X, AlertTriangle, Sparkles } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -83,6 +83,8 @@ export function AudioLibraryPanel({ onMoreTakes }: AudioLibraryPanelProps = {}) 
   const [data, setData] = useState<LibraryData>({ sets: [], assets: [], usage: null, audioDir: null, disk: null });
   const [reality, setReality] = useState<ImportReality>({ bySet: {}, preflight: null });
   const [loading, setLoading] = useState(true);
+  /** Why the library read failed - kept apart from "no rows" so a failure never reads as an empty library. */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   /** The set whose import was refused, so the inline banner can offer a real retry. */
@@ -100,6 +102,7 @@ export function AudioLibraryPanel({ onMoreTakes }: AudioLibraryPanelProps = {}) 
         // map empty, which renders as "never imported" — the honest default.
         tryApiFetch<unknown>('/api/audio/import-result'),
       ]);
+      setLoadError(res.ok ? null : res.error);
       if (res.ok) {
         setData({
           sets: res.data.sets, assets: res.data.assets,
@@ -363,7 +366,13 @@ export function AudioLibraryPanel({ onMoreTakes }: AudioLibraryPanelProps = {}) 
 
         {loading && <div className="text-2xs text-text-muted">Loading…</div>}
 
-        {!loading && totalCount === 0 && (
+        {!loading && loadError && (
+          <div className="mb-3" data-testid="audio-library-load-error">
+            <InlineErrorRetry message={`Could not load the audio library: ${loadError}`} onRetry={refresh} dense />
+          </div>
+        )}
+
+        {!loading && !loadError && totalCount === 0 && (
           <div className="text-xs text-text-muted">No audio yet. Generate variations in the Sound Forge tab.</div>
         )}
 
@@ -471,23 +480,26 @@ export function AudioLibraryPanel({ onMoreTakes }: AudioLibraryPanelProps = {}) 
   );
 }
 
-function Facet({ label, children }: { label: string; children: React.ReactNode }) {
+/** Associates the visible label with its control (the `SoundForgePanel.Field` pattern). */
+function Facet({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
+  const id = useId();
   return (
     <div>
-      <label className="block text-2xs uppercase tracking-wider text-text-muted mb-1 font-semibold">{label}</label>
-      {children}
+      <label htmlFor={id} className="block text-2xs uppercase tracking-wider text-text-muted mb-1 font-semibold">{label}</label>
+      {cloneElement(children, { id })}
     </div>
   );
 }
 
-function FacetSelect({ value, onChange, options, testId }: {
+function FacetSelect({ id, value, onChange, options, testId }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   options: [string, string][];
   testId: string;
 }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} data-testid={testId}
+    <select id={id} value={value} onChange={(e) => onChange(e.target.value)} data-testid={testId}
             className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:border-border-bright outline-none">
       {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
     </select>
