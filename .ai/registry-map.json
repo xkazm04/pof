@@ -3566,7 +3566,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 Scanned states are placed by index over count, so one added state moves every node on the ring.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:59c31182b8b6b4db",
+          "evaluatedRevision": 5
         },
         {
           "subject": "motion",
@@ -15233,7 +15237,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 The room drag is mouse listeners on the svg, so leaving the svg or crossing the toolbar overlay runs mouseup and the node lets go, with no pointer capture.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:59c31182b8b6b4db",
+          "evaluatedRevision": 5
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -17105,7 +17113,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 Each dependency-graph module is its own tab stop, which is the tab-order wall canvas-accessibility tells you to turn off.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:59c31182b8b6b4db",
+          "evaluatedRevision": 5
         },
         {
           "subject": "supply-chain",

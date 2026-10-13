@@ -2296,6 +2296,124 @@
         "at": "2026-10-13T10:28:17.424238+00:00",
         "reason": "reviewer (sonnet): The anchor MaterialLabView.tsx:171 is only a `moduleId=\"material-lab\"` prop and shows no absence; the four technique claims all cite that same line, and the context includes an AdvancedTexturePanel I did not trace."
       }
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/canvas-graph": {
+      "context": "level-flow-editor",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:17:22.075Z",
+      "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+      "techniques": [
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:131 Rooms use one roving tab stop, but every link is its own tab stop; arrow keys walk DOM order via focusSibling and do not pan the focused room into view. The per-edge dash animation is also not reduced-motion gated."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 No setPointerCapture in LevelFlowEditor. Any mousemove while dragState is set stages move-room (useLevelFlowEditor.ts:183) with no screen-space threshold, and selection is applied on mousedown."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/index.tsx:117 The comment above says the 18% inset is approximate against pixel NODE_W/NODE_H. LevelFlowEditor itself shares ROOM_W/ROOM_H and uses a 20-wide hit stroke; this diagram does not."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:59 Dragged positions are stored by room id (move-room writes x,y on that room). A new room is a random point in the view with no neighbor or clearance probe, so it can stack."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:90 Every link runs an infinite SMIL dash animation. No population gate and no prefers-reduced-motion check in this folder."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:144 Pan is one translate on the world group; this is the matching inverse. There is no zoom. addRoom repeats the same pan subtraction instead of calling getSVGPoint."
+        }
+      ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/canvas-graph": {
+      "context": "module-topology-graph",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:17:22.075Z",
+      "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+      "techniques": [
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 NexusGraph nodes are clickable <g> elements with no role or tabIndex. FeatureConstellation is role=img and has no list twin. Zoom buttons on DependencyGraph are labelled; Nexus zoom buttons are not."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:141 Click selects a module. No drag, connect, or marquee in DependencyGraph, NexusGraph, or FeatureConstellation."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:75 The y inset is uy*(NODE_H/2+4). On a diagonal that point is inside the rectangle, so the arrowhead is buried. Focus-dimming and bundled counts are present. Constellation edges do use NODE_W/2 on the horizontal side."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/lib/constellation/layout.ts:212 Every column's y depends on the widest layer's length, so one added feature recenters the picture. placeModules keeps curated anchors fixed, but overflow modules are slotted by sorted index i % cols."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/NexusView/NexusGraph.tsx:167 Every node with critical findings pulses for as long as the builds layer is on. No population gate and no reduced-motion check. Constellation's single next-node pulse is one ornament; its entrance delay is by render index."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "conformant",
+          "evidence": "src/lib/topology/moduleGraph.ts:227 Button zoom only, pinned to the graph center through this one function. The 0.5–1.5 clamp is copied in GraphControls and NexusView rather than inside zoomViewBox. No wheel listener."
+        }
+      ]
+    },
+    "9aaa14f4-5109-4e11-a7c5-2684cc02ad11/canvas-graph": {
+      "context": "animation-state-machine-viewer",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:17:22.075Z",
+      "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+      "techniques": [
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:80 Each state is a native button, so Tab stops once per node. No roving tabindex and no list twin in this folder. Search for aria- and tabIndex in AnimationStateMachine found none."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:82 Read-only. The only pointer handler found is click. No drag, capture, or marquee."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "deviation",
+          "evidence": "src/components/ui/svg/graph-edges.ts:65 StateMachineEdges calls computeEdgeGeometry without a size. Nodes are NODE_W 110 by NODE_H 46 CSS pixels at percentage positions, so an 8% inset is not the node border and changes with panel width."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 The grid branch is also column/row index. Bridge input is Array.from(a Set) with no sort before layoutStates, so declaration order is an unstated input."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Completed and sim edges loop forever. Reduced motion is checked (the line above); there is no population gate."
+        }
+      ]
     }
   }
 }
