@@ -1,0 +1,173 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3d7fe3fe-c644-4e6a-92ca-61be83919703",
+ "subject": "codebase-scanning",
+ "evaluatedAt": "2026-10-13T21:14:27.879967+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "gdd-compliance",
+   "subject": "codebase-scanning",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 The anti-pattern list displays at most 100 findings while its header counts the pre-cap population, leaving truncation undisclosed.",
+   "techniques": [
+    {
+     "technique": "causes-beside-the-finding-count",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/index.tsx:143 The published gap count has neither a distinct-cause count nor a statement that the cause relation was not computed."
+    },
+    {
+     "technique": "sensor-pipeline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 The header uses hits.length, but rendering silently caps the list at 100 without reporting how many findings were withheld."
+    }
+   ]
+  },
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "codebase-scanning",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:84 The scan hook retains only 100 fetched findings without disclosing the omitted population beside the displayed backlog.",
+   "techniques": [
+    {
+     "technique": "causes-beside-the-finding-count",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:245 Severity groups publish finding counts without cause attribution, a cause count, or a cause-relation-not-computed disclosure."
+    },
+    {
+     "technique": "finding-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/app/api/module-scan/import/route.ts:85 The ScanTab import endpoint inserts fresh scan-id/index identities on every sweep rather than refreshing a stable finding identity; delta reconciliation does not change this persistence behavior."
+    },
+    {
+     "technique": "sensor-pipeline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:84 STORE_FINDINGS_CAP is 100, and neither this hook nor the reviewed ScanTab components disclose the number omitted by that cap."
+    }
+   ]
+  },
+  {
+   "context": "code-quality-evaluation",
+   "subject": "codebase-scanning",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:182 Zero findings triggers a green clean-result panel even when evaluation failures make the scan incomplete.",
+   "techniques": [
+    {
+     "technique": "causes-beside-the-finding-count",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:98 The summary publishes emissions and severity counts without distinct causes or an explicit cause-relation-not-computed notice."
+    },
+    {
+     "technique": "finding-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/lib/evaluator/finding-collector.ts:247 The cross-scan fingerprint uses module, file, and a normalized description prefix rather than rule identity, containing declaration, and matched-content digest, allowing unrelated findings to collide."
+    },
+    {
+     "technique": "llm-assisted-scanning",
+     "verdict": "deviation",
+     "evidence": "src/lib/evaluator/finding-collector.ts:201 parseFindingsStrict silently filters malformed array entries without counting or reporting them, so a parseable array containing only invalid entries becomes successful zero findings."
+    },
+    {
+     "technique": "sensor-pipeline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:182 The empty-result condition ignores failedModules and renders 'No Issues Found' and 'All evaluated modules passed'; the separate failure warning does not prevent this contradictory clean claim."
+    }
+   ]
+  },
+  {
+   "context": "ue5-filesystem",
+   "subject": "codebase-scanning",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/filesystem/verify-semantic/route.ts:176 Semantic verification can report a class missing after its header failed to read, turning unavailable evidence into an absence finding.",
+   "techniques": [
+    {
+     "technique": "sensor-pipeline",
+     "verdict": "deviation",
+     "evidence": "src/app/api/filesystem/verify-semantic/route.ts:176 Unreadable headers are disclosed but removed from parsedHeaders; findBestMatch still returns missing with zero completeness when no remaining header matches, rather than unknown."
+    },
+    {
+     "technique": "the-tree-is-not-the-population",
+     "verdict": "deviation",
+     "evidence": "src/app/api/filesystem/scan-assets/route.ts:179 Traversal excludes directories and stops at 2000 assets, but AssetScanResult reports neither the enumerated population nor exclusion counts and reasons."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "codebase-scanning",
+   "context": "material-configurator",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T21:14:27.879967+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "codebase-scanning"
+   ],
+   "techniques": [
+    "causes-beside-the-finding-count",
+    "sensor-pipeline"
+   ],
+   "deviations": 1,
+   "context": "gdd-compliance",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T21:14:27.879967+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "codebase-scanning"
+   ],
+   "techniques": [
+    "causes-beside-the-finding-count",
+    "finding-lifecycle",
+    "sensor-pipeline"
+   ],
+   "deviations": 1,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T21:14:27.879967+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "codebase-scanning"
+   ],
+   "techniques": [
+    "causes-beside-the-finding-count",
+    "finding-lifecycle",
+    "llm-assisted-scanning",
+    "sensor-pipeline"
+   ],
+   "deviations": 1,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T21:14:27.879967+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "codebase-scanning"
+   ],
+   "techniques": [
+    "sensor-pipeline",
+    "the-tree-is-not-the-population"
+   ],
+   "deviations": 1,
+   "context": "ue5-filesystem",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

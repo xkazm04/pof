@@ -2647,6 +2647,84 @@
           "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:105 Generation success earns a synced status without rechecking the document; the update preserves an earlier code hash, while SyncStatusPanel accepts synced whenever that hash is nonempty."
         }
       ]
+    },
+    "80cab220-4eac-4a25-8873-f1c42c257174/codebase-scanning": {
+      "context": "core-engine-scan-telemetry",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:14:27.879Z",
+      "worker": "3d7fe3fe-c644-4e6a-92ca-61be83919703",
+      "techniques": [
+        {
+          "technique": "causes-beside-the-finding-count",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:245 Severity groups publish finding counts without cause attribution, a cause count, or a cause-relation-not-computed disclosure."
+        },
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/app/api/module-scan/import/route.ts:85 The ScanTab import endpoint inserts fresh scan-id/index identities on every sweep rather than refreshing a stable finding identity; delta reconciliation does not change this persistence behavior."
+        },
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:84 STORE_FINDINGS_CAP is 100, and neither this hook nor the reviewed ScanTab components disclose the number omitted by that cap."
+        }
+      ]
+    },
+    "8234e336-4af3-4c49-9e31-9740282bdde2/codebase-scanning": {
+      "context": "code-quality-evaluation",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:14:27.879Z",
+      "worker": "3d7fe3fe-c644-4e6a-92ca-61be83919703",
+      "techniques": [
+        {
+          "technique": "causes-beside-the-finding-count",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:98 The summary publishes emissions and severity counts without distinct causes or an explicit cause-relation-not-computed notice."
+        },
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/lib/evaluator/finding-collector.ts:247 The cross-scan fingerprint uses module, file, and a normalized description prefix rather than rule identity, containing declaration, and matched-content digest, allowing unrelated findings to collide."
+        },
+        {
+          "technique": "llm-assisted-scanning",
+          "verdict": "deviation",
+          "evidence": "src/lib/evaluator/finding-collector.ts:201 parseFindingsStrict silently filters malformed array entries without counting or reporting them, so a parseable array containing only invalid entries becomes successful zero findings."
+        },
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:182 The empty-result condition ignores failedModules and renders 'No Issues Found' and 'All evaluated modules passed'; the separate failure warning does not prevent this contradictory clean claim."
+        }
+      ]
+    },
+    "ec9c55a2-90ee-463e-bf53-7fcad9dd29b7/codebase-scanning": {
+      "context": "ue5-filesystem",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:14:27.879Z",
+      "worker": "3d7fe3fe-c644-4e6a-92ca-61be83919703",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/app/api/filesystem/verify-semantic/route.ts:176 Unreadable headers are disclosed but removed from parsedHeaders; findBestMatch still returns missing with zero completeness when no remaining header matches, rather than unknown."
+        },
+        {
+          "technique": "the-tree-is-not-the-population",
+          "verdict": "deviation",
+          "evidence": "src/app/api/filesystem/scan-assets/route.ts:179 Traversal excludes directories and stops at 2000 assets, but AssetScanResult reports neither the enumerated population nor exclusion counts and reasons."
+        }
+      ]
     }
   }
 }
