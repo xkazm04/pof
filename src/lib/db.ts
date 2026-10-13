@@ -246,7 +246,8 @@ function bootstrap(conn: Database.Database): void {
       warning_count INTEGER DEFAULT 0,
       error_count INTEGER DEFAULT 0,
       notes TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      project_id TEXT NOT NULL DEFAULT ''
     )
   `);
 

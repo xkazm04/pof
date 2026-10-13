@@ -356,4 +356,27 @@ describe('an already-stamped DB is untouched', () => {
     expect(again.prepare("SELECT type, name, sql FROM sqlite_master ORDER BY type, name").all()).toEqual(before);
     expect(count(again, 'settings')).toBe(1);
   });
+
+  it('declares project_id in CREATE TABLE build_history (even when user_version skips migration probes) and favorite/promptHash in CREATE TABLE audio_assets', async () => {
+    const file = newDbFile('stamped-no-migrations');
+    const pre = new Database(file);
+    pre.pragma('user_version = 6');
+    pre.close();
+
+    const db = await openThroughApp(file);
+    const bhCols = (db.prepare('PRAGMA table_info(build_history)').all() as { name: string }[]).map((c) => c.name);
+    expect(bhCols).toContain('project_id');
+
+    const { createAudioAssetDb } = await import('@/lib/audio-asset-db');
+    const mem = new Database(':memory:');
+    openHandles.push(mem);
+    const execCalls: string[] = [];
+    const origExec = mem.exec.bind(mem);
+    vi.spyOn(mem, 'exec').mockImplementation(((sql: string) => {
+      execCalls.push(sql);
+      return origExec(sql);
+    }) as typeof mem.exec);
+    createAudioAssetDb(mem);
+    expect(execCalls.some((s) => s.includes('ALTER TABLE audio_assets'))).toBe(false);
+  });
 });

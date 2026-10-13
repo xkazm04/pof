@@ -48,6 +48,8 @@ export function createAudioAssetDb(db: Database.Database): void {
       provider TEXT NOT NULL,
       durationMs INTEGER NOT NULL DEFAULT 0,
       format TEXT NOT NULL,
+      favorite INTEGER NOT NULL DEFAULT 0,
+      promptHash TEXT,
       createdAt INTEGER NOT NULL,
       FOREIGN KEY (setId) REFERENCES audio_sets(id) ON DELETE CASCADE
     );
