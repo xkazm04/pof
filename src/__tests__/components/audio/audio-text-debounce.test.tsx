@@ -168,4 +168,18 @@ describe('SettingsTab — debounced numeric settings', () => {
     expect(screen.getByRole('alert').textContent).toContain('DB is locked');
     expect(pool.value).toBe('64');
   });
+
+  it('renders all 10 ReverbPreset options in Global Reverb Fallback and allows selecting cave/stone-chamber', async () => {
+    const commitSetting = vi.fn().mockResolvedValue(undefined);
+    render(<SettingsTab activeDoc={doc({ globalReverbPreset: 'cave' })} commitSetting={commitSetting} />);
+
+    for (const preset of ['none', 'small-room', 'large-hall', 'cave', 'outdoor', 'underwater', 'metal-corridor', 'stone-chamber', 'forest', 'custom']) {
+      expect(screen.getByRole('button', { name: preset })).toBeTruthy();
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'stone-chamber' }));
+    await settle();
+    expect(commitSetting).toHaveBeenCalledWith('globalReverbPreset', 'stone-chamber');
+  });
 });
+

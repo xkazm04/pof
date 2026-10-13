@@ -10,8 +10,15 @@ import { DEFAULT_EVENTS } from '@/components/modules/content/audio/AudioEventCat
  * scene said 16 voices. The hook now passes the scene as the user sees it.
  */
 
+const baseZone = {
+  id: 'z1', name: 'Crypt Hall', shape: 'rect' as const, x: 0, y: 0, width: 100, height: 100,
+  soundscapeDescription: 'initial silence', reverbPreset: 'cave' as const, reverbDecayTime: 2.5,
+  reverbDiffusion: 0.7, reverbWetDry: 0.5, attenuationRadius: 200,
+  occlusionMode: 'medium' as const, priority: 5, color: '',
+};
+
 const scene: AudioSceneDocument = {
-  id: 7, name: 'Crypt', description: '', zones: [], emitters: [],
+  id: 7, name: 'Crypt', description: '', zones: [baseZone], emitters: [],
   globalReverbPreset: 'none', soundPoolSize: 40, maxConcurrentSounds: 20,
   lastGeneratedAt: null, createdAt: '', updatedAt: '',
 };
@@ -19,12 +26,13 @@ const scene: AudioSceneDocument = {
 const clis = new Map<string, { sendPrompt: ReturnType<typeof vi.fn>; isRunning: boolean }>();
 
 const createDocMock = vi.fn();
+const commitDocMock = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@/hooks/useAudioScene', () => ({
   useAudioScene: () => ({
     docs: [scene], summary: null, activeDoc: scene, isLoading: false, error: null,
     retry: vi.fn(), setActiveDocId: vi.fn(), createDoc: createDocMock, updateDoc: vi.fn(),
-    commitDoc: vi.fn().mockResolvedValue(undefined), deleteDoc: vi.fn(), refetch: vi.fn(),
+    commitDoc: commitDocMock, deleteDoc: vi.fn(), refetch: vi.fn(),
   }),
 }));
 
@@ -51,6 +59,7 @@ import { useAudioView } from '@/components/modules/content/audio/AudioView/useAu
 beforeEach(() => {
   clis.clear();
   createDocMock.mockReset();
+  commitDocMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe('useAudioView — the event prompt carries the open scene budget', () => {
@@ -95,4 +104,26 @@ describe('useAudioView — handleCreateDoc error recovery', () => {
     expect(result.current.newDocName).toBe('Boss Arena');
   });
 });
+
+describe('useAudioView — handleGenerateSoundscape settles buffered zone edits', () => {
+  it('flushes debounced zone edits and builds the soundscape prompt from the settled zone', () => {
+    const { result } = renderHook(() => useAudioView());
+
+    act(() => {
+      result.current.sceneSession.buffer.stageDebounced([
+        { kind: 'patchZone', id: 'z1', patch: { soundscapeDescription: 'rattling chains and distant thunder' } },
+      ]);
+    });
+    expect(commitDocMock).not.toHaveBeenCalled();
+
+    // Pass the pre-edit baseZone; handleGenerateSoundscape must settle() first and resolve the buffered zone.
+    act(() => result.current.handleGenerateSoundscape(baseZone));
+
+    expect(commitDocMock).toHaveBeenCalledTimes(1);
+    const send = clis.get('audio-codegen')!.sendPrompt;
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0]).toContain('rattling chains and distant thunder');
+  });
+});
+
 

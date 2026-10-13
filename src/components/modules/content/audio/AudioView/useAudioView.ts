@@ -178,15 +178,18 @@ export function useAudioView() {
   const handleGenerateZoneCode = useCallback((zone: AudioZone) => {
     const doc = settle();
     if (!doc) return;
+    const latestZone = doc.zones.find((z) => z.id === zone.id) ?? zone;
     dispatchedSceneIdRef.current = doc.id;
-    audioCli.sendPrompt(buildZoneCodegenPrompt(zone, doc, ctx));
+    audioCli.sendPrompt(buildZoneCodegenPrompt(latestZone, doc, ctx));
   }, [settle, ctx, audioCli]);
 
   const activeDocId = activeDoc?.id ?? null;
   const handleGenerateSoundscape = useCallback((zone: AudioZone) => {
-    dispatchedSceneIdRef.current = activeDocId;
-    audioCli.sendPrompt(buildSoundscapeNarrativePrompt(zone, ctx));
-  }, [activeDocId, ctx, audioCli]);
+    const doc = settle();
+    const latestZone = doc?.zones.find((z) => z.id === zone.id) ?? zone;
+    dispatchedSceneIdRef.current = doc?.id ?? activeDocId;
+    audioCli.sendPrompt(buildSoundscapeNarrativePrompt(latestZone, ctx));
+  }, [settle, activeDocId, ctx, audioCli]);
 
   // ── Doc-level field writes ──
   // Zones and emitters go through the session buffer above; these are the

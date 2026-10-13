@@ -1,6 +1,7 @@
 'use client';
 import { useCallback } from 'react';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { REVERB_PRESETS } from '@/components/modules/content/audio/AudioPropertyPanel/constants';
 import type { AudioSceneDocument } from '@/types/audio-scene';
 import { useDebouncedCommit } from './useDebouncedCommit';
 import { BudgetStressPanel } from '@/components/modules/content/audio/AudioView/BudgetStressPanel';
@@ -83,7 +84,7 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
           Global Reverb Fallback
         </label>
         <div className="flex flex-wrap gap-1.5">
-          {(['none', 'small-room', 'large-hall', 'outdoor'] as const).map((preset) => (
+          {REVERB_PRESETS.map((preset) => (
             <button
               key={preset}
               onClick={() => reverb.onChange(preset)}
