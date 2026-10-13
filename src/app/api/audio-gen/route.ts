@@ -24,6 +24,7 @@ import {
   logUsage,
   removeAssetFile,
   removeSetDirectory,
+  resolveAudioPath,
   setAssetFavorite,
   upsertSet,
   type FileRemoval,
@@ -52,6 +53,12 @@ function monthlyQuota(): number {
   return Number.isFinite(env) && env > 0 ? env : DEFAULT_AUDIO_MONTHLY_QUOTA;
 }
 
+/** The Forge asks for 0.5-22 s (`AudioGenRequest.durationSeconds`); omitted means provider's choice. */
+const MIN_DURATION_SECONDS = 0.5;
+const MAX_DURATION_SECONDS = 22;
+/** Set ids are directory names under AUDIO_DIR: UUIDs from `upsertSet`, or a caller-chosen slug. */
+const SET_ID_PATTERN = /^[A-Za-z0-9_-]{1,80}$/;
+
 interface PostBody {
   provider?: string;
   kind?: AudioKind;
@@ -71,6 +78,18 @@ export async function POST(request: NextRequest) {
   const { provider, kind, prompt } = body;
   if (!provider || !kind || !prompt || (!body.setId && !body.setName)) {
     return apiError('Missing provider/kind/prompt or setId/setName', 400);
+  }
+  // Request-shape checks BEFORE the cache and any billed call - the same refuse-early
+  // order as the capability gate below. `setId` becomes a directory name and
+  // DELETE already proves containment; POST must not be the unguarded half.
+  if (body.setId !== undefined && (typeof body.setId !== 'string' || !SET_ID_PATTERN.test(body.setId))) {
+    return apiError('Invalid setId: use 1-80 letters, digits, "_" or "-".', 400);
+  }
+  if (body.durationSeconds !== undefined) {
+    const d = body.durationSeconds;
+    if (typeof d !== 'number' || !Number.isFinite(d) || d < MIN_DURATION_SECONDS || d > MAX_DURATION_SECONDS) {
+      return apiError(`Invalid durationSeconds: expected ${MIN_DURATION_SECONDS}-${MAX_DURATION_SECONDS}, or omit it for the provider's choice.`, 400);
+    }
   }
   const p = getAudioProvider(provider);
   if (!p) return apiError(`Unknown provider: ${provider}`, 400);
@@ -119,7 +138,8 @@ export async function POST(request: NextRequest) {
     : upsertSet(db(), { name: body.setName!, kind, eventKey: body.eventKey ?? null, surface: body.surface ?? null, loopable: !!body.loop });
 
   ensureAudioDir();
-  const setDir = join(AUDIO_DIR, set.id);
+  const setDir = resolveAudioPath(set.id);
+  if (!setDir) return apiError(`Set id "${set.id}" does not resolve inside the audio directory`, 400);
   if (!existsSync(setDir)) mkdirSync(setDir, { recursive: true });
   const assetId = randomUUID();
   const filename = `${assetId}.${result.format}`;

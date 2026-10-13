@@ -122,3 +122,36 @@ describe('PATCH /api/audio-gen', () => {
     expect(patched.data.asset.favorite).toBe(true);
   });
 });
+
+describe('POST /api/audio-gen - request-shape validation (parity with the Forge form and the DELETE containment guard)', () => {
+  const base = { provider: 'elevenlabs', kind: 'sfx' as const };
+
+  it('refuses a setId that would escape the audio root, before any billed call', async () => {
+    process.env.ELEVENLABS_API_KEY = 'sk-test';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Uint8Array([1]), { status: 200 }));
+    for (const setId of ['../escape', '..\escape', 'a/b', '/abs', '..']) {
+      const res = await POST(makePost({ ...base, prompt: `traversal ${setId}`, setId, setName: 'x' }));
+      expect(res.status, `setId ${setId}`).toBe(400);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a durationSeconds the Forge form could never send, before any billed call', async () => {
+    process.env.ELEVENLABS_API_KEY = 'sk-test';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Uint8Array([1]), { status: 200 }));
+    for (const durationSeconds of [-1, 0.1, 23, 1e9, 'long', null]) {
+      const res = await POST(makePost({ ...base, prompt: `dur ${String(durationSeconds)}`, setName: 'dur-set', durationSeconds }));
+      expect(res.status, `duration ${String(durationSeconds)}`).toBe(400);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('still accepts an omitted duration and the 0.5-22s range edges', async () => {
+    process.env.ELEVENLABS_API_KEY = 'sk-test';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(new Uint8Array([1]), { status: 200 }));
+    for (const durationSeconds of [undefined, 0.5, 22]) {
+      const res = await POST(makePost({ ...base, prompt: `ok ${Date.now()}-${durationSeconds}`, setName: 'dur-ok', durationSeconds }));
+      expect(res.status, `duration ${String(durationSeconds)}`).toBe(200);
+    }
+  });
+});
