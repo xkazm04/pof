@@ -2594,7 +2594,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:4 Searches of the listed API directories for AGENTS.md, CLAUDE.md, frontmatter, .cursorrules, and SKILL.md found no matches; these routes forward or store task prompts, and live-token's Gemini system string is assembled by the route rather than injected as a repo instruction file.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "agent-memory",
@@ -8795,7 +8799,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/constants.ts:72 A search of TerminalOutput for AGENTS.md, CLAUDE.md, frontmatter, .cursorrules, and SKILL.md found no matches; STARTER_PROMPTS are clickable user-turn chips in the output renderer, not a repo instruction file a harness injects.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "eval-harness",
@@ -12885,7 +12893,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/harness/executor.ts:83 The harness writes every prior-session learning into a file named AGENTS.md under the project and replays the whole file on the next area, with no admission test, prune, or sharing class.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "session-continuation",
@@ -14015,7 +14027,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/_shared/balance-prompt.ts:41 A search of sub_inventory for AGENTS.md, CLAUDE.md, frontmatter, .cursorrules, and SKILL.md found no matches; buildBalancePrompt derives a one-shot advisor prompt from item data, which this subject distinguishes from a harness-injected instruction file.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "tool-result-economy",

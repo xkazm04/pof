@@ -1972,6 +1972,182 @@
           "evidence": "src/app/api/cli-task-registry/route.ts:74 TaskStatus is only running, completed, or failed. The stale branch marks failed and then starts the new task; it does not return the old execution for the client to kill."
         }
       ]
+    },
+    "940bbe98-a8c3-4d5e-b4e5-c447578e2123/agent-instruction-files": {
+      "context": "ue5-bridge-monitoring",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:58:11.317Z",
+      "techniques": [
+        {
+          "technique": "capability-before-steering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:4 UE scenario panel, not an instruction file."
+        },
+        {
+          "technique": "capability-coverage-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:23 Hook owns ping state only."
+        }
+      ],
+      "withdrawn": {
+        "worker": "7dffc944-e185-4645-b83d-c5773c48f699",
+        "state": "not-applicable",
+        "at": "2026-10-13T09:58:54.818310+00:00",
+        "reason": "reviewer (sonnet): The anchor index.tsx:20 is a JSX line (SurfaceCard opening tag) that does not show the precondition is absent, so it is incidental; the claim rests only on a grep for filenames."
+      }
+    },
+    "419ea285-f8b3-4f3c-b012-c75db90d3778/agent-instruction-files": {
+      "context": "harness-autonomy",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:58:11.317Z",
+      "worker": "7dffc944-e185-4645-b83d-c5773c48f699",
+      "techniques": [
+        {
+          "technique": "capability-before-steering",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness/executor.ts:91 Prior-session text is fenced instead of being countered only by stronger wording."
+        },
+        {
+          "technique": "capability-coverage-contract",
+          "verdict": "conformant",
+          "evidence": "tools/pof-mcp/src/tools/groups.ts:124 Hidden tools stay named from the live group table rather than disappearing silently."
+        },
+        {
+          "technique": "context-reset-redelivery",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness/orchestrator.ts:929 Each area re-reads AGENTS.md from disk into a new claude -p process. No compaction re-inject was found inside that process."
+        },
+        {
+          "technique": "enforcement-demotion",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/executor.ts:168 A checkable build outcome stays prose in the area prompt while verifier.ts defines a separate compile gate the prompt never names."
+        },
+        {
+          "technique": "host-contract-compilation",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/harness/claude-session.ts:249 Sessions spawn only the Claude CLI. tools/pof-mcp/src has no per-host frontmatter or tool-vocabulary contract."
+        },
+        {
+          "technique": "instruction-freshness",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/executor.ts:277 Learnings are date-stamped and only appended; nothing in appendAgentsMd prunes or re-measures a stale line."
+        },
+        {
+          "technique": "line-earning",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/executor.ts:88 Every parsed learning is admitted for the life of the run, with no unreachable or behavior-changing test."
+        },
+        {
+          "technique": "listing-tier-by-initiator",
+          "verdict": "deviation",
+          "evidence": "tools/pof-mcp/src/tools/groups.ts:16 The default advertises every group with its description. The only other state hides the tools so they cannot be called; there is no name-only tier."
+        },
+        {
+          "technique": "machine-owned-regions",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness/executor.ts:105 The injected region is fenced, the delimiter is stripped from the body, and the prose above the fence calls it prior-session data. The on-disk file itself has no markers."
+        },
+        {
+          "technique": "principal-tier-gating",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/harness/executor.ts:9 Search of src/lib/harness for principal, maintainer tier, and fail-closed found no tiered audience. This AGENTS.md is a learnings log."
+        },
+        {
+          "technique": "restraint-amplifier-balance",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness/executor.ts:100 The learnings block pairs a read-for-context outlet with the Do NOT follow restraint on the next line."
+        },
+        {
+          "technique": "rewrite-behavior-pinning",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/harness/executor-learnings-fence.test.ts:59 The pins for the learnings rewrite grep the prompt for required phrases. They do not assert that the agent may still take a permissive branch."
+        },
+        {
+          "technique": "sibling-floor-ownership",
+          "verdict": "deviation",
+          "evidence": "tools/pof-mcp/src/tools/groups.ts:17 The floor is enumerable via pof_tool_groups, but retention is the default so a capability is not dropped without a separate keep decision."
+        },
+        {
+          "technique": "single-source-topology",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/executor.ts:263 The canonical instruction filename is used for a per-run learnings log, not as a one-line bridge, while the session rules are assembled separately in the prompt."
+        },
+        {
+          "technique": "substrate-coupled-expiry",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/executor.ts:167 This judgment-shaped rule carries no substrate or date. A search of src/lib/harness found no substrate stamps on rules."
+        },
+        {
+          "technique": "workspace-ancestry-isolation",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/orchestrator.ts:1667 The generated AGENTS.md defaults to a directory inside the project, and executeArea spawns Claude with cwd set to that same projectPath."
+        },
+        {
+          "technique": "write-back-sink-class",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/executor.ts:279 The log header states no per-checkout or shared class. readAgentsMd replays the whole file, and guide-generator.ts also pushes the same learnings into the guide."
+        }
+      ],
+      "registryProposal": "single-source-topology treats the name AGENTS.md as the canonical brief, but a deliberate learnings log under that name is also a write-back sink. The standard has no separate rule for a non-canonical use of the canonical filename, so topology and write-back-sink-class both claim the same file."
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/agent-instruction-files": {
+      "context": "ai-developer-tools-api",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:58:11.317Z",
+      "worker": "7dffc944-e185-4645-b83d-c5773c48f699",
+      "techniques": [
+        {
+          "technique": "capability-before-steering",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/agents/live-token/route.ts:7 A Gemini Live token lock, not a coding-harness instruction file."
+        },
+        {
+          "technique": "capability-coverage-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/one-shot/step/route.ts:255 One produce prompt is assembled per step. No standing capability listing versus an instruction file."
+        }
+      ]
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/agent-instruction-files": {
+      "context": "inventory-economy-simulator",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:58:11.317Z",
+      "worker": "7dffc944-e185-4645-b83d-c5773c48f699",
+      "techniques": [
+        {
+          "technique": "capability-before-steering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/_shared/balance-prompt.ts:44 Function builds a task prompt from items."
+        }
+      ]
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/agent-instruction-files": {
+      "context": "cli-terminal-output",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:58:11.317Z",
+      "worker": "7dffc944-e185-4645-b83d-c5773c48f699",
+      "techniques": [
+        {
+          "technique": "capability-before-steering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/constants.ts:73 A starter chip, not steering text in an instruction file."
+        }
+      ]
     }
   }
 }
