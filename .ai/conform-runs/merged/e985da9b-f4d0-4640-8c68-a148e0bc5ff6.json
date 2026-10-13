@@ -1,0 +1,200 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e985da9b-f4d0-4640-8c68-a148e0bc5ff6",
+  "subject": "spatial-audio-scene-authoring",
+  "evaluatedAt": "2026-10-13T08:10:42.272448+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "audio-scene-designer",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:110 The listening preview varies reverb only through decay and wet mix, so diffusion, density and reflection delays cannot distinguish spaces as the standard requires.",
+      "techniques": [
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-scene-audition.ts:87 AuditionReadout calls this mix function, whose distance gain is linear rather than logarithmic."
+        },
+        {
+          "technique": "occlusion-to-volume-and-filter",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-scene-audition.ts:91 Occlusion selection uses a stateless boundary test without hysteresis; Web Audio parameter glides exist, but do not prevent repeated boundary-state oscillation."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:113 The synthesized impulse uses decay alone, ignoring the shared table's diffusion, density and early/late delays."
+        }
+      ]
+    },
+    {
+      "context": "audio-view-and-catalog",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:133 The zone overview displays attenuation radii without a distance unit in either the values or their column heading, making the authored scale ambiguous.",
+      "techniques": [
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:115 Neither this heading nor its numeric cells states the required world distance unit."
+        },
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioView/BudgetStressPanel.tsx:77 The stress panel and event-generation prompt prescribe blanket oldest stealing at class caps instead of category-specific policies, including never stealing critical classes."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/audio-scene.ts:23 The full-system prompt sent by useAudioView serializes only the preset name, dropping a custom zone's authored reverb parameters."
+        }
+      ]
+    },
+    {
+      "context": "audio-module",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/audio-codegen.ts:684 The generated emitter spawner allocates and plays components directly without consulting the scene manager's voice limit, so authored global budgets do not constrain these voices.",
+      "techniques": [
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:621 The emitter radius is serialized but never consumed by SpawnEmitter, which attaches no generated attenuation settings to its audio component."
+        },
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:675 The spawner creates independent voices; cooldown is checked, but this playback path has no concurrency or priority admission against the manager's budget."
+        },
+        {
+          "technique": "occlusion-to-volume-and-filter",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:468 Occlusion assignments are emitted inside spawn-reference comments, and searches found only declarations and commented assignments for these members, with no runtime consumers."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:268 The generated preset table excludes none, so GetPresetConfig(None) falls back to nonzero struct defaults instead of the required explicit all-zero row."
+        },
+        {
+          "technique": "two-d-vs-three-d-spatialization-choice",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:615 Every emitter receives a world position, including generated non-diegetic music stingers; emitter type is not used to select a positionless playback branch."
+        }
+      ]
+    },
+    {
+      "context": "game-world-content-api",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/app/api/spatial-audio-generate/route.ts:70 Regeneration can raise a designer's existing concurrency limit to the generator's larger recommendation, weakening the chosen playback budget.",
+      "techniques": [
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "deviation",
+          "evidence": "src/app/api/spatial-audio-generate/route.ts:70 An existing manually lowered voice limit is increased whenever the regenerated recommendation exceeds it."
+        },
+        {
+          "technique": "room-type-to-acoustic-profile",
+          "verdict": "deviation",
+          "evidence": "src/lib/spatial-audio-sync.ts:115 The API's sync planner freezes the entire room when any zone field is tuned and reports tuned field names without the proposed regenerated values, preventing the required per-field reconciliation."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "spatial-audio-scene-authoring",
+      "context": "audio-generation-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited `spatial-audio-generator.ts` is not one of this context's files, and nothing in the SpatialAudioGeneratorPanel files references a radius or the generator (the radius reaches it only through the API route), so the verdict is about the game-world-content-api context's code."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T08:10:42.272448+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "attenuation-falloff-and-distance-filtering",
+        "occlusion-to-volume-and-filter",
+        "reverb-parameter-tables"
+      ],
+      "deviations": 1,
+      "context": "audio-scene-designer",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T08:10:42.272448+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "event-priority-concurrency-cooldown",
+        "room-type-to-acoustic-profile"
+      ],
+      "deviations": 1,
+      "context": "audio-generation-tools",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T08:10:42.272448+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "attenuation-falloff-and-distance-filtering",
+        "event-priority-concurrency-cooldown",
+        "reverb-parameter-tables"
+      ],
+      "deviations": 1,
+      "context": "audio-view-and-catalog",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T08:10:42.272448+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "attenuation-falloff-and-distance-filtering",
+        "event-priority-concurrency-cooldown",
+        "occlusion-to-volume-and-filter",
+        "reverb-parameter-tables",
+        "two-d-vs-three-d-spatialization-choice"
+      ],
+      "deviations": 1,
+      "context": "audio-module",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-13T08:10:42.272448+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "event-priority-concurrency-cooldown",
+        "room-type-to-acoustic-profile"
+      ],
+      "deviations": 1,
+      "context": "game-world-content-api",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
