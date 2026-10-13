@@ -29,7 +29,7 @@ class FakeAudioContext {
   destination = node();
   sources: Array<ReturnType<typeof node> & { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }> = [];
   gains: Array<{ gain: FakeParam }> = [];
-  filters: Array<{ frequency: FakeParam }> = [];
+  filters: Array<ReturnType<typeof node> & { frequency: FakeParam }> = [];
   close = vi.fn(async () => { this.state = 'closed'; });
   constructor() { FakeAudioContext.instances.push(this); }
   decodeAudioData = vi.fn(async () => ({ duration: 1 }));
@@ -138,6 +138,34 @@ describe('useSceneAudition — [guard] case 6: GET-only, in-place updates, suspe
     expect(ctx2.close).toHaveBeenCalledTimes(1);
     expect(ctx.close).toHaveBeenCalledTimes(1);
     onlyGets();
+  });
+
+  it('stops and disconnects the old AudioBufferSourceNode, filter, and panner when an emitter clip is rebound', async () => {
+    const lib: AuditionLibrary = {
+      s1: [{ relPath: 'sets/s1/drip.mp3', favorite: true }],
+      s2: [{ relPath: 'sets/s2/wind.mp3', favorite: true }],
+    };
+    const { result, rerender, unmount } = renderHook(
+      ({ setId }: { setId: string }) =>
+        useSceneAudition(auditionMix({ zones: [], emitters: [emitter({ assetSetId: setId })] }, { x: 100, y: 100 }, lib)),
+      { initialProps: { setId: 's1' } },
+    );
+
+    await act(async () => { await result.current.play(); });
+    const ctx = FakeAudioContext.instances[0];
+    await waitFor(() => expect(ctx.sources).toHaveLength(1));
+
+    const firstSource = ctx.sources[0];
+    const firstFilter = ctx.filters[0];
+
+    rerender({ setId: 's2' });
+    await waitFor(() => expect(ctx.sources).toHaveLength(2));
+
+    expect(firstSource.stop).toHaveBeenCalledTimes(1);
+    expect(firstSource.disconnect).toHaveBeenCalledTimes(1);
+    expect(firstFilter.disconnect).toHaveBeenCalledTimes(1);
+    expect(ctx.sources[1].start).toHaveBeenCalledTimes(1);
+    unmount();
   });
 });
 

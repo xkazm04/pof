@@ -10,7 +10,13 @@ const GLIDE_S = 0.05;
 /** Synthesised impulse responses are capped so a long decay stays cheap to build. */
 const MAX_IR_S = 4;
 
-interface Voice { url: string; gain: GainNode; filter: BiquadFilterNode; panner: StereoPannerNode }
+interface Voice {
+  url: string;
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+  filter: BiquadFilterNode;
+  panner: StereoPannerNode;
+}
 
 interface Graph {
   ctx: AudioContext;
@@ -89,7 +95,7 @@ export function useSceneAudition(mix: AuditionMix | null) {
       panner.connect(g.dry);
       panner.connect(g.convolver);
       source.start();
-      g.voices.set(id, { url, gain, filter, panner });
+      g.voices.set(id, { url, source, gain, filter, panner });
       const h = mixRef.current?.heard[id];
       if (h) {
         gain.gain.setTargetAtTime(h.gain, ctx.currentTime, GLIDE_S);
@@ -117,7 +123,11 @@ export function useSceneAudition(mix: AuditionMix | null) {
     for (const [id, v] of g.voices) {
       const h = m.heard[id];
       if (h && h.clipUrl !== v.url) { // rebound: retire the old clip, load the new one
+        try { v.source.stop(); } catch { /* already stopped */ }
+        v.source.disconnect();
         v.gain.disconnect();
+        v.filter.disconnect();
+        v.panner.disconnect();
         g.voices.delete(id);
         continue;
       }
