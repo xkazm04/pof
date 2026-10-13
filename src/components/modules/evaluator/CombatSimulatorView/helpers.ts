@@ -5,7 +5,9 @@ export function pct(v: number): string {
 }
 
 export function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  if (!Number.isFinite(n)) return '0';
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return String(Math.round(n));
 }

@@ -15,14 +15,20 @@ export function TuningSlidersPanel({
   setTuning: (t: TuningOverrides) => void;
   handleTuningChange: (key: keyof TuningOverrides, value: number) => void;
 }) {
+  const isAtDefault = !defaultTuning || TUNING_SLIDERS.every(
+    ({ key }) => Math.round(tuning[key] * 100) === Math.round(defaultTuning[key] * 100),
+  );
+
   return (
     <SurfaceCard className="p-4">
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-amber-400" />
         <h2 className="text-sm font-medium text-text">Tuning Sliders</h2>
         <button
+          type="button"
+          disabled={isAtDefault}
           onClick={() => defaultTuning && setTuning({ ...defaultTuning })}
-          className="ml-auto text-2xs text-text-muted hover:text-text transition-colors"
+          className="ml-auto text-2xs text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           Reset
         </button>
