@@ -22853,7 +22853,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:705 The mesh finish export relies on the exporter completing and a simple file-existence check without reading back the exported GLB inside the process to verify scene and mesh contents.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "image-to-3d-input-gating",

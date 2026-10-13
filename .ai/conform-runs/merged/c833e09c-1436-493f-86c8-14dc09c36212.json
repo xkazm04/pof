@@ -1,0 +1,133 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c833e09c-1436-493f-86c8-14dc09c36212",
+  "subject": "mesh-finishing-for-engine-readiness",
+  "evaluatedAt": "2026-10-13T10:27:53.357316+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "scripts/visual-gen/pof_mesh_finish.py:705 The mesh finish export relies on the exporter completing and a simple file-existence check without reading back the exported GLB inside the process to verify scene and mesh contents.",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:705 Exporter returns success and file existence is checked without re-reading the exported GLB file inside the process to verify scenes, meshes, and nodes."
+        },
+        {
+          "technique": "crease-angle-and-custom-normals",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:356 Re-shading is explicitly refused when the source mesh carries custom split normals, logging that custom normals override crease angle."
+        },
+        {
+          "technique": "headless-dcc-capability-limits",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:326 Verifies actual mesh modification because QuadriFlow silently no-ops and returns FINISHED on non-manifold input."
+        },
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:551 BAKE_TYPES natively supports only shape-derivable channels (normal, ao, diffuse, roughness) and deliberately excludes metallic."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:384 Detects presence of authored UV layers before packing existing islands, reporting UV_MODE_FALLBACK and falling back to smart unwrap only when no authored UVs exist."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:678 The unwrap operation is run strictly on the decimated low-poly copy (low) after the decimation pass has completed."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "procedural-scene-tools",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "visual-gen-mesh",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "visual-gen-rigging-conformance",
+      "reason": "withdrawn after review: reviewer (sonnet): The rig-presets.ts:187 conform branch and :203 totality check are real, but the evidence also claims enforced headless DCC limits, an unwrap restriction to low-poly targets and a baking-coverage guard, and I could not confirm the last two; reference-roles.ts:105 is a prose guidance entry, not an enf"
+    },
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "material-lab",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor MaterialLabView.tsx:171 is only a `moduleId=\"material-lab\"` prop and shows no absence; the four technique claims all cite that same line, and the context includes an AdvancedTexturePanel I did not trace."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T10:27:53.357316+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "mesh-finishing-for-engine-readiness"
+      ],
+      "techniques": [
+        "conform-target-is-not-a-remap-row",
+        "headless-dcc-capability-limits",
+        "high-to-low-bake-coverage",
+        "rig-preset-and-bone-remap-binding",
+        "texture-pass-must-consume-the-bake",
+        "unwrap-only-the-low-poly"
+      ],
+      "deviations": 0,
+      "context": "visual-gen-rigging-conformance",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:27:53.357316+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "mesh-finishing-for-engine-readiness"
+      ],
+      "techniques": [
+        "crease-angle-and-custom-normals",
+        "export-proven-by-read-back",
+        "headless-dcc-capability-limits",
+        "high-to-low-bake-coverage",
+        "pack-existing-vs-smart-unwrap",
+        "unwrap-only-the-low-poly"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-asset-pipeline",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:27:53.357316+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "mesh-finishing-for-engine-readiness"
+      ],
+      "techniques": [
+        "conform-target-is-not-a-remap-row",
+        "crease-angle-and-custom-normals",
+        "export-proven-by-read-back",
+        "headless-dcc-capability-limits",
+        "high-to-low-bake-coverage",
+        "pack-existing-vs-smart-unwrap",
+        "rig-preset-and-bone-remap-binding",
+        "texture-pass-must-consume-the-bake",
+        "unwrap-only-the-low-poly"
+      ],
+      "deviations": 0,
+      "context": "material-lab",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

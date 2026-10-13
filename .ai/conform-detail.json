@@ -2148,6 +2148,154 @@
           "evidence": "src/components/cli/TerminalOutput/constants.ts:73 A starter chip, not steering text in an instruction file."
         }
       ]
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/mesh-finishing-for-engine-readiness": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T10:27:53.357Z",
+      "techniques": [
+        {
+          "technique": "conform-target-is-not-a-remap-row",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/rig-presets.ts:187 Rig presets branch on kind='conform', returning unmappedChainBones: null because conform targets inherit template topology and rig without source skeleton remapping."
+        },
+        {
+          "technique": "rig-preset-and-bone-remap-binding",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/rig-presets.ts:203 Rig presets verify totality over required IK chain endpoints, failing when an endpoint is missing from the mapping table."
+        },
+        {
+          "technique": "headless-dcc-capability-limits",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:63 Uses lower-level vertex conform call proven to execute unattended in headless UE instead of the high-level interactive wrapper."
+        },
+        {
+          "technique": "texture-pass-must-consume-the-bake",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:105 Enforces splitting AI color from PBR properties so generative texturing does not fabricate conflicting material maps over geometric detail."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:137 Enforces that unwrap is only planned when accompanied by a target face decimation budget."
+        },
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:139 Plans only derivable shape channels (normal, ao) for high-to-low baking."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c833e09c-1436-493f-86c8-14dc09c36212",
+        "state": "conformant",
+        "at": "2026-10-13T10:28:17.377487+00:00",
+        "reason": "reviewer (sonnet): The rig-presets.ts:187 conform branch and :203 totality check are real, but the evidence also claims enforced headless DCC limits, an unwrap restriction to low-poly targets and a baking-coverage guard, and I could not confirm the last two; reference-roles.ts:105 is a prose guidance entry, not an enf"
+      }
+    },
+    "c120fef4-1da4-432b-9fac-7abb92a27830/mesh-finishing-for-engine-readiness": {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T10:27:53.357Z",
+      "worker": "c833e09c-1436-493f-86c8-14dc09c36212",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:705 Exporter returns success and file existence is checked without re-reading the exported GLB file inside the process to verify scenes, meshes, and nodes."
+        },
+        {
+          "technique": "crease-angle-and-custom-normals",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:356 Re-shading is explicitly refused when the source mesh carries custom split normals, logging that custom normals override crease angle."
+        },
+        {
+          "technique": "headless-dcc-capability-limits",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:326 Verifies actual mesh modification because QuadriFlow silently no-ops and returns FINISHED on non-manifold input."
+        },
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:551 BAKE_TYPES natively supports only shape-derivable channels (normal, ao, diffuse, roughness) and deliberately excludes metallic."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:384 Detects presence of authored UV layers before packing existing islands, reporting UV_MODE_FALLBACK and falling back to smart unwrap only when no authored UVs exist."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:678 The unwrap operation is run strictly on the decimated low-poly copy (low) after the decimation pass has completed."
+        }
+      ]
+    },
+    "77c4a5c6-f0e9-4311-8cbf-504eda86e733/mesh-finishing-for-engine-readiness": {
+      "context": "material-lab",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T10:27:53.357Z",
+      "techniques": [
+        {
+          "technique": "conform-target-is-not-a-remap-row",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not handle character skeletons or rig targets."
+        },
+        {
+          "technique": "crease-angle-and-custom-normals",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not manage geometry smoothing or custom normal overrides."
+        },
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab generates Python code snippets for UE5 material instances rather than exporting mesh files."
+        },
+        {
+          "technique": "headless-dcc-capability-limits",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab is an interactive browser UI component, not an unattended headless DCC stage."
+        },
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab edits 2D texture properties rather than running high-to-low geometry bakes."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not compute or pack UV coordinates."
+        },
+        {
+          "technique": "rig-preset-and-bone-remap-binding",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not bind meshes to skeletons."
+        },
+        {
+          "technique": "texture-pass-must-consume-the-bake",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab works with tiling textures, not baked normal maps from geometry decimation."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not perform mesh retopology or unwrapping."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c833e09c-1436-493f-86c8-14dc09c36212",
+        "state": "not-applicable",
+        "at": "2026-10-13T10:28:17.424238+00:00",
+        "reason": "reviewer (sonnet): The anchor MaterialLabView.tsx:171 is only a `moduleId=\"material-lab\"` prop and shows no absence; the four technique claims all cite that same line, and the context includes an AdvancedTexturePanel I did not trace."
+      }
     }
   }
 }
