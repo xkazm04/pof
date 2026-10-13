@@ -15233,7 +15233,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:105 Code-generation completion restores the document's synced verdict without a new comparison, and a retained lastCodeHash allows the UI to present that verdict as verified.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "canvas-graph",

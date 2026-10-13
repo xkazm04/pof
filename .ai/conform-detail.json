@@ -2626,6 +2626,27 @@
           "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:941 Burn specifies 8 damage per tick, 6 seconds, and a 1-second period; EffectsSection displays those inputs but does not derive and publish the standard's 48-point total."
         }
       ]
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/docs-sync": {
+      "context": "level-flow-editor",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T13:14:57.816Z",
+      "worker": "eba8640d-abf9-4808-b562-34f58364d1fc",
+      "techniques": [
+        {
+          "technique": "checked-vs-skipped-denominators",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:177 The divergence headline is a bare finding count; the panel and sync callback contract provide no checked population or skipped populations with reasons."
+        },
+        {
+          "technique": "earned-verification-state",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:105 Generation success earns a synced status without rechecking the document; the update preserves an earlier code hash, while SyncStatusPanel accepts synced whenever that hash is nonempty."
+        }
+      ]
     }
   }
 }

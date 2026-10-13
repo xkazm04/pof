@@ -1,0 +1,68 @@
+{
+ "schema": "conform-run/1",
+ "worker": "eba8640d-abf9-4808-b562-34f58364d1fc",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-10-13T13:14:57.816263+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "level-flow-editor",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:105 Code-generation completion restores the document's synced verdict without a new comparison, and a retained lastCodeHash allows the UI to present that verdict as verified.",
+   "techniques": [
+    {
+     "technique": "checked-vs-skipped-denominators",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:177 The divergence headline is a bare finding count; the panel and sync callback contract provide no checked population or skipped populations with reasons."
+    },
+    {
+     "technique": "earned-verification-state",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:105 Generation success earns a synced status without rechecking the document; the update preserves an earlier code hash, while SyncStatusPanel accepts synced whenever that hash is nonempty."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "ue5-state-sync",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "game-design-studio-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "gdd-compliance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T13:14:57.816263+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "checked-vs-skipped-denominators",
+    "earned-verification-state"
+   ],
+   "deviations": 1,
+   "context": "level-flow-editor",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
