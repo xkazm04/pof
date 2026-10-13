@@ -828,12 +828,12 @@ export function getAllReviewHistory(limit = 20, projectId?: string): Record<stri
     .prepare(
       `SELECT ${SNAPSHOT_SELECT}
        FROM (
-         SELECT *, ROW_NUMBER() OVER (PARTITION BY module_id ORDER BY reviewed_at DESC) as rn
+         SELECT *, ROW_NUMBER() OVER (PARTITION BY module_id ORDER BY reviewed_at DESC, id DESC) as rn
          FROM review_snapshots
          WHERE ${scope.sql}
        )
        WHERE rn <= ?
-       ORDER BY module_id, reviewed_at ASC`,
+       ORDER BY module_id, reviewed_at ASC, id ASC`,
     )
     .all(...scope.params, limit) as SnapshotRow[];
 

@@ -111,6 +111,29 @@ describe('getReviewHistory returns the RECENT window', () => {
     const all = (getAllReviewHistory(20)[MODULE] ?? []).map((s) => s.reviewedAt);
     expect(mine).toEqual(all);
   });
+
+  it('breaks identical reviewed_at ties by id DESC for window selection and id ASC for chronology in getAllReviewHistory', () => {
+    getDb().prepare('DELETE FROM review_snapshots WHERE module_id = ?').run(MODULE);
+    const sameInstant = '2026-06-01T00:00:00.000Z';
+    // Legacy snapshot (older id) and project-scoped snapshot (newer id) at the same reviewed_at instant
+    getDb()
+      .prepare(
+        `INSERT INTO review_snapshots (module_id, reviewed_at, total, implemented, improved, partial, missing, unknown, avg_quality, project_id)
+         VALUES (?, ?, 5, 1, 0, 4, 0, 0, 3.0, '')`,
+      )
+      .run(MODULE, sameInstant);
+    getDb()
+      .prepare(
+        `INSERT INTO review_snapshots (module_id, reviewed_at, total, implemented, improved, partial, missing, unknown, avg_quality, project_id)
+         VALUES (?, ?, 5, 4, 0, 1, 0, 0, 4.5, 'proj-tie')`,
+      )
+      .run(MODULE, sameInstant);
+
+    const singleMine = getReviewHistory(MODULE, 1, 'proj-tie');
+    const singleAll = getAllReviewHistory(1, 'proj-tie')[MODULE] ?? [];
+    expect(singleAll.map((s) => s.id)).toEqual(singleMine.map((s) => s.id));
+    expect(singleAll[0]?.implemented).toBe(4);
+  });
 });
 
 describe('a snapshot is written only for a real review event', () => {
