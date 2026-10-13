@@ -34,6 +34,7 @@ import { StepLibraryPicker } from './shared/StepLibraryPicker';
 import { libraryAttachmentLines, addReference, removeReference } from './shared/libraryReference';
 import { useJudgeVerdictDesk } from './ux/useJudgeVerdictDesk';
 import { useSiblingReconcileDesk } from './ux/useSiblingReconcileDesk';
+import { usePriceLawDesk } from './ux/usePriceLawDesk';
 import type { LibraryAsset } from '@/types/asset-library';
 import type { AcceptanceResult, CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabTheme } from '../theme';
@@ -406,6 +407,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const desk = useJudgeVerdictDesk({ t, catalogId, entityId: entity.id, step, acceptance, fixEffect, liveEligible });
   // PROTOTYPE, opt-in via `?ux=sibling-check`: sets Localization against its sibling steps (named / shared keys / what the prompt carries); without the flag no panel, no seed.
   const sib = useSiblingReconcileDesk({ t, catalogId, entity, step, spec, data, artifacts: entityArtifacts, siblings, View: ViewPanel });
+  // PROTOTYPE, opt-in via `?ux=price-law`: re-derives an items Economy cell from its stored ITEMS-PRICE-LAW (inputs, stored vs law, whether the ratio can bite); without the flag no panel, no seed.
+  const law = usePriceLawDesk({ t, catalogId, entity, step, data });
 
   /**
    * The step's produce prompt — built by the SHARED `buildStepProducePrompt`, which the
@@ -454,8 +457,8 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   };
 
   const cli = (onComplete: CliProduceProps['onComplete']) => (
-    <CliProduce key={`${desk.seedKey}.${sib.seedKey}`} t={t} label={`Produce ${spec.label}`} rows={3}
-      defaultDirection={sib.seed ?? desk.seed ?? spec.defaultDirection} note={spec.produceNote}
+    <CliProduce key={`${desk.seedKey}.${sib.seedKey}.${law.seedKey}`} t={t} label={`Produce ${spec.label}`} rows={3}
+      defaultDirection={law.seed ?? sib.seed ?? desk.seed ?? spec.defaultDirection} note={spec.produceNote}
       liveEligible={liveEligible}
       attachments={[...evidence.map((e) => `${e.kind} · ${e.url}`), ...libraryAttachmentLines(referenced)]}
       fields={
@@ -532,7 +535,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   // Every generic step exposes its stored payload verbatim — produce bodies write far more
   // than any View renders or Checker grades (wiringContract, notes, breakdowns), and none of
   // it was reachable from the UI. Collapsed by default; serialized only when expanded.
-  panels = [...desk.panels, ...sib.panels, ...panels, { label: 'Raw artifact', node: (
+  panels = [...desk.panels, ...sib.panels, ...law.panels, ...panels, { label: 'Raw artifact', node: (
     <>
       <RawArtifactDisclosure t={t} data={data} ueAssets={art?.ueAssets} verdict={art} />
       {/* The versions this step's re-produces superseded. Server-side, because the local
