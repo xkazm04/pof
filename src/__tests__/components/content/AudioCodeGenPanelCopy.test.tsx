@@ -40,4 +40,15 @@ describe('AudioCodeGenPanel — a rejected clipboard write never claims success'
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByText(/copied a\.h/i)).toBeNull();
   });
+
+  it('associates Module Name and API Macro labels with their text inputs', () => {
+    render(<AudioCodeGenPanel doc={doc} accentColor="#fff" />);
+    const moduleInput = screen.getByLabelText('Module Name') as HTMLInputElement;
+    const macroInput = screen.getByLabelText('API Macro') as HTMLInputElement;
+    expect(moduleInput.tagName).toBe('INPUT');
+    expect(macroInput.tagName).toBe('INPUT');
+    fireEvent.change(moduleInput, { target: { value: 'CustomModule' } });
+    expect(moduleInput.value).toBe('CustomModule');
+  });
 });
+

@@ -108,4 +108,17 @@ describe('AudioScenePainter — minimap', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show minimap' }));
     expect(minimapSvg(container)).toBeTruthy();
   });
+
+  it('exposes aria-pressed on painter toolbar buttons as tools are switched', () => {
+    renderPainter();
+    const selectBtn = screen.getByRole('button', { name: 'SELECT' });
+    const rectBtn = screen.getByRole('button', { name: 'VOL_RECT' });
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(rectBtn.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(rectBtn);
+    expect(selectBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(rectBtn.getAttribute('aria-pressed')).toBe('true');
+  });
 });
+

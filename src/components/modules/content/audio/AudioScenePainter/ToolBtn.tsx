@@ -6,6 +6,8 @@ export function ToolBtn({ active, onClick, label, icon }: {
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-2xs font-semibold uppercase tracking-widest transition-all border ${active
         ? 'text-text'

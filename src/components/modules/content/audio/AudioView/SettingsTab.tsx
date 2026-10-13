@@ -87,6 +87,8 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
           {REVERB_PRESETS.map((preset) => (
             <button
               key={preset}
+              type="button"
+              aria-pressed={reverb.value === preset}
               onClick={() => reverb.onChange(preset)}
               className={`px-2.5 py-1.5 rounded text-xs transition-colors ${
                 reverb.value === preset
