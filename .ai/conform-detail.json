@@ -1909,6 +1909,69 @@
           "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasSectors.tsx:12 Sectors group software modules, not world regions with traversal connections and level bands."
         }
       ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/agent-runtime-assembly": {
+      "context": "cli-terminal-shell",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:21:57.039Z",
+      "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+      "techniques": [
+        {
+          "technique": "activation-is-a-separate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/skills.ts:237 Skill packs are prompt text for a new session only; resume does not re-inject them, and nothing here registers a callback that runs on later sessions."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/CompactTerminal.tsx:80 A follow-up typed while the run is streaming is dropped, and TerminalInput marks the textarea readOnly for that time, so the message never joins the running unit."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/useTaskQueue.ts:886 Abort omits outcomeUnknown. An unobserved server loss is handled separately: runArbiter returns outcomeUnknown on not-found, and sessionRun stores success null only when that flag is set."
+        }
+      ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/agent-runtime-assembly": {
+      "context": "ai-developer-tools-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:21:57.039Z",
+      "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/app/api/claude-terminal/stream/route.ts:134 The execution type includes aborted, but this replay frame publishes only result or error. The client completion path switches on that event type."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "conformant",
+          "evidence": "src/lib/claude-terminal/mcp-config.ts:25 One-shot step sets enableMcp true, and buildCliArgs appends --mcp-config only from this env var; the request body cannot name the config path. A missing file warns and spawns without it."
+        }
+      ]
+    },
+    "6540a636-c13b-4437-a682-d5c71b7d71b4/agent-runtime-assembly": {
+      "context": "platform-services-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:21:57.039Z",
+      "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/app/api/cli-task-registry/route.ts:74 TaskStatus is only running, completed, or failed. The stale branch marks failed and then starts the new task; it does not return the old execution for the client to kill."
+        }
+      ]
     }
   }
 }

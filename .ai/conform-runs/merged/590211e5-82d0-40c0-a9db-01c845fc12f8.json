@@ -1,0 +1,126 @@
+{
+ "schema": "conform-run/1",
+ "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-10-13T09:21:57.039080+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "cli-terminal-shell",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/cli/useTaskQueue.ts:886 A user abort ends the run as success false, with no outcomeUnknown flag, so a killed Claude process is recorded as a failure while its in-flight tool effects are unknown.",
+   "techniques": [
+    {
+     "technique": "activation-is-a-separate-mutation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/cli/skills.ts:237 Skill packs are prompt text for a new session only; resume does not re-inject them, and nothing here registers a callback that runs on later sessions."
+    },
+    {
+     "technique": "additive-input-at-the-call-boundary",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/CompactTerminal.tsx:80 A follow-up typed while the run is streaming is dropped, and TerminalInput marks the textarea readOnly for that time, so the message never joins the running unit."
+    },
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/useTaskQueue.ts:886 Abort omits outcomeUnknown. An unobserved server loss is handled separately: runArbiter returns outcomeUnknown on not-found, and sessionRun stores success null only when that flag is set."
+    }
+   ]
+  },
+  {
+   "context": "ai-developer-tools-api",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/claude-terminal/stream/route.ts:134 When a finished execution is replayed, every status other than completed is sent as an error event, so an aborted run is delivered as a failure.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/app/api/claude-terminal/stream/route.ts:134 The execution type includes aborted, but this replay frame publishes only result or error. The client completion path switches on that event type."
+    },
+    {
+     "technique": "operator-tier-code-loading",
+     "verdict": "conformant",
+     "evidence": "src/lib/claude-terminal/mcp-config.ts:25 One-shot step sets enableMcp true, and buildCliArgs appends --mcp-config only from this env var; the request body cannot name the config path. A missing file warns and spawns without it."
+    }
+   ]
+  },
+  {
+   "context": "platform-services-api",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/cli-task-registry/route.ts:74 A running task whose heartbeat went stale is stored as failed when another start arrives, and the registry status type has no unknown value.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/app/api/cli-task-registry/route.ts:74 TaskStatus is only running, completed, or failed. The stale branch marks failed and then starts the new task; it does not return the old execution for the client to kill."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "project-ops-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "visual-gen-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T09:21:57.039080+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "activation-is-a-separate-mutation",
+    "additive-input-at-the-call-boundary",
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "cli-terminal-shell",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T09:21:57.039080+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "indeterminate-closure-on-interruption",
+    "operator-tier-code-loading"
+   ],
+   "deviations": 1,
+   "context": "ai-developer-tools-api",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T09:21:57.039080+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "platform-services-api",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
