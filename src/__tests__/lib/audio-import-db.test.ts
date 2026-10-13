@@ -17,3 +17,17 @@ describe('audio-import-db', () => {
     expect(latest?.assetsImported).toBe(3);
   });
 });
+
+describe('audio-import-db - same-millisecond ordering', () => {
+  it('getLatestAudioImport resolves a createdAt tie to the later insert, like the per-set readers', () => {
+    const frozen = Date.now() + 10_000_000; // later than every other row this file wrote
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(frozen);
+    try {
+      recordAudioImport({ setName: 'tie-set', assetsImported: 1 });
+      const second = recordAudioImport({ setName: 'tie-set', assetsImported: 2 });
+      expect(getLatestAudioImport()?.id).toBe(second.id);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

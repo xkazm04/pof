@@ -42,7 +42,7 @@ export function recordAudioImport(input: RecordAudioImportInput): AudioImportRes
 }
 
 export function getLatestAudioImport(): AudioImportResult | null {
-  const row = db().prepare('SELECT * FROM audio_import_runs ORDER BY createdAt DESC LIMIT 1').get() as Record<string, unknown> | undefined;
+  const row = db().prepare('SELECT * FROM audio_import_runs ORDER BY createdAt DESC, id DESC LIMIT 1').get() as Record<string, unknown> | undefined;
   return row ? rowToImport(row) : null;
 }
 
