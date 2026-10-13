@@ -1,14 +1,17 @@
+import type Database from 'better-sqlite3';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { jsonUnsafeKeys } from '@/lib/catalog/entityPayload';
 import type { LifecycleRecord, LifecycleState, StoredCatalogEntity, TestResult } from '@/lib/catalog/types';
 
 // The DB connection is a process-level singleton (see getDb), so the DDL only
-// needs to run once. This guard keeps it off the hot path of every query.
-let tableEnsured = false;
+// needs to run once per connection instance. Keyed on the live Database handle
+// (matching prepareCached in db.ts) so a swapped connection re-runs the DDL.
+let tableEnsuredDb: Database.Database | null = null;
 function ensureTable() {
-  if (tableEnsured) return;
-  getDb().exec(`
+  const db = getDb();
+  if (tableEnsuredDb === db) return;
+  db.exec(`
     CREATE TABLE IF NOT EXISTS catalog_lifecycle (
       catalog_id TEXT NOT NULL,
       entity_id TEXT NOT NULL,
@@ -20,7 +23,7 @@ function ensureTable() {
       PRIMARY KEY (catalog_id, entity_id)
     )
   `);
-  tableEnsured = true;
+  tableEnsuredDb = db;
 }
 
 /**
@@ -101,10 +104,11 @@ export function upsertLifecycle(rec: LifecycleRecord): LifecycleRecord {
 // columns, because a catalog entity's `data` is a different typed shape per catalog
 // (`StoredCatalogEntity`); the columns carry only what the server keys and audits on.
 
-let entityTableEnsured = false;
+let entityTableEnsuredDb: Database.Database | null = null;
 function ensureEntityTable() {
-  if (entityTableEnsured) return;
-  getDb().exec(`
+  const db = getDb();
+  if (entityTableEnsuredDb === db) return;
+  db.exec(`
     CREATE TABLE IF NOT EXISTS catalog_entities (
       catalog_id TEXT NOT NULL,
       entity_id TEXT NOT NULL,
@@ -115,7 +119,7 @@ function ensureEntityTable() {
       PRIMARY KEY (catalog_id, entity_id)
     )
   `);
-  entityTableEnsured = true;
+  entityTableEnsuredDb = db;
 }
 
 /** Who created the entity. `'one-shot'` = the autonomous flow; `'user'` = a direct create. */

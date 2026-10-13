@@ -1,5 +1,20 @@
-import { describe, it, expect } from 'vitest';
-import { rowToTrack } from '@/lib/pipeline-db';
+import { describe, it, expect, vi } from 'vitest';
+import Database from 'better-sqlite3';
+
+const dbHolder = vi.hoisted(() => ({ current: null as Database.Database | null }));
+
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>();
+  return {
+    ...actual,
+    getDb: () => {
+      if (!dbHolder.current) dbHolder.current = new Database(':memory:');
+      return dbHolder.current;
+    },
+  };
+});
+
+import { rowToTrack, upsertTrack } from '@/lib/pipeline-db';
 
 describe('rowToTrack', () => {
   it('maps a full row', () => {
@@ -20,6 +35,18 @@ describe('rowToTrack', () => {
     });
     expect(rec.note).toBeUndefined();
     expect(rec.updatedAt).toBeUndefined();
+    expect(rec.state).toBe('done');
+  });
+});
+
+describe('pipeline-db table ensure across connection swap', () => {
+  it('re-creates pipeline_tracks when getDb() returns a new Database instance', () => {
+    dbHolder.current = new Database(':memory:');
+    upsertTrack({ catalogId: 'bestiary', entityId: 'brute', trackId: 'art-3d', state: 'in-progress' });
+
+    dbHolder.current = new Database(':memory:');
+    const rec = upsertTrack({ catalogId: 'bestiary', entityId: 'brute', trackId: 'logic', state: 'done' });
+    expect(rec.trackId).toBe('logic');
     expect(rec.state).toBe('done');
   });
 });

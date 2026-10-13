@@ -1,13 +1,16 @@
+import type Database from 'better-sqlite3';
 import { getDb } from '@/lib/db';
 import type { PipelineTrackRecord } from '@/lib/pipeline/types';
 import type { PipelineTrackId, TrackState } from '@/lib/pipeline/tracks';
 
 // The DB connection is a process-level singleton (see getDb), so the DDL only
-// needs to run once. This guard keeps it off the hot path of every query.
-let tableEnsured = false;
+// needs to run once per connection instance. Keyed on the live Database handle
+// (matching prepareCached in db.ts) so a swapped connection re-runs the DDL.
+let tableEnsuredDb: Database.Database | null = null;
 function ensureTable() {
-  if (tableEnsured) return;
-  getDb().exec(`
+  const db = getDb();
+  if (tableEnsuredDb === db) return;
+  db.exec(`
     CREATE TABLE IF NOT EXISTS pipeline_tracks (
       catalog_id TEXT NOT NULL,
       entity_id TEXT NOT NULL,
@@ -18,7 +21,7 @@ function ensureTable() {
       PRIMARY KEY (catalog_id, entity_id, track_id)
     )
   `);
-  tableEnsured = true;
+  tableEnsuredDb = db;
 }
 
 /** Column row → PipelineTrackRecord. Pure (exported for unit test). */

@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { rowToLifecycle } from '@/lib/catalog-db';
+import { describe, it, expect, vi } from 'vitest';
+import Database from 'better-sqlite3';
+
+const dbHolder = vi.hoisted(() => ({ current: null as Database.Database | null }));
+
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>();
+  return {
+    ...actual,
+    getDb: () => {
+      if (!dbHolder.current) dbHolder.current = new Database(':memory:');
+      return dbHolder.current;
+    },
+  };
+});
+
+import { rowToLifecycle, rowToEntity, upsertLifecycle, upsertEntity } from '@/lib/catalog-db';
 
 describe('rowToLifecycle', () => {
   it('maps a full row', () => {
@@ -40,5 +57,30 @@ describe('rowToLifecycle - a corrupt ue_assets blob (parity with rowToEntity and
 
   it('keeps only string paths from a mixed array', () => {
     expect(rowToLifecycle({ ...base, ue_assets: '["/Game/A", 3, null]' }).ueAssets).toEqual(['/Game/A']);
+  });
+});
+
+describe('catalog-db table ensure across connection swap', () => {
+  it('re-creates catalog_lifecycle and catalog_entities when getDb() returns a new Database instance', () => {
+    dbHolder.current = new Database(':memory:');
+    upsertLifecycle({ catalogId: 'spellbook', entityId: 'e1', lifecycle: 'planned', ueAssets: [] });
+    upsertEntity({
+      catalogId: 'spellbook',
+      entityId: 'e1',
+      source: 'user',
+      entity: { id: 'e1', catalogId: 'spellbook', name: 'E1', categoryPath: [], tags: [], lifecycle: 'planned' },
+    });
+
+    // Swap to a brand-new connection; subsequent calls must not fail with "no such table"
+    dbHolder.current = new Database(':memory:');
+    const lc = upsertLifecycle({ catalogId: 'spellbook', entityId: 'e2', lifecycle: 'verified', ueAssets: [] });
+    expect(lc.entityId).toBe('e2');
+    const ent = upsertEntity({
+      catalogId: 'spellbook',
+      entityId: 'e2',
+      source: 'user',
+      entity: { id: 'e2', catalogId: 'spellbook', name: 'E2', categoryPath: [], tags: [], lifecycle: 'verified' },
+    });
+    expect(ent.entityId).toBe('e2');
   });
 });
