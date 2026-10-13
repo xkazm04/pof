@@ -1,0 +1,1 @@
+{"id":"bakeoff-2026-10-13","at":"2026-10-13T17:35:21.289Z","strategy":"stabilize","path":".claude/scan-history/bakeoff-2026-10-13/open-backlog.jsonl","total":7,"emitted":0,"built":0,"declined":0,"descoped":0,"open":7,"status":"open","note":"Gemini-vs-Sonnet bake-off residue; top item: audio codegen never emits zone attenuations (GetAttenuationForZone always nullptr)"}
