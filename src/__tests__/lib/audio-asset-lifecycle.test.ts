@@ -90,11 +90,16 @@ describe('audio file lifecycle — containment guard (never a caller-supplied pa
     expect(r.reason).toMatch(/does not resolve inside/);
   });
 
-  it('refuses a set id that escapes the audio root', () => {
+  it('refuses a set id that escapes the audio root or contains path separators / null bytes', () => {
+    expect(resolveAudioPath('s1/clip\0.mp3')).toBeNull();
     const r = removeSetDirectory('../../Documents');
     expect(r.ok).toBe(false);
     expect(r.path).toBeNull();
     expect(r.reason).toMatch(/does not resolve inside/);
+
+    const nested = removeSetDirectory('setA/sub');
+    expect(nested.ok).toBe(false);
+    expect(nested.path).toBeNull();
   });
 
   it('accepts a path that genuinely sits inside the root', () => {
@@ -114,5 +119,39 @@ describe('audio disk footprint', () => {
 
     removeSetDirectory(setId);
     expect(getDiskFootprint(join(AUDIO_DIR, setId))).toEqual({ bytes: 0, files: 0 });
+  });
+});
+
+import { buildUpdateQuery } from '@/lib/db-utils';
+
+describe('buildUpdateQuery — SQL identifier validation and parameterized update generation', () => {
+  it('builds parameterized SET clauses and JSON-stringifies jsonFields, returning null when nothing is defined', () => {
+    const empty = buildUpdateQuery('audio_scenes', 7, { name: undefined }, [{ key: 'name', column: 'name' }]);
+    expect(empty).toBeNull();
+
+    const q = buildUpdateQuery(
+      'audio_scenes',
+      7,
+      { name: 'Cave', tags: ['dark', 'wet'] },
+      [
+        { key: 'name', column: 'name' },
+        { key: 'tags', column: 'tags_json' },
+      ],
+      new Set(['tags']),
+    );
+    expect(q).toEqual({
+      sql: "UPDATE audio_scenes SET name = ?, tags_json = ?, updated_at = datetime('now') WHERE id = ?",
+      values: ['Cave', '["dark","wet"]', 7],
+    });
+  });
+
+  it('rejects unsafe tableName or column identifiers to prevent SQL injection', () => {
+    expect(() =>
+      buildUpdateQuery('audio_scenes; DROP TABLE audio_scenes--', 1, { name: 'x' }, [{ key: 'name', column: 'name' }]),
+    ).toThrow(/Invalid SQL identifier/);
+
+    expect(() =>
+      buildUpdateQuery('audio_scenes', 1, { name: 'x' }, [{ key: 'name', column: 'name = 1; --' }]),
+    ).toThrow(/Invalid SQL identifier/);
   });
 });

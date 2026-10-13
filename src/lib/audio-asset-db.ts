@@ -221,7 +221,7 @@ export interface FileRemoval {
  * not `..`-prefixed and not absolute. Returns null when containment fails.
  */
 export function resolveAudioPath(rel: string): string | null {
-  if (!rel || rel.includes('..')) return null;
+  if (!rel || rel.includes('..') || rel.includes('\0')) return null;
   const root = normalize(AUDIO_DIR);
   const abs = normalize(join(root, rel));
   const r = relative(root, abs);
@@ -249,6 +249,9 @@ export function removeAssetFile(relPath: string): FileRemoval {
 
 /** Delete a set's whole `~/.pof/audio/<setId>` directory, guard-checked as above. */
 export function removeSetDirectory(setId: string): FileRemoval {
+  if (setId.includes('/') || setId.includes('\\')) {
+    return { ok: false, path: null, removed: 0, reason: `Refused: set id "${setId}" does not resolve inside ${AUDIO_DIR}` };
+  }
   const abs = resolveAudioPath(setId);
   if (!abs) {
     return { ok: false, path: null, removed: 0, reason: `Refused: set id "${setId}" does not resolve inside ${AUDIO_DIR}` };

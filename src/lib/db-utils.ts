@@ -1,3 +1,11 @@
+const SAFE_SQL_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function assertSqlIdentifier(ident: string, kind: string): void {
+  if (!SAFE_SQL_IDENT.test(ident)) {
+    throw new Error(`Invalid SQL identifier for ${kind}: "${ident}"`);
+  }
+}
+
 /**
  * Generic dynamic SQL UPDATE builder.
  *
@@ -15,10 +23,12 @@ export function buildUpdateQuery<T>(
   allowedFields: { key: keyof T & string; column: string }[],
   jsonFields?: Set<keyof T & string>,
 ): { sql: string; values: unknown[] } | null {
+  assertSqlIdentifier(tableName, 'tableName');
   const setClauses: string[] = [];
   const values: unknown[] = [];
 
   for (const { key, column } of allowedFields) {
+    assertSqlIdentifier(column, 'column');
     if ((payload as Record<string, unknown>)[key] !== undefined) {
       setClauses.push(`${column} = ?`);
       const val = (payload as Record<string, unknown>)[key];
