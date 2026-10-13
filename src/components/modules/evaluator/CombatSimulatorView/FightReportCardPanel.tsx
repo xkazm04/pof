@@ -21,15 +21,20 @@ export function FightReportCardPanel({
   iterations?: number;
 }) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const style = BAND_STYLE[report.band];
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(formatReportCardText(report, scenarioName));
+      setCopyFailed(false);
       setCopied(true);
       window.setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
     } catch {
-      // Clipboard unavailable (e.g. insecure context) — silently ignore.
+      // Clipboard unavailable (e.g. insecure context): say so rather than leave an inert-looking button.
+      setCopied(false);
+      setCopyFailed(true);
+      window.setTimeout(() => setCopyFailed(false), UI_TIMEOUTS.copyFeedback);
     }
   }, [report, scenarioName]);
 
@@ -48,7 +53,7 @@ export function FightReportCardPanel({
               className="focus-ring flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-2xs text-text-muted hover:text-text transition-colors"
             >
               {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? 'Copied' : copyFailed ? 'Copy failed' : 'Copy'}
             </button>
           </Tooltip>
         </div>

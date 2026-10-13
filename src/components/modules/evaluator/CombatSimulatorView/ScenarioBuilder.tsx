@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Target } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { NumberField } from '@/components/ui/NumberField';
@@ -33,6 +34,7 @@ export function ScenarioBuilder({
   /** While a run is in flight the iteration count is locked so the progress readout can't diverge from the submitted job. */
   simulating?: boolean;
 }) {
+  const gearSelectId = useId();
   const toggleAbility = (id: string) =>
     setSelectedAbilities(
       selectedAbilities.includes(id)
@@ -63,8 +65,9 @@ export function ScenarioBuilder({
             />
           </div>
           <div>
-            <label className="text-2xs text-text-muted font-medium block mb-1">Gear</label>
+            <label htmlFor={gearSelectId} className="text-2xs text-text-muted font-medium block mb-1">Gear</label>
             <select
+              id={gearSelectId}
               value={gearId}
               onChange={(e) => setGearId(e.target.value)}
               className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong cursor-pointer"
@@ -147,6 +150,7 @@ export function ScenarioBuilder({
                       <button
                         key={a.id}
                         onClick={() => toggleAbility(a.id)}
+                        aria-pressed={selectedAbilities.includes(a.id)}
                         className={`px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
                           selectedAbilities.includes(a.id)
                             ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
@@ -214,6 +218,7 @@ export function ScenarioBuilder({
                 {enemySetup.length > 1 && (
                   <button
                     onClick={() => setEnemySetup(enemySetup.filter((_, j) => j !== i))}
+                    aria-label={`Remove enemy group ${i + 1}`}
                     className="text-2xs text-text-muted hover:text-red-400 transition-colors"
                   >
                     ×

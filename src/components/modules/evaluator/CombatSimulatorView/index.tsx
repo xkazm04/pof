@@ -107,8 +107,12 @@ export function CombatSimulatorView() {
     [summary, alerts],
   );
 
+  // The one gate for "a run can start": the button's disabled state and the handler's
+  // guard both read it, so a click can never be accepted by the UI and dropped by the handler.
+  const canRun = !!tuning && !!defaultConfig && !!gear;
+
   const handleRun = useCallback(async () => {
-    if (!tuning || !defaultConfig || !gear) return;
+    if (!canRun || !tuning || !defaultConfig || !gear) return;
     const scenario: CombatScenario = {
       name: `Lvl ${playerLevel} vs ${enemySetup.map((e) => `${e.count}x ${e.archetypeId}`).join(', ')}`,
       playerLevel,
@@ -116,10 +120,14 @@ export function CombatSimulatorView() {
       playerAbilities: playerAbils,
       enemies: enemySetup,
     };
-    const config: CombatSimConfig = { ...defaultConfig, iterations, seed: Math.floor(Math.random() * 999999) };
+    // A candidate diffed against a pinned baseline reuses the baseline's seed: with an
+    // unchanged tuning the delta is then exactly zero instead of RNG noise from two
+    // different random draws (common random numbers).
+    const seed = baselineResult?.config.seed ?? Math.floor(Math.random() * 999999);
+    const config: CombatSimConfig = { ...defaultConfig, iterations, seed };
     setActiveIterations(iterations);
     await runSimulation(scenario, tuning, config);
-  }, [tuning, defaultConfig, gear, playerLevel, playerAbils, enemySetup, iterations, runSimulation]);
+  }, [canRun, tuning, defaultConfig, gear, playerLevel, playerAbils, enemySetup, iterations, baselineResult, runSimulation]);
 
   const handleTuningChange = useCallback((key: keyof TuningOverrides, value: number) => {
     if (!tuning) return;
@@ -139,15 +147,22 @@ export function CombatSimulatorView() {
   // Run lifecycle is otherwise conveyed only by the button's changing label, which
   // screen readers don't announce. Progress is quantised to quarters so the live
   // region speaks ~4 times per run instead of once per streamed batch.
+  const errorMessage = error
+    ? (tuning && defaultConfig ? `Simulation failed: ${error}` : `Could not load combat data: ${error}`)
+    : null;
+
   const runStatus = useMemo(() => {
     if (isSimulating) {
       return `Simulating ${activeIterations} fights — ${Math.floor(simProgress * 4) * 25}% complete`;
     }
+    // A failed run leaves the previous summary in the store; without this the live region
+    // would re-announce that stale run as a fresh "complete".
+    if (errorMessage) return errorMessage;
     if (summary) {
       return `Simulation complete: ${(summary.survivalRate * 100).toFixed(0)}% survival across ${(result?.config.iterations ?? activeIterations).toLocaleString()} fights`;
     }
     return '';
-  }, [isSimulating, activeIterations, simProgress, summary, result]);
+  }, [isSimulating, activeIterations, simProgress, summary, result, errorMessage]);
 
   // A/B diff is only apples-to-apples when the candidate ran the same encounter
   // as the pinned baseline; flag a divergence so the delta isn't read as a
@@ -194,7 +209,7 @@ export function CombatSimulatorView() {
               )}
               <button
                 onClick={handleRun}
-                disabled={isSimulating || !tuning}
+                disabled={isSimulating || !canRun}
                 className="flex items-center gap-1.5 px-4 py-2 bg-status-red-subtle border border-status-red-strong rounded-lg text-red-400 text-xs font-medium hover:bg-status-red-medium transition-colors disabled:opacity-50"
               >
                 {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
@@ -258,7 +273,7 @@ export function CombatSimulatorView() {
         {error && (
           <InlineErrorRetry
             className="mb-4"
-            message={tuning && defaultConfig ? `Simulation failed: ${error}` : `Could not load combat data: ${error}`}
+            message={errorMessage ?? error}
             onRetry={handleRetry}
           />
         )}
