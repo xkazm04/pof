@@ -1,0 +1,197 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+  "subject": "module-design",
+  "evaluatedAt": "2026-10-13T11:45:49.160993+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "step-shared-primitives",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 An incomplete two-field record is unsafely cast to the broader StepSpec type to satisfy an over-specified function parameter signature without verifying missing members.",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 Unchecked type assertion bypasses the compiler to pass an incomplete record where a typed partial signature should have been used."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:75 Demands a complete StepSpec interface even though the body only reads archetype and label, expanding the parameter interface unnecessarily."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:10 Candidate history transitions are pure functions without framework or I/O dependencies."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:147 Uses an explicit sequential loop to compute the maximum sequence number where a declarative pipeline would add destructured accumulator overhead."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:70 Exposes the liveEligible seam enabling substitution between simulated stub production and real model execution."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:17 Delivers high caller leverage by unifying direction, validation, async state, and retry handling into a standard produce component."
+        }
+      ]
+    },
+    {
+      "context": "world-module",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Generic catalog entities from an external store are unsafely cast to ZoneEntry without runtime validation or an invariant comment verifying the array element shapes.",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Unchecked type assertion casts generic catalog entities to ZoneEntry without runtime type guard or invariant comment."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:6 Calculations for playtime budgets and interest curves are kept pure and free of React or external I/O."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:271 detectPacingRegions uses an explicit sequential while-loop with index tracking to group contiguous spans."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:51 applyLevers provides a centralized scenario transformation that synchronously reprices all downstream playtime panels."
+        }
+      ]
+    },
+    {
+      "context": "module-topology-graph",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 A category identifier ('core-engine') that is not a member of the closed SubModuleId union is forced via an unchecked type assertion into a hook expecting a valid submodule ID.",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 Forces an invalid category identifier through a closed SubModuleId type boundary using an unchecked type assertion with no invariant."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:118 Receives an open string from an HTML select change event and casts directly to the closed SubModuleId enum without checking membership."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:90 Maintains a strict single-door adapter discipline by routing all plan dispatches through usePlanDispatch."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/helpers.ts:1 Starfield generation is implemented as pure deterministic math seeded by coordinates to avoid render-time randomness."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/NexusView/helpers.ts:6 Explicit sequential loop matches item IDs against prefix list in order of longest prefix precedence."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "module-design",
+      "context": "combat-damage-pipeline",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "module-design",
+      "context": "combat-choreography",
+      "reason": "withdrawn after review: reviewer (sonnet): The CombatNav.tsx:12 technique anchor is wrong: 'features' is a member of the CombatSubtab union (_shared/data.ts:14), so that cast is a literal-type annotation, not a bypass. The usePacingPaths, Python-generator and loop claims were fine."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T11:45:49.160993+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "declarative-or-sequential",
+        "io-free-core",
+        "locality-and-leverage",
+        "marked-unverifiable-region",
+        "module-depth",
+        "seams-and-adapters"
+      ],
+      "deviations": 1,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T11:45:49.160993+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "declarative-or-sequential",
+        "io-free-core",
+        "locality-and-leverage",
+        "marked-unverifiable-region"
+      ],
+      "deviations": 1,
+      "context": "world-module",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T11:45:49.160993+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "declarative-or-sequential",
+        "io-free-core",
+        "marked-unverifiable-region",
+        "module-depth",
+        "seams-and-adapters"
+      ],
+      "deviations": 1,
+      "context": "module-topology-graph",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T11:45:49.160993+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "declarative-or-sequential",
+        "io-free-core",
+        "marked-unverifiable-region",
+        "module-depth"
+      ],
+      "deviations": 1,
+      "context": "combat-choreography",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

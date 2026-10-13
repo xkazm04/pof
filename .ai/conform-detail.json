@@ -2414,6 +2414,150 @@
           "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Completed and sim edges loop forever. Reduced motion is checked (the line above); there is no population gate."
         }
       ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/module-design": {
+      "context": "step-shared-primitives",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:45:49.160Z",
+      "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 Unchecked type assertion bypasses the compiler to pass an incomplete record where a typed partial signature should have been used."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:75 Demands a complete StepSpec interface even though the body only reads archetype and label, expanding the parameter interface unnecessarily."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:10 Candidate history transitions are pure functions without framework or I/O dependencies."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:147 Uses an explicit sequential loop to compute the maximum sequence number where a declarative pipeline would add destructured accumulator overhead."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:70 Exposes the liveEligible seam enabling substitution between simulated stub production and real model execution."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:17 Delivers high caller leverage by unifying direction, validation, async state, and retry handling into a standard produce component."
+        }
+      ]
+    },
+    "2991dc7e-92df-4e72-a7fe-ea3d15646718/module-design": {
+      "context": "world-module",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:45:49.160Z",
+      "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Unchecked type assertion casts generic catalog entities to ZoneEntry without runtime type guard or invariant comment."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:6 Calculations for playtime budgets and interest curves are kept pure and free of React or external I/O."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:271 detectPacingRegions uses an explicit sequential while-loop with index tracking to group contiguous spans."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:51 applyLevers provides a centralized scenario transformation that synchronously reprices all downstream playtime panels."
+        }
+      ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/module-design": {
+      "context": "module-topology-graph",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:45:49.160Z",
+      "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 Forces an invalid category identifier through a closed SubModuleId type boundary using an unchecked type assertion with no invariant."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:118 Receives an open string from an HTML select change event and casts directly to the closed SubModuleId enum without checking membership."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:90 Maintains a strict single-door adapter discipline by routing all plan dispatches through usePlanDispatch."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/helpers.ts:1 Starfield generation is implemented as pure deterministic math seeded by coordinates to avoid render-time randomness."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/NexusView/helpers.ts:6 Explicit sequential loop matches item IDs against prefix list in order of longest prefix precedence."
+        }
+      ]
+    },
+    "dadc026b-804a-4632-ad7f-0c8254660f2c/module-design": {
+      "context": "combat-choreography",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:45:49.160Z",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:7 Violates the rule against extracting purely for line count; adds module interface with exactly one caller and hides no decision."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/attributes/attribute-defaults-export.ts:28 Attribute defaults Python generator is a pure string transformation over input rows with no file or environment I/O."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:13 Uses an explicit sequential accumulation loop to aggregate damage into time buckets."
+        },
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/CombatNav.tsx:12 Unchecked type assertion casts string 'features' to CombatSubtab to bypass union type checking."
+        }
+      ],
+      "withdrawn": {
+        "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+        "state": "deviation",
+        "at": "2026-10-13T11:46:38.723864+00:00",
+        "reason": "reviewer (sonnet): The CombatNav.tsx:12 technique anchor is wrong: 'features' is a member of the CombatSubtab union (_shared/data.ts:14), so that cast is a literal-type annotation, not a bypass. The usePacingPaths, Python-generator and loop claims were fine."
+      }
     }
   }
 }

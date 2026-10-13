@@ -17153,7 +17153,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 A category identifier ('core-engine') that is not a member of the closed SubModuleId union is forced via an unchecked type assertion into a hook expecting a valid submodule ID.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:a33adfb4a8edc0eb",
+          "evaluatedRevision": 17
         },
         {
           "subject": "test-harness",
@@ -21097,7 +21101,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 An incomplete two-field record is unsafely cast to the broader StepSpec type to satisfy an over-specified function parameter signature without verifying missing members.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:a33adfb4a8edc0eb",
+          "evaluatedRevision": 17
         },
         {
           "subject": "hitl-approval",
@@ -23917,7 +23925,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Generic catalog entities from an external store are unsafely cast to ZoneEntry without runtime validation or an invariant comment verifying the array element shapes.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:a33adfb4a8edc0eb",
+          "evaluatedRevision": 17
         },
         {
           "subject": "canvas-graph",
