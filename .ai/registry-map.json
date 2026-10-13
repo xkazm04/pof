@@ -6124,7 +6124,11 @@
           "revision": 41,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:133 The dashboard loads packaging build records; a search of the listed files for prompt, claude, llm, and systemPrompt found only STATUS_TOKENS color tokens in BuildScopeBanner, no prompt assembler.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "ship-pipeline-gating",
@@ -7628,7 +7632,11 @@
           "revision": 41,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:85 These files record whether a stored produce direction already contained a prompt and persist canon rules that prompts read elsewhere; a search of the listed files for PromptBuilder, '## ', 'You are', and buildPrompt found no assembler.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "test-harness",
@@ -8656,7 +8664,11 @@
           "revision": 41,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:244 Starter chips copy a one-line string into the input via onPromptFill; a search of the listed TerminalOutput files found no assembler, budget, or transcript compaction, and ToolRows.tsx:26 uses CSS truncate on the rendered log row.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "agent-cli-transport",

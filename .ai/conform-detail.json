@@ -778,6 +778,36 @@
         "at": "2026-10-13T00:08:35.421505+00:00",
         "reason": "reviewer (sonnet): The anchor scripts/model-benchmark.ts is not among the context's paths (src/components/status/* and the dev-inspector files); the status components never call it, so the verdict is about the benchmark producer, not this context's code."
       }
+    },
+    "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/prompt-assembly": {
+      "context": "catalog-pipeline-state",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:28:21.100Z",
+      "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+      "techniques": []
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/prompt-assembly": {
+      "context": "build-history-config",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:28:21.100Z",
+      "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+      "techniques": []
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/prompt-assembly": {
+      "context": "cli-terminal-output",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:28:21.100Z",
+      "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+      "techniques": []
     }
   }
 }

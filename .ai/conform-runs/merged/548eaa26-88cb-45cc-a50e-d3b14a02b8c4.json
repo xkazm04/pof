@@ -1,0 +1,84 @@
+{
+ "schema": "conform-run/1",
+ "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-10-13T01:28:21.100200+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/produceLog.ts:85 These files record whether a stored produce direction already contained a prompt and persist canon rules that prompts read elsewhere; a search of the listed files for PromptBuilder, '## ', 'You are', and buildPrompt found no assembler.",
+   "techniques": []
+  },
+  {
+   "context": "build-history-config",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:133 The dashboard loads packaging build records; a search of the listed files for prompt, claude, llm, and systemPrompt found only STATUS_TOKENS color tokens in BuildScopeBanner, no prompt assembler.",
+   "techniques": []
+  },
+  {
+   "context": "cli-terminal-output",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/cli/TerminalOutput/index.tsx:244 Starter chips copy a one-line string into the input via onPromptFill; a search of the listed TerminalOutput files found no assembler, budget, or transcript compaction, and ToolRows.tsx:26 uses CSS truncate on the rendered log row.",
+   "techniques": []
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "prompt-engineering",
+   "reason": "evidence leans on scan-project/route.ts, which is not a tracked file"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "cli-terminal-shell",
+   "reason": "evidence leans on skills/index.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T01:28:21.100200+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T01:28:21.100200+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "build-history-config",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T01:28:21.100200+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "cli-terminal-output",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
