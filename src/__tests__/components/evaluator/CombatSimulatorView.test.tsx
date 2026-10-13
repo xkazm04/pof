@@ -191,3 +191,75 @@ describe('CombatSimulatorView — plain-language metric tooltips', () => {
     expect(within(legend).getByText('Kill share')).toBeTruthy();
   });
 });
+
+describe('CombatSimulatorView — scenarioSignature normalization', () => {
+  it('does not show a false scenario-mismatch warning when enemy groups are reordered or split across rows', () => {
+    const baseScenario = {
+      name: 'Baseline',
+      playerLevel: 5,
+      playerGear: { id: 'starter', name: 'Starter', bonuses: {} },
+      playerAbilities: [{ id: 'ga-melee-attack' }, { id: 'ga-fireball' }],
+      enemies: [
+        { archetypeId: 'ranged-archer', count: 1, level: 5 },
+        { archetypeId: 'melee-grunt', count: 3, level: 5 },
+      ],
+    };
+    const candidateScenario = {
+      name: 'Candidate',
+      playerLevel: 5,
+      playerGear: { id: 'starter', name: 'Starter', bonuses: {} },
+      playerAbilities: [{ id: 'ga-fireball' }, { id: 'ga-melee-attack' }],
+      enemies: [
+        { archetypeId: 'melee-grunt', count: 1, level: 5 },
+        { archetypeId: 'melee-grunt', count: 2, level: 5 },
+        { archetypeId: 'ranged-archer', count: 1, level: 5 },
+      ],
+    };
+    const prevBaseline = storeState.baselineResult;
+    const prevComparison = storeState.comparison;
+    const prevResult = storeState.result;
+    try {
+      storeState.baselineResult = {
+        config: storeState.defaultConfig,
+        scenario: baseScenario,
+        summary: storeState.summary,
+        durationMs: 40,
+      };
+      storeState.result = {
+        config: storeState.defaultConfig,
+        scenario: candidateScenario,
+        summary: storeState.summary,
+        durationMs: 45,
+      };
+      storeState.comparison = {
+        baseline: storeState.baselineResult,
+        candidate: storeState.result,
+        deltas: {
+          survivalRateDelta: 0, avgDurationDelta: 0, avgDPSDelta: 0, oneShotRateDelta: 0,
+        },
+        alertDiff: [],
+      };
+
+      const { rerender } = render(<CombatSimulatorView />);
+      expect(screen.queryByText(/Scenario changed since the baseline was pinned/i)).toBeNull();
+
+      // Actually changing enemy count must still trigger the mismatch banner.
+      storeState.result = {
+        config: storeState.defaultConfig,
+        scenario: {
+          ...candidateScenario,
+          enemies: [{ archetypeId: 'melee-grunt', count: 4, level: 5 }],
+        },
+        summary: storeState.summary,
+        durationMs: 45,
+      };
+      rerender(<CombatSimulatorView />);
+      expect(screen.getByText(/Scenario changed since the baseline was pinned/i)).toBeTruthy();
+    } finally {
+      storeState.baselineResult = prevBaseline;
+      storeState.comparison = prevComparison;
+      storeState.result = prevResult;
+    }
+  });
+});
+

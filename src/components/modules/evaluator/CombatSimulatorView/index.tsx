@@ -34,11 +34,20 @@ import { StatCard } from './StatCards';
 // when a pinned baseline and the latest candidate describe different encounters,
 // so an A/B diff can't silently compare apples to oranges.
 function scenarioSignature(s: CombatScenario): string {
+  const enemyCounts = new Map<string, number>();
+  for (const e of s.enemies ?? []) {
+    if (e.count <= 0) continue;
+    const key = `${e.archetypeId}:${e.level}`;
+    enemyCounts.set(key, (enemyCounts.get(key) ?? 0) + e.count);
+  }
+  const enemies = [...enemyCounts.entries()]
+    .map(([key, count]) => `${key}:${count}`)
+    .sort();
   return JSON.stringify({
     lvl: s.playerLevel,
     gear: s.playerGear?.id,
-    abils: [...s.playerAbilities.map((a) => a.id)].sort(),
-    enemies: s.enemies.map((e) => `${e.archetypeId}:${e.count}:${e.level}`),
+    abils: [...new Set((s.playerAbilities ?? []).map((a) => a.id))].sort(),
+    enemies,
   });
 }
 
