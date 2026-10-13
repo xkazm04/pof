@@ -10435,7 +10435,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanView.tsx:31 Searches for corridorWidth, roomGraph and pacing-linter found no shell-context hits and located their repository implementations in separate contexts, while this view manages feature-implementation tasks.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "engine-host-contract",
@@ -17927,7 +17931,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/spawnPlacement.ts:127 Blender export places the boss near a fixed map corner instead of selecting its room by traversal distance and arena size.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "terrain-synthesis-acceptance",
@@ -18141,7 +18149,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:182 The dungeon run retains its seed-bearing configuration and generated output but omits the generator version required to identify its reproducibility contract.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mcp-tools",
@@ -18477,7 +18489,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:46 Searches for corridorWidth, roomGraph and pacing-linter found no context hits and located spatial-generation implementations elsewhere in the repository, while this context produces progression tables and character-balance previews.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "game-economy-tuning",
@@ -23837,7 +23853,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/world/zone-analysis.ts:109 Zone validation substitutes an incoming-edge count for reachability from the start, so disconnected cycles can receive a clean progression verdict.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "module-design",

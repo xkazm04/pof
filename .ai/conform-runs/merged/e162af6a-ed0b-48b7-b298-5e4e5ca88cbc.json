@@ -1,0 +1,338 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e162af6a-ed0b-48b7-b298-5e4e5ca88cbc",
+ "subject": "procedural-level-planning",
+ "evaluatedAt": "2026-10-13T08:44:57.347937+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "procedural-level-generation",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/spawnPlacement.ts:127 Blender export places the boss near a fixed map corner instead of selecting its room by traversal distance and arena size.",
+   "techniques": [
+    {
+     "technique": "algorithm-parameter-support-matrix",
+     "verdict": "deviation",
+     "evidence": "src/lib/level-design/procgen-algorithms.ts:139 Normalization ensures min <= max, and depthFor is monotonic, so valid minimum changes cannot affect BSP split depth even though the minimum control is declared supported."
+    },
+    {
+     "technique": "critical-path-to-optional-branch-ratio",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/constants.ts:106 The dungeon defaults and shared spec provide no intended optional-to-critical room ratio or branch-depth budget; searches of the generation code found no corresponding measurement."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "deviation",
+     "evidence": "src/lib/level-design/pacing-linter.ts:248 The closure promotes every room with no incoming edge to a starting position, allowing disconnected rooms and their keys to count as reachable from the declared arc start."
+    },
+    {
+     "technique": "pacing-linter-rules",
+     "verdict": "deviation",
+     "evidence": "src/lib/level-design/pacing-linter.ts:682 Evaluation is enabled solely by room count; room kinds, difficulty values and connection elements are not narrowed, and missing difficulty does not produce an unevaluated-rule result."
+    },
+    {
+     "technique": "safe-room-and-boss-placement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/spawnPlacement.ts:127 Boss placement uses a geometric corner followed by floor snapping, without traversal-distance ranking, arena-size selection or adjacent safe-room placement."
+    },
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "deviation",
+     "evidence": "src/lib/level-design/procgen-spec.ts:248 The preview receives the label instead of the spec's resolved seedValue, and generatePreview hashes that label again, violating the resolve-once requirement."
+    }
+   ],
+   "registryProposal": "Require support-matrix differential checks to vary a parameter while keeping the request valid: raising a minimum above its maximum and then swapping the pair can make an inert minimum appear consumed."
+  },
+  {
+   "context": "world-module",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/world/zone-analysis.ts:109 Zone validation substitutes an incoming-edge count for reachability from the start, so disconnected cycles can receive a clean progression verdict.",
+   "techniques": [
+    {
+     "technique": "algorithm-parameter-support-matrix",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:71 Branchiness remains active for every topology, although the linear and hub-and-spoke connection branches return without consulting it."
+    },
+    {
+     "technique": "critical-path-to-optional-branch-ratio",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:31 This measures a world at zone scale, which the technique explicitly excludes from its room-scale ratio."
+    },
+    {
+     "technique": "declare-what-each-engine-ignores",
+     "verdict": "deviation",
+     "evidence": "src/lib/world/zone-graph-generator.ts:117 Topology variants return only zones, with no ignored-input payload declaring that linear and hub-and-spoke generation discard branchiness."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:118 A critical-path door is declared locked without a machine-readable satisfier, and world validation walks plain zone connections without a gate/key closure."
+    },
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:49 Pins preserve seed and parameters and regenerate on restoration; the inspected pin API and type store neither the generated plan nor a generator version."
+    },
+    {
+     "technique": "zone-progression-linting",
+     "verdict": "deviation",
+     "evidence": "src/lib/world/zone-analysis.ts:109 Incoming edges do not prove start reachability; unreachable findings are warnings, and band comparison uses > 3 instead of >= 3 and omits downward jumps."
+    }
+   ]
+  },
+  {
+   "context": "progression-rewards-internals",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:46 Searches for corridorWidth, roomGraph and pacing-linter found no context hits and located spatial-generation implementations elsewhere in the repository, while this context produces progression tables and character-balance previews.",
+   "techniques": [
+    {
+     "technique": "algorithm-parameter-support-matrix",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/index.tsx:35 The generator choices select attribute-code output formats, not spatial generation algorithms."
+    },
+    {
+     "technique": "critical-path-to-optional-branch-ratio",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/BuildPathComparison.tsx:15 Build paths are character-stat presets, with no traversal objective or optional-room graph."
+    },
+    {
+     "technique": "declare-what-each-engine-ignores",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:46 This exports one progression-table schema, not a shared level request interpreted by multiple spatial engines."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/LevelUpRewardPreview.tsx:22 The preview lists level-up rewards without placing spatial gates or their satisfiers."
+    },
+    {
+     "technique": "landmark-and-sightline-legibility",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/AchievementBoard.tsx:29 Zone visits are an achievement counter; this board does not place landmarks into a generated space."
+    },
+    {
+     "technique": "pacing-linter-rules",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:41 This estimates encounter kill time, a balance concern explicitly outside room-graph pacing."
+    },
+    {
+     "technique": "safe-room-and-boss-placement",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/RestXpSystem.tsx:92 Rest means offline XP accumulation, with no safe-room placement."
+    },
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/PrestigePreview.tsx:13 Prestige is represented by a fixed progression table, without seeded level regeneration."
+    },
+    {
+     "technique": "zone-progression-linting",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/PowerCurveDangerZones.tsx:17 Danger zones describe relative character and enemy power, not connected world regions."
+    }
+   ],
+   "absenceTerms": [
+    "corridorWidth",
+    "roomGraph",
+    "pacing-linter"
+   ]
+  },
+  {
+   "context": "procedural-scene-tools",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:182 The dungeon run retains its seed-bearing configuration and generated output but omits the generator version required to identify its reproducibility contract.",
+   "techniques": [
+    {
+     "technique": "algorithm-parameter-support-matrix",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView/GeneratorTab.tsx:72 Dungeon generation has its own parameter editor and one BSP backend."
+    },
+    {
+     "technique": "critical-path-to-optional-branch-ratio",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:108 The inspected generator produces geometric rooms without a designated objective, which this technique explicitly excludes."
+    },
+    {
+     "technique": "declare-what-each-engine-ignores",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/procedural-engine/generatorSpecs.ts:62 Each generator receives its own correlated configuration type; there is no shared spatial-request superset."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:159 The fully inspected dungeon connector carves open corridors and introduces no lock requirements or key grants."
+    },
+    {
+     "technique": "pacing-linter-rules",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:228 The result contains geometric rooms without room kinds or difficulty values, the technique's explicit non-applicability case."
+    },
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:182 The stored run has configuration, output and timestamp but no generator version; the inspected export provenance also omits that version."
+    }
+   ]
+  },
+  {
+   "context": "core-engine-planning-shell",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/PlanView.tsx:31 Searches for corridorWidth, roomGraph and pacing-linter found no shell-context hits and located their repository implementations in separate contexts, while this view manages feature-implementation tasks.",
+   "techniques": [
+    {
+     "technique": "algorithm-parameter-support-matrix",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanView.tsx:53 This tab renders an implementation tracker without spatial-generator parameter controls."
+    },
+    {
+     "technique": "declare-what-each-engine-ignores",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/GenreModuleView.tsx:22 The shell dispatches module views without producing shared-request spatial-generation results."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanningGlossary.tsx:28 Prerequisites govern developer tasks, not access through generated game-space gates."
+    },
+    {
+     "technique": "landmark-and-sightline-legibility",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasNodes.tsx:83 Canvas nodes identify implementation features, not landmarks encountered while walking a level."
+    },
+    {
+     "technique": "pacing-linter-rules",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/ImplementationPlan/SummaryCards.tsx:54 The displayed duration is development effort, without a typed gameplay room graph."
+    },
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/GenreTemplateGallery.tsx:46 Template instantiation imports character genomes without promising seeded level regeneration."
+    },
+    {
+     "technique": "zone-progression-linting",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasSectors.tsx:12 Sectors group software modules, not world regions with traversal connections and level bands."
+    }
+   ],
+   "absenceTerms": [
+    "corridorWidth",
+    "roomGraph",
+    "pacing-linter"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-13T08:44:57.347937+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "algorithm-parameter-support-matrix",
+    "critical-path-to-optional-branch-ratio",
+    "gate-and-key-solvability-proof",
+    "pacing-linter-rules",
+    "safe-room-and-boss-placement",
+    "seed-determinism-contract"
+   ],
+   "deviations": 1,
+   "context": "procedural-level-generation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T08:44:57.347937+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "algorithm-parameter-support-matrix",
+    "critical-path-to-optional-branch-ratio",
+    "declare-what-each-engine-ignores",
+    "gate-and-key-solvability-proof",
+    "seed-determinism-contract",
+    "zone-progression-linting"
+   ],
+   "deviations": 1,
+   "context": "world-module",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T08:44:57.347937+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "algorithm-parameter-support-matrix",
+    "critical-path-to-optional-branch-ratio",
+    "declare-what-each-engine-ignores",
+    "gate-and-key-solvability-proof",
+    "landmark-and-sightline-legibility",
+    "pacing-linter-rules",
+    "safe-room-and-boss-placement",
+    "seed-determinism-contract",
+    "zone-progression-linting"
+   ],
+   "deviations": 0,
+   "context": "progression-rewards-internals",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T08:44:57.347937+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "algorithm-parameter-support-matrix",
+    "critical-path-to-optional-branch-ratio",
+    "declare-what-each-engine-ignores",
+    "gate-and-key-solvability-proof",
+    "pacing-linter-rules",
+    "seed-determinism-contract"
+   ],
+   "deviations": 1,
+   "context": "procedural-scene-tools",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T08:44:57.347937+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "algorithm-parameter-support-matrix",
+    "declare-what-each-engine-ignores",
+    "gate-and-key-solvability-proof",
+    "landmark-and-sightline-legibility",
+    "pacing-linter-rules",
+    "seed-determinism-contract",
+    "zone-progression-linting"
+   ],
+   "deviations": 0,
+   "context": "core-engine-planning-shell",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
