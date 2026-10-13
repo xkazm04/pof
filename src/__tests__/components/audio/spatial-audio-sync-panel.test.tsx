@@ -63,4 +63,42 @@ describe('SpatialAudioGeneratorPanel — preview, then explicit apply', () => {
     expect(gen).toHaveLength(1);
     expect(gen[0].overwrite).toEqual(['r2']);
   });
+
+  it('surfaces a load error with retry instead of the empty state when list-levels fails', async () => {
+    let attempts = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String((init as RequestInit).body)) as Body;
+      if (body.action === 'list-levels') {
+        attempts += 1;
+        if (attempts === 1) {
+          return new Response(JSON.stringify({ success: false, error: 'Level DB unavailable' }), { status: 500 });
+        }
+        return new Response(
+          JSON.stringify({ success: true, data: [{ id: 1, name: 'Crypt Level', roomCount: 2, connectionCount: 1 }] }),
+          { status: 200 },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            rows: ROWS, ops: [], summary: { new: 0, unchanged: 2, updated: 0, kept: 0, orphaned: 0 },
+            suggestedGlobalReverb: 'cave', report: [], targetSceneId: null,
+          },
+        }),
+        { status: 200 },
+      );
+    });
+
+    render(<SpatialAudioGeneratorPanel activeDoc={SCENE} accentColor={ACCENT_CYAN_LIGHT} onSceneCreated={vi.fn()} />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Level DB unavailable');
+    expect(screen.queryByText(/No level design documents found/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(await screen.findByText('Crypt Level')).toBeTruthy();
+    expect(attempts).toBe(2);
+  });
 });
+

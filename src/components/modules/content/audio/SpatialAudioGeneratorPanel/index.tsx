@@ -33,6 +33,8 @@ export function SpatialAudioGeneratorPanel({
 
   const [levelDocs, setLevelDocs] = useState<LevelDocItem[]>([]);
   const [loadingLevels, setLoadingLevels] = useState(true);
+  const [levelsError, setLevelsError] = useState<string | null>(null);
+  const [levelsEpoch, setLevelsEpoch] = useState(0);
   const [selectedLevelId, setSelectedLevelId] = useState<number | null>(null);
   const [syncIntoActive, setSyncIntoActive] = useState(false);
   const targetSceneId = syncIntoActive && activeDoc ? activeDoc.id : null;
@@ -62,12 +64,23 @@ export function SpatialAudioGeneratorPanel({
     let cancelled = false;
     tryApiFetch<LevelDocItem[]>(SYNC_URL, post({ action: 'list-levels' }))
       .then((r) => {
-        if (cancelled || !r.ok) return;
+        if (cancelled) return;
+        if (!r.ok) {
+          setLevelsError(r.error);
+          return;
+        }
+        setLevelsError(null);
         setLevelDocs(r.data);
         if (r.data.length === 1) setSelectedLevelId(r.data[0].id);
       })
       .finally(() => { if (!cancelled) setLoadingLevels(false); });
     return () => { cancelled = true; };
+  }, [levelsEpoch]);
+
+  const retryLoadLevels = useCallback(() => {
+    setLoadingLevels(true);
+    setLevelsError(null);
+    setLevelsEpoch((n) => n + 1);
   }, []);
 
   // The plan is shown BEFORE anything is written: re-planned whenever the
@@ -165,6 +178,23 @@ export function SpatialAudioGeneratorPanel({
             <div className="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
               <Loader2 className="w-4 h-4 animate-spin" />
               Loading level documents…
+            </div>
+          ) : levelsError ? (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-2 text-xs text-red-400 py-3 px-4 bg-red-500/10 border border-red-500/20 rounded-lg"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{levelsError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={retryLoadLevels}
+                className="px-2.5 py-1 rounded-md border border-red-500/30 text-text hover:bg-surface-hover font-medium shrink-0"
+              >
+                Retry
+              </button>
             </div>
           ) : levelDocs.length === 0 ? (
             <div className="flex items-center justify-center gap-2 text-xs text-text-muted py-6 bg-surface-deep border border-dashed border-border rounded-lg">
