@@ -8,6 +8,7 @@
  * are created lazily on first use (matching the other *-db.ts modules).
  */
 
+import type Database from 'better-sqlite3';
 import { getDb } from './db';
 import type {
   SpendRecord,
@@ -23,8 +24,11 @@ import { budgetPeriods, ENFORCED_BUDGET_ZONE } from '@/lib/cli-spend/budgetPrevi
 
 // ── Schema bootstrap ─────────────────────────────────────────────────────────
 
+let cliSpendEnsuredDb: Database.Database | null = null;
+
 export function ensureCliSpendTables(): void {
   const db = getDb();
+  if (cliSpendEnsuredDb === db) return;
   db.exec(`
     CREATE TABLE IF NOT EXISTS cli_spend (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +43,7 @@ export function ensureCliSpendTables(): void {
       cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
       duration_ms INTEGER NOT NULL DEFAULT 0,
       success INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'completed',
       recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
@@ -61,6 +66,7 @@ export function ensureCliSpendTables(): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  cliSpendEnsuredDb = db;
 }
 
 // ── Row mapping ──────────────────────────────────────────────────────────────

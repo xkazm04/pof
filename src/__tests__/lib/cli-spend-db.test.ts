@@ -141,4 +141,14 @@ describe('cli-spend-db', () => {
     expect(recent[0].moduleId).toBe('b');
     expect(recent[1].moduleId).toBe('a');
   });
+
+  it('memoizes ensureCliSpendTables per Database instance so getSpendDashboard does not re-run DDL on every read', () => {
+    const execSpy = vi.spyOn(getDb(), 'exec');
+    try {
+      getSpendDashboard();
+      expect(execSpy).toHaveBeenCalledTimes(0);
+    } finally {
+      execSpy.mockRestore();
+    }
+  });
 });
