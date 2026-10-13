@@ -1,0 +1,658 @@
+{
+ "schema": "conform-run/1",
+ "worker": "efe5385e-bce1-4e4b-acb0-93cb0b5456c8",
+ "subject": "voice-io",
+ "evaluatedAt": "2026-10-13T04:25:19.073584+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "audio-module",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/audio-gen/route.ts:80 This route treats text-to-speech as a kind the sound-generation path must refuse before a billed call (the refusal is the supportsKind check at line 86), and a search of the other listed files for speech, transcription, microphone, and tts found no capture or synthesis pipeline.",
+   "techniques": [
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 Same absence: no microphone or transcript path in the listed files."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 Speech synthesis is refused; the route stores generated sound-effect bytes."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 Provider mesh is for sound-effect generation, not a speech engine."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No transcript-to-command crossing."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No read-aloud or capture affordance in the listed files."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No speech residency choice; generation is a remote sound-effect call."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No live listen-and-speak session."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No speech-engine package."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 Prompts describe sound effects, not text prepared for speaking."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No transcript destination."
+    },
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No voice specification is stored."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No decoder."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No dictation handoff."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 Callers receive a sound-effect asset, not live speech."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No speaking voice to bind."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No speech render is accepted."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No recognition-engine choice."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No live speech synthesis to budget."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:80 No voice onboarding."
+    }
+   ]
+  },
+  {
+   "context": "character-movement-playground",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 This screen is a dodge-trajectory and movement-feel playground, and a search of the listed movement, playground, and ai-feel files for speech, voice, tts, transcription, microphone, and dictation found no matches.",
+   "techniques": [
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No capture affordance in the listed files."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No speech playback."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No speech engine."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No spoken commands."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No narration controls."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No voice placement."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No duplex session."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No speech package."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No text is spoken."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No transcript."
+    },
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No voice identity."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No decoder."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No dictation handoff."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 Nothing here speaks."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No speech caller."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No speech render."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No recognition engine."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No live synthesis."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 No voice setup."
+    }
+   ]
+  },
+  {
+   "context": "catalog-database",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/catalog/route.ts:13 This route reads catalog lifecycle rows, and a search of the listed database, seed, store, and route files for transcription, microphone, text-to-speech, and speechConfig found no speech channel; the characters seed line 'a talker first' is NPC description prose.",
+   "techniques": [
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 Persistence only; no capture."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No playback queue."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No speech engine registry."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No spoken commands."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No voice affordance."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No voice placement."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No live session."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No speech package."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No text is spoken."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No transcript."
+    },
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No authored voice record."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No decoder."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No dictation handoff."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No speech output."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No voice binding."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No speech audio buffer."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No recognition bake-off."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No live synthesis."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/route.ts:13 No voice setup. The audio seed returns an empty sound-set list."
+    }
+   ]
+  },
+  {
+   "context": "ai-developer-tools-api",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/agents/live-token/route.ts:143 The live-token route locks a Gemini Live session to cloud transcription and cloud speech, and an unmatched voice name, a key-only readiness flag, and an unmeasured live audio modality are all accepted.",
+   "techniques": [
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "conformant",
+     "evidence": "src/app/api/agents/live-token/route.ts:141 The token constraint hands Gemini the advisor persona, tools, and audio output, so the vendor decides replies and speaks them, from one structure in the repo. There is no stored vendor agent to drift, and this file does not open the socket."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "deviation",
+     "evidence": "src/app/api/agents/live-token/route.ts:143 User audio is transcribed inside the cloud live session. The route has no on-device engine and no disclosure or opt-in."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "deviation",
+     "evidence": "src/app/api/agents/live-token/route.ts:177 GET reports the engine ready when an API key constructed a client. A present key and a failing service are the same available:true."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "deviation",
+     "evidence": "src/app/api/agents/live-token/route.ts:122 An explicit voice outside VALID_VOICES is dropped and the request still succeeds as Puck. One advisor persona does not require a per-caller table; the unmatched argument still has to fail."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "deviation",
+     "evidence": "src/app/api/agents/live-token/route.ts:119 The default is a hardcoded cloud prebuilt voice. No local heard default, labelled cloud opt-in, or compare-by-ear flow exists, and nothing in the repo calls this route."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "deviation",
+     "evidence": "src/app/api/agents/live-token/route.ts:140 Audio is admitted on a hosted live model. A repo search for real-time factor and time-to-first-audio found no measurement; the hosted exception still requires first-audio from the user region."
+    },
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:98 Voices are a closed prebuilt catalog. Nothing authors a voice from a description or a sample."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:138 One model is fixed. The route does not compare recognition engines."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:142 Workspace actions are vendor function calls under the brain session, not a product grammar over a transcript."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:90 The product does not pass display markup to a synthesizer. The only speakability rule is this prompt sentence."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:158 The handler returns a token name. It has no utterance queue, playback, or stop."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:178 One service in one app. The technique says a package waits for a second app or a local engine install."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/agents/live-token/route.ts:131 The handler mints a token and produces no audio, so the live attribution surface is not triggered here."
+    }
+   ],
+   "registryProposal": "A token mint that locks input transcription and speech output is already voice-io even when the repo has no microphone or playback client. The golden path's boundary question does not say so, and the residency, default-voice, and readiness decisions are made in that mint."
+  },
+  {
+   "context": "audio-view-and-catalog",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 voiceLimit here is the scene's max-concurrent-sounds draft, a mixer cap, and a search of the listed AudioView and AudioEventCatalog files found no transcription, microphone, or text-to-speech call.",
+   "techniques": [
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No capture affordance in the listed files."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No speech playback. Concurrent sounds are a mixer budget."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No speech engine."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No spoken commands."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No read-aloud controls. Tabs are painter, soundscapes, and settings."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No speech residency choice."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No live session."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No speech package."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No text is spoken."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No transcript."
+    },
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No voice specification. Player Death's voice tag is a 3D combat-event tag."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No decoder."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No dictation handoff."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No live speech."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 voiceLimit is a sound-slot cap, not a speaker binding."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No speech render."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No recognition engine."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 No live speech synthesis."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 Settings are pool size, concurrent sounds, and reverb, not a voice setup flow."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-13T04:25:19.073584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "audio-module",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T04:25:19.073584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "character-movement-playground",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T04:25:19.073584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "catalog-database",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T04:25:19.073584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience"
+   ],
+   "deviations": 1,
+   "context": "ai-developer-tools-api",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T04:25:19.073584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "audio-view-and-catalog",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}

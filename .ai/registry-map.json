@@ -2570,7 +2570,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/agents/live-token/route.ts:143 The live-token route locks a Gemini Live session to cloud transcription and cloud speech, and an unmatched voice name, a key-only readiness flag, and an unmeasured live audio modality are all accepted.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "agent-instruction-files",
@@ -4810,13 +4814,12 @@
           "changedAt": "2026-09-30",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "this module is game sound-effect/ambience generation and spatial placement (SoundForgePanel.tsx, SpatialAudioGeneratorPanel/, AudioScenePainter/), not speech capture or synthesis; src/lib/audio-gen/providers/elevenlabs.ts:26 states outright 'PoF does not claim text-to-speech.' [re-judged 2026-09-22: still holds, and more firmly: app/api/audio-gen/route.ts:91-99 now REFUSES a tts or music request before any billed call rather than silently serving an SFX clip under that label, and elevenlabs.ts:26 still states PoF does not claim text-to-speech. The 7 techniques voice-io gained are all speech-side (voice identity, transcripts, caller attribution).]",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256-b2:4337a608b34cbe4a",
-          "evaluatedRevision": 18,
+          "evidence": "src/app/api/audio-gen/route.ts:80 This route treats text-to-speech as a kind the sound-generation path must refuse before a billed call (the refusal is the supportsKind check at line 86), and a search of the other listed files for speech, transcription, microphone, and tts found no capture or synthesis pipeline.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20,
           "source": "conform",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -5083,7 +5086,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 voiceLimit here is the scene's max-concurrent-sounds draft, a mixer cap, and a search of the listed AudioView and AudioEventCatalog files found no transcription, microphone, or text-to-speech call.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "client-fetch-cache",
@@ -7086,7 +7093,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/catalog/route.ts:13 This route reads catalog lifecycle rows, and a search of the listed database, seed, store, and route files for transcription, microphone, text-to-speech, and speechConfig found no speech channel; the characters seed line 'a talker first' is NPC description prose.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "mcp-tools",
@@ -8138,7 +8149,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 This screen is a dodge-trajectory and movement-feel playground, and a search of the listed movement, playground, and ai-feel files for speech, voice, tts, transcription, microphone, and dictation found no matches.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "mcp-tools",
