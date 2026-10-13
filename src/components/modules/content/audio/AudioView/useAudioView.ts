@@ -15,7 +15,7 @@ import {
 import { buildAudioEventPrompt } from '@/lib/prompts/audio-events';
 import type { AudioZone } from '@/types/audio-scene';
 import type { AudioEventCatalogConfig } from '@/components/modules/content/audio/AudioEventCatalog';
-import { MODULE_COLORS } from '@/lib/constants';
+import { MODULE_COLORS, UI_TIMEOUTS } from '@/lib/constants';
 import type { TabId } from './types';
 import { useSceneSession } from './useSceneSession';
 
@@ -122,7 +122,7 @@ export function useAudioView() {
 
   useEffect(() => {
     if (!rvToast) return;
-    const t = setTimeout(() => setRvToast(null), 3000);
+    const t = setTimeout(() => setRvToast(null), UI_TIMEOUTS.toast);
     return () => clearTimeout(t);
   }, [rvToast]);
 
