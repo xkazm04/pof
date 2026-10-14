@@ -1,0 +1,171 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6e4786f4-ac69-4c58-829c-f85f428b9b74",
+ "subject": "combat-pacing-and-dramatic-arc",
+ "evaluatedAt": "2026-10-14T23:35:19.273713+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "combat-choreography",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_combat/choreography/BalanceAlertsPanel.tsx:88 Combat choreography displays duration and spongy warnings from a single global threshold set without per-encounter-class envelopes, and omits the structured fight report card and measurement basis.",
+   "techniques": [
+    {
+     "technique": "intensity-and-threat-tension-curve",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/TensionArc.tsx:32 Scales the continuous dramatic tension curve from samples into the SVG lane height."
+    },
+    {
+     "technique": "beat-taxonomy-climax-comeback-deadzone",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:49 Maps the seven dramatic beat types to visual styles and tones across peaks, valleys, and issues."
+    },
+    {
+     "technique": "encounter-duration-envelopes",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/BalanceAlertsPanel.tsx:88 Displays duration envelope and spongy warnings derived from a single global threshold set rather than per-encounter-class bounds."
+    },
+    {
+     "technique": "plain-language-fight-report",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/TensionPanel.tsx:35 Renders only an inline summary sentence rather than a structured fight report card with envelope comparison and actionable input suggestions."
+    },
+    {
+     "technique": "difficulty-band-classification",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/CompareStrip.tsx:33 The choreography outcome reports single-trial survival or death time rather than sampled win rates, so continuous difficulty band classification does not apply."
+    },
+    {
+     "technique": "lead-car-wreck-before-lap-one-rate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/SpatialGrid.tsx:18 Encounter layout models placed enemies across spatial grid coordinates and wave spawns rather than a multi-entrant combat race or lap boundary."
+    },
+    {
+     "technique": "division-wide-damage-multiplier",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/TuningSlider.tsx:9 Tuning sliders modify local scratch multipliers (damage, health) rather than logging a division-wide data scalar across calibration sweeps."
+    },
+    {
+     "technique": "proxy-driver-limit-declaration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/ue5-export.ts:5 Choreography editor generates static Unreal Engine 5 spawn data tables without certifying proxy-derived fairness acceptance rates."
+    }
+   ],
+   "registryProposal": "The standard combines general action-combat pacing techniques (intensity-threat tension curves, beat taxonomy, duration envelopes, fight report cards) with multi-entrant combat racing opening gates (lead-car lap-one elimination rate and division-wide damage multipliers) whose preconditions do not hold for standard ARPG combat encounters; segregating vehicle combat racing into a distinct sub-module would sharpen registry applicability."
+  },
+  {
+   "context": "combat-simulator",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/CombatSimulatorView/FightReportCardPanel.tsx:47 The fight report card badges the difficulty band without stating the numerical survival boundary or distance to adjacent bands, lacks beat shape detection, and fails to declare the simulated driver proxy.",
+   "techniques": [
+    {
+     "technique": "difficulty-band-classification",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/FightReportCardPanel.tsx:47 Difficulty is badged by name and color without publishing the numeric survival threshold or boundary distance."
+    },
+    {
+     "technique": "plain-language-fight-report",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/FightReportCardPanel.tsx:66 Fight length verdict triggers a slog warning at 30s contradicting the 60s simulator alert, and the report card omits the beat shape section."
+    },
+    {
+     "technique": "proxy-driver-limit-declaration",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/FightReportCardPanel.tsx:91 Reports simulated proxy runs as human win rates without declaring driver policy, input path, or the required 'Human sample: none'."
+    },
+    {
+     "technique": "encounter-duration-envelopes",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/AlertsSection.tsx:37 Alerts check duration and spongy limits (>60s) globally rather than per encounter class, and drift from the fight report verdict threshold."
+    },
+    {
+     "technique": "intensity-and-threat-tension-curve",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/index.tsx:265 Surfaces only aggregate summary scalars (survival rate, avg duration, player DPS) and does not compute or visualize an intensity-and-threat tension curve."
+    },
+    {
+     "technique": "beat-taxonomy-climax-comeback-deadzone",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/index.tsx:358 Advanced results display ability usage heatmaps and distributions but omit beat mining across trials (climax, comeback, dead zones)."
+    },
+    {
+     "technique": "lead-car-wreck-before-lap-one-rate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/ScenarioBuilder.tsx:15 Scenario builder configures player abilities, gear, and enemy mob counts for ARPG combat rather than combat racing laps or grid starts."
+    },
+    {
+     "technique": "division-wide-damage-multiplier",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CombatSimulatorView/TuningSlidersPanel.tsx:10 Tuning sliders adjust per-encounter multipliers for player and enemy stats rather than calibrating a single tier-wide damage scalar across campaign divisions."
+    }
+   ],
+   "registryProposal": "The standard requires fight report cards to present dramatic beat findings alongside outcome bands, but does not provide an aggregation specification for reporting beat distributions across large Monte Carlo sample sets."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "combat-pacing-and-dramatic-arc",
+   "context": "hud-damage-and-navigation",
+   "reason": "UI and HUD presentation layer (floating combat text canvas physics in DamageNumberPhysicsSimulator, screen node transition editor in MenuFlowDiagram, and low-health screen pulse) without combat pacing timeline, beat detection, or difficulty classification. Declined under seat rules forbidding not-applicable."
+  },
+  {
+   "subject": "combat-pacing-and-dramatic-arc",
+   "context": "combat-metrics",
+   "reason": "Aggregated analytics dashboard (DPS, cumulative damage SVG, Sankey flows, stat influence) that aggregates combat events into macro metrics rather than analyzing temporal dramatic arcs, beat taxonomy, or encounter duration envelopes. Declined under seat rules forbidding not-applicable."
+  },
+  {
+   "subject": "combat-pacing-and-dramatic-arc",
+   "context": "combat-damage-pipeline",
+   "reason": "Damage calculation pipeline modeling formula execution steps, heal/damage DAG nodes, and combo ability cooldown overlaps rather than dramatic pacing curves or fight report classification. Declined under seat rules forbidding not-applicable."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-14T23:35:19.273713+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "beat-taxonomy-climax-comeback-deadzone",
+    "difficulty-band-classification",
+    "division-wide-damage-multiplier",
+    "encounter-duration-envelopes",
+    "intensity-and-threat-tension-curve",
+    "lead-car-wreck-before-lap-one-rate",
+    "plain-language-fight-report",
+    "proxy-driver-limit-declaration"
+   ],
+   "deviations": 1,
+   "context": "combat-choreography",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-14T23:35:19.273713+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "beat-taxonomy-climax-comeback-deadzone",
+    "difficulty-band-classification",
+    "division-wide-damage-multiplier",
+    "encounter-duration-envelopes",
+    "intensity-and-threat-tension-curve",
+    "lead-car-wreck-before-lap-one-rate",
+    "plain-language-fight-report",
+    "proxy-driver-limit-declaration"
+   ],
+   "deviations": 1,
+   "context": "combat-simulator",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

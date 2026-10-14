@@ -9875,7 +9875,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/BalanceAlertsPanel.tsx:88 Combat choreography displays duration and spongy warnings from a single global threshold set without per-encounter-class envelopes, and omits the structured fight report card and measurement basis.",
+          "evaluatedAt": "2026-10-14",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "module-design",
@@ -10296,7 +10300,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/FightReportCardPanel.tsx:47 The fight report card badges the difficulty band without stating the numerical survival boundary or distance to adjacent bands, lacks beat shape detection, and fails to declare the simulated driver proxy.",
+          "evaluatedAt": "2026-10-14",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "realtime-combat-semantics",
