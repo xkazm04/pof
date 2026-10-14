@@ -265,7 +265,39 @@ export function missingForgedAbilityFields(x: unknown): string[] {
     'radarValues',
   );
 
+  // Relationships, not only types. Shape checks above type each field alone, so
+  // an artifact can pass them and still be impossible or self-contradicting.
+  // Only run once the fields they read are known good, and name each failure.
+  if (bad.length === 0) bad.push(...forgedAbilityRelationshipFaults(x as unknown as ForgedAbility));
+
   return bad;
+}
+
+/**
+ * Cross-field checks for a shape-valid ForgedAbility: bounds, the timing
+ * containment the combo timeline draws, and the one quantity authored twice
+ * (stats.manaCost vs the constructor's AbilityManaCost literal, which the adopt
+ * path and the shipped code read separately). Each entry names the contradiction.
+ */
+export function forgedAbilityRelationshipFaults(a: ForgedAbility): string[] {
+  const out: string[] = [];
+  const { stats, comboEntry: c } = a;
+  if (stats.baseDamage < 0) out.push('stats.baseDamage is negative');
+  if (stats.manaCost < 0) out.push('stats.manaCost is negative');
+  if (stats.cooldownSec < 0) out.push('stats.cooldownSec is negative');
+  if (c.animDuration <= 0) out.push('comboEntry.animDuration is not positive');
+  const [start, end] = c.damageWindow;
+  if (start < 0 || end < start) out.push('comboEntry.damageWindow is not an ordered interval from 0');
+  else if (end > c.animDuration) out.push('comboEntry.damageWindow ends after animDuration');
+  if (c.recovery < 0) out.push('comboEntry.recovery is negative');
+  else if (c.recovery > c.animDuration) out.push('comboEntry.recovery is longer than animDuration');
+  if (a.radarValues.slice(0, 5).some(v => v < 0 || v > 1)) out.push('radarValues outside 0-1');
+  // Foreign/duplicate authority: only compared when the literal is readable.
+  const m = /\bAbilityManaCost\s*=\s*(-?\d+(?:\.\d*)?)f?\s*;/.exec(a.cppCode);
+  if (m && Math.abs(Number(m[1]) - stats.manaCost) > 1e-6) {
+    out.push(`stats.manaCost (${stats.manaCost}) disagrees with AbilityManaCost in cppCode (${m[1]})`);
+  }
+  return out;
 }
 
 /** Runtime validation so a malformed AI reply doesn't crash `ForgeResult`. */

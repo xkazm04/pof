@@ -277,6 +277,7 @@ const GAS_RULES: string[] = [
   'Include VFX (UNiagaraSystem) and montage (UAnimMontage) as UPROPERTY slots',
   'Radar values should be consistent with existing abilities (e.g. pure buff = 0 damage, high speed)',
   'ComboEntry timing should be realistic (animDuration 0.4-1.5s, recovery 0.1-0.5s)',
+  'stats.manaCost MUST equal the AbilityManaCost literal in the constructor; damageWindow lies inside [0, animDuration] and recovery is not longer than animDuration (both in seconds); every radarValues entry is within 0-1. A response that contradicts itself is rejected',
 ];
 
 export function buildAbilityForgePrompt(input: ForgeInput): string {
