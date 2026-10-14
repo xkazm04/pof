@@ -159,6 +159,7 @@ export interface GateCheckResult {
 /** Render one blocker for the checklist row / log / banner detail — the step AND the layer
  *  that condemned it, so the operator knows whether to fix data, re-drain, or re-judge. */
 function blockerLabel(b: GateBlocker): string {
+  if (b.status === 'unmapped') return b.step;
   return b.layer === 'missing' ? `${b.step} (not produced)` : `${b.step} (${b.status} · ${b.layer})`;
 }
 
@@ -190,6 +191,9 @@ export function deriveGateChecks(
   return DEFAULT_GATE_CHECKS.map((name) => {
     const deps = GATE_CHECK_DEPS[name] ?? [];
     const blockers: GateBlocker[] = [];
+    // A check that verifies nothing is not a check: with no declared dependency the loop below
+    // would leave it with zero blockers and report PASS, a vacuous pass. Block it by name.
+    if (deps.length === 0) blockers.push({ step: 'no dependency declared', status: 'unmapped', layer: 'missing' });
     for (const step of deps) {
       const data = siblings[step];
       if (!data) { blockers.push({ step, status: 'missing', layer: 'missing' }); continue; }
