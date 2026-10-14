@@ -48,20 +48,35 @@ const ARCHIVE_HEADER = [
 // sees a torn file. What remains is the instant between the confirm and the rename; only a lock
 // closes it. The archive is appended only after the rename succeeds, so a failed prune never
 // leaves a line in both files.
+//
+// The plan removes only lines it read, and the file is append-only, newest last. So the check is
+// on what was read, not on the whole file: when the file still starts with the text the plan was
+// computed from, the lines appended since were never part of the plan and are carried over as
+// they are (planned once more in memory, in case they pushed the count back over the cap). Only
+// a change to the text that was read (an edit, a concurrent prune) re-reads and re-plans.
 function prune() {
   for (let attempt = 0; attempt < 5; attempt++) {
     const text = readFileSync(FILE, 'utf8');
     const plan = planFleetMemoryPrune(text, CAP);
     if (!plan.ok) return plan;
     if (plan.archived.length === 0) return plan;
+    const now = readFileSync(FILE, 'utf8');
+    if (!now.startsWith(text)) continue;
+    let kept = plan.kept + now.slice(text.length);
+    let archived = plan.archived;
+    const again = planFleetMemoryPrune(kept, CAP);
+    if (again.ok) {
+      kept = again.kept;
+      archived = [...archived, ...again.archived];
+    }
     const tmp = `${FILE}.${process.pid}.tmp`;
-    writeFileSync(tmp, plan.kept);
-    if (readFileSync(FILE, 'utf8') === text) {
+    writeFileSync(tmp, kept);
+    if (readFileSync(FILE, 'utf8') === now) {
       renameSync(tmp, FILE);
       const eol = text.includes('\r\n') ? '\r\n' : '\n';
       const head = existsSync(ARCHIVE) ? '' : ARCHIVE_HEADER.join(eol) + eol;
-      appendFileSync(ARCHIVE, head + plan.archived.map((l) => l.replace(/\r$/, '') + eol).join(''));
-      return plan;
+      appendFileSync(ARCHIVE, head + archived.map((l) => l.replace(/\r$/, '') + eol).join(''));
+      return { ...plan, kept, archived, entriesAfter: countFleetMemoryEntries(kept) };
     }
     rmSync(tmp);
   }
