@@ -48,6 +48,28 @@ Rules for every session:
    own new files in this shared index; a bare commit sweeps them into yours
    (it happened 2026-08-18, commit `906783b6`).
 
+### Never-lose-work rules (every session, shared checkout)
+
+A housekeeping command must never be able to destroy a sibling session's work.
+These are bans, because a rule that only works when remembered is not a guarantee.
+
+- **Never `git stash` in the shared checkout.** A stash sweeps the whole tree, siblings'
+  in-flight edits included, into a hidden state. On 2026-10-05 a stash pop left literal
+  conflict markers across 71 files (incl. `src/lib/chart-colors.ts`) and blocked typecheck
+  for everyone (see fleet-memory). Need a clean stage? Stage your own paths and leave the
+  rest. Need an A/B of your own change? Use a throwaway `git worktree`.
+- **Stage per path, never in bulk.** No `git add -A`, `git add .`, `git add -u`, `git commit -a`.
+  Read `git status --porcelain` first and sort every entry into mine / pre-existing / a
+  sibling's live work; stage only mine. A pathspec on `commit` bounds the file set but still
+  commits the working-tree content of those files, so do not pathspec-commit a file a sibling
+  has also edited.
+- **Commit each task as it lands**; uncommitted work is the whole blast radius.
+- **Never `git reset --hard` or rewind a shared branch.** What it removes is other sessions'
+  landed work. Repair a mis-scoped commit with `git commit --amend` on your own unshared tip
+  or a new commit; a "lost" commit is recoverable from `git reflog`.
+- **After every commit, confirm `git log --oneline -1` is yours** and `git show --stat HEAD`
+  lists only your files. A commit that did not happen looks like one that did in hook output.
+
 ## Fleet Machine Protocol (mechanical orchestration cues)
 
 When this repo is driven by Personas Fleet, an orchestrator machine-reads your

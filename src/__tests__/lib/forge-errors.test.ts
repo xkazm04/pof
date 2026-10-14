@@ -101,6 +101,22 @@ describe('isValidForgedAbility / missingForgedAbilityFields', () => {
     expect(missing).toContain('radarValues');
   });
 
+  it('rejects a shape-valid ability whose fields contradict each other', () => {
+    const cases: Array<[string, Record<string, unknown>, string]> = [
+      ['window past the animation', { comboEntry: { ...valid.comboEntry, damageWindow: [0.1, 2] } }, 'ends after animDuration'],
+      ['recovery longer than action', { comboEntry: { ...valid.comboEntry, recovery: 3 } }, 'recovery is longer'],
+      ['reversed window', { comboEntry: { ...valid.comboEntry, damageWindow: [0.5, 0.2] } }, 'ordered interval'],
+      ['negative cooldown', { stats: { ...valid.stats, cooldownSec: -1 } }, 'cooldownSec is negative'],
+      ['radar out of range', { radarValues: [0, 0, 0, 0, 7] }, 'radarValues outside'],
+      ['mana cost authored twice', { cppCode: '  AbilityManaCost = 25.f;' }, 'disagrees with AbilityManaCost'],
+    ];
+    for (const [label, patch, frag] of cases) {
+      const missing = missingForgedAbilityFields({ ...valid, ...patch });
+      expect(missing.some(m => m.includes(frag)), label).toBe(true);
+    }
+    expect(isValidForgedAbility({ ...valid, cppCode: 'AbilityManaCost = 2.f;' })).toBe(true);
+  });
+
   it('rejects non-objects without throwing', () => {
     expect(isValidForgedAbility(null)).toBe(false);
     expect(isValidForgedAbility('nope')).toBe(false);

@@ -13,7 +13,7 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 import { ACCENT } from './constants';
 import {
-  diffAbilityStats, diffAbilityTags, diffLines,
+  diffAbilityStats, diffAbilityTags, diffAbilityIdentity, diffLines,
   abilityHasChanges,
 } from './ability-diff';
 import { CodeDiff } from './CodeDiff';
@@ -36,6 +36,7 @@ export function AbilityDiff({ prior, next, instruction }: {
   instruction: string;
 }) {
   const statGroups = useMemo(() => groupDeltas(diffAbilityStats(prior, next)), [prior, next]);
+  const identityChanges = useMemo(() => diffAbilityIdentity(prior, next), [prior, next]);
   const tagChanges = useMemo(() => diffAbilityTags(prior, next), [prior, next]);
   const headerDiff = useMemo(() => diffLines(prior.headerCode, next.headerCode), [prior, next]);
   const cppDiff = useMemo(() => diffLines(prior.cppCode, next.cppCode), [prior, next]);
@@ -61,6 +62,25 @@ export function AbilityDiff({ prior, next, instruction }: {
         <p className="text-xs font-mono text-zinc-500">
           The refine returned an identical ability — no stat, tag, or code changes detected.
         </p>
+      )}
+
+      {/* Identity and wording — fields the refine was told to leave alone */}
+      {identityChanges.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: STATUS_WARNING }}>
+            {identityChanges.some((c) => c.field === 'className')
+              ? 'Identity changed — this may be a new ability, not a refinement'
+              : 'Wording changed'}
+          </div>
+          {identityChanges.map((c) => (
+            <div key={c.field} className="flex items-start gap-2 text-xs font-mono pl-1">
+              <span className="w-24 shrink-0 text-zinc-500">{c.field}</span>
+              <span className="text-zinc-600 line-through break-words min-w-0">{c.before}</span>
+              <ArrowRight size={11} className="shrink-0 mt-0.5" style={{ color: STATUS_WARNING }} />
+              <span className="text-zinc-300 break-words min-w-0">{c.after}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Stats */}

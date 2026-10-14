@@ -14,11 +14,17 @@
  *    craft-ceilings.json, never a gauge.
  *  - the `__process__` scorecard row is gauged by `production-process`, and only it is.
  *
+ *  - disqualifier caps: a finding that names a fired lens disqualifier (`disqualifier`, its
+ *    1-based position in the lens file's list) caps the level. A gauge above the strictest named
+ *    cap is refused — a tagged finding with an uncapped level is a contradiction the auditor
+ *    cannot be trusted to resolve on its own. Lowest cap wins; caps do not stack.
+ *
  * Display-only like the rest of the A-axis: no grading module imports this file.
  */
 import { craftRank, type GaugedCraftLevel } from '@/lib/status/craft';
 import { craftStepOf } from '@/lib/craft/craftCell';
 import { LENS_VERSIONS } from '@/lib/craft/lens-versions';
+import { disqualifierCap } from '@/lib/craft/lens-disqualifiers';
 import type { LensId } from '@/lib/craft/lens-map';
 import { err, ok, type Result } from '@/types/result';
 
@@ -30,6 +36,8 @@ export interface CraftGaugeClaim {
   lens?: LensId;
   lensVersion?: number;
   aLevel: GaugedCraftLevel;
+  /** Only the disqualifier citation is read here; the rest of a finding is the route's business. */
+  findings?: readonly { disqualifier?: number }[];
 }
 
 /** What the door derived — the lens and version the gauge is stored under. */
@@ -72,6 +80,18 @@ export function admitCraftGauge(v: CraftGaugeClaim, { isProcess = false }: { isP
     reasons.push(
       `${v.aLevel} is above the recorded roof for ${step.deliverable} (ceiling ${step.ceiling}, src/lib/craft/craft-ceilings.json) — not awardable; raising a roof is a product decision, not a gauge`,
     );
+  }
+  const cited = (v.findings ?? []).flatMap((f) => (f.disqualifier === undefined ? [] : [f.disqualifier]));
+  if (cited.length) {
+    const { cap, unknown } = disqualifierCap(lens, cited);
+    if (unknown.length) {
+      reasons.push(`lens '${lens}' has no disqualifier ${unknown.join(', ')} — cite its 1-based position in the lens file's DISQUALIFIERS list`);
+    }
+    if (cap && craftRank(v.aLevel) > craftRank(cap)) {
+      reasons.push(
+        `${v.aLevel} is above the ${cap} cap of the disqualifier(s) this gauge reports (${[...new Set(cited)].join(', ')}) — a fired disqualifier caps the level regardless of other strengths`,
+      );
+    }
   }
   return reasons.length ? err(reasons) : ok({ lens, lensVersion: current });
 }

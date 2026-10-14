@@ -14,6 +14,8 @@ import { buildCraftTrend, craftMovementOf, craftTrendSummary } from '@/lib/craft
 import { LENS_IDS } from '@/lib/craft/lens-map';
 import { currentStepBinding } from '@/lib/judge/stepBinding';
 import { admitCraftGauge } from '@/lib/craft/admission';
+import { listCoverageGaps, replaceCoverageGaps } from '@/lib/craft/craft-coverage-gaps-db';
+import { summarizeCoverageGaps } from '@/lib/craft/coverage-gaps';
 
 /**
  * GET /api/craft-verdicts[?catalogId=] — the A-axis storage layer (craft gauges).
@@ -30,11 +32,20 @@ import { admitCraftGauge } from '@/lib/craft/admission';
  *
  * `?entityId=&step=&history=1` returns that one cell's full trend instead (points +
  * summary), for a detail view that wants every kept point rather than the delta.
+ *
+ * `?coverageGaps=1[&catalogId=]` returns the coverage channel instead: every visible-but-uncovered
+ * defect the auditors reported, plus a per-lens roll-up for the lens author (see
+ * src/lib/craft/coverage-gaps.ts). Addressed to the rubric author; no gauge reads it.
  */
 export async function GET(req: NextRequest) {
   try {
     const q = req.nextUrl.searchParams;
     const catalogId = q.get('catalogId') ?? undefined;
+
+    if (q.get('coverageGaps') === '1') {
+      const gaps = listCoverageGaps(catalogId);
+      return apiSuccess({ gaps, byLens: summarizeCoverageGaps(gaps) });
+    }
 
     if (q.get('history') === '1') {
       const entityId = q.get('entityId');
@@ -73,6 +84,9 @@ const findingSchema = z.object({
   criterion: z.string().min(1, 'a finding must name the violated lens criterion'),
   detail: z.string().min(10, 'a finding without detail is not auditable'),
   class: z.enum(['content', 'capability', 'ux']),
+  // 1-based position in the lens file's DISQUALIFIERS list when this finding reports a fired
+  // disqualifier; the admission door then enforces that list's cap on aLevel.
+  disqualifier: z.number().int().min(1).optional(),
 });
 
 /**
@@ -95,6 +109,12 @@ const craftCostSchema = z.object({
   isError: z.boolean().optional(),
 });
 
+// A defect the auditor can see that NO lens criterion covers. Proposal for the next lens version,
+// stored beside the gauge and never read by it — it cannot change aLevel (coverage-gaps.ts).
+const coverageGapSchema = z.object({
+  detail: z.string().min(10, 'a coverage remark without detail is not auditable'),
+});
+
 const craftVerdictSchema = z.object({
   catalogId: z.string().min(1),
   entityId: z.string().min(1),
@@ -105,6 +125,7 @@ const craftVerdictSchema = z.object({
   aLevel: z.enum(['A1', 'A2', 'A3', 'A4']),
   // A1–A3 must explain the gap; a clean A4 may have none.
   findings: z.array(findingSchema),
+  coverageGaps: z.array(coverageGapSchema).max(10).optional(),
   model: z.string().min(1),
   effort: z.string().optional(),
   cost: craftCostSchema.optional(),
@@ -135,7 +156,7 @@ export async function POST(req: NextRequest) {
   try {
     const parsed = craftVerdictSchema.safeParse(await req.json());
     if (!parsed.success) return apiError('Invalid craft verdict', 400, parsed.error.issues);
-    const { cost, ...v } = parsed.data;
+    const { cost, coverageGaps, ...v } = parsed.data;
     if (v.aLevel !== 'A4' && v.findings.length === 0) {
       return apiError('a below-A4 gauge must name at least one finding', 400);
     }
@@ -143,7 +164,7 @@ export async function POST(req: NextRequest) {
     const admitted = admitCraftGauge(v, { isProcess });
     if (!admitted.ok) return apiError(admitted.error.join('; '), 400, admitted.error);
     const binding = isProcess ? null : currentStepBinding(v.catalogId, v.entityId, v.step);
-    return apiSuccess(
+    const stored = (
       upsertCraftVerdict(
         {
           ...v,
@@ -152,8 +173,12 @@ export async function POST(req: NextRequest) {
           ...(binding?.updatedAt ? { artifactUpdatedAt: binding.updatedAt } : {}),
         },
         cost,
-      ),
+      )
     );
+    // The channel is stored AFTER the gauge and never feeds it: the level above is already final.
+    // Current picture per cell — a re-gauge that reports none clears the cell's earlier remarks.
+    const kept = replaceCoverageGaps({ ...v, ...admitted.data }, coverageGaps ?? []);
+    return apiSuccess(kept.length ? { ...stored, coverageGaps: kept } : stored);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'craft-verdicts POST failed', 500);
   }

@@ -4,7 +4,7 @@ vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines
 import { getStepComponent } from '@/components/layout-lab/steps';
 import { resolveAccept } from '@/components/layout-lab/labAcceptance';
-import { ITEM_STEP_NAMES, ITEM_STEP_SPECS, deriveGateChecks } from '@/components/layout-lab/steps/itemsSteps';
+import { ITEM_STEP_NAMES, ITEM_STEP_SPECS, DEFAULT_GATE_CHECKS, GATE_CHECK_DEPS, deriveGateChecks } from '@/components/layout-lab/steps/itemsSteps';
 import { serverCheckerFor } from '@/lib/catalog/headless';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -52,5 +52,37 @@ describe('the Items Test Gate has ONE grader — the registered one', () => {
     const stats = injected.find((r) => r.name === 'Stat/rules unit test')!;
     expect(stats.ok).toBe(false);
     expect(stats.blockedBy).toContain('Attributes (fail · judge)');
+  });
+});
+
+describe('the gate dependency map is complete and never passes vacuously', () => {
+  it('every named check declares at least one dependency, and every dependency is a real step', () => {
+    for (const name of DEFAULT_GATE_CHECKS) {
+      const deps = GATE_CHECK_DEPS[name] ?? [];
+      expect(deps.length, name).toBeGreaterThan(0);
+      for (const d of deps) expect(ITEM_STEP_NAMES, name).toContain(d);
+    }
+  });
+
+  it('a check with no declared dependency is a blocker, not a pass', () => {
+    const siblings: Record<string, Record<string, unknown>> = {};
+    for (const step of ITEM_STEP_NAMES) siblings[step] = (ITEM_STEP_SPECS[step].produce(entity).data ?? {}) as Record<string, unknown>;
+    const saved = GATE_CHECK_DEPS['Performance budget'];
+    try {
+      delete GATE_CHECK_DEPS['Performance budget'];
+      const row = deriveGateChecks(siblings, () => ({ status: 'pass', source: 'judge' })).find((r) => r.name === 'Performance budget')!;
+      expect(row.ok).toBe(false);
+      expect(row.deferred).toBe(false);
+    } finally {
+      GATE_CHECK_DEPS['Performance budget'] = saved;
+    }
+  });
+
+  it('steps outside every check are a stated list, so a new unit cannot slip past the gate unseen', () => {
+    const gated = new Set(Object.values(GATE_CHECK_DEPS).flat());
+    const ungated = ITEM_STEP_NAMES.filter((n) => !gated.has(n)).sort();
+    // Concept Brief is upstream of everything, Test Gate is the gate, UE Packaging is downstream.
+    // SFX and Tooltip / Compare are ungated and unreviewed: a design call, recorded rather than changed.
+    expect(ungated).toEqual(['Concept Brief', 'SFX', 'Test Gate', 'Tooltip / Compare', 'UE Packaging']);
   });
 });

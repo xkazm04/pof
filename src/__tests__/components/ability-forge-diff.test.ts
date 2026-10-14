@@ -6,6 +6,7 @@ import {
   summarizeLines,
   collapseDiff,
   abilityHasChanges,
+  diffAbilityIdentity,
 } from '@/components/modules/core-engine/sub_ability/forge/ability-diff';
 import type { ForgedAbility } from '@/lib/prompts/ability-forge';
 
@@ -133,5 +134,20 @@ describe('abilityHasChanges', () => {
   });
   it('is true when any code/stat/tag changes', () => {
     expect(abilityHasChanges(makeAbility(), makeAbility({ cppCode: 'AbilityManaCost = 18.f;' }))).toBe(true);
+  });
+});
+
+describe('diffAbilityIdentity', () => {
+  it('is empty when identity and prose are untouched', () => {
+    expect(diffAbilityIdentity(makeAbility(), makeAbility())).toEqual([]);
+  });
+  it('reports a re-picked className, displayName and rephrased description', () => {
+    const next = makeAbility({ className: 'GA_FireRush', displayName: 'Fire Rush', description: 'A blazing charge.' });
+    expect(diffAbilityIdentity(makeAbility(), next).map((c) => c.field))
+      .toEqual(['className', 'displayName', 'description']);
+  });
+  it('makes a wording-only refine count as a change, not "identical"', () => {
+    const next = makeAbility({ description: 'A fiery dash that scorches foes.' });
+    expect(abilityHasChanges(makeAbility(), next)).toBe(true);
   });
 });

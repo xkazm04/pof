@@ -30,7 +30,7 @@ const NUDGE_COARSE_STEP = 5;
 export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
   const {
     canvasRef,
-    draggingStateId, setDraggingStateId,
+    draggingStateId, beginDrag,
     drawingTransition, setDrawingTransition,
     handleCanvasMouseMove,
     handleCanvasMouseUp,
@@ -227,7 +227,7 @@ export function EditorCanvas({ editor }: { editor: StateMachineEditorApi }) {
               // Only start drag on left button and not drawing
               if (e.button === 0 && !drawingTransition) {
                 e.preventDefault();
-                setDraggingStateId(state.id);
+                beginDrag(state.id, e.clientX, e.clientY);
               }
             }}
           >

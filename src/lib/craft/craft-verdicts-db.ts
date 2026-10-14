@@ -34,6 +34,12 @@ export interface CraftFinding {
    *  - `ux`         → the improvement backlog (a missing human-review surface)
    */
   class: 'content' | 'capability' | 'ux';
+  /**
+   * 1-based position in the lens file's DISQUALIFIERS list when this finding reports a fired
+   * disqualifier (see lens-disqualifiers.ts). Absent for ordinary criterion findings, so a
+   * capped gauge is distinguishable from a merely low one.
+   */
+  disqualifier?: number;
 }
 
 export interface CraftVerdict {
