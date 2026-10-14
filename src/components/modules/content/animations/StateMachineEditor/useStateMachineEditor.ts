@@ -9,7 +9,7 @@ import {
 import { compileMachine } from '@/lib/state-machine-compile';
 import type { EditorState, EditorTransition, DiffResult } from './types';
 import { DEFAULT_STATES, DEFAULT_TRANSITIONS, KNOWN_FLAGS } from './constants';
-import { computeDiff, genId } from './helpers';
+import { computeDiff, genId, resolveNodeDrag, type DragGesture } from './helpers';
 import { loadDraft, saveDraft, clearDraft } from './draftStore';
 import { seedSignature, type EditorSeed } from './seed';
 import { buildApplyPlan } from './applyPlan';
@@ -219,17 +219,38 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
 
   // ── Dragging ──
 
+  const dragRef = useRef<DragGesture | null>(null);
+
+  /** Press on a node: gesture state only, the model is untouched until the threshold. */
+  const beginDrag = useCallback((id: string, clientX: number, clientY: number) => {
+    const s = states.find((n) => n.id === id);
+    if (!s) return;
+    dragRef.current = { id, startX: clientX, startY: clientY, originX: s.x, originY: s.y, crossed: false };
+    setDraggingStateId(id);
+  }, [states]);
+
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!draggingStateId || !canvasRef.current) return;
+    const g = dragRef.current;
+    if (!g || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    updateState(draggingStateId, { x: clampPct(x), y: clampPct(y) });
-  }, [draggingStateId, updateState]);
+    const next = resolveNodeDrag(g, e.clientX, e.clientY, rect);
+    if (!next) return;
+    g.crossed = true;
+    updateState(g.id, { x: next.x, y: next.y });
+  }, [updateState]);
 
   const handleCanvasMouseUp = useCallback(() => {
+    dragRef.current = null;
     setDraggingStateId(null);
   }, []);
+
+  /** Abandon the in-flight drag and put the node back where the press found it. */
+  const cancelDrag = useCallback(() => {
+    const g = dragRef.current;
+    dragRef.current = null;
+    setDraggingStateId(null);
+    if (g?.crossed) updateState(g.id, { x: g.originX, y: g.originY });
+  }, [updateState]);
 
   /**
    * Move a state by a percent delta — the keyboard equivalent of dragging,
@@ -325,10 +346,15 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
 
   // cleanup mouse listener
   useEffect(() => {
-    const handleUp = () => setDraggingStateId(null);
+    const handleUp = () => { dragRef.current = null; setDraggingStateId(null); };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') cancelDrag(); };
     window.addEventListener('mouseup', handleUp);
-    return () => window.removeEventListener('mouseup', handleUp);
-  }, []);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [cancelDrag]);
 
   const selectedState = selectedStateId ? stateMap.get(selectedStateId) ?? null : null;
   const selectedTransition = selectedTransitionId ? transitions.find((t) => t.id === selectedTransitionId) ?? null : null;
@@ -401,6 +427,8 @@ export function useStateMachineEditor(options: StateMachineEditorOptions = {}) {
     addTransition,
     removeTransition,
     updateTransition,
+    beginDrag,
+    cancelDrag,
     handleCanvasMouseMove,
     handleCanvasMouseUp,
     nudgeState,

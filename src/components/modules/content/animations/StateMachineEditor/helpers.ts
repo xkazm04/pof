@@ -60,3 +60,43 @@ export function severityColor(severity: WarningSeverity): string {
   if (severity === 'warning') return STATUS_WARNING;
   return STATUS_INFO;
 }
+
+// ── Node drag gesture (canvas-graph direct-manipulation) ──
+
+/** Screen-space travel (px) before a press on a node becomes a drag. */
+export const DRAG_THRESHOLD_PX = 4;
+
+export interface DragGesture {
+  id: string;
+  /** Pointer position at press, in screen px. */
+  startX: number;
+  startY: number;
+  /** Node position at press, in canvas percent. */
+  originX: number;
+  originY: number;
+  /** Flips once the pointer has travelled past the threshold; never flips back. */
+  crossed: boolean;
+}
+
+/**
+ * Resolve one pointer sample against a press. Returns null while the press is
+ * still a click (no model mutation); afterwards the position is the press-time
+ * origin plus the screen delta converted to percent, so the node keeps the
+ * offset it was grabbed at instead of jumping its anchor to the cursor.
+ */
+export function resolveNodeDrag(
+  g: DragGesture,
+  clientX: number,
+  clientY: number,
+  rect: { width: number; height: number },
+): { crossed: boolean; x: number; y: number } | null {
+  const dx = clientX - g.startX;
+  const dy = clientY - g.startY;
+  const crossed = g.crossed || Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX;
+  if (!crossed || rect.width <= 0 || rect.height <= 0) return null;
+  return {
+    crossed,
+    x: Math.min(100, Math.max(0, g.originX + (dx / rect.width) * 100)),
+    y: Math.min(100, Math.max(0, g.originY + (dy / rect.height) * 100)),
+  };
+}
