@@ -191,10 +191,32 @@ export function summarizeLines(lines: DiffLine[]): CodeChangeSummary {
   return { added, removed };
 }
 
+/* ── Identity and wording (the part of "unrelated authored values" a model rewrites) ── */
+
+export interface IdentityChange {
+  field: 'className' | 'displayName' | 'description';
+  before: string;
+  after: string;
+}
+
+/**
+ * Identity and prose fields a refinement is told to leave alone. The stat, tag
+ * and code diffs cannot see a re-picked displayName or a rephrased description,
+ * and a className change is the one edit that should read as a new ability
+ * rather than a refinement (every reference to the old class breaks).
+ */
+export function diffAbilityIdentity(prior: ForgedAbility, next: ForgedAbility): IdentityChange[] {
+  const fields = ['className', 'displayName', 'description'] as const;
+  return fields
+    .filter((f) => prior[f] !== next[f])
+    .map((f) => ({ field: f, before: prior[f], after: next[f] }));
+}
+
 /* ── Convenience ───────────────────────────────────────────────────────────── */
 
-/** True when a refine produced any visible stat, tag, or code change. */
+/** True when a refine produced any visible identity, stat, tag, or code change. */
 export function abilityHasChanges(prior: ForgedAbility, next: ForgedAbility): boolean {
+  if (diffAbilityIdentity(prior, next).length > 0) return true;
   if (diffAbilityStats(prior, next).length > 0) return true;
   if (diffAbilityTags(prior, next).length > 0) return true;
   return prior.headerCode !== next.headerCode || prior.cppCode !== next.cppCode;
