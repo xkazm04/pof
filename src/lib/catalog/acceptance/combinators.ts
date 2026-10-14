@@ -1,5 +1,5 @@
 import { isContentInvariant, markContentInvariant } from './contentInvariant';
-import type { Checker } from './types';
+import type { AcceptanceResult, Checker } from './types';
 
 /**
  * Compose several `Checker`s into one that a step can use as its single `accept`.
@@ -13,6 +13,8 @@ import type { Checker } from './types';
 export function allOf(...checkers: Checker[]): Checker {
   const composed: Checker = (data, ctx) => {
     const results = checkers.map((c) => c(data, ctx));
+    // An empty conjunction measured nothing: deferred, never a pass and never undefined.
+    if (results.length === 0) return EMPTY_COMPOSITION;
     return results.find((r) => r.status !== 'pass') ?? results[0];
   };
   // Record the members ON the composed function (a symbol property, invisible to callers and
@@ -24,6 +26,14 @@ export function allOf(...checkers: Checker[]): Checker {
   // so `allOf(<shape check>, budgetWithinCap(...))` counts and the spec linter can see it.
   return checkers.some(isContentInvariant) ? markContentInvariant(composed) : composed;
 }
+
+const EMPTY_COMPOSITION: AcceptanceResult = {
+  label: 'No checks composed',
+  tier: 'L0',
+  status: 'deferred',
+  detail: 'allOf() was composed with no members',
+  reason: 'No checks were composed for this step, so nothing was measured.',
+};
 
 const ALL_OF_MEMBERS = Symbol.for('pof.acceptance.allOfMembers');
 
