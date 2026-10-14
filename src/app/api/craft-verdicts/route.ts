@@ -73,6 +73,9 @@ const findingSchema = z.object({
   criterion: z.string().min(1, 'a finding must name the violated lens criterion'),
   detail: z.string().min(10, 'a finding without detail is not auditable'),
   class: z.enum(['content', 'capability', 'ux']),
+  // 1-based position in the lens file's DISQUALIFIERS list when this finding reports a fired
+  // disqualifier; the admission door then enforces that list's cap on aLevel.
+  disqualifier: z.number().int().min(1).optional(),
 });
 
 /**
