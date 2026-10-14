@@ -24,9 +24,16 @@
  * so it is safe to run over mixed-dialect input.
  */
 export function toDottedTag(tag: string): string {
-  const t = (tag ?? '').trim();
-  if (!t || t.includes('.')) return t;
-  return t.replace(/_+/g, '.');
+  // Strip a C++ scope qualifier (`ARPGGameplayTags::State_Dashing`): the forge's
+  // few-shot code spells tags that way, and the qualifier is engine syntax, not
+  // part of the tag. Without this the `::` survives into the "dotted" tag and
+  // the row matches nothing in the audit.
+  const t = (tag ?? '').trim().replace(/^.*::/, '').trim();
+  if (!t) return t;
+  // Edge separators carry no segment: `State_Dead_` must not become `State.Dead.`
+  // (an empty trailing segment is not a legal tag and never matches a declaration).
+  if (t.includes('.')) return t.replace(/^[._]+|[._]+$/g, '');
+  return t.replace(/^_+|_+$/g, '').replace(/_+/g, '.');
 }
 
 /** Normalize a list to the dotted dialect, dropping empties and de-duping (order kept). */

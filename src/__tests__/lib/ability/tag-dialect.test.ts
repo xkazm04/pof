@@ -22,6 +22,18 @@ describe('tag-dialect — one mapper for both spellings', () => {
     expect(toDottedTag('Ability__Fire')).toBe('Ability.Fire');
   });
 
+  it('strips a C++ scope qualifier — engine syntax, not part of the tag', () => {
+    expect(toDottedTag('ARPGGameplayTags::State_Dashing')).toBe('State.Dashing');
+    expect(toDottedTag('ARPGGameplayTags::Ability.Fireball')).toBe('Ability.Fireball');
+  });
+
+  it('never emits an empty segment from edge separators', () => {
+    expect(toDottedTag('State_Dead_')).toBe('State.Dead');
+    expect(toDottedTag('_State_Dead')).toBe('State.Dead');
+    expect(toDottedTag('State.Dead.')).toBe('State.Dead');
+    expect(toDottedTag('___')).toBe('');
+  });
+
   it('toDottedTags normalizes, drops empties and de-dupes, keeping order', () => {
     expect(toDottedTags(['State_Dead', '', 'State.Dead', 'Ability_Fire', '  '])).toEqual([
       'State.Dead', 'Ability.Fire',
