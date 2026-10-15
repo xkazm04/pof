@@ -1,0 +1,336 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9dec16a4-90e9-4712-8421-e6539e29bb94",
+  "subject": "motion",
+  "evaluatedAt": "2026-10-15T22:43:58.187200+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "animation-state-machine-viewer",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Completed and simulated edges march a dashed stroke forever, with no pause control and no cap on how many edges move.",
+      "techniques": [
+        {
+          "technique": "engine-selection",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/useAnimationStateMachine.ts:18 Names the engine the stylesheet reset cannot see, and the hook gates that engine in JS."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:167 SMIL loops are omitted when the preference is set. CSS pulses use motion-reduce:animate-none, so infinite loops go to stillness."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:166 Edge motion is marked decorative. The static stroke remains and still encodes modified, done, and simulated."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:81 The same button stays mounted and is keyed by state identity, so a scan update changes the node instead of swapping it."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:89 transition-all on absolutely positioned nodes will interpolate left and top, which are layout, not transform or opacity."
+        },
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:116 The active-state pulse runs indefinitely beside other content. Reduced motion stops it. There is no visible pause control."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:170 The only veto on the indefinite dash is the reduced-motion flag. In-view, background, and user stop are not merged."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:168 dur=1s is inlined on the gesture. No named duration class or shared preset in this viewer."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Every qualifying edge runs an unbounded dash march. No ambient distance or instance cap is declared here."
+        }
+      ],
+      "registryProposal": "reduced-motion-mechanics lists the snapshot-transition tree as what a universal selector misses, and does not list SVG SMIL animate. This viewer had to record that a prefers-reduced-motion duration reset does not cover SMIL and gate it in JS. The engine inventory should name SMIL as its own line."
+    },
+    {
+      "context": "animation-combos-metrics",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:104 Connectors between combo sections run a one-second sweep forever, and this panel has no stop control.",
+      "techniques": [
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:104 The sweep starts by itself and never ends. The file has combo tabs and a scrub range, not a pause for this loop."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/FrameScrubberPanel.tsx:52 Playback writes React state from setInterval every 80ms, so the scrubber re-renders on the clock instead of writing the playhead on a ref."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:75 Window bars inline a compound delay, 0.5s, and a spring, with no settle bound and no shared preset."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:50 Section stagger is 200ms per item with no count cutoff. The entrance budget wants stagger steps in the tens of milliseconds."
+        },
+        {
+          "technique": "one-shot-guarding",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:48 Cards enter on mount. Switching the combo unmounts them and returning plays the entrance again. No seen-set."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:73 Notify-window width is the data and it is born at 0. Nothing in this file paints the resolved width when the spring will not run."
+        }
+      ],
+      "registryProposal": "A frame scrubber that stays stopped until the user presses Play is prompted transport. Worth saying so the playhead clock is judged as performance-discipline, not as an unprompted loop that owes a five-second stop."
+    },
+    {
+      "context": "animation-state-graph",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_animation/budget/BlendSpacePanel.tsx:102 The blend-space current marker pulses its radius forever, and this file never reads reduced motion or offers a stop.",
+      "techniques": [
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/budget/BlendSpacePanel.tsx:102 Idle radius travel of 8 to 12, repeating, with no named ambient bound. Grep of this file found no pause or reduced-motion gate."
+        },
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/budget/BlendSpacePanel.tsx:103 The same marker loops with no visible stop. The panel does not mention pause or playing."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_animation/budget/BlendSpacePanel.tsx:105 The pulse is painted over a still dot and a Current label, so the position remains if the animate does not run."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:47 Indefinite SMIL on the edge. This file has no preference read. A CSS duration reset does not drive SMIL."
+        },
+        {
+          "technique": "engine-selection",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:45 The same edge mixes a CSS stroke transition with SMIL and never records which switch can reach which engine."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/retargeting/RetargetingTab.tsx:83 Expanding a pipeline step animates height to auto, which is layout on every frame of the transition."
+        },
+        {
+          "technique": "one-shot-guarding",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/index.tsx:131 Tab body is keyed by activeTab, so leaving a tab and coming back remounts it and replays the entrance."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/index.tsx:133 mode=wait slides the whole outgoing tab away. The panels are different tools and share no animation identity."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/index.tsx:134 Tab change inlines 300ms and a custom cubic instead of a duration class and an easing role."
+        }
+      ]
+    },
+    {
+      "context": "hud-theme-and-inventory",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/useAnimationLoop.ts:29 The combat preview publishes the clock through React state on every animation frame, so the scene re-renders at frame rate.",
+      "techniques": [
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/useAnimationLoop.ts:29 requestAnimationFrame calls setTime continuously. LivePreviewScene then recomputes bars, vignette, and damage numbers from that state."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/useAnimationLoop.ts:25 The frame loop's only gate is the playing flag, plus a suspend wrapper. Reduced motion is not a veto, and the deciders are not one merged list. Suspend does bank elapsed time."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/useAnimationLoop.ts:7 Served time is 0, which helpers map to full health and no damage numbers. No explanatory freeze frame is named if the clock never advances."
+        },
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:30 Preview autostarts. A pause button exists and its icon swaps, but playing is component state and line 26 says the tab unmounts on every tab switch, so a stop is discarded on return."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:115 Damage numbers travel every frame from the script clock. Grep of HudThemeEditor and InventoryGridDesigner found no reduced-motion read. Inline style writes are outside a stylesheet duration reset."
+        },
+        {
+          "technique": "engine-selection",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:52 Bar width is driven by the rAF clock and also by a CSS width transition, so a declarative transition is stacked on a value that changes every frame."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:101 Enemy bar inlines 200ms. Theme fade fields are game HUD parameters, not a shared UI preset."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:119 Every equipped slot pings indefinitely. That is many concurrent ambient scales, not a few pixels on one hand of instances."
+        },
+        {
+          "technique": "one-shot-guarding",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:25 Section entrance is a 500ms slide on mount. The designer unmounts the inactive tab, so each return replays it."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:97 Grid, slots, equip, and interact replace each other by unmounting. The incoming panel then slides in rather than switching plainly."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "motion",
+      "context": "animation-combo-workflow",
+      "reason": "withdrawn after review: reviewer (sonnet): StepCard.tsx:125 sets duration 0 on the reduced-motion path, and a zero-duration framer-motion tween completes immediately, so the claim that an exit waiting on completion can hang is not supported by the code."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T22:43:58.187200+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "motion"
+      ],
+      "techniques": [
+        "content-bearing-degradation",
+        "continuity-across-change",
+        "engine-selection",
+        "loop-pause-governance",
+        "one-shot-guarding",
+        "performance-discipline",
+        "preset-vocabulary",
+        "reduced-motion-mechanics",
+        "taste-budgets",
+        "unprompted-motion-lifecycle"
+      ],
+      "deviations": 1,
+      "context": "animation-combo-workflow",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T22:43:58.187200+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "motion"
+      ],
+      "techniques": [
+        "content-bearing-degradation",
+        "continuity-across-change",
+        "engine-selection",
+        "loop-pause-governance",
+        "performance-discipline",
+        "preset-vocabulary",
+        "reduced-motion-mechanics",
+        "taste-budgets",
+        "unprompted-motion-lifecycle"
+      ],
+      "deviations": 1,
+      "context": "animation-state-machine-viewer",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T22:43:58.187200+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "motion"
+      ],
+      "techniques": [
+        "content-bearing-degradation",
+        "one-shot-guarding",
+        "performance-discipline",
+        "preset-vocabulary",
+        "taste-budgets",
+        "unprompted-motion-lifecycle"
+      ],
+      "deviations": 1,
+      "context": "animation-combos-metrics",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T22:43:58.187200+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "motion"
+      ],
+      "techniques": [
+        "content-bearing-degradation",
+        "continuity-across-change",
+        "engine-selection",
+        "one-shot-guarding",
+        "performance-discipline",
+        "preset-vocabulary",
+        "reduced-motion-mechanics",
+        "taste-budgets",
+        "unprompted-motion-lifecycle"
+      ],
+      "deviations": 1,
+      "context": "animation-state-graph",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T22:43:58.187200+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "motion"
+      ],
+      "techniques": [
+        "content-bearing-degradation",
+        "continuity-across-change",
+        "engine-selection",
+        "loop-pause-governance",
+        "one-shot-guarding",
+        "performance-discipline",
+        "preset-vocabulary",
+        "reduced-motion-mechanics",
+        "taste-budgets",
+        "unprompted-motion-lifecycle"
+      ],
+      "deviations": 1,
+      "context": "hud-theme-and-inventory",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

@@ -3081,7 +3081,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboTimelinePanel.tsx:104 Connectors between combo sections run a one-second sweep forever, and this panel has no stop control.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "motion-quality-gating",
@@ -3493,7 +3497,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/budget/BlendSpacePanel.tsx:102 The blend-space current marker pulses its radius forever, and this file never reads reduced motion or offers a stop.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "module-design",
@@ -3774,7 +3782,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Completed and simulated edges march a dashed stroke forever, with no pause control and no cap on how many edges move.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "render-mount-pipeline",
@@ -13834,7 +13846,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/useAnimationLoop.ts:29 The combat preview publishes the clock through React state on every animation frame, so the scene re-renders at frame rate.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "multi-provider-gateway-plane",
