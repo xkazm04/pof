@@ -4347,6 +4347,141 @@
           "evidence": "src/hooks/useModuleCLI.ts:102 Completion observation reads a store transition, not the occupant's screen."
         }
       ]
+    },
+    "ee957a28-f90d-4863-8f75-c599520803a4/encounter-balance-simulation": {
+      "context": "ability-gas-balance",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T21:47:08.363Z",
+      "worker": "794b6b86-61d8-4094-8440-27605f2844cf",
+      "techniques": [
+        {
+          "technique": "goal-seek-on-a-seeded-monotonic-lever",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceFixes.ts:139 After solveFor fails its tolerance, membership in a healthy band can set converged to true; the technique requires an exhausted solve to retain converged:false."
+        },
+        {
+          "technique": "kill-share-and-damage-share-attribution",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:128 Iteration results retain outgoing totals and survival but discard incoming source damage and killing-blow identity, preventing attribution in mixed encounters."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/index.tsx:47 Loading a preset replaces its stable identity with a timestamp identity; the inspected scenario/result model also carries no cast version."
+        },
+        {
+          "technique": "one-shot-rate-and-ehp-floor-checks",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:269 Sweep points retain EHP but drop armorRefHit, so their rendered survivability values cannot carry the required reference hit."
+        },
+        {
+          "technique": "per-cell-seed-derivation-for-order-independence",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:198 Sensitivity cells all reuse the default seed without deriving identity-specific seeds or declaring deliberate common-random-number comparisons."
+        }
+      ]
+    },
+    "ddb8a1b1-4393-4887-a986-8b5e81ae6ae2/encounter-balance-simulation": {
+      "context": "loot-simulation",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T21:47:08.363Z",
+      "worker": "794b6b86-61d8-4094-8440-27605f2844cf",
+      "techniques": [
+        {
+          "technique": "distinct-hash-seed-diversity-alarm",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/MonteCarloSim.tsx:34 The sampled outcomes are rarity counts, outside this subject's encounter-state diversity measurement."
+        },
+        {
+          "technique": "entry-vs-winner-share-threshold-check",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/DropSimulator.tsx:68 This result is a drop tally, not a roster dominance gate."
+        },
+        {
+          "technique": "goal-seek-on-a-seeded-monotonic-lever",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/pity/DroughtCalculator.tsx:29 The drought expectation uses a closed form rather than a simulated encounter lever requiring bisection."
+        },
+        {
+          "technique": "kill-share-and-damage-share-attribution",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/DropSimulator.tsx:55 Outcomes identify dropped item rarity, not damage sources or killing blows."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/MonteCarloSim.tsx:157 The reference distribution concerns loot value, not a standing cast of combatants and encounter scenarios."
+        },
+        {
+          "technique": "one-shot-rate-and-ehp-floor-checks",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/pity/PityTimerSection.tsx:45 The pity outcome concerns receiving Rare-or-better loot and has no character-health measurement."
+        },
+        {
+          "technique": "per-cell-seed-derivation-for-order-independence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/DropsPerHour.tsx:13 This level-dependent estimate is deterministic, for which the technique explicitly requires no seeds."
+        },
+        {
+          "technique": "rotation-confound-cross-check",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/DropSimulator.tsx:51 Trials roll a selected loot binding rather than assigning classes, courses and slots from an index."
+        },
+        {
+          "technique": "tier-band-peer-outlier-linting",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/economy/EconomyImpact.tsx:24 These tiers filter item rarities rather than define same-tier combatant peers."
+        }
+      ]
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/encounter-balance-simulation": {
+      "context": "game-design-studio-api",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T21:47:08.363Z",
+      "techniques": [
+        {
+          "technique": "kill-share-and-damage-share-attribution",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:805 The endpoint's engine emits kill shares for any positive death count, including one death, without the required minimum-death withholding rule."
+        },
+        {
+          "technique": "one-shot-rate-and-ehp-floor-checks",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:744 Here n is fights.length; the technique defines empirical one-shot rate as a share of deaths."
+        }
+      ],
+      "withdrawn": {
+        "worker": "794b6b86-61d8-4094-8440-27605f2844cf",
+        "state": "deviation",
+        "at": "2026-10-15T21:47:40.938341+00:00",
+        "reason": "reviewer (sonnet): The anchor src/app/api/combat-simulator/route.ts and the cited src/lib/combat/simulation-engine.ts lines could not be tied to this context. Its file list runs alphabetically from ability-spec to feature-matrix, and combat-simulator would sort between them but is missing. I confirmed that oneShotRate"
+      }
+    },
+    "ca5add2a-febe-405e-a1dc-2597c8e9d14a/encounter-balance-simulation": {
+      "context": "economy-simulator",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T21:47:08.363Z",
+      "worker": "794b6b86-61d8-4094-8440-27605f2844cf",
+      "techniques": [
+        {
+          "technique": "goal-seek-on-a-seeded-monotonic-lever",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/goal-seek.ts:51 The UI-reachable adapter passes the selected output, including Gini, straight to solveFor without sweeping or refusing non-monotonic regions; seeding alone does not satisfy the contract."
+        }
+      ],
+      "registryProposal": "Clarify the boundary between the golden path's exclusion of economy sensitivity analysis and the goal-seek technique's explicit inclusion of faucet/net-flow solvers."
     }
   }
 }

@@ -2182,7 +2182,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:268 Every level cell uses runSimulation's constant default seed instead of deriving a seed from its coordinates, producing the identical-stream correlation the standard prohibits.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         },
         {
           "subject": "game-economy-tuning",
@@ -11931,7 +11935,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/EconomySimulatorView/GoalSeekPanel.tsx:43 The panel submits net-flow or Gini targets directly to bisection without a preliminary monotonicity check, allowing a folded response curve to produce a misleading solution.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
@@ -16461,7 +16469,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/simulation/MonteCarloSim.tsx:31 Searches for killShare, oneShotRate and effectiveHp found no hits in the loot context and found repository hits elsewhere, while this simulation counts loot rarities rather than resolving encounters.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         },
         {
           "subject": "engine-host-contract",
