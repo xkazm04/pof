@@ -1,0 +1,191 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2e4378bc-588f-430d-a4db-21f75497ccfa",
+ "subject": "ship-pipeline-gating",
+ "evaluatedAt": "2026-10-15T02:03:57.945297+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "cook-packaging-pipeline",
+   "subject": "ship-pipeline-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/game-systems/CookProgress/helpers.ts:11 Cook log line classification uses unanchored keyword matching that catches false positives (including zero counts) and lacks affirmative success markers or total classification.",
+   "techniques": [
+    {
+     "technique": "validator-log-classification",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/CookProgress/helpers.ts:11 Cook log severity classification matches keywords without category scoping, zero-count exclusion, or an affirmative success pattern."
+    },
+    {
+     "technique": "preflight-before-an-expensive-cook",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:169 Preflight allows cooking to proceed whenever completed checks have not failed, even while cook-relevant verification checks remain unrun."
+    },
+    {
+     "technique": "post-cook-process-liveness-smoke",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/game-systems/SmokeTest.tsx:125 SmokeTest runs the post-cook liveness test over a timed observe window and reports whether the real process survived."
+    },
+    {
+     "technique": "ship-only-what-the-runtime-reads",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/CookSettingsPanel.tsx:167 Plugin exclusion settings are captured in the panel but acknowledged as not applied by the generated packaging command."
+    }
+   ]
+  },
+  {
+   "context": "build-packaging",
+   "subject": "ship-pipeline-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/packaging/preflight/route.ts:105 Preflight asset validation evaluates commandlet log output without requiring an affirmative success marker, allowing empty or unclassified logs from an early crash to pass as clean.",
+   "techniques": [
+    {
+     "technique": "validator-log-classification",
+     "verdict": "deviation",
+     "evidence": "src/app/api/packaging/preflight/route.ts:105 DataValidation commandlet output parsing treats unclassified or missing output as clean without requiring an affirmative completion marker."
+    },
+    {
+     "technique": "editor-only-api-audit-for-shipping",
+     "verdict": "deviation",
+     "evidence": "src/app/api/packaging/preflight/route.ts:93 Fast preflight invokes the WITH_EDITOR audit scanner, which does not invert guard condition state on #else/#elif directives."
+    },
+    {
+     "technique": "preflight-before-an-expensive-cook",
+     "verdict": "deviation",
+     "evidence": "src/app/api/packaging/preflight/route.ts:130 Preflight checks configuration and plugins but does not validate downstream gate configuration (such as size budgets), and overallStatus cannot represent unevaluated checks."
+    }
+   ]
+  },
+  {
+   "context": "build-history-config",
+   "subject": "ship-pipeline-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/RecordBuildForm.tsx:20 Manual build recording submits the operator's status directly without gating against absolute size budgets or growth baselines, allowing oversized builds into the history as green.",
+   "techniques": [
+    {
+     "technique": "size-budget-and-growth-baseline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/RecordBuildForm.tsx:20 Build records take arbitrary size inputs without gating on budget or growth thresholds, recording oversized builds as successful."
+    },
+    {
+     "technique": "fail-closed-on-corrupt-gate-config",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:140 The dashboard displays unreadable budgets under a warning banner and substitutes default budgets rather than refusing unverified operations."
+    },
+    {
+     "technique": "preflight-before-an-expensive-cook",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:62 PreflightGateBlock blocks packaging when preflight checks fail or remain unmeasured unless explicitly overridden."
+    }
+   ]
+  },
+  {
+   "context": "platform-services-api",
+   "subject": "ship-pipeline-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/packaging/execute/route.ts:51 The cook execution API dispatches the expensive build job directly without gating on preflight checks or validating configuration beforehand.",
+   "techniques": [
+    {
+     "technique": "preflight-before-an-expensive-cook",
+     "verdict": "deviation",
+     "evidence": "src/app/api/packaging/execute/route.ts:51 Interactive packaging starts the cook job directly on POST /api/packaging/execute without requiring or enforcing a passing preflight check."
+    },
+    {
+     "technique": "post-cook-process-liveness-smoke",
+     "verdict": "conformant",
+     "evidence": "src/app/api/packaging/smoke-test/route.ts:78 The smoke-test route executes the post-cook process liveness check and condemns the recorded build in history if the staged process does not survive."
+    },
+    {
+     "technique": "size-budget-and-growth-baseline",
+     "verdict": "deviation",
+     "evidence": "src/app/api/packaging/history/route.ts:98 The build history API records build submissions with their supplied status without enforcing platform size budgets or growth limits."
+    },
+    {
+     "technique": "validator-log-classification",
+     "verdict": "deviation",
+     "evidence": "src/app/api/packaging/preflight/route.ts:105 Asset validation output is parsed without requiring affirmative success patterns, allowing empty or early-crashed runs to be treated as clean."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "ship-pipeline-gating",
+   "context": "asset-visual-studio",
+   "reason": "Provides tooling to scout, acquire, and visually tune game assets (AssetScoutView and PostProcessStudioView) with no build, cook, or packaging pipeline gating logic."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-15T02:03:57.945297+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "ship-pipeline-gating"
+   ],
+   "techniques": [
+    "post-cook-process-liveness-smoke",
+    "preflight-before-an-expensive-cook",
+    "ship-only-what-the-runtime-reads",
+    "validator-log-classification"
+   ],
+   "deviations": 1,
+   "context": "cook-packaging-pipeline",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T02:03:57.945297+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "ship-pipeline-gating"
+   ],
+   "techniques": [
+    "editor-only-api-audit-for-shipping",
+    "preflight-before-an-expensive-cook",
+    "validator-log-classification"
+   ],
+   "deviations": 1,
+   "context": "build-packaging",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T02:03:57.945297+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "ship-pipeline-gating"
+   ],
+   "techniques": [
+    "fail-closed-on-corrupt-gate-config",
+    "preflight-before-an-expensive-cook",
+    "size-budget-and-growth-baseline"
+   ],
+   "deviations": 1,
+   "context": "build-history-config",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T02:03:57.945297+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "ship-pipeline-gating"
+   ],
+   "techniques": [
+    "post-cook-process-liveness-smoke",
+    "preflight-before-an-expensive-cook",
+    "size-budget-and-growth-baseline",
+    "validator-log-classification"
+   ],
+   "deviations": 1,
+   "context": "platform-services-api",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

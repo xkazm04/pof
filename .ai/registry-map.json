@@ -6425,7 +6425,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/RecordBuildForm.tsx:20 Manual build recording submits the operator's status directly without gating against absolute size budgets or growth baselines, allowing oversized builds into the history as green.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:9441126e96ce0ac9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "supply-chain",
@@ -6538,7 +6542,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/packaging/preflight/route.ts:105 Preflight asset validation evaluates commandlet log output without requiring an affirmative success marker, allowing empty or unclassified logs from an early crash to pass as clean.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:9441126e96ce0ac9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "test-harness",
@@ -10407,7 +10415,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/CookProgress/helpers.ts:11 Cook log line classification uses unanchored keyword matching that catches false positives (including zero counts) and lacks affirmative success markers or total classification.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:9441126e96ce0ac9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",
@@ -18264,7 +18276,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/packaging/execute/route.ts:51 The cook execution API dispatches the expensive build job directly without gating on preflight checks or validating configuration beforehand.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:9441126e96ce0ac9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "prompt-assembly",
