@@ -30,7 +30,7 @@
  * env: POF_ORIGIN (default http://localhost:3001), POF_TRIPOSR_ROOT (venv for the gate),
  *      POF_STYLE_DNA=off (skip style injection)
  */
-import { writeFileSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -189,4 +189,6 @@ async function main() {
   console.log(`RESULT ${catalogId}::${step} bestScore=${best.score} status=${gate.status} verdict=${gate.verdict ?? 'none'} persisted=${artStatus} styleDna=${styleApplied ?? 'none'}`);
   await reportUnreachableIcons();
 }
-main().catch((e) => { console.error('FATAL', e); process.exit(1); });
+// TRYDIR holds only the scratch tries (the winner was already copied into OUTDIR), so it goes either way.
+const dropTries = () => rmSync(TRYDIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+main().then(dropTries, (e) => { console.error('FATAL', e); dropTries(); process.exit(1); });
