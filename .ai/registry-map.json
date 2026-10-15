@@ -4982,7 +4982,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:678 The emitted StopAllEmitters implementation discards handles after fading without destroying components whose automatic destruction is disabled, so repeated spawn-and-stop cycles retain playback resources.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "module-design",
@@ -5171,7 +5175,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:167 The audition reports playing before asynchronous clip loading completes, without a loading state or transition watchdog, so its transport can claim playback while no clip is ready.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "quality-gates",
@@ -7707,7 +7715,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:101 Context searches found none of the listed playback terms and repository searches located playback elsewhere, while this module computes catalog attribute distributions without driving media time.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "scoring-rubrics",
@@ -10155,7 +10167,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:100 The animation loop updates the editor's React playhead state every frame, causing its playback consumers to render at frame cadence instead of sampling an external clock.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",

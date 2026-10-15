@@ -1,0 +1,318 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3daf563a-acd0-45db-a221-06407118a836",
+ "subject": "media-playback",
+ "evaluatedAt": "2026-10-15T22:56:57.217443+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "combat-dodge-timeline",
+   "subject": "media-playback",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:100 The animation loop updates the editor's React playhead state every frame, causing its playback consumers to render at frame cadence instead of sampling an external clock.",
+   "techniques": [
+    {
+     "technique": "committed-buffer-steering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:120 Chain entries are authored parameter snapshots, not produced-but-unplayed media."
+    },
+    {
+     "technique": "engine-adapters",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:89 One application-driven preview loop owns time; there are no interchangeable playback engines."
+    },
+    {
+     "technique": "generated-supply-margin",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:131 The complete chain is constructed synchronously rather than supplied by a producer racing playback."
+    },
+    {
+     "technique": "media-resource-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:106 Reaching the end returns from the state updater but still schedules another frame, leaving the ticker running after isPlaying becomes false and allowing replay to start overlapping loops."
+    },
+    {
+     "technique": "playback-clock",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:100 Frame-rate time is stored in React state and passed through the editor tree."
+    },
+    {
+     "technique": "self-conditioned-supply",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:71 Phases derive from authored parameters, not a producer conditioned on its committed output."
+    },
+    {
+     "technique": "sender-declared-playout-bound",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:108 Playback is a local animation loop, not a live stream decoded by a foreign receiver."
+    },
+    {
+     "technique": "source-resilience",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/VelocityCurve.tsx:26 The silent preview evaluates local mathematical data rather than fetching or decoding fallible media sources."
+    },
+    {
+     "technique": "timeline-scheduling",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:94 The running animation retains the chain captured when Play was pressed; edits replace the displayed chain without reconciling that loop's captured end time."
+    }
+   ]
+  },
+  {
+   "context": "audio-scene-designer",
+   "subject": "media-playback",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:167 The audition reports playing before asynchronous clip loading completes, without a loading state or transition watchdog, so its transport can claim playback while no clip is ready.",
+   "techniques": [
+    {
+     "technique": "committed-buffer-steering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:101 Listener changes update live node parameters rather than steering a committed generated-content queue."
+    },
+    {
+     "technique": "engine-adapters",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:154 The audition implements one Web Audio backend, without interchangeable playback engines."
+    },
+    {
+     "technique": "generated-supply-margin",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:85 Voices play fully decoded stored clips rather than content generated just ahead of consumption."
+    },
+    {
+     "technique": "media-resource-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:74 Successful decoded buffers remain cached across stops with no byte budget or eviction; only rejected promises are removed."
+    },
+    {
+     "technique": "self-conditioned-supply",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:72 Sources are decoded files, not continuations conditioned on previously committed output."
+    },
+    {
+     "technique": "sender-declared-playout-bound",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:84 The product owns local buffer-source playback; there is no foreign live-stream receiver."
+    },
+    {
+     "technique": "timeline-scheduling",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:86 The scene mixes independently looping emitters rather than arranging clips on authored timeline intervals."
+    },
+    {
+     "technique": "transport-contract",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/useSceneAudition.ts:167 Playing is committed before awaiting sync and clip loads; loading, stalled, and deadline outcomes are not represented."
+    }
+   ]
+  },
+  {
+   "context": "catalog-gap-analysis",
+   "subject": "media-playback",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/catalog/gap-analysis/index.ts:101 Context searches found none of the listed playback terms and repository searches located playback elsewhere, while this module computes catalog attribute distributions without driving media time.",
+   "techniques": [
+    {
+     "technique": "committed-buffer-steering",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/index.ts:122 Samples are catalog entities, not committed media awaiting playback."
+    },
+    {
+     "technique": "engine-adapters",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/plugins/registry.ts:10 Registered adapters are catalog-analysis plugins, not playback engines."
+    },
+    {
+     "technique": "generated-supply-margin",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/index.ts:97 Analysis consumes existing entity data without a real-time media consumer."
+    },
+    {
+     "technique": "media-resource-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/index.ts:112 The module creates analysis records, not media resources or playback handles."
+    },
+    {
+     "technique": "playback-clock",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/index.ts:101 Histogram measurement does not advance a playhead."
+    },
+    {
+     "technique": "self-conditioned-supply",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/plugins/types.ts:9 Plugin output summarizes entity data rather than continuing committed media."
+    },
+    {
+     "technique": "sender-declared-playout-bound",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/plugins/music.ts:4 Music is analyzed as metadata; no live packets or receiver buffer are involved."
+    },
+    {
+     "technique": "source-resilience",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/plugins/audio.ts:4 Audio entries contribute metadata dimensions rather than playable sources."
+    },
+    {
+     "technique": "timeline-scheduling",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/index.ts:99 The derived structure is an attribute distribution, not timed clip intervals."
+    },
+    {
+     "technique": "transport-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/gap-analysis/index.ts:119 Returned facts describe catalog counts rather than playback transport state."
+    }
+   ],
+   "absenceTerms": [
+    "playback",
+    "playhead",
+    "AudioContext",
+    "HTMLMediaElement",
+    "requestAnimationFrame"
+   ]
+  },
+  {
+   "context": "audio-generation-tools",
+   "subject": "media-playback",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/audio-codegen.ts:678 The emitted StopAllEmitters implementation discards handles after fading without destroying components whose automatic destruction is disabled, so repeated spawn-and-stop cycles retain playback resources.",
+   "techniques": [
+    {
+     "technique": "committed-buffer-steering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:110 Completed generation results enter a library for later preview, not a committed streaming queue."
+    },
+    {
+     "technique": "generated-supply-margin",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:255 Stored completed assets are previewed with native controls; generation does not race an advancing playhead."
+    },
+    {
+     "technique": "media-resource-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/lib/audio-codegen.ts:678 The generated stop path clears handles without destroying registered components, while SpawnEmitter sets bAutoDestroy to false."
+    },
+    {
+     "technique": "self-conditioned-supply",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:107 Generation requests share a library-set identity, not the committed media tail as continuation context."
+    },
+    {
+     "technique": "sender-declared-playout-bound",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/audio-codegen.ts:685 The emitted runtime loads local UE sound assets rather than sending an interactive stream to a foreign receiver."
+    },
+    {
+     "technique": "source-resilience",
+     "verdict": "deviation",
+     "evidence": "src/lib/audio-codegen.ts:686 An unavailable sound cue silently aborts playback without a reported failure or explicit recovery outcome."
+    },
+    {
+     "technique": "timeline-scheduling",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/audio-codegen.ts:853 Ambient layers transition on zone commands rather than authored clip intervals on a composition timeline."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "media-playback",
+   "context": "audio-view-and-catalog",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-15T22:56:57.217443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "media-playback"
+   ],
+   "techniques": [
+    "committed-buffer-steering",
+    "engine-adapters",
+    "generated-supply-margin",
+    "media-resource-lifecycle",
+    "playback-clock",
+    "self-conditioned-supply",
+    "sender-declared-playout-bound",
+    "source-resilience",
+    "timeline-scheduling"
+   ],
+   "deviations": 1,
+   "context": "combat-dodge-timeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T22:56:57.217443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "media-playback"
+   ],
+   "techniques": [
+    "committed-buffer-steering",
+    "engine-adapters",
+    "generated-supply-margin",
+    "media-resource-lifecycle",
+    "self-conditioned-supply",
+    "sender-declared-playout-bound",
+    "timeline-scheduling",
+    "transport-contract"
+   ],
+   "deviations": 1,
+   "context": "audio-scene-designer",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T22:56:57.217443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "media-playback"
+   ],
+   "techniques": [
+    "committed-buffer-steering",
+    "engine-adapters",
+    "generated-supply-margin",
+    "media-resource-lifecycle",
+    "playback-clock",
+    "self-conditioned-supply",
+    "sender-declared-playout-bound",
+    "source-resilience",
+    "timeline-scheduling",
+    "transport-contract"
+   ],
+   "deviations": 0,
+   "context": "catalog-gap-analysis",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T22:56:57.217443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "media-playback"
+   ],
+   "techniques": [
+    "committed-buffer-steering",
+    "generated-supply-margin",
+    "media-resource-lifecycle",
+    "self-conditioned-supply",
+    "sender-declared-playout-bound",
+    "source-resilience",
+    "timeline-scheduling"
+   ],
+   "deviations": 1,
+   "context": "audio-generation-tools",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
