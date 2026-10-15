@@ -3605,6 +3605,121 @@
         "at": "2026-10-15T00:06:39.696889+00:00",
         "reason": "reviewer (sonnet): The anchor GridSection.tsx:28 is a DimensionControl line, not the grid preview it is cited for, and ParameterEditor.tsx:54 is a color-picker line, so the not-applicable rests on incidental anchors plus a narrow grep that never covered all context directories."
       }
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/generative-artifact-gating": {
+      "context": "step-shared-primitives",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:34:05.837Z",
+      "worker": "d3d88a8d-6bfb-43c8-a7e4-b93159b8fa2c",
+      "techniques": [
+        {
+          "technique": "placeholder-is-not-an-asset",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 Defines seed previews as distinct from generated assets so deterministic placeholders never masquerade as output."
+        },
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/libraryReference.ts:24 Explicitly flags referenced library assets missing a recorded license rather than assuming unrestricted status."
+        },
+        {
+          "technique": "auto-picked-vs-human-chosen-provenance",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:91 Surfaces selection provenance on the review strip, visually distinguishing machine auto-picks from human choices."
+        },
+        {
+          "technique": "cite-evidence-not-descriptions",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/stepEvidence.ts:76 Emits real fetchable artifact URLs or returns an empty string when only swatches exist, omitting ungrounded descriptions."
+        },
+        {
+          "technique": "generation-history-as-artifact",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:101 Persists bounded generation history with candidate batches and exempts the selected batch from pruning eviction."
+        }
+      ]
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/generative-artifact-gating": {
+      "context": "image-generation",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:34:05.837Z",
+      "worker": "d3d88a8d-6bfb-43c8-a7e4-b93159b8fa2c",
+      "techniques": [
+        {
+          "technique": "reserve-before-dispatch-stop-latch",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/qwen-image-runner.ts:161 When quota errors occur, execution loops through fallback models without reserving under a lock or setting a durable stop latch."
+        },
+        {
+          "technique": "generator-failure-deterministic-gates",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:105 The vision model grader directly issues a pass verdict and lacks deterministic raw margin or axis checks ahead of the model."
+        },
+        {
+          "technique": "gate-before-every-credit-spend",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/input-gate.ts:208 Refuses failed 2D concept images before image-to-3D provider dispatch, preventing credit consumption on invalid inputs."
+        }
+      ]
+    },
+    "71f2dcdd-a894-4fda-a381-1ca0388f2b51/generative-artifact-gating": {
+      "context": "visual-gen-core",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:34:05.837Z",
+      "worker": "d3d88a8d-6bfb-43c8-a7e4-b93159b8fa2c",
+      "techniques": [
+        {
+          "technique": "reserve-before-dispatch-stop-latch",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate-2d/route.ts:59 Dispatches metered 2D generation without locking a local reservation ledger or checking a durable stop latch."
+        },
+        {
+          "technique": "gate-before-every-credit-spend",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:147 Enforces Tier-0 input gate refusal with HTTP 400 before starting a paid 3D generation runner."
+        }
+      ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/generative-artifact-gating": {
+      "context": "catalog-acceptance",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:34:05.837Z",
+      "worker": "d3d88a8d-6bfb-43c8-a7e4-b93159b8fa2c",
+      "techniques": [
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 Awards an advancing L1 pass to any candidate carrying a served URL without checking an acquisition record or verifying license status."
+        },
+        {
+          "technique": "grade-the-selected-candidate",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:155 Dereferences the selection pointer into history, verifies back-reference alignment, and fails when the candidate is missing or contradictory."
+        },
+        {
+          "technique": "placeholder-is-not-an-asset",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:196 Deterministic swatch placeholders defer at L4 with a reason rather than falsely passing before a generator runs."
+        },
+        {
+          "technique": "generation-history-as-artifact",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:142 Single-sources generation seeding and grading in one file, requiring stored history batches for the selection to advance."
+        }
+      ],
+      "registryProposal": "Consider clarifying how downstream catalog acceptance layers should distinguish acquired library assets from generated assets when both are represented as served URL references in candidate payloads."
     }
   }
 }

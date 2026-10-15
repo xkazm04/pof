@@ -1,0 +1,192 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d3d88a8d-6bfb-43c8-a7e4-b93159b8fa2c",
+ "subject": "generative-artifact-gating",
+ "evaluatedAt": "2026-10-15T00:34:05.837696+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "step-shared-primitives",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "conformant",
+   "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 The shared primitives distinguish deterministic seed previews from real generated assets and persist candidate history with provenance tracking across pipeline steps.",
+   "techniques": [
+    {
+     "technique": "placeholder-is-not-an-asset",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 Defines seed previews as distinct from generated assets so deterministic placeholders never masquerade as output."
+    },
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/libraryReference.ts:24 Explicitly flags referenced library assets missing a recorded license rather than assuming unrestricted status."
+    },
+    {
+     "technique": "auto-picked-vs-human-chosen-provenance",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:91 Surfaces selection provenance on the review strip, visually distinguishing machine auto-picks from human choices."
+    },
+    {
+     "technique": "cite-evidence-not-descriptions",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/stepEvidence.ts:76 Emits real fetchable artifact URLs or returns an empty string when only swatches exist, omitting ungrounded descriptions."
+    },
+    {
+     "technique": "generation-history-as-artifact",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:101 Persists bounded generation history with candidate batches and exempts the selected batch from pruning eviction."
+    }
+   ]
+  },
+  {
+   "context": "image-generation",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/qwen-image-runner.ts:161 The image generation runner bypasses local reservation ledgers and quota stop latches by continuing across fallback models upon encountering 429 quota exhaustion.",
+   "techniques": [
+    {
+     "technique": "reserve-before-dispatch-stop-latch",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/qwen-image-runner.ts:161 When quota errors occur, execution loops through fallback models without reserving under a lock or setting a durable stop latch."
+    },
+    {
+     "technique": "generator-failure-deterministic-gates",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/input-gate.ts:105 The vision model grader directly issues a pass verdict and lacks deterministic raw margin or axis checks ahead of the model."
+    },
+    {
+     "technique": "gate-before-every-credit-spend",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:208 Refuses failed 2D concept images before image-to-3D provider dispatch, preventing credit consumption on invalid inputs."
+    }
+   ]
+  },
+  {
+   "context": "visual-gen-core",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/visual-gen/generate-2d/route.ts:59 The API dispatches metered generation requests without taking a reservation in a local ledger or checking a durable stop latch.",
+   "techniques": [
+    {
+     "technique": "reserve-before-dispatch-stop-latch",
+     "verdict": "deviation",
+     "evidence": "src/app/api/visual-gen/generate-2d/route.ts:59 Dispatches metered 2D generation without locking a local reservation ledger or checking a durable stop latch."
+    },
+    {
+     "technique": "gate-before-every-credit-spend",
+     "verdict": "conformant",
+     "evidence": "src/app/api/visual-gen/generate/route.ts:147 Enforces Tier-0 input gate refusal with HTTP 400 before starting a paid 3D generation runner."
+    }
+   ]
+  },
+  {
+   "context": "catalog-acceptance",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 The acceptance checker awards an advancing L1 pass to any candidate carrying a served URL reference without verifying whether it was acquired or checking its licence.",
+   "techniques": [
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 Awards an advancing L1 pass to any candidate carrying a served URL without checking an acquisition record or verifying license status."
+    },
+    {
+     "technique": "grade-the-selected-candidate",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:155 Dereferences the selection pointer into history, verifies back-reference alignment, and fails when the candidate is missing or contradictory."
+    },
+    {
+     "technique": "placeholder-is-not-an-asset",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:196 Deterministic swatch placeholders defer at L4 with a reason rather than falsely passing before a generator runs."
+    },
+    {
+     "technique": "generation-history-as-artifact",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:142 Single-sources generation seeding and grading in one file, requiring stored history batches for the selection to advance."
+    }
+   ],
+   "registryProposal": "Consider clarifying how downstream catalog acceptance layers should distinguish acquired library assets from generated assets when both are represented as served URL references in candidate payloads."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generative-artifact-gating",
+   "context": "asset-viewer-and-browser",
+   "reason": "The context implements client-side 3D viewport rendering and asset library browsing rather than generative pipeline artifact gating, candidate history persistence, or provider dispatch latches."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-15T00:34:05.837696+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "auto-picked-vs-human-chosen-provenance",
+    "cite-evidence-not-descriptions",
+    "generation-history-as-artifact",
+    "placeholder-is-not-an-asset"
+   ],
+   "deviations": 0,
+   "context": "step-shared-primitives",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T00:34:05.837696+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "gate-before-every-credit-spend",
+    "generator-failure-deterministic-gates",
+    "reserve-before-dispatch-stop-latch"
+   ],
+   "deviations": 1,
+   "context": "image-generation",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T00:34:05.837696+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "gate-before-every-credit-spend",
+    "reserve-before-dispatch-stop-latch"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-core",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T00:34:05.837696+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "generation-history-as-artifact",
+    "grade-the-selected-candidate",
+    "placeholder-is-not-an-asset"
+   ],
+   "deviations": 1,
+   "context": "catalog-acceptance",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

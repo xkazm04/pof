@@ -6929,7 +6929,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 The acceptance checker awards an advancing L1 pass to any candidate carrying a served URL reference without verifying whether it was acquired or checking its licence.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "invariant-placement",
@@ -13908,7 +13912,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/qwen-image-runner.ts:161 The image generation runner bypasses local reservation ledgers and quota stop latches by continuing across fallback models upon encountering 429 quota exhaustion.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "repository-landing-document",
@@ -21554,7 +21562,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 The shared primitives distinguish deterministic seed previews from real generated assets and persist candidate history with provenance tracking across pipeline steps.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "module-design",
@@ -23677,7 +23689,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/visual-gen/generate-2d/route.ts:59 The API dispatches metered generation requests without taking a reservation in a local ledger or checking a durable stop latch.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "image-to-3d-input-gating",
