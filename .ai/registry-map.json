@@ -2759,7 +2759,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/claude-terminal/query/route.ts:64 The execution endpoint uses a runner that unconditionally disables permission checks instead of applying a fail-closed headless profile.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-instruction-files",
@@ -3555,7 +3559,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:61 Apply confirmation dispatches the plan without recording an immutable decision binding the decider to the reviewed plan revision and disclosure.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "quality-gates",
@@ -21670,7 +21678,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:203 Generation automatically selects a candidate that can satisfy the human-selection check without a human selection verdict.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "eval-harness",

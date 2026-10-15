@@ -1,0 +1,152 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d90d1836-edf2-485a-9856-654c11ce1b3b",
+  "subject": "hitl-approval",
+  "evaluatedAt": "2026-10-15T01:06:18.099670+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "step-shared-primitives",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:203 Generation automatically selects a candidate that can satisfy the human-selection check without a human selection verdict.",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:203 appendBatch chooses the first candidate automatically; gradeGallerySelection can return pass for its real asset without checking autoSelected, so the machine can satisfy the documented L1 human-selection gate."
+        }
+      ]
+    },
+    {
+      "context": "ai-developer-tools-api",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/claude-terminal/query/route.ts:64 The execution endpoint uses a runner that unconditionally disables permission checks instead of applying a fail-closed headless profile.",
+      "techniques": [
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:247 The server-side query and one-shot routes import this runner; every invocation receives the permission bypass, including autonomous runs, with no fail-closed policy selection."
+        }
+      ]
+    },
+    {
+      "context": "animation-state-machine-editor",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:61 Apply confirmation dispatches the plan without recording an immutable decision binding the decider to the reviewed plan revision and disclosure.",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:61 confirmApply clears its UI flag and calls the host, which creates a quick-action CLI task; the traced path carries no immutable approval record or approved-plan fingerprint."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:41 The pending Apply confirmation exists only as React state, so it does not provide the durable pending state required by the technique."
+        }
+      ]
+    },
+    {
+      "context": "crash-analysis",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/crash-analyzer/analysis-engine.ts:570 Unrecognized crash errors retain medium severity instead of the highest severity, so uncertain classifications receive lower triage priority.",
+      "techniques": [
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "deviation",
+          "evidence": "src/lib/crash-analyzer/analysis-engine.ts:570 parseCrashLog starts with crashType unknown, and an unrecognized error matches none of the subsequent severity overrides; it therefore returns medium rather than critical."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "hitl-approval",
+      "context": "pipeline-step-components",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor src/lib/one-shot/orchestrator.ts is not in this context's layout-lab step components, and I could not confirm that those components call approveAndRun, so the verdict reads as about the one-shot orchestrator, a different context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T01:06:18.099670+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "decision-records",
+        "resume-after-decision"
+      ],
+      "deviations": 1,
+      "context": "pipeline-step-components",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T01:06:18.099670+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "gate-state-machines"
+      ],
+      "deviations": 1,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T01:06:18.099670+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "fail-closed-profile-for-headless"
+      ],
+      "deviations": 1,
+      "context": "ai-developer-tools-api",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T01:06:18.099670+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "decision-records",
+        "gate-state-machines"
+      ],
+      "deviations": 1,
+      "context": "animation-state-machine-editor",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T01:06:18.099670+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "fail-loud-classification-default"
+      ],
+      "deviations": 1,
+      "context": "crash-analysis",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

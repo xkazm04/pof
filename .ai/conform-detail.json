@@ -3720,6 +3720,85 @@
         }
       ],
       "registryProposal": "Consider clarifying how downstream catalog acceptance layers should distinguish acquired library assets from generated assets when both are represented as served URL references in candidate payloads."
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/hitl-approval": {
+      "context": "pipeline-step-components",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:06:18.099Z",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/lib/one-shot/orchestrator.ts:183 approveAndRun persists an entity and changes client phase, but records no version-bound human verdict atomically with that transition."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "src/lib/one-shot/orchestrator.ts:146 Each approval invocation creates a fresh draft before awaiting persistence; phase remains approvable during that await, allowing duplicate clicks to start duplicate continuations."
+        }
+      ],
+      "withdrawn": {
+        "worker": "d90d1836-edf2-485a-9856-654c11ce1b3b",
+        "state": "deviation",
+        "at": "2026-10-15T01:06:55.056236+00:00",
+        "reason": "reviewer (sonnet): The anchor src/lib/one-shot/orchestrator.ts is not in this context's layout-lab step components, and I could not confirm that those components call approveAndRun, so the verdict reads as about the one-shot orchestrator, a different context."
+      }
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/hitl-approval": {
+      "context": "step-shared-primitives",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:06:18.099Z",
+      "worker": "d90d1836-edf2-485a-9856-654c11ce1b3b",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:203 appendBatch chooses the first candidate automatically; gradeGallerySelection can return pass for its real asset without checking autoSelected, so the machine can satisfy the documented L1 human-selection gate."
+        }
+      ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/hitl-approval": {
+      "context": "ai-developer-tools-api",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:06:18.099Z",
+      "worker": "d90d1836-edf2-485a-9856-654c11ce1b3b",
+      "techniques": [
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:247 The server-side query and one-shot routes import this runner; every invocation receives the permission bypass, including autonomous runs, with no fail-closed policy selection."
+        }
+      ]
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/hitl-approval": {
+      "context": "animation-state-machine-editor",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:06:18.099Z",
+      "worker": "d90d1836-edf2-485a-9856-654c11ce1b3b",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:61 confirmApply clears its UI flag and calls the host, which creates a quick-action CLI task; the traced path carries no immutable approval record or approved-plan fingerprint."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:41 The pending Apply confirmation exists only as React state, so it does not provide the durable pending state required by the technique."
+        }
+      ]
     }
   }
 }
