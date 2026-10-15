@@ -3364,6 +3364,247 @@
         }
       ],
       "registryProposal": "The standard requires fight report cards to present dramatic beat findings alongside outcome bands, but does not provide an aggregation specification for reporting beat distributions across large Monte Carlo sample sets."
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/table": {
+      "context": "catalog-browser-ui",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:06:04.931Z",
+      "techniques": [
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:278 Cells navigate to pipeline steps; the reviewed component provides no clipboard range operations."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:204 This is an ordinary overflow container with fully mounted rows, without virtual spacers or compressed coordinates."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:103 One applied in-memory predicate drives the displayed rows; controls commit immediately, counts receive that predicate, and Clear resets it."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:216 The skeleton replaces the entire table branch, including its column headers and column-filter buttons, instead of occupying only the body under persistent chrome."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:244 The row action navigates; this matrix does not edit cell values or implement range writers."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 All filtered rows render without a page-size bound or continuation mechanism."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/matrixTriage.ts:39 The named coach-priority order now ends with an entity-ID tiebreaker; the earlier storage-order finding no longer applies to the matrix."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "added by /conform: the matcher scored `table` at zero; CatalogMatrix.tsx:241 is a real entities x steps <table>. Judged deviation - loading-and-empty-states and performance are realized (unconditional chrome :184-222, geometry-matched MatrixSkeleton :237, error-with-retry distinct from empty :227, identity row keys :252, per-status styles precomputed :126, stale-response drop labArtifactCache.ts:140), but sorting has no declared order or identity tiebreaker (useLabCatalogData.ts:81 renders Object.values() storage order) and pagination has no window bound (:251 mounts every entity), so row order shuffles on refetch and the grid fails at catalog size. [re-judged 2026-09-22: still holds - rows are still Object.values() storage order (useLabCatalogData.ts:90-91, anchor moved from :81) with no declared sort or identity tiebreaker, and CatalogMatrix still mounts every entity with no window bound.]",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by 1f82a883-861b-4163-a984-d3463adfdf77"
+        }
+      ],
+      "withdrawn": {
+        "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
+        "state": "deviation",
+        "at": "2026-10-15T00:06:39.649783+00:00",
+        "reason": "reviewer (sonnet): The technique anchor at CatalogMatrix.tsx:103 claims 'counts receive that predicate', but line 102 computes tallyRungs(rows) from the unfiltered rows, so only the displayed rows (shown) receive the predicate; the claim contradicts the code."
+      }
+    },
+    "419ea285-f8b3-4f3c-b012-c75db90d3778/table": {
+      "context": "harness-autonomy",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:06:04.931Z",
+      "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
+      "techniques": [
+        {
+          "technique": "client-server-split",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/runs/route.ts:19 Although query execution stays server-side, the response omits the answered-query echo and window metadata required by the all-server contract."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:41 The table selects runs for comparison and provides no cell-range clipboard operations."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:33 The bounded response is fully mounted, without virtualization or a dataset-sized spacer."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "src/components/harness/HarnessRunHistory/index.tsx:106 RunTable and its column headers mount only after nonempty data arrives; initial loading shows a spinner instead of a row-shaped placeholder under persistent headers."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:42 Comparison selection changes UI state rather than cell data; no editable range writers exist in this table."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness-runs-db.ts:480 The default 50-row window has no cursor or offset, and the response and UI provide neither continuation nor a truncation notice."
+        },
+        {
+          "technique": "performance",
+          "verdict": "deviation",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:46 Date formatting runs in each row render rather than in a cached view model computed when data changes."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness-runs-db.ts:491 The default order omits run_id as the final comparison term."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "added by /conform: the matcher scored `table` at zero; RunTable.tsx:15-31 is a real <table>. Judged deviation - the surface is well-formed (sr-only caption :16, scope=col headers :21-29, right-aligned tabular-nums numerics :48-59, identity row keys :38) and sort+window live on one tier (harness-runs-db.ts:491), but the sort has no identity tiebreaker (ORDER BY started_at DESC alone, so same-timestamp runs reorder between refetches), the LIMIT 50 window (harness-runs-db.ts:480) is silently truncated with no pager, hasMore or count, and the body loads behind a spinner (index.tsx:92) instead of a ghost-under-chrome placeholder. [re-judged 2026-09-22: still holds. harness-runs-db.ts:491 is still ORDER BY started_at DESC with no tiebreaker; the window is still a silent LIMIT (default 50, now clamped to 500 at :480) with no hasMore, count or pager. loading-and-empty-states was edited on 2026-09-20; the edit does not touch spinner, skeleton or chrome guidance, so the spinner count stands too.]",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by 1f82a883-861b-4163-a984-d3463adfdf77"
+        }
+      ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/table": {
+      "context": "step-shared-primitives",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:06:04.931Z",
+      "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
+      "techniques": [
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:83 Cells display supplied values; this primitive has no clipboard range operations."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:63 The implementation lays out fully mounted CSS-grid rows and implements no virtual scroll-space mapping."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:72 The read-only multi-column table uses div/span layout without native table semantics or equivalent table roles."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:82 The cell renderer is read-only and exposes no editor, paste, fill, cut, or clear writer."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:76 ROW mode mounts the complete supplied row array without a row-window bound."
+        },
+        {
+          "technique": "performance",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:77 The row key falls back to position and otherwise uses a display label, contrary to the technique's identity requirement."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "added by /conform: the matcher scored `table` at zero; DataTable.tsx is this repo's only shared multi-column table primitive. Judged deviation - ROW mode (:39, rendered at ArchetypeStep.tsx:90) keys rows positionally (:77 `key={r.label ?? i}`), so any future reorder makes a recycled row inherit the previous record's state; its column model (:18-24, key/label/unit only) declares no alignment, semantic type or sortability, so type-aware sorting is unexpressible; and it bounds nothing (:76 renders every row it is handed).",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by 1f82a883-861b-4163-a984-d3463adfdf77"
+        }
+      ]
+    },
+    "db5bb171-c9ed-4d1f-9ef5-dab6d67580c1/table": {
+      "context": "hud-theme-and-inventory",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:06:04.931Z",
+      "techniques": [
+        {
+          "technique": "client-server-split",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:29 The surface edits a design configuration rather than querying a table dataset."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ExportPanel.tsx:55 Paste imports a C++ header, not a rectangular cell range."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:28 The grid is a bounded inventory-layout preview, not a virtualized record table."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:63 The export consumer is a C++ header rather than CSV or a spreadsheet."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ParameterEditor.tsx:105 Section tabs select a parameter editor panel rather than apply a record predicate."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:56 Columns describe spatial inventory slots, not uniform attributes of record rows."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:118 This is a theme animation preview, not an asynchronously loaded table body."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:38 Writes update theme parameters; there are no table cell-range writers."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:82 The count is inventory capacity derived from layout dimensions, not a paged record count."
+        },
+        {
+          "technique": "performance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:44 This bounds a spatial design dimension; the table rendering ladder has no subject here."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ParameterEditor.tsx:125 The sequence consists of schema-defined parameter controls rather than sortable records."
+        }
+      ],
+      "withdrawn": {
+        "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
+        "state": "not-applicable",
+        "at": "2026-10-15T00:06:39.696889+00:00",
+        "reason": "reviewer (sonnet): The anchor GridSection.tsx:28 is a DimensionControl line, not the grid preview it is cited for, and ParameterEditor.tsx:54 is a color-picker line, so the not-applicable rests on incidental anchors plus a narrow grep that never covered all context directories."
+      }
     }
   }
 }

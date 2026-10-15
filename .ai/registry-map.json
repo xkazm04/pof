@@ -7158,11 +7158,7 @@
           "confidence": "strong",
           "state": "deviation",
           "evidence": "added by /conform: the matcher scored `table` at zero; CatalogMatrix.tsx:241 is a real entities x steps <table>. Judged deviation - loading-and-empty-states and performance are realized (unconditional chrome :184-222, geometry-matched MatrixSkeleton :237, error-with-retry distinct from empty :227, identity row keys :252, per-status styles precomputed :126, stale-response drop labArtifactCache.ts:140), but sorting has no declared order or identity tiebreaker (useLabCatalogData.ts:81 renders Object.values() storage order) and pagination has no window bound (:251 mounts every entity), so row order shuffles on refetch and the grid fails at catalog size. [re-judged 2026-09-22: still holds - rows are still Object.values() storage order (useLabCatalogData.ts:90-91, anchor moved from :81) with no declared sort or identity tiebreaker, and CatalogMatrix still mounts every entity with no window bound.]",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256:b220b0cfe6a4bcda",
-          "evaluatedRevision": 7,
-          "revisionsBehind": 7,
-          "stale": true
+          "evaluatedAt": "2026-09-22"
         }
       ],
       "governance": "governed"
@@ -13322,12 +13318,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "added by /conform: the matcher scored `table` at zero; RunTable.tsx:15-31 is a real <table>. Judged deviation - the surface is well-formed (sr-only caption :16, scope=col headers :21-29, right-aligned tabular-nums numerics :48-59, identity row keys :38) and sort+window live on one tier (harness-runs-db.ts:491), but the sort has no identity tiebreaker (ORDER BY started_at DESC alone, so same-timestamp runs reorder between refetches), the LIMIT 50 window (harness-runs-db.ts:480) is silently truncated with no pager, hasMore or count, and the body loads behind a spinner (index.tsx:92) instead of a ghost-under-chrome placeholder. [re-judged 2026-09-22: still holds. harness-runs-db.ts:491 is still ORDER BY started_at DESC with no tiebreaker; the window is still a silent LIMIT (default 50, now clamped to 500 at :480) with no hasMore, count or pager. loading-and-empty-states was edited on 2026-09-20; the edit does not touch spinner, skeleton or chrome guidance, so the spinner count stands too.]",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256:b220b0cfe6a4bcda",
-          "evaluatedRevision": 7,
-          "revisionsBehind": 7,
-          "stale": true
+          "evidence": "src/lib/harness-runs-db.ts:491 Run history orders by a potentially colliding timestamp without an immutable identity tiebreaker, leaving tied runs without a deterministic order.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14,
+          "revisionsBehind": 7
         }
       ],
       "governance": "governed"
@@ -21740,18 +21735,17 @@
           "subject": "table",
           "bundle": "software-engineering",
           "state": "deviation",
-          "evidence": "added by /conform: the matcher scored `table` at zero; DataTable.tsx is this repo's only shared multi-column table primitive. Judged deviation - ROW mode (:39, rendered at ArchetypeStep.tsx:90) keys rows positionally (:77 `key={r.label ?? i}`), so any future reorder makes a recycled row inherit the previous record's state; its column model (:18-24, key/label/unit only) declares no alignment, semantic type or sortability, so type-aware sorting is unexpressible; and it bounds nothing (:76 renders every row it is handed).",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:77 ROW mode uses a display label or array position as its React key, violating the stable record-identity requirement for row reuse and reordering.",
           "confidence": "strong",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256:b220b0cfe6a4bcda",
-          "evaluatedRevision": 7,
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14,
           "digest": "sha256-b2:c587a204413d5373",
           "revision": 14,
           "changedAt": "2026-10-14",
           "source": "conform",
           "adoptedFrom": "c3c80a76-7cb9-481e-9030-bdd3d9e13046",
-          "revisionsBehind": 7,
-          "stale": true
+          "revisionsBehind": 7
         }
       ],
       "governance": "governed"

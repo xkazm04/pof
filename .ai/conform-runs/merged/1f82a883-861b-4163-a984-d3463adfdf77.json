@@ -1,0 +1,201 @@
+{
+  "schema": "conform-run/1",
+  "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
+  "subject": "table",
+  "evaluatedAt": "2026-10-15T00:06:04.931150+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "harness-autonomy",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/harness-runs-db.ts:491 Run history orders by a potentially colliding timestamp without an immutable identity tiebreaker, leaving tied runs without a deterministic order.",
+      "techniques": [
+        {
+          "technique": "client-server-split",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/runs/route.ts:19 Although query execution stays server-side, the response omits the answered-query echo and window metadata required by the all-server contract."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:41 The table selects runs for comparison and provides no cell-range clipboard operations."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:33 The bounded response is fully mounted, without virtualization or a dataset-sized spacer."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "src/components/harness/HarnessRunHistory/index.tsx:106 RunTable and its column headers mount only after nonempty data arrives; initial loading shows a spinner instead of a row-shaped placeholder under persistent headers."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:42 Comparison selection changes UI state rather than cell data; no editable range writers exist in this table."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness-runs-db.ts:480 The default 50-row window has no cursor or offset, and the response and UI provide neither continuation nor a truncation notice."
+        },
+        {
+          "technique": "performance",
+          "verdict": "deviation",
+          "evidence": "src/components/harness/HarnessRunHistory/RunTable.tsx:46 Date formatting runs in each row render rather than in a cached view model computed when data changes."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness-runs-db.ts:491 The default order omits run_id as the final comparison term."
+        }
+      ]
+    },
+    {
+      "context": "step-shared-primitives",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:77 ROW mode uses a display label or array position as its React key, violating the stable record-identity requirement for row reuse and reordering.",
+      "techniques": [
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:83 Cells display supplied values; this primitive has no clipboard range operations."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:63 The implementation lays out fully mounted CSS-grid rows and implements no virtual scroll-space mapping."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:72 The read-only multi-column table uses div/span layout without native table semantics or equivalent table roles."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:82 The cell renderer is read-only and exposes no editor, paste, fill, cut, or clear writer."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:76 ROW mode mounts the complete supplied row array without a row-window bound."
+        },
+        {
+          "technique": "performance",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/DataTable.tsx:77 The row key falls back to position and otherwise uses a display label, contrary to the technique's identity requirement."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "table",
+      "context": "inventory-economy-simulator",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "table",
+      "context": "catalog-browser-ui",
+      "reason": "withdrawn after review: reviewer (sonnet): The technique anchor at CatalogMatrix.tsx:103 claims 'counts receive that predicate', but line 102 computes tallyRungs(rows) from the unfiltered rows, so only the displayed rows (shown) receive the predicate; the claim contradicts the code."
+    },
+    {
+      "subject": "table",
+      "context": "hud-theme-and-inventory",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor GridSection.tsx:28 is a DimensionControl line, not the grid preview it is cited for, and ParameterEditor.tsx:54 is a color-picker line, so the not-applicable rests on incidental anchors plus a narrow grep that never covered all context directories."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T00:06:04.931150+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "clipboard-range-round-trip",
+        "compressed-scroll-space",
+        "filtering",
+        "loading-and-empty-states",
+        "one-door-for-range-writes",
+        "pagination",
+        "sorting"
+      ],
+      "deviations": 1,
+      "context": "catalog-browser-ui",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T00:06:04.931150+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "client-server-split",
+        "clipboard-range-round-trip",
+        "compressed-scroll-space",
+        "loading-and-empty-states",
+        "one-door-for-range-writes",
+        "pagination",
+        "performance",
+        "sorting"
+      ],
+      "deviations": 1,
+      "context": "harness-autonomy",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T00:06:04.931150+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "clipboard-range-round-trip",
+        "compressed-scroll-space",
+        "grid-keyboard-model",
+        "one-door-for-range-writes",
+        "pagination",
+        "performance"
+      ],
+      "deviations": 1,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T00:06:04.931150+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "client-server-split",
+        "clipboard-range-round-trip",
+        "compressed-scroll-space",
+        "export-escapes-for-its-consumer",
+        "filtering",
+        "grid-keyboard-model",
+        "loading-and-empty-states",
+        "one-door-for-range-writes",
+        "pagination",
+        "performance",
+        "sorting"
+      ],
+      "deviations": 0,
+      "context": "hud-theme-and-inventory",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
