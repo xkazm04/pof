@@ -4063,6 +4063,136 @@
           "evidence": "src/lib/visual-gen/poll.ts:43 The periodic work polls provider jobs server-side rather than building diagnostics on a render thread."
         }
       ]
+    },
+    "77c4a5c6-f0e9-4311-8cbf-504eda86e733/imported-material-conformance": {
+      "context": "material-lab",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T03:35:11.546Z",
+      "worker": "ded3b2e1-50c3-4ef2-b38a-c77e70fdd7e8",
+      "techniques": [
+        {
+          "technique": "colour-space-is-per-texture-role",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialPreview.tsx:22 Each preview slot samples through the shared per-role table: albedo sRGB, normal/metallic/roughness/AO linear. Blender and the UE emitter read that same table."
+        },
+        {
+          "technique": "gloss-axis-inversion-and-the-midpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/materialPreviewProps.ts:59 three.js, Blender Principled, and the UE script all store this scalar as roughness. No smoothness name and no negation in the lab projections."
+        },
+        {
+          "technique": "format-defaults-are-not-asset-properties",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/materialTransfer.ts:52 Those three scalars are always sent as authored lab values. This module does not read an interchange file that can omit a factor."
+        },
+        {
+          "technique": "surface-conformance-swatch",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/visual-gen/material-boundary-swatch.test.ts:88 The test named as the surface swatch pins roughness at 0.5 and metallic at 0. It has no empty material, transparency, two-sided case, emissive-without-factor, or metalness pair."
+        },
+        {
+          "technique": "a-fixer-script-is-the-edge-in-the-wrong-place",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/ue5-material-instance.ts:295 The generated UE script writes the role flag from the shared table when the imported texture disagrees, instead of leaving a warning for someone to untick."
+        }
+      ],
+      "registryProposal": "The node application treats base-colour numeric agreement plus a per-role colour-space check as the swatch, while the technique also requires gloss extremes, an empty material, transparency, two-sidedness, emissive-without-factor, and a metalness pair."
+    },
+    "15282b56-0d42-43ed-b76d-d61c8e6e0309/imported-material-conformance": {
+      "context": "material-style-tools",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T03:35:11.546Z",
+      "worker": "ded3b2e1-50c3-4ef2-b38a-c77e70fdd7e8",
+      "techniques": [
+        {
+          "technique": "colour-space-is-per-texture-role",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:14 The upload is a reference screenshot, not a delivered texture with a declared role."
+        },
+        {
+          "technique": "gloss-axis-inversion-and-the-midpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:43 Roughness is an analysis value or a user override. Nothing negates it between a roughness convention and a smoothness convention."
+        },
+        {
+          "technique": "format-defaults-are-not-asset-properties",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:44 Metallic is the same kind of analysis override. No interchange omission is recorded or defaulted here."
+        },
+        {
+          "technique": "materialise-on-import",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:33 Adjustments sit on an analysis result. There is no embedded delivery material to make addressable."
+        },
+        {
+          "technique": "a-fixer-script-is-the-edge-in-the-wrong-place",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:34 Roughness adjustment is a nullable user override, not a batch pass run after import."
+        }
+      ]
+    },
+    "b6266959-0161-4ca0-b9e9-249804753b1c/imported-material-conformance": {
+      "context": "material-configurator",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T03:35:11.546Z",
+      "worker": "ded3b2e1-50c3-4ef2-b38a-c77e70fdd7e8",
+      "techniques": [
+        {
+          "technique": "colour-space-is-per-texture-role",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/constants.ts:62 ORM here is an authoring packing glossary entry. No import assigns a colour space per texture role."
+        },
+        {
+          "technique": "gloss-axis-inversion-and-the-midpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/constants.ts:36 The slider explains the roughness sense to an author. It does not convert a delivered smoothness value."
+        },
+        {
+          "technique": "format-defaults-are-not-asset-properties",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/liveParent.ts:11 An unreported parent scalar stays null. That manifest is a live UE master, not an interchange file whose omitted factor was replaced by a format default."
+        },
+        {
+          "technique": "materialise-on-import",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/helpers.ts:17 A newly picked surface gets spec defaults. Nothing materialises an embedded delivery."
+        }
+      ]
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/imported-material-conformance": {
+      "context": "procedural-scene-tools",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T03:35:11.546Z",
+      "techniques": [
+        {
+          "technique": "materialise-on-import",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/ue-import-plan.ts:383 Reimport replaces the task's assets. The script then keeps the StaticMesh and does not merge a project override back onto a delivery-owned material."
+        },
+        {
+          "technique": "a-fixer-script-is-the-edge-in-the-wrong-place",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:210 The panel's user action is copying the import script. No second material-corrector step is referenced."
+        }
+      ],
+      "withdrawn": {
+        "worker": "ded3b2e1-50c3-4ef2-b38a-c77e70fdd7e8",
+        "state": "deviation",
+        "at": "2026-10-15T03:35:35.316016+00:00",
+        "reason": "reviewer (sonnet): The import-plan anchor (ue-import-plan.ts:383) and ImportAutomationView belong to the asset-forge and import-automation contexts; a grep of procedural-engine, scene-composer and auto-rig found no reference to ue-import-plan, AssetImportTask or replace_existing, so the claim is not about this context"
+      }
     }
   }
 }

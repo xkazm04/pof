@@ -1,0 +1,204 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ded3b2e1-50c3-4ef2-b38a-c77e70fdd7e8",
+  "subject": "imported-material-conformance",
+  "evaluatedAt": "2026-10-15T03:35:11.546768+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "material-lab",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/__tests__/lib/visual-gen/material-boundary-swatch.test.ts:88 The calibration shared by the preview, Blender, and UE varies only base-colour hex and holds roughness at the midpoint and metallic at 0, so it cannot fail a gloss inversion, a metallic default, or an empty delivery.",
+      "techniques": [
+        {
+          "technique": "colour-space-is-per-texture-role",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialPreview.tsx:22 Each preview slot samples through the shared per-role table: albedo sRGB, normal/metallic/roughness/AO linear. Blender and the UE emitter read that same table."
+        },
+        {
+          "technique": "gloss-axis-inversion-and-the-midpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/materialPreviewProps.ts:59 three.js, Blender Principled, and the UE script all store this scalar as roughness. No smoothness name and no negation in the lab projections."
+        },
+        {
+          "technique": "format-defaults-are-not-asset-properties",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/materialTransfer.ts:52 Those three scalars are always sent as authored lab values. This module does not read an interchange file that can omit a factor."
+        },
+        {
+          "technique": "surface-conformance-swatch",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/visual-gen/material-boundary-swatch.test.ts:88 The test named as the surface swatch pins roughness at 0.5 and metallic at 0. It has no empty material, transparency, two-sided case, emissive-without-factor, or metalness pair."
+        },
+        {
+          "technique": "a-fixer-script-is-the-edge-in-the-wrong-place",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/ue5-material-instance.ts:295 The generated UE script writes the role flag from the shared table when the imported texture disagrees, instead of leaving a warning for someone to untick."
+        }
+      ],
+      "registryProposal": "The node application treats base-colour numeric agreement plus a per-role colour-space check as the swatch, while the technique also requires gloss extremes, an empty material, transparency, two-sidedness, emissive-without-factor, and a metalness pair."
+    },
+    {
+      "context": "material-style-tools",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:14 Style transfer takes a reference screenshot and post-process builds a compositor stack; a search of src/components/modules/content/materials for srgb, smoothness, colourSpace, alphaMode, and metallicFactor found none.",
+      "techniques": [
+        {
+          "technique": "colour-space-is-per-texture-role",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:14 The upload is a reference screenshot, not a delivered texture with a declared role."
+        },
+        {
+          "technique": "gloss-axis-inversion-and-the-midpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:43 Roughness is an analysis value or a user override. Nothing negates it between a roughness convention and a smoothness convention."
+        },
+        {
+          "technique": "format-defaults-are-not-asset-properties",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:44 Metallic is the same kind of analysis override. No interchange omission is recorded or defaulted here."
+        },
+        {
+          "technique": "materialise-on-import",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:33 Adjustments sit on an analysis result. There is no embedded delivery material to make addressable."
+        },
+        {
+          "technique": "a-fixer-script-is-the-edge-in-the-wrong-place",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:34 Roughness adjustment is a nullable user override, not a batch pass run after import."
+        }
+      ],
+      "absenceTerms": [
+        "srgb",
+        "smoothness",
+        "colourSpace",
+        "alphaMode",
+        "metallicFactor"
+      ]
+    },
+    {
+      "context": "material-configurator",
+      "subject": "imported-material-conformance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/helpers.ts:15 The configurator seeds a picked surface from authoring slider defaults and, when adopting a live UE parent, leaves an unreported scalar null; the same materials-tree search found no srgb, smoothness, colourSpace, alphaMode, or metallicFactor.",
+      "techniques": [
+        {
+          "technique": "colour-space-is-per-texture-role",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/constants.ts:62 ORM here is an authoring packing glossary entry. No import assigns a colour space per texture role."
+        },
+        {
+          "technique": "gloss-axis-inversion-and-the-midpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/constants.ts:36 The slider explains the roughness sense to an author. It does not convert a delivered smoothness value."
+        },
+        {
+          "technique": "format-defaults-are-not-asset-properties",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/liveParent.ts:11 An unreported parent scalar stays null. That manifest is a live UE master, not an interchange file whose omitted factor was replaced by a format default."
+        },
+        {
+          "technique": "materialise-on-import",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/helpers.ts:17 A newly picked surface gets spec defaults. Nothing materialises an embedded delivery."
+        }
+      ],
+      "absenceTerms": [
+        "srgb",
+        "smoothness",
+        "colourSpace",
+        "alphaMode",
+        "metallicFactor"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "imported-material-conformance",
+      "context": "visual-gen-library",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "imported-material-conformance",
+      "context": "procedural-scene-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The import-plan anchor (ue-import-plan.ts:383) and ImportAutomationView belong to the asset-forge and import-automation contexts; a grep of procedural-engine, scene-composer and auto-rig found no reference to ue-import-plan, AssetImportTask or replace_existing, so the claim is not about this context"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T03:35:11.546768+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "imported-material-conformance"
+      ],
+      "techniques": [
+        "a-fixer-script-is-the-edge-in-the-wrong-place",
+        "colour-space-is-per-texture-role",
+        "format-defaults-are-not-asset-properties",
+        "gloss-axis-inversion-and-the-midpoint",
+        "surface-conformance-swatch"
+      ],
+      "deviations": 1,
+      "context": "material-lab",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T03:35:11.546768+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "imported-material-conformance"
+      ],
+      "techniques": [
+        "a-fixer-script-is-the-edge-in-the-wrong-place",
+        "colour-space-is-per-texture-role",
+        "format-defaults-are-not-asset-properties",
+        "gloss-axis-inversion-and-the-midpoint",
+        "materialise-on-import"
+      ],
+      "deviations": 0,
+      "context": "material-style-tools",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T03:35:11.546768+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "imported-material-conformance"
+      ],
+      "techniques": [
+        "colour-space-is-per-texture-role",
+        "format-defaults-are-not-asset-properties",
+        "gloss-axis-inversion-and-the-midpoint",
+        "materialise-on-import"
+      ],
+      "deviations": 0,
+      "context": "material-configurator",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T03:35:11.546768+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "imported-material-conformance"
+      ],
+      "techniques": [
+        "a-fixer-script-is-the-edge-in-the-wrong-place",
+        "materialise-on-import"
+      ],
+      "deviations": 1,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

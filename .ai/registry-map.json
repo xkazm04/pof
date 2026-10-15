@@ -16539,7 +16539,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/helpers.ts:15 The configurator seeds a picked surface from authoring slider defaults and, when adopting a live UE parent, leaves an unreported scalar null; the same materials-tree search found no srgb, smoothness, colourSpace, alphaMode, or metallicFactor.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:1a78990f85143545",
+          "evaluatedRevision": 3
         },
         {
           "subject": "shader-budget-authoring",
@@ -16706,7 +16710,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/visual-gen/material-boundary-swatch.test.ts:88 The calibration shared by the preview, Blender, and UE varies only base-colour hex and holds roughness at the midpoint and metallic at 0, so it cannot fail a gloss inversion, a metallic default, or an empty delivery.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:1a78990f85143545",
+          "evaluatedRevision": 3
         },
         {
           "subject": "shader-budget-authoring",
@@ -16809,7 +16817,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:14 Style transfer takes a reference screenshot and post-process builds a compositor stack; a search of src/components/modules/content/materials for srgb, smoothness, colourSpace, alphaMode, and metallicFactor found none.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:1a78990f85143545",
+          "evaluatedRevision": 3
         },
         {
           "subject": "prompt-assembly",
