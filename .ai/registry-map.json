@@ -7208,7 +7208,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/headless.ts:562 Headless submission forwards arbitrary artifact data to persistence without capturing or requiring the direction and composed prompt, leaving an uncovered production path.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-memory",
@@ -14566,7 +14570,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:867 The Items Test Gate composes its always-deferred runtime criterion before wiringContractSound, so the first-non-pass combinator masks a failing wiring contract.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "test-harness",
@@ -18116,7 +18124,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/StaticStepFrame.tsx:94 The bespoke static-step fix callback discards StepFrame's corrective direction and calls production without a context, so the advertised fix carries no corrective instruction or direction stamp.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "wizard-flows",
@@ -21714,7 +21726,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/useStepProduceDoor.ts:73 The stub dispatch records the preview prompt from pctx even though no prompt drove production, violating the requirement that deterministic production record an empty composed instruction.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",

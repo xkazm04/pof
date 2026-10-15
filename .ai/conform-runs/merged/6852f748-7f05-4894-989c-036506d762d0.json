@@ -1,0 +1,179 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6852f748-7f05-4894-989c-036506d762d0",
+ "subject": "catalog-pipeline-authoring",
+ "evaluatedAt": "2026-10-15T01:34:36.210049+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "step-shared-primitives",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/steps/shared/useStepProduceDoor.ts:73 The stub dispatch records the preview prompt from pctx even though no prompt drove production, violating the requirement that deterministic production record an empty composed instruction.",
+   "techniques": [
+    {
+     "technique": "direction-as-first-class-produce-input",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/shared/useStepProduceDoor.ts:73 CliProduce supplies a built preview prompt, and the stub branch stamps it rather than recording prompt: ''."
+    },
+    {
+     "technique": "step-archetype-taxonomy",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:17 Corrective language is defined for the shared closed ArchetypeId vocabulary and composed with the checker's criterion and reason."
+    }
+   ]
+  },
+  {
+   "context": "item-catalog-pipeline",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/pipelines/items.ts:867 The Items Test Gate composes its always-deferred runtime criterion before wiringContractSound, so the first-non-pass combinator masks a failing wiring contract.",
+   "techniques": [
+    {
+     "technique": "direction-as-first-class-produce-input",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/itemsSteps.ts:666 Demo production writes unstamped producer output; neither produceItemStep nor the store's produce operation adds a direction stamp."
+    },
+    {
+     "technique": "packaging-exempt-two-state-rule",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/pipelines/items.ts:888 Items owns an explicit terminal packaging step whose asset claim is derived from producing siblings rather than an empty compliance step."
+    },
+    {
+     "technique": "seed-entities-and-walker-coverage",
+     "verdict": "deviation",
+     "evidence": "e2e/catalog-items-reference.spec.ts:45 Items is skipped by the generic walker, while its replacement walk supplies no unique steer and contains no persisted-artifact or cache-wipe rehydration assertions."
+    },
+    {
+     "technique": "view-produce-accept-triad",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:867 This criterion precedes wiringContractSound at line 871; allOf returns the first non-pass result, contrary to the deferred-last rule."
+    }
+   ]
+  },
+  {
+   "context": "catalog-core-infrastructure",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/headless.ts:562 Headless submission forwards arbitrary artifact data to persistence without capturing or requiring the direction and composed prompt, leaving an uncovered production path.",
+   "techniques": [
+    {
+     "technique": "archetype-view-coherence-ratchet",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/stepSpec.ts:108 The measured kind/view map records legitimate splits and restricts custom; the inspected fleet linter asserts zero mismatches against this declaration."
+    },
+    {
+     "technique": "direction-as-first-class-produce-input",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/headless.ts:562 submitStepArtifact accepts no direction context, and commitArtifact adds engine provenance without adding a produceDirection stamp."
+    },
+    {
+     "technique": "packaging-exempt-two-state-rule",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/stepSpec.ts:291 The pipeline contract owns the reason field; inspected coverage checks reject missing or thin reasons, and the packaging drain reports exemptions separately."
+    },
+    {
+     "technique": "step-archetype-taxonomy",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/stepSpec.ts:41 Nine deliverable kinds drive typed step declarations, allowed view shapes, corrective language, canon selection, and explicit text-author eligibility."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-step-components",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/steps/StaticStepFrame.tsx:94 The bespoke static-step fix callback discards StepFrame's corrective direction and calls production without a context, so the advertised fix carries no corrective instruction or direction stamp.",
+   "techniques": [
+    {
+     "technique": "direction-as-first-class-produce-input",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/StaticStepFrame.tsx:94 StepFrame passes acceptance.fixDirection, but this zero-argument wrapper drops it; the shared produce door receives no stamp context."
+    },
+    {
+     "technique": "step-archetype-taxonomy",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/useStaticStep.ts:43 Bespoke static steps use their deliverable archetype to gate live text authoring through the shared eligibility authority."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "catalog-pipeline-authoring",
+   "context": "catalog-seed-data",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-15T01:34:36.210049+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [
+    "direction-as-first-class-produce-input",
+    "step-archetype-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "step-shared-primitives",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T01:34:36.210049+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [
+    "direction-as-first-class-produce-input",
+    "packaging-exempt-two-state-rule",
+    "seed-entities-and-walker-coverage",
+    "view-produce-accept-triad"
+   ],
+   "deviations": 1,
+   "context": "item-catalog-pipeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T01:34:36.210049+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [
+    "archetype-view-coherence-ratchet",
+    "direction-as-first-class-produce-input",
+    "packaging-exempt-two-state-rule",
+    "step-archetype-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "catalog-core-infrastructure",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T01:34:36.210049+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [
+    "direction-as-first-class-produce-input",
+    "step-archetype-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "pipeline-step-components",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -3799,6 +3799,110 @@
           "evidence": "src/components/modules/content/animations/StateMachineEditor/index.tsx:41 The pending Apply confirmation exists only as React state, so it does not provide the durable pending state required by the technique."
         }
       ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/catalog-pipeline-authoring": {
+      "context": "step-shared-primitives",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:34:36.210Z",
+      "worker": "6852f748-7f05-4894-989c-036506d762d0",
+      "techniques": [
+        {
+          "technique": "direction-as-first-class-produce-input",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/useStepProduceDoor.ts:73 CliProduce supplies a built preview prompt, and the stub branch stamps it rather than recording prompt: ''."
+        },
+        {
+          "technique": "step-archetype-taxonomy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:17 Corrective language is defined for the shared closed ArchetypeId vocabulary and composed with the checker's criterion and reason."
+        }
+      ]
+    },
+    "3f0f619b-52a3-4238-b72a-8df88fd452fd/catalog-pipeline-authoring": {
+      "context": "item-catalog-pipeline",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:34:36.210Z",
+      "worker": "6852f748-7f05-4894-989c-036506d762d0",
+      "techniques": [
+        {
+          "technique": "direction-as-first-class-produce-input",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:666 Demo production writes unstamped producer output; neither produceItemStep nor the store's produce operation adds a direction stamp."
+        },
+        {
+          "technique": "packaging-exempt-two-state-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/items.ts:888 Items owns an explicit terminal packaging step whose asset claim is derived from producing siblings rather than an empty compliance step."
+        },
+        {
+          "technique": "seed-entities-and-walker-coverage",
+          "verdict": "deviation",
+          "evidence": "e2e/catalog-items-reference.spec.ts:45 Items is skipped by the generic walker, while its replacement walk supplies no unique steer and contains no persisted-artifact or cache-wipe rehydration assertions."
+        },
+        {
+          "technique": "view-produce-accept-triad",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:867 This criterion precedes wiringContractSound at line 871; allOf returns the first non-pass result, contrary to the deferred-last rule."
+        }
+      ]
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/catalog-pipeline-authoring": {
+      "context": "catalog-core-infrastructure",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:34:36.210Z",
+      "worker": "6852f748-7f05-4894-989c-036506d762d0",
+      "techniques": [
+        {
+          "technique": "archetype-view-coherence-ratchet",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/stepSpec.ts:108 The measured kind/view map records legitimate splits and restricts custom; the inspected fleet linter asserts zero mismatches against this declaration."
+        },
+        {
+          "technique": "direction-as-first-class-produce-input",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/headless.ts:562 submitStepArtifact accepts no direction context, and commitArtifact adds engine provenance without adding a produceDirection stamp."
+        },
+        {
+          "technique": "packaging-exempt-two-state-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/stepSpec.ts:291 The pipeline contract owns the reason field; inspected coverage checks reject missing or thin reasons, and the packaging drain reports exemptions separately."
+        },
+        {
+          "technique": "step-archetype-taxonomy",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/stepSpec.ts:41 Nine deliverable kinds drive typed step declarations, allowed view shapes, corrective language, canon selection, and explicit text-author eligibility."
+        }
+      ]
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/catalog-pipeline-authoring": {
+      "context": "pipeline-step-components",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:34:36.210Z",
+      "worker": "6852f748-7f05-4894-989c-036506d762d0",
+      "techniques": [
+        {
+          "technique": "direction-as-first-class-produce-input",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/StaticStepFrame.tsx:94 StepFrame passes acceptance.fixDirection, but this zero-argument wrapper drops it; the shared produce door receives no stamp context."
+        },
+        {
+          "technique": "step-archetype-taxonomy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/useStaticStep.ts:43 Bespoke static steps use their deliverable archetype to gate live text authoring through the shared eligibility authority."
+        }
+      ]
     }
   }
 }
