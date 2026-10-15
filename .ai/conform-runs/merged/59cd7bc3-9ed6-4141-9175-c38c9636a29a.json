@@ -1,0 +1,103 @@
+{
+ "schema": "conform-run/1",
+ "worker": "59cd7bc3-9ed6-4141-9175-c38c9636a29a",
+ "subject": "motion-quality-gating",
+ "evaluatedAt": "2026-10-15T23:31:24.688834+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "animation-state-graph",
+   "subject": "motion-quality-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_animation/budget/AnimationRealityLedger.tsx:245 The ledger presents empty findings as clean even when its collector silently converts unreadable directories into empty collections, obscuring uncollected views.",
+   "techniques": [
+    {
+     "technique": "asset-reality-ledger",
+     "verdict": "deviation",
+     "evidence": "src/lib/animation/reality-ledger.mjs:150 The panel's API uses this collector; an unreadable content or log directory becomes an empty view without an uncollected status, allowing a green summary."
+    },
+    {
+     "technique": "genre-response-latency-norms",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_animation/_shared/data.ts:746 A missing class norm silently receives the 0.2-second default; the returned comparison does not identify that fallback or mark it ungauged."
+    }
+   ]
+  },
+  {
+   "context": "visual-gen-quality-and-animation",
+   "subject": "motion-quality-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "scripts/visual-gen/pof_anim_filmstrip.py:81 The Blender sampler divides by NFRAMES while k stops at NFRAMES minus one, deliberately omitting the final pose required for judging settle and follow-through.",
+   "techniques": [
+    {
+     "technique": "absolute-not-curved-judgment",
+     "verdict": "conformant",
+     "evidence": "src/lib/anim-critique/prompt.ts:58 The motion critic explicitly states all three refusals and assigns functional but unbelievable motion a low score."
+    },
+    {
+     "technique": "filmstrip-sampling-discipline",
+     "verdict": "deviation",
+     "evidence": "scripts/visual-gen/pof_anim_filmstrip.py:77 The renderer explicitly discards the endpoint; downstream endpoint-preserving filename sampling cannot recover that missing source frame."
+    },
+    {
+     "technique": "six-dimension-motion-rubric",
+     "verdict": "conformant",
+     "evidence": "src/lib/anim-critique/score.ts:99 The prompt defines all six visible contrasts and scale anchors; parsing rejects missing dimensions, and separate pass/warn thresholds grade the weakest dimension so averages cannot conceal a failure."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "motion-quality-gating",
+   "context": "animation-combo-workflow",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "motion-quality-gating",
+   "context": "character-movement-playground",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "motion-quality-gating",
+   "context": "animation-combos-metrics",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-15T23:31:24.688834+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "motion-quality-gating"
+   ],
+   "techniques": [
+    "asset-reality-ledger",
+    "genre-response-latency-norms"
+   ],
+   "deviations": 1,
+   "context": "animation-state-graph",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T23:31:24.688834+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "motion-quality-gating"
+   ],
+   "techniques": [
+    "absolute-not-curved-judgment",
+    "filmstrip-sampling-discipline",
+    "six-dimension-motion-rubric"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-quality-and-animation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

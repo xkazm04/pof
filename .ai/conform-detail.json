@@ -4978,6 +4978,53 @@
           "evidence": "src/lib/audio-codegen.ts:853 Ambient layers transition on zone commands rather than authored clip intervals on a composition timeline."
         }
       ]
+    },
+    "0550cd65-c2cd-4171-9401-8a64dfe09656/motion-quality-gating": {
+      "context": "animation-state-graph",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T23:31:24.688Z",
+      "worker": "59cd7bc3-9ed6-4141-9175-c38c9636a29a",
+      "techniques": [
+        {
+          "technique": "asset-reality-ledger",
+          "verdict": "deviation",
+          "evidence": "src/lib/animation/reality-ledger.mjs:150 The panel's API uses this collector; an unreadable content or log directory becomes an empty view without an uncollected status, allowing a green summary."
+        },
+        {
+          "technique": "genre-response-latency-norms",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/_shared/data.ts:746 A missing class norm silently receives the 0.2-second default; the returned comparison does not identify that fallback or mark it ungauged."
+        }
+      ]
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/motion-quality-gating": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T23:31:24.688Z",
+      "worker": "59cd7bc3-9ed6-4141-9175-c38c9636a29a",
+      "techniques": [
+        {
+          "technique": "absolute-not-curved-judgment",
+          "verdict": "conformant",
+          "evidence": "src/lib/anim-critique/prompt.ts:58 The motion critic explicitly states all three refusals and assigns functional but unbelievable motion a low score."
+        },
+        {
+          "technique": "filmstrip-sampling-discipline",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_anim_filmstrip.py:77 The renderer explicitly discards the endpoint; downstream endpoint-preserving filename sampling cannot recover that missing source frame."
+        },
+        {
+          "technique": "six-dimension-motion-rubric",
+          "verdict": "conformant",
+          "evidence": "src/lib/anim-critique/score.ts:99 The prompt defines all six visible contrasts and scale anchors; parsing rejects missing dimensions, and separate pass/warn thresholds grade the weakest dimension so averages cannot conceal a failure."
+        }
+      ]
     }
   }
 }

@@ -3447,7 +3447,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/budget/AnimationRealityLedger.tsx:245 The ledger presents empty findings as clean even when its collector silently converts unreadable directories into empty collections, obscuring uncollected views.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:3c222a31fd795fc1",
+          "evaluatedRevision": 1
         },
         {
           "subject": "supply-chain",
@@ -24390,7 +24394,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_anim_filmstrip.py:81 The Blender sampler divides by NFRAMES while k stops at NFRAMES minus one, deliberately omitting the final pose required for judging settle and follow-through.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:3c222a31fd795fc1",
+          "evaluatedRevision": 1
         },
         {
           "subject": "generative-artifact-gating",
