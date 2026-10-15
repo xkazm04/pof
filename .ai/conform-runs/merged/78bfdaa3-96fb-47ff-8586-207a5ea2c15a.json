@@ -1,0 +1,229 @@
+{
+  "schema": "conform-run/1",
+  "worker": "78bfdaa3-96fb-47ff-8586-207a5ea2c15a",
+  "subject": "terminal-multiplexing",
+  "evaluatedAt": "2026-10-15T21:11:51.837824+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "cli-terminal-system",
+      "subject": "terminal-multiplexing",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/claude-terminal/cli-service.ts:311 The backend retains every execution event without byte accounting or eviction, so replay memory grows with output instead of obeying a fixed per-session budget.",
+      "techniques": [
+        {
+          "technique": "bounded-replay-buffers",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:311 The array feeds replay; inspected writes contain no byte limit, eviction, or truncation disclosure."
+        },
+        {
+          "technique": "capability-revalidation",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:247 Runs use the CLI's native structured protocol, without an injected shell capability tier."
+        },
+        {
+          "technique": "completion-authority-arbitration",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:404 This branch handles native CLI results; the technique's injected-protocol versus screen-heuristic arbitration does not arise."
+        },
+        {
+          "technique": "injected-hook-reconvergence",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-task.ts:86 Callback injection consists of application prompt instructions, not shell startup hooks or prompt-cycle invariants."
+        },
+        {
+          "technique": "keystroke-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:372 Input is a finite piped prompt, not interactive PTY keystrokes."
+        },
+        {
+          "technique": "occupant-state-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:383 The occupant supplies native structured lifecycle messages, so screen classification is unnecessary."
+        },
+        {
+          "technique": "pty-management",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:365 The subprocess uses pipes instead of a pseudo-terminal."
+        },
+        {
+          "technique": "readiness-edge-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:371 The prompt is supplied through stdin; there is no injected line-editor readiness marker to arm on."
+        }
+      ]
+    },
+    {
+      "context": "cli-terminal-shell",
+      "subject": "terminal-multiplexing",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/cli/useScrollSync.ts:24 Follow mode belongs to a component hook without session identity, so remounting the same session resets the user's reading position behavior.",
+      "techniques": [
+        {
+          "technique": "capability-revalidation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:632 The host consumes native structured SSE events without an injected shell capability tier."
+        },
+        {
+          "technique": "completion-authority-arbitration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:639 Completion uses application event types; no injected command-boundary protocol competes with a screen heuristic."
+        },
+        {
+          "technique": "injected-hook-reconvergence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/skills.ts:246 Skill injection prepends prompt text and does not install shell hooks."
+        },
+        {
+          "technique": "keystroke-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalInput.tsx:22 Enter invokes a browser submission callback instead of writing a key sequence to a hosted interactive program."
+        },
+        {
+          "technique": "multiplexer-state",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/useScrollSync.ts:24 The hook has no session key or restoration path, and the inspected stores retain neither follow mode nor scroll position."
+        },
+        {
+          "technique": "occupant-state-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:480 Run observations arrive as structured events rather than classifications of an occupant's terminal screen."
+        },
+        {
+          "technique": "pty-management",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:826 The host starts an application query and receives a stream URL, without managing terminal devices or terminal dimensions."
+        },
+        {
+          "technique": "readiness-edge-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/CompactTerminal.tsx:118 This readiness handshake advertises browser listener registration, not an injected shell line-editor capability."
+        }
+      ]
+    },
+    {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "terminal-multiplexing",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/hooks/useModuleCLI.ts:185 Searches for node-pty, xterm and conpty found no matches in the context or repository, while these hooks dispatch application prompts and consume outcomes without owning terminal machinery.",
+      "techniques": [
+        {
+          "technique": "completion-authority-arbitration",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useChecklistCLI.ts:63 This gates a domain checklist update on an already reported outcome and callback confirmation."
+        },
+        {
+          "technique": "injected-hook-reconvergence",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:257 The integration selects application skill packs; it does not install or repair shell hooks."
+        },
+        {
+          "technique": "keystroke-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleActions.ts:41 The hook dispatches a complete prompt through the application API instead of synthesizing terminal keystrokes."
+        },
+        {
+          "technique": "occupant-state-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:102 Completion observation reads a store transition, not the occupant's screen."
+        }
+      ],
+      "absenceTerms": [
+        "node-pty",
+        "xterm",
+        "conpty"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "terminal-multiplexing",
+      "context": "cli-terminal-output",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "terminal-multiplexing",
+      "context": "state-management",
+      "reason": "withdrawn after review: reviewer (sonnet): The technique anchor src/lib/event-bus.ts:37 is the `payload: EventPayload<C>` parameter of emit(), not the replay buffer (that is at lines 30-31 and 49-52), so the not-applicable rests on an incidental line. The absence search used node-pty/xterm/conpty, which is a poor fit for this context's store"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T21:11:51.837824+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "terminal-multiplexing"
+      ],
+      "techniques": [
+        "bounded-replay-buffers",
+        "capability-revalidation",
+        "completion-authority-arbitration",
+        "injected-hook-reconvergence",
+        "keystroke-injection",
+        "occupant-state-detection",
+        "pty-management",
+        "readiness-edge-detection"
+      ],
+      "deviations": 1,
+      "context": "cli-terminal-system",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T21:11:51.837824+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "terminal-multiplexing"
+      ],
+      "techniques": [
+        "capability-revalidation",
+        "completion-authority-arbitration",
+        "injected-hook-reconvergence",
+        "keystroke-injection",
+        "multiplexer-state",
+        "occupant-state-detection",
+        "pty-management",
+        "readiness-edge-detection"
+      ],
+      "deviations": 1,
+      "context": "cli-terminal-shell",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T21:11:51.837824+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "terminal-multiplexing"
+      ],
+      "techniques": [
+        "bounded-replay-buffers"
+      ],
+      "deviations": 0,
+      "context": "state-management",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-15T21:11:51.837824+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "terminal-multiplexing"
+      ],
+      "techniques": [
+        "completion-authority-arbitration",
+        "injected-hook-reconvergence",
+        "keystroke-injection",
+        "occupant-state-detection"
+      ],
+      "deviations": 0,
+      "context": "module-cli-orchestration-hooks",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

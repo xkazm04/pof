@@ -9291,7 +9291,11 @@
           "revision": 7,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/useScrollSync.ts:24 Follow mode belongs to a component hook without session identity, so remounting the same session resets the user's reading position behavior.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:c3ef11aba4a471f5",
+          "evaluatedRevision": 7
         },
         {
           "subject": "quality-gates",
@@ -9414,7 +9418,11 @@
           "revision": 7,
           "changedAt": "2026-09-04",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:311 The backend retains every execution event without byte accounting or eviction, so replay memory grows with output instead of obeying a fixed per-session budget.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:c3ef11aba4a471f5",
+          "evaluatedRevision": 7
         },
         {
           "subject": "prompt-assembly",
@@ -17263,7 +17271,11 @@
           "revision": 7,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:185 Searches for node-pty, xterm and conpty found no matches in the context or repository, while these hooks dispatch application prompts and consume outcomes without owning terminal machinery.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:c3ef11aba4a471f5",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mcp-tools",
