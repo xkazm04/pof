@@ -1,8 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { makeTempDir, waitForQuiet } from '../../helpers/temp-dirs';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 
 // Hoisted spies (vi.mock factories run before imports).
 const { recordSpend, spawn } = vi.hoisted(() => ({ recordSpend: vi.fn(), spawn: vi.fn() }));
@@ -35,7 +33,11 @@ function makeFakeProc() {
 
 import { startExecution, abortExecution } from '@/lib/claude-terminal/cli-service';
 
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-spend-'));
+const TMP = makeTempDir('pof-spend-');
+
+// Each execution opens a log stream under TMP/.claude/logs a tick after it starts; let those opens land
+// before the helper's hook removes TMP, or the late open fails with ENOENT.
+afterAll(async () => { await waitForQuiet(TMP); });
 
 function resultLine(over: Record<string, unknown> = {}) {
   return JSON.stringify({

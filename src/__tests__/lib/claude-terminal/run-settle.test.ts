@@ -14,11 +14,9 @@
  *
  * scan-sweep --challenge run challenge-2026-09-29b, card ai-developer-tools-api/A.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { makeTempDir, waitForQuiet } from '../../helpers/temp-dirs';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 
 const { killSpy, spawnMock } = vi.hoisted(() => ({ killSpy: vi.fn(), spawnMock: vi.fn() }));
 
@@ -57,7 +55,12 @@ import { startExecution, getExecution } from '@/lib/claude-terminal/cli-service'
 import { settleExecution } from '@/lib/claude-terminal/run-settle';
 import { startDeepEvalJob, cancelDeepEvalJob } from '@/lib/evaluator/deep-eval-job';
 
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-run-settle-'));
+const TMP = makeTempDir('pof-run-settle-');
+
+// Each execution opens a log stream under TMP/.claude/logs a tick after it starts; let those opens land
+// before the helper's hook removes TMP, or the late open fails with ENOENT.
+let cancelDir: string | undefined;
+afterAll(async () => { await waitForQuiet(TMP); if (cancelDir) await waitForQuiet(cancelDir); });
 
 const assistantLine = (text: string) => JSON.stringify({
   type: 'assistant',
@@ -207,7 +210,7 @@ describe('[guard] case 8: deep-eval passes settle through the seam', () => {
   });
 
   it('cancelling the job kills every in-flight execution', async () => {
-    const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-run-settle-cancel-'));
+    const projectPath = cancelDir = makeTempDir('pof-run-settle-cancel-');
     const started = startDeepEvalJob({ projectPath, moduleIds: ['audio'], projectContext: ctx(projectPath) });
     expect(started.ok).toBe(true);
     await drain(5);

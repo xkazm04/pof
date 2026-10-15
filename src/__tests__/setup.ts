@@ -7,7 +7,10 @@
  *   - Zustand store reset helper
  */
 
-import { beforeEach, vi } from 'vitest';
+import { afterAll, beforeEach, vi } from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { StoreApi } from 'zustand';
 
 // ─── localStorage mock ───────────────────────────────────────────────────────
@@ -117,3 +120,29 @@ export function resetStoreBeforeEach<T extends object>(
     store.setState(initialState as T);
   });
 }
+
+// ─── Provider input images ───────────────────────────────────────────────────
+
+/**
+ * `runner-dispatch.ts` (`writeTemp`) writes each image-to-3d input to the OS temp dir as
+ * `pof_<provider>_in_<stamp>.<ext>` / `pof_tripo_mv_<slot>_<stamp>.<ext>` for the provider job to
+ * read. The job is mocked in the generate-route tests, so nothing ever consumes or removes the
+ * file. Remove, after each test file, exactly the files of that shape written since the file
+ * started (the mtime floor keeps another run's or the dev server's files out of reach).
+ */
+const PROVIDER_INPUT = /^pof_(?:[a-z0-9]+_in|tripo_mv_(?:front|back|left|right))_\d+\.(?:png|jpe?g|webp)$/;
+const fileStartedMs = Date.now() - 1000;
+
+afterAll(() => {
+  if (process.env.KEEP_TMP === '1') return;
+  const dir = os.tmpdir();
+  let names: string[];
+  try { names = fs.readdirSync(dir); } catch { return; }
+  for (const name of names) {
+    if (!PROVIDER_INPUT.test(name)) continue;
+    const file = path.join(dir, name);
+    try {
+      if (fs.lstatSync(file).mtimeMs >= fileStartedMs) fs.rmSync(file, { force: true });
+    } catch { /* raced away or in use: a backstop, never a failure */ }
+  }
+});

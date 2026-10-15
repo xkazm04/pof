@@ -1,8 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { makeTempDir, waitForQuiet } from '../../helpers/temp-dirs';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 
 // scan-sweep --challenge cli-terminal-system/A — the execution that owns a run
 // settles its declared @@CALLBACKs (never a real Claude spawn: spawn is mocked).
@@ -34,7 +32,11 @@ import { startExecution, getExecutionStatus, type CLIExecutionEvent } from '@/li
 import type { TaskCallback } from '@/lib/cli-task';
 import { getAppOrigin } from '@/lib/constants';
 
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-cb-settle-'));
+const TMP = makeTempDir('pof-cb-settle-');
+
+// Each execution opens a log stream under TMP/.claude/logs a tick after it starts; let those opens land
+// before the helper's hook removes TMP, or the late open fails with ENOENT.
+afterAll(async () => { await waitForQuiet(TMP); });
 const ORIGIN = getAppOrigin(); // the server's own origin (what an absent appOrigin falls back to)
 const CB1: TaskCallback = {
   id: 'cb-1', url: `${ORIGIN}/api/checklist/complete`, method: 'POST', staticFields: { moduleId: 'm' }, schemaHint: '',

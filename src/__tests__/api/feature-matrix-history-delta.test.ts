@@ -12,7 +12,7 @@
  *
  * Throwaway DB in a per-file mkdtemp dir — never ~/.pof/pof.db.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const P_RAW = vi.hoisted(() => 'C:\\P\\PoF');
@@ -59,6 +59,13 @@ import { getDb } from '@/lib/db';
 import type { ReviewDelta } from '@/lib/feature-review-delta';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
+import { dirname } from 'node:path';
+import { trackTempDir } from '../helpers/temp-dirs';
+
+// The DB lives in the per-file dir made in the hoisted block above. Close the handle (an open
+// SQLite file makes the removal throw EBUSY on Windows); the helper's own hook removes the dir after.
+trackTempDir(dirname(process.env.POF_DB_PATH!));
+afterAll(() => { getDb().close(); });
 
 const P = normalizeProjectId(P_RAW);
 

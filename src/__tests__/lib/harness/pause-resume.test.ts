@@ -13,9 +13,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { makeTempDir } from '../../helpers/temp-dirs';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 // In-memory DB, mocked before importing anything that touches harness-runs-db.
@@ -84,8 +84,8 @@ function area(id: string): ModuleArea {
 
 /** A state dir carrying a ready-to-run plan, so plan-builder never runs. */
 function seedRun(areaIds: string[], overrides: Partial<HarnessConfig> = {}) {
-  const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-proj-'));
-  const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-state-'));
+  const projectPath = makeTempDir('pr-proj-');
+  const statePath = makeTempDir('pr-state-');
   const plan: GamePlan = {
     game: 'PoF',
     projectPath,

@@ -10,7 +10,7 @@
  * (Lives under `__tests__/lib` rather than `__tests__/api` only because of this session's
  * write-set boundaries — it is an API route test.)
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // A fresh directory per FILE run (not per pid): a pid-named DB can be reused by a later run
@@ -26,6 +26,13 @@ import { GET } from '@/app/api/pipeline-artifacts/changes/route';
 import type { CatalogChanges } from '@/app/api/pipeline-artifacts/changes/route';
 import { upsertArtifact, MAX_REVISIONS } from '@/lib/pipeline-artifacts-db';
 import { getDb } from '@/lib/db';
+import { dirname } from 'node:path';
+import { trackTempDir } from '../helpers/temp-dirs';
+
+// The DB lives in the per-file dir made in the hoisted block above. Close the handle (an open
+// SQLite file makes the removal throw EBUSY on Windows); the helper's own hook removes the dir after.
+trackTempDir(dirname(process.env.POF_DB_PATH!));
+afterAll(() => { getDb().close(); });
 
 const get = (qs: string) => GET(new NextRequest(`http://localhost/api/pipeline-artifacts/changes?${qs}`));
 

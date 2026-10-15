@@ -15,9 +15,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { makeTempDir } from '../../helpers/temp-dirs';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 // In-memory DB, mocked before importing anything that touches harness-runs-db.
@@ -112,8 +112,8 @@ function area(id: string): ModuleArea {
  * accounting must still book what the fix session spent.
  */
 function seedRun(overrides: Partial<HarnessConfig> = {}) {
-  const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'sh-proj-'));
-  const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'sh-state-'));
+  const projectPath = makeTempDir('sh-proj-');
+  const statePath = makeTempDir('sh-state-');
   const plan: GamePlan = {
     game: 'PoF',
     projectPath,

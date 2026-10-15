@@ -9,9 +9,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { makeTempDir } from '../../helpers/temp-dirs';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 const testDb = new Database(':memory:');
@@ -59,8 +59,8 @@ function area(id: string, description: string): ModuleArea {
 }
 
 async function runWith(areas: ModuleArea[]): Promise<HarnessEvent[]> {
-  const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-proj-'));
-  const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-state-'));
+  const projectPath = makeTempDir('cr-proj-');
+  const statePath = makeTempDir('cr-state-');
   const plan: GamePlan = {
     game: 'PoF',
     projectPath,

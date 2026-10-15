@@ -11,10 +11,8 @@
  * scan-sweep --challenge run challenge-2026-09-29b, card ai-developer-tools-api/A.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { makeTempDir } from '../helpers/temp-dirs';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import { NextRequest } from 'next/server';
 import type { BatchReviewState } from '@/types/batch-review';
 
@@ -60,7 +58,7 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 
 type Route = typeof import('@/app/api/feature-matrix/batch-review/route');
 let route: Route;
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-batch-settle-'));
+const TMP = makeTempDir('pof-batch-settle-');
 
 const assistantLine = (text: string) => JSON.stringify({
   type: 'assistant',

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { makeTempDir } from '../../helpers/temp-dirs';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 // In-memory DB, mocked before importing anything that touches harness-runs-db.
@@ -29,8 +29,8 @@ beforeEach(() => {
 
 /** A statePath dir with a run-meta.json + a real config snapshot on disk. */
 function seedStateDir(runId: string, parentRunId?: string): { statePath: string; projectPath: string } {
-  const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'proj-'));
-  const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'state-'));
+  const projectPath = makeTempDir('proj-');
+  const statePath = makeTempDir('state-');
   const config = createDefaultConfig({ projectPath, projectName: 'PoF', ueVersion: '5.8', statePath });
   fs.writeFileSync(path.join(statePath, 'harness-config.json'), JSON.stringify(config, null, 2));
   const meta: RunMeta = { runId, projectPath, statePath, startedAt: '2026-01-01T00:00:00.000Z', ...(parentRunId ? { parentRunId } : {}) };
@@ -106,7 +106,7 @@ describe('reopenRun', () => {
 
 describe('resolveRunIdentity', () => {
   it('fresh when no run-meta exists at the statePath', () => {
-    const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'state-'));
+    const statePath = makeTempDir('state-');
     expect(resolveRunIdentity(statePath)).toEqual({ mode: 'fresh' });
   });
 
@@ -166,14 +166,14 @@ describe('rehydrateHarnessOrchestrator', () => {
   });
 
   it('returns null when there is no run-meta', () => {
-    const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'state-'));
+    const statePath = makeTempDir('state-');
     // config present but no run-meta.
     fs.writeFileSync(path.join(statePath, 'harness-config.json'), JSON.stringify({} as HarnessConfig));
     expect(rehydrateHarnessOrchestrator(statePath)).toBeNull();
   });
 
   it('returns null when the config snapshot is missing', () => {
-    const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'state-'));
+    const statePath = makeTempDir('state-');
     const meta: RunMeta = { runId: 'r', projectPath: 'C:/p', statePath, startedAt: '' };
     fs.writeFileSync(path.join(statePath, 'run-meta.json'), JSON.stringify(meta));
     expect(rehydrateHarnessOrchestrator(statePath)).toBeNull();

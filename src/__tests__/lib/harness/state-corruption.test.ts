@@ -15,9 +15,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { makeTempDir } from '../../helpers/temp-dirs';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 const testDb = new Database(':memory:');
@@ -61,8 +61,8 @@ beforeEach(() => {
 
 /** A state dir with NO plan — the caller seeds whatever (broken) files it wants. */
 function seedRun() {
-  const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-proj-'));
-  const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'sc-state-'));
+  const projectPath = makeTempDir('sc-proj-');
+  const statePath = makeTempDir('sc-state-');
   const config: HarnessConfig = {
     projectPath,
     projectName: 'PoF',

@@ -12,9 +12,9 @@
  *     stop condition uses), with the executor's self-report clearly secondary.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { makeTempDir } from '../../helpers/temp-dirs';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 // In-memory DB, mocked before importing anything that touches harness-runs-db.
@@ -95,7 +95,7 @@ describe('parseCliOptions — HTTP-surface parity', () => {
 });
 
 describe('configFromCliOptions — the levers reach the engine', () => {
-  const proj = () => fs.mkdtempSync(path.join(os.tmpdir(), 'cli-proj-'));
+  const proj = () => makeTempDir('cli-proj-');
 
   it('threads budget / unlimited / basis / concurrency into HarnessConfig', () => {
     const projectPath = proj();
@@ -142,8 +142,8 @@ describe('configFromCliOptions — the levers reach the engine', () => {
 
 /** A statePath dir bound to `runId` with a real config snapshot on disk. */
 function seedStateDir(runId: string): { statePath: string; projectPath: string } {
-  const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-proj-'));
-  const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-state-'));
+  const projectPath = makeTempDir('cli-proj-');
+  const statePath = makeTempDir('cli-state-');
   const config = createDefaultConfig({ projectPath, projectName: 'PoF', ueVersion: '5.8', statePath });
   fs.writeFileSync(path.join(statePath, 'harness-config.json'), JSON.stringify(config, null, 2));
   const meta: RunMeta = { runId, projectPath, statePath, startedAt: '2026-01-01T00:00:00.000Z' };
@@ -191,8 +191,8 @@ describe('cliOrchestratorOptions — the CLI stops fragmenting run history', () 
   });
 
   it('a virgin statePath is fresh (no adopted id)', () => {
-    const projectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-proj-'));
-    const statePath = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-state-'));
+    const projectPath = makeTempDir('cli-proj-');
+    const statePath = makeTempDir('cli-state-');
     const { identity, options } = cliOrchestratorOptions(cliConfig(projectPath, statePath), false);
     expect(identity.mode).toBe('fresh');
     expect(options).toEqual({});
@@ -200,7 +200,7 @@ describe('cliOrchestratorOptions — the CLI stops fragmenting run history', () 
 
   it('refuses a statePath owned by a DIFFERENT project instead of resuming it', () => {
     const { statePath } = seedStateDir('run-cli-other');
-    const otherProject = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-other-'));
+    const otherProject = makeTempDir('cli-other-');
     expect(() => cliOrchestratorOptions(cliConfig(otherProject, statePath), false)).toThrow(/belongs to project/);
   });
 });
