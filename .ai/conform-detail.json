@@ -4017,6 +4017,52 @@
           "evidence": "src/app/api/packaging/preflight/route.ts:105 Asset validation output is parsed without requiring affirmative success patterns, allowing empty or early-crashed runs to be treated as clean."
         }
       ]
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/render-submission-economy": {
+      "context": "image-generation",
+      "subject": "render-submission-economy",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T02:38:42.250Z",
+      "worker": "6ca02a93-cdc0-4291-894e-48209cd254b5",
+      "techniques": [
+        {
+          "technique": "batch-by-page-where-order-is-invisible",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/qwen-image-runner.ts:150 This path requests generated images over HTTP rather than issuing sprite draws or texture binds."
+        },
+        {
+          "technique": "cost-per-effect-before-effect-count",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:167 The endpoint starts an asset-generation job, without a real-time frame-budget remediation decision."
+        },
+        {
+          "technique": "cull-before-submission",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/library-filter.ts:14 Library filtering selects asset metadata by source rather than camera-visible drawables."
+        },
+        {
+          "technique": "prepare-off-the-render-thread-commit-on-it",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/seam-check.ts:65 Image decoding serves server-side seam analysis, with no render-thread upload or scene commit in this context."
+        },
+        {
+          "technique": "residency-budget-checked-before-decode",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/qwen-image-runner.ts:174 Downloaded output is persisted as encoded bytes rather than admitted into a game's resident texture pool."
+        },
+        {
+          "technique": "retain-what-did-not-change",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/style-dna.ts:30 This text builds an image-generation prompt, without per-frame geometry construction or glyph layout."
+        },
+        {
+          "technique": "spread-periodic-render-thread-bursts",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/poll.ts:43 The periodic work polls provider jobs server-side rather than building diagnostics on a render thread."
+        }
+      ]
     }
   }
 }
