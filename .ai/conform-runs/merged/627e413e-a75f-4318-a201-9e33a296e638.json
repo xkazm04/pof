@@ -1,0 +1,37 @@
+{
+ "schema": "conform-run/1",
+ "worker": "627e413e-a75f-4318-a201-9e33a296e638",
+ "subject": "multi-provider-gateway-plane",
+ "evaluatedAt": "2026-10-15T03:44:06.958819+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "multi-provider-gateway-plane",
+   "context": "inventory-catalog",
+   "reason": "The context comprises React UI components for the gear catalog browser (item grid, drawer, comparison panel, affix slot panels, spatial stash grid) and contains no multi-provider gateway plane fronting interchangeable upstreams, candidate selection trees, or stream framers."
+  },
+  {
+   "subject": "multi-provider-gateway-plane",
+   "context": "inventory-economy-simulator",
+   "reason": "The context comprises UI components for inventory economy simulation (power-curve charts, rarity stack charts, alert cards) and loot-filter rule builder logic, with no request/response gateway plane or upstream provider adapters."
+  },
+  {
+   "subject": "multi-provider-gateway-plane",
+   "context": "inventory-genome-economy",
+   "reason": "The context comprises UI components for the item DNA genome editor (trait sliders, DNA strand, Monte Carlo simulator) and economy crafting/drop-source views, with no multi-provider gateway plane or upstream routing infrastructure."
+  },
+  {
+   "subject": "multi-provider-gateway-plane",
+   "context": "catalog-browser-ui",
+   "reason": "The context comprises frontend LayoutLab UI components (CatalogTree, Baseline view, coaching overlays, and labArtifactClient) serving as the catalog browser application interface, with no multi-provider gateway plane fronting interchangeable upstreams."
+  },
+  {
+   "subject": "multi-provider-gateway-plane",
+   "context": "catalog-database",
+   "reason": "The context comprises SQLite database tables, seed data, and Next.js REST API endpoints for catalog entity lifecycle, pipeline artifact persistence, and UE5 test gate drains; it contains no multi-provider gateway plane or upstream routing mechanisms."
+  }
+ ],
+ "consults": []
+}
