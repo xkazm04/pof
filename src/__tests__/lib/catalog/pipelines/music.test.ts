@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { _resetRegistry, getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 
 describe('music pipeline', () => {
@@ -61,5 +61,44 @@ describe('music pipeline', () => {
     const packResult = packStep.accept(packStep.produce(entity).data ?? {});
     expect(packResult.status).toBe('pass');
     expect(packResult.tier).toBe('L0');
+  });
+});
+
+describe('music pipeline: transition latency against the attribution window', () => {
+  beforeEach(() => _resetRegistry());
+
+  const BAR_MS = (60_000 / 96) * 4; // the pipeline's single sync point, at its declared 96 BPM
+  const ATTRIBUTION_WINDOW_MS = 500;
+  const RESPONSIVE = ['combatEnter', 'eliteEscalation', 'bossClimax'] as const;
+
+  async function transitionsStep() {
+    vi.resetModules();
+    const registry = await import('@/lib/catalog/pipeline-registry');
+    await import('@/lib/catalog/pipelines/music');
+    const step = registry.getCatalogPipeline('music')!.steps.find((s) => s.label === 'Transitions')!;
+    const entity = { id: 'music-combat-a', name: 'Combat A', lifecycle: 'planned' as const, data: {} };
+    const data = step.produce(entity).data ?? {};
+    return { step, data, transitions: (data.transitions ?? {}) as Record<string, Record<string, unknown>> };
+  }
+
+  it('every responsive transition that waits past the window covers the gap with an immediate accent', async () => {
+    const { transitions } = await transitionsStep();
+    expect(BAR_MS).toBeGreaterThan(ATTRIBUTION_WINDOW_MS);
+    const uncovered = RESPONSIVE.filter((k) => !transitions[k]?.immediateAccent);
+    expect(uncovered).toEqual([]);
+  });
+
+  it('declares a commit horizon and the requested-versus-used boundary report', async () => {
+    const { transitions } = await transitionsStep();
+    expect(transitions.commitHorizon).toBeTruthy();
+    expect(String(transitions.commitHorizon)).toMatch(/next bar/i);
+  });
+
+  it('acceptance fails a responsive transition with no accent, and passes the produced data', async () => {
+    const { step, data, transitions } = await transitionsStep();
+    expect(step.accept(data).status).toBe('pass');
+    const stripped = { ...data, transitions: { ...transitions, combatEnter: { ...transitions.combatEnter, immediateAccent: undefined } } };
+    const verdict = step.accept(stripped);
+    expect(verdict.status).not.toBe('pass');
   });
 });

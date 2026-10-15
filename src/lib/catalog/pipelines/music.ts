@@ -5,6 +5,7 @@ import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { allOf } from '../acceptance/combinators';
+import type { Checker } from '../acceptance/types';
 import { valueWithinDeclaredBand } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
@@ -28,6 +29,33 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  *   combat-map::arena-ravaged-courtyard — the combat arena that triggers the track
  *   icon-sets::iconset-abilities     — shared icon presentation library
  */
+/** The pipeline's one sync point: a bar at the declared 96 BPM, in wall-clock milliseconds. */
+const BAR_MS = (60_000 / 96) * 4;
+const ATTRIBUTION_WINDOW_MS = 500;
+const RESPONSIVE_TRANSITIONS = ['combatEnter', 'eliteEscalation', 'bossClimax'] as const;
+
+/**
+ * Transitions are quantized to the bar, whose worst-case wait (2500 ms) is five times the window in which a
+ * player attributes a response to their action. A responsive transition therefore has to declare an immediate,
+ * unquantized accent covering the gap (technique: transition-quantization-and-perceived-latency).
+ */
+function responsiveTransitionsCoverTheirWait(): Checker {
+  return (data) => {
+    const t = (data.transitions ?? {}) as Record<string, Record<string, unknown> | undefined>;
+    const uncovered = BAR_MS > ATTRIBUTION_WINDOW_MS
+      ? RESPONSIVE_TRANSITIONS.filter((k) => !t[k]?.immediateAccent)
+      : [];
+    const ok = uncovered.length === 0;
+    return {
+      label: 'responsive transitions cover the bar wait with an immediate accent',
+      tier: 'L0',
+      status: ok ? 'pass' : 'pending',
+      detail: `${RESPONSIVE_TRANSITIONS.length - uncovered.length} / ${RESPONSIVE_TRANSITIONS.length} covered (worst-case wait ${BAR_MS} ms vs ${ATTRIBUTION_WINDOW_MS} ms window)`,
+      ...(ok ? {} : { reason: `transitions without immediateAccent: ${uncovered.join(', ')}` }),
+    };
+  };
+}
+
 registerCatalogPipeline({
   catalogId: 'music',
   steps: [
@@ -241,6 +269,11 @@ registerCatalogPipeline({
               brassStabOnset:
                 'Brass stab parameter "WaveEntry" triggered at bar 1, beat 1 of the first combat-low bar — ' +
                 'signals the encounter start without a telegraphed countdown.',
+              latencyClass: 'responsive (player-attributed; attribution window ≈500 ms wall clock)',
+              immediateAccent:
+                'Unpitched war-drum hit "CombatHit" fires on the next audio buffer after MusicEvent.CombatStart, ' +
+                'outside the bar grid and never quantized, so the 2.5 s worst-case bar wait is covered inside the window; ' +
+                'the harmonic change still lands on the bar.',
             },
             combatExit: {
               trigger: 'GAS event "MusicEvent.CombatEnd" broadcast when encounter waves complete (all enemies defeated)',
@@ -262,6 +295,10 @@ registerCatalogPipeline({
               stringsHighOnset:
                 'High-strings dissonance stem fades in over the 1-bar transition window; ' +
                 'must reach target volume profile by beat 1 of the next bar.',
+              latencyClass: 'responsive (player-attributed; attribution window ≈500 ms wall clock)',
+              immediateAccent:
+                'Unpitched sub-bass impact "EliteHit" fires on the next audio buffer after MusicEvent.EliteSpawned, ' +
+                'never quantized; the layer change waits for the bar.',
             },
             bossClimax: {
               trigger: 'UARPGMusicManager detects elite HP ≤ 30% via HP_Percent attribute on target',
@@ -271,7 +308,15 @@ registerCatalogPipeline({
               returnRule:
                 'On elite kill: return to combat-high (or combat-low if no other enemies) over 2 bars. ' +
                 'Boss-swell is never sustained beyond ≤30 s to avoid fatiguing the player.',
+              latencyClass: 'responsive (player-attributed; attribution window ≈500 ms wall clock)',
+              immediateAccent:
+                'Unpitched cymbal-swell "ClimaxRise" fires on the next audio buffer when the HP threshold is crossed, ' +
+                'never quantized; the 0.5-bar crossfade starts on the next bar, so the accent carries the urgency in the meantime.',
             },
+            commitHorizon:
+              'One audio buffer period (2048 samples at 48 kHz ≈ 43 ms) plus one game frame. A request inside the ' +
+              'horizon of a bar boundary is scheduled on the next bar, never clamped to now. UARPGMusicManager logs ' +
+              'requestedBoundary and usedBoundary for every transition, so a substituted boundary is visible.',
             beatSyncImplementation:
               'UARPGMusicManager maintains a BarClock (float, 0.0–1.0 per bar at 96 BPM) driven by ' +
               'a UE AudioComponent callback. Transition requests are queued and flushed at the next ' +
@@ -308,8 +353,10 @@ registerCatalogPipeline({
           'combatEnter',
           'combatExit',
           'beatSyncImplementation',
+          'commitHorizon',
           'wiringContract',
         ]),
+        responsiveTransitionsCoverTheirWait(),
         wiringContractSound('transitions'),
       ),
     },
