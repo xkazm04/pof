@@ -1,0 +1,37 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3b465dbd-4e5c-46bb-8657-aa1aa8ac6123",
+ "subject": "native-shell-integration",
+ "evaluatedAt": "2026-10-15T04:08:36.325324+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "native-shell-integration",
+   "context": "catalog-browser-ui",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "native-shell-integration",
+   "context": "topbar-and-activity",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "native-shell-integration",
+   "context": "lab-shell-and-navigation",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "native-shell-integration",
+   "context": "character-overview-input",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "native-shell-integration",
+   "context": "app-shell-and-chrome",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
