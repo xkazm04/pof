@@ -1,0 +1,173 @@
+{
+ "schema": "conform-run/1",
+ "worker": "58793b6e-7447-4ae1-a78c-7220e239324a",
+ "subject": "design-tokens",
+ "evaluatedAt": "2026-10-16T22:36:50.184566+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ui-primitives",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/motion.ts:11 TypeScript assigns the fast duration 120ms while CSS assigns the same role 150ms, so the two runtimes disagree.",
+   "techniques": [
+    {
+     "technique": "cross-language-token-parity",
+     "verdict": "deviation",
+     "evidence": "src/lib/motion.ts:11 The corresponding CSS role at src/app/globals.css:99 is 150ms; base and slow also differ between these authorities."
+    },
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "src/lib/constants.ts:56 CLI_ANIM introduces a separate 200ms duration outside the canonical DURATION ladder instead of referencing a named step."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "src/lib/typography-scale.ts:21 TEXT_SCALE supplies bare size utilities rather than typography recipes owning size, weight, line-height, and tracking."
+    }
+   ]
+  },
+  {
+   "context": "animation-combo-workflow",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/animations/AnimationChecklist/index.tsx:35 The checklist consumes literal surface colors and primitive palette utilities, preventing semantic surface bindings from controlling its appearance.",
+   "techniques": [
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/AIComboChoreographer/MontageTimeline.tsx:29 Entrance staggering uses a local 80ms increment instead of the shared STAGGER vocabulary."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/AIComboChoreographer/index.tsx:233 The foreground repeats ACCENT_EMERALD and the other values repeat ACCENT_EMERALD_DARK with alpha; these RGB forms escape the configured hex-literal restriction."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/AnimationChecklist/index.tsx:35 The component bypasses semantic surface and border roles with a literal background and violet ramp references."
+    }
+   ]
+  },
+  {
+   "context": "hud-theme-and-inventory",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/EquipSection.tsx:38 The equipment preview repeats the existing ACCENT_VIOLET value directly, leaving that visual decision outside its shared token.",
+   "techniques": [
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/SectionTab.tsx:32 The editor's tab interaction hardcodes 300ms instead of consuming a semantic duration step."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/SummaryBar.tsx:35 This raw background repeats ACCENT_VIOLET with alpha but falls outside the configured hex-literal restriction."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/EquipSection.tsx:38 The SVG consumes a raw color already represented by ACCENT_VIOLET in src/lib/chart-colors.ts:40."
+    }
+   ]
+  },
+  {
+   "context": "animation-state-machine-viewer",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 The viewer declares its own animation duration instead of consuming the motion vocabulary, allowing its timing to drift independently.",
+   "techniques": [
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 The local 800ms SMIL duration bypasses the shared ladder; the surrounding reduced-motion conditional does not tokenize it."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:112 Completed-state styling uses primitive green utilities and embedded RGBA values, syntactic forms the configured hex-literal restriction does not cover."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:57 The active-state ring consumes a violet ramp primitive directly instead of a semantic active-ring role."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-16T22:36:50.184566+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "cross-language-token-parity",
+    "motion-tokens",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "ui-primitives",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T22:36:50.184566+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "motion-tokens",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "animation-combo-workflow",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T22:36:50.184566+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "motion-tokens",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "hud-theme-and-inventory",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T22:36:50.184566+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "motion-tokens",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "animation-state-machine-viewer",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
