@@ -5025,6 +5025,181 @@
           "evidence": "src/lib/anim-critique/score.ts:99 The prompt defines all six visible contrasts and scale anchors; parsing rejects missing dimensions, and separate pass/warn thresholds grade the weakest dimension so averages cannot conceal a failure."
         }
       ]
+    },
+    "099d3014-5d1c-47d0-9d2c-e4b078222cb7/production-prompt-architecture": {
+      "context": "prompt-engineering",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T00:17:03.376Z",
+      "worker": "7f2b8260-c536-4185-bde4-078d48db5847",
+      "techniques": [
+        {
+          "technique": "fixed-section-order",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-context.ts:428 PromptBuilder.build does push context, quality pack, domain, task, spec, wiring, best practices, output schema, then criteria, and throws if context or task is missing. Known UE pitfalls are still concatenated into that header, so they are read before the task."
+        },
+        {
+          "technique": "scanned-project-state-do-not-recreate",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-context.ts:22 When a DynamicProjectContext is passed, classes are grouped and counted, an empty class list is explicit, and the do-not-recreate sentence is included. A missing scan omits the section; scannedAt is never rendered; plugins and deps say nothing when empty; there is no item cap."
+        },
+        {
+          "technique": "wiring-requirements-section",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/prompt-builder.ts:159 The shared renderer can list moduleAssets and returns '' when both lists are empty (the comment above this line, which says an empty array still emits the four sub-prompts, is stale). The builder never forwards moduleAssets, and buildMaterialConfiguratorPrompt never calls withWiringRequirements, while MODULE_WIRING_ASSETS.materials names M_Master. cli-task-handlers.ts:781 dispatches that prompt with no wiring block."
+        },
+        {
+          "technique": "acceptance-criteria-appended-not-replaced",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/prompt-builder.ts:222 addSuccessCriteria rebuilds the section by parsing the already-rendered numbered list, which the technique names as the fragile form. withSuccessCriteria remains the replacing setter. No cap or elision count is applied."
+        },
+        {
+          "technique": "version-keyed-engine-facts",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/animation-checklist.ts:88 Domain framings and the MSVC floor are read from getEngineFacts(ctx.ueVersion). This best-practices block still types a 5.7 API fact into the prompt. The heading above it only marks the block as verified on 5.7."
+        },
+        {
+          "technique": "domain-scoped-knowledge-injection",
+          "verdict": "conformant",
+          "evidence": "src/lib/prompt-context.ts:279 formatGotchas keeps untagged gotchas, intersects module domains, and leaves an unknown module on the superset; an explicit empty domain list (for example arpg-loot) stays truthy and keeps only universals. animation-checklist and material-configurator spread moduleKnowledge(), one object for kind, module, and known assets. Nothing counts how often the superset fallback is taken."
+        },
+        {
+          "technique": "platform-shell-conventions-in-the-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/prompts/animation-checklist.ts:51 These builders author classes and materials inside an existing UE module. A repo search for focus-loss, quit-from-program, and shell-convention wording found no shell inventory. The technique says that case uses the wiring section."
+        }
+      ],
+      "registryProposal": "Measure the fallback rate never says where the count has to live or what increment makes a router conformant, so a three-tier router with no counter can be read either as conformant or as the hidden-fallback failure."
+    },
+    "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/production-prompt-architecture": {
+      "context": "catalog-pipeline-state",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T00:17:03.376Z",
+      "worker": "7f2b8260-c536-4185-bde4-078d48db5847",
+      "techniques": [
+        {
+          "technique": "fixed-section-order",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:16 The produce log projects stored step artifacts. It does not assemble prompt sections."
+        },
+        {
+          "technique": "scanned-project-state-do-not-recreate",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:85 hadPrompt is a boolean read off an already stored produce direction, not a scan rendered into a generation prompt."
+        },
+        {
+          "technique": "wiring-requirements-section",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/catalogManifest.ts:42 Wiring here names Gameplay Effect contracts carried as catalog step payloads, not a prompt section demanding grant, activation, dependencies, and a check."
+        },
+        {
+          "technique": "acceptance-criteria-appended-not-replaced",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/labAcceptance.ts:44 resolveAccept returns the step's grader. It does not append that checker's criteria onto a producer prompt."
+        },
+        {
+          "technique": "version-keyed-engine-facts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/activityModel.ts:46 Engine in this model is an activity-lane status line, not a version-keyed UE facts source inside a prompt."
+        },
+        {
+          "technique": "domain-scoped-knowledge-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/canonStore.ts:35 This is the canon corpus cache. The technique says the corpus is a separate concern from routing it into a prompt, and this file does not route."
+        },
+        {
+          "technique": "platform-shell-conventions-in-the-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/Baseline/index.tsx:37 Baseline here is the lab's pipeline work canvas, a tool surface the technique excludes because it is not a playable program a person quits and resumes."
+        }
+      ]
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/production-prompt-architecture": {
+      "context": "build-history-config",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T00:17:03.376Z",
+      "worker": "7f2b8260-c536-4185-bde4-078d48db5847",
+      "techniques": [
+        {
+          "technique": "fixed-section-order",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:29 The screen state is a history, trend, or compare tab over build rows, not an ordered prompt skeleton."
+        },
+        {
+          "technique": "scanned-project-state-do-not-recreate",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:4 Scope here is which persisted build rows a query can see, not an inventory injected into a generation prompt."
+        },
+        {
+          "technique": "wiring-requirements-section",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:12 The command this screen prepares is a packaging UAT invocation, not a wiring contract on a generated artifact."
+        },
+        {
+          "technique": "acceptance-criteria-appended-not-replaced",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:14 Scope copy is display-only. It does not read or append a grader's criteria into a prompt."
+        },
+        {
+          "technique": "version-keyed-engine-facts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:35 This version is the build-record label initialized to 0.1.0, not an engine-facts lookup inside a prompt."
+        },
+        {
+          "technique": "domain-scoped-knowledge-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:7 The classifier decides which build rows are visible. It does not route pitfalls or canon into a task prompt."
+        },
+        {
+          "technique": "platform-shell-conventions-in-the-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:8 Platform ids here select packaging profiles. Nothing in these files puts quit, pause, or resume duties into a producer prompt."
+        }
+      ]
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/production-prompt-architecture": {
+      "context": "ai-behavior-testing",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T00:17:03.376Z",
+      "worker": "7f2b8260-c536-4185-bde4-078d48db5847",
+      "techniques": [
+        {
+          "technique": "fixed-section-order",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ai-testing.ts:1 buildGenerateTestsPrompt, buildSingleScenarioTestPrompt, buildMockStimuliPrompt, and buildRunTestsPrompt concatenate that header with a literal task. None import PromptBuilder. The same string-append shape is buildSquadBuildPrompt, which EqsSquadTab dispatches."
+        },
+        {
+          "technique": "scanned-project-state-do-not-recreate",
+          "verdict": "deviation",
+          "evidence": "src/lib/ai-director/squad-build-prompt.ts:88 The reuse instruction is present, but the paths and numbers come from eqs-defaults constants and a hardcoded Source/PoF path, not a scan. The test prompts do pass ctx into the shared header; that header's omit-when-unscanned behavior is the prompt-engineering finding and is not re-anchored here."
+        },
+        {
+          "technique": "wiring-requirements-section",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ai-testing.ts:54 Registration, the thing that makes the generated test reachable, is requirement 5 inside the task. The file never emits a Wiring Requirements section or a wiring output field."
+        },
+        {
+          "technique": "domain-scoped-knowledge-injection",
+          "verdict": "conformant",
+          "evidence": "src/lib/prompts/ai-testing.ts:16 Each test prompt spreads one moduleKnowledge('ai-behavior') bundle into the shared header, so kind, module, and known-asset scope are passed together. The uncounted superset fallback is the same router gap noted on prompt-engineering."
+        },
+        {
+          "technique": "platform-shell-conventions-in-the-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/prompts/ai-testing.ts:57 The producer is asked for an automation test file under the module's Source tree, not for the playable program's quit, pause, and resume shell."
+        }
+      ]
     }
   }
 }

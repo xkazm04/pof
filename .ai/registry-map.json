@@ -2542,7 +2542,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/prompts/ai-testing.ts:35 The prompts AIBehaviorView sends are handwritten header-plus-task strings, so they do not share PromptBuilder's ordered sections, and the rule that makes a generated test reachable sits inside the task.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-runtime-assembly",
@@ -6538,7 +6542,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:8 The dashboard loads packaging build records, size trends, and build profiles; a search of BuildHistoryDashboard, BuildConfigSelector, BuildComparison.tsx, PlatformProfileCard.tsx, and SizeTrendChart.tsx found no prompt, PromptBuilder, withProjectContext, formatGotchas, auditPromptString, or successCriteria.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
@@ -8144,7 +8152,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:42 This lab state records whether a produce already had a prompt and resolves step checkers; a search of src/components/layout-lab for PromptBuilder, withProjectContext, formatGotchas, getEngineFacts, and auditPromptString found no prompt assembler.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         },
         {
           "subject": "docs-sync",
@@ -20060,7 +20072,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/prompt-context.ts:22 The shared project header drops the scanned-state section whenever no scan object is passed, which is the case the standard says the producer reads as unknown territory and then invents into.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-memory",
