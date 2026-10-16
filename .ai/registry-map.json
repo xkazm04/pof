@@ -2250,7 +2250,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:135 The health report presents stat-only simulation survival as a player-experience claim without declaring or estimating player skill.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d760d5742a4fa29e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "gameplay-runtime-patterns",
@@ -5572,7 +5576,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The chart classifies hardcoded enemy difficulty scores without identifying the player power or skill assumptions behind those classifications.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d760d5742a4fa29e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
@@ -19192,7 +19200,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:51 The encounter simulator declares balance from stat-derived TTK ratios without stating its player-skill assumption or distinguishing skill from power.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d760d5742a4fa29e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "game-economy-tuning",

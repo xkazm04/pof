@@ -5906,6 +5906,85 @@
         "at": "2026-10-16T21:17:41.469567+00:00",
         "reason": "reviewer (sonnet): `planPartBudget` (polycount-presets.ts:180) has no caller in src outside tests, and `mesh-split.ts` never calls it, so the claim that the gate divides split-part budgets against the assembled whole is not shown in running code. The `providerFaceLimit` quad halving is also only called from `runner-di"
       }
+    },
+    "781544e4-d4e7-4f67-8118-e5f903f0fb23/difficulty-design-and-adaptation": {
+      "context": "procedural-level-generation",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:39:24.570Z",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/DifficultyArcChart.tsx:61 The chart and RoomNode model provide scalar difficulty without the four terms or skill-assumption provenance."
+        },
+        {
+          "technique": "reward-cadence-first-diagnosis",
+          "verdict": "deviation",
+          "evidence": "src/lib/level-design/pacing-linter.ts:475 The pacing report's linter recommends restructuring the challenge curve without first auditing reward events, droughts, or clumps across that span."
+        }
+      ],
+      "withdrawn": {
+        "worker": "5c337a9a-91bd-42c4-acf8-a6183898e9e6",
+        "state": "deviation",
+        "at": "2026-10-16T21:39:47.337131+00:00",
+        "reason": "reviewer (sonnet): Both anchors (level-design/DifficultyArcChart.tsx and lib/level-design/pacing-linter.ts) are outside the context's ProceduralLevelWizard file list, so the verdict is about a different context; the linter's line 475 also only suggests a difficulty dip and does not show missing reward-event auditing."
+      }
+    },
+    "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/difficulty-design-and-adaptation": {
+      "context": "bestiary-encounters-metrics",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:39:24.570Z",
+      "worker": "5c337a9a-91bd-42c4-acf8-a6183898e9e6",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The supplied series contain only level and value; the report neither states an assumed player skill nor renders it as unestimated."
+        }
+      ]
+    },
+    "c7fb4de3-6779-431b-9860-639fef9f98ea/difficulty-design-and-adaptation": {
+      "context": "progression-rewards-internals",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:39:24.570Z",
+      "worker": "5c337a9a-91bd-42c4-acf8-a6183898e9e6",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:51 computeEncounter accepts level, build, enemy multipliers, and ratio thresholds, but no skill assumption or provenance accompanies its difficulty verdict."
+        }
+      ]
+    },
+    "ee957a28-f90d-4863-8f75-c599520803a4/difficulty-design-and-adaptation": {
+      "context": "ability-gas-balance",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:39:24.570Z",
+      "worker": "5c337a9a-91bd-42c4-acf8-a6183898e9e6",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:135 The underlying simulation schedules automatic attacks from combatant stats; its report supplies neither a player-skill basis nor an unestimated state."
+        },
+        {
+          "technique": "setting-bounded-overlapping-bands",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:286 These bands classify completed simulation results for breakpoint reporting; they do not bound a live adaptive controller."
+        }
+      ]
     }
   }
 }

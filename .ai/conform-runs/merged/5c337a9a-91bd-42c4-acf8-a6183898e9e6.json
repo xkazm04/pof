@@ -1,0 +1,129 @@
+{
+  "schema": "conform-run/1",
+  "worker": "5c337a9a-91bd-42c4-acf8-a6183898e9e6",
+  "subject": "difficulty-design-and-adaptation",
+  "evaluatedAt": "2026-10-16T21:39:24.570258+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "bestiary-encounters-metrics",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The chart classifies hardcoded enemy difficulty scores without identifying the player power or skill assumptions behind those classifications.",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The supplied series contain only level and value; the report neither states an assumed player skill nor renders it as unestimated."
+        }
+      ]
+    },
+    {
+      "context": "progression-rewards-internals",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:51 The encounter simulator declares balance from stat-derived TTK ratios without stating its player-skill assumption or distinguishing skill from power.",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:51 computeEncounter accepts level, build, enemy multipliers, and ratio thresholds, but no skill assumption or provenance accompanies its difficulty verdict."
+        }
+      ]
+    },
+    {
+      "context": "ability-gas-balance",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:135 The health report presents stat-only simulation survival as a player-experience claim without declaring or estimating player skill.",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:135 The underlying simulation schedules automatic attacks from combatant stats; its report supplies neither a player-skill basis nor an unestimated state."
+        },
+        {
+          "technique": "setting-bounded-overlapping-bands",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:286 These bands classify completed simulation results for breakpoint reporting; they do not bound a live adaptive controller."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "difficulty-design-and-adaptation",
+      "context": "inventory-economy-simulator",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "difficulty-design-and-adaptation",
+      "context": "procedural-level-generation",
+      "reason": "withdrawn after review: reviewer (sonnet): Both anchors (level-design/DifficultyArcChart.tsx and lib/level-design/pacing-linter.ts) are outside the context's ProceduralLevelWizard file list, so the verdict is about a different context; the linter's line 475 also only suggests a difficulty dip and does not show missing reward-event auditing."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T21:39:24.570258+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [
+        "four-term-difficulty-decomposition",
+        "reward-cadence-first-diagnosis"
+      ],
+      "deviations": 1,
+      "context": "procedural-level-generation",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-16T21:39:24.570258+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [
+        "four-term-difficulty-decomposition"
+      ],
+      "deviations": 1,
+      "context": "bestiary-encounters-metrics",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-16T21:39:24.570258+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [
+        "four-term-difficulty-decomposition"
+      ],
+      "deviations": 1,
+      "context": "progression-rewards-internals",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-16T21:39:24.570258+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [
+        "four-term-difficulty-decomposition",
+        "setting-bounded-overlapping-bands"
+      ],
+      "deviations": 1,
+      "context": "ability-gas-balance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
