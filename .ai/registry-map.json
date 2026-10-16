@@ -6424,7 +6424,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/packaging/size-budgets.ts:38 An unconfigured size-budget row leaves the gate off, so the common absent state is the permissive one for a cap that decides whether a build fails.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "prompt-assembly",
@@ -10531,7 +10535,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/GateNotifySettings.tsx:73 A failed gate-notification save is swallowed, so the settings surface does not say the write failed.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "voice-io",
@@ -20804,7 +20812,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/advanced/AutoSaveConfig.tsx:14 The only mutable auto-save control is component state seeded from the fixture AUTO_SAVE_CONFIG; a search of sub_save found no settings-blob, getSetting, localStorage, readSettingsBlob, or preference, so this module is a save-schema mock and not an application settings store.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "mcp-tools",
@@ -22846,7 +22858,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/pof-bridge/compile/route.ts:12 These routes proxy compile, manifest, and status calls; searching ue5-bridge, pof-bridge, blueprint-transpiler, ue5-inject-item, ue5-source, and ue-test-scaffold found no settings-blob, getSetting, localStorage, readSettingsBlob, or preference. The only configuration hits are a UE build-configuration field on a compile body and a ?port= override of a constant.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "build-economics",

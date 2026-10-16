@@ -1,0 +1,242 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c828a477-94da-46f2-9f4c-fd5288e64a77",
+ "subject": "settings",
+ "evaluatedAt": "2026-10-16T04:41:18.330287+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "save-system",
+   "subject": "settings",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_save/advanced/AutoSaveConfig.tsx:14 The only mutable auto-save control is component state seeded from the fixture AUTO_SAVE_CONFIG; a search of sub_save found no settings-blob, getSetting, localStorage, readSettingsBlob, or preference, so this module is a save-schema mock and not an application settings store.",
+   "techniques": [
+    {
+     "technique": "key-registry",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_save/advanced/AutoSaveConfig.tsx:14 No settings key space in this module."
+    },
+    {
+     "technique": "typed-accessors",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:102 Auto-save numbers are a compiled-in fixture, not stored values with defaults."
+    },
+    {
+     "technique": "read-batching",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_save/advanced/DataRecoveryTool.tsx:12 Recovery rows are imported fixtures, not per-key settings reads."
+    }
+   ],
+   "absenceTerms": [
+    "settings-blob",
+    "getSetting",
+    "localStorage",
+    "readSettingsBlob",
+    "preference"
+   ]
+  },
+  {
+   "context": "build-history-config",
+   "subject": "settings",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/packaging/size-budgets.ts:38 An unconfigured size-budget row leaves the gate off, so the common absent state is the permissive one for a cap that decides whether a build fails.",
+   "techniques": [
+    {
+     "technique": "typed-accessors",
+     "verdict": "deviation",
+     "evidence": "src/lib/packaging/size-budgets.ts:38 Absent budget config fails the size gate open; corrupt is the path that arms it."
+    },
+    {
+     "technique": "read-batching",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:94 All profiles come back in one request; there is no per-key startup fan-out."
+    },
+    {
+     "technique": "setting-kinds",
+     "verdict": "deviation",
+     "evidence": "src/lib/packaging/size-verdict.ts:125 A missing platform budget still reads as 0 bytes and 0% growth, which this validator says disables the check, and no kind is declared on the key."
+    },
+    {
+     "technique": "save-experience",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:117 A failed profile save is only logged; the explicit-save form is not told the write failed."
+    },
+    {
+     "technique": "cross-source-precedence-chain",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/packaging/build-profiles-db.ts:10 Profiles have one substrate, the settings table, so a precedence chain does not arise."
+    },
+    {
+     "technique": "presence-decides-precedence",
+     "verdict": "conformant",
+     "evidence": "src/lib/packaging/size-verdict.ts:120 Canonical platform key wins when present, else the legacy spelling; the test is nullish presence, not value. No deprecation notice or named removal release is attached."
+    },
+    {
+     "technique": "applied-defaults-ledger",
+     "verdict": "deviation",
+     "evidence": "src/lib/packaging/size-budgets.ts:43 Once any budgets object is stored it is kept wholesale, so a platform added to the shipped defaults later is never inserted and there is no ledger of applied names."
+    },
+    {
+     "technique": "in-place-document-patch",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/game-systems/BuildConfigSelector/ProfileEditor.tsx:28 Opening a profile spreads stored cook settings over the defaults, so members this form does not name stay on the object that save posts back."
+    }
+   ],
+   "registryProposal": "Size budgets deliberately disarm the gate when the row is absent and arm it only when the row is unreadable. The ceiling rule collapses both to closed; the standard needs a sentence if an unconfigured gate may stay opt-in while only an unreadable row must fail closed."
+  },
+  {
+   "context": "ue5-build-bridge",
+   "subject": "settings",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/pof-bridge/compile/route.ts:12 These routes proxy compile, manifest, and status calls; searching ue5-bridge, pof-bridge, blueprint-transpiler, ue5-inject-item, ue5-source, and ue-test-scaffold found no settings-blob, getSetting, localStorage, readSettingsBlob, or preference. The only configuration hits are a UE build-configuration field on a compile body and a ?port= override of a constant.",
+   "techniques": [
+    {
+     "technique": "key-registry",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/pof-bridge/compile/route.ts:12 No settings key space; this route proxies a compile."
+    },
+    {
+     "technique": "cross-source-precedence-chain",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/pof-bridge/constants.ts:17 A query port falling back to a constant is not a settings precedence chain."
+    }
+   ],
+   "absenceTerms": [
+    "settings-blob",
+    "getSetting",
+    "localStorage",
+    "readSettingsBlob",
+    "preference"
+   ]
+  },
+  {
+   "context": "cook-packaging-pipeline",
+   "subject": "settings",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/game-systems/GateNotifySettings.tsx:73 A failed gate-notification save is swallowed, so the settings surface does not say the write failed.",
+   "techniques": [
+    {
+     "technique": "typed-accessors",
+     "verdict": "deviation",
+     "evidence": "src/lib/notify/gate-notify-store.ts:90 The UI read drops the corrupt flag, so an unreadable webhook config is handed out as the disabled default. readGateNotifyConfig exists and the GET route does not use it."
+    },
+    {
+     "technique": "read-batching",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/GateNotifySettings.tsx:54 The panel loads its one config document in a single GET; there is no per-key fan-out."
+    },
+    {
+     "technique": "setting-kinds",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/CookSettingsPanel.tsx:175 The texture streaming cap treats 0 as unlimited and is edited as an ordinary number; no setting kind is declared, and the shipped default is 0."
+    },
+    {
+     "technique": "inherited-default-override",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/notify/gate-notify-store.ts:27 The enable default is a code constant (opt-in off), not a live platform or sibling source."
+    },
+    {
+     "technique": "save-experience",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/GateNotifySettings.tsx:73 Write failure is not shown. The URL draft is only replaced from the response on success, so a failed URL write stays on screen."
+    },
+    {
+     "technique": "cross-source-precedence-chain",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/notify/gate-notify-store.ts:2 Gate notify is one settings-table row, not a chain of sources."
+    },
+    {
+     "technique": "in-place-document-patch",
+     "verdict": "conformant",
+     "evidence": "src/lib/notify/gate-notify-store.ts:66 Hydrate spreads the parsed record over the defaults, so keys this build does not name remain on the object that is written back."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "settings",
+   "context": "blueprint-transpiler-game-systems",
+   "reason": "absence contradicted: src/components/modules/game-systems/SquadChoreographyEditor/index.tsx:191 contains 'preference' (1 hit(s) in the context's directories)"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-16T04:41:18.330287+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "settings"
+   ],
+   "techniques": [
+    "key-registry",
+    "read-batching",
+    "typed-accessors"
+   ],
+   "deviations": 0,
+   "context": "save-system",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-16T04:41:18.330287+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "settings"
+   ],
+   "techniques": [
+    "applied-defaults-ledger",
+    "cross-source-precedence-chain",
+    "in-place-document-patch",
+    "presence-decides-precedence",
+    "read-batching",
+    "save-experience",
+    "setting-kinds",
+    "typed-accessors"
+   ],
+   "deviations": 1,
+   "context": "build-history-config",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-16T04:41:18.330287+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "settings"
+   ],
+   "techniques": [
+    "cross-source-precedence-chain",
+    "key-registry"
+   ],
+   "deviations": 0,
+   "context": "ue5-build-bridge",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-16T04:41:18.330287+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "settings"
+   ],
+   "techniques": [
+    "cross-source-precedence-chain",
+    "in-place-document-patch",
+    "inherited-default-override",
+    "read-batching",
+    "save-experience",
+    "setting-kinds",
+    "typed-accessors"
+   ],
+   "deviations": 1,
+   "context": "cook-packaging-pipeline",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
