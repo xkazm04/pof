@@ -1,0 +1,109 @@
+{
+ "schema": "conform-run/1",
+ "worker": "15a263aa-93c5-4f2d-b19a-ed4bcd21c228",
+ "subject": "session-continuation",
+ "evaluatedAt": "2026-10-16T02:23:37.709489+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "quality-evaluation-api",
+   "subject": "session-continuation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/harness/route.ts:270 The harness control route only defines start, pause, and resume actions without providing an ordered cancellation teardown path that clears active loop guards.",
+   "techniques": [
+    {
+     "technique": "ordered-teardown",
+     "verdict": "deviation",
+     "evidence": "src/app/api/harness/route.ts:270 The harness control route recognizes only start, pause, and resume, lacking an ordered cancel path to disarm running loop guards."
+    },
+    {
+     "technique": "continuation-as-state",
+     "verdict": "deviation",
+     "evidence": "src/app/api/harness/route.ts:404 The autonomous harness loop is started fire-and-forget in Node memory without an in-session turn-boundary continuation record or lease."
+    },
+    {
+     "technique": "single-loop-authority",
+     "verdict": "deviation",
+     "evidence": "src/app/api/harness/route.ts:320 The route allows passRateBasis to be set to self-reported, letting the model's self-reported verdicts drive loop completion without required verification."
+    }
+   ]
+  },
+  {
+   "context": "harness-autonomy",
+   "subject": "session-continuation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/stores/taskDAGStore.ts:50 Interrupted multi-step runs are demoted to failed on reload rather than resuming or continuing from a leased, persisted continuation record.",
+   "techniques": [
+    {
+     "technique": "continuation-as-state",
+     "verdict": "deviation",
+     "evidence": "src/stores/taskDAGStore.ts:50 Interrupted runs are demoted to failed on reload instead of maintaining a leased continuation record that can be re-entered."
+    },
+    {
+     "technique": "sealed-stage-advance",
+     "verdict": "deviation",
+     "evidence": "src/stores/taskDAGStore.ts:115 The store accepts arbitrary custom workflows and advances nodes via external callbacks without content-hash sealing or authenticated completion records."
+    },
+    {
+     "technique": "ordered-teardown",
+     "verdict": "deviation",
+     "evidence": "src/stores/taskDAGStore.ts:203 Workflow cancellation delegates to the transient orchestrator without an ordered teardown path that clears active child sessions."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "session-continuation",
+   "context": "session-analytics-reporting",
+   "reason": "Context covers developer productivity, token spend, and quality-score dashboard UI components (SessionAnalyticsDashboard, SpendDashboard, SpendBudgetPanel); it does not implement or govern an LLM agent turn boundary or session continuation control loop."
+  },
+  {
+   "subject": "session-continuation",
+   "context": "judge-craft-quality",
+   "reason": "Context covers AAA rubric definitions, dimensional scoring, spend metering, and craft cell verdict storage for the judge fleet; it operates as an evaluation and scoring engine rather than an in-session turn-boundary continuation loop."
+  },
+  {
+   "subject": "session-continuation",
+   "context": "prompt-evolution",
+   "reason": "Context covers prompt variant management, A/B testing cards, and version timeline comparison UI components; it does not implement agent execution loops or turn-boundary session continuation."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-16T02:23:37.709489+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "session-continuation"
+   ],
+   "techniques": [
+    "continuation-as-state",
+    "ordered-teardown",
+    "single-loop-authority"
+   ],
+   "deviations": 1,
+   "context": "quality-evaluation-api",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-16T02:23:37.709489+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "session-continuation"
+   ],
+   "techniques": [
+    "continuation-as-state",
+    "ordered-teardown",
+    "sealed-stage-advance"
+   ],
+   "deviations": 1,
+   "context": "harness-autonomy",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

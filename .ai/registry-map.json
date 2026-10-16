@@ -13321,7 +13321,11 @@
           "revision": 8,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/stores/taskDAGStore.ts:50 Interrupted multi-step runs are demoted to failed on reload rather than resuming or continuing from a leased, persisted continuation record.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:b0eabf78abd856a4",
+          "evaluatedRevision": 8
         },
         {
           "subject": "agent-instruction-files",
@@ -20488,7 +20492,11 @@
           "revision": 8,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/harness/route.ts:270 The harness control route only defines start, pause, and resume actions without providing an ordered cancellation teardown path that clears active loop guards.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:b0eabf78abd856a4",
+          "evaluatedRevision": 8
         },
         {
           "subject": "agent-runtime-assembly",
