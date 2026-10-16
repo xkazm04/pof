@@ -1,0 +1,178 @@
+{
+  "schema": "conform-run/1",
+  "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+  "subject": "page-load-pipeline",
+  "evaluatedAt": "2026-10-16T01:45:32.691837+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "lab-hooks",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/layout-lab/hooks/useLabActivity.ts:15 These hooks read in-app job state and one drain-lease poll that the effect clears on cleanup; the hooks directory has none of the document-pipeline identifiers searched below.",
+      "techniques": [
+        {
+          "technique": "discoverable-critical-resources",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:19 The hook classifies pipeline step artifacts after the lab is open, not document subresources."
+        },
+        {
+          "technique": "navigation-reuse",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/hooks/useLabActivity.ts:59 The poll is cleared when the React effect ends or the lab suspends. There is no document socket, pagehide handler, or unload registration in this directory."
+        }
+      ],
+      "absenceTerms": [
+        "pageshow",
+        "pagehide",
+        "fetchpriority",
+        "font-display",
+        "web-vitals"
+      ]
+    },
+    {
+      "context": "coach-and-guidance",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/CatalogChangesDigest.tsx:63 The digest's loading state is a single line in an unfixed shell, and the ready list can grow to eight rows above the matrix, so the grid drops when the changes arrive.",
+      "techniques": [
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogChangesDigest.tsx:63 Shell sets padding and font size but no height. GlobalCoach does reserve its own row (GlobalCoach.tsx:89); this digest does not match that reservation."
+        },
+        {
+          "technique": "navigation-reuse",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/GlobalCoach.tsx:54 A coach click writes an in-memory location. It does not leave the document, so back/forward cache rules are the shell's concern."
+        }
+      ]
+    },
+    {
+      "context": "app-navigation",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/hooks/useViewportWidth.ts:45 The shell hook used by the home shells defaults to the wide layout and only collapses after a ResizeObserver measurement, so a narrow first viewport moves once script runs.",
+      "techniques": [
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useViewportWidth.ts:45 useViewportAtLeast seeds state from WIDE_FALLBACK_WIDTH (1440) and updates only inside the effect. AppShell and Baseline both call it for the first-paint column split."
+        },
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "deviation",
+          "evidence": "src/app/page.tsx:4 The home route is a client module that also imports NewHome and renders exactly one of them, so the unseen legacy shell is still in the first-load graph."
+        },
+        {
+          "technique": "font-loading-discipline",
+          "verdict": "deviation",
+          "evidence": "src/app/layout.tsx:43 Both Geist families are on every document. Neither call passes preload:false; the installed next/font validator defaults preload to true, display to swap, and adjustFontFallback to true."
+        },
+        {
+          "technique": "render-blocking-budget",
+          "verdict": "conformant",
+          "evidence": "src/app/layout.tsx:6 The server layout's only stylesheet import is the app's own global CSS. The layout renders no classic parser-blocking script."
+        }
+      ],
+      "registryProposal": "navigation-reuse names an unload listener as the back/forward opt-out and does not say whether a beforeunload listener that only calls preventDefault to confirm in-flight work is the same failure; pagehide cannot show that dialog."
+    }
+  ],
+  "declined": [
+    {
+      "subject": "page-load-pipeline",
+      "context": "catalog-browser-ui",
+      "reason": "withdrawn after review: reviewer (sonnet): The opacity-0 claim is not about served markup. NewHome.tsx's hydration gate uses getServerSnapshot `() => false`, so the server renders only NewHomeSkeleton and never renders CatalogTree or PipelineRail rows. Both verdicts therefore rest on an unconfirmed claim that the served HTML hides labels."
+    },
+    {
+      "subject": "page-load-pipeline",
+      "context": "lab-shell-and-navigation",
+      "reason": "withdrawn after review: reviewer (sonnet): The opacity-0 claim is not about served markup. NewHome.tsx's hydration gate uses getServerSnapshot `() => false`, so the server renders only NewHomeSkeleton and never renders CatalogTree or PipelineRail rows. Both verdicts therefore rest on an unconfirmed claim that the served HTML hides labels."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T01:45:32.691837+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "page-load-pipeline"
+      ],
+      "techniques": [
+        "font-loading-discipline",
+        "layout-stability-by-reservation",
+        "script-cost-is-main-thread-time"
+      ],
+      "deviations": 1,
+      "context": "catalog-browser-ui",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-16T01:45:32.691837+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "page-load-pipeline"
+      ],
+      "techniques": [
+        "font-loading-discipline",
+        "layout-stability-by-reservation",
+        "script-cost-is-main-thread-time"
+      ],
+      "deviations": 1,
+      "context": "lab-shell-and-navigation",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-16T01:45:32.691837+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "page-load-pipeline"
+      ],
+      "techniques": [
+        "discoverable-critical-resources",
+        "navigation-reuse"
+      ],
+      "deviations": 0,
+      "context": "lab-hooks",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-16T01:45:32.691837+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "page-load-pipeline"
+      ],
+      "techniques": [
+        "layout-stability-by-reservation",
+        "navigation-reuse"
+      ],
+      "deviations": 1,
+      "context": "coach-and-guidance",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-16T01:45:32.691837+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "page-load-pipeline"
+      ],
+      "techniques": [
+        "font-loading-discipline",
+        "layout-stability-by-reservation",
+        "render-blocking-budget",
+        "script-cost-is-main-thread-time"
+      ],
+      "deviations": 1,
+      "context": "app-navigation",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

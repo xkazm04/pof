@@ -5418,6 +5418,142 @@
           "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:125 Import applies a character or item genome, rather than admitting a project."
         }
       ]
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/page-load-pipeline": {
+      "context": "catalog-browser-ui",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "techniques": [
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:382 Nested rows set their own entrance; LayoutLab's AnimatePresence initial={false} does not cover them. Server-side reduced-motion state stays null, so the opacity 0 branch is what is served."
+        },
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/NewHome.tsx:71 The homepage hydration skeleton reserves a 260px rail plus canvas. The loaded Baseline grid on a wide viewport is 260px + 320px + canvas, so the work area shifts when the shell replaces the placeholder."
+        },
+        {
+          "technique": "font-loading-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/fonts.ts:11 The lab root always enables Inter, JetBrains Mono and IBM Plex Mono. None of the next/font calls sets preload:false; the installed loader defaults preload to true, so the dark-theme mono is preloaded on the default light theme too."
+        }
+      ],
+      "withdrawn": {
+        "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+        "state": "deviation",
+        "at": "2026-10-16T01:46:15.419339+00:00",
+        "reason": "reviewer (sonnet): The opacity-0 claim is not about served markup. NewHome.tsx's hydration gate uses getServerSnapshot `() => false`, so the server renders only NewHomeSkeleton and never renders CatalogTree or PipelineRail rows. Both verdicts therefore rest on an unconfirmed claim that the served HTML hides labels."
+      }
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/page-load-pipeline": {
+      "context": "lab-shell-and-navigation",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "techniques": [
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:382 Same entrance on the rail steps (PipelineRail.tsx:252). The view wrapper's AnimatePresence initial={false} only settles the outer motion.div."
+        },
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/NewHome.tsx:71 Placeholder columns do not match Baseline's wide grid of 260px 320px 1fr, so replacing the skeleton moves the canvas."
+        },
+        {
+          "technique": "font-loading-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/fonts.ts:11 Three families are always attached. display is swap and subsets are latin, but preload is left at the next/font default of true, including JetBrains Mono which the default light theme does not draw."
+        }
+      ],
+      "withdrawn": {
+        "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+        "state": "deviation",
+        "at": "2026-10-16T01:46:15.419339+00:00",
+        "reason": "reviewer (sonnet): The opacity-0 claim is not about served markup. NewHome.tsx's hydration gate uses getServerSnapshot `() => false`, so the server renders only NewHomeSkeleton and never renders CatalogTree or PipelineRail rows. Both verdicts therefore rest on an unconfirmed claim that the served HTML hides labels."
+      }
+    },
+    "c3f566ea-1570-4687-86df-d8a0925984d5/page-load-pipeline": {
+      "context": "lab-hooks",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+      "techniques": [
+        {
+          "technique": "discoverable-critical-resources",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:19 The hook classifies pipeline step artifacts after the lab is open, not document subresources."
+        },
+        {
+          "technique": "navigation-reuse",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/hooks/useLabActivity.ts:59 The poll is cleared when the React effect ends or the lab suspends. There is no document socket, pagehide handler, or unload registration in this directory."
+        }
+      ]
+    },
+    "3aa2c4eb-2fdb-4429-b2f1-611fa0626af5/page-load-pipeline": {
+      "context": "coach-and-guidance",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+      "techniques": [
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogChangesDigest.tsx:63 Shell sets padding and font size but no height. GlobalCoach does reserve its own row (GlobalCoach.tsx:89); this digest does not match that reservation."
+        },
+        {
+          "technique": "navigation-reuse",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/GlobalCoach.tsx:54 A coach click writes an in-memory location. It does not leave the document, so back/forward cache rules are the shell's concern."
+        }
+      ]
+    },
+    "7e5113c1-2957-49ad-aeee-6f7effe35dce/page-load-pipeline": {
+      "context": "app-navigation",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+      "techniques": [
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useViewportWidth.ts:45 useViewportAtLeast seeds state from WIDE_FALLBACK_WIDTH (1440) and updates only inside the effect. AppShell and Baseline both call it for the first-paint column split."
+        },
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "deviation",
+          "evidence": "src/app/page.tsx:4 The home route is a client module that also imports NewHome and renders exactly one of them, so the unseen legacy shell is still in the first-load graph."
+        },
+        {
+          "technique": "font-loading-discipline",
+          "verdict": "deviation",
+          "evidence": "src/app/layout.tsx:43 Both Geist families are on every document. Neither call passes preload:false; the installed next/font validator defaults preload to true, display to swap, and adjustFontFallback to true."
+        },
+        {
+          "technique": "render-blocking-budget",
+          "verdict": "conformant",
+          "evidence": "src/app/layout.tsx:6 The server layout's only stylesheet import is the app's own global CSS. The layout renders no classic parser-blocking script."
+        }
+      ],
+      "registryProposal": "navigation-reuse names an unload listener as the back/forward opt-out and does not say whether a beforeunload listener that only calls preventDefault to confirm in-flight work is the same failure; pagehide cannot show that dialog."
     }
   }
 }

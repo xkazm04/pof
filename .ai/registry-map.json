@@ -4009,7 +4009,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useViewportWidth.ts:45 The shell hook used by the home shells defaults to the wide layout and only collapses after a ResizeObserver measurement, so a narrow first viewport moves once script runs.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:f51109a4fa17ac48",
+          "evaluatedRevision": 3
         },
         {
           "subject": "lazy-section-addressability",
@@ -9698,7 +9702,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/CatalogChangesDigest.tsx:63 The digest's loading state is a single line in an unfixed shell, and the ready list can grow to eight rows above the matrix, so the grid drops when the changes arrive.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:f51109a4fa17ac48",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-runtime-assembly",
@@ -15116,7 +15124,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/hooks/useLabActivity.ts:15 These hooks read in-app job state and one drain-lease poll that the effect clears on cleanup; the hooks directory has none of the document-pipeline identifiers searched below.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:f51109a4fa17ac48",
+          "evaluatedRevision": 3
         },
         {
           "subject": "table",
