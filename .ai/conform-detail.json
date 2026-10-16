@@ -6179,6 +6179,79 @@
           "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:57 The active-state ring consumes a violet ramp primitive directly instead of a semantic active-ring role."
         }
       ]
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/generated-asset-world-scale": {
+      "context": "procedural-scene-tools",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:54:05.401Z",
+      "techniques": [
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:114 FBX import automation lets users hand-tune scale via slider rather than deriving it."
+        },
+        {
+          "technique": "reference-skeleton-size-check",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:40 Preset bone generation uses an arbitrary fixed spacing scalar rather than canonical reference skeleton proportions."
+        }
+      ],
+      "withdrawn": {
+        "worker": "d71f3058-263e-4f51-8917-9e4b2abc2b37",
+        "state": "deviation",
+        "at": "2026-10-16T22:54:22.123287+00:00",
+        "reason": "reviewer (sonnet): Both anchors (import-automation/ImportAutomationView.tsx:114 and auto-rig/AutoRigView/helpers.ts:40) sit outside this context's file list, which covers procedural-engine, scene-composer and AutoRigView/index.tsx. The slider at line 114 is a real FBX scale control, but nothing I opened shows it is th"
+      }
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/generated-asset-world-scale": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:54:05.401Z",
+      "worker": "d71f3058-263e-4f51-8917-9e4b2abc2b37",
+      "techniques": [
+        {
+          "technique": "reference-skeleton-size-check",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:11 Gate restricts verification to joint weights and disclaims anatomical proportion checks against a reference skeleton."
+        }
+      ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/generated-asset-world-scale": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:54:05.401Z",
+      "worker": "d71f3058-263e-4f51-8917-9e4b2abc2b37",
+      "techniques": [
+        {
+          "technique": "generator-normalization-band",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/world-scale.ts:28 Defines a ±10% band around 1.0 m to classify raw generator output and treat real size as unknown."
+        },
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/world-scale.ts:31 Derives target / measured scale but enforces a single flat relative tolerance rather than per-class tolerances."
+        },
+        {
+          "technique": "nominal-extent-only-where-honest",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/world-scale.ts:39 Authoritative nominal size is provided solely for humanoid characters and deliberately omitted for props and weapons."
+        },
+        {
+          "technique": "unit-convention-at-the-engine-edge",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/world-scale.ts:178 Validates glTF Y-up axis convention and prescribes import-time rotation instead of destructive mesh re-export."
+        }
+      ]
     }
   }
 }

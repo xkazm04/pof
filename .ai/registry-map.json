@@ -24452,7 +24452,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/world-scale.ts:31 A single global 10% tolerance is enforced for all meshes, deviating from the standard's requirement for per-class tolerance (e.g. modular kit pieces vs free-standing props).",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:792cdbe5a3573767",
+          "evaluatedRevision": 1
         },
         {
           "subject": "hitl-approval",
@@ -24759,7 +24763,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:11 The rig gate explicitly avoids judging anatomical limb placements and segment proportions against a reference skeleton, leaving humanoid build defects undetected.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:792cdbe5a3573767",
+          "evaluatedRevision": 1
         },
         {
           "subject": "mcp-tools",

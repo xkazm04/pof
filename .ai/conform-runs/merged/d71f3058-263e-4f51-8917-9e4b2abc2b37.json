@@ -1,0 +1,118 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d71f3058-263e-4f51-8917-9e4b2abc2b37",
+  "subject": "generated-asset-world-scale",
+  "evaluatedAt": "2026-10-16T22:54:05.401347+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/rig-gate.ts:11 The rig gate explicitly avoids judging anatomical limb placements and segment proportions against a reference skeleton, leaving humanoid build defects undetected.",
+      "techniques": [
+        {
+          "technique": "reference-skeleton-size-check",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:11 Gate restricts verification to joint weights and disclaims anatomical proportion checks against a reference skeleton."
+        }
+      ]
+    },
+    {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/world-scale.ts:31 A single global 10% tolerance is enforced for all meshes, deviating from the standard's requirement for per-class tolerance (e.g. modular kit pieces vs free-standing props).",
+      "techniques": [
+        {
+          "technique": "generator-normalization-band",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/world-scale.ts:28 Defines a ±10% band around 1.0 m to classify raw generator output and treat real size as unknown."
+        },
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/world-scale.ts:31 Derives target / measured scale but enforces a single flat relative tolerance rather than per-class tolerances."
+        },
+        {
+          "technique": "nominal-extent-only-where-honest",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/world-scale.ts:39 Authoritative nominal size is provided solely for humanoid characters and deliberately omitted for props and weapons."
+        },
+        {
+          "technique": "unit-convention-at-the-engine-edge",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/world-scale.ts:178 Validates glTF Y-up axis convention and prescribes import-time rotation instead of destructive mesh re-export."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "generated-asset-world-scale",
+      "context": "asset-viewer-and-browser",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "generated-asset-world-scale",
+      "context": "world-module",
+      "reason": "world-module covers 2D canvas map topology, zone playtime budget, and travel progression networks; it does not process 3D generated meshes, bounding boxes, or engine import scaling."
+    },
+    {
+      "subject": "generated-asset-world-scale",
+      "context": "procedural-scene-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): Both anchors (import-automation/ImportAutomationView.tsx:114 and auto-rig/AutoRigView/helpers.ts:40) sit outside this context's file list, which covers procedural-engine, scene-composer and AutoRigView/index.tsx. The slider at line 114 is a real FBX scale control, but nothing I opened shows it is th"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T22:54:05.401347+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-asset-world-scale"
+      ],
+      "techniques": [
+        "import-scale-derivation",
+        "reference-skeleton-size-check"
+      ],
+      "deviations": 1,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-16T22:54:05.401347+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-asset-world-scale"
+      ],
+      "techniques": [
+        "reference-skeleton-size-check"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-rigging-conformance",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-16T22:54:05.401347+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-asset-world-scale"
+      ],
+      "techniques": [
+        "generator-normalization-band",
+        "import-scale-derivation",
+        "nominal-extent-only-where-honest",
+        "unit-convention-at-the-engine-edge"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
