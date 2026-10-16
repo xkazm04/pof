@@ -23635,7 +23635,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-skins.ts:154 Geometry parity can report an entire skin set as consistent after excluding unmeasured variants, hiding incomplete verification.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
+          "evaluatedRevision": 1
         },
         {
           "subject": "model-routing",
@@ -24242,7 +24246,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 The HTTP import flow records the structural critique but invokes the importer without rejecting a failed verdict, so structurally rejected meshes can enter UE.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
+          "evaluatedRevision": 1
         },
         {
           "subject": "image-to-3d-input-gating",
@@ -24351,7 +24359,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:153 The retry guard still identifies repeated defects by normalizing human-readable reasons, so wording changes can alter retry decisions.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
+          "evaluatedRevision": 1
         },
         {
           "subject": "asset-class-poly-budgeting",
@@ -24715,7 +24727,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:90 The finish router treats an undeclared stage as raw, allowing routing assessments to claim a production stage the caller did not supply.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
+          "evaluatedRevision": 1
         },
         {
           "subject": "reference-parity-gating",

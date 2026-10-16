@@ -6252,6 +6252,125 @@
           "evidence": "src/lib/visual-gen/world-scale.ts:178 Validates glTF Y-up axis convention and prescribes import-time rotation instead of destructive mesh re-export."
         }
       ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/generated-mesh-acceptance": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:18:14.935Z",
+      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "techniques": [
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:153 failureShape parses prose and its result controls the repeat-failure stop at lines 305–306."
+        },
+        {
+          "technique": "face-rig-shell-readiness",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:84 The separate tri-state helper exists, but repository searches found references only in its implementation, tests, and documentation; it does not gate production rigging."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/component-split.ts:33 The share denominator sums retained histogram bins rather than all mesh faces, so truncation changes the classification floor."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:235 An omitted caller stage becomes raw instead of unknown."
+        },
+        {
+          "technique": "structural-scorecard",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-score.ts:203 The independent pure scorer derives verdict and score from severity-tagged findings; a failure cannot be outweighed by clean properties."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:51 A missing degenerate-face measurement becomes zero, allowing that unmeasured property to grade clean."
+        }
+      ]
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/generated-mesh-acceptance": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:18:14.935Z",
+      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "techniques": [
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:147 Failure remediation refuses verdicts without defect codes and otherwise derives routing from the structured stage assessment."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:90 Missing stage declarations default to raw rather than remaining unknown."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:382 Required facial deformation with an unread morph-target count produces an explicit failure distinct from measured zero targets."
+        }
+      ]
+    },
+    "6f37d3d5-8476-45cf-8598-a7a900cfe93c/generated-mesh-acceptance": {
+      "context": "visual-gen-mesh",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:18:14.935Z",
+      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "techniques": [
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/mesh-finish/status/route.ts:49 The projection emits all human reasons but only failCodes, leaving warning findings without their machine-readable codes and severities."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:102 The import implementation infers production stage from the pathname instead of accepting a declaration or reporting unknown."
+        },
+        {
+          "technique": "structural-scorecard",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 After critique and planning, import runs without a structural-failure guard."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/mesh-finish/status/route.ts:54 An unavailable critique becomes an empty failCodes list while this projection omits its ok, unavailable, and error fields, losing the explicit ungraded outcome."
+        }
+      ]
+    },
+    "0dd24399-c9cd-4a8a-a4ed-617ad69597a3/generated-mesh-acceptance": {
+      "context": "visual-gen-3d-model-runners",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:18:14.935Z",
+      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "techniques": [
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/trellis-job-store.ts:69 The TRELLIS producer explicitly declares its newly generated delivery as raw when constructing the critique request."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-skins.ts:154 Line 148 filters out unmeasured entries; two matching measured variants therefore yield consistent even when another variant lacks measurements."
+        }
+      ]
     }
   }
 }
