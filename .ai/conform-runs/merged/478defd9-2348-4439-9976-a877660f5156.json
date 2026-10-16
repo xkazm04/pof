@@ -1,0 +1,158 @@
+{
+  "schema": "conform-run/1",
+  "worker": "478defd9-2348-4439-9976-a877660f5156",
+  "subject": "ability-authoring-to-engine",
+  "evaluatedAt": "2026-10-16T22:06:11.735528+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "ability-blueprint",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_ability/blueprint/useAbilitySpecBinding.ts:147 The editor hydrates persisted generated specs whose acceptance endpoint checks arrays but does not validate their effect and rule entries.",
+      "techniques": [
+        {
+          "technique": "few-shot-reference-plus-tag-registry",
+          "verdict": "deviation",
+          "evidence": "src/lib/ability/logic-prompts.ts:49 The blueprint draft path supplies generic conventions and thin ability identity, without a live registry, accepted exemplars, or instructions to read named exemplars."
+        },
+        {
+          "technique": "server-derived-codegen-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/GeneratedFilesPanel.tsx:44 The panel promotes the callback's buildOk directly into a compile verdict; the shared callback evidence limitation is described in notes."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "deviation",
+          "evidence": "src/app/api/ability-spec/route.ts:54 The draft callback checks only that both fields are arrays, then casts their entries and persists them without field, bound, relationship, or identifier validation."
+        }
+      ]
+    },
+    {
+      "context": "ability-spellbook-core",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_ability/_shared/useAbilitySpecTags.ts:25 A failed app-tag fetch silently leaves an empty list, allowing the core audit to treat an unmeasured authoring source as having no references.",
+      "techniques": [
+        {
+          "technique": "declared-vs-referenced-tag-audit",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:690 The attribution describes an empty list as actual absence, although useAbilitySpecTags also returns that list after failed extraction."
+        }
+      ]
+    },
+    {
+      "context": "ability-forge",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:120 A refinement becomes the current adoptable result before its changes are checked against a permitted change scope.",
+      "techniques": [
+        {
+          "technique": "few-shot-reference-plus-tag-registry",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ability-forge.ts:216 The briefing uses a hardcoded KNOWN_TAGS constant and one abbreviated reference rather than an authoritative live extraction and complete accepted exemplars."
+        },
+        {
+          "technique": "refinement-mode-minimal-diff",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:120 The prior artifact and minimal-diff instructions exist, but returned changes are accepted before display-only diffing; no permitted closure or scope rejection is enforced."
+        },
+        {
+          "technique": "server-derived-codegen-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:133 Selecting history restores the ability without restoring its generating prompt; adoption receives the historical result with the current lastPrompt, breaking exact-input provenance."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:122 The endpoint repairs fenced output before parsing, contrary to the explicit rule to reject decoration rather than repair it."
+        },
+        {
+          "technique": "tag-dialect-normalization",
+          "verdict": "deviation",
+          "evidence": "src/lib/ability/tag-dialect.ts:36 Forge adoption uses this unconditional convention mapping, which collapses distinct underscore spellings without declaration-based resolution, collision handling, or an unresolved result."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "ability-authoring-to-engine",
+      "context": "ability-design",
+      "reason": "Opened src/stores/abilitySpecStore.ts: it is a per-entity Zustand cache delegating persistence to the API/DB, not the full design suite described; assigning the other contexts' authoring guarantees to this store would not establish a context-local verdict."
+    },
+    {
+      "subject": "ability-authoring-to-engine",
+      "context": "ability-gas-balance",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor TagAuditSection.tsx and tag-audit.ts sit in the tags/ and lib/ability code, not in the gas-balance context, and nothing in gas-balance imports or renders the tag audit score. The empty-set-gives-100 behaviour is real (tag-audit.ts:118), but it belongs to a different context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T22:06:11.735528+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "ability-authoring-to-engine"
+      ],
+      "techniques": [
+        "declared-vs-referenced-tag-audit"
+      ],
+      "deviations": 1,
+      "context": "ability-gas-balance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-16T22:06:11.735528+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "ability-authoring-to-engine"
+      ],
+      "techniques": [
+        "few-shot-reference-plus-tag-registry",
+        "server-derived-codegen-report",
+        "strict-output-schema-with-derived-dependents"
+      ],
+      "deviations": 1,
+      "context": "ability-blueprint",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-16T22:06:11.735528+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "ability-authoring-to-engine"
+      ],
+      "techniques": [
+        "declared-vs-referenced-tag-audit"
+      ],
+      "deviations": 1,
+      "context": "ability-spellbook-core",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-16T22:06:11.735528+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "ability-authoring-to-engine"
+      ],
+      "techniques": [
+        "few-shot-reference-plus-tag-registry",
+        "refinement-mode-minimal-diff",
+        "server-derived-codegen-report",
+        "strict-output-schema-with-derived-dependents",
+        "tag-dialect-normalization"
+      ],
+      "deviations": 1,
+      "context": "ability-forge",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

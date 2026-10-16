@@ -5985,6 +5985,105 @@
           "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:286 These bands classify completed simulation results for breakpoint reporting; they do not bound a live adaptive controller."
         }
       ]
+    },
+    "ee957a28-f90d-4863-8f75-c599520803a4/ability-authoring-to-engine": {
+      "context": "ability-gas-balance",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:06:11.735Z",
+      "techniques": [
+        {
+          "technique": "declared-vs-referenced-tag-audit",
+          "verdict": "deviation",
+          "evidence": "src/lib/ability/tag-audit.ts:118 Empty sets produce 100; the standard explicitly requires the unmeasured guard inside the scoring function, regardless of caller guards."
+        }
+      ],
+      "withdrawn": {
+        "worker": "478defd9-2348-4439-9976-a877660f5156",
+        "state": "deviation",
+        "at": "2026-10-16T22:06:34.755255+00:00",
+        "reason": "reviewer (sonnet): The anchor TagAuditSection.tsx and tag-audit.ts sit in the tags/ and lib/ability code, not in the gas-balance context, and nothing in gas-balance imports or renders the tag audit score. The empty-set-gives-100 behaviour is real (tag-audit.ts:118), but it belongs to a different context."
+      }
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/ability-authoring-to-engine": {
+      "context": "ability-blueprint",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:06:11.735Z",
+      "worker": "478defd9-2348-4439-9976-a877660f5156",
+      "techniques": [
+        {
+          "technique": "few-shot-reference-plus-tag-registry",
+          "verdict": "deviation",
+          "evidence": "src/lib/ability/logic-prompts.ts:49 The blueprint draft path supplies generic conventions and thin ability identity, without a live registry, accepted exemplars, or instructions to read named exemplars."
+        },
+        {
+          "technique": "server-derived-codegen-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/GeneratedFilesPanel.tsx:44 The panel promotes the callback's buildOk directly into a compile verdict; the shared callback evidence limitation is described in notes."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "deviation",
+          "evidence": "src/app/api/ability-spec/route.ts:54 The draft callback checks only that both fields are arrays, then casts their entries and persists them without field, bound, relationship, or identifier validation."
+        }
+      ]
+    },
+    "4a2ff90c-3fc1-4692-929c-98b8ecb796ac/ability-authoring-to-engine": {
+      "context": "ability-spellbook-core",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:06:11.735Z",
+      "worker": "478defd9-2348-4439-9976-a877660f5156",
+      "techniques": [
+        {
+          "technique": "declared-vs-referenced-tag-audit",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/_shared/data.ts:690 The attribution describes an empty list as actual absence, although useAbilitySpecTags also returns that list after failed extraction."
+        }
+      ]
+    },
+    "968f37ed-d663-4839-8eb0-4dd445d129ed/ability-authoring-to-engine": {
+      "context": "ability-forge",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:06:11.735Z",
+      "worker": "478defd9-2348-4439-9976-a877660f5156",
+      "techniques": [
+        {
+          "technique": "few-shot-reference-plus-tag-registry",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ability-forge.ts:216 The briefing uses a hardcoded KNOWN_TAGS constant and one abbreviated reference rather than an authoritative live extraction and complete accepted exemplars."
+        },
+        {
+          "technique": "refinement-mode-minimal-diff",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:120 The prior artifact and minimal-diff instructions exist, but returned changes are accepted before display-only diffing; no permitted closure or scope rejection is enforced."
+        },
+        {
+          "technique": "server-derived-codegen-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:133 Selecting history restores the ability without restoring its generating prompt; adoption receives the historical result with the current lastPrompt, breaking exact-input provenance."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:122 The endpoint repairs fenced output before parsing, contrary to the explicit rule to reject decoration rather than repair it."
+        },
+        {
+          "technique": "tag-dialect-normalization",
+          "verdict": "deviation",
+          "evidence": "src/lib/ability/tag-dialect.ts:36 Forge adoption uses this unconditional convention mapping, which collapses distinct underscore spellings without declaration-based resolution, collision handling, or an unresolved result."
+        }
+      ]
     }
   }
 }

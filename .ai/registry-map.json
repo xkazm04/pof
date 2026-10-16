@@ -1688,7 +1688,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/useAbilitySpecBinding.ts:147 The editor hydrates persisted generated specs whose acceptance endpoint checks arrays but does not validate their effect and rule entries.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:5830c3752f48cc16",
+          "evaluatedRevision": 7
         },
         {
           "subject": "realtime-combat-semantics",
@@ -2014,7 +2018,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:120 A refinement becomes the current adoptable result before its changes are checked against a permitted change scope.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:5830c3752f48cc16",
+          "evaluatedRevision": 7
         },
         {
           "subject": "realtime-combat-semantics",
@@ -2341,7 +2349,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/_shared/useAbilitySpecTags.ts:25 A failed app-tag fetch silently leaves an empty list, allowing the core audit to treat an unmeasured authoring source as having no references.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:5830c3752f48cc16",
+          "evaluatedRevision": 7
         },
         {
           "subject": "realtime-combat-semantics",
