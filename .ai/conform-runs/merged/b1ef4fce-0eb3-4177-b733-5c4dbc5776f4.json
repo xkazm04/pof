@@ -1,0 +1,167 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b1ef4fce-0eb3-4177-b733-5c4dbc5776f4",
+ "subject": "arpg-systems-canon",
+ "evaluatedAt": "2026-10-16T00:42:56.783758+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "loot-affix-workbench",
+   "subject": "arpg-systems-canon",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/craftingKernel.ts:109 Affix magnitudes scale continuously with item level instead of being sampled from weighted tiers with minimum-level gates.",
+   "techniques": [
+    {
+     "technique": "added-increased-more-stacking",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/data.ts:74 This percentage damage modifier declares no added, increased, or more bucket."
+    },
+    {
+     "technique": "ilvl-gated-affix-tiers",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:41 Displayed tiers are scaled copies of one range, without tier eligibility gates or per-tier weights; the crafting kernel uses the same continuous scaling."
+    },
+    {
+     "technique": "rarity-is-an-affix-budget",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/hooks.ts:137 Legendary bases use the same random affix generator as other rarities, rather than a fixed hand-authored modifier set."
+    }
+   ]
+  },
+  {
+   "context": "loot-affix-core",
+   "subject": "arpg-systems-canon",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/affix/AffixRollSimulator/useAffixRollSimulator.tsx:77 The three-slot simulator samples repeatedly from the unchanged pool, permitting duplicate affixes contrary to family distinctness.",
+   "techniques": [
+    {
+     "technique": "added-increased-more-stacking",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/_shared/data.ts:137 The damage bonus exists as description text without a declared stacking bucket."
+    },
+    {
+     "technique": "rarity-is-an-affix-budget",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/AffixRollSimulator/useAffixRollSimulator.tsx:70 Every roll makes three independent picks, without a rarity-selected slot budget or family exclusion."
+    }
+   ]
+  },
+  {
+   "context": "inventory-economy-simulator",
+   "subject": "arpg-systems-canon",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_inventory/_shared/data-items.ts:49 Weapon damage magnitude is multiplied by rarity, making rarity a magnitude axis rather than only an affix budget.",
+   "techniques": [
+    {
+     "technique": "added-increased-more-stacking",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_inventory/_shared/data-items.ts:14 The percentage attack modifier carries display text and a category, but no stacking bucket."
+    },
+    {
+     "technique": "ilvl-gated-affix-tiers",
+     "verdict": "deviation",
+     "evidence": "src/lib/economy/item-economy-engine.ts:314 The simulator passes character level into drop generation, which assigns that level to the item and scales affix magnitudes from it instead of using a content-source level."
+    },
+    {
+     "technique": "rarity-is-an-affix-budget",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_inventory/_shared/data-items.ts:11 These rarity multipliers directly increase weapon, armour, and accessory stat magnitudes."
+    }
+   ]
+  },
+  {
+   "context": "progression-rewards-internals",
+   "subject": "arpg-systems-canon",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:35 The encounter simulator computes armour reduction independently of incoming hit size and uses that reduction to produce balance verdicts.",
+   "techniques": [
+    {
+     "technique": "layered-defenses-and-the-ehp-floor",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:22 Reported effective HP is only vitality-scaled life; it has no reference-hit/type mitigation basis or capped-resistance floor evaluation."
+    },
+    {
+     "technique": "mitigation-order-and-soft-caps",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:36 Enemy armour also uses a fixed denominator, so changing hit size cannot change its mitigation percentage."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "arpg-systems-canon",
+   "context": "progression-curves-builds",
+   "reason": "The opened charts compare illustrative stat series and generic player-power/enemy-difficulty ratios; I could not confidently determine whether those ratios claim defensive viability, and the separately scoped TTK implementation cannot supply this context's verdict."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-16T00:42:56.783758+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "arpg-systems-canon"
+   ],
+   "techniques": [
+    "added-increased-more-stacking",
+    "ilvl-gated-affix-tiers",
+    "rarity-is-an-affix-budget"
+   ],
+   "deviations": 1,
+   "context": "loot-affix-workbench",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T00:42:56.783758+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "arpg-systems-canon"
+   ],
+   "techniques": [
+    "added-increased-more-stacking",
+    "rarity-is-an-affix-budget"
+   ],
+   "deviations": 1,
+   "context": "loot-affix-core",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T00:42:56.783758+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "arpg-systems-canon"
+   ],
+   "techniques": [
+    "added-increased-more-stacking",
+    "ilvl-gated-affix-tiers",
+    "rarity-is-an-affix-budget"
+   ],
+   "deviations": 1,
+   "context": "inventory-economy-simulator",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T00:42:56.783758+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "arpg-systems-canon"
+   ],
+   "techniques": [
+    "layered-defenses-and-the-ehp-floor",
+    "mitigation-order-and-soft-caps"
+   ],
+   "deviations": 1,
+   "context": "progression-rewards-internals",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

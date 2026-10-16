@@ -14370,7 +14370,11 @@
           "revision": 3,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/_shared/data-items.ts:49 Weapon damage magnitude is multiplied by rarity, making rarity a magnitude axis rather than only an affix budget.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d035028544c76685",
+          "evaluatedRevision": 3
         },
         {
           "subject": "alerting",
@@ -16034,7 +16038,11 @@
           "revision": 3,
           "changedAt": "2026-09-10",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/AffixRollSimulator/useAffixRollSimulator.tsx:77 The three-slot simulator samples repeatedly from the unchanged pool, permitting duplicate affixes contrary to family distinctness.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d035028544c76685",
+          "evaluatedRevision": 3
         },
         {
           "subject": "game-economy-tuning",
@@ -16223,7 +16231,11 @@
           "revision": 3,
           "changedAt": "2026-09-10",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/craftingKernel.ts:109 Affix magnitudes scale continuously with item level instead of being sampled from weighted tiers with minimum-level gates.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d035028544c76685",
+          "evaluatedRevision": 3
         },
         {
           "subject": "game-economy-tuning",
@@ -19262,7 +19274,11 @@
           "revision": 3,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:35 The encounter simulator computes armour reduction independently of incoming hit size and uses that reduction to produce balance verdicts.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:d035028544c76685",
+          "evaluatedRevision": 3
         },
         {
           "subject": "ability-authoring-to-engine",
