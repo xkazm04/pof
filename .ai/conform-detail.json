@@ -5606,6 +5606,115 @@
           "evidence": "src/stores/taskDAGStore.ts:203 Workflow cancellation delegates to the transient orchestrator without an ordered teardown path that clears active child sessions."
         }
       ]
+    },
+    "77c4a5c6-f0e9-4311-8cbf-504eda86e733/tiling-texture-acceptance": {
+      "context": "material-lab",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T02:44:53.287Z",
+      "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
+      "techniques": [
+        {
+          "technique": "texel-density-and-uv-tiling",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/materialPreviewProps.ts:51 Material preview maps the albedo directly without UV tiling parameters or texel density calculation against surface size."
+        },
+        {
+          "technique": "derive-only-what-the-source-encodes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/useMaterialStore.ts:217 Calls the derivation endpoint without exposing or passing the roughness inversion option needed as an escape hatch for chalky/bright surfaces."
+        },
+        {
+          "technique": "wrap-around-edge-diff",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/useMaterialStore.ts:221 The material store drops the per-map seam check results returned for derived channels, failing to verify that derivation preserved tileability."
+        },
+        {
+          "technique": "seam-threshold-calibration",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/AdvancedTexturePanel/index.tsx:98 The seam badge renders an uncalibrated default threshold without recorded catch and false-positive rates on a labelled corpus."
+        },
+        {
+          "technique": "luminance-heightfield-normal-derivation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/PBREditor.tsx:215 Allows scaling normal strength as an ungrounded scalar but does not provide height field inspection or output seam verification."
+        }
+      ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/tiling-texture-acceptance": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T02:44:53.287Z",
+      "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
+      "techniques": [
+        {
+          "technique": "wrap-around-edge-diff",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:82 Computes only the mean per-channel edge difference, omitting the maximum pixel discontinuity required to catch sharp structural mismatches."
+        },
+        {
+          "technique": "seam-threshold-calibration",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:53 The threshold is an asserted conservative estimate (~20/255) rather than a value calibrated on a labelled corpus of clean and seamed tiles."
+        },
+        {
+          "technique": "texel-density-and-uv-tiling",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/texel-density.ts:72 Texel density logic sizes unique mesh bakes and prop atlases but does not compute UV tiling repeat counts for continuous tiling textures on surfaces."
+        }
+      ]
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/tiling-texture-acceptance": {
+      "context": "image-generation",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T02:44:53.287Z",
+      "techniques": [
+        {
+          "technique": "wrap-around-edge-diff",
+          "verdict": "deviation",
+          "evidence": "src/app/api/leonardo/route.ts:46 The Leonardo image generation endpoint deliberately omitted seam testing because tiling generation is not triggered by callers."
+        },
+        {
+          "technique": "seam-threshold-calibration",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:63 Allows callers to supply arbitrary thresholds rather than enforcing a single authority calibrated on corpus error rates."
+        }
+      ],
+      "withdrawn": {
+        "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
+        "state": "deviation",
+        "at": "2026-10-16T02:45:32.788975+00:00",
+        "reason": "reviewer (sonnet): The anchor src/app/api/leonardo/route.ts is not among this context's files, and its comment says the seam path was removed on purpose because no caller requests tiling. It also names /api/scenario as the live seam check, which contradicts 'relying on callers to notice seams downstream'. The seam-che"
+      }
+    },
+    "9a11b0c7-a013-434b-8325-086ee4151f70/tiling-texture-acceptance": {
+      "context": "visual-gen-style-asset-library",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T02:44:53.287Z",
+      "techniques": [
+        {
+          "technique": "biome-themed-tile-prompting",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/biome-textures.ts:74 Directly indexes the closed biome map without a declared fallback generic for unrecognized environment classes, and duplicates quality suffixes across static prompts."
+        }
+      ],
+      "withdrawn": {
+        "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
+        "state": "deviation",
+        "at": "2026-10-16T02:45:32.837470+00:00",
+        "reason": "reviewer (sonnet): `pickBiomeTexture(biome: Biome)` indexes a closed TypeScript union, and I found no caller that passes an unrecognized biome. Both the unknown-biome lookup failure and the link to tiling acceptance are unconfirmed, and the one concrete detail, a repeated 'seamless tileable PBR texture' phrase in the "
+      }
     }
   }
 }

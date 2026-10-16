@@ -1,0 +1,150 @@
+{
+  "schema": "conform-run/1",
+  "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
+  "subject": "tiling-texture-acceptance",
+  "evaluatedAt": "2026-10-16T02:44:53.287933+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "material-lab",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/material-lab/useMaterialStore.ts:32 The material store defines only base PBR parameters without UV repeat or texel density parameters, leaving tiling textures unparameterized for density acceptance.",
+      "techniques": [
+        {
+          "technique": "texel-density-and-uv-tiling",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/materialPreviewProps.ts:51 Material preview maps the albedo directly without UV tiling parameters or texel density calculation against surface size."
+        },
+        {
+          "technique": "derive-only-what-the-source-encodes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/useMaterialStore.ts:217 Calls the derivation endpoint without exposing or passing the roughness inversion option needed as an escape hatch for chalky/bright surfaces."
+        },
+        {
+          "technique": "wrap-around-edge-diff",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/useMaterialStore.ts:221 The material store drops the per-map seam check results returned for derived channels, failing to verify that derivation preserved tileability."
+        },
+        {
+          "technique": "seam-threshold-calibration",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/AdvancedTexturePanel/index.tsx:98 The seam badge renders an uncalibrated default threshold without recorded catch and false-positive rates on a labelled corpus."
+        },
+        {
+          "technique": "luminance-heightfield-normal-derivation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/PBREditor.tsx:215 Allows scaling normal strength as an ungrounded scalar but does not provide height field inspection or output seam verification."
+        }
+      ]
+    },
+    {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/seam-check.ts:82 The seam check averages edge differences into a mean delta without computing maximum discontinuity, allowing narrow local seams to pass undetected.",
+      "techniques": [
+        {
+          "technique": "wrap-around-edge-diff",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:82 Computes only the mean per-channel edge difference, omitting the maximum pixel discontinuity required to catch sharp structural mismatches."
+        },
+        {
+          "technique": "seam-threshold-calibration",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:53 The threshold is an asserted conservative estimate (~20/255) rather than a value calibrated on a labelled corpus of clean and seamed tiles."
+        },
+        {
+          "technique": "texel-density-and-uv-tiling",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/texel-density.ts:72 Texel density logic sizes unique mesh bakes and prop atlases but does not compute UV tiling repeat counts for continuous tiling textures on surfaces."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "tiling-texture-acceptance",
+      "context": "material-configurator",
+      "reason": "The material configurator module configures UE5 shading parameters (roughness, metallic, subsurface scattering, parallax occlusion, WPO), material layer hierarchies, and shader instruction budgets; it does not author, derive, or acceptance-test tiling textures."
+    },
+    {
+      "subject": "tiling-texture-acceptance",
+      "context": "image-generation",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor src/app/api/leonardo/route.ts is not among this context's files, and its comment says the seam path was removed on purpose because no caller requests tiling. It also names /api/scenario as the live seam check, which contradicts 'relying on callers to notice seams downstream'. The seam-che"
+    },
+    {
+      "subject": "tiling-texture-acceptance",
+      "context": "visual-gen-style-asset-library",
+      "reason": "withdrawn after review: reviewer (sonnet): `pickBiomeTexture(biome: Biome)` indexes a closed TypeScript union, and I found no caller that passes an unrecognized biome. Both the unknown-biome lookup failure and the link to tiling acceptance are unconfirmed, and the one concrete detail, a repeated 'seamless tileable PBR texture' phrase in the "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T02:44:53.287933+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "tiling-texture-acceptance"
+      ],
+      "techniques": [
+        "derive-only-what-the-source-encodes",
+        "luminance-heightfield-normal-derivation",
+        "seam-threshold-calibration",
+        "texel-density-and-uv-tiling",
+        "wrap-around-edge-diff"
+      ],
+      "deviations": 1,
+      "context": "material-lab",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-16T02:44:53.287933+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "tiling-texture-acceptance"
+      ],
+      "techniques": [
+        "seam-threshold-calibration",
+        "texel-density-and-uv-tiling",
+        "wrap-around-edge-diff"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-16T02:44:53.287933+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "tiling-texture-acceptance"
+      ],
+      "techniques": [
+        "seam-threshold-calibration",
+        "wrap-around-edge-diff"
+      ],
+      "deviations": 1,
+      "context": "image-generation",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-16T02:44:53.287933+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "tiling-texture-acceptance"
+      ],
+      "techniques": [
+        "biome-themed-tile-prompting"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-style-asset-library",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

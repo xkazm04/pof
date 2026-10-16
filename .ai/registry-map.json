@@ -16794,7 +16794,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/useMaterialStore.ts:32 The material store defines only base PBR parameters without UV repeat or texel density parameters, leaving tiling textures unparameterized for density acceptance.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:79554b00c93b3e3e",
+          "evaluatedRevision": 1
         },
         {
           "subject": "imported-material-conformance",
@@ -24344,7 +24348,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:82 The seam check averages edge differences into a mean delta without computing maximum discontinuity, allowing narrow local seams to pass undetected.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:79554b00c93b3e3e",
+          "evaluatedRevision": 1
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
