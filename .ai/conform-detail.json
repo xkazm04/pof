@@ -5860,6 +5860,52 @@
           "evidence": "src/lib/notify/gate-notify-store.ts:66 Hydrate spreads the parsed record over the defaults, so keys this build does not name remain on the object that is written back."
         }
       ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/asset-class-poly-budgeting": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:17:27.710Z",
+      "techniques": [
+        {
+          "technique": "provider-face-limit-conversion",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/face-budget.ts:76 Converts authored triangle budget to provider face_limit at the edge, explicitly halving and flooring for quad topology."
+        },
+        {
+          "technique": "quad-trap-detection",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/face-budget.ts:121 Tests measured/requested ratio against explicit [1.8, 2.2] band and attributes overruns inside it to the quad/triangle trap by name."
+        },
+        {
+          "technique": "part-split-budget-division",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:180 Divides assembled whole budget by part count when naive per-part modular budget overruns, returning constrained flag and rationale."
+        },
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:219 Enforces class ceiling resolution without promoting unclassified assets, reporting class-blind degradation explicitly."
+        },
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/face-budget.ts:29 Declares triangles as the single exported constant unit for all authored geometry budgets in the codebase."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:144 Withholds faceLimit from the generator for bake-quality classes so surplus density is not capped or distorted at generation time, leaving retopo to hit target."
+        }
+      ],
+      "withdrawn": {
+        "worker": "a2d7f620-737d-4b38-b238-8a56fdaf429d",
+        "state": "conformant",
+        "at": "2026-10-16T21:17:41.469567+00:00",
+        "reason": "reviewer (sonnet): `planPartBudget` (polycount-presets.ts:180) has no caller in src outside tests, and `mesh-split.ts` never calls it, so the claim that the gate divides split-part budgets against the assembled whole is not shown in running code. The `providerFaceLimit` quad halving is also only called from `runner-di"
+      }
     }
   }
 }

@@ -1,0 +1,57 @@
+{
+  "schema": "conform-run/1",
+  "worker": "a2d7f620-737d-4b38-b238-8a56fdaf429d",
+  "subject": "asset-class-poly-budgeting",
+  "evaluatedAt": "2026-10-16T21:17:27.710814+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "visual-gen-mesh",
+      "reason": "API route handlers for post-processing and import (mesh finishing, splitting, scene decomposition, view gating, UE import) that delegate budget enforcement and grading to visual-gen-mesh-quality-gates and do not directly author budgets or convert generative provider requests."
+    },
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "blender-mcp-bridge",
+      "reason": "TCP transport bridge and scripts communicating with Blender via MCP over a raw socket; the subject's geometry budget conversion and grading lifecycle occurs upstream in the visual generation gate modules."
+    },
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "blender-pipeline",
+      "reason": "Frontend UI views and tab components invoking Blender scripts for LOD generation, mesh optimization, and FBX conversion; budget planning and grading math are implemented in library modules rather than the UI views."
+    },
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "asset-viewer-and-browser",
+      "reason": "Frontend 3D viewport and asset library UI components that consume pre-computed scores and polycount presets for display rather than participating in the generative commissioning, conversion, and gating pipeline."
+    },
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "visual-gen-mesh-quality-gates",
+      "reason": "withdrawn after review: reviewer (sonnet): `planPartBudget` (polycount-presets.ts:180) has no caller in src outside tests, and `mesh-split.ts` never calls it, so the claim that the gate divides split-part budgets against the assembled whole is not shown in running code. The `providerFaceLimit` quad halving is also only called from `runner-di"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T21:17:27.710814+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "asset-class-poly-budgeting"
+      ],
+      "techniques": [
+        "budget-shapes-output-not-just-caps",
+        "class-ceiling-vs-requested-budget",
+        "part-split-budget-division",
+        "provider-face-limit-conversion",
+        "quad-trap-detection",
+        "triangles-as-the-authored-unit"
+      ],
+      "deviations": 0,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
