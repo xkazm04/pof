@@ -1773,7 +1773,11 @@
           "revision": 1,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/EffectTimelineEditor.tsx:89 Every effect is an SVG group in one timeline, and a search of the blueprint directory for useVirtualizer, overscan, premount, renderUnit, and content-visibility found none, so React mounts the whole graph.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:df020f172eb32893",
+          "evaluatedRevision": 1
         },
         {
           "subject": "visual-script-to-code-transpilation",
@@ -3830,7 +3834,11 @@
           "revision": 1,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:37 Every state becomes a React button in one map, and a search of this context for useVirtualizer, overscan, premount, renderUnit, and content-visibility found none, so React decides which elements exist.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:df020f172eb32893",
+          "evaluatedRevision": 1
         },
         {
           "subject": "voice-io",
@@ -15468,7 +15476,11 @@
           "revision": 1,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 Every filtered matrix row is a table row inside an overflow:auto div, and a search of layout-lab for useVirtualizer, overscan, premount, renderUnit, and content-visibility found none, so the browser scrolls elements React already created.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:df020f172eb32893",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -18386,7 +18398,11 @@
           "revision": 1,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/StepFrame.tsx:207 Every step panel is rendered as a React section, and a search of steps and one-shot for useVirtualizer, overscan, premount, renderUnit, and content-visibility found none, so the toolkit decides element existence.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:df020f172eb32893",
+          "evaluatedRevision": 1
         },
         {
           "subject": "render-submission-economy",
@@ -21245,7 +21261,11 @@
           "revision": 1,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useIsMounted.ts:6 These hooks follow React component mount, and a search of src/hooks for useVirtualizer, overscan, premount, renderUnit, and content-visibility found none, so they do not decide which host objects exist.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:df020f172eb32893",
+          "evaluatedRevision": 1
         },
         {
           "subject": "terminal-multiplexing",

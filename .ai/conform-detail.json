@@ -6371,6 +6371,212 @@
           "evidence": "src/lib/visual-gen/tripo-skins.ts:154 Line 148 filters out unmeasured entries; two matching measured variants therefore yield consistent even when another variant lacks measurements."
         }
       ]
+    },
+    "9aaa14f4-5109-4e11-a7c5-2684cc02ad11/render-mount-pipeline": {
+      "context": "animation-state-machine-viewer",
+      "subject": "render-mount-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:52:18.190Z",
+      "worker": "b58940b4-7d6d-4995-87b1-62628888e193",
+      "techniques": [
+        {
+          "technique": "blueprint-then-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/useAnimationStateMachine.ts:92 Positions for the whole scan are computed in a render useMemo and then styled onto buttons; there is no host-free blueprint for a separate mount pass."
+        },
+        {
+          "technique": "edge-sorted-incremental-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineDiagram.tsx:57 The diagram picks a fixed panel height from the state count and does not mount or release nodes as viewport edges cross."
+        },
+        {
+          "technique": "mount-binders-versus-attach-binders",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:82 The click listener is a React prop on the button, so its lifetime is the element's, not a mount clock separate from an attach clock."
+        },
+        {
+          "technique": "mount-references-across-features",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:71 Unreachable states stay in the tree and are only faded, so no visibility window is voting them out while another feature holds them."
+        },
+        {
+          "technique": "preempt-and-continue-shared-computation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/useAnimationStateMachine.ts:87 The displayed graph is derived in a render useMemo on the calling thread; nothing joins a layout already running elsewhere."
+        },
+        {
+          "technique": "recycle-by-content-type",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:81 Each state gets its own button keyed by state id, and no host is acquired from a pool keyed by content type."
+        }
+      ],
+      "registryProposal": "use_when names virtualized lists and native runtimes, but the opening exclusion of a declarative toolkit is easy to miss, so a React map of every child looks like a mount pass."
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/render-mount-pipeline": {
+      "context": "pipeline-step-components",
+      "subject": "render-mount-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:52:18.190Z",
+      "worker": "b58940b4-7d6d-4995-87b1-62628888e193",
+      "techniques": [
+        {
+          "technique": "blueprint-then-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/StepFrame.tsx:206 Panels are placed by a CSS grid on sections React creates, not by a mount pass reading a blueprint of render units."
+        },
+        {
+          "technique": "edge-sorted-incremental-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/one-shot/RunLogView.tsx:62 Every recorded run step is a row in a column flex, with no edge cursors releasing rows that leave a viewport."
+        },
+        {
+          "technique": "mount-binders-versus-attach-binders",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/ItemGate.tsx:74 Each check is a React child keyed by name; nothing declares a content binder on one clock and a listener on another."
+        },
+        {
+          "technique": "mount-references-across-features",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/one-shot/OneShotPanel.tsx:45 The drawer is either fully returned or not rendered, and no second feature is voting a render unit against a visibility window."
+        },
+        {
+          "technique": "preempt-and-continue-shared-computation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/useStaticStep.ts:37 The step reads one stored artifact during render and does not join a layout computation running on another thread."
+        },
+        {
+          "technique": "recycle-by-content-type",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:242 Each graph node is a new span keyed by node id, not a host taken from a pool keyed by leaf content type."
+        }
+      ]
+    },
+    "e00660d8-9dde-4409-9590-4c82d7a18eea/render-mount-pipeline": {
+      "context": "shared-utility-hooks",
+      "subject": "render-mount-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:52:18.190Z",
+      "worker": "b58940b4-7d6d-4995-87b1-62628888e193",
+      "techniques": [
+        {
+          "technique": "blueprint-then-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useElementSize.ts:30 Size comes from the browser's ResizeObserver on an element React already mounted, so the hook never hands a blueprint to a mount pass."
+        },
+        {
+          "technique": "edge-sorted-incremental-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useScrollRestoration.ts:27 The hook writes a saved scroll offset on a container the caller already rendered and does not acquire or release units as edges cross."
+        },
+        {
+          "technique": "mount-binders-versus-attach-binders",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useSuspend.ts:102 Suspension skips a React effect; teardown is that effect's cleanup, not content binders on a mount clock versus listeners on an attach clock."
+        },
+        {
+          "technique": "mount-references-across-features",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useSuspend.ts:64 A suspended module stays in React's tree and this hook only drops store notifications, so no feature holds a mount reference on a render unit."
+        },
+        {
+          "technique": "preempt-and-continue-shared-computation",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useViewportWidth.ts:33 Viewport width arrives from the browser on the main thread; there is no background layout to interrupt and continue."
+        },
+        {
+          "technique": "recycle-by-content-type",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useDynamicTitle.ts:51 The only element created here is a throwaway 32x32 favicon canvas, not a pool of hosts keyed by content type."
+        }
+      ]
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/render-mount-pipeline": {
+      "context": "ability-blueprint",
+      "subject": "render-mount-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:52:18.190Z",
+      "worker": "b58940b4-7d6d-4995-87b1-62628888e193",
+      "techniques": [
+        {
+          "technique": "blueprint-then-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/WiringGraphEditor.tsx:95 Node x/y is read in the same render that paints SVG rects, so layout is not a host-free blueprint handed to a mount pass."
+        },
+        {
+          "technique": "edge-sorted-incremental-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/EffectTimelineEditor.tsx:81 The timeline SVG grows with every effect and the scroller pans that one SVG, so a scroll step does not mount or release units."
+        },
+        {
+          "technique": "mount-binders-versus-attach-binders",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/EffectTimelineEditor.tsx:95 Selection is an onClick on an SVG group that stays mounted; there is no split between a content-bind clock and an attach clock."
+        },
+        {
+          "technique": "mount-references-across-features",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/EffectTimelineEditor.tsx:93 Effects outside the playhead stay in the SVG and only change opacity, so no feature is holding a mount reference against a window."
+        },
+        {
+          "technique": "preempt-and-continue-shared-computation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/useSimulationSandbox.ts:51 The sandbox calls runSimulation synchronously and stores the snapshots; playback is a timer over that array, not a frame thread continuing another thread's layout."
+        },
+        {
+          "technique": "recycle-by-content-type",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/Sparkline.tsx:24 Every sample is folded into one polyline's point string, so the sparkline never allocates or recycles a host per content type."
+        }
+      ]
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/render-mount-pipeline": {
+      "context": "lab-shell-and-navigation",
+      "subject": "render-mount-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T23:52:18.190Z",
+      "worker": "b58940b4-7d6d-4995-87b1-62628888e193",
+      "techniques": [
+        {
+          "technique": "blueprint-then-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:220 The matrix is an HTML table, so the browser lays out every cell and there is no blueprint of render units for a mount pass."
+        },
+        {
+          "technique": "edge-sorted-incremental-mount",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:204 Scrolling is CSS overflow on a container whose children are the full table, not two cursors over edge-sorted units."
+        },
+        {
+          "technique": "mount-binders-versus-attach-binders",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:278 The cell click handler is a React prop on the button, with no mount-clock content bind distinct from an attach-clock listener."
+        },
+        {
+          "technique": "mount-references-across-features",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:144 View changes are one Framer Motion exit of a whole view, not per-unit reference counts between a visibility window and another feature."
+        },
+        {
+          "technique": "preempt-and-continue-shared-computation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:145 Each lab view is one React child created on the render path, and nothing interrupts a layout running on another thread."
+        },
+        {
+          "technique": "recycle-by-content-type",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:179 Every entity of the selected catalog is its own React child, not a host reused from a pool keyed by content type."
+        }
+      ]
     }
   }
 }
