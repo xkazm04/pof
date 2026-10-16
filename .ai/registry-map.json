@@ -10629,7 +10629,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:29 Recursive searches found no portfolio, projectId, or recent_projects matches in this context, whose registry provides game-submodule visualizations rather than project management.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "module-design",
@@ -19613,7 +19617,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:60 Review history is selected using the project path as its identity, so a move changes the history lookup instead of rebinding the existing project.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "machine-authored-documentation",
@@ -19765,7 +19773,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/recent-projects/route.ts:85 New recent-project records use path-derived progress identities, so moving or re-cloning a project creates a different key instead of preserving its relationships.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "error-handling",
@@ -22685,7 +22697,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/constants.ts:11 Recursive searches found no portfolio, projectId, or recent_projects matches in this context, whose catalog monitors bridge routes and editor test suites rather than managed projects.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",

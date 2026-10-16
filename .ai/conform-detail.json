@@ -5294,6 +5294,130 @@
           "evidence": "src/components/modules/core-engine/sub_progression/_internals/EncounterTTKSimulator/helpers.ts:36 Enemy armour also uses a fixed denominator, so changing hit size cannot change its mitigation percentage."
         }
       ]
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/multi-project": {
+      "context": "project-ops-api",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:06:13.261Z",
+      "worker": "21297050-2504-405c-b247-02fa98e3dc38",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "deviation",
+          "evidence": "src/app/api/recent-projects/route.ts:85 The called helper hashes the normalized filesystem path rather than minting an opaque project identity."
+        }
+      ]
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/multi-project": {
+      "context": "project-health-dashboards",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:06:13.261Z",
+      "worker": "21297050-2504-405c-b247-02fa98e3dc38",
+      "techniques": [
+        {
+          "technique": "cross-project-comparison",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/helpers.ts:4 The comparison population comprises modules of the open project, rather than projects across a portfolio."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:159 This navigation changes evaluator views, rather than maintaining open-project tabs."
+        },
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:60 A mutable filesystem path performs project-identifying work in the history request."
+        }
+      ]
+    },
+    "940bbe98-a8c3-4d5e-b4e5-c447578e2123/multi-project": {
+      "context": "ue5-bridge-monitoring",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:06:13.261Z",
+      "worker": "21297050-2504-405c-b247-02fa98e3dc38",
+      "techniques": [
+        {
+          "technique": "cross-project-comparison",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/SnapshotsTab.tsx:85 Snapshot comparisons concern camera presets within a project, rather than portfolio scores."
+        },
+        {
+          "technique": "passive-signal-ingestion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:56 These are explicit bridge diagnostics, rather than watchers maintaining a portfolio pulse."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:41 Tabs select harness sections, rather than open projects."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/constants.ts:11 Grouping follows bridge subsystems and routes, rather than portfolio drill levels."
+        },
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:75 The keys identify endpoint routes, rather than projects."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:53 Creation adds a test suite, rather than admitting a project into management."
+        }
+      ]
+    },
+    "4c0281bd-ea7b-44ba-86a0-ccda978296a4/multi-project": {
+      "context": "core-engine-genre-tabs",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:06:13.261Z",
+      "worker": "21297050-2504-405c-b247-02fa98e3dc38",
+      "techniques": [
+        {
+          "technique": "cross-project-comparison",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/feature-init-prompts.ts:123 The domain comparison concerns characters and their stats, rather than managed projects."
+        },
+        {
+          "technique": "passive-signal-ingestion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx:31 Feature scanning is member-level tooling, rather than portfolio pulse ingestion."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:105 Tab lookup is by game submodule, rather than open-project identity."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx:25 Navigation groups sections of one module, rather than projects and portfolio dimensions."
+        },
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/VisibleSection.tsx:14 This lookup controls module-section visibility and does not identify a managed project."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:125 Import applies a character or item genome, rather than admitting a project."
+        }
+      ]
     }
   }
 }

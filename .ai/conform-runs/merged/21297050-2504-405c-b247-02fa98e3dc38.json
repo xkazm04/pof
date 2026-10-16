@@ -1,0 +1,213 @@
+{
+ "schema": "conform-run/1",
+ "worker": "21297050-2504-405c-b247-02fa98e3dc38",
+ "subject": "multi-project",
+ "evaluatedAt": "2026-10-16T01:06:13.261274+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "project-ops-api",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/recent-projects/route.ts:85 New recent-project records use path-derived progress identities, so moving or re-cloning a project creates a different key instead of preserving its relationships.",
+   "techniques": [
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "deviation",
+     "evidence": "src/app/api/recent-projects/route.ts:85 The called helper hashes the normalized filesystem path rather than minting an opaque project identity."
+    }
+   ]
+  },
+  {
+   "context": "project-health-dashboards",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:60 Review history is selected using the project path as its identity, so a move changes the history lookup instead of rebinding the existing project.",
+   "techniques": [
+    {
+     "technique": "cross-project-comparison",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/helpers.ts:4 The comparison population comprises modules of the open project, rather than projects across a portfolio."
+    },
+    {
+     "technique": "per-project-tabs-and-state",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:159 This navigation changes evaluator views, rather than maintaining open-project tabs."
+    },
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:60 A mutable filesystem path performs project-identifying work in the history request."
+    }
+   ]
+  },
+  {
+   "context": "ue5-bridge-monitoring",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/constants.ts:11 Recursive searches found no portfolio, projectId, or recent_projects matches in this context, whose catalog monitors bridge routes and editor test suites rather than managed projects.",
+   "techniques": [
+    {
+     "technique": "cross-project-comparison",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/SnapshotsTab.tsx:85 Snapshot comparisons concern camera presets within a project, rather than portfolio scores."
+    },
+    {
+     "technique": "passive-signal-ingestion",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:56 These are explicit bridge diagnostics, rather than watchers maintaining a portfolio pulse."
+    },
+    {
+     "technique": "per-project-tabs-and-state",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:41 Tabs select harness sections, rather than open projects."
+    },
+    {
+     "technique": "portfolio-drill-hierarchy",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/constants.ts:11 Grouping follows bridge subsystems and routes, rather than portfolio drill levels."
+    },
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:75 The keys identify endpoint routes, rather than projects."
+    },
+    {
+     "technique": "project-onboarding-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:53 Creation adds a test suite, rather than admitting a project into management."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "projectId",
+    "recent_projects"
+   ]
+  },
+  {
+   "context": "core-engine-genre-tabs",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:29 Recursive searches found no portfolio, projectId, or recent_projects matches in this context, whose registry provides game-submodule visualizations rather than project management.",
+   "techniques": [
+    {
+     "technique": "cross-project-comparison",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/feature-init-prompts.ts:123 The domain comparison concerns characters and their stats, rather than managed projects."
+    },
+    {
+     "technique": "passive-signal-ingestion",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx:31 Feature scanning is member-level tooling, rather than portfolio pulse ingestion."
+    },
+    {
+     "technique": "per-project-tabs-and-state",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:105 Tab lookup is by game submodule, rather than open-project identity."
+    },
+    {
+     "technique": "portfolio-drill-hierarchy",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx:25 Navigation groups sections of one module, rather than projects and portfolio dimensions."
+    },
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/VisibleSection.tsx:14 This lookup controls module-section visibility and does not identify a managed project."
+    },
+    {
+     "technique": "project-onboarding-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:125 Import applies a character or item genome, rather than admitting a project."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "projectId",
+    "recent_projects"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "multi-project",
+   "context": "project-setup-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-16T01:06:13.261274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "project-identity-and-joins"
+   ],
+   "deviations": 1,
+   "context": "project-ops-api",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T01:06:13.261274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "cross-project-comparison",
+    "per-project-tabs-and-state",
+    "project-identity-and-joins"
+   ],
+   "deviations": 1,
+   "context": "project-health-dashboards",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T01:06:13.261274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "cross-project-comparison",
+    "passive-signal-ingestion",
+    "per-project-tabs-and-state",
+    "portfolio-drill-hierarchy",
+    "project-identity-and-joins",
+    "project-onboarding-lifecycle"
+   ],
+   "deviations": 0,
+   "context": "ue5-bridge-monitoring",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T01:06:13.261274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "cross-project-comparison",
+    "passive-signal-ingestion",
+    "per-project-tabs-and-state",
+    "portfolio-drill-hierarchy",
+    "project-identity-and-joins",
+    "project-onboarding-lifecycle"
+   ],
+   "deviations": 0,
+   "context": "core-engine-genre-tabs",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
