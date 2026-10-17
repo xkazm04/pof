@@ -6762,7 +6762,11 @@
           "revision": 3,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/profiling/csv-parser.ts:204 A stat-dump import invents up to 300 frame rows by scaling aggregates with Math.random, and the profiling view's before/after compare then treats that series as a measured frame-cost change.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:173f001a43e00fb7",
+          "evaluatedRevision": 5
         },
         {
           "subject": "supply-chain",
@@ -11939,7 +11943,11 @@
           "revision": 3,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:19 The regression report prints PASS on average FPS against a bare baseline, and the sample session stores its worst frame in the P99 field the stat panel shows.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:173f001a43e00fb7",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",
@@ -23203,7 +23211,11 @@
           "revision": 3,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/stores/baselineStore.ts:27 This store records an archetype balance snapshot and the visual route grades a screenshot; a search of src/stores and src/app/api/verify for FrameTime, hitch, p99FrameMs, spreadMs and csvStartOnEvent found none of them.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:173f001a43e00fb7",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"

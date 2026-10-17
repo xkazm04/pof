@@ -7096,6 +7096,220 @@
           "evidence": "src/hooks/useUE5Connection.ts:2 The hook mirrors a remote socket; connection-manager.ts only connects, pings, and reconnects."
         }
       ]
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/perf-regression-gating": {
+      "context": "build-quality-monitoring",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:39:28.590Z",
+      "worker": "ac5ad382-6c04-4056-b537-4355ee452d1c",
+      "techniques": [
+        {
+          "technique": "allocation-gate-on-the-shipped-configuration",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/profiling/csv-parser.ts:268 Memory rows are category totals taken from a stat dump, not a per-step byte count on the stepping thread of a shipped scenario."
+        },
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/session-compare.ts:152 The only comparability check is the frame-budget number; build, scenario, instrument, render mode and machine are not fields on the session and are not refused."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/csv-parser.ts:201 The series length is a guessed ten seconds of proxy frames, with no scenario phase markers, settle cut, or empty-window failure."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/triage-engine.ts:205 Visible stutter is asserted from frames over a 16.67ms thread-time budget; no compositor present interval is read."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/FindingsSection.tsx:23 The badge sums triage estimates and the compare calls disappeared findings realized milliseconds, with no equivalence witness."
+        },
+        {
+          "technique": "host-independent-work-counts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/index.tsx:264 The view analyzes a host capture or a generated sample and does not state those figures as a device that was not measured."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/session-compare.ts:38 Every metric shares one fixed 1% band, and a pair that stays inside it is rendered Unchanged rather than unverifiable for resolution."
+        },
+        {
+          "technique": "per-thread-budgets-not-one-frame-time",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/csv-parser.ts:205 A stage with no rows is filled with 8, 6 or 5 ms and then averaged against one 16.67ms frame budget."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/session-compare.ts:24 Avg frame and min FPS (one worst frame) receive better/worse verdicts; there is no median-relative hitch event count."
+        }
+      ]
+    },
+    "0f8602ad-d98f-4d1d-9644-0467be9e70b9/perf-regression-gating": {
+      "context": "debug-performance",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:39:28.590Z",
+      "worker": "ac5ad382-6c04-4056-b537-4355ee452d1c",
+      "techniques": [
+        {
+          "technique": "allocation-gate-on-the-shipped-configuration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:48 The typed budgets are a resident-megabyte ceiling and a GC pause warn, not allocated bytes over a shipped step."
+        },
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:27 The trend binds a version label to fps, memory and draw calls, with no configuration, scenario, instrument or machine class."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:18 The PASS/FAIL report has metric, status, detail and delta only, so the verdict has no phase markers or frame count."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/system/SystemHealthSection.tsx:59 The live frame line is stage milliseconds against a budget; a search of sub_debug found no compositor, present-interval, vsync or missed-refresh term."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/optimizationQueue.ts:93 The fix payload calls an estimate measured, and resolution is the finding id vanishing on a later capture."
+        },
+        {
+          "technique": "host-independent-work-counts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/performance/DrawCallSection.tsx:11 Draw-call figures are labeled as this capture's counts, and the dashboard does not report them as an absent device."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:20 A 0.2ms P99 rise is PASS with no replicate spread, no resolution sentence, and no unverifiable branch."
+        },
+        {
+          "technique": "per-thread-budgets-not-one-frame-time",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:101 Each stage bar is that stage's average against the one frame budget, and the result is boolean OVER/WITHIN with no not-measured state."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/sampleSession.ts:76 The sample summary stores the maximum as P99, and the illustrative report also passes on FPS (Avg) and GC Pause (Max)."
+        }
+      ]
+    },
+    "89b3215f-69e9-4aa4-8c8b-27316cccc59d/perf-regression-gating": {
+      "context": "observation-testing",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:39:28.590Z",
+      "techniques": [
+        {
+          "technique": "allocation-gate-on-the-shipped-configuration",
+          "verdict": "not-applicable",
+          "evidence": "src/types/observation.ts:177 The perf-capture plan compares wall time per frame; it does not count allocated bytes on a shipped step."
+        },
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/perf-capture.ts:284 Baseline and candidate arrive as CSV text plus an optional window length, so render mode, build, instrument and machine are never compared."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "conformant",
+          "evidence": "src/lib/profiling/perf-capture.ts:101 The launch arms CSV start/stop on scenario events; a missing start is an empty window, non-positive frames are counted and dropped, and a length mismatch with the plan is unverifiable."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "not-applicable",
+          "evidence": "src/types/observation.ts:165 The boot is a headless benchmark at a fixed step, in nullrhi or offscreen, with no display present clock."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "not-applicable",
+          "evidence": "src/types/observation.ts:142 The fixed step serves a behaviour metric; the cost gate does not claim an optimisation is equivalent."
+        },
+        {
+          "technique": "host-independent-work-counts",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/profiling/perf-capture.ts:12 The gate's question is the capturing machine's frame time, and it does not translate counts onto an absent device."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/perf-capture.ts:152 Spread is the max-min of the baseline side once at least 3 runs are supplied; the verdict does not say that count or the 5% tolerance is an unmeasured placeholder."
+        },
+        {
+          "technique": "per-thread-budgets-not-one-frame-time",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/perf-capture.ts:55 The gate reads whole-frame FrameTime only, so a stage with headroom cannot fail on its own and a nullrhi boot cannot report graphics as not measured."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/perf-capture.ts:150 The verdict is p50 and p95 only: no hitch events, no missed-frame count, and the reason does not state N(1-p)."
+        }
+      ],
+      "withdrawn": {
+        "worker": "ac5ad382-6c04-4056-b537-4355ee452d1c",
+        "state": "deviation",
+        "at": "2026-10-17T01:39:52.821450+00:00",
+        "reason": "reviewer (sonnet): The verdict rests on perf-capture.ts, which is not among this context's files (only drain/route.ts and observation.ts), and drain/route.ts never references perf-capture; its only caller I found is the performance-profiling API route. The 5% tolerance, minRuns 3 and FrameTime-only claims are true of "
+      }
+    },
+    "178c9468-7f24-4c1e-b1ef-daa2d14bc88d/perf-regression-gating": {
+      "context": "ue5-experiment-runner",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:39:28.590Z",
+      "worker": "ac5ad382-6c04-4056-b537-4355ee452d1c",
+      "techniques": [
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/balance/baseline.ts:13 The stored baseline is an archetype threat score and stat rows, not a frame-cost sample bound to a machine."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:5 The route receives one HighResShot path, not a scenario-bounded run of frame costs."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:6 The check is a still image graded by a vision model, not a compositor present interval."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:87 The verdict is a picture defect check, which this technique leaves to picture comparison."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/balance/baseline.ts:32 The only dead-band is on balance-stat drift, not on a frame-cost statistic replicated across runs."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/balance/baseline.ts:14 Drift is computed on named stat rows, and there is no per-frame cost series to take a tail or a hitch count from."
+        }
+      ]
     }
   }
 }

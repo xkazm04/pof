@@ -1,0 +1,258 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ac5ad382-6c04-4056-b537-4355ee452d1c",
+  "subject": "perf-regression-gating",
+  "evaluatedAt": "2026-10-17T01:39:28.590656+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "build-quality-monitoring",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/profiling/csv-parser.ts:204 A stat-dump import invents up to 300 frame rows by scaling aggregates with Math.random, and the profiling view's before/after compare then treats that series as a measured frame-cost change.",
+      "techniques": [
+        {
+          "technique": "allocation-gate-on-the-shipped-configuration",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/profiling/csv-parser.ts:268 Memory rows are category totals taken from a stat dump, not a per-step byte count on the stepping thread of a shipped scenario."
+        },
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/session-compare.ts:152 The only comparability check is the frame-budget number; build, scenario, instrument, render mode and machine are not fields on the session and are not refused."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/csv-parser.ts:201 The series length is a guessed ten seconds of proxy frames, with no scenario phase markers, settle cut, or empty-window failure."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/triage-engine.ts:205 Visible stutter is asserted from frames over a 16.67ms thread-time budget; no compositor present interval is read."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/FindingsSection.tsx:23 The badge sums triage estimates and the compare calls disappeared findings realized milliseconds, with no equivalence witness."
+        },
+        {
+          "technique": "host-independent-work-counts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/index.tsx:264 The view analyzes a host capture or a generated sample and does not state those figures as a device that was not measured."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/session-compare.ts:38 Every metric shares one fixed 1% band, and a pair that stays inside it is rendered Unchanged rather than unverifiable for resolution."
+        },
+        {
+          "technique": "per-thread-budgets-not-one-frame-time",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/csv-parser.ts:205 A stage with no rows is filled with 8, 6 or 5 ms and then averaged against one 16.67ms frame budget."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/session-compare.ts:24 Avg frame and min FPS (one worst frame) receive better/worse verdicts; there is no median-relative hitch event count."
+        }
+      ]
+    },
+    {
+      "context": "debug-performance",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:19 The regression report prints PASS on average FPS against a bare baseline, and the sample session stores its worst frame in the P99 field the stat panel shows.",
+      "techniques": [
+        {
+          "technique": "allocation-gate-on-the-shipped-configuration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:48 The typed budgets are a resident-megabyte ceiling and a GC pause warn, not allocated bytes over a shipped step."
+        },
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:27 The trend binds a version label to fps, memory and draw calls, with no configuration, scenario, instrument or machine class."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:18 The PASS/FAIL report has metric, status, detail and delta only, so the verdict has no phase markers or frame count."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/system/SystemHealthSection.tsx:59 The live frame line is stage milliseconds against a budget; a search of sub_debug found no compositor, present-interval, vsync or missed-refresh term."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/optimizationQueue.ts:93 The fix payload calls an estimate measured, and resolution is the finding id vanishing on a later capture."
+        },
+        {
+          "technique": "host-independent-work-counts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/performance/DrawCallSection.tsx:11 Draw-call figures are labeled as this capture's counts, and the dashboard does not report them as an absent device."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:20 A 0.2ms P99 rise is PASS with no replicate spread, no resolution sentence, and no unverifiable branch."
+        },
+        {
+          "technique": "per-thread-budgets-not-one-frame-time",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:101 Each stage bar is that stage's average against the one frame budget, and the result is boolean OVER/WITHIN with no not-measured state."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/sampleSession.ts:76 The sample summary stores the maximum as P99, and the illustrative report also passes on FPS (Avg) and GC Pause (Max)."
+        }
+      ]
+    },
+    {
+      "context": "ue5-experiment-runner",
+      "subject": "perf-regression-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/stores/baselineStore.ts:27 This store records an archetype balance snapshot and the visual route grades a screenshot; a search of src/stores and src/app/api/verify for FrameTime, hitch, p99FrameMs, spreadMs and csvStartOnEvent found none of them.",
+      "techniques": [
+        {
+          "technique": "baseline-bound-to-build-and-machine",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/balance/baseline.ts:13 The stored baseline is an archetype threat score and stat rows, not a frame-cost sample bound to a machine."
+        },
+        {
+          "technique": "bracketed-capture-window",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:5 The route receives one HighResShot path, not a scenario-bounded run of frame costs."
+        },
+        {
+          "technique": "delivery-bar-at-the-display",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:6 The check is a still image graded by a vision model, not a compositor present interval."
+        },
+        {
+          "technique": "equivalence-before-the-saving",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:87 The verdict is a picture defect check, which this technique leaves to picture comparison."
+        },
+        {
+          "technique": "noise-floor-before-the-threshold",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/balance/baseline.ts:32 The only dead-band is on balance-stat drift, not on a frame-cost statistic replicated across runs."
+        },
+        {
+          "technique": "percentile-and-hitch-gate",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/balance/baseline.ts:14 Drift is computed on named stat rows, and there is no per-frame cost series to take a tail or a hitch count from."
+        }
+      ],
+      "absenceTerms": [
+        "FrameTime",
+        "hitch",
+        "p99FrameMs",
+        "spreadMs",
+        "csvStartOnEvent"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "perf-regression-gating",
+      "context": "observation-testing",
+      "reason": "withdrawn after review: reviewer (sonnet): The verdict rests on perf-capture.ts, which is not among this context's files (only drain/route.ts and observation.ts), and drain/route.ts never references perf-capture; its only caller I found is the performance-profiling API route. The 5% tolerance, minRuns 3 and FrameTime-only claims are true of "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T01:39:28.590656+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "perf-regression-gating"
+      ],
+      "techniques": [
+        "allocation-gate-on-the-shipped-configuration",
+        "baseline-bound-to-build-and-machine",
+        "bracketed-capture-window",
+        "delivery-bar-at-the-display",
+        "equivalence-before-the-saving",
+        "host-independent-work-counts",
+        "noise-floor-before-the-threshold",
+        "per-thread-budgets-not-one-frame-time",
+        "percentile-and-hitch-gate"
+      ],
+      "deviations": 1,
+      "context": "build-quality-monitoring",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T01:39:28.590656+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "perf-regression-gating"
+      ],
+      "techniques": [
+        "allocation-gate-on-the-shipped-configuration",
+        "baseline-bound-to-build-and-machine",
+        "bracketed-capture-window",
+        "delivery-bar-at-the-display",
+        "equivalence-before-the-saving",
+        "host-independent-work-counts",
+        "noise-floor-before-the-threshold",
+        "per-thread-budgets-not-one-frame-time",
+        "percentile-and-hitch-gate"
+      ],
+      "deviations": 1,
+      "context": "debug-performance",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T01:39:28.590656+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "perf-regression-gating"
+      ],
+      "techniques": [
+        "allocation-gate-on-the-shipped-configuration",
+        "baseline-bound-to-build-and-machine",
+        "bracketed-capture-window",
+        "delivery-bar-at-the-display",
+        "equivalence-before-the-saving",
+        "host-independent-work-counts",
+        "noise-floor-before-the-threshold",
+        "per-thread-budgets-not-one-frame-time",
+        "percentile-and-hitch-gate"
+      ],
+      "deviations": 1,
+      "context": "observation-testing",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T01:39:28.590656+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "perf-regression-gating"
+      ],
+      "techniques": [
+        "baseline-bound-to-build-and-machine",
+        "bracketed-capture-window",
+        "delivery-bar-at-the-display",
+        "equivalence-before-the-saving",
+        "noise-floor-before-the-threshold",
+        "percentile-and-hitch-gate"
+      ],
+      "deviations": 0,
+      "context": "ue5-experiment-runner",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}
