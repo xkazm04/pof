@@ -135,27 +135,7 @@ export function parseTrellisOutput(stdout: string): Omit<TrellisResult, 'duratio
   };
 }
 
-type RunFn = (
-  cmd: string,
-  args: string[],
-  timeoutMs: number,
-  /** Extra environment for the child. Optional so existing seams stay call-compatible. */
-  envOverlay?: Record<string, string | undefined>,
-) => Promise<ProcessOutcome>;
-
-/**
- * Add `name` to a WSLENV list without duplicating it.
- *
- * A Windows env var does NOT cross into a distro unless WSLENV names it, so HF_TOKEN has
- * to be declared here rather than passed as an argument — an argv token would be readable
- * in any process listing on both sides of the boundary. `/u` marks it as
- * Windows-to-WSL-only (no path translation). Pure.
- */
-export function withWslenv(existing: string | undefined, name: string): string {
-  const parts = (existing ?? '').split(':').filter(Boolean);
-  if (parts.some((p) => p.split('/')[0] === name)) return parts.join(':');
-  return [...parts, `${name}/u`].join(':');
-}
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
 export interface TrellisDeps {
   run?: RunFn;
@@ -192,17 +172,11 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
   const args = buildTrellisArgs(script, spec, root, !!distro);
   const [cmd, argv] = distro ? ['wsl.exe', ['-d', distro, '--', py, ...args]] : [py, args];
 
-  // TRELLIS.2 conditions on the GATED facebook/dinov3-* repo, so an unauthenticated run
-  // dies at pipeline load with a 401. Forward the token INTO the distro when one exists.
-  const overlay = distro && env.HF_TOKEN
-    ? { HF_TOKEN: env.HF_TOKEN, WSLENV: withWslenv(env.WSLENV, 'HF_TOKEN') }
-    : undefined;
-
   const start = now();
   // 4B params + a 4096 PBR bake, and the first run also downloads the ~16GB model.
   // Default to a 40-min ceiling — well above Hunyuan's 15.
   const timeoutMs = spec.timeoutMs ?? 2_400_000;
-  const outcome = await run(cmd, argv, timeoutMs, overlay);
+  const outcome = await run(cmd, argv, timeoutMs);
   const parsed = parseTrellisOutput(outcome.stdout);
   const tool = distro ? `${basename(script)} (wsl -d ${distro})` : basename(script);
 
@@ -229,5 +203,4 @@ export async function runTrellis(spec: TrellisSpec, deps: TrellisDeps = {}): Pro
 }
 
 // ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──
-const defaultRun: RunFn = (cmd, args, timeoutMs, envOverlay) =>
-  runLocalProcess(cmd, args, { timeoutMs, ...(envOverlay ? { env: { ...process.env, ...envOverlay } } : {}) });
+const defaultRun: RunFn = (cmd, args, timeoutMs) => runLocalProcess(cmd, args, { timeoutMs });
