@@ -12008,7 +12008,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:73 This screen rolls a live profiler's memory, GC, and frame-budget thresholds into a risk label. A search of src/components/modules/core-engine/sub_debug found no callstack, culprit, signature, glossary, or attribution.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:639acd5a5328a2bd",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"

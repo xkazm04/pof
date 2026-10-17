@@ -1,0 +1,136 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a3229d82-afe3-4c21-9d80-9fd5ce82ed17",
+ "subject": "crash-forensics-attribution",
+ "evaluatedAt": "2026-10-17T03:41:30.478972+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "crash-forensics-attribution",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/PlainCrashSummary.tsx:63 Plain mode presents every attached diagnosis as an analysis of the crash on screen and prints its confidence as a percentage, including a diagnosis that was only transferred by signature similarity.",
+   "techniques": [
+    {
+     "technique": "caller-chain-decay",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/CallstackCard.tsx:22 The card renders every frame in order and never weights one by distance from the crash site."
+    },
+    {
+     "technique": "confidence-gates-report-unknown",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/CrashDetailPanel.tsx:66 The detail names a module or says it was not determined, with no runner-up, scores, margin, or which gate failed. The list row omits the chip entirely when mappedModule is null."
+    },
+    {
+     "technique": "crash-signature-over-id-equality",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/PlainCrashSummary.tsx:63 Technical mode and the import panel label a signature match as transferred; plain mode does not read diagnosis.match."
+    },
+    {
+     "technique": "engine-crash-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/ui/CrashTerm.tsx:29 An unrecognised token is passed through raw and the gap is not stated. DecoratedCrashText only wraps tokens the glossary already knows."
+    },
+    {
+     "technique": "root-cause-to-fix-prompt",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/PlainCrashSummary.tsx:84 Plain mode shows the stored fix as what to do for this crash, with no provenance check and no verification step. The no-diagnosis path does withhold the one-click prompt."
+    },
+    {
+     "technique": "weighted-evidence-directory-file-symbol",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:69 The view filters on a module string it already holds and does not score directory, file, or symbol evidence."
+    }
+   ]
+  },
+  {
+   "context": "debug-performance",
+   "subject": "crash-forensics-attribution",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:73 This screen rolls a live profiler's memory, GC, and frame-budget thresholds into a risk label. A search of src/components/modules/core-engine/sub_debug found no callstack, culprit, signature, glossary, or attribution.",
+   "techniques": [
+    {
+     "technique": "caller-chain-decay",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:176 The crash figure is derived from the profiling summary, not from frames at a distance from a crash site."
+    },
+    {
+     "technique": "confidence-gates-report-unknown",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:95 Overall risk is the worst threshold, not a subsystem score that can be refused."
+    },
+    {
+     "technique": "crash-signature-over-id-equality",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/crashes/RegressionSection.tsx:23 The regression panel compares build metrics, not the shape of two crash reports."
+    },
+    {
+     "technique": "engine-crash-vocabulary",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/crashes/CrashPredictionSection.tsx:16 The panel takes a risk object and recommendation strings, not engine crash terms to gloss."
+    },
+    {
+     "technique": "root-cause-to-fix-prompt",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:58 The hint is for a live memory-budget factor, not a confirmed crash class."
+    },
+    {
+     "technique": "weighted-evidence-directory-file-symbol",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/index.tsx:121 The frame panel is frame time from the profiler, not a call stack scored for subsystem ownership."
+    }
+   ],
+   "absenceTerms": [
+    "callstack",
+    "culprit",
+    "signature",
+    "glossary",
+    "attribution"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-17T03:41:30.478972+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "crash-forensics-attribution"
+   ],
+   "techniques": [
+    "caller-chain-decay",
+    "confidence-gates-report-unknown",
+    "crash-signature-over-id-equality",
+    "engine-crash-vocabulary",
+    "root-cause-to-fix-prompt",
+    "weighted-evidence-directory-file-symbol"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-17T03:41:30.478972+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "crash-forensics-attribution"
+   ],
+   "techniques": [
+    "caller-chain-decay",
+    "confidence-gates-report-unknown",
+    "crash-signature-over-id-equality",
+    "engine-crash-vocabulary",
+    "root-cause-to-fix-prompt",
+    "weighted-evidence-directory-file-symbol"
+   ],
+   "deviations": 0,
+   "context": "debug-performance",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}

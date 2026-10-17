@@ -8033,6 +8033,47 @@
           "evidence": "src/lib/visual-gen/tripo-runner.ts:560 This is a poll deadline on one task, not a working-time accumulator for an interactive session."
         }
       ]
+    },
+    "0f8602ad-d98f-4d1d-9644-0467be9e70b9/crash-forensics-attribution": {
+      "context": "debug-performance",
+      "subject": "crash-forensics-attribution",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:41:30.478Z",
+      "worker": "a3229d82-afe3-4c21-9d80-9fd5ce82ed17",
+      "techniques": [
+        {
+          "technique": "caller-chain-decay",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:176 The crash figure is derived from the profiling summary, not from frames at a distance from a crash site."
+        },
+        {
+          "technique": "confidence-gates-report-unknown",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:95 Overall risk is the worst threshold, not a subsystem score that can be refused."
+        },
+        {
+          "technique": "crash-signature-over-id-equality",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/crashes/RegressionSection.tsx:23 The regression panel compares build metrics, not the shape of two crash reports."
+        },
+        {
+          "technique": "engine-crash-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/crashes/CrashPredictionSection.tsx:16 The panel takes a risk object and recommendation strings, not engine crash terms to gloss."
+        },
+        {
+          "technique": "root-cause-to-fix-prompt",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/debugSnapshot.ts:58 The hint is for a live memory-budget factor, not a confirmed crash class."
+        },
+        {
+          "technique": "weighted-evidence-directory-file-symbol",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/index.tsx:121 The frame panel is frame time from the profiler, not a call stack scored for subsystem ownership."
+        }
+      ]
     }
   }
 }
