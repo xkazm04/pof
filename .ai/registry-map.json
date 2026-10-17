@@ -19780,7 +19780,11 @@
           "revision": 4,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:90 Dismissing a regression only updates component state, so remounting restores it without a durable resolution kind, actor, or timestamp.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:90e16e9a2b80434b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",

@@ -1,0 +1,64 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bc07e066-2955-497c-930d-df3a537d8842",
+ "subject": "alerting",
+ "evaluatedAt": "2026-10-17T23:24:51.780799+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "project-health-dashboards",
+   "subject": "alerting",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:90 Dismissing a regression only updates component state, so remounting restores it without a durable resolution kind, actor, or timestamp.",
+   "techniques": [
+    {
+     "technique": "alert-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:44 Dismissal is transient visibility state, rather than a recorded lifecycle transition with ownership and resolution semantics."
+    },
+    {
+     "technique": "periodic-digest",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/ScanHistoryTimeline.tsx:23 The scan-history summary is rendered on demand, rather than pushed on a schedule."
+    },
+    {
+     "technique": "rule-authoring-validation",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/evaluator/scan-report.ts:130 These regression alerts use a fingerprint diff, rather than authored threshold rules."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "alerting",
+   "context": "inventory-economy-simulator",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "alerting",
+   "context": "holistic-quality-overview",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-17T23:24:51.780799+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "alerting"
+   ],
+   "techniques": [
+    "alert-lifecycle",
+    "periodic-digest",
+    "rule-authoring-validation"
+   ],
+   "deviations": 1,
+   "context": "project-health-dashboards",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

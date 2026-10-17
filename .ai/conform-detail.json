@@ -8855,6 +8855,32 @@
           "evidence": "src/lib/catalog/pipelines/music.ts:229 The field combines independent presence and runtime observations at different tiers instead of naming one strongest classified observation."
         }
       ]
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/alerting": {
+      "context": "project-health-dashboards",
+      "subject": "alerting",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T23:24:51.780Z",
+      "worker": "bc07e066-2955-497c-930d-df3a537d8842",
+      "techniques": [
+        {
+          "technique": "alert-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:44 Dismissal is transient visibility state, rather than a recorded lifecycle transition with ownership and resolution semantics."
+        },
+        {
+          "technique": "periodic-digest",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/ScanHistoryTimeline.tsx:23 The scan-history summary is rendered on demand, rather than pushed on a schedule."
+        },
+        {
+          "technique": "rule-authoring-validation",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/evaluator/scan-report.ts:130 These regression alerts use a fingerprint diff, rather than authored threshold rules."
+        }
+      ]
     }
   }
 }
