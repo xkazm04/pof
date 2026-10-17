@@ -1,0 +1,205 @@
+{
+  "schema": "conform-run/1",
+  "worker": "cadd1fd8-6680-49cd-9b1f-73a40e76dc16",
+  "subject": "client-fetch-cache",
+  "evaluatedAt": "2026-10-17T03:02:07.665387+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "audio-view-and-catalog",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/audio/AudioView/index.tsx:105 A failed refetch leaves the last scene list in hook state, and this return paints only the error screen, so the scenes already on screen disappear.",
+      "techniques": [
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:60 The scene read is that exact path, with no resemblance metric or cut-point."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioView/index.tsx:105 useCRUD keeps docs on a failed refetch and sets error; this branch replaces the scene UI with the error screen, and the view names no fresh window or stale ceiling."
+        },
+        {
+          "technique": "prefetch-and-defer",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/audio/AudioView/index.tsx:260 The event catalog, and the library fetch it starts, mounts only while that tab is selected."
+        },
+        {
+          "technique": "plural-policy-claims",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:58 The scene read takes no policy arguments, so callers cannot register different TTLs on one entry."
+        },
+        {
+          "technique": "portable-read-definitions",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:59 The scene read is declared once inside this hook; this context has one production caller and no second prefetch or loader spelling."
+        },
+        {
+          "technique": "sibling-entry-warmth",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:66 The open scene is the same list payload, so there is no detail read to seed from a summary row."
+        }
+      ]
+    },
+    {
+      "context": "gdd-compliance",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/GameDesignDocView/index.tsx:161 A regeneration failure after a document is already cached never enters this branch, and the document render does not report error, so the previous GDD stays up unlabeled.",
+      "techniques": [
+        {
+          "technique": "admission-hypothesis",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useGameDesignDoc.ts:58 The module slot states why the document is retained: a tab flip back to an unchanged synthesis should not run again."
+        },
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useGameDesignDoc.ts:78 The gate is exact equality of project name, project id, and checklist hash."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/GameDesignDocView/index.tsx:161 generate() sets error and leaves the cached document in place; this view shows the error only when gdd is null."
+        },
+        {
+          "technique": "in-flight-dedup",
+          "verdict": "deviation",
+          "evidence": "src/stores/gddComplianceStore.ts:225 The in-flight gate is one boolean on the store, so a call for another project during an audit neither joins that flight nor starts a keyed one."
+        },
+        {
+          "technique": "cache-key-discipline",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useGameDesignDoc.ts:77 The comment and the comparison put the normalized project path in the key so one project's synthesis is not served for another."
+        },
+        {
+          "technique": "warm-remount-caches",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useGameDesignDoc.ts:57 The single document slot outlives the conditional tab remount, the first render adopts it, and __resetGddDocCache clears it for tests."
+        },
+        {
+          "technique": "prefetch-and-defer",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/GameDesignDocView/index.tsx:38 The mount read is the normal generate path, and an unchanged key adopts the cached document instead of synthesizing again."
+        },
+        {
+          "technique": "parse-and-derive-caches",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/GameDesignDocView/Markdown.tsx:75 parseMarkdown is pure in the source string, and each block memoizes only that current string."
+        },
+        {
+          "technique": "plural-policy-claims",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useGameDesignDoc.ts:61 One module slot holds the document; callers do not pass competing lifetimes."
+        },
+        {
+          "technique": "sibling-entry-warmth",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/GDDComplianceView/index.tsx:76 The selected module is a row of the audit report already held, so there is no detail fetch to warm from a list entry."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "client-fetch-cache",
+      "context": "holistic-quality-overview",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor is real, but none of the HolisticHealthView files read useFeatureStatuses (the cache belongs to UnifiedSummaryView and other consumers), so the verdict is about a different context."
+    },
+    {
+      "subject": "client-fetch-cache",
+      "context": "app-navigation",
+      "reason": "withdrawn after review: reviewer (sonnet): The keep-alive and LRU claims rest on components/layout/ModuleRenderer/index.tsx, which is not among this context's files, and I found no fetch cache in the context files (useSuspend.ts only gates subscriptions and effects). The deviation (view state surviving only inside hidden trees rather than as"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T03:02:07.665387+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-fetch-cache"
+      ],
+      "techniques": [
+        "plural-policy-claims",
+        "portable-read-definitions",
+        "prefetch-and-defer",
+        "sibling-entry-warmth",
+        "similarity-keyed-admission",
+        "swr-design"
+      ],
+      "deviations": 1,
+      "context": "audio-view-and-catalog",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T03:02:07.665387+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-fetch-cache"
+      ],
+      "techniques": [
+        "admission-hypothesis",
+        "cache-key-discipline",
+        "in-flight-dedup",
+        "parse-and-derive-caches",
+        "plural-policy-claims",
+        "prefetch-and-defer",
+        "similarity-keyed-admission",
+        "swr-design",
+        "warm-remount-caches"
+      ],
+      "deviations": 1,
+      "context": "holistic-quality-overview",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T03:02:07.665387+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-fetch-cache"
+      ],
+      "techniques": [
+        "admission-hypothesis",
+        "cache-key-discipline",
+        "in-flight-dedup",
+        "parse-and-derive-caches",
+        "plural-policy-claims",
+        "prefetch-and-defer",
+        "sibling-entry-warmth",
+        "similarity-keyed-admission",
+        "swr-design",
+        "warm-remount-caches"
+      ],
+      "deviations": 1,
+      "context": "gdd-compliance",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T03:02:07.665387+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-fetch-cache"
+      ],
+      "techniques": [
+        "admission-hypothesis",
+        "in-flight-dedup",
+        "plural-policy-claims",
+        "similarity-keyed-admission",
+        "swr-design",
+        "warm-remount-caches"
+      ],
+      "deviations": 1,
+      "context": "app-navigation",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

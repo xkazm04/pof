@@ -7745,6 +7745,155 @@
           "evidence": "src/components/layout-lab/LabSearch.tsx:129 Filtering searches a catalog/navigation index, not a live transcript channel."
         }
       ]
+    },
+    "8982772c-2414-4c6a-a49b-0d33e98deaec/client-fetch-cache": {
+      "context": "audio-view-and-catalog",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:02:07.665Z",
+      "worker": "cadd1fd8-6680-49cd-9b1f-73a40e76dc16",
+      "techniques": [
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:60 The scene read is that exact path, with no resemblance metric or cut-point."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioView/index.tsx:105 useCRUD keeps docs on a failed refetch and sets error; this branch replaces the scene UI with the error screen, and the view names no fresh window or stale ceiling."
+        },
+        {
+          "technique": "prefetch-and-defer",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/audio/AudioView/index.tsx:260 The event catalog, and the library fetch it starts, mounts only while that tab is selected."
+        },
+        {
+          "technique": "plural-policy-claims",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:58 The scene read takes no policy arguments, so callers cannot register different TTLs on one entry."
+        },
+        {
+          "technique": "portable-read-definitions",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:59 The scene read is declared once inside this hook; this context has one production caller and no second prefetch or loader spelling."
+        },
+        {
+          "technique": "sibling-entry-warmth",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useAudioScene.ts:66 The open scene is the same list payload, so there is no detail read to seed from a summary row."
+        }
+      ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/client-fetch-cache": {
+      "context": "holistic-quality-overview",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:02:07.665Z",
+      "techniques": [
+        {
+          "technique": "admission-hypothesis",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useFeatureStatuses.ts:19 The construction comment states the reuse bet: concurrent Evaluator mounts share one result for a short TTL."
+        },
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useFeatureStatuses.ts:110 A hit requires the same project id; there is no distance metric or cut-point."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useFeatureStatuses.ts:119 Failure builds empty rows, the same object stamps fetchedAt with Date.now(), and freshCache treats that stamp as the only freshness threshold."
+        },
+        {
+          "technique": "in-flight-dedup",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useFeatureStatuses.ts:145 A second caller for the same project and generation receives the pending promise; settle clears that flight for success and for a resolved failure."
+        },
+        {
+          "technique": "cache-key-discipline",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useFeatureStatuses.ts:116 The request URL and the cache entry both carry the active project id, which the hit check refuses to cross."
+        },
+        {
+          "technique": "warm-remount-caches",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useFeatureStatuses.ts:189 The module-level entry survives remount and the first paint seeds from it when it is still inside the TTL."
+        },
+        {
+          "technique": "prefetch-and-defer",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:71 This dashboard's own analytics read starts in the mount effect of the surface the user is looking at."
+        },
+        {
+          "technique": "parse-and-derive-caches",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:95 The correlation is a render memo of the current inputs, replaced when those inputs change, and it does not accumulate content versions."
+        },
+        {
+          "technique": "plural-policy-claims",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:42 The summary calls the shared loader with no per-call TTL, and the loader itself accepts none."
+        }
+      ],
+      "withdrawn": {
+        "worker": "cadd1fd8-6680-49cd-9b1f-73a40e76dc16",
+        "state": "deviation",
+        "at": "2026-10-17T03:02:38.895755+00:00",
+        "reason": "reviewer (sonnet): The anchor is real, but none of the HolisticHealthView files read useFeatureStatuses (the cache belongs to UnifiedSummaryView and other consumers), so the verdict is about a different context."
+      }
+    },
+    "7e5113c1-2957-49ad-aeee-6f7effe35dce/client-fetch-cache": {
+      "context": "app-navigation",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:02:07.665Z",
+      "techniques": [
+        {
+          "technique": "admission-hypothesis",
+          "verdict": "conformant",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:41 The module keep-alive states a recency bet at construction: visited modules stay mounted and the oldest leave."
+        },
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:146 The keep-alive touch key is the module id itself."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useSuspend.ts:74 While a module is hidden the selector returns its frozen store snapshot; this shell file does not apply a freshness window to a fetched response."
+        },
+        {
+          "technique": "in-flight-dedup",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useSuspend.ts:13 Suspension tells the hidden tree to skip polling; these navigation files do not join identical requests."
+        },
+        {
+          "technique": "warm-remount-caches",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useSuspend.ts:12 The LRU in ModuleRenderer keeps up to five module trees mounted, and hiding them freezes their timers and subscriptions instead of storing a serializable last result."
+        },
+        {
+          "technique": "plural-policy-claims",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:42 One cap is declared for the module list; callers do not pass a second lifetime."
+        }
+      ],
+      "registryProposal": "The golden path lists a value-holding module cache as its own seam, while warm-remount-caches requires that cache to hold plain snapshots and to exclude live timers. A suspended keep-alive of mounted trees is a third shape; the standard should say which subject owns it.",
+      "withdrawn": {
+        "worker": "cadd1fd8-6680-49cd-9b1f-73a40e76dc16",
+        "state": "deviation",
+        "at": "2026-10-17T03:02:38.934343+00:00",
+        "reason": "reviewer (sonnet): The keep-alive and LRU claims rest on components/layout/ModuleRenderer/index.tsx, which is not among this context's files, and I found no fetch cache in the context files (useSuspend.ts only gates subscriptions and effects). The deviation (view state surviving only inside hidden trees rather than as"
+      }
     }
   }
 }

@@ -5398,7 +5398,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioView/index.tsx:105 A failed refetch leaves the last scene list in hook state, and this return paints only the error screen, so the scenes already on screen disappear.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:20824426732ffb6a",
+          "evaluatedRevision": 15
         },
         {
           "subject": "catalog-pipeline-authoring",
