@@ -1,0 +1,111 @@
+{
+ "schema": "conform-run/1",
+ "worker": "368dcd99-a078-4a9f-9b71-6a7b8e60e19a",
+ "subject": "aaa-craft-rubric-authoring",
+ "evaluatedAt": "2026-10-17T02:10:33.333897+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "judge-craft-quality",
+   "subject": "aaa-craft-rubric-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/craft/craft-ceilings.json:37 The ceiling treats a prediction about generative tooling as permanent, although the standard classifies tooling-dependent limits as revisitable market assumptions.",
+   "techniques": [
+    {
+     "technique": "capped-disqualifiers",
+     "verdict": "conformant",
+     "evidence": "src/lib/craft/admission.ts:90 A-axis admission rejects levels above the strictest cited cap and rejects unknown disqualifier IDs."
+    },
+    {
+     "technique": "ceiling-as-a-market-assumption",
+     "verdict": "deviation",
+     "evidence": "src/lib/craft/craft-ceilings.json:37 A technological forecast is classified as permanent; the arguable 2D ceiling also has no recorded date."
+    },
+    {
+     "technique": "deliberately-overlapping-criteria",
+     "verdict": "deviation",
+     "evidence": "src/lib/judge/rubrics.ts:109 Holistic weakest-few aggregation supplies neither finding deduplication nor the duplication guarantee of an exact minimum."
+    },
+    {
+     "technique": "lens-versioning-as-invalidation",
+     "verdict": "deviation",
+     "evidence": "src/lib/craft/craftCell.ts:137 Trend calculations compare first and last grades without restricting lens versions or identifying mixed-version comparisons."
+    },
+    {
+     "technique": "question-form-criteria-for-open-judgment",
+     "verdict": "deviation",
+     "evidence": "src/lib/judge/rubrics.ts:106 Relational qualities such as style cohesion receive numeric scores without criterion-level met, not-met or not-answerable responses."
+    }
+   ]
+  },
+  {
+   "context": "status-health-dashboard",
+   "subject": "aaa-craft-rubric-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/status/capabilityModel.ts:378 Capability grading admits rubric-v3 evidence under the current v4 instrument and pools it without identifying mixed rubric versions.",
+   "techniques": [
+    {
+     "technique": "capped-disqualifiers",
+     "verdict": "deviation",
+     "evidence": "src/components/status/StatusCell.tsx:251 The craft chip and its tooltip report level and state without the disqualifier cause, making a capped grade indistinguishable from an ordinary low grade."
+    },
+    {
+     "technique": "ceiling-as-a-market-assumption",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/craft.ts:181 The display projects reaching the recorded ceiling as achievement after checking version invalidation and content staleness."
+    },
+    {
+     "technique": "lens-versioning-as-invalidation",
+     "verdict": "deviation",
+     "evidence": "src/lib/status/capabilityModel.ts:378 MIN_PANEL_RUBRIC remains 3 while RUBRIC_VERSION is 4, and capability aggregation neutralizes the shared rubric-standing check."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "aaa-craft-rubric-authoring",
+   "context": "quality-evaluation-api",
+   "reason": "pair anchor refused: placeholder evidence at src/lib/anim-critique/prompt.ts:60"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-17T02:10:33.333897+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "aaa-craft-rubric-authoring"
+   ],
+   "techniques": [
+    "capped-disqualifiers",
+    "ceiling-as-a-market-assumption",
+    "deliberately-overlapping-criteria",
+    "lens-versioning-as-invalidation",
+    "question-form-criteria-for-open-judgment"
+   ],
+   "deviations": 1,
+   "context": "judge-craft-quality",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T02:10:33.333897+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "aaa-craft-rubric-authoring"
+   ],
+   "techniques": [
+    "capped-disqualifiers",
+    "ceiling-as-a-market-assumption",
+    "lens-versioning-as-invalidation"
+   ],
+   "deviations": 1,
+   "context": "status-health-dashboard",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

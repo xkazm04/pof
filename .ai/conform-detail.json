@@ -7310,6 +7310,68 @@
           "evidence": "src/lib/balance/baseline.ts:14 Drift is computed on named stat rows, and there is no per-frame cost series to take a tail or a hitch count from."
         }
       ]
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/aaa-craft-rubric-authoring": {
+      "context": "judge-craft-quality",
+      "subject": "aaa-craft-rubric-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:10:33.333Z",
+      "worker": "368dcd99-a078-4a9f-9b71-6a7b8e60e19a",
+      "techniques": [
+        {
+          "technique": "capped-disqualifiers",
+          "verdict": "conformant",
+          "evidence": "src/lib/craft/admission.ts:90 A-axis admission rejects levels above the strictest cited cap and rejects unknown disqualifier IDs."
+        },
+        {
+          "technique": "ceiling-as-a-market-assumption",
+          "verdict": "deviation",
+          "evidence": "src/lib/craft/craft-ceilings.json:37 A technological forecast is classified as permanent; the arguable 2D ceiling also has no recorded date."
+        },
+        {
+          "technique": "deliberately-overlapping-criteria",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:109 Holistic weakest-few aggregation supplies neither finding deduplication nor the duplication guarantee of an exact minimum."
+        },
+        {
+          "technique": "lens-versioning-as-invalidation",
+          "verdict": "deviation",
+          "evidence": "src/lib/craft/craftCell.ts:137 Trend calculations compare first and last grades without restricting lens versions or identifying mixed-version comparisons."
+        },
+        {
+          "technique": "question-form-criteria-for-open-judgment",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:106 Relational qualities such as style cohesion receive numeric scores without criterion-level met, not-met or not-answerable responses."
+        }
+      ]
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/aaa-craft-rubric-authoring": {
+      "context": "status-health-dashboard",
+      "subject": "aaa-craft-rubric-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:10:33.333Z",
+      "worker": "368dcd99-a078-4a9f-9b71-6a7b8e60e19a",
+      "techniques": [
+        {
+          "technique": "capped-disqualifiers",
+          "verdict": "deviation",
+          "evidence": "src/components/status/StatusCell.tsx:251 The craft chip and its tooltip report level and state without the disqualifier cause, making a capped grade indistinguishable from an ordinary low grade."
+        },
+        {
+          "technique": "ceiling-as-a-market-assumption",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/craft.ts:181 The display projects reaching the recorded ceiling as achievement after checking version invalidation and content staleness."
+        },
+        {
+          "technique": "lens-versioning-as-invalidation",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/capabilityModel.ts:378 MIN_PANEL_RUBRIC remains 3 while RUBRIC_VERSION is 4, and capability aggregation neutralizes the shared rubric-standing check."
+        }
+      ]
     }
   }
 }

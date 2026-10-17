@@ -14876,7 +14876,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/craft/craft-ceilings.json:37 The ceiling treats a prediction about generative tooling as permanent, although the standard classifies tooling-dependent limits as revisitable market assumptions.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:30e56086d6ef6162",
+          "evaluatedRevision": 7
         },
         {
           "subject": "eval-harness",
@@ -21772,7 +21776,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/status/capabilityModel.ts:378 Capability grading admits rubric-v3 evidence under the current v4 instrument and pools it without identifying mixed rubric versions.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:30e56086d6ef6162",
+          "evaluatedRevision": 7
         },
         {
           "subject": "agent-runtime-assembly",
