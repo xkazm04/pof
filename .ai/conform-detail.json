@@ -8404,6 +8404,78 @@
           "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:93 Sections render BlueprintEntry. The bridge URL is one producer, not the type the panel integrates against."
         }
       ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/invariant-placement": {
+      "context": "catalog-acceptance",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:23:53.656Z",
+      "worker": "c0fadc3b-5941-4ac9-afbe-1e3e5cfd2c44",
+      "techniques": [
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/combinators.ts:43 This returns the actual mutable checker array; allOf computes its marker only during construction, so replacing its invariant-bearing member does not invalidate the marker."
+        },
+        {
+          "technique": "initialization-proof-tokens",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/acceptance/ueStaticCheckers.ts:88 The UE-root dependency explicitly supports unavailable-environment degradation, which the technique excludes from mandatory initialization proofs."
+        },
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:105 Content-dependent verdict validity is rechecked against the supplied current content rather than treated as a permanent proof."
+        },
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:23 A malformed failed field becomes an empty failure list without a signal; for example, created: ['asset'] with failed: 'boom' reaches pass."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:43 Dispatch resolution represents absence outside PythonDispatch instead of inventing a placeholder dispatch."
+        }
+      ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/invariant-placement": {
+      "context": "module-topology-graph",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:23:53.656Z",
+      "techniques": [
+        {
+          "technique": "build-time-evaluation-of-cross-value-invariants",
+          "verdict": "deviation",
+          "evidence": "src/lib/topology/moduleGraph.ts:32 The hand-maintained anchor table has no build-time uniqueness check, and the numeric presets have no node-size-versus-stride constraint; the inspected topology tests run separately from next build."
+        },
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 The graph derives counts, blockers, edges and placement through the shared projection and recomputes it when the status map changes."
+        },
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:49 The discriminated source union makes ready data and failed error mutually exclusive states, and rendering narrows that union before accessing report data."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/NexusView/helpers.ts:4 Unresolved item prefixes return undefined separately from module identifiers, and callers explicitly handle that absence."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c0fadc3b-5941-4ac9-afbe-1e3e5cfd2c44",
+        "state": "deviation",
+        "at": "2026-10-17T04:24:17.105245+00:00",
+        "reason": "reviewer (sonnet): The evidence says the cross-value constraints are 'tested separately', but moduleGraph.test.ts has only viewport-bounds checks (cx ± nodeW/2). I found no test for anchor uniqueness or node size against stride. The anchor at moduleGraph.ts:57 is a plain constant (colWidth 180 vs nodeW 140) and shows "
+      }
     }
   }
 }

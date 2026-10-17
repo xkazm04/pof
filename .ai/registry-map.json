@@ -7057,7 +7057,11 @@
           "revision": 9,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/combinators.ts:43 Callers can replace a composition's members while its previously computed content-invariant marker remains true, allowing the guarantee to outlive its enforcing parts.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:c6563834f502429c",
+          "evaluatedRevision": 9
         },
         {
           "subject": "voice-io",

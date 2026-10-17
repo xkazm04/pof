@@ -1,0 +1,98 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c0fadc3b-5941-4ac9-afbe-1e3e5cfd2c44",
+  "subject": "invariant-placement",
+  "evaluatedAt": "2026-10-17T04:23:53.656621+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "catalog-acceptance",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/catalog/acceptance/combinators.ts:43 Callers can replace a composition's members while its previously computed content-invariant marker remains true, allowing the guarantee to outlive its enforcing parts.",
+      "techniques": [
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/combinators.ts:43 This returns the actual mutable checker array; allOf computes its marker only during construction, so replacing its invariant-bearing member does not invalidate the marker."
+        },
+        {
+          "technique": "initialization-proof-tokens",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/acceptance/ueStaticCheckers.ts:88 The UE-root dependency explicitly supports unavailable-environment degradation, which the technique excludes from mandatory initialization proofs."
+        },
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:105 Content-dependent verdict validity is rechecked against the supplied current content rather than treated as a permanent proof."
+        },
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:23 A malformed failed field becomes an empty failure list without a signal; for example, created: ['asset'] with failed: 'boom' reaches pass."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:43 Dispatch resolution represents absence outside PythonDispatch instead of inventing a placeholder dispatch."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "invariant-placement",
+      "context": "gdd-compliance",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "invariant-placement",
+      "context": "audio-scene-designer",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "invariant-placement",
+      "context": "module-topology-graph",
+      "reason": "withdrawn after review: reviewer (sonnet): The evidence says the cross-value constraints are 'tested separately', but moduleGraph.test.ts has only viewport-bounds checks (cx ± nodeW/2). I found no test for anchor uniqueness or node size against stride. The anchor at moduleGraph.ts:57 is a plain constant (colWidth 180 vs nodeW 140) and shows "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T04:23:53.656621+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "invariant-placement"
+      ],
+      "techniques": [
+        "derived-properties-cannot-be-forged",
+        "initialization-proof-tokens",
+        "placement-precedes-gate",
+        "repairing-check-erases-its-evidence",
+        "shape-with-a-not-applicable-member"
+      ],
+      "deviations": 1,
+      "context": "catalog-acceptance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-17T04:23:53.656621+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "invariant-placement"
+      ],
+      "techniques": [
+        "build-time-evaluation-of-cross-value-invariants",
+        "derived-properties-cannot-be-forged",
+        "placement-precedes-gate",
+        "shape-with-a-not-applicable-member"
+      ],
+      "deviations": 1,
+      "context": "module-topology-graph",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
