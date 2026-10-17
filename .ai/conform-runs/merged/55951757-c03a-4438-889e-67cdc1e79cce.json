@@ -1,0 +1,98 @@
+{
+ "schema": "conform-run/1",
+ "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+ "subject": "judgeable-spec-authoring",
+ "evaluatedAt": "2026-10-17T04:33:43.594848+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ability-blueprint",
+   "subject": "judgeable-spec-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:147 The channel template promises recurring mana drain, but replaying its five-second mana effect subtracts eight mana only once, leaving its cadence claim unsupported.",
+   "techniques": [
+    {
+     "technique": "interpolated-counts-over-typed-counts",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:61 Template counts are rendered from their source arrays; the neighboring effect, rule, and slot counts use the same approach."
+    },
+    {
+     "technique": "simulate-the-mechanism-not-the-constant",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:166 An in-memory replay of this actual template effect changes Mana from 50 to 42 at 0.25 seconds and leaves it at 42 through five seconds; cooldownSec does not produce periodic applications."
+    }
+   ]
+  },
+  {
+   "context": "item-catalog-pipeline",
+   "subject": "judgeable-spec-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/pipelines/items.ts:569 Adding the example's stated flat seventeen damage to its declared 12\u201318 base produces 29\u201335 rather than 22\u201335, invalidating the worked damage chain.",
+   "techniques": [
+    {
+     "technique": "execute-the-rules-against-the-worked-example",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:569 The same producer declares damageMin=12 and damageMax=18; applying +17 flat yields an average of 32, so the example's range and subsequent DPS do not reproduce."
+    },
+    {
+     "technique": "interpolated-counts-over-typed-counts",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:418 The illustrative roll hardcodes its derived affix total instead of computing prefixes.length + suffixes.length, allowing edits to leave a stale count."
+    },
+    {
+     "technique": "quantity-ownership-and-the-bindable-row",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:790 Tooltip independently restates weapon quantities and disagrees with Damage / Implicit, which writes 12\u201318 damage, default 0.8333 APS, and 5.5% critical chance."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "judgeable-spec-authoring",
+   "context": "catalog-core-infrastructure",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "judgeable-spec-authoring",
+   "context": "ability-design",
+   "reason": "The supplied abilitySpecStore.ts accepts and caches already-built EnrichedAbilitySpec snapshots; it does not expose the authoring rules or artifact contents needed to judge these seven techniques."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-17T04:33:43.594848+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "judgeable-spec-authoring"
+   ],
+   "techniques": [
+    "interpolated-counts-over-typed-counts",
+    "simulate-the-mechanism-not-the-constant"
+   ],
+   "deviations": 1,
+   "context": "ability-blueprint",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T04:33:43.594848+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "judgeable-spec-authoring"
+   ],
+   "techniques": [
+    "execute-the-rules-against-the-worked-example",
+    "interpolated-counts-over-typed-counts",
+    "quantity-ownership-and-the-bindable-row"
+   ],
+   "deviations": 1,
+   "context": "item-catalog-pipeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -1741,7 +1741,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:147 The channel template promises recurring mana drain, but replaying its five-second mana effect subtracts eight mana only once, leaving its cadence claim unsupported.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:51d2d7f30dfc2a96",
+          "evaluatedRevision": 3
         },
         {
           "subject": "engine-host-contract",
@@ -14834,7 +14838,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:569 Adding the example's stated flat seventeen damage to its declared 12–18 base produces 29–35 rather than 22–35, invalidating the worked damage chain.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:51d2d7f30dfc2a96",
+          "evaluatedRevision": 3
         },
         {
           "subject": "multi-provider-gateway-plane",

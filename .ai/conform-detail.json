@@ -8476,6 +8476,53 @@
         "at": "2026-10-17T04:24:17.105245+00:00",
         "reason": "reviewer (sonnet): The evidence says the cross-value constraints are 'tested separately', but moduleGraph.test.ts has only viewport-bounds checks (cx ± nodeW/2). I found no test for anchor uniqueness or node size against stride. The anchor at moduleGraph.ts:57 is a plain constant (colWidth 180 vs nodeW 140) and shows "
       }
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/judgeable-spec-authoring": {
+      "context": "ability-blueprint",
+      "subject": "judgeable-spec-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:33:43.594Z",
+      "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+      "techniques": [
+        {
+          "technique": "interpolated-counts-over-typed-counts",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:61 Template counts are rendered from their source arrays; the neighboring effect, rule, and slot counts use the same approach."
+        },
+        {
+          "technique": "simulate-the-mechanism-not-the-constant",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:166 An in-memory replay of this actual template effect changes Mana from 50 to 42 at 0.25 seconds and leaves it at 42 through five seconds; cooldownSec does not produce periodic applications."
+        }
+      ]
+    },
+    "3f0f619b-52a3-4238-b72a-8df88fd452fd/judgeable-spec-authoring": {
+      "context": "item-catalog-pipeline",
+      "subject": "judgeable-spec-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:33:43.594Z",
+      "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+      "techniques": [
+        {
+          "technique": "execute-the-rules-against-the-worked-example",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:569 The same producer declares damageMin=12 and damageMax=18; applying +17 flat yields an average of 32, so the example's range and subsequent DPS do not reproduce."
+        },
+        {
+          "technique": "interpolated-counts-over-typed-counts",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:418 The illustrative roll hardcodes its derived affix total instead of computing prefixes.length + suffixes.length, allowing edits to leave a stale count."
+        },
+        {
+          "technique": "quantity-ownership-and-the-bindable-row",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:790 Tooltip independently restates weapon quantities and disagrees with Damage / Implicit, which writes 12–18 damage, default 0.8333 APS, and 5.5% critical chance."
+        }
+      ]
     }
   }
 }
