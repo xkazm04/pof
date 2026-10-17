@@ -1,0 +1,136 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7532b087-1715-46ad-9ca0-75b59ace5332",
+ "subject": "shader-budget-authoring",
+ "evaluatedAt": "2026-10-17T04:50:37.586921+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "material-configurator",
+   "subject": "shader-budget-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/materials/surface-spec.ts:137 Generate is blocked for tessellation plus parallax, but the reason calls that pair wasted cost and the shader-budget bar still shows a summed sampler and instruction total.",
+   "techniques": [
+    {
+     "technique": "sampler-hard-and-soft-caps",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/content/materials/MaterialBudgetBar.tsx:47 The bar warns at the soft cap and errors above SAMPLER_HARD_LIMIT. The estimator's soft-cap text reserves shared MSAA/UI samplers; the hard-cap path does not block Generate, and this feature set cannot reach 16."
+    },
+    {
+     "technique": "channel-packing",
+     "verdict": "deviation",
+     "evidence": "src/lib/material-cost-estimator.ts:123 Glossary constants.ts:62 assigns Occlusion, Roughness, Metallic to R, G, B, and surface-spec.ts:50 says RoughMetalAO. No single layout and no linear tag. StyleTransferTab's prompt also asks for a separate Roughness map."
+    },
+    {
+     "technique": "surface-to-shading-model-map",
+     "verdict": "deviation",
+     "evidence": "src/lib/prompts/style-transfer.ts:10 StyleTransferTab sends this table. SURFACE_SPEC glass is ThinTranslucent, and cloth and foliage are forced single models, so the costed path and the generated path can disagree."
+    },
+    {
+     "technique": "feature-cost-with-a-cheaper-swap",
+     "verdict": "deviation",
+     "evidence": "src/lib/material-cost-estimator.ts:78 cheaperSwap is its own field and the bar renders it beside the warning, but none of the strings name the look the swap gives up."
+    },
+    {
+     "technique": "forbidden-feature-combinations",
+     "verdict": "deviation",
+     "evidence": "src/lib/material-cost-estimator.ts:146 The pair is appended to a report that already summed samplers and instructions. The message frames the canonical depth pair as cost, not as depth applied twice."
+    },
+    {
+     "technique": "hardware-tier-lighting-presets",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/index.tsx:249 This surface budgets samplers and instructions. Searched the materials module for lighting-presets, Lumen, targetTier, and rayTracing; it does not import the GI preset table."
+    }
+   ],
+   "registryProposal": "The node application treats the repo's cheaperSwap strings as this technique realized, but procedure step 4 requires each swap to name the look it gives up, and those strings do not. Reconcile the example with the procedure."
+  },
+  {
+   "context": "material-style-tools",
+   "subject": "shader-budget-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/style-transfer/route.ts:60 A description that matches no keyword is still returned as stone, so an unmatched brief looks like a detected surface.",
+   "techniques": [
+    {
+     "technique": "sampler-hard-and-soft-caps",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/index.tsx:161 The only ceiling in these files is post-process frame time. Searched both directories for SAMPLER_, estimateMaterialBudget, and sampler and found no hits."
+    },
+    {
+     "technique": "channel-packing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx:121 Roughness and metallic are scalars on the analysis, not exported maps. Searched these directories for ORM and channel pack and found no hits."
+    },
+    {
+     "technique": "surface-to-shading-model-map",
+     "verdict": "deviation",
+     "evidence": "src/app/api/style-transfer/route.ts:60 Unmatched text becomes stone at 0.4 confidence (route.ts:61). STYLE_RULES is a second property table (water roughness 0.05 versus SURFACE_SPEC 0.02) and does not record forced shading models."
+    },
+    {
+     "technique": "feature-cost-with-a-cheaper-swap",
+     "verdict": "deviation",
+     "evidence": "src/app/api/style-transfer/route.ts:110 The empty-feature message recommends expensive features and names neither a cost nor a cheaper swap."
+    },
+    {
+     "technique": "forbidden-feature-combinations",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/style-keywords.ts:45 Displacement is recorded as parallax alone. STYLE_RULES never enables tessellation, and these directories have no forbidden-pair table."
+    },
+    {
+     "technique": "hardware-tier-lighting-presets",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/constants.ts:14 Here lighting is a post-process category colour. Searched these directories for Lumen, lighting-presets, targetTier, and rayTracing and found no hits."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "shader-budget-authoring",
+   "context": "material-lab",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-17T04:50:37.586921+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "shader-budget-authoring"
+   ],
+   "techniques": [
+    "channel-packing",
+    "feature-cost-with-a-cheaper-swap",
+    "forbidden-feature-combinations",
+    "hardware-tier-lighting-presets",
+    "sampler-hard-and-soft-caps",
+    "surface-to-shading-model-map"
+   ],
+   "deviations": 1,
+   "context": "material-configurator",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-17T04:50:37.586921+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "shader-budget-authoring"
+   ],
+   "techniques": [
+    "channel-packing",
+    "feature-cost-with-a-cheaper-swap",
+    "forbidden-feature-combinations",
+    "hardware-tier-lighting-presets",
+    "sampler-hard-and-soft-caps",
+    "surface-to-shading-model-map"
+   ],
+   "deviations": 1,
+   "context": "material-style-tools",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
