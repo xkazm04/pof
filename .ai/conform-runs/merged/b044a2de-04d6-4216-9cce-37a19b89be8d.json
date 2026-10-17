@@ -1,0 +1,37 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b044a2de-04d6-4216-9cce-37a19b89be8d",
+ "subject": "repository-landing-document",
+ "evaluatedAt": "2026-10-17T01:46:12.743744+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "repository-landing-document",
+   "context": "image-generation",
+   "reason": "Inspected generation helpers, stores, and routes; src/app/api/visual-gen/generate/route.ts:107 routes a generation prompt, which does not establish evidence about repository landing-document composition."
+  },
+  {
+   "subject": "repository-landing-document",
+   "context": "visual-gen-library",
+   "reason": "The inspected files implement application APIs; src/app/api/visual-gen/library/route.ts:23 returns filtered library assets, providing no basis for judging the eight repository landing-document techniques."
+  },
+  {
+   "subject": "repository-landing-document",
+   "context": "asset-forge",
+   "reason": "The inspected files render an application studio; src/components/modules/visual-gen/asset-forge/AssetForgeView.tsx:47 renders GenerationPanel, and its images and critique badges are not repository front-page figures or badges."
+  },
+  {
+   "subject": "repository-landing-document",
+   "context": "visual-gen-style-asset-library",
+   "reason": "The inspected files implement asset indexing and artistic style persistence; src/lib/visual-gen/style-dna-db.ts:84 inserts style profiles, which does not establish a public-prose house style or repository landing-document responsibility."
+  },
+  {
+   "subject": "repository-landing-document",
+   "context": "app-navigation",
+   "reason": "src/app/page.tsx:27 selects between application shells; the inspected navigation hooks and Next.js metadata do not establish evidence about the repository README or code-host metadata."
+  }
+ ],
+ "consults": []
+}
