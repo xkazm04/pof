@@ -1,0 +1,165 @@
+{
+  "schema": "conform-run/1",
+  "worker": "62c306b7-f3be-4c15-80fd-822bf9b4acb3",
+  "subject": "vehicle-archetype-balance",
+  "evaluatedAt": "2026-10-17T22:21:56.675097+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "hud-damage-and-navigation",
+      "subject": "vehicle-archetype-balance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/index.tsx:33 Searches for vehicle, powerRating, winnerShare and courseMix found no context matches; the inspected modules configure combat-text presentation, menu navigation and health indicators rather than competing vehicles.",
+      "techniques": [
+        {
+          "technique": "identity-pair-via-authored-band",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/constants.ts:65 These presets describe floating-text behavior, outside the precondition of a roster requiring strength/weakness pairs."
+        },
+        {
+          "technique": "linear-stat-to-physics-mapping",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/PhysicsPanel.tsx:32 The authoring input controls text displacement in pixels, outside vehicle handling and rating derivation."
+        },
+        {
+          "technique": "power-rating-single-function",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/ClutterBadge.tsx:8 The displayed score classifies visual clutter, so a vehicle-strength rating is not required."
+        },
+        {
+          "technique": "sidegrade-two-per-tier",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/constants.ts:21 The authored choices are navigation screens and widgets, outside vehicle progression."
+        },
+        {
+          "technique": "weights-fit-to-sim-with-published-residuals",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/simulation.ts:180 These weights combine particle density and overlap into a readability heuristic, outside race-strength calibration."
+        },
+        {
+          "technique": "winner-share-over-declared-course-mix",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/simulation.ts:174 The simulation counts visible text particles; it does not produce competitive race outcomes."
+        }
+      ],
+      "absenceTerms": [
+        "vehicle",
+        "powerRating",
+        "winnerShare",
+        "courseMix"
+      ]
+    },
+    {
+      "context": "ability-gas-balance",
+      "subject": "vehicle-archetype-balance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:128 Searches for vehicle, powerRating, winnerShare and courseMix found no context matches; the inspected simulation measures player-versus-enemy combat and the accompanying tools manage attributes and gameplay tags.",
+      "techniques": [
+        {
+          "technique": "identity-pair-via-authored-band",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:75 The simulation models an asymmetric combat encounter, outside a tiered roster of racing contenders."
+        },
+        {
+          "technique": "linear-stat-to-physics-mapping",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:26 This derives combat attack power from strength; it does not author vehicle movement parameters."
+        },
+        {
+          "technique": "power-rating-single-function",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:563 This aggregates encounter-health assessments into a report score, outside vehicle capability budgets and purchases."
+        },
+        {
+          "technique": "sidegrade-two-per-tier",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:264 The progression sweep changes player level rather than choosing between vehicle archetypes within tiers."
+        },
+        {
+          "technique": "weights-fit-to-sim-with-published-residuals",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:64 The weighting computes incoming combat damage by enemy count, outside fitting a vehicle-strength rating."
+        },
+        {
+          "technique": "winner-share-over-declared-course-mix",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:161 This measures player survival across encounter iterations, outside class winner shares over courses."
+        }
+      ],
+      "absenceTerms": [
+        "vehicle",
+        "powerRating",
+        "winnerShare",
+        "courseMix"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "vehicle-archetype-balance",
+      "context": "character-simulator",
+      "reason": "withdrawn after review: reviewer (sonnet): The ArchetypeBalanceRadar.tsx:32 technique says the technique 'explicitly excludes using its movement rating as a combat rating', but that line is only a compositeScore sort and the file has no movement, speed or rating-exclusion text, so the claim is unconfirmed."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T22:21:56.675097+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "vehicle-archetype-balance"
+      ],
+      "techniques": [
+        "identity-pair-via-authored-band",
+        "linear-stat-to-physics-mapping",
+        "power-rating-single-function",
+        "sidegrade-two-per-tier",
+        "weights-fit-to-sim-with-published-residuals",
+        "winner-share-over-declared-course-mix"
+      ],
+      "deviations": 0,
+      "context": "hud-damage-and-navigation",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-17T22:21:56.675097+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "vehicle-archetype-balance"
+      ],
+      "techniques": [
+        "identity-pair-via-authored-band",
+        "linear-stat-to-physics-mapping",
+        "power-rating-single-function",
+        "sidegrade-two-per-tier",
+        "weights-fit-to-sim-with-published-residuals"
+      ],
+      "deviations": 0,
+      "context": "character-simulator",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-17T22:21:56.675097+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "vehicle-archetype-balance"
+      ],
+      "techniques": [
+        "identity-pair-via-authored-band",
+        "linear-stat-to-physics-mapping",
+        "power-rating-single-function",
+        "sidegrade-two-per-tier",
+        "weights-fit-to-sim-with-published-residuals",
+        "winner-share-over-declared-course-mix"
+      ],
+      "deviations": 0,
+      "context": "ability-gas-balance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

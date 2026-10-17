@@ -2302,7 +2302,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:128 Searches for vehicle, powerRating, winnerShare and courseMix found no context matches; the inspected simulation measures player-versus-enemy combat and the accompanying tools manage attributes and gameplay tags.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:1e08d143bfc1401c",
+          "evaluatedRevision": 3
         },
         {
           "subject": "supply-chain",
@@ -13799,7 +13803,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/index.tsx:33 Searches for vehicle, powerRating, winnerShare and courseMix found no context matches; the inspected modules configure combat-text presentation, menu navigation and health indicators rather than competing vehicles.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:1e08d143bfc1401c",
+          "evaluatedRevision": 3
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
