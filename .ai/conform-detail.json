@@ -7894,6 +7894,145 @@
         "at": "2026-10-17T03:02:38.934343+00:00",
         "reason": "reviewer (sonnet): The keep-alive and LRU claims rest on components/layout/ModuleRenderer/index.tsx, which is not among this context's files, and I found no fetch cache in the context files (useSuspend.ts only gates subscriptions and effects). The deviation (view state surviving only inside hidden trees rather than as"
       }
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/cost-metering": {
+      "context": "session-analytics-reporting",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:19:15.105Z",
+      "techniques": [
+        {
+          "technique": "price-tables",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SpendDashboard.tsx:252 Renders a stored currency figure; no model rate lookup or unknown-model default."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SpendDashboard.tsx:26 Reads a fetched payload; this view does not decide whether a failed call gets a row."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/SpendDashboard.tsx:89 One-axis module rollup has no period, spend-class, or failed-call predicate on the figure."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/SpendDashboard.tsx:71 Headline is an unwindowed all-time total; no failed-spend series, per-class split, outlier list, drift, or unattributed share. BudgetPace does project the month."
+        },
+        {
+          "technique": "whole-prompt-denominator",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SpendDashboard.tsx:184 Prints the two token counts; does not bill or ratio them against cache fields."
+        }
+      ],
+      "withdrawn": {
+        "worker": "d79ff7e9-2963-4eaa-8829-94f54e0122e0",
+        "state": "deviation",
+        "at": "2026-10-17T03:19:40.151654+00:00",
+        "reason": "reviewer (sonnet): Every anchor is in SpendDashboard.tsx, which is not among this context's files (SessionAnalyticsDashboard/* and WeeklyDigestView/*), so the verdict is about a different context and none of the context's own files were examined."
+      }
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/cost-metering": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:19:15.105Z",
+      "worker": "d79ff7e9-2963-4eaa-8829-94f54e0122e0",
+      "techniques": [
+        {
+          "technique": "preflight-estimation",
+          "verdict": "deviation",
+          "evidence": "src/lib/cli-spend-db.ts:297 The hook's preflight uses this historical average; failed and zero-cost rows are excluded, and the figure is a scalar average not an input-unit estimate."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:118 Completion here records session analytics, not the spend row. The ledger write is outside this context."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/stores/preflightStore.ts:54 Missing verdict or a non-warning proceeds; user cancel and proceed-anyway are not recorded. useModuleActions dispatches with no check at all."
+        },
+        {
+          "technique": "engagement-paced-cadence",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useNBA.ts:68 NBA is a memoized score of existing data, not a self-waking spend loop."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:157 A dispatch that names no task type is stored as the category interactive."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useCliSpend.ts:41 This hook fetches the payload; the surface is the analytics context."
+        },
+        {
+          "technique": "time-ceilings-count-working-time",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:114 Wall-clock duration is stored for analytics after the run; nothing here ceilings working time."
+        },
+        {
+          "technique": "housekeeping-calls-obey-the-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleReviewCli.ts:106 summarizeDelta formats a local diff for a toast, not a budgeted compaction call."
+        }
+      ],
+      "registryProposal": "The golden path refuses advisory ceilings, while budget-enforcement allows a recorded interactive override; a confirm-to-proceed that is not recorded fails the technique and matches the golden path's refusal, so the two texts read as opposites."
+    },
+    "0dd24399-c9cd-4a8a-a4ed-617ad69597a3/cost-metering": {
+      "context": "visual-gen-3d-model-runners",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T03:19:15.105Z",
+      "worker": "d79ff7e9-2963-4eaa-8829-94f54e0122e0",
+      "techniques": [
+        {
+          "technique": "price-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:115 The only credit rate in these runners is a field comment; nothing versions it or prices an unknown model."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:615 Paid create has no cost, units, outcome class, or attribution written. Qwen's success result is path, url, and model only."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:20 The guard is a per-job attempt count of 3. Qwen falls through to the next model on quota (qwen-image-runner.ts:160); skin sets post one task per variant with no shared cap."
+        },
+        {
+          "technique": "engagement-paced-cadence",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:127 Jobs start when a caller invokes them; there is no self-waking idle loop."
+        },
+        {
+          "technique": "reversible-debit-and-settle",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:570 Spend is the provider account behind the API key; these runners do not debit a local balance."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/qwen-image-runner.ts:175 The success record names the model and not the run, actor, or feature."
+        },
+        {
+          "technique": "time-ceilings-count-working-time",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:560 This is a poll deadline on one task, not a working-time accumulator for an interactive session."
+        }
+      ]
     }
   }
 }

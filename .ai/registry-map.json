@@ -17410,7 +17410,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:202 Checklist and feature-fix launches in this context call execute, and those types are outside the expensive set, so they start metered CLI work with no budget check.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "quality-gates",
@@ -23763,7 +23767,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:615 A Tripo task is treated as paid at creation and the runner keeps the task id only, so the credit spend never becomes a ledger row.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "agent-memory",

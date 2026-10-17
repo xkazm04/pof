@@ -1,0 +1,172 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d79ff7e9-2963-4eaa-8829-94f54e0122e0",
+  "subject": "cost-metering",
+  "evaluatedAt": "2026-10-17T03:19:15.105671+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/hooks/useModuleCLI.ts:202 Checklist and feature-fix launches in this context call execute, and those types are outside the expensive set, so they start metered CLI work with no budget check.",
+      "techniques": [
+        {
+          "technique": "preflight-estimation",
+          "verdict": "deviation",
+          "evidence": "src/lib/cli-spend-db.ts:297 The hook's preflight uses this historical average; failed and zero-cost rows are excluded, and the figure is a scalar average not an input-unit estimate."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:118 Completion here records session analytics, not the spend row. The ledger write is outside this context."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/stores/preflightStore.ts:54 Missing verdict or a non-warning proceeds; user cancel and proceed-anyway are not recorded. useModuleActions dispatches with no check at all."
+        },
+        {
+          "technique": "engagement-paced-cadence",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useNBA.ts:68 NBA is a memoized score of existing data, not a self-waking spend loop."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:157 A dispatch that names no task type is stored as the category interactive."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useCliSpend.ts:41 This hook fetches the payload; the surface is the analytics context."
+        },
+        {
+          "technique": "time-ceilings-count-working-time",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleCLI.ts:114 Wall-clock duration is stored for analytics after the run; nothing here ceilings working time."
+        },
+        {
+          "technique": "housekeeping-calls-obey-the-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useModuleReviewCli.ts:106 summarizeDelta formats a local diff for a toast, not a budgeted compaction call."
+        }
+      ],
+      "registryProposal": "The golden path refuses advisory ceilings, while budget-enforcement allows a recorded interactive override; a confirm-to-proceed that is not recorded fails the technique and matches the golden path's refusal, so the two texts read as opposites."
+    },
+    {
+      "context": "visual-gen-3d-model-runners",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/tripo-runner.ts:615 A Tripo task is treated as paid at creation and the runner keeps the task id only, so the credit spend never becomes a ledger row.",
+      "techniques": [
+        {
+          "technique": "price-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:115 The only credit rate in these runners is a field comment; nothing versions it or prices an unknown model."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:615 Paid create has no cost, units, outcome class, or attribution written. Qwen's success result is path, url, and model only."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:20 The guard is a per-job attempt count of 3. Qwen falls through to the next model on quota (qwen-image-runner.ts:160); skin sets post one task per variant with no shared cap."
+        },
+        {
+          "technique": "engagement-paced-cadence",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:127 Jobs start when a caller invokes them; there is no self-waking idle loop."
+        },
+        {
+          "technique": "reversible-debit-and-settle",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:570 Spend is the provider account behind the API key; these runners do not debit a local balance."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/qwen-image-runner.ts:175 The success record names the model and not the run, actor, or feature."
+        },
+        {
+          "technique": "time-ceilings-count-working-time",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/tripo-runner.ts:560 This is a poll deadline on one task, not a working-time accumulator for an interactive session."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "cost-metering",
+      "context": "session-analytics-reporting",
+      "reason": "withdrawn after review: reviewer (sonnet): Every anchor is in SpendDashboard.tsx, which is not among this context's files (SessionAnalyticsDashboard/* and WeeklyDigestView/*), so the verdict is about a different context and none of the context's own files were examined."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T03:19:15.105671+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "cost-metering"
+      ],
+      "techniques": [
+        "price-tables",
+        "spend-attribution",
+        "spend-observability",
+        "usage-ledgers",
+        "whole-prompt-denominator"
+      ],
+      "deviations": 1,
+      "context": "session-analytics-reporting",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T03:19:15.105671+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "cost-metering"
+      ],
+      "techniques": [
+        "budget-enforcement",
+        "engagement-paced-cadence",
+        "housekeeping-calls-obey-the-ceiling",
+        "preflight-estimation",
+        "spend-attribution",
+        "spend-observability",
+        "time-ceilings-count-working-time",
+        "usage-ledgers"
+      ],
+      "deviations": 1,
+      "context": "module-cli-orchestration-hooks",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T03:19:15.105671+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "cost-metering"
+      ],
+      "techniques": [
+        "budget-enforcement",
+        "engagement-paced-cadence",
+        "price-tables",
+        "reversible-debit-and-settle",
+        "spend-attribution",
+        "time-ceilings-count-working-time",
+        "usage-ledgers"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-3d-model-runners",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}
