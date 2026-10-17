@@ -8238,6 +8238,172 @@
           "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/DistributionsPanel.tsx:33 Occurrence percentages fill their tracks relative to the observed maximum, while the surface does not disclose that the full track means largest sibling rather than 100-percent occurrence."
         }
       ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/dependency-declaration": {
+      "context": "module-topology-graph",
+      "subject": "dependency-declaration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:15:46.219Z",
+      "worker": "a2722f8e-9a23-4987-a887-1fd708ed4291",
+      "techniques": [
+        {
+          "technique": "attachment-coherence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/constants.ts:30 One view-owned prefix table. Nothing here attaches behavior to a foreign type."
+        },
+        {
+          "technique": "declaration-cost-floor",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/feature-definitions.ts:173 dependsOn is an in-catalog feature name. This is not the admission cost of a third-party package."
+        },
+        {
+          "technique": "declaration-invariants",
+          "verdict": "conformant",
+          "evidence": "src/lib/feature-definitions.ts:166 Each feature record states direct deps only, qualified when cross-module. Closed catalog, so the single const is the priced central file."
+        },
+        {
+          "technique": "logical-name-or-address",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:144 Module id is resolved by searching inside asset paths (arpg- prefix stripped), not by a name the asset declared."
+        },
+        {
+          "technique": "progressive-resolution",
+          "verdict": "conformant",
+          "evidence": "src/lib/feature-definitions.ts:1010 The full map is recomputed from the static catalog, a closed set, and is not a committed closure treated as the spec."
+        },
+        {
+          "technique": "shortcut-is-not-the-substrate",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:32 Nexus and the dependency canvas both consume buildModuleTopology, so the graph is not trapped in one view."
+        }
+      ],
+      "registryProposal": "declaration-invariants calls a central registry a locality failure, while progressive-resolution and attachment-coherence exempt a closed single-team catalog. A per-record dependsOn inside one application-owned const is that exemption, and the invariants page should say so."
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/dependency-declaration": {
+      "context": "project-setup-core",
+      "subject": "dependency-declaration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:15:46.219Z",
+      "worker": "a2722f8e-9a23-4987-a887-1fd708ed4291",
+      "techniques": [
+        {
+          "technique": "attachment-coherence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/prompts.ts:36 A plugin switch in the project file is a module requirement, not behavior attached to a foreign type."
+        },
+        {
+          "technique": "declaration-invariants",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/prompts.ts:31 Create declares EnhancedInput. Build-verify's Build.cs does not. Two authorities, no precedence, for one module's direct deps."
+        },
+        {
+          "technique": "logical-name-or-address",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/prompts.ts:46 The engine version is resolved by a substring of the install path, and a miss falls back to the first engine instead of refusing."
+        },
+        {
+          "technique": "progressive-resolution",
+          "verdict": "conformant",
+          "evidence": "src/lib/project-setup/toolchain.ts:236 A pasted environment manifest cannot supply the install command. Unknown ids are ignored and the toolchain table stays the spec."
+        },
+        {
+          "technique": "shortcut-is-not-the-substrate",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/prompts.ts:98 Module requirements exist only as prompt text. The second prompt is a drifted copy, not a second producer of one declaration."
+        },
+        {
+          "technique": "vendored-copy-loses-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/project-setup/toolchain.ts:37 Tools are installed by package id. The context does not ship a folded private copy of a shared runtime."
+        }
+      ]
+    },
+    "dc6bda3e-9219-49b5-bdc5-844f99f5c4c2/dependency-declaration": {
+      "context": "models-asset-inventory",
+      "subject": "dependency-declaration",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:15:46.219Z",
+      "worker": "a2722f8e-9a23-4987-a887-1fd708ed4291",
+      "techniques": [
+        {
+          "technique": "attachment-coherence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/types.ts:12 The inventory passes edge records. It does not attach behavior to a foreign type."
+        },
+        {
+          "technique": "declaration-cost-floor",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/models/AssetInventory/DependencyGraph.tsx:15 A content scan still yields a labelled guess. The bridge adds declared refs and is not required for any dependency view."
+        },
+        {
+          "technique": "declaration-invariants",
+          "verdict": "conformant",
+          "evidence": "src/lib/asset-inventory/declared-edges.ts:127 Direct refs stay on the manifest entry that owns them. The join does not write a transitive closure."
+        },
+        {
+          "technique": "logical-name-or-address",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/models/AssetInventory/DependencyGraph.tsx:28 Asset identity is the content path, an address, because a shared basename would bind the wrong file."
+        },
+        {
+          "technique": "progressive-resolution",
+          "verdict": "conformant",
+          "evidence": "src/lib/asset-inventory/declared-edges.ts:115 A declared /Game ref with no scanned file is counted and dropped. It is not drawn as an edge to a same-named stand-in."
+        },
+        {
+          "technique": "shortcut-is-not-the-substrate",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/models/AssetInventory/DependencyGraph.tsx:6 The canvas draws EdgeProvenance. Manifest JSON and the scan route are producers of one edge shape, not the shape itself."
+        },
+        {
+          "technique": "vendored-copy-loses-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/asset-inventory/declared-edges.ts:120 Edges keep both ends as paths. The context does not fold a shared asset into a private copy."
+        }
+      ],
+      "registryProposal": "declaration-invariants treats a generated merge file as proof that composability failed. A bridge export whose entries still carry their own crossReferences, and which loses when it disagrees with those entries, is the progressive-resolution hybrid. The invariants page should point at that distinction."
+    },
+    "c83e4533-113e-44e3-b005-bd44b22bf20a/dependency-declaration": {
+      "context": "project-exploration-tools",
+      "subject": "dependency-declaration",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T04:15:46.219Z",
+      "worker": "a2722f8e-9a23-4987-a887-1fd708ed4291",
+      "techniques": [
+        {
+          "technique": "attachment-coherence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:102 Interface names are listed. This viewer does not attach behavior to a type."
+        },
+        {
+          "technique": "declaration-invariants",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:104 The section prints the blueprint's own direct reference list and does not expand a transitive closure."
+        },
+        {
+          "technique": "logical-name-or-address",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/index.tsx:52 Lookup key is the asset path, an address that means one blueprint everywhere. Substitution would inspect the wrong asset."
+        },
+        {
+          "technique": "progressive-resolution",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/index.tsx:58 One path is fetched when the user asks. A failed lookup stores the error and clears the blueprint instead of falling back."
+        },
+        {
+          "technique": "shortcut-is-not-the-substrate",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:93 Sections render BlueprintEntry. The bridge URL is one producer, not the type the panel integrates against."
+        }
+      ]
     }
   }
 }

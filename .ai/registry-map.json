@@ -17265,7 +17265,11 @@
           "revision": 6,
           "changedAt": "2026-09-11",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/asset-inventory/declared-edges.ts:127 Each manifest entry contributes its own direct references, unresolved targets are counted and not drawn, and name guesses stay a separate labelled provenance.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:4eb7088d6ed99926",
+          "evaluatedRevision": 6
         },
         {
           "subject": "mcp-tools",
@@ -17916,7 +17920,11 @@
           "revision": 6,
           "changedAt": "2026-09-11",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:144 Bridge asset paths are bound to a module by a substring of the content path, so an unpublished directory layout becomes the module identity.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:4eb7088d6ed99926",
+          "evaluatedRevision": 6
         },
         {
           "subject": "client-state",
@@ -19562,7 +19570,11 @@
           "revision": 6,
           "changedAt": "2026-09-11",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:104 The inspector loads one blueprint by its asset path and shows that blueprint's own direct cross-references, with a bridge miss recorded as an error rather than an empty graph.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:4eb7088d6ed99926",
+          "evaluatedRevision": 6
         },
         {
           "subject": "production-work-prioritization",
@@ -20130,7 +20142,11 @@
           "revision": 6,
           "changedAt": "2026-09-11",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/prompts.ts:98 The build-verify scaffold writes a module dependency list that omits EnhancedInput, which the create scaffold declares, so the same module's requirements depend on which prompt ran.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:4eb7088d6ed99926",
+          "evaluatedRevision": 6
         },
         {
           "subject": "prompt-assembly",
