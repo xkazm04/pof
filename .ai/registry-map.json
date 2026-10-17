@@ -6941,7 +6941,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/wiringCheckers.ts:107 A missing wiring contract passes instead of blocking acceptance until all four declarations are answered.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:f6d362878248f99b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "test-harness",
@@ -7397,7 +7401,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/rollup.ts:23 The rollup counts structural passes as done and can declare config-complete using only L0 evidence.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:f6d362878248f99b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "structured-output",
@@ -8439,7 +8447,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/currencies.ts:140 The currency contract names a catalog without a target entity identifier, so its declared dependency cannot be resolved as a concrete graph edge.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:f6d362878248f99b",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -18292,7 +18304,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/labGlossary.ts:82 The summary presents config-complete structural-only evidence as done without retaining its evidence-tier qualification.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:f6d362878248f99b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "mcp-tools",

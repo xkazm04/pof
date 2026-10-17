@@ -8766,6 +8766,95 @@
           "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:161 This measures player survival across encounter iterations, outside class winner shares over courses."
         }
       ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/wiring-contract-doctrine": {
+      "context": "catalog-acceptance",
+      "subject": "wiring-contract-doctrine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T22:58:45.064Z",
+      "worker": "4cc72bf0-b0ee-4f26-9096-b6664ca0a0fd",
+      "techniques": [
+        {
+          "technique": "cross-catalog-link-resolution",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/linkCheckers.ts:48 Declared links pass without catalog context; the technique explicitly requires an unmeasured outcome instead."
+        },
+        {
+          "technique": "four-field-wiring-contract",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/wiringCheckers.ts:107 The checker makes the entire contract optional rather than requiring its four answers."
+        },
+        {
+          "technique": "verification-must-name-a-tier",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/wiringCheckers.ts:67 A tier token is required, but the observation is not classified against that tier; the actionless 'L4: verify it works' passed."
+        }
+      ]
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/wiring-contract-doctrine": {
+      "context": "catalog-core-infrastructure",
+      "subject": "wiring-contract-doctrine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T22:58:45.064Z",
+      "worker": "4cc72bf0-b0ee-4f26-9096-b6664ca0a0fd",
+      "techniques": [
+        {
+          "technique": "contract-injection-into-prompts",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/contractPrompt.ts:60 Individual claims are truncated mid-claim, contrary to the requirement to retain whole contract blocks and report omitted blocks."
+        },
+        {
+          "technique": "no-gray-box-rule",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/rollup.ts:23 An in-memory probe containing one L0 pass returned done=1 and configComplete=true; the separate verified-lifecycle gate does not prevent this lower-rung completion claim."
+        }
+      ]
+    },
+    "fbf29127-2676-426a-82b7-d0588ca6bd81/wiring-contract-doctrine": {
+      "context": "pipeline-acceptance-engine",
+      "subject": "wiring-contract-doctrine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T22:58:45.064Z",
+      "worker": "4cc72bf0-b0ee-4f26-9096-b6664ca0a0fd",
+      "techniques": [
+        {
+          "technique": "no-gray-box-rule",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labGlossary.ts:82 The function ignores highestTier in this branch; a probe with highestTier='L0' returned 'All steps are done.'"
+        }
+      ]
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/wiring-contract-doctrine": {
+      "context": "catalog-pipelines",
+      "subject": "wiring-contract-doctrine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T22:58:45.064Z",
+      "worker": "4cc72bf0-b0ee-4f26-9096-b6664ca0a0fd",
+      "techniques": [
+        {
+          "technique": "cross-catalog-link-resolution",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/currencies.ts:140 This produced dependency names no vendor entity; the rules step composes shape and wiring checks without linksResolve."
+        },
+        {
+          "technique": "no-gray-box-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/player-movement.ts:141 The terminal playable gate requires live movement and frame-variance evidence and remains deferred before observation."
+        },
+        {
+          "technique": "verification-must-name-a-tier",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:229 The field combines independent presence and runtime observations at different tiers instead of naming one strongest classified observation."
+        }
+      ]
     }
   }
 }
