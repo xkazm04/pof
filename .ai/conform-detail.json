@@ -8881,6 +8881,22 @@
           "evidence": "src/lib/evaluator/scan-report.ts:130 These regression alerts use a fingerprint diff, rather than authored threshold rules."
         }
       ]
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/build-economics": {
+      "context": "build-quality-monitoring",
+      "subject": "build-economics",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T23:49:23.723Z",
+      "worker": "56a9b4fa-3df9-4c27-817f-244fd7fe359f",
+      "techniques": [
+        {
+          "technique": "build-measurement",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/RegressionBanner.tsx:30 RegressionBanner alerts on build duration spikes against an unpartitioned baseline that does not record whether prior or current runs were cold or incremental, nor samples peak memory."
+        }
+      ]
     }
   }
 }

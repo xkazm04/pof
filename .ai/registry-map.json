@@ -6903,7 +6903,11 @@
           "revision": 7,
           "changedAt": "2026-09-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/BuildDurationTrendChart.tsx:57 BuildDurationTrendChart plots durationMs across builds on a single line chart without scenario predicates (cold, warm, incremental) or peak memory tracking, conflating different build types into an unpartitioned baseline.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:2dc0e92ddb23f674",
+          "evaluatedRevision": 7
         }
       ],
       "governance": "governed"
