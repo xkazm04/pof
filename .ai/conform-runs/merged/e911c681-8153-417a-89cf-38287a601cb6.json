@@ -1,0 +1,123 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e911c681-8153-417a-89cf-38287a601cb6",
+  "subject": "fire-tv-device-realities",
+  "evaluatedAt": "2026-10-17T00:44:16.375273+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "fire-tv-device-realities",
+      "context": "cook-packaging-pipeline",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "fire-tv-device-realities",
+      "context": "blueprint-transpiler-game-systems",
+      "reason": "withdrawn after review: reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+    },
+    {
+      "subject": "fire-tv-device-realities",
+      "context": "debug-performance",
+      "reason": "withdrawn after review: reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+    },
+    {
+      "subject": "fire-tv-device-realities",
+      "context": "hud-damage-and-navigation",
+      "reason": "withdrawn after review: reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+    },
+    {
+      "subject": "fire-tv-device-realities",
+      "context": "streaming-zone-planner",
+      "reason": "withdrawn after review: reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T00:44:16.375273+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "fire-tv-device-realities"
+      ],
+      "techniques": [
+        "abi-inspect-the-apk",
+        "dhcp-scan-for-device",
+        "price-the-durable-save-on-the-device",
+        "read-the-priority-before-requesting-one",
+        "server-socket-portability-hedge",
+        "startup-work-belongs-at-first-use",
+        "unhandled-bind-failure-kills-process",
+        "wake-before-launch"
+      ],
+      "deviations": 0,
+      "context": "blueprint-transpiler-game-systems",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-17T00:44:16.375273+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "fire-tv-device-realities"
+      ],
+      "techniques": [
+        "abi-inspect-the-apk",
+        "keep-screen-on-flag",
+        "price-the-durable-save-on-the-device",
+        "read-the-priority-before-requesting-one",
+        "server-socket-portability-hedge",
+        "startup-work-belongs-at-first-use",
+        "unhandled-bind-failure-kills-process",
+        "wake-before-launch"
+      ],
+      "deviations": 0,
+      "context": "debug-performance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-17T00:44:16.375273+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "fire-tv-device-realities"
+      ],
+      "techniques": [
+        "abi-inspect-the-apk",
+        "dhcp-scan-for-device",
+        "price-the-durable-save-on-the-device",
+        "read-the-priority-before-requesting-one",
+        "server-socket-portability-hedge",
+        "startup-work-belongs-at-first-use",
+        "unhandled-bind-failure-kills-process",
+        "wake-before-launch"
+      ],
+      "deviations": 0,
+      "context": "hud-damage-and-navigation",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-17T00:44:16.375273+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "fire-tv-device-realities"
+      ],
+      "techniques": [
+        "abi-inspect-the-apk",
+        "dhcp-scan-for-device",
+        "keep-screen-on-flag",
+        "price-the-durable-save-on-the-device",
+        "read-the-priority-before-requesting-one",
+        "server-socket-portability-hedge",
+        "startup-work-belongs-at-first-use",
+        "unhandled-bind-failure-kills-process",
+        "wake-before-launch"
+      ],
+      "deviations": 0,
+      "context": "streaming-zone-planner",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
