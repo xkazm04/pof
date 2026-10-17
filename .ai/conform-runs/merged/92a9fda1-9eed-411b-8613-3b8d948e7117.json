@@ -1,0 +1,245 @@
+{
+ "schema": "conform-run/1",
+ "worker": "92a9fda1-9eed-411b-8613-3b8d948e7117",
+ "subject": "data-viz",
+ "evaluatedAt": "2026-10-17T03:55:05.775464+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "bestiary-encounters-metrics",
+   "subject": "data-viz",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:481 Missing bestiary stats become zero before radar rendering, making an absent value indistinguishable from a measured zero.",
+   "techniques": [
+    {
+     "technique": "chart-loading-economics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/EncountersTab.tsx:72 The chart mounts directly inside a presentation panel without its own failure boundary, so its rendering exception can replace sibling instruments."
+    },
+    {
+     "technique": "empty-and-degraded-chart-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:481 A missing stat is coalesced to zero rather than transported as explicitly absent."
+    },
+    {
+     "technique": "encoding-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/CardsMetric.tsx:14 The role donut assigns ranged cyan, while SPAWN_POINTS assigns the same ranged role ACCENT_PURPLE_BOLD in data.ts:563."
+    },
+    {
+     "technique": "metric-identity",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:499 One radar dataset merges combat-derived normalization with authored stat scores and role defaults under identical axis names, without carrying the differing source or derivation basis."
+    },
+    {
+     "technique": "micro-visualizations",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/RadarMetric.tsx:39 SIZE is 24, and this glyph overlays weakest and strongest seven-axis radar polygons, exceeding the technique's one-series constraint at glyph size."
+    },
+    {
+     "technique": "scale-and-axis-design",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/DifficultyMetric.tsx:13 The miniature independently normalizes difficulty to its sample maximum, while DifficultyChart.tsx:25 fixes the same metric to 0\u2013100; the scale policy is implemented twice."
+    }
+   ]
+  },
+  {
+   "context": "combat-metrics",
+   "subject": "data-viz",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_combat/metrics/ProportionalSankey.tsx:28 The Sankey forces small shares such as the five-percent Kill node to a minimum ten-pixel height, overstating their proportional magnitude.",
+   "techniques": [
+    {
+     "technique": "chart-loading-economics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/MetricsTab.tsx:45 Grouped DPS mounts directly alongside the other instruments without a chart-specific failure boundary."
+    },
+    {
+     "technique": "empty-and-degraded-chart-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/EffectivenessMetric.tsx:10 An empty roster silently removes the metric instead of displaying an explicit absence state."
+    },
+    {
+     "technique": "encoding-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/CumulativeDamageSvg.tsx:25 Weapon colors come from rarity tiers, so different weapons of the same tier share identical solid strokes and markers without direct line labels."
+    },
+    {
+     "technique": "metric-identity",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/EffectivenessMetric.tsx:14 The best-DPS tile rounds to an integer while its own tooltip and the grouped chart show one decimal, violating the shared precision contract despite using one derivation."
+    },
+    {
+     "technique": "micro-visualizations",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/FeedbackTunerMetric.tsx:18 The compact completion bar has a fixed whole, an unfilled track, and adjacent tuned/total text that supplies its numerator and denominator."
+    },
+    {
+     "technique": "scale-and-axis-design",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/ProportionalSankey.tsx:28 A minimum node height breaks the proportional length encoding for the existing five-percent Kill node."
+    }
+   ]
+  },
+  {
+   "context": "progression-curves-builds",
+   "subject": "data-viz",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_progression/curves/MultiCurveOverlay.tsx:55 Deselecting every overlay series leaves labeled axes and gridlines around an empty plot instead of explaining that no series is selected.",
+   "techniques": [
+    {
+     "technique": "chart-loading-economics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/curves/MainChartArea.tsx:61 Snapshot and live charts mount directly in their slots without individual failure boundaries."
+    },
+    {
+     "technique": "empty-and-degraded-chart-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/curves/MultiCurveOverlay.tsx:55 Every checkbox can be cleared, but NormalizedLineChart still receives labels and renders its grid when visibleSeries is empty."
+    },
+    {
+     "technique": "encoding-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:12 The reserved error color identifies an ordinary XP-source category rather than an error or failure."
+    },
+    {
+     "technique": "metric-identity",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/curves/CurveDeltaSummary.tsx:64 XP-delta favorability is decided locally in JSX rather than supplied by the central curve metric contract."
+    },
+    {
+     "technique": "micro-visualizations",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/builds/BuildPresetPanel.tsx:49 The miniature stat bars interpret raw stat points as percentages, but their surrounding labels never identify the implied 100-point denominator."
+    },
+    {
+     "technique": "scale-and-axis-design",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/curves/XpCurveChart.tsx:20 The level axis spaces samples by index although generateChartData supplies levels 1, 5, 10 through 50, giving unequal level intervals equal horizontal distances."
+    }
+   ]
+  },
+  {
+   "context": "loot-metrics-designer",
+   "subject": "data-viz",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/metrics/HistogramMetric.tsx:14 The miniature rarity histogram inflates the Legendary weight to two pixels instead of its proportional 0.72 pixels, distorting the distribution.",
+   "techniques": [
+    {
+     "technique": "chart-loading-economics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:113 The panel's frequency, magnitude, and affix-count charts have no individual failure boundaries in the inspected render tree."
+    },
+    {
+     "technique": "empty-and-degraded-chart-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/DistributionsPanel.tsx:14 Selecting Common produces zero affixes; this filter removes every distribution row and leaves the frequency and magnitude panels blank without a typed explanation."
+    },
+    {
+     "technique": "encoding-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/constants.ts:20 The reserved error hue identifies the offensive affix category rather than an error state."
+    },
+    {
+     "technique": "metric-identity",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/MetricsAndWeights.tsx:23 Level Scale duplicates the simulator's getItemLevelScaling derivation with a different lower clamp instead of importing its authoritative implementation."
+    },
+    {
+     "technique": "micro-visualizations",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/metrics/HistogramMetric.tsx:14 The two-pixel floor exaggerates the existing Legendary bar rather than degrading an undersized magnitude to a numeric or discrete representation."
+    },
+    {
+     "technique": "scale-and-axis-design",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/DistributionsPanel.tsx:33 Occurrence percentages fill their tracks relative to the observed maximum, while the surface does not disclose that the full track means largest sibling rather than 100-percent occurrence."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-17T03:55:05.775464+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-viz"
+   ],
+   "techniques": [
+    "chart-loading-economics",
+    "empty-and-degraded-chart-states",
+    "encoding-vocabulary",
+    "metric-identity",
+    "micro-visualizations",
+    "scale-and-axis-design"
+   ],
+   "deviations": 1,
+   "context": "bestiary-encounters-metrics",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T03:55:05.775464+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-viz"
+   ],
+   "techniques": [
+    "chart-loading-economics",
+    "empty-and-degraded-chart-states",
+    "encoding-vocabulary",
+    "metric-identity",
+    "micro-visualizations",
+    "scale-and-axis-design"
+   ],
+   "deviations": 1,
+   "context": "combat-metrics",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T03:55:05.775464+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-viz"
+   ],
+   "techniques": [
+    "chart-loading-economics",
+    "empty-and-degraded-chart-states",
+    "encoding-vocabulary",
+    "metric-identity",
+    "micro-visualizations",
+    "scale-and-axis-design"
+   ],
+   "deviations": 1,
+   "context": "progression-curves-builds",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T03:55:05.775464+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-viz"
+   ],
+   "techniques": [
+    "chart-loading-economics",
+    "empty-and-degraded-chart-states",
+    "encoding-vocabulary",
+    "metric-identity",
+    "micro-visualizations",
+    "scale-and-axis-design"
+   ],
+   "deviations": 1,
+   "context": "loot-metrics-designer",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

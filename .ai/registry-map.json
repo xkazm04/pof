@@ -5660,7 +5660,11 @@
           "revision": 6,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:481 Missing bestiary stats become zero before radar rendering, making an absent value indistinguishable from a measured zero.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:0a15845e9dc44963",
+          "evaluatedRevision": 6
         },
         {
           "subject": "eval-harness",
@@ -10410,7 +10414,11 @@
           "revision": 6,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/ProportionalSankey.tsx:28 The Sankey forces small shares such as the five-percent Kill node to a minimum ten-pixel height, overstating their proportional magnitude.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:0a15845e9dc44963",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -16583,7 +16591,11 @@
           "revision": 6,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/HistogramMetric.tsx:14 The miniature rarity histogram inflates the Legendary weight to two pixels instead of its proportional 0.72 pixels, distorting the distribution.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:0a15845e9dc44963",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -19233,7 +19245,11 @@
           "revision": 6,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/curves/MultiCurveOverlay.tsx:55 Deselecting every overlay series leaves labeled axes and gridlines around an empty plot instead of explaining that no series is selected.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:0a15845e9dc44963",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
