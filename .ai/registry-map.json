@@ -2550,7 +2550,11 @@
           "revision": 9,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/prompts/ai-testing.ts:24 Batch test generation drops structured stimulus parameters, making scenarios that differ only in those parameters indistinguishable to the generator.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:d5ab12a92aba67c4",
+          "evaluatedRevision": 10
         },
         {
           "subject": "production-prompt-architecture",
@@ -3758,7 +3762,11 @@
           "revision": 9,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:187 Invalid rule-expression cases pass for any rejection string, so the suite cannot detect rejection for the wrong reason as required by negative-space generation.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:d5ab12a92aba67c4",
+          "evaluatedRevision": 10
         }
       ],
       "governance": "governed"

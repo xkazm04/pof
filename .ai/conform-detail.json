@@ -8606,6 +8606,43 @@
           "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/constants.ts:14 Here lighting is a post-process category colour. Searched these directories for Lumen, lighting-presets, targetTier, and rayTracing and found no hits."
         }
       ]
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/test-input-generation": {
+      "context": "ai-behavior-testing",
+      "subject": "test-input-generation",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T21:33:43.104Z",
+      "worker": "cdfdb366-0118-4e9f-be8a-9c2e0bcfe413",
+      "techniques": [
+        {
+          "technique": "generator-bounds-the-space",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ai-testing.ts:24 MockStimulus.params is part of the structured input and is included by the single-scenario prompt at line 76, but omitted here; the batch generator loses an authored input dimension."
+        }
+      ]
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/test-input-generation": {
+      "context": "animation-state-machine-editor",
+      "subject": "test-input-generation",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T21:33:43.104Z",
+      "worker": "cdfdb366-0118-4e9f-be8a-9c2e0bcfe413",
+      "techniques": [
+        {
+          "technique": "model-based-oracle",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:127 The recorded-output rung is realized by an adjacent literal baseline attributed to base SHA 7a3ddd7a; updating it requires an explicit source change."
+        },
+        {
+          "technique": "negative-space-generation",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:187 The suite supplies valid controls and invalid expressions, but checks only that rejection occurred rather than the specific reason for placeholders, comments, missing operands or unbalanced parentheses."
+        }
+      ]
     }
   }
 }

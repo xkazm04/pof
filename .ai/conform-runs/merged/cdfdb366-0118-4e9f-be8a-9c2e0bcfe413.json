@@ -1,0 +1,86 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cdfdb366-0118-4e9f-be8a-9c2e0bcfe413",
+ "subject": "test-input-generation",
+ "evaluatedAt": "2026-10-17T21:33:43.104482+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ai-behavior-testing",
+   "subject": "test-input-generation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/prompts/ai-testing.ts:24 Batch test generation drops structured stimulus parameters, making scenarios that differ only in those parameters indistinguishable to the generator.",
+   "techniques": [
+    {
+     "technique": "generator-bounds-the-space",
+     "verdict": "deviation",
+     "evidence": "src/lib/prompts/ai-testing.ts:24 MockStimulus.params is part of the structured input and is included by the single-scenario prompt at line 76, but omitted here; the batch generator loses an authored input dimension."
+    }
+   ]
+  },
+  {
+   "context": "animation-state-machine-editor",
+   "subject": "test-input-generation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/state-machine-compile.test.ts:187 Invalid rule-expression cases pass for any rejection string, so the suite cannot detect rejection for the wrong reason as required by negative-space generation.",
+   "techniques": [
+    {
+     "technique": "model-based-oracle",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/state-machine-compile.test.ts:127 The recorded-output rung is realized by an adjacent literal baseline attributed to base SHA 7a3ddd7a; updating it requires an explicit source change."
+    },
+    {
+     "technique": "negative-space-generation",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/state-machine-compile.test.ts:187 The suite supplies valid controls and invalid expressions, but checks only that rejection occurred rather than the specific reason for placeholders, comments, missing operands or unbalanced parentheses."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-input-generation",
+   "context": "code-quality-evaluation",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-input-generation",
+   "context": "ue5-asset-generation-hooks",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-17T21:33:43.104482+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-input-generation"
+   ],
+   "techniques": [
+    "generator-bounds-the-space"
+   ],
+   "deviations": 1,
+   "context": "ai-behavior-testing",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T21:33:43.104482+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-input-generation"
+   ],
+   "techniques": [
+    "model-based-oracle",
+    "negative-space-generation"
+   ],
+   "deviations": 1,
+   "context": "animation-state-machine-editor",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
