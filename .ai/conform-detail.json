@@ -6960,6 +6960,142 @@
         "at": "2026-10-17T00:44:36.166410+00:00",
         "reason": "reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
       }
+    },
+    "27a34084-b33e-4538-8173-600d5162f922/node-boot-and-declarative-bootstrap": {
+      "context": "catalog-gap-analysis",
+      "subject": "node-boot-and-declarative-bootstrap",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:17:56.569Z",
+      "worker": "eeba979d-d0ac-4885-a25c-80046bb9da29",
+      "techniques": [
+        {
+          "technique": "ordered-boot-dag",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/index.ts:3 Plugins are registered by static import, not as the startup graph of a stateful node."
+        },
+        {
+          "technique": "once-only-bootstrap-with-marker",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/coverage.ts:6 seededEntities is a read of existing catalog rows for measurement, not a first-start write."
+        },
+        {
+          "technique": "seal-before-storage-plugins",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/registry.ts:3 The plugin catalog is a process-local map, not a storage-backed catalog behind a seal."
+        }
+      ]
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/node-boot-and-declarative-bootstrap": {
+      "context": "project-setup-core",
+      "subject": "node-boot-and-declarative-bootstrap",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:17:56.569Z",
+      "worker": "eeba979d-d0ac-4885-a25c-80046bb9da29",
+      "techniques": [
+        {
+          "technique": "ordered-boot-dag",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/nextStep.ts:2 The order is a UI priority over scan state (tools, then project, then build), not a node boot graph."
+        },
+        {
+          "technique": "reload-partition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/WaitingTestsTab.tsx:69 reload only bumps React state to refetch tests; it is not a configuration reload partition."
+        },
+        {
+          "technique": "once-only-bootstrap-with-marker",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/ToolingBootstrapPanel.tsx:28 Tool install is a human-triggered Claude/winget action, with no first-start marker or bootstrap credential."
+        },
+        {
+          "technique": "request-chain-not-dsl",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/prompts.ts:18 The bootstrap text is a prose prompt that asks an agent to create UE files, not a chain of the node's API requests."
+        }
+      ]
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/node-boot-and-declarative-bootstrap": {
+      "context": "catalog-database",
+      "subject": "node-boot-and-declarative-bootstrap",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:17:56.569Z",
+      "worker": "eeba979d-d0ac-4885-a25c-80046bb9da29",
+      "techniques": [
+        {
+          "technique": "ordered-boot-dag",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog-db.ts:7 Schema is created on first use of the connection; this module has no storage-seal-listener startup graph."
+        },
+        {
+          "technique": "once-only-bootstrap-with-marker",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/seed.ts:35 Code seeds are re-read from source on every call and are not a first-start insert detected by an empty table."
+        },
+        {
+          "technique": "config-objects-are-api-immutable",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/seed.ts:92 Same-id code and API rows are resolved by ignoring the stored row and continuing; POST /api/catalog-entities refuses a new collision with 409, but startup does not fail and the stored row is kept."
+        },
+        {
+          "technique": "request-chain-not-dsl",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/seed-items.ts:18 Seeds are functions that return static entries, not an ordered list of API requests."
+        }
+      ],
+      "registryProposal": "The conflict rule assumes both populations are stored records. It does not say whether a code-resident seed that the API refuses to shadow, with an existing shadow row warned and ignored, must still fail process start."
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/node-boot-and-declarative-bootstrap": {
+      "context": "project-ops-api",
+      "subject": "node-boot-and-declarative-bootstrap",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:17:56.569Z",
+      "worker": "eeba979d-d0ac-4885-a25c-80046bb9da29",
+      "techniques": [
+        {
+          "technique": "ordered-boot-dag",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/project-health/route.ts:21 Health is a pure fold of the posted body, not a replay of node startup."
+        },
+        {
+          "technique": "once-only-bootstrap-with-marker",
+          "verdict": "deviation",
+          "evidence": "src/lib/project-rules-db.ts:79 Empty-count resurrection is avoided, but the default seed is neither one transaction nor a marker written before the first insert; syncProfileSeed does write its marker first."
+        },
+        {
+          "technique": "config-objects-are-api-immutable",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/project-rules/route.ts:85 After the one-time seed, an API delete sticks, so these rows are operator-owned records rather than host-acting configuration devices."
+        },
+        {
+          "technique": "request-chain-not-dsl",
+          "verdict": "not-applicable",
+          "evidence": "src/types/task-dag.ts:31 The workflow-dag route validates CLI prompt nodes with dependsOn, retry, and branches, not a chain of the node's API requests."
+        }
+      ]
+    },
+    "a43ea6ff-3c0b-411c-8ace-f97992845e63/node-boot-and-declarative-bootstrap": {
+      "context": "ue5-bridge-client",
+      "subject": "node-boot-and-declarative-bootstrap",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T01:17:56.569Z",
+      "worker": "eeba979d-d0ac-4885-a25c-80046bb9da29",
+      "techniques": [
+        {
+          "technique": "ordered-boot-dag",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useUE5Connection.ts:2 The hook mirrors a remote socket; connection-manager.ts only connects, pings, and reconnects."
+        }
+      ]
     }
   }
 }
