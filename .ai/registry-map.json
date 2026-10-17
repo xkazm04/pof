@@ -9179,7 +9179,11 @@
           "revision": 5,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:36 Ordinary assistant output is truncated without expansion, preventing the transcript from preserving the complete readable answer.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:5b4e7d399a4d924e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-instruction-files",
@@ -15439,7 +15443,11 @@
           "revision": 5,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:152 Searches for transcript, assistant, and tool_use found no matches throughout layout-lab, while repository searches located the CLI renderer; the inspected shell and imported proposal/run-log views display catalog work rather than a conversation transcript.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:5b4e7d399a4d924e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "two-thumb-touch-layout-design",
@@ -22109,7 +22117,11 @@
           "revision": 5,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:70 Searches for transcript, assistant, and tool_use found no matches in the planner, while repository searches located the CLI renderer; this context edits a spatial zone document rather than a conversation.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:5b4e7d399a4d924e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "streaming-output",
@@ -22323,7 +22335,11 @@
           "revision": 5,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/index.tsx:113 Searches for transcript, assistant, and tool_use found no matches in this context, while repository searches located the CLI renderer; these files render navigation, search results, and application events rather than a conversation.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:5b4e7d399a4d924e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "generated-workflow-candidates",

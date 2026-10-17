@@ -7526,6 +7526,225 @@
         "at": "2026-10-17T02:31:20.170829+00:00",
         "reason": "reviewer (sonnet): RadarMetric.tsx:25 shows a one-shot mean, but the other technique anchors are incidental. KillDeathStats.tsx:71 is only a layout comment. I did not open the data.ts:551 claim that no class cell is undefined, and I did not open the other encounter and metric files."
       }
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/chat-transcript": {
+      "context": "cli-terminal-output",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:41:03.663Z",
+      "worker": "88eae002-e3d6-42f9-bb2d-1dbb2660cbed",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/CompactTerminal.tsx:80 The directly connected composer refuses submissions while streaming instead of accepting queue or interjection intent."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:64 When an adjacent result arrives, a standalone invocation becomes a differently keyed pair; index.tsx uses that derived ID as the React key, replacing the rendered row."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/CodeBlockHighlighter.tsx:14 The parser requires a closing fence, so an incomplete fence cannot render provisionally as code and changes interpretation when closed."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:309 The Working indicator disappears at settlement; tool-log grouping is independent of settlement and provides no per-turn compact expandable activity trail."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/useScrollSync.ts:49 Auto-follow disengages only beyond two viewport heights, allowing the next append to pull back a reader who scrolled up a smaller distance."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/TerminalHeader.tsx:162 Usage belongs to the terminal header's latest result rather than a durable strip attached to each settled turn."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/useTaskQueue.ts:494 Assistant identity is minted on event receipt, so replay after remount assigns different identities instead of preserving the original turn identity."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:119 This surface groups the complete supplied log; it exposes no filtered or merged transcript channel."
+        }
+      ]
+    },
+    "8bf35604-2492-4c16-bca5-1c3b2787bd76/chat-transcript": {
+      "context": "topbar-and-activity",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:41:03.663Z",
+      "worker": "88eae002-e3d6-42f9-bb2d-1dbb2660cbed",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/index.tsx:66 The event action dispatches to another module; this context does not host its conversation composer."
+        },
+        {
+          "technique": "immutable-model-cached-layout",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/SearchResultRow.tsx:15 The memoized rows are search results, outside the transcript model/layout contract."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/constants.ts:27 The feed taxonomy describes application outcomes rather than structured events interleaved within machine turns."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/helpers.ts:7 This helper escapes search snippets for highlighting; it is not a model-authored transcript renderer."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/index.tsx:53 The displayed history consists of time-grouped application events, not narration belonging to a working turn."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/index.tsx:139 This scroll container holds search results rather than an incrementally written conversation."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/TopBar/ProjectStats.tsx:55 These figures describe project checklist progress, not machine-turn accounting."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/CollapsedGroup.tsx:48 Expandable groups contain activity events rather than authored conversation turns."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/useGlobalSearchPanel.ts:95 Filtering queries a search index, not a subset or union of transcript channels."
+        }
+      ]
+    },
+    "023f8e03-d83d-49d1-b740-04ecdd77362c/chat-transcript": {
+      "context": "streaming-zone-planner",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:41:03.663Z",
+      "worker": "88eae002-e3d6-42f9-bb2d-1dbb2660cbed",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:137 The action submits zone configuration for generation, not a follow-up conversation prompt."
+        },
+        {
+          "technique": "immutable-model-cached-layout",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:51 The cached derivation is zone-transition geometry, not transcript-message layout."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/TransitionList.tsx:19 Rows edit spatial transitions rather than tool invocations or approvals within a conversation."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneCell.tsx:139 The grid renders zone labels, not streamed model markup."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:147 This is configuration-generation button state, not narration inside a machine turn."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:74 Scrolling exposes planner controls and the grid rather than growing conversation history."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:130 The displayed count describes zones in the configuration, not a machine turn."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:89 The rendered entities are spatial zones, with no authored-turn lifecycle."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:47 Selection resolves a zone from the document rather than deriving a transcript channel."
+        }
+      ]
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/chat-transcript": {
+      "context": "lab-shell-and-navigation",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:41:03.663Z",
+      "worker": "88eae002-e3d6-42f9-bb2d-1dbb2660cbed",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/MatrixBindIcons.tsx:105 This busy action binds generated icons; it is not a conversation send control."
+        },
+        {
+          "technique": "immutable-model-cached-layout",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:93 Derived rows represent catalog artifacts and pipeline status, not transcript messages."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CanonView.tsx:130 These editable cards represent project rules rather than events positioned within conversation turns."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CanonView.tsx:28 This view displays stored rule text rather than an incrementally written model answer."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/ActivityChip.tsx:93 The header summarizes independent runtime lanes, not activity narration attached to a conversation turn."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:358 The scrollable region is the catalog navigation tree rather than growing conversation history."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:173 This strip reports catalog completion, not usage or provenance belonging to a settled turn."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/PipelineRail.tsx:194 The rail renders pipeline steps rather than authored conversation turns."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/LabSearch.tsx:129 Filtering searches a catalog/navigation index, not a live transcript channel."
+        }
+      ]
     }
   }
 }
