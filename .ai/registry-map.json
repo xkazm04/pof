@@ -10954,7 +10954,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/usePlanMatrixMap.ts:49 Scoped searches found no heightfield, drainage, or verticalRangeM references, and the canvas lays out implementation-plan items rather than generated terrain.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:8a4a050129e7cb88",
+          "evaluatedRevision": 1
         },
         {
           "subject": "ending-first-narrative-structure",
@@ -18674,7 +18678,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/level-design/procgen-algorithms.ts:287 Scoped searches found no heightfield, drainage, or verticalRangeM references, and the Perlin implementation produces categorical tiles whose exported floors are flat rather than a synthesized elevation surface.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:8a4a050129e7cb88",
+          "evaluatedRevision": 1
         },
         {
           "subject": "difficulty-design-and-adaptation",
@@ -23854,7 +23862,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/generators/terrain.ts:123 Supplying either scale marks the entire basis declared while the missing scale receives a legacy default, allowing assumed physical dimensions to be presented as declared.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:8a4a050129e7cb88",
+          "evaluatedRevision": 1
         },
         {
           "subject": "procedural-level-planning",
@@ -25116,7 +25128,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:28 Scoped searches found no heightfield, drainage, or verticalRangeM references, and the generator produces an abstract zone graph with progression and playtime data rather than synthesized ground.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:8a4a050129e7cb88",
+          "evaluatedRevision": 1
         },
         {
           "subject": "generated-asset-world-scale",

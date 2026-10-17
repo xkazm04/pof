@@ -1,0 +1,254 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2bb46ab1-eb3e-4729-91f3-f62b5945f313",
+ "subject": "terrain-synthesis-acceptance",
+ "evaluatedAt": "2026-10-17T00:15:57.332469+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "procedural-level-generation",
+   "subject": "terrain-synthesis-acceptance",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/lib/level-design/procgen-algorithms.ts:287 Scoped searches found no heightfield, drainage, or verticalRangeM references, and the Perlin implementation produces categorical tiles whose exported floors are flat rather than a synthesized elevation surface.",
+   "techniques": [
+    {
+     "technique": "drainage-coherence-as-plausibility-gate",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/blender-mcp/scripts/dungeon-to-geometry.ts:96 The wizard's geometry dependency constructs flat architectural floors; the technique excludes interiors and architectural surfaces."
+    },
+    {
+     "technique": "heightfield-resolution-and-vertical-basis",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/level-design/procgen-algorithms.ts:287 Noise is classified into tile types, not transferred as elevation samples requiring a vertical basis."
+    },
+    {
+     "technique": "playable-area-versus-backdrop-ratio",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/level-design/procgen-preview.ts:148 This is categorical floor occupancy in a tile layout, not the playable fraction of synthesized terrain."
+    },
+    {
+     "technique": "slope-traversability-envelope",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/spawnPlacement.ts:64 Placement checks categorical floor membership on flat geometry, not a heightfield gradient."
+    },
+    {
+     "technique": "terrain-to-room-graph-handoff",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/spawnPlacement.ts:20 The planner uses the modular geometry's floor-cell contract; the technique explicitly excludes flat modular layouts without an underlying field."
+    }
+   ],
+   "absenceTerms": [
+    "heightfield",
+    "drainage",
+    "verticalRangeM"
+   ]
+  },
+  {
+   "context": "visual-gen-contact-sheet-ue5-export",
+   "subject": "terrain-synthesis-acceptance",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/generators/terrain.ts:123 Supplying either scale marks the entire basis declared while the missing scale receives a legacy default, allowing assumed physical dimensions to be presented as declared.",
+   "techniques": [
+    {
+     "technique": "biome-mask-cross-consistency",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/vegetation.ts:154 The inspected vegetation generator produces independent two-dimensional scatter points, not biome or vegetation masks over the terrain."
+    },
+    {
+     "technique": "drainage-coherence-as-plausibility-gate",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/generators/terrain.ts:234 The final elevation normalization is followed by returning the field without flow-direction, depression-resolution, or accumulation checks; searches found no implementation on its generation/export path."
+    },
+    {
+     "technique": "heightfield-resolution-and-vertical-basis",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/generators/terrain.ts:123 Both scales must be declared; the OR condition labels a partially defaulted basis as declared."
+    },
+    {
+     "technique": "slope-traversability-envelope",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/visual-gen/procedural-engine/generatorSpecs.ts:90 The terrain generation path directly produces the noise field without measuring a gradient distribution or connected components against a declared locomotion envelope."
+    },
+    {
+     "technique": "terrain-to-room-graph-handoff",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:207 The dungeon generator connects its own categorical tile grid; the inspected paths contain no room planner placing footprints on the independently generated heightfield."
+    }
+   ]
+  },
+  {
+   "context": "world-module",
+   "subject": "terrain-synthesis-acceptance",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:28 Scoped searches found no heightfield, drainage, or verticalRangeM references, and the generator produces an abstract zone graph with progression and playtime data rather than synthesized ground.",
+   "techniques": [
+    {
+     "technique": "biome-mask-cross-consistency",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:69 The inspected map colors graph nodes by completion status; no elevation-backed generated mask stack was found."
+    },
+    {
+     "technique": "drainage-coherence-as-plausibility-gate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:100 These are zone graph connections, not channels over an open elevation surface."
+    },
+    {
+     "technique": "heightfield-resolution-and-vertical-basis",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:28 Generation produces zone nodes and edges, with no heightfield transfer requiring physical sample scales."
+    },
+    {
+     "technique": "playable-area-versus-backdrop-ratio",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:31 The generated candidate is evaluated as a graph path and playtime model, not as terrain area."
+    },
+    {
+     "technique": "slope-traversability-envelope",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:29 This validates abstract zone topology; there is no elevation gradient to compare with locomotion limits."
+    },
+    {
+     "technique": "terrain-to-room-graph-handoff",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:479 The world model carries abstract zone roles and level ranges, which fall under the technique's abstract-layout exclusion."
+    }
+   ],
+   "absenceTerms": [
+    "heightfield",
+    "drainage",
+    "verticalRangeM"
+   ]
+  },
+  {
+   "context": "core-engine-planning-shell",
+   "subject": "terrain-synthesis-acceptance",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/PlanMatrixMap/usePlanMatrixMap.ts:49 Scoped searches found no heightfield, drainage, or verticalRangeM references, and the canvas lays out implementation-plan items rather than generated terrain.",
+   "techniques": [
+    {
+     "technique": "biome-mask-cross-consistency",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasNodes.tsx:83 Canvas nodes display implementation features; no generated terrain mask stack was found."
+    },
+    {
+     "technique": "drainage-coherence-as-plausibility-gate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasEdges.tsx:27 The canvas draws dependency curves between task nodes, not hydrological channels over a surface."
+    },
+    {
+     "technique": "heightfield-resolution-and-vertical-basis",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:27 The visible grid is a zoomed CSS background measured in pixels, not a transferred elevation grid."
+    },
+    {
+     "technique": "playable-area-versus-backdrop-ratio",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanView.tsx:31 This view manages implementation work rather than producing a playable terrain extent."
+    },
+    {
+     "technique": "slope-traversability-envelope",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasNodes.tsx:27 Node readiness describes task state; this context has no ground gradient or locomotion acceptance."
+    },
+    {
+     "technique": "terrain-to-room-graph-handoff",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanningGlossary.tsx:55 The graph represents task dependencies, not rooms placed on synthesized ground."
+    }
+   ],
+   "absenceTerms": [
+    "heightfield",
+    "drainage",
+    "verticalRangeM"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "terrain-synthesis-acceptance",
+   "context": "blender-mcp-bridge",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-17T00:15:57.332469+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "terrain-synthesis-acceptance"
+   ],
+   "techniques": [
+    "drainage-coherence-as-plausibility-gate",
+    "heightfield-resolution-and-vertical-basis",
+    "playable-area-versus-backdrop-ratio",
+    "slope-traversability-envelope",
+    "terrain-to-room-graph-handoff"
+   ],
+   "deviations": 0,
+   "context": "procedural-level-generation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T00:15:57.332469+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "terrain-synthesis-acceptance"
+   ],
+   "techniques": [
+    "biome-mask-cross-consistency",
+    "drainage-coherence-as-plausibility-gate",
+    "heightfield-resolution-and-vertical-basis",
+    "slope-traversability-envelope",
+    "terrain-to-room-graph-handoff"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-contact-sheet-ue5-export",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T00:15:57.332469+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "terrain-synthesis-acceptance"
+   ],
+   "techniques": [
+    "biome-mask-cross-consistency",
+    "drainage-coherence-as-plausibility-gate",
+    "heightfield-resolution-and-vertical-basis",
+    "playable-area-versus-backdrop-ratio",
+    "slope-traversability-envelope",
+    "terrain-to-room-graph-handoff"
+   ],
+   "deviations": 0,
+   "context": "world-module",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-17T00:15:57.332469+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "terrain-synthesis-acceptance"
+   ],
+   "techniques": [
+    "biome-mask-cross-consistency",
+    "drainage-coherence-as-plausibility-gate",
+    "heightfield-resolution-and-vertical-basis",
+    "playable-area-versus-backdrop-ratio",
+    "slope-traversability-envelope",
+    "terrain-to-room-graph-handoff"
+   ],
+   "deviations": 0,
+   "context": "core-engine-planning-shell",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
