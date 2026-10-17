@@ -1,0 +1,141 @@
+{
+  "schema": "conform-run/1",
+  "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+  "subject": "accumulate-then-aggregate-metrics",
+  "evaluatedAt": "2026-10-17T02:30:56.353730+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "combat-metrics",
+      "subject": "accumulate-then-aggregate-metrics",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:199 The weapon catalog is reduced in one call, and a search of sub_combat for mean_over_batch, all_reduce, nanmean, world_size, and detach found no validation-batch accumulator.",
+      "techniques": [
+        {
+          "technique": "per-iteration-buffering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/StatsMetric.tsx:7 Glyph prints one finished roster mean; no batch loop appends rows."
+        },
+        {
+          "technique": "nan-as-undefined-not-zero",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:189 Null is a parse miss for a damage string, not an empty per-class reference mask."
+        },
+        {
+          "technique": "lazy-rank-synchronization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/DpsMetric.tsx:6 Bars are a local top slice of one roster; no multi-process gather."
+        },
+        {
+          "technique": "reduction-axis-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/EffectivenessMetric.tsx:7 The view takes a prechosen best row, not a named reduction axis."
+        },
+        {
+          "technique": "detached-buffer-reads",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:191 DPS is a pure table law, not a graph-backed accumulator buffer."
+        }
+      ],
+      "absenceTerms": [
+        "mean_over_batch",
+        "all_reduce",
+        "nanmean",
+        "world_size",
+        "detach"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "accumulate-then-aggregate-metrics",
+      "context": "loot-metrics-designer",
+      "reason": "withdrawn after review: reviewer (sonnet): The ai-designer anchor (index.tsx:44) calls runDropSimulation with a rollCount, which is a repeated-roll accumulation with co-occurrence aggregation. I did not open that simulator to see whether it is an accumulate-then-aggregate site, so 'no per-batch append' is unconfirmed."
+    },
+    {
+      "subject": "accumulate-then-aggregate-metrics",
+      "context": "project-health-dashboards",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor HealthHeader.tsx:41 is only a UI help string. It does not show that no batch accumulator exists, so it is incidental. I also did not open the other dashboard files, such as helpers.ts and ModuleScoreTrend."
+    },
+    {
+      "subject": "accumulate-then-aggregate-metrics",
+      "context": "bestiary-encounters-metrics",
+      "reason": "withdrawn after review: reviewer (sonnet): RadarMetric.tsx:25 shows a one-shot mean, but the other technique anchors are incidental. KillDeathStats.tsx:71 is only a layout comment. I did not open the data.ts:551 claim that no class cell is undefined, and I did not open the other encounter and metric files."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T02:30:56.353730+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "accumulate-then-aggregate-metrics"
+      ],
+      "techniques": [
+        "detached-buffer-reads",
+        "lazy-rank-synchronization",
+        "nan-as-undefined-not-zero",
+        "per-iteration-buffering",
+        "reduction-axis-vocabulary"
+      ],
+      "deviations": 0,
+      "context": "combat-metrics",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T02:30:56.353730+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "accumulate-then-aggregate-metrics"
+      ],
+      "techniques": [
+        "detached-buffer-reads",
+        "lazy-rank-synchronization",
+        "nan-as-undefined-not-zero",
+        "per-iteration-buffering",
+        "reduction-axis-vocabulary"
+      ],
+      "deviations": 0,
+      "context": "loot-metrics-designer",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T02:30:56.353730+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "accumulate-then-aggregate-metrics"
+      ],
+      "techniques": [
+        "detached-buffer-reads",
+        "lazy-rank-synchronization",
+        "nan-as-undefined-not-zero",
+        "per-iteration-buffering",
+        "reduction-axis-vocabulary"
+      ],
+      "deviations": 0,
+      "context": "project-health-dashboards",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-17T02:30:56.353730+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "accumulate-then-aggregate-metrics"
+      ],
+      "techniques": [
+        "lazy-rank-synchronization",
+        "nan-as-undefined-not-zero",
+        "per-iteration-buffering",
+        "reduction-axis-vocabulary"
+      ],
+      "deviations": 0,
+      "context": "bestiary-encounters-metrics",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

@@ -7372,6 +7372,160 @@
           "evidence": "src/lib/status/capabilityModel.ts:378 MIN_PANEL_RUBRIC remains 3 while RUBRIC_VERSION is 4, and capability aggregation neutralizes the shared rubric-standing check."
         }
       ]
+    },
+    "38cdf098-fcb5-4c48-8100-de599eb863e0/accumulate-then-aggregate-metrics": {
+      "context": "combat-metrics",
+      "subject": "accumulate-then-aggregate-metrics",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:30:56.353Z",
+      "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+      "techniques": [
+        {
+          "technique": "per-iteration-buffering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/StatsMetric.tsx:7 Glyph prints one finished roster mean; no batch loop appends rows."
+        },
+        {
+          "technique": "nan-as-undefined-not-zero",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:189 Null is a parse miss for a damage string, not an empty per-class reference mask."
+        },
+        {
+          "technique": "lazy-rank-synchronization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/DpsMetric.tsx:6 Bars are a local top slice of one roster; no multi-process gather."
+        },
+        {
+          "technique": "reduction-axis-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/EffectivenessMetric.tsx:7 The view takes a prechosen best row, not a named reduction axis."
+        },
+        {
+          "technique": "detached-buffer-reads",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:191 DPS is a pure table law, not a graph-backed accumulator buffer."
+        }
+      ]
+    },
+    "e589fc28-aa8c-4cf7-805f-819d1b92d568/accumulate-then-aggregate-metrics": {
+      "context": "loot-metrics-designer",
+      "subject": "accumulate-then-aggregate-metrics",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:30:56.353Z",
+      "techniques": [
+        {
+          "technique": "per-iteration-buffering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/lootMetricsView.ts:80 EV impact sums the whole binding table once; there is no per-batch append."
+        },
+        {
+          "technique": "nan-as-undefined-not-zero",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/lootMetricsView.ts:64 A missing rarity tier is a null reading, not an empty class mask in a sample table."
+        },
+        {
+          "technique": "lazy-rank-synchronization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:44 One local simulation call; no rank, world size, or collective."
+        },
+        {
+          "technique": "reduction-axis-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/HistogramMetric.tsx:16 Bar labels are static rarity weights over a fixed total, with no reduction argument."
+        },
+        {
+          "technique": "detached-buffer-reads",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/index.tsx:50 The map paints sample glyphs; it does not hand out an accumulator buffer."
+        }
+      ],
+      "withdrawn": {
+        "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+        "state": "not-applicable",
+        "at": "2026-10-17T02:31:20.087104+00:00",
+        "reason": "reviewer (sonnet): The ai-designer anchor (index.tsx:44) calls runDropSimulation with a rollCount, which is a repeated-roll accumulation with co-occurrence aggregation. I did not open that simulator to see whether it is an accumulate-then-aggregate site, so 'no per-batch append' is unconfirmed."
+      }
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/accumulate-then-aggregate-metrics": {
+      "context": "project-health-dashboards",
+      "subject": "accumulate-then-aggregate-metrics",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:30:56.353Z",
+      "techniques": [
+        {
+          "technique": "per-iteration-buffering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:154 One mean of module cells already in memory, not an append inside a validation batch loop."
+        },
+        {
+          "technique": "nan-as-undefined-not-zero",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:152 Null module quality is skipped in a dashboard mean; there is no per-class reference mask."
+        },
+        {
+          "technique": "lazy-rank-synchronization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:30 The roll-up is a shared cached read, not a gather across process ranks."
+        },
+        {
+          "technique": "reduction-axis-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/HealthHeader.tsx:28 The header shows one scan scalar and takes no reduction-axis name."
+        },
+        {
+          "technique": "detached-buffer-reads",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/helpers.ts:14 The only not-a-number here is an invalid review timestamp, not a tensor buffer."
+        }
+      ],
+      "withdrawn": {
+        "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+        "state": "not-applicable",
+        "at": "2026-10-17T02:31:20.131473+00:00",
+        "reason": "reviewer (sonnet): The anchor HealthHeader.tsx:41 is only a UI help string. It does not show that no batch accumulator exists, so it is incidental. I also did not open the other dashboard files, such as helpers.ts and ModuleScoreTrend."
+      }
+    },
+    "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/accumulate-then-aggregate-metrics": {
+      "context": "bestiary-encounters-metrics",
+      "subject": "accumulate-then-aggregate-metrics",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T02:30:56.353Z",
+      "techniques": [
+        {
+          "technique": "per-iteration-buffering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/WavesMetric.tsx:7 Wave enemy total is one sum of a fixed table, not a per-batch buffer."
+        },
+        {
+          "technique": "nan-as-undefined-not-zero",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:551 Difficulty points are authored numbers at every level; no class cell is undefined."
+        },
+        {
+          "technique": "lazy-rank-synchronization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:71 Rank here is a danger chart title, not a process rank in a collective."
+        },
+        {
+          "technique": "reduction-axis-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/RadarMetric.tsx:28 Archetypes are sorted by one hardcoded axis average, with no reduction enum."
+        }
+      ],
+      "withdrawn": {
+        "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+        "state": "not-applicable",
+        "at": "2026-10-17T02:31:20.170829+00:00",
+        "reason": "reviewer (sonnet): RadarMetric.tsx:25 shows a one-shot mean, but the other technique anchors are incidental. KillDeathStats.tsx:71 is only a layout comment. I did not open the data.ts:551 claim that no class cell is undefined, and I did not open the other encounter and metric files."
+      }
     }
   }
 }

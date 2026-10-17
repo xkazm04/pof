@@ -10382,7 +10382,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:199 The weapon catalog is reduced in one call, and a search of sub_combat for mean_over_batch, all_reduce, nanmean, world_size, and detach found no validation-batch accumulator.",
+          "evaluatedAt": "2026-10-17",
+          "evaluatedAgainst": "sha256-b2:ea4763c3df4dd4c8",
+          "evaluatedRevision": 1
         },
         {
           "subject": "data-viz",
