@@ -9516,6 +9516,79 @@
           "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:50 Checks for null average score to render an explicit unjudged state with no meter bar rather than misrepresenting unreviewed prompt versions as zero."
         }
       ]
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/packaging": {
+      "context": "build-history-config",
+      "subject": "packaging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:07:54.559Z",
+      "worker": "93a44927-822f-4af2-b90d-98815cf3165e",
+      "techniques": [
+        {
+          "technique": "installed-tree-acceptance",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:181 The post-cook flow requests the staged-build smoke directly; it does not install on a clean environment, verify an installed manifest, or exercise uninstall."
+        },
+        {
+          "technique": "os-arch-matrix",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:178 Profiles expose multiple platforms, but the completion flow skips smoke verification outside Win64 without a per-cell verification alternative."
+        },
+        {
+          "technique": "variant-config-parity",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/ProfileEditor.tsx:28 The editor saves materialized settings in independent profiles; saved values override later defaults, and the inspected profile path has no base-relative overlays or allowed-divergence gate."
+        }
+      ]
+    },
+    "6540a636-c13b-4437-a682-d5c71b7d71b4/packaging": {
+      "context": "platform-services-api",
+      "subject": "packaging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:07:54.559Z",
+      "worker": "93a44927-822f-4af2-b90d-98815cf3165e",
+      "techniques": [
+        {
+          "technique": "installed-tree-acceptance",
+          "verdict": "deviation",
+          "evidence": "src/app/api/packaging/smoke-test/route.ts:71 The route passes the staged output to runSmokeTest without an installation or installed-tree check; the implementation checks process survival rather than a positive initialization signal."
+        },
+        {
+          "technique": "os-arch-matrix",
+          "verdict": "deviation",
+          "evidence": "src/app/api/packaging/smoke-test/route.ts:58 The API refuses smoke verification for other configurable platforms, and the inspected packaging path supplies no acceptance jobs or dated verification alternatives for those cells."
+        },
+        {
+          "technique": "variant-config-parity",
+          "verdict": "deviation",
+          "evidence": "src/app/api/packaging/profiles/route.ts:27 The save route persists independent full profiles through a store that replaces whole records, without comparing them against a shared base and declared divergence set."
+        }
+      ]
+    },
+    "d143dfab-b0b5-44e4-a6d5-51396280ffbf/packaging": {
+      "context": "build-packaging",
+      "subject": "packaging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:07:54.559Z",
+      "worker": "93a44927-822f-4af2-b90d-98815cf3165e",
+      "techniques": [
+        {
+          "technique": "installed-tree-acceptance",
+          "verdict": "deviation",
+          "evidence": "src/lib/packaging/scheduled-build-runner.ts:283 The runner launches the cook's executable directly; the chain contains no clean installation, installed-tree manifest comparison, or uninstall verification."
+        },
+        {
+          "technique": "os-arch-matrix",
+          "verdict": "deviation",
+          "evidence": "src/lib/packaging/scheduled-build-runner.ts:129 The nightly chain smoke-tests only Win64; other profile platforms bypass launch verification and can receive a successful outcome without a per-cell alternative."
+        }
+      ]
     }
   }
 }

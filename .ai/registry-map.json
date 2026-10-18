@@ -6598,7 +6598,11 @@
           "revision": 7,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:181 A successful cook triggers a smoke test of its recorded staged executable without installation or installed-tree verification, so it does not establish installed-tree acceptance.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:e3584aae3c68e668",
+          "evaluatedRevision": 7
         },
         {
           "subject": "production-prompt-architecture",
@@ -6719,7 +6723,11 @@
           "revision": 7,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/packaging/scheduled-build-runner.ts:283 The nightly runner reached through instrumentation smoke-tests the staged executable on the server without a clean installation and installed-tree verification.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:e3584aae3c68e668",
+          "evaluatedRevision": 7
         }
       ],
       "governance": "governed"
@@ -18735,7 +18743,11 @@
           "revision": 7,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/packaging/smoke-test/route.ts:71 The smoke API launches the recorded cook output directly, so its verdict cannot prove installation or the completeness of an installed tree.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:e3584aae3c68e668",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mcp-tools",
