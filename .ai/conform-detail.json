@@ -9589,6 +9589,57 @@
           "evidence": "src/lib/packaging/scheduled-build-runner.ts:129 The nightly chain smoke-tests only Win64; other profile platforms bypass launch verification and can receive a successful outcome without a per-cell alternative."
         }
       ]
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/quality-verdict-integrity": {
+      "context": "judge-craft-quality",
+      "subject": "quality-verdict-integrity",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:22:23.880Z",
+      "worker": "2c79b488-18dd-481a-af99-749fb0320454",
+      "techniques": [
+        {
+          "technique": "calibration-against-confirmed-labels-only",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/calibration.ts:129 Confirmed labels are separated from provisional seeds, but the enforced agreement statistic is raw agreed/scored rather than the golden path's required chance-corrected agreement."
+        },
+        {
+          "technique": "condemn-vs-elevate-asymmetry",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:70 The standing subset admits unknown and absent provenance without distinguishing verdict direction, so unverified passes increase passCount and average score; permission to retain condemnations does not authorize positive quality claims."
+        },
+        {
+          "technique": "content-hash-binding",
+          "verdict": "deviation",
+          "evidence": "src/app/api/judge-verdicts/route.ts:83 The fleet submits no contentHash, so this fallback hashes a fresh database read after grading; an intervening rewrite can bind the verdict to content the judge never read."
+        },
+        {
+          "technique": "rubric-version-supersession",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:102 A newest-present rubric newer than this build is classified unknown and remains eligible to condemn, whereas the standard requires a version not in force to be superseded and non-condemning."
+        },
+        {
+          "technique": "sibling-context-projection",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/siblingContext.ts:81 Nested projection, bounds, and separate context framing exist, but empty sibling projections are silently skipped without recording their emptiness with the verdict as required."
+        },
+        {
+          "technique": "stale-superseded-unknown-classification",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/craft.ts:185 Without comparable hashes, staleBecause returns null unless it detects a later timestamp, allowing an unprovable craft verdict to render gauged or at-ceiling instead of unknown."
+        }
+      ],
+      "registryProposal": "Clarify that the shared counted-subset rule distinguishes applied condemnations from measured current quality: unknown may contribute to the former but must not contribute to the latter.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "contentHash excludes 2 keys, payload.ts 4: the digest covers produceDirection no judge reads. verdictRollup counts 'unknown'-provenance passes toward current quality. [re-judged 2026-09-22: HALF FIXED, half holds. The contentHash/payload key divergence is fixed - contentHash.ts:13 now derives from payload's NON_CONTENT_KEYS. The second count stands: verdictRollup.ts:48-50 still counts a verdict with no provenance toward current quality. Its module note (:21-24) defends that as not silently dropping a real CONDEMNATION - but the same rule also counts an unknown-provenance PASS, which is the inflation the finding names, and the defence does not reach it.]",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by 2c79b488-18dd-481a-af99-749fb0320454"
+        }
+      ]
     }
   }
 }

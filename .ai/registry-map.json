@@ -15011,13 +15011,12 @@
           "changedAt": "2026-09-23",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "contentHash excludes 2 keys, payload.ts 4: the digest covers produceDirection no judge reads. verdictRollup counts 'unknown'-provenance passes toward current quality. [re-judged 2026-09-22: HALF FIXED, half holds. The contentHash/payload key divergence is fixed - contentHash.ts:13 now derives from payload's NON_CONTENT_KEYS. The second count stands: verdictRollup.ts:48-50 still counts a verdict with no provenance toward current quality. Its module note (:21-24) defends that as not silently dropping a real CONDEMNATION - but the same rule also counts an unknown-provenance PASS, which is the inflation the finding names, and the defence does not reach it.]",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256:523a7830a1ecdb06",
-          "evaluatedRevision": 2,
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 Current-quality totals admit passes with missing or unknown provenance, allowing positive quality claims without confirmed content bindings.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:bea58008d7738651",
+          "evaluatedRevision": 3,
           "source": "conform",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
