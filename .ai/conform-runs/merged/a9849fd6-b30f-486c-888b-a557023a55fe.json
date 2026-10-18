@@ -1,0 +1,97 @@
+{
+  "schema": "conform-run/1",
+  "worker": "a9849fd6-b30f-486c-888b-a557023a55fe",
+  "subject": "accessibility",
+  "evaluatedAt": "2026-10-18T23:55:42.382412+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "game-ui-hud",
+      "subject": "accessibility",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:201 The accessibility score card displays a fixed score rather than measured verification results, so its favorable rating cannot establish accessibility.",
+      "techniques": [
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:201 AccessibilityTab renders this constant as its score without measurement scope or provenance."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:116 AnimatePresence retains the collapsing subtree, including lifecycle controls, during exit without closing its focus and accessibility channels."
+        },
+        {
+          "technique": "keyboard-navigation-models",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenLifecycle.tsx:74 When no runnable step remains, static text replaces NextActionButton without a focus handoff if that button was focused."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/systems/ArpgHudPreview.tsx:148 The enclosing preview button has no explicit accessible name, and XpBarElement supplies only empty divs."
+        },
+        {
+          "technique": "preference-respect",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:96 Screen names truncate inside a fixed pixel maximum instead of reflowing as text scales."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:86 The reusable disclosure row owns expansion but does not expose aria-expanded on its button."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "accessibility",
+      "context": "ui-primitives",
+      "reason": "withdrawn after review: reviewer (sonnet): The code claims hold (UnderlineTabs.tsx has role=tab buttons with no roving tabindex or arrow keys; Tooltip unmounts when closed; CopyButton has no live region), but the context's file list holds only src/lib and src/types files. None of the anchored src/components/ui files or the test file is in it"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T23:55:42.382412+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "accessibility"
+      ],
+      "techniques": [
+        "a11y-verification",
+        "hidden-but-mounted-inertness",
+        "keyboard-navigation-models",
+        "name-and-description-wiring",
+        "preference-respect",
+        "primitive-level-a11y"
+      ],
+      "deviations": 1,
+      "context": "game-ui-hud",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-18T23:55:42.382412+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "accessibility"
+      ],
+      "techniques": [
+        "a11y-verification",
+        "hidden-but-mounted-inertness",
+        "keyboard-navigation-models",
+        "live-region-architecture",
+        "name-and-description-wiring",
+        "preference-respect",
+        "primitive-level-a11y"
+      ],
+      "deviations": 1,
+      "context": "ui-primitives",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

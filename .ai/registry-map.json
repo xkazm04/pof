@@ -12953,7 +12953,11 @@
           "revision": 7,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:201 The accessibility score card displays a fixed score rather than measured verification results, so its favorable rating cannot establish accessibility.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
+          "evaluatedRevision": 7
         },
         {
           "subject": "canvas-graph",
