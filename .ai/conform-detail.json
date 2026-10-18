@@ -9047,6 +9047,42 @@
           "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/constants.ts:11 The spatial diagram orders implementation tasks and dependencies rather than increasingly strong evidence about produced content."
         }
       ]
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/error-handling": {
+      "context": "project-ops-api",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T00:35:11.230Z",
+      "worker": "da8e8608-7b68-41db-a4fe-44374be14d25",
+      "techniques": [
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "deviation",
+          "evidence": "src/app/api/recent-projects/route.ts:39 Catches corrupted checklist JSON and returns an empty fallback object without reaching any operator door or documenting the dropped failure."
+        },
+        {
+          "technique": "error-doors",
+          "verdict": "deviation",
+          "evidence": "src/app/api/session-analytics/route.ts:51 Catches unhandled errors and outputs solely to console.error without telemetry, violating the error doors standard where console logging alone is the weakest door."
+        },
+        {
+          "technique": "cancellation-attribution",
+          "verdict": "deviation",
+          "evidence": "src/app/api/session-log/route.ts:46 Cancels open sessions in bulk without recording attribution or distinguishing between user navigation, supersession, deadline, or server drain."
+        },
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/telemetry/route.ts:64 Converts caught runtime exceptions into bare prose message strings, discarding error classification and structured cause chains at the API boundary."
+        },
+        {
+          "technique": "taxonomy-design",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:69 API failures use ad-hoc string messages and HTTP 500 status codes rather than an enumerated closed failure taxonomy classifying transience and fault."
+        }
+      ]
     }
   }
 }

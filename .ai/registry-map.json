@@ -20029,7 +20029,11 @@
           "revision": 16,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/recent-projects/route.ts:39 An unhandled JSON parse failure on stored checklist data is caught and replaced with an empty fallback without reaching any telemetry or logging door.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
+          "evaluatedRevision": 17
         },
         {
           "subject": "agent-instruction-files",
