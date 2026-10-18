@@ -9325,6 +9325,57 @@
         "at": "2026-10-18T01:22:15.734363+00:00",
         "reason": "reviewer (sonnet): The anchor src/lib/module-registry.ts:946 is outside this context's files. It is the dq-1 checklist prompt, which sets up a dialogue data asset and sample dialogues, and it doesn't show the claimed lack of speaker briefing. Grep found no createTabbedModuleView in module-registry.ts, so the claimed m"
       }
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/machine-authored-documentation": {
+      "context": "quality-evaluation-api",
+      "subject": "machine-authored-documentation",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T01:33:31.249Z",
+      "techniques": [
+        {
+          "technique": "evidence-without-verdict",
+          "verdict": "deviation",
+          "evidence": "src/app/api/verify/visual/route.ts:180 The automated vision endpoint records a final verdict directly instead of returning containment/capture evidence with review status kept pending."
+        },
+        {
+          "technique": "stale-artifact-on-failed-write",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:176 The endpoint serves guide.json from disk without gating on writer exit status or candidate digest binding, exposing stale artifacts from failed runs."
+        },
+        {
+          "technique": "rescored-baseline-uplift",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/runs/diff/route.ts:26 Run diffs calculate aggregate pass-rate changes between runs directly from stored historical records without re-scoring the baseline under the current verifier."
+        },
+        {
+          "technique": "three-gate-acceptance",
+          "verdict": "deviation",
+          "evidence": "src/app/api/judge-verdicts/route.ts:47 The acceptance schema permits only binary pass or fail verdicts and accepts automated judges without supporting a skipped review state or requiring human perceptual inspection."
+        },
+        {
+          "technique": "declared-truth-boundary",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:98 The summary serves aggregate pass-rate percentages over generated implementations without an explicit negative boundary declaring what the metric does not claim."
+        },
+        {
+          "technique": "packaged-surface-evaluation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:342 Generators are evaluated with full filesystem access inside the repository working tree where test fixtures and answer keys live, rather than against an extracted package."
+        },
+        {
+          "technique": "preregistered-kill-criterion",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:287 Evaluation pass thresholds are accepted as dynamic request parameters rather than being pre-registered with blinded ratings and pre-committed build-or-kill criteria."
+        }
+      ],
+      "withdrawn": {
+        "worker": "67187990-1abb-46e4-b65d-5bf0235a2762",
+        "state": "deviation",
+        "at": "2026-10-18T01:33:44.361442+00:00",
+        "reason": "reviewer (sonnet): The primary anchor, src/app/api/verify/visual/route.ts, is not one of the context's listed files, so the verdict is about code outside this context. The supporting claims were also not confirmed: I did not open loadGuide or diffRuns, so the stale-guide and no-re-scoring claims are unverified. The ju"
+      }
     }
   }
 }
