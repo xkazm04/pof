@@ -9851,6 +9851,68 @@
           "evidence": "src/types/cli-spend.ts:2 Documents application accounting types, not APIs in an incomplete standards implementation."
         }
       ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/structured-output": {
+      "context": "ai-developer-tools-api",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:18:56.146Z",
+      "techniques": [
+        {
+          "technique": "answer-coverage-gating",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/run-callbacks.ts:133 Settlement checks failures among emitted declared callbacks but does not require every declared callback to arrive, so partial coverage can be confirmed."
+        },
+        {
+          "technique": "artifact-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/run-settle.ts:107 The awaitCallback path succeeds when a marker arrives in a text event, before the producer settles; a later producer failure cannot reverse that settlement."
+        },
+        {
+          "technique": "extraction-observability",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:127 This parse-failure path retains no settled-output sample, strategy trace, or parser diagnostics and emits no extraction-specific telemetry."
+        },
+        {
+          "technique": "extraction-strategies",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:122 Extraction strips fences before its sole JSON parse, recognizes only the json label, and provides no ordered recovery ladder or strategy attribution."
+        },
+        {
+          "technique": "output-budget-signal",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:48 The route raises the former 4096-token ceiling for two embedded C++ files without measuring utilization against the producer ceiling; its truncation response also recommends raising the limit."
+        },
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "deviation",
+          "evidence": "src/lib/one-shot/validate-proposal.ts:42 Enum validation runs only for strings, allowing a present numeric rarity or tier to escape both required-field and enum checks in the proposal routes."
+        }
+      ],
+      "withdrawn": {
+        "worker": "2ea1bb95-8cb3-4cd6-935c-2f9656ec8c0d",
+        "state": "deviation",
+        "at": "2026-10-18T23:19:37.194267+00:00",
+        "reason": "reviewer (sonnet): The main anchor, route.ts:115, is the closing brace of the truncation block. The 'raise the limit' text is at line 112. Two technique anchors, run-callbacks.ts:133 and run-settle.ts:107, are claude-terminal library files that are not in this context's route files. The forge-ability route calls Gemin"
+      }
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/structured-output": {
+      "context": "catalog-core-infrastructure",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:18:56.146Z",
+      "worker": "2ea1bb95-8cb3-4cd6-935c-2f9656ec8c0d",
+      "techniques": [
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/headless.ts:562 The supplied entityId reaches commitArtifact without an existence check; the API checks only its type, commit checks profile applicability, and the artifact table has no entity foreign key."
+        }
+      ]
     }
   }
 }

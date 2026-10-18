@@ -1,0 +1,71 @@
+{
+  "schema": "conform-run/1",
+  "worker": "2ea1bb95-8cb3-4cd6-935c-2f9656ec8c0d",
+  "subject": "structured-output",
+  "evaluatedAt": "2026-10-18T23:18:56.146371+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "catalog-core-infrastructure",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/catalog/headless.ts:560 Artifact submission resolves the catalog and step but does not reject a nonexistent target entity before committing, allowing orphan artifact records.",
+      "techniques": [
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/headless.ts:562 The supplied entityId reaches commitArtifact without an existence check; the API checks only its type, commit checks profile applicability, and the artifact table has no entity foreign key."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "structured-output",
+      "context": "gdd-compliance",
+      "reason": "absence contradicted: src/components/ui/StatTerm.tsx:4 contains 'prompt' (2495 hit(s) in the context's directories)"
+    },
+    {
+      "subject": "structured-output",
+      "context": "ai-developer-tools-api",
+      "reason": "withdrawn after review: reviewer (sonnet): The main anchor, route.ts:115, is the closing brace of the truncation block. The 'raise the limit' text is at line 112. Two technique anchors, run-callbacks.ts:133 and run-settle.ts:107, are claude-terminal library files that are not in this context's route files. The forge-ability route calls Gemin"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T23:18:56.146371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "structured-output"
+      ],
+      "techniques": [
+        "answer-coverage-gating",
+        "artifact-lifecycle",
+        "extraction-observability",
+        "extraction-strategies",
+        "output-budget-signal",
+        "schema-validation-and-repair"
+      ],
+      "deviations": 1,
+      "context": "ai-developer-tools-api",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-18T23:18:56.146371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "structured-output"
+      ],
+      "techniques": [
+        "schema-validation-and-repair"
+      ],
+      "deviations": 1,
+      "context": "catalog-core-infrastructure",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
