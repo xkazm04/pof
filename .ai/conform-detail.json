@@ -9114,6 +9114,134 @@
           "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:168 The simulation uses a fixed 0.05-second step and explicit player-before-enemy ordering; repeated seeded runs matched apart from result timestamp metadata."
         }
       ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/generated-workflow-candidates": {
+      "context": "step-shared-primitives",
+      "subject": "generated-workflow-candidates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T01:09:06.183Z",
+      "worker": "9f22a927-8c4c-43cd-a8fd-41c30487a3fc",
+      "techniques": [
+        {
+          "technique": "candidates-as-ordinary-artifacts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:231 This projects an art variant and its history into step data; it does not generate runnable training-and-inference packages."
+        },
+        {
+          "technique": "score-keyed-candidate-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/CandidateGallery.tsx:101 Selection is an artist's gallery click, outside selection among trained models by validation score."
+        },
+        {
+          "technique": "search-as-candidate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/itemGenCandidates.ts:18 Re-roll variation derives thumbnail hues from direction and sequence; this is not hyperparameter search."
+        },
+        {
+          "technique": "stage-level-result-caching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/useGeneratedImageAssets.ts:46 The hook loads an image manifest for presentation; it does not drive analyze-generate-train-select stages."
+        },
+        {
+          "technique": "template-filling-with-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:145 Prompt construction takes the user's direction rather than measured dataset statistics for a model configuration."
+        },
+        {
+          "technique": "two-tier-data-statistics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/genericGalleryCandidates.ts:19 Placeholder generation consumes direction and identifiers, without a dataset-analysis precondition."
+        }
+      ]
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/generated-workflow-candidates": {
+      "context": "roadmap-workflow-management",
+      "subject": "generated-workflow-candidates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T01:09:06.183Z",
+      "worker": "9f22a927-8c4c-43cd-a8fd-41c30487a3fc",
+      "techniques": [
+        {
+          "technique": "candidates-as-ordinary-artifacts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 The action starts a task workflow for selected modules; its output is not a generated model package."
+        },
+        {
+          "technique": "score-keyed-candidate-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:58 History filters workflow executions by terminal status; it does not rank trained candidates."
+        },
+        {
+          "technique": "search-as-candidate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/ModuleSelector.tsx:51 The operator selects target modules; this is not a hyperparameter-search backend."
+        },
+        {
+          "technique": "stage-level-result-caching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/ExecutionHistoryRow.tsx:38 This reports interrupted DAG executions; the technique explicitly excludes general pipeline-engine resume semantics."
+        },
+        {
+          "technique": "template-filling-with-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:90 Templates are selected interactively for task execution, without statistics-driven model-configuration filling."
+        },
+        {
+          "technique": "two-tier-data-statistics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/CalendarRoadmapView/useCalendarRoadmapView.ts:39 Roadmap inputs concern project health and checklist completion, outside analysis of training samples."
+        }
+      ]
+    },
+    "8bf35604-2492-4c16-bca5-1c3b2787bd76/generated-workflow-candidates": {
+      "context": "topbar-and-activity",
+      "subject": "generated-workflow-candidates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T01:09:06.183Z",
+      "techniques": [
+        {
+          "technique": "candidates-as-ordinary-artifacts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/TopBar/useTopBar.ts:145 The top-bar action switches an existing project; it does not return generated training packages."
+        },
+        {
+          "technique": "score-keyed-candidate-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/EventCard.tsx:23 Event scores determine a quality-trend icon, without selecting or ensembling trained candidates."
+        },
+        {
+          "technique": "search-as-candidate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/useGlobalSearchPanel.ts:95 This queries the application's text-search index; it is not hyperparameter search."
+        },
+        {
+          "technique": "stage-level-result-caching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/useGlobalSearchPanel.ts:117 The rebuild operation refreshes a search index, outside the fixed analyze-generate-train-select runner."
+        },
+        {
+          "technique": "template-filling-with-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/searchIntents.ts:82 Quick actions use registered prompts; they do not fill model configurations from dataset statistics."
+        },
+        {
+          "technique": "two-tier-data-statistics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/TopBar/ProjectStats.tsx:52 Displayed statistics summarize checklist completion, without per-sample analysis feeding a model generator."
+        }
+      ],
+      "withdrawn": {
+        "worker": "9f22a927-8c4c-43cd-a8fd-41c30487a3fc",
+        "state": "not-applicable",
+        "at": "2026-10-18T01:09:35.576593+00:00",
+        "reason": "reviewer (sonnet): The verdict anchor, useGlobalSearchPanel.ts:172, is the `filterTypes` chip list and says nothing about model generation being absent. The better-fitting lines (useTopBar.ts:145, EventCard.tsx:23, useGlobalSearchPanel.ts:95 and :117) are only technique anchors, so the not-applicable rests on an incid"
+      }
     }
   }
 }

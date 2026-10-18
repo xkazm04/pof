@@ -20905,7 +20905,11 @@
           "revision": 2,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 Context and repository searches found no hyperparameter, crossValidation, fillRecord or statisticsFile matches; this context schedules milestones and starts user-selected task DAGs, which the standard places outside its fixed model-generator workflow.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:a8a570eae3950671",
+          "evaluatedRevision": 2
         },
         {
           "subject": "agent-instruction-files",
@@ -22082,7 +22086,11 @@
           "revision": 2,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/CandidateGallery.tsx:101 Context and repository searches found no hyperparameter, crossValidation, fillRecord or statisticsFile matches; these primitives present artist-selected image and mesh variants, outside the standard's dataset-to-trained-model scope.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:a8a570eae3950671",
+          "evaluatedRevision": 2
         },
         {
           "subject": "hitl-approval",

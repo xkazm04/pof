@@ -1,0 +1,166 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9f22a927-8c4c-43cd-a8fd-41c30487a3fc",
+  "subject": "generated-workflow-candidates",
+  "evaluatedAt": "2026-10-18T01:09:06.183935+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "step-shared-primitives",
+      "subject": "generated-workflow-candidates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/layout-lab/steps/shared/CandidateGallery.tsx:101 Context and repository searches found no hyperparameter, crossValidation, fillRecord or statisticsFile matches; these primitives present artist-selected image and mesh variants, outside the standard's dataset-to-trained-model scope.",
+      "techniques": [
+        {
+          "technique": "candidates-as-ordinary-artifacts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:231 This projects an art variant and its history into step data; it does not generate runnable training-and-inference packages."
+        },
+        {
+          "technique": "score-keyed-candidate-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/CandidateGallery.tsx:101 Selection is an artist's gallery click, outside selection among trained models by validation score."
+        },
+        {
+          "technique": "search-as-candidate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/itemGenCandidates.ts:18 Re-roll variation derives thumbnail hues from direction and sequence; this is not hyperparameter search."
+        },
+        {
+          "technique": "stage-level-result-caching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/useGeneratedImageAssets.ts:46 The hook loads an image manifest for presentation; it does not drive analyze-generate-train-select stages."
+        },
+        {
+          "technique": "template-filling-with-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:145 Prompt construction takes the user's direction rather than measured dataset statistics for a model configuration."
+        },
+        {
+          "technique": "two-tier-data-statistics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/genericGalleryCandidates.ts:19 Placeholder generation consumes direction and identifiers, without a dataset-analysis precondition."
+        }
+      ],
+      "absenceTerms": [
+        "hyperparameter",
+        "crossValidation",
+        "fillRecord",
+        "statisticsFile"
+      ]
+    },
+    {
+      "context": "roadmap-workflow-management",
+      "subject": "generated-workflow-candidates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 Context and repository searches found no hyperparameter, crossValidation, fillRecord or statisticsFile matches; this context schedules milestones and starts user-selected task DAGs, which the standard places outside its fixed model-generator workflow.",
+      "techniques": [
+        {
+          "technique": "candidates-as-ordinary-artifacts",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 The action starts a task workflow for selected modules; its output is not a generated model package."
+        },
+        {
+          "technique": "score-keyed-candidate-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:58 History filters workflow executions by terminal status; it does not rank trained candidates."
+        },
+        {
+          "technique": "search-as-candidate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/ModuleSelector.tsx:51 The operator selects target modules; this is not a hyperparameter-search backend."
+        },
+        {
+          "technique": "stage-level-result-caching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/ExecutionHistoryRow.tsx:38 This reports interrupted DAG executions; the technique explicitly excludes general pipeline-engine resume semantics."
+        },
+        {
+          "technique": "template-filling-with-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:90 Templates are selected interactively for task execution, without statistics-driven model-configuration filling."
+        },
+        {
+          "technique": "two-tier-data-statistics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/CalendarRoadmapView/useCalendarRoadmapView.ts:39 Roadmap inputs concern project health and checklist completion, outside analysis of training samples."
+        }
+      ],
+      "absenceTerms": [
+        "hyperparameter",
+        "crossValidation",
+        "fillRecord",
+        "statisticsFile"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "generated-workflow-candidates",
+      "context": "topbar-and-activity",
+      "reason": "withdrawn after review: reviewer (sonnet): The verdict anchor, useGlobalSearchPanel.ts:172, is the `filterTypes` chip list and says nothing about model generation being absent. The better-fitting lines (useTopBar.ts:145, EventCard.tsx:23, useGlobalSearchPanel.ts:95 and :117) are only technique anchors, so the not-applicable rests on an incid"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T01:09:06.183935+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "generated-workflow-candidates"
+      ],
+      "techniques": [
+        "candidates-as-ordinary-artifacts",
+        "score-keyed-candidate-selection",
+        "search-as-candidate-mutation",
+        "stage-level-result-caching",
+        "template-filling-with-provenance",
+        "two-tier-data-statistics"
+      ],
+      "deviations": 0,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-18T01:09:06.183935+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "generated-workflow-candidates"
+      ],
+      "techniques": [
+        "candidates-as-ordinary-artifacts",
+        "score-keyed-candidate-selection",
+        "search-as-candidate-mutation",
+        "stage-level-result-caching",
+        "template-filling-with-provenance",
+        "two-tier-data-statistics"
+      ],
+      "deviations": 0,
+      "context": "roadmap-workflow-management",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-18T01:09:06.183935+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "generated-workflow-candidates"
+      ],
+      "techniques": [
+        "candidates-as-ordinary-artifacts",
+        "score-keyed-candidate-selection",
+        "search-as-candidate-mutation",
+        "stage-level-result-caching",
+        "template-filling-with-provenance",
+        "two-tier-data-statistics"
+      ],
+      "deviations": 0,
+      "context": "topbar-and-activity",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
