@@ -1,0 +1,81 @@
+{
+  "schema": "conform-run/1",
+  "worker": "286ad05e-a8f7-462e-a51d-27896f18575b",
+  "subject": "on-device-verification-harness",
+  "evaluatedAt": "2026-10-18T21:37:12.479753+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "ue5-bridge-monitoring",
+      "subject": "on-device-verification-harness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:25 The test harness template configures a fixed 1.0 second wait action for actor initialization rather than polling a readiness signal before running assertions.",
+      "techniques": [
+        {
+          "technique": "poll-ready-signal-not-fixed-delay",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:25 Default action sleeps for a fixed 1.0s to wait for initialization rather than polling a ready signal."
+        },
+        {
+          "technique": "keep-the-failed-baseline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/SnapshotsTab.tsx:19 Snapshot acceptance overwrites baseline image without archival or backup, destroying the failed baseline."
+        },
+        {
+          "technique": "fresh-state-per-check",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/ScenarioCard.tsx:90 Allows disabling cleanup (none), allowing spawned actors and state to leak into subsequent checks."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "on-device-verification-harness",
+      "context": "hud-damage-and-navigation",
+      "reason": "The context covers HUD visual design subsystems (DamageNumberPhysicsSimulator, MenuFlowDiagram, LowHealthPulse) comprising UI editors and canvas physics sandboxes, with no test or verification harness."
+    },
+    {
+      "subject": "on-device-verification-harness",
+      "context": "quality-evaluation-api",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors (experiment/run/route.ts, performance-profiling/route.ts) are not in this context's file list. Line 33 only passes body.settleMs through. runner.ts and editor-process.ts show settleMs is a ceiling (the editor can self-exit) with a poll-budget module, not a fixed delay in place of polling"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T21:37:12.479753+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "on-device-verification-harness"
+      ],
+      "techniques": [
+        "fresh-state-per-check",
+        "keep-the-failed-baseline",
+        "poll-ready-signal-not-fixed-delay",
+        "separate-active-race-from-transition-windows"
+      ],
+      "deviations": 1,
+      "context": "quality-evaluation-api",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T21:37:12.479753+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "on-device-verification-harness"
+      ],
+      "techniques": [
+        "fresh-state-per-check",
+        "keep-the-failed-baseline",
+        "poll-ready-signal-not-fixed-delay"
+      ],
+      "deviations": 1,
+      "context": "ue5-bridge-monitoring",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

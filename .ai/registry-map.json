@@ -22969,7 +22969,11 @@
           "revision": 1,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:25 The test harness template configures a fixed 1.0 second wait action for actor initialization rather than polling a readiness signal before running assertions.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:c93684a45025e912",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
