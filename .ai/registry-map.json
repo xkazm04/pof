@@ -9635,7 +9635,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:356 This integration invokes an external Claude CLI and manages application callbacks and spend; context and repository searches found no embeddable, guestContext, or register_global matches indicating a guest-language runtime implementation.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
+          "evaluatedRevision": 1
         },
         {
           "subject": "fleet-orchestration",
@@ -18786,7 +18790,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/checklist/complete/route.ts:55 These routes manage application progress, builds, notifications, and previews; searches of the context and repository found no embeddable, guestContext, or register_global matches establishing an embeddable language-runtime implementation.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"

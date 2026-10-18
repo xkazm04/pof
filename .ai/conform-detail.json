@@ -9723,6 +9723,134 @@
           "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:48 The controls expose literal text matching and predefined source selections, without an authored predicate language."
         }
       ]
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/standards-layered-runtime": {
+      "context": "game-design-studio-api",
+      "subject": "standards-layered-runtime",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:04:26.120Z",
+      "techniques": [
+        {
+          "technique": "backend-parameterised-web-api",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/quest-generation/route.ts:46 Consumes fetch for an application request; does not implement a guest-facing standard API."
+        },
+        {
+          "technique": "baseline-plus-extension-tuple",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/feature-matrix/aggregate/route.ts:18 Returns application aggregates; no embedder entry point installs APIs into a guest context."
+        },
+        {
+          "technique": "cli-as-thin-assembler",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 An HTTP handler launches a review task; it is not an embeddable runtime's executable."
+        },
+        {
+          "technique": "crate-per-standards-body",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/ability-spec/route.ts:33 Serves stored ability specifications; no language-runtime conformance package is implemented here."
+        },
+        {
+          "technique": "re-export-preserves-import-path",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/ability-spec/codegen/route.ts:41 Persists an application code-generation report; no extras-to-standards runtime API migration was identified."
+        },
+        {
+          "technique": "status-header-per-api",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/gdd-compliance/route.ts:27 Audits game-design progress, not implementation coverage of a guest-language platform standard."
+        }
+      ],
+      "withdrawn": {
+        "worker": "dc6bdcbc-3e8f-4717-95c1-18ca6253ef2d",
+        "state": "not-applicable",
+        "at": "2026-10-18T23:05:19.126188+00:00",
+        "reason": "reviewer (sonnet): The primary anchor (economy-simulator/route.ts:39) and the quest-generation technique anchor are not among the context's files, which are ability-spec and feature-matrix routes. Those routes are standalone HTTP handlers and nothing in the context calls them, so the verdict rests on another context's"
+      }
+    },
+    "6540a636-c13b-4437-a682-d5c71b7d71b4/standards-layered-runtime": {
+      "context": "platform-services-api",
+      "subject": "standards-layered-runtime",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:04:26.120Z",
+      "worker": "dc6bdcbc-3e8f-4717-95c1-18ca6253ef2d",
+      "techniques": [
+        {
+          "technique": "backend-parameterised-web-api",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/notify/gate/route.ts:75 Dispatches an application webhook; it does not implement a standardized guest I/O API."
+        },
+        {
+          "technique": "baseline-plus-extension-tuple",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/cli-task-registry/route.ts:78 Registers task lifecycle records, not baseline APIs or extensions in a guest realm."
+        },
+        {
+          "technique": "cli-as-thin-assembler",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/packaging/preflight/route.ts:55 Constructs arguments for UnrealBuildTool; this route is a subprocess client, not a language-runtime CLI."
+        },
+        {
+          "technique": "crate-per-standards-body",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/checklist-metadata/route.ts:31 Reads application metadata; no standards conformance package boundary is claimed."
+        },
+        {
+          "technique": "re-export-preserves-import-path",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/packaging/profiles/route.ts:36 Generates an application build command; no runtime API moving between extras and standards packages was identified."
+        },
+        {
+          "technique": "status-header-per-api",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/preview/mirror-map/route.ts:33 Reports game-preview capability, not partial implementation of a language-runtime standard."
+        }
+      ]
+    },
+    "2a39555c-9199-48bf-b54a-6a13db05036c/standards-layered-runtime": {
+      "context": "cli-terminal-system",
+      "subject": "standards-layered-runtime",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:04:26.120Z",
+      "worker": "dc6bdcbc-3e8f-4717-95c1-18ca6253ef2d",
+      "techniques": [
+        {
+          "technique": "backend-parameterised-web-api",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-task.ts:245 Uses the host's fetch API to submit callbacks; it does not implement fetch for guest programs."
+        },
+        {
+          "technique": "baseline-plus-extension-tuple",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-task.ts:58 Registers callback descriptors; no guest context receives a runtime baseline or extension tuple."
+        },
+        {
+          "technique": "cli-as-thin-assembler",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:363 Wraps a separately installed CLI process; this repository does not implement that CLI's runtime library or executable."
+        },
+        {
+          "technique": "crate-per-standards-body",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/cli-spend-db.ts:33 Implements application spend persistence, with no runtime standards package or portability claim."
+        },
+        {
+          "technique": "re-export-preserves-import-path",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/prompt-evolution/dispatch-resolve.ts:37 The re-export shares a prompt-variant sentinel within the application; it is not a migration into a runtime standards package."
+        },
+        {
+          "technique": "status-header-per-api",
+          "verdict": "not-applicable",
+          "evidence": "src/types/cli-spend.ts:2 Documents application accounting types, not APIs in an incomplete standards implementation."
+        }
+      ]
     }
   }
 }
