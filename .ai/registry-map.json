@@ -1813,7 +1813,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:48 Context searches found none of the absence terms, and the simulation interprets numeric game data while code generation produces C++ source text, so the extension-hosting precondition is absent.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         },
         {
           "subject": "supply-chain",
@@ -4811,7 +4815,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/IntegrationView.tsx:163 Context searches found none of the absence terms, and tracing acquisition and integration found asset metadata updates and C++ text display without runtime extension hosting.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         },
         {
           "subject": "supply-chain",
@@ -14787,7 +14795,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:163 Context searches found none of the absence terms, and tracing genome import found sanitized data passed to the application store without loading extension code.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"

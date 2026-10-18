@@ -1,0 +1,295 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b6062829-74cf-455c-b4f0-d232f96adb88",
+ "subject": "untrusted-extension-host",
+ "evaluatedAt": "2026-10-18T23:41:04.019053+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "asset-visual-studio",
+   "subject": "untrusted-extension-host",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/AssetScoutView/IntegrationView.tsx:163 Context searches found none of the absence terms, and tracing acquisition and integration found asset metadata updates and C++ text display without runtime extension hosting.",
+   "techniques": [
+    {
+     "technique": "canonicalizable-privilege-declaration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/ParamSlider.tsx:75 This describes graphics parameters; no extension privilege declaration was found."
+    },
+    {
+     "technique": "capability-subtraction-sandbox",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/IntegrationView.tsx:163 Adapter source goes to CodeViewer; no embedded guest runtime was found."
+    },
+    {
+     "technique": "declared-schema-extension-storage",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/AcquiredAssetsList.tsx:13 The list consumes application-owned acquisition records, not guest storage requests."
+    },
+    {
+     "technique": "derived-capability-inventory",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/AssetRow.tsx:45 The scoring surface ranks asset recommendations; no extension language or capability extractor was found."
+    },
+    {
+     "technique": "grant-change-consent",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/PresetGallery.tsx:41 This applies a graphics preset; no installed-extension update or grant change was found."
+    },
+    {
+     "technique": "host-api-import-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/GPUBreakdown.tsx:61 The budget concerns rendering cost, not isolated extension execution."
+    },
+    {
+     "technique": "isolation-tier-independent-extension-api",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/EffectCard.tsx:180 This forwards a slider value through a React callback; no extension context or isolation tiers were found."
+    },
+    {
+     "technique": "per-callback-failure-policy",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/AssetRow.tsx:29 The acquisition callback updates host-owned metadata; it does not dispatch foreign hooks."
+    },
+    {
+     "technique": "pluggable-isolation-runner",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:77 Generation dispatches the application's CLI task; no isolated extension runner was found."
+    },
+    {
+     "technique": "safe-mode-registration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/AcquiredAssetsList.tsx:47 Removal deletes an acquisition record; no extension boot or registration lifecycle was found."
+    },
+    {
+     "technique": "two-tier-extension-format",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/helpers.ts:19 The adapter helper produces a C++ download filename; no extension installation formats were found."
+    }
+   ],
+   "absenceTerms": [
+    "extension",
+    "privilege",
+    "broker",
+    "consent"
+   ]
+  },
+  {
+   "context": "ability-blueprint",
+   "subject": "untrusted-extension-host",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:48 Context searches found none of the absence terms, and the simulation interprets numeric game data while code generation produces C++ source text, so the extension-hosting precondition is absent.",
+   "techniques": [
+    {
+     "technique": "canonicalizable-privilege-declaration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TagRulesEditor.tsx:34 These are gameplay activation rules; no extension privilege declaration was found."
+    },
+    {
+     "technique": "capability-subtraction-sandbox",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:46 The simulator extracts a numeric multiplier from text; it does not embed a guest scripting runtime."
+    },
+    {
+     "technique": "declared-schema-extension-storage",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/useAbilitySpecBinding.ts:183 Persistence writes the application's ability-spec slices; no guest-owned collections or query surface were found."
+    },
+    {
+     "technique": "derived-capability-inventory",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/index.tsx:81 The editor generates source from attribute data; it does not load extension modules for capability analysis."
+    },
+    {
+     "technique": "grant-change-consent",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/index.tsx:94 Template selection replaces editor data; no installed-extension update was found."
+    },
+    {
+     "technique": "host-api-import-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/constants.ts:13 This caps simulated timeline length, not a foreign module's wall-clock execution."
+    },
+    {
+     "technique": "isolation-tier-independent-extension-api",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/useSimulationSandbox.ts:51 Simulation calls a statically imported application function; no tier-specific extension context exists here."
+    },
+    {
+     "technique": "per-callback-failure-policy",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:80 Queued effects apply numeric modifiers directly; no foreign callback registration was found."
+    },
+    {
+     "technique": "pluggable-isolation-runner",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:134 The simulation returns computed snapshots; it does not manage isolated execution contexts."
+    },
+    {
+     "technique": "safe-mode-registration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/useSimulationSandbox.ts:55 Stopping playback clears an application timer; no extension startup recovery lifecycle was found."
+    },
+    {
+     "technique": "two-tier-extension-format",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/codegen.ts:136 The generator returns source text; no runtime extension formats or installation tiers were found."
+    }
+   ],
+   "absenceTerms": [
+    "extension",
+    "privilege",
+    "broker",
+    "consent"
+   ]
+  },
+  {
+   "context": "inventory-genome-economy",
+   "subject": "untrusted-extension-host",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:163 Context searches found none of the absence terms, and tracing genome import found sanitized data passed to the application store without loading extension code.",
+   "techniques": [
+    {
+     "technique": "canonicalizable-privilege-declaration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/diff-fields.ts:23 The declaration being compared is genome configuration; no extension grants were found."
+    },
+    {
+     "technique": "capability-subtraction-sandbox",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/MonteCarloSimulator.tsx:33 Monte Carlo execution invokes a bundled rolling function; no embedded guest runtime was found."
+    },
+    {
+     "technique": "declared-schema-extension-storage",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:102 The application stores genome records; no persistence interface exposed to extensions was found."
+    },
+    {
+     "technique": "derived-capability-inventory",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/DistributionBar.tsx:16 The analysis predicts loot distributions from data; it does not inspect guest host-interface calls."
+    },
+    {
+     "technique": "grant-change-consent",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:95 Updates change numerical genome traits; no installed-extension privilege update was found."
+    },
+    {
+     "technique": "host-api-import-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/MonteCarloSimulator.tsx:18 The execution control selects simulation sample counts; no isolated foreign-code timeout was found."
+    },
+    {
+     "technique": "isolation-tier-independent-extension-api",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:125 The editor derives chart data through a bundled helper; no extension context or isolation tiers were found."
+    },
+    {
+     "technique": "per-callback-failure-policy",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:121 The UI invokes its own evolution action; no foreign vetoing callbacks were found."
+    },
+    {
+     "technique": "pluggable-isolation-runner",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/index.tsx:115 Rolling calls the application's algorithm directly; no platform isolation runner was found."
+    },
+    {
+     "technique": "safe-mode-registration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/LibraryTab.tsx:44 This resets genome presets; no extension registration or startup lockout was found."
+    },
+    {
+     "technique": "two-tier-extension-format",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/CodePreview.tsx:25 The preview interpolates a genome weight into displayed C++ text; no executable extension installation format was found."
+    }
+   ],
+   "absenceTerms": [
+    "extension",
+    "privilege",
+    "broker",
+    "consent"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-18T23:41:04.019053+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "untrusted-extension-host"
+   ],
+   "techniques": [
+    "canonicalizable-privilege-declaration",
+    "capability-subtraction-sandbox",
+    "declared-schema-extension-storage",
+    "derived-capability-inventory",
+    "grant-change-consent",
+    "host-api-import-budget",
+    "isolation-tier-independent-extension-api",
+    "per-callback-failure-policy",
+    "pluggable-isolation-runner",
+    "safe-mode-registration",
+    "two-tier-extension-format"
+   ],
+   "deviations": 0,
+   "context": "asset-visual-studio",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T23:41:04.019053+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "untrusted-extension-host"
+   ],
+   "techniques": [
+    "canonicalizable-privilege-declaration",
+    "capability-subtraction-sandbox",
+    "declared-schema-extension-storage",
+    "derived-capability-inventory",
+    "grant-change-consent",
+    "host-api-import-budget",
+    "isolation-tier-independent-extension-api",
+    "per-callback-failure-policy",
+    "pluggable-isolation-runner",
+    "safe-mode-registration",
+    "two-tier-extension-format"
+   ],
+   "deviations": 0,
+   "context": "ability-blueprint",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T23:41:04.019053+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "untrusted-extension-host"
+   ],
+   "techniques": [
+    "canonicalizable-privilege-declaration",
+    "capability-subtraction-sandbox",
+    "declared-schema-extension-storage",
+    "derived-capability-inventory",
+    "grant-change-consent",
+    "host-api-import-budget",
+    "isolation-tier-independent-extension-api",
+    "per-callback-failure-policy",
+    "pluggable-isolation-runner",
+    "safe-mode-registration",
+    "two-tier-extension-format"
+   ],
+   "deviations": 0,
+   "context": "inventory-genome-economy",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
