@@ -2286,7 +2286,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/data.ts:258 Scenario import accepts unknown keys at the scenario, player, enemy, and enemy-stat levels, violating the technique's requirement to reject unknown definition fields at load time.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:3a3f807b1eee2ce2",
+          "evaluatedRevision": 1
         },
         {
           "subject": "vehicle-archetype-balance",

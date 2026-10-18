@@ -1,0 +1,70 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5e519d51-d234-47a2-af54-fc299d8b6a14",
+ "subject": "gameplay-runtime-patterns",
+ "evaluatedAt": "2026-10-18T00:49:43.075255+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ability-gas-balance",
+   "subject": "gameplay-runtime-patterns",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/data.ts:258 Scenario import accepts unknown keys at the scenario, player, enemy, and enemy-stat levels, violating the technique's requirement to reject unknown definition fields at load time.",
+   "techniques": [
+    {
+     "technique": "data-driven-type-objects-over-subclass-growth",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/data.ts:258 Enemy variation uses data records, but import validation accepts unknown fields; four in-memory probes confirmed this at every object level."
+    },
+    {
+     "technique": "event-dispatch-versus-direct-call",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:102 The known damage consequence is computed directly on the caller's stack."
+    },
+    {
+     "technique": "spatial-partitioning-threshold",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:100 One player selects a target through a linear scan; this is not all-participants-against-all-participants adjacency."
+    },
+    {
+     "technique": "update-order-and-frame-coherence",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:168 The simulation uses a fixed 0.05-second step and explicit player-before-enemy ordering; repeated seeded runs matched apart from result timestamp metadata."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "gameplay-runtime-patterns",
+   "context": "state-management",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "gameplay-runtime-patterns",
+   "context": "ability-design",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T00:49:43.075255+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "gameplay-runtime-patterns"
+   ],
+   "techniques": [
+    "data-driven-type-objects-over-subclass-growth",
+    "event-dispatch-versus-direct-call",
+    "spatial-partitioning-threshold",
+    "update-order-and-frame-coherence"
+   ],
+   "deviations": 1,
+   "context": "ability-gas-balance",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
