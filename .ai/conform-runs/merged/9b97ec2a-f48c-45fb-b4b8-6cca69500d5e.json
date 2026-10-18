@@ -1,0 +1,175 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9b97ec2a-f48c-45fb-b4b8-6cca69500d5e",
+ "subject": "content-acceptance-tiering",
+ "evaluatedAt": "2026-10-18T00:21:44.100851+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "pipeline-acceptance-engine",
+   "subject": "content-acceptance-tiering",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/lifecycle.ts:132 One passing runtime gate can produce a verified lifecycle while another runtime or visual gate remains deferred.",
+   "techniques": [
+    {
+     "technique": "config-complete-vs-runtime-verified",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/lifecycle.ts:132 With L3 passing and L4 deferred, configComplete is true and this threshold permits verified without draining L4."
+    },
+    {
+     "technique": "derived-vs-toggled-acceptance",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:203 When no checker resolves, the derivation manufactures a passing verdict without examining the content."
+    },
+    {
+     "technique": "never-fail-silently-reason-strings",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/labAcceptance.ts:57 The wrapper forwards non-pass statuses without requiring a reason or supplying a status-specific explanation."
+    },
+    {
+     "technique": "plain-language-tier-glossary",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/labGlossary.ts:25 The glossary supplies friendly names, but its separately maintained entries omit the required blindness clauses and shared evaluator definitions."
+    }
+   ]
+  },
+  {
+   "context": "catalog-acceptance",
+   "subject": "content-acceptance-tiering",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:88 The human-selection checker accepts a boolean attestation instead of deriving acceptance from a recorded choice.",
+   "techniques": [
+    {
+     "technique": "config-complete-vs-runtime-verified",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/resolveStepAcceptance.ts:24 The server overlay checks status but not tier, allowing a persisted pass to replace a locally deferred L2 check and conceal an unresolved static requirement."
+    },
+    {
+     "technique": "deferred-as-honest-progress",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/ueStaticCheckers.ts:105 An absent seed row is authoring work discoverable by a static check, but it is classified as deferred at L2."
+    },
+    {
+     "technique": "derived-vs-toggled-acceptance",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:88 humanConfirmed passes on a boolean without recording the selected artifact, chooser, or selection time."
+    },
+    {
+     "technique": "never-fail-silently-reason-strings",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/linkCheckers.ts:13 This pending result omits reason, demonstrating that reasonless non-passes are actually produced."
+    },
+    {
+     "technique": "tier-ladder-design",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:94 Missing human confirmation is moved to L3 even though the missing evidence is a human action, making it eligible for configuration-complete deferral."
+    }
+   ]
+  },
+  {
+   "context": "level-flow-editor",
+   "subject": "content-acceptance-tiering",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:20 Context and repository searches located acceptance tiering elsewhere but found none of the searched identifiers here, where statuses describe editing, implementation progress, pacing warnings, and document-to-code synchronization.",
+   "techniques": [
+    {
+     "technique": "config-complete-vs-runtime-verified",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:20 The indicator claims document/code agreement rather than content readiness or runtime verification."
+    },
+    {
+     "technique": "deferred-as-honest-progress",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:50 The unrun state concerns a synchronization comparison, not an environment-dependent content gate."
+    },
+    {
+     "technique": "derived-vs-toggled-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/index.tsx:16 This reads implementation-checklist progress for level systems, a workflow measure outside the standard's content acceptance ladder."
+    },
+    {
+     "technique": "never-fail-silently-reason-strings",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/LevelFlowEditor/types.ts:32 The result describes whether an editing operation was accepted, not a content-check verdict."
+    },
+    {
+     "technique": "plain-language-tier-glossary",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/LevelDesignView/SyncDot.tsx:13 These labels name synchronization states rather than evidence rungs."
+    },
+    {
+     "technique": "tier-ladder-design",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/constants.ts:11 The spatial diagram orders implementation tasks and dependencies rather than increasingly strong evidence about produced content."
+    }
+   ],
+   "absenceTerms": [
+    "AcceptanceTier",
+    "configComplete",
+    "runtimeVerified",
+    "runtimeDeferred"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-18T00:21:44.100851+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "content-acceptance-tiering"
+   ],
+   "techniques": [
+    "config-complete-vs-runtime-verified",
+    "derived-vs-toggled-acceptance",
+    "never-fail-silently-reason-strings",
+    "plain-language-tier-glossary"
+   ],
+   "deviations": 1,
+   "context": "pipeline-acceptance-engine",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T00:21:44.100851+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "content-acceptance-tiering"
+   ],
+   "techniques": [
+    "config-complete-vs-runtime-verified",
+    "deferred-as-honest-progress",
+    "derived-vs-toggled-acceptance",
+    "never-fail-silently-reason-strings",
+    "tier-ladder-design"
+   ],
+   "deviations": 1,
+   "context": "catalog-acceptance",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T00:21:44.100851+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "content-acceptance-tiering"
+   ],
+   "techniques": [
+    "config-complete-vs-runtime-verified",
+    "deferred-as-honest-progress",
+    "derived-vs-toggled-acceptance",
+    "never-fail-silently-reason-strings",
+    "plain-language-tier-glossary",
+    "tier-ladder-design"
+   ],
+   "deviations": 0,
+   "context": "level-flow-editor",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

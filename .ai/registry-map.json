@@ -6997,7 +6997,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:88 The human-selection checker accepts a boolean attestation instead of deriving acceptance from a recorded choice.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:d2af80c60b0b0da3",
+          "evaluatedRevision": 2
         },
         {
           "subject": "quality-gates",
@@ -15988,7 +15992,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:20 Context and repository searches located acceptance tiering elsewhere but found none of the searched identifiers here, where statuses describe editing, implementation progress, pacing warnings, and document-to-code synchronization.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:d2af80c60b0b0da3",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -18198,7 +18206,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/lifecycle.ts:132 One passing runtime gate can produce a verified lifecycle while another runtime or visual gate remains deferred.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:d2af80c60b0b0da3",
+          "evaluatedRevision": 2
         },
         {
           "subject": "quality-gates",

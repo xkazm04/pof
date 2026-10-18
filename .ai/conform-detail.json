@@ -8939,6 +8939,114 @@
         }
       ],
       "registryProposal": "The single-flight-primitives technique describes backend try-begin/end token patterns, but client-side React hooks frequently degrade to module-level singleton promises or component-level refs; the technique should explicitly document keyed promise map patterns with finally-guaranteed cleanup for client single-flight loaders."
+    },
+    "fbf29127-2676-426a-82b7-d0588ca6bd81/content-acceptance-tiering": {
+      "context": "pipeline-acceptance-engine",
+      "subject": "content-acceptance-tiering",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T00:21:44.100Z",
+      "worker": "9b97ec2a-f48c-45fb-b4b8-6cca69500d5e",
+      "techniques": [
+        {
+          "technique": "config-complete-vs-runtime-verified",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/lifecycle.ts:132 With L3 passing and L4 deferred, configComplete is true and this threshold permits verified without draining L4."
+        },
+        {
+          "technique": "derived-vs-toggled-acceptance",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:203 When no checker resolves, the derivation manufactures a passing verdict without examining the content."
+        },
+        {
+          "technique": "never-fail-silently-reason-strings",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labAcceptance.ts:57 The wrapper forwards non-pass statuses without requiring a reason or supplying a status-specific explanation."
+        },
+        {
+          "technique": "plain-language-tier-glossary",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labGlossary.ts:25 The glossary supplies friendly names, but its separately maintained entries omit the required blindness clauses and shared evaluator definitions."
+        }
+      ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/content-acceptance-tiering": {
+      "context": "catalog-acceptance",
+      "subject": "content-acceptance-tiering",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T00:21:44.100Z",
+      "worker": "9b97ec2a-f48c-45fb-b4b8-6cca69500d5e",
+      "techniques": [
+        {
+          "technique": "config-complete-vs-runtime-verified",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/resolveStepAcceptance.ts:24 The server overlay checks status but not tier, allowing a persisted pass to replace a locally deferred L2 check and conceal an unresolved static requirement."
+        },
+        {
+          "technique": "deferred-as-honest-progress",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/ueStaticCheckers.ts:105 An absent seed row is authoring work discoverable by a static check, but it is classified as deferred at L2."
+        },
+        {
+          "technique": "derived-vs-toggled-acceptance",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:88 humanConfirmed passes on a boolean without recording the selected artifact, chooser, or selection time."
+        },
+        {
+          "technique": "never-fail-silently-reason-strings",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/linkCheckers.ts:13 This pending result omits reason, demonstrating that reasonless non-passes are actually produced."
+        },
+        {
+          "technique": "tier-ladder-design",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/pythonStepCheckers.ts:94 Missing human confirmation is moved to L3 even though the missing evidence is a human action, making it eligible for configuration-complete deferral."
+        }
+      ]
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/content-acceptance-tiering": {
+      "context": "level-flow-editor",
+      "subject": "content-acceptance-tiering",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T00:21:44.100Z",
+      "worker": "9b97ec2a-f48c-45fb-b4b8-6cca69500d5e",
+      "techniques": [
+        {
+          "technique": "config-complete-vs-runtime-verified",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:20 The indicator claims document/code agreement rather than content readiness or runtime verification."
+        },
+        {
+          "technique": "deferred-as-honest-progress",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:50 The unrun state concerns a synchronization comparison, not an environment-dependent content gate."
+        },
+        {
+          "technique": "derived-vs-toggled-acceptance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/index.tsx:16 This reads implementation-checklist progress for level systems, a workflow measure outside the standard's content acceptance ladder."
+        },
+        {
+          "technique": "never-fail-silently-reason-strings",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/types.ts:32 The result describes whether an editing operation was accepted, not a content-check verdict."
+        },
+        {
+          "technique": "plain-language-tier-glossary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/LevelDesignView/SyncDot.tsx:13 These labels name synchronization states rather than evidence rungs."
+        },
+        {
+          "technique": "tier-ladder-design",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/constants.ts:11 The spatial diagram orders implementation tasks and dependencies rather than increasingly strong evidence about produced content."
+        }
+      ]
     }
   }
 }
