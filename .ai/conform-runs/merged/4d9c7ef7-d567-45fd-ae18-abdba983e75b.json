@@ -1,0 +1,115 @@
+{
+  "schema": "conform-run/1",
+  "worker": "4d9c7ef7-d567-45fd-ae18-abdba983e75b",
+  "subject": "llm-dialogue-quality-control",
+  "evaluatedAt": "2026-10-18T01:21:53.322746+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "code-quality-evaluation",
+      "subject": "llm-dialogue-quality-control",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/DeepEvalResults/index.tsx:146 Searches found dialogue facilities elsewhere and factual dialogue checks in the evaluator dependency, but these context files inspect code findings and stored verdicts rather than generate or select dialogue candidates.",
+      "techniques": [
+        {
+          "technique": "blind-rubric-scoring-by-another-family",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/index.tsx:41 This browser retrieves existing verdicts rather than judging dialogue candidates."
+        },
+        {
+          "technique": "candidates-under-rotating-constraints",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/index.tsx:57 The work unit is a code module, not a dialogue slot receiving candidate lines."
+        },
+        {
+          "technique": "critique-and-revise-with-human-checkpoints",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:300 This revision action repairs a code finding, not generated dialogue."
+        },
+        {
+          "technique": "measured-banned-pattern-list",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/index.tsx:103 The library stores implementation approaches rather than stock dialogue patterns."
+        },
+        {
+          "technique": "read-aloud-pass",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/index.tsx:79 This checks asset references rather than accepting a dialogue shortlist."
+        },
+        {
+          "technique": "voice-bible-in-every-prompt",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 The editor updates implementation-pattern documentation rather than assembling speaker-generation prompts."
+        }
+      ],
+      "absenceTerms": [
+        "barks",
+        "voiceBible",
+        "readAloud"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "llm-dialogue-quality-control",
+      "context": "judge-craft-quality",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor src/lib/model-policy.ts is outside this context's files, and the only judge-dir reference (spendMeter.ts) just labels spend as 'judge-content'. I found no code in src/lib/judge or src/lib/craft that resolves the model policy, so the claim that the judge harness resolves this policy is unc"
+    },
+    {
+      "subject": "llm-dialogue-quality-control",
+      "context": "blueprint-transpiler-game-systems",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor src/lib/module-registry.ts:946 is outside this context's files. It is the dq-1 checklist prompt, which sets up a dialogue data asset and sample dialogues, and it doesn't show the claimed lack of speaker briefing. Grep found no createTabbedModuleView in module-registry.ts, so the claimed m"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T01:21:53.322746+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "llm-dialogue-quality-control"
+      ],
+      "techniques": [
+        "blind-rubric-scoring-by-another-family"
+      ],
+      "deviations": 1,
+      "context": "judge-craft-quality",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-18T01:21:53.322746+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "llm-dialogue-quality-control"
+      ],
+      "techniques": [
+        "blind-rubric-scoring-by-another-family",
+        "candidates-under-rotating-constraints",
+        "critique-and-revise-with-human-checkpoints",
+        "measured-banned-pattern-list",
+        "read-aloud-pass",
+        "voice-bible-in-every-prompt"
+      ],
+      "deviations": 0,
+      "context": "code-quality-evaluation",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-18T01:21:53.322746+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "llm-dialogue-quality-control"
+      ],
+      "techniques": [
+        "voice-bible-in-every-prompt"
+      ],
+      "deviations": 1,
+      "context": "blueprint-transpiler-game-systems",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

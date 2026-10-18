@@ -10009,7 +10009,11 @@
           "revision": 3,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/index.tsx:146 Searches found dialogue facilities elsewhere and factual dialogue checks in the evaluator dependency, but these context files inspect code findings and stored verdicts rather than generate or select dialogue candidates.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:65f5fbeafc4961fc",
+          "evaluatedRevision": 3
         },
         {
           "subject": "module-design",
