@@ -1,0 +1,83 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b5162298-95a5-42d0-bdf3-b8ac428991bd",
+ "subject": "concurrency-guards",
+ "evaluatedAt": "2026-10-18T00:09:24.878338+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "feature-design-state-hooks",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useFeatureStatuses.ts:86 In-flight requests use an unkeyed module-level scalar promise variable that is overwritten on project switches and prematurely cleared on the first response, admitting duplicate in-flight fetches for the active project.",
+   "techniques": [
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useFeatureStatuses.ts:86 Shared in-flight request tracking uses an unkeyed scalar promise variable that gets overwritten by a second project's request, causing the first request's resolution to clear the guard early via inflight = null while the second request is still in flight."
+    },
+    {
+     "technique": "release-guarantees",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useFeatureMatrix.ts:263 seedKey is added to seededModules before seed() is called, but seed() lacks an error handler or finally block to delete the key if the network request fails, permanently wedging auto-seeding for that module."
+    },
+    {
+     "technique": "attempt-attribution",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useGameDesignDoc.ts:134 generate() mints a monotonic token on dispatch and checks it at the write site before updating cache or state, discarding superseded responses."
+    },
+    {
+     "technique": "guard-key-design",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useGameDesignDoc.ts:77 cachedDoc keys document cache entries by projectName, normalized projectId, and checklistHash so documents are scoped to project and checklist state."
+    },
+    {
+     "technique": "idempotency-by-design",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useFeatureMatrix.ts:162 seed() marks the payload with seedOnly: true (insert-if-missing) so repeated seed requests are idempotent conditional writes that cannot overwrite existing review data."
+    },
+    {
+     "technique": "critical-section-across-a-suspension",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useEntityCommitBuffer.ts:191 stageAtCommit captures the edit sequence before the asynchronous write, and writeEntry(null) is only called after the await if stageSeqRef.current has not moved during the suspension."
+    }
+   ],
+   "registryProposal": "The single-flight-primitives technique describes backend try-begin/end token patterns, but client-side React hooks frequently degrade to module-level singleton promises or component-level refs; the technique should explicitly document keyed promise map patterns with finally-guaranteed cleanup for client single-flight loaders."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "concurrency-guards",
+   "context": "coach-and-guidance",
+   "reason": "The context consists purely of UI presentation components and pure models (GlobalCoach, NextStepCoach, DriftBanner, ProduceErrorBanner, ProduceLogPanel, RefreshFromServer, RefreshCatalogFromServer, CatalogChangesDigest) that render guidance and delegate actions to callbacks rather than implementing concurrency guards or in-flight exclusion primitives."
+  },
+  {
+   "subject": "concurrency-guards",
+   "context": "cross-module-features",
+   "reason": "The context consists of dashboard UI presentation components and the EvaluatorModule tab shell that consume shared hooks (useFeatureStatuses, useModuleAggregates, usePlanDispatch) rather than managing concurrency guards or single-flight primitives directly."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T00:09:24.878338+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "attempt-attribution",
+    "critical-section-across-a-suspension",
+    "guard-key-design",
+    "idempotency-by-design",
+    "release-guarantees",
+    "single-flight-primitives"
+   ],
+   "deviations": 1,
+   "context": "feature-design-state-hooks",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

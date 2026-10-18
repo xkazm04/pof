@@ -12310,7 +12310,11 @@
           "revision": 14,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useFeatureStatuses.ts:86 In-flight requests use an unkeyed module-level scalar promise variable that is overwritten on project switches and prematurely cleared on the first response, admitting duplicate in-flight fetches for the active project.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         },
         {
           "subject": "terminal-multiplexing",
