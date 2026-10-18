@@ -9376,6 +9376,53 @@
         "at": "2026-10-18T01:33:44.361442+00:00",
         "reason": "reviewer (sonnet): The primary anchor, src/app/api/verify/visual/route.ts, is not one of the context's listed files, so the verdict is about code outside this context. The supporting claims were also not confirmed: I did not open loadGuide or diffRuns, so the stale-guide and no-re-scoring claims are unverified. The ju"
       }
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/observability-telemetry": {
+      "context": "project-ops-api",
+      "subject": "observability-telemetry",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:14:36.958Z",
+      "worker": "b4a3f2ba-27ae-4ed3-b429-745d062ed6de",
+      "techniques": [
+        {
+          "technique": "log-architecture",
+          "verdict": "deviation",
+          "evidence": "src/app/api/project-progress/route.ts:58 Migration keys and origin are embedded in prose rather than supplied as structured fields."
+        },
+        {
+          "technique": "remote-telemetry-economics",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/telemetry/route.ts:85 This endpoint derives gameplay-pattern data from project scans and stores it locally; its name does not establish a remote self-telemetry channel."
+        },
+        {
+          "technique": "rotation-and-retention",
+          "verdict": "deviation",
+          "evidence": "src/lib/session-log-db.ts:49 The writer appends without size, count, or age caps; repository searches for session_log references and deletion paths found inserts and limited reads, but no reaper."
+        }
+      ]
+    },
+    "80cab220-4eac-4a25-8873-f1c42c257174/observability-telemetry": {
+      "context": "core-engine-scan-telemetry",
+      "subject": "observability-telemetry",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:14:36.958Z",
+      "worker": "b4a3f2ba-27ae-4ed3-b429-745d062ed6de",
+      "techniques": [
+        {
+          "technique": "log-architecture",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:152 Module identity and three independently useful counts are interpolated into one message instead of structured fields."
+        },
+        {
+          "technique": "remote-telemetry-economics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:25 Tracing scanProject shows application-local genre analysis requests rather than a metered diagnostic event channel."
+        }
+      ]
     }
   }
 }

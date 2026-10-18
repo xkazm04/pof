@@ -1,0 +1,93 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b4a3f2ba-27ae-4ed3-b429-745d062ed6de",
+ "subject": "observability-telemetry",
+ "evaluatedAt": "2026-10-18T21:14:36.958822+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "project-ops-api",
+   "subject": "observability-telemetry",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/session-log/route.ts:56 Session-event recording appends persistent lifecycle records without an enforced retention bound, allowing diagnostic storage to grow indefinitely.",
+   "techniques": [
+    {
+     "technique": "log-architecture",
+     "verdict": "deviation",
+     "evidence": "src/app/api/project-progress/route.ts:58 Migration keys and origin are embedded in prose rather than supplied as structured fields."
+    },
+    {
+     "technique": "remote-telemetry-economics",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/telemetry/route.ts:85 This endpoint derives gameplay-pattern data from project scans and stores it locally; its name does not establish a remote self-telemetry channel."
+    },
+    {
+     "technique": "rotation-and-retention",
+     "verdict": "deviation",
+     "evidence": "src/lib/session-log-db.ts:49 The writer appends without size, count, or age caps; repository searches for session_log references and deletion paths found inserts and limited reads, but no reaper."
+    }
+   ]
+  },
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "observability-telemetry",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:152 Scan verification embeds module identity and outcome counts in prose, requiring text parsing instead of structured filtering and aggregation.",
+   "techniques": [
+    {
+     "technique": "log-architecture",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:152 Module identity and three independently useful counts are interpolated into one message instead of structured fields."
+    },
+    {
+     "technique": "remote-telemetry-economics",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:25 Tracing scanProject shows application-local genre analysis requests rather than a metered diagnostic event channel."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "observability-telemetry",
+   "context": "crash-analysis",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T21:14:36.958822+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "observability-telemetry"
+   ],
+   "techniques": [
+    "log-architecture",
+    "remote-telemetry-economics",
+    "rotation-and-retention"
+   ],
+   "deviations": 1,
+   "context": "project-ops-api",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T21:14:36.958822+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "observability-telemetry"
+   ],
+   "techniques": [
+    "log-architecture",
+    "remote-telemetry-economics"
+   ],
+   "deviations": 1,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

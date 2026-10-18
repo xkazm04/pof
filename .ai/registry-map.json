@@ -11280,7 +11280,11 @@
           "revision": 6,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:152 Scan verification embeds module identity and outcome counts in prose, requiring text parsing instead of structured filtering and aggregation.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:5f1eca73a0e27036",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -20090,7 +20094,11 @@
           "revision": 6,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/session-log/route.ts:56 Session-event recording appends persistent lifecycle records without an enforced retention bound, allowing diagnostic storage to grow indefinitely.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:5f1eca73a0e27036",
+          "evaluatedRevision": 6
         },
         {
           "subject": "node-boot-and-declarative-bootstrap",
