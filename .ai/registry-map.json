@@ -14630,7 +14630,11 @@
           "revision": 5,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/loot-filter/defaults.ts:6 The rarity selector maintains a separate vocabulary from the inventory's RARITY_ORDER, allowing authoring options to drift from the item model.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:395e660a5e607abe",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-instruction-files",
@@ -16342,7 +16346,11 @@
           "revision": 5,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:84 The editor implements its own lowercase-only matcher, so accent-insensitive matching and a centrally consistent normalization policy are missing.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:395e660a5e607abe",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-memory",

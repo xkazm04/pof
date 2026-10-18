@@ -1,0 +1,136 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1539b096-f1e8-4ffe-ba8f-da5d8f77d286",
+ "subject": "search",
+ "evaluatedAt": "2026-10-18T22:43:13.015134+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "inventory-economy-simulator",
+   "subject": "search",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/loot-filter/defaults.ts:6 The rarity selector maintains a separate vocabulary from the inventory's RARITY_ORDER, allowing authoring options to drift from the item model.",
+   "techniques": [
+    {
+     "technique": "command-surface",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/RulesetToolbar.tsx:20 Rulesets are selected directly through buttons; this surface does not provide command matching."
+    },
+    {
+     "technique": "faceting-and-filters",
+     "verdict": "deviation",
+     "evidence": "src/lib/loot-filter/defaults.ts:6 RuleEditor consumes this independently enumerated list rather than deriving options from the shared rarity vocabulary; data-items.ts:5 separately defines RARITY_ORDER."
+    },
+    {
+     "technique": "full-text-indexing",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/loot-filter/engine.ts:39 Execution evaluates structured item predicates, without a text-retrieval corpus or tokenizer."
+    },
+    {
+     "technique": "query-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/RuleEditor.tsx:31 Users select structured condition values instead of entering a free-text search query."
+    },
+    {
+     "technique": "ranking-and-excerpts",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/LivePreview.tsx:22 The preview filters existing outcomes while retaining their order; relevance ranking and excerpts do not serve this intent."
+    },
+    {
+     "technique": "typed-filter-language",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/RuleEditor.tsx:25 The editor modifies fixed condition fields; users do not author an expression language with operators and a grammar."
+    }
+   ],
+   "registryProposal": "Clarify whether persistent named Show/Hide rule documents fall under saved-views, particularly its dirty-state and explicit-update requirements."
+  },
+  {
+   "context": "loot-affix-core",
+   "subject": "search",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:84 The editor implements its own lowercase-only matcher, so accent-insensitive matching and a centrally consistent normalization policy are missing.",
+   "techniques": [
+    {
+     "technique": "command-surface",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:28 Typing narrows an editable table rather than selecting a command or destination."
+    },
+    {
+     "technique": "faceting-and-filters",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/index.tsx:52 The module-level Rarity Filter only affects its color and selection display; rarityFilter is never supplied to LootTabPanels or applied to its rows."
+    },
+    {
+     "technique": "query-parsing",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:84 Matching is inline rather than centralized and omits diacritic folding; the query is also lowercased without trimming its surrounding whitespace."
+    },
+    {
+     "technique": "ranking-and-excerpts",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:80 This is bounded-table filtering, for which membership restriction rather than relevance ranking is appropriate."
+    },
+    {
+     "technique": "saved-views",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:45 The editor keeps an ephemeral query; its export serializes loot-table entries rather than a named query/filter view."
+    },
+    {
+     "technique": "typed-filter-language",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:48 The controls expose literal text matching and predefined source selections, without an authored predicate language."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "search",
+   "context": "ability-spellbook-core",
+   "reason": "evidence leans on _shared/data.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T22:43:13.015134+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "search"
+   ],
+   "techniques": [
+    "command-surface",
+    "faceting-and-filters",
+    "full-text-indexing",
+    "query-parsing",
+    "ranking-and-excerpts",
+    "typed-filter-language"
+   ],
+   "deviations": 1,
+   "context": "inventory-economy-simulator",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T22:43:13.015134+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "search"
+   ],
+   "techniques": [
+    "command-surface",
+    "faceting-and-filters",
+    "query-parsing",
+    "ranking-and-excerpts",
+    "saved-views",
+    "typed-filter-language"
+   ],
+   "deviations": 1,
+   "context": "loot-affix-core",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
