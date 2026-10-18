@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1ab0101c-9fca-4a54-bbc5-7b0ee9138e0c",
+ "subject": "prompt-fitness-and-evolution",
+ "evaluatedAt": "2026-10-18T21:54:01.365048+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "prompt-evolution",
+   "subject": "prompt-fitness-and-evolution",
+   "bundle": "game-production",
+   "state": "conformant",
+   "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:37 PromptEvolutionView provides the full lifecycle interface for prompt evolution, joining judge verdicts to prompt versions with explicit unjudged states and confidence-banded A/B test results.",
+   "techniques": [
+    {
+     "technique": "join-judge-verdicts-to-prompt-version",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:70 Displays judged artifacts against produced artifacts per prompt version from joined judge verdicts."
+    },
+    {
+     "technique": "min-trials-and-confidence-banded-conclusion",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PromptEvolutionView/ABTestCard.tsx:185 Displays the current confidence band alongside trial counts and the evidence basis for the A/B comparison."
+    },
+    {
+     "technique": "mutation-taxonomy",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PromptEvolutionView/VariantCard.tsx:91 Selects from a closed taxonomy of mutation types (MUTATION_OPTIONS) for prompt variant creation."
+    },
+    {
+     "technique": "unjudged-is-null-not-zero",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:50 Checks for null average score to render an explicit unjudged state with no meter bar rather than misrepresenting unreviewed prompt versions as zero."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-fitness-and-evolution",
+   "context": "prompt-engineering",
+   "reason": "The prompt-fitness-and-evolution subject governs prompt revision experiments, A/B test stopping rules, and judge fitness joins. Context prompt-engineering implements prompt construction and section architecture (production-prompt-architecture), which the standard explicitly identifies as a separate concern from fitness measurement ('The structure of a production prompt \u2014 how it is composed, what context it is given, how its output is shaped \u2014 is a separate concern'). As not-applicable is not accepted from this seat, this context is declined."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T21:54:01.365048+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "prompt-fitness-and-evolution"
+   ],
+   "techniques": [
+    "join-judge-verdicts-to-prompt-version",
+    "min-trials-and-confidence-banded-conclusion",
+    "mutation-taxonomy",
+    "unjudged-is-null-not-zero"
+   ],
+   "deviations": 0,
+   "context": "prompt-evolution",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

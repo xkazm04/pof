@@ -20491,7 +20491,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:37 PromptEvolutionView provides the full lifecycle interface for prompt evolution, joining judge verdicts to prompt versions with explicit unjudged states and confidence-banded A/B test results.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:5abdf112c1d99974",
+          "evaluatedRevision": 2
         },
         {
           "subject": "prompt-assembly",

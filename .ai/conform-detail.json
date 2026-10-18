@@ -9485,6 +9485,37 @@
           "evidence": "src/components/modules/project-setup/TestHarnessPanel/ScenarioCard.tsx:90 Allows disabling cleanup (none), allowing spawned actors and state to leak into subsequent checks."
         }
       ]
+    },
+    "234034cf-29e8-432e-aca8-490e30e9f45d/prompt-fitness-and-evolution": {
+      "context": "prompt-evolution",
+      "subject": "prompt-fitness-and-evolution",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:54:01.365Z",
+      "worker": "1ab0101c-9fca-4a54-bbc5-7b0ee9138e0c",
+      "techniques": [
+        {
+          "technique": "join-judge-verdicts-to-prompt-version",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:70 Displays judged artifacts against produced artifacts per prompt version from joined judge verdicts."
+        },
+        {
+          "technique": "min-trials-and-confidence-banded-conclusion",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/ABTestCard.tsx:185 Displays the current confidence band alongside trial counts and the evidence basis for the A/B comparison."
+        },
+        {
+          "technique": "mutation-taxonomy",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/VariantCard.tsx:91 Selects from a closed taxonomy of mutation types (MUTATION_OPTIONS) for prompt variant creation."
+        },
+        {
+          "technique": "unjudged-is-null-not-zero",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/JudgeFitnessStrip.tsx:50 Checks for null average score to render an explicit unjudged state with no meter bar rather than misrepresenting unreviewed prompt versions as zero."
+        }
+      ]
     }
   }
 }
