@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "23b98e76-9262-4b11-b9cd-9f17a9563638",
+ "subject": "time-travel-replay",
+ "evaluatedAt": "2026-10-19T10:32:35.632611+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "combat-dodge-timeline",
+   "subject": "time-travel-replay",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:164 The combat dodge timeline implements an interactive animation scrubber rather than deriving a playable timeline from persisted run records or re-accruing event metrics under playback.",
+   "techniques": [
+    {
+     "technique": "accrual-overlays",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/useDodgeTimelineState.ts:46 Playhead stats compute total dodged hits statically across all hit markers rather than folding up to the playhead, displaying final totals from frame zero."
+    },
+    {
+     "technique": "estimate-labeling",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/TimelineBarMarkers.tsx:29 Hit markers display static timestamps and binary DODGED/HIT tags without per-element estimate labeling or precision coarsening under motion."
+    },
+    {
+     "technique": "renderer-reuse",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:165 The replay timeline renders through custom editor-specific visualizers rather than reusing the live combat surface fed by an event log."
+    },
+    {
+     "technique": "scrub-performance",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/TimelineBar.tsx:40 Scrubbing directly triggers full state re-renders on every mousemove event without keyframing or a two-phase preview-then-settle strategy."
+    },
+    {
+     "technique": "timeline-derivation",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:32 Timeline events are authored directly in local component state rather than derived through a recomputable function over persisted run records."
+    },
+    {
+     "technique": "transport-and-time-mapping",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:102 Playback clamps at totalTimeline and pauses, preventing one-gesture replay from the end where play immediately re-clamps."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "time-travel-replay",
+   "context": "world-module",
+   "reason": "World module tooling provides map topology, playtime budget targeting, and static progression charts; it has no replay transport, record derivation, or time-travel replay functionality."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-19T10:32:35.632611+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "time-travel-replay"
+   ],
+   "techniques": [
+    "accrual-overlays",
+    "estimate-labeling",
+    "renderer-reuse",
+    "scrub-performance",
+    "timeline-derivation",
+    "transport-and-time-mapping"
+   ],
+   "deviations": 1,
+   "context": "combat-dodge-timeline",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

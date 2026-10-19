@@ -10403,7 +10403,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:164 The combat dodge timeline implements an interactive animation scrubber rather than deriving a playable timeline from persisted run records or re-accruing event metrics under playback.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:798a88c318279127",
+          "evaluatedRevision": 5
         },
         {
           "subject": "prompt-assembly",

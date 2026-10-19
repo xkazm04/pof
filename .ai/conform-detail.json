@@ -11439,6 +11439,47 @@
           "evidence": "src/stores/ue5BridgeStore.ts:98 The browser adopts the editor snapshot as its live view and submits commands separately, rather than maintaining a writable durable replica."
         }
       ]
+    },
+    "24d18aef-2104-4889-9d67-d20a91d5fdea/time-travel-replay": {
+      "context": "combat-dodge-timeline",
+      "subject": "time-travel-replay",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T10:32:35.632Z",
+      "worker": "23b98e76-9262-4b11-b9cd-9f17a9563638",
+      "techniques": [
+        {
+          "technique": "accrual-overlays",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/useDodgeTimelineState.ts:46 Playhead stats compute total dodged hits statically across all hit markers rather than folding up to the playhead, displaying final totals from frame zero."
+        },
+        {
+          "technique": "estimate-labeling",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/TimelineBarMarkers.tsx:29 Hit markers display static timestamps and binary DODGED/HIT tags without per-element estimate labeling or precision coarsening under motion."
+        },
+        {
+          "technique": "renderer-reuse",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:165 The replay timeline renders through custom editor-specific visualizers rather than reusing the live combat surface fed by an event log."
+        },
+        {
+          "technique": "scrub-performance",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/TimelineBar.tsx:40 Scrubbing directly triggers full state re-renders on every mousemove event without keyframing or a two-phase preview-then-settle strategy."
+        },
+        {
+          "technique": "timeline-derivation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:32 Timeline events are authored directly in local component state rather than derived through a recomputable function over persisted run records."
+        },
+        {
+          "technique": "transport-and-time-mapping",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:102 Playback clamps at totalTimeline and pauses, preventing one-gesture replay from the end where play immediately re-clamps."
+        }
+      ]
     }
   }
 }
