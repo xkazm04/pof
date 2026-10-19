@@ -18,6 +18,8 @@ import { labFontVars } from '@/components/layout-lab/fonts';
 import { StatusTabs, statusTabId, statusPanelId, type StatusTab } from './StatusTabs';
 import { CapabilityView } from './CapabilityView';
 import { PipelinesView } from './PipelinesView';
+import { parseStatusSearch, serializeStatusSearch } from '@/lib/status/workQueue';
+import type { ReadinessRoute } from '@/lib/status/readinessRoute';
 import { CategoryView } from './CategoryView';
 import { ItemFocusView } from './ItemFocusView';
 import { ModelsView } from './ModelsView';
@@ -39,35 +41,6 @@ function navigate(search: string) {
   window.dispatchEvent(new Event(NAV_EVENT));
 }
 
-interface ViewState {
-  tab: StatusTab;
-  focus: { catalogId: string; entityId: string } | null;
-  /** Selected catalog for the Category tab (null = show the catalog picker). */
-  catalog: string | null;
-  /** Active capability-class filter on the Pipelines tab (null = unfiltered). */
-  filterClass: string | null;
-}
-
-function parse(search: string): ViewState {
-  const p = new URLSearchParams(search);
-  const entityRaw = p.get('entity');
-  let focus: ViewState['focus'] = null;
-  if (entityRaw) {
-    const i = entityRaw.indexOf(':');
-    if (i > 0) focus = { catalogId: entityRaw.slice(0, i), entityId: entityRaw.slice(i + 1) };
-  }
-  const catalogParam = p.get('catalog');
-  const tabParam = p.get('tab');
-  const classParam = p.get('class');
-  let tab: StatusTab;
-  if (focus || tabParam === 'item') tab = 'item';
-  else if (catalogParam || tabParam === 'category') tab = 'category';
-  else if (tabParam === 'models') tab = 'models';
-  else if (tabParam === 'pipelines' || classParam) tab = 'pipelines';
-  else tab = 'capability';
-  return { tab, focus, catalog: catalogParam || null, filterClass: classParam || null };
-}
-
 /** The one-paragraph orientation line above a tab's view. Single source for the intro's
  *  measure/colour/spacing so every tab's lede sits on the same rhythm (CapabilityView and
  *  ModelsView render their own lede in this same shape). */
@@ -81,7 +54,7 @@ function TabIntro({ children }: { children: React.ReactNode }) {
 
 export function StatusDashboard() {
   const search = useSyncExternalStore(subscribe, () => window.location.search, () => '');
-  const { tab, focus, catalog, filterClass } = parse(search);
+  const { tab, focus, catalog, filterClass, route } = parseStatusSearch(search);
 
   const setTab = (t: StatusTab) => {
     if (t === 'item') navigate(focus ? `entity=${focus.catalogId}:${focus.entityId}` : 'tab=item');
@@ -93,7 +66,10 @@ export function StatusDashboard() {
 
   /** Capability row → Pipelines map filtered to that class. */
   const filterByClass = (klass: string) => navigate(`tab=pipelines&class=${encodeURIComponent(klass)}`);
-  const clearFilter = () => navigate('tab=pipelines');
+  const clearFilter = () => navigate(serializeStatusSearch({ tab: 'pipelines', focus: null, catalog: null, filterClass: null, route }));
+  /** Address a route highlight on the Pipelines map (null clears it); composes with the class filter. */
+  const setRoute = (r: ReadinessRoute | null) =>
+    navigate(serializeStatusSearch({ tab: 'pipelines', focus: null, catalog: null, filterClass, route: r }));
 
   const focusEntity = (catalogId: string, entityId: string) =>
     navigate(`entity=${encodeURIComponent(catalogId)}:${encodeURIComponent(entityId)}`);
@@ -154,7 +130,7 @@ export function StatusDashboard() {
               progress; red is blocked. Click a readiness or engine chip to highlight, or a pipeline to open its category
               overview.
             </TabIntro>
-            <PipelinesView onFocusCatalog={focusCatalog} onFocusEntity={focusEntity} filterClass={filterClass} onClearFilter={clearFilter} />
+            <PipelinesView onFocusCatalog={focusCatalog} onFocusEntity={focusEntity} filterClass={filterClass} onClearFilter={clearFilter} route={route} onRouteChange={setRoute} />
           </>
         )}
 

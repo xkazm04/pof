@@ -47,3 +47,8 @@ export function summarizeRoutes(rows: readonly { route: ReadinessRoute }[]): Rou
   }
   return out;
 }
+
+/** Narrow an untrusted string (a URL param) to a route. */
+export function isReadinessRoute(v: unknown): v is ReadinessRoute {
+  return typeof v === 'string' && (ROUTES as readonly string[]).includes(v);
+}
