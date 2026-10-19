@@ -23688,7 +23688,11 @@
           "revision": 10,
           "changedAt": "2026-10-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/stores/ue5BridgeStore.ts:74 Searches found no tombstone or outbox in either panel directory; the traced implementation provides transient editor views and remote commands rather than independently operating durable replicas, placing it outside this standard's scope.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:2d5b609198b79d34",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",

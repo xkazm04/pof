@@ -1,0 +1,81 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6e85390a-0421-43af-89f1-cbf2fafc5bf0",
+ "subject": "sync-replication",
+ "evaluatedAt": "2026-10-19T10:19:44.188260+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ue5-state-sync",
+   "subject": "sync-replication",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/stores/ue5BridgeStore.ts:74 Searches found no tombstone or outbox in either panel directory; the traced implementation provides transient editor views and remote commands rather than independently operating durable replicas, placing it outside this standard's scope.",
+   "techniques": [
+    {
+     "technique": "change-tracking-and-cursors",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/ue5-bridge/ws-live-state.ts:234 Each opened connection requests current editor state; there is no durable replicated change stream requiring resumable cursor advancement."
+    },
+    {
+     "technique": "conflict-detection-and-policy",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/ue5-bridge/sync-ledger.ts:62 The ledger compares command values with editor read-backs; it does not reconcile independently edited durable record copies."
+    },
+    {
+     "technique": "in-flight-is-per-connection",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/ue5-bridge/ws-live-state.ts:378 Commands are sent immediately or reported unsent; there is no durable outbox of acknowledged replication batches."
+    },
+    {
+     "technique": "projection-security",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/ue5-bridge/ws-live-state.ts:180 This boundary carries an explicit remote property command, rather than a projection of locally stored replicated records."
+    },
+    {
+     "technique": "sync-observability",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useLiveStateSync.ts:97 The exposed status describes the live editor connection; durable replication progress, cursor lag, and settlement are outside this channel's role."
+    },
+    {
+     "technique": "tombstone-propagation",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/ue5-bridge/ws-live-state.ts:349 Editor selection replaces the transient displayed list; no replicated record deletion or resurrection reconciliation occurs."
+    },
+    {
+     "technique": "topology-declaration",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/ue5BridgeStore.ts:98 The browser adopts the editor snapshot as its live view and submits commands separately, rather than maintaining a writable durable replica."
+    }
+   ],
+   "absenceTerms": [
+    "tombstone",
+    "outbox"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T10:19:44.188260+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "sync-replication"
+   ],
+   "techniques": [
+    "change-tracking-and-cursors",
+    "conflict-detection-and-policy",
+    "in-flight-is-per-connection",
+    "projection-security",
+    "sync-observability",
+    "tombstone-propagation",
+    "topology-declaration"
+   ],
+   "deviations": 0,
+   "context": "ue5-state-sync",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
