@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c784502a-16bb-4b1f-9cbb-1b7b7d05cdad",
+ "subject": "declared-process-graph",
+ "evaluatedAt": "2026-10-19T12:20:05.827047+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "module-topology-graph",
+   "subject": "declared-process-graph",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Searches for channel, composite and descriptor found no hits in the context directories, whose graph projects feature prerequisites and implementation statuses for display rather than declaring concurrent processes connected by named channels.",
+   "techniques": [
+    {
+     "technique": "additive-live-mutation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:73 Nodes are derived display records; updating this projection does not mutate a running process graph's routing tables."
+    },
+    {
+     "technique": "bounded-expansion",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:39 The inspected layout implementation traverses catalogued feature dependencies without loading further author-selected documents."
+    },
+    {
+     "technique": "composite-expansion-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/FeatureConstellation/constants.ts:16 The view enumerates feature-bearing modules; it does not instantiate reusable process-topology bodies with exposed ports."
+    },
+    {
+     "technique": "panic-proof-numeric-fields",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/NexusView/NodeDeepDivePanel.tsx:184 This conversion formats recorded session telemetry for display, rather than converting an authored topology duration into runtime behavior."
+    },
+    {
+     "technique": "per-kind-field-whitelist",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:107 Selection reads a module's feature catalog; this context does not consume runtime topology documents with discriminated process kinds."
+    },
+    {
+     "technique": "typed-port-compatibility",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/types.ts:41 Edges aggregate feature dependencies between modules, rather than connecting producer and consumer ports carrying typed messages."
+    }
+   ],
+   "absenceTerms": [
+    "channel",
+    "composite",
+    "descriptor"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T12:20:05.827047+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "declared-process-graph"
+   ],
+   "techniques": [
+    "additive-live-mutation",
+    "bounded-expansion",
+    "composite-expansion-contract",
+    "panic-proof-numeric-fields",
+    "per-kind-field-whitelist",
+    "typed-port-compatibility"
+   ],
+   "deviations": 0,
+   "context": "module-topology-graph",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

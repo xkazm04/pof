@@ -11967,6 +11967,47 @@
           "evidence": "src/components/modules/core-engine/sub_ui/hud-compositor/index.tsx:134 The compositor renders the relevant widget placements directly; no bounded summary-generation call requires sampling children."
         }
       ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/declared-process-graph": {
+      "context": "module-topology-graph",
+      "subject": "declared-process-graph",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T12:20:05.827Z",
+      "worker": "c784502a-16bb-4b1f-9cbb-1b7b7d05cdad",
+      "techniques": [
+        {
+          "technique": "additive-live-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:73 Nodes are derived display records; updating this projection does not mutate a running process graph's routing tables."
+        },
+        {
+          "technique": "bounded-expansion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:39 The inspected layout implementation traverses catalogued feature dependencies without loading further author-selected documents."
+        },
+        {
+          "technique": "composite-expansion-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/constants.ts:16 The view enumerates feature-bearing modules; it does not instantiate reusable process-topology bodies with exposed ports."
+        },
+        {
+          "technique": "panic-proof-numeric-fields",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/NodeDeepDivePanel.tsx:184 This conversion formats recorded session telemetry for display, rather than converting an authored topology duration into runtime behavior."
+        },
+        {
+          "technique": "per-kind-field-whitelist",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:107 Selection reads a module's feature catalog; this context does not consume runtime topology documents with discriminated process kinds."
+        },
+        {
+          "technique": "typed-port-compatibility",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/types.ts:41 Edges aggregate feature dependencies between modules, rather than connecting producer and consumer ports carrying typed messages."
+        }
+      ]
     }
   }
 }

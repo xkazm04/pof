@@ -18191,7 +18191,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Searches for channel, composite and descriptor found no hits in the context directories, whose graph projects feature prerequisites and implementation statuses for display rather than declaring concurrent processes connected by named channels.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:8bc79a0c5315d2ac",
+          "evaluatedRevision": 1
         },
         {
           "subject": "llm-extracted-entity-graph",
