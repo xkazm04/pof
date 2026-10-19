@@ -11619,6 +11619,47 @@
           "evidence": "src/components/layout-lab/steps/itemsSteps.ts:123 Declares explicit gate check dependencies to prevent vacuous passes and evaluate resolved sibling verdicts."
         }
       ]
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/analytics-time-windows": {
+      "context": "session-analytics-reporting",
+      "subject": "analytics-time-windows",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T11:13:49.603Z",
+      "worker": "0d8cb0a9-498d-42b3-b419-875537dff4d1",
+      "techniques": [
+        {
+          "technique": "canonical-zone-single-source",
+          "verdict": "conformant",
+          "evidence": "src/lib/analytics/report-window.ts:22 The declared single-source reporting timezone is resolved through reportZone() and passed explicitly to all boundary and bucketing operations."
+        },
+        {
+          "technique": "half-open-interval-policy",
+          "verdict": "conformant",
+          "evidence": "src/lib/weekly-digest.ts:26 Database filters enforce [start, end) intervals where the previous week's exclusive end equals the current week's inclusive start."
+        },
+        {
+          "technique": "calendar-arithmetic",
+          "verdict": "conformant",
+          "evidence": "src/lib/analytics/report-window.ts:104 Weeks are floored to Monday calendar keys via date math rather than dividing epoch timestamps, preventing phase drift across cadences."
+        },
+        {
+          "technique": "baseline-as-window-start",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/WeeklyDigestView/weekLanded.ts:92 Handles missing dated baselines as a distinct null delta rather than zero, and tracks cumulative progress as of the window boundary."
+        },
+        {
+          "technique": "cohort-matched-comparison",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WeeklyDigestView/weekLanded.ts:48 The evaluated population consists of static checklist registry items and discrete session event occurrences rather than a dynamic cohort."
+        },
+        {
+          "technique": "range-precedence-resolution",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/weekly-digest/route.ts:16 The reporting window resolves from a single parameter with a default to the current week, without stored preference chains or competing sources."
+        }
+      ]
     }
   }
 }
