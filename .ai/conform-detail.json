@@ -12008,6 +12008,52 @@
           "evidence": "src/components/modules/evaluator/DependencyGraph/types.ts:41 Edges aggregate feature dependencies between modules, rather than connecting producer and consumer ports carrying typed messages."
         }
       ]
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/deployment-contract": {
+      "context": "build-history-config",
+      "subject": "deployment-contract",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T12:28:24.558Z",
+      "techniques": [
+        {
+          "technique": "cache-immutability-licensing",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/packaging/cook-jobs.ts:314 The packaging response streams runtime events; it does not serve static build output with an immutable cache policy."
+        },
+        {
+          "technique": "deploy-gate-coupling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:35 This gate controls starting a cook; no hosting deployment races a push-triggered verification pipeline here."
+        },
+        {
+          "technique": "deployment-config-as-code",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/packaging/build-profiles-db.ts:15 These are application-owned packaging profiles, not hosting-provider configuration or dashboard settings."
+        },
+        {
+          "technique": "direct-push-delivery",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/PlatformProfileCard.tsx:93 The context starts packaging through an explicit UI action; it does not define default-branch push delivery."
+        },
+        {
+          "technique": "environment-promotion",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/index.tsx:181 Successful cooks feed a smoke test by build ID, without preview or production environment promotion."
+        },
+        {
+          "technique": "platform-build-parity",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/packaging/uat-command-generator.ts:128 The build command targets the installed Unreal Engine batch tool; no hosting-platform builder is involved."
+        }
+      ],
+      "withdrawn": {
+        "worker": "863a9aff-795a-4a89-af4a-1e9d2a36d9b1",
+        "state": "not-applicable",
+        "at": "2026-10-19T12:28:45.696012+00:00",
+        "reason": "reviewer (sonnet): The anchors are incidental and mostly sit outside the context's files. cook-executor.ts:88 is a cmd.exe spawn of UAT, and cook-jobs.ts:314 is only SSE response headers (no-cache). PreflightGateBlock.tsx:35 is a 'measuring' phase message. build-profiles-db.ts:15 is a storage-key comment. PlatformProf"
+      }
     }
   }
 }

@@ -1,0 +1,37 @@
+{
+  "schema": "conform-run/1",
+  "worker": "863a9aff-795a-4a89-af4a-1e9d2a36d9b1",
+  "subject": "deployment-contract",
+  "evaluatedAt": "2026-10-19T12:28:24.558561+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "deployment-contract",
+      "context": "build-history-config",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors are incidental and mostly sit outside the context's files. cook-executor.ts:88 is a cmd.exe spawn of UAT, and cook-jobs.ts:314 is only SSE response headers (no-cache). PreflightGateBlock.tsx:35 is a 'measuring' phase message. build-profiles-db.ts:15 is a storage-key comment. PlatformProf"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T12:28:24.558561+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "deployment-contract"
+      ],
+      "techniques": [
+        "cache-immutability-licensing",
+        "deploy-gate-coupling",
+        "deployment-config-as-code",
+        "direct-push-delivery",
+        "environment-promotion",
+        "platform-build-parity"
+      ],
+      "deviations": 0,
+      "context": "build-history-config",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
