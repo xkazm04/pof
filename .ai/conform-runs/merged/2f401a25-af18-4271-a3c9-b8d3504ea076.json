@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2f401a25-af18-4271-a3c9-b8d3504ea076",
+ "subject": "subtext-and-voice-differentiation",
+ "evaluatedAt": "2026-10-19T10:07:00.965592+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "subtext-and-voice-differentiation",
+   "context": "audio-module",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "subtext-and-voice-differentiation",
+   "context": "character-movement-playground",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
