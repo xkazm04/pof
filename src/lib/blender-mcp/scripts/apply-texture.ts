@@ -1,4 +1,5 @@
 import { py } from '@/lib/blender-mcp/escape';
+import { pyReceipt, pyStr } from '@/lib/blender-mcp/receipt';
 
 export function applyTextureScript(params: {
   materialName: string;
@@ -33,5 +34,6 @@ ${isNonColor ? 'tex_node.image.colorspace_settings.name = "Non-Color"' : ''}
 links.new(tex_node.outputs["Color"], bsdf.inputs["${inputName}"])
 
 print(f"Applied texture to {mat.name} -> ${inputName}")
+${pyReceipt('apply-texture', { material: 'mat.name', slot: pyStr(inputName) })}
 `.trim();
 }

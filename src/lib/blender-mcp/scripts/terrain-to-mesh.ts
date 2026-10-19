@@ -1,3 +1,5 @@
+import { pyNum } from '@/lib/blender-mcp/escape';
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
 import type { TerrainBasis } from '@/lib/visual-gen/generators/terrain';
 import { describeTerrainBasis } from '@/lib/visual-gen/generators/terrain';
 
@@ -16,7 +18,7 @@ export function terrainToMeshScript(params: {
 }): string {
   const rows = params.heightmap.length;
   const cols = params.heightmap[0]?.length ?? 0;
-  const flatHeights = params.heightmap.flat().join(',');
+  const flatHeights = params.heightmap.flat().map(pyNum).join(',');
   const { cellSizeM, metresPerSampleM } = params.basis;
 
   return `
@@ -26,8 +28,8 @@ import bmesh
 # Terrain basis: ${describeTerrainBasis(params.basis)}
 heights = [${flatHeights}]
 rows, cols = ${rows}, ${cols}
-spacing_m = ${cellSizeM}
-metres_per_sample = ${metresPerSampleM}
+spacing_m = ${pyNum(cellSizeM)}
+metres_per_sample = ${pyNum(metresPerSampleM)}
 
 mesh = bpy.data.meshes.new("Terrain")
 obj = bpy.data.objects.new("Terrain", mesh)
@@ -52,6 +54,7 @@ bm.to_mesh(mesh)
 bm.free()
 
 mesh.update()
-print(f"Created terrain: {rows}x{cols} grid at ${cellSizeM} m spacing, {len(mesh.polygons)} faces")
+print(f"Created terrain: {rows}x{cols} grid at ${pyNum(cellSizeM)} m spacing, {len(mesh.polygons)} faces")
+${pyReceipt('terrain-mesh', { faces: 'len(mesh.polygons)', verts: 'len(mesh.vertices)' })}
 `.trim();
 }
