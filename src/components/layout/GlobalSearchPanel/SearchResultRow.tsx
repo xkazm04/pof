@@ -17,6 +17,7 @@ export const SearchResultRow = memo(function SearchResultRow({
   intents,
   active,
   index,
+  homeKind,
   onSelect,
   onRun,
   onHover,
@@ -25,6 +26,8 @@ export const SearchResultRow = memo(function SearchResultRow({
   intents: SearchIntents;
   active: boolean;
   index: number;
+  /** Palette-home rows only: why the row is offered before any query. */
+  homeKind?: 'alert' | 'recent';
   onSelect: (r: SearchResult) => void;
   onRun: (r: SearchResult) => void;
   onHover: (i: number) => void;
@@ -66,6 +69,11 @@ export const SearchResultRow = memo(function SearchResultRow({
             >
               {meta.label}
             </span>
+            {homeKind && (
+              <span className="text-2xs flex-shrink-0 text-text-muted">
+                {homeKind === 'alert' ? 'Needs attention' : 'Recent'}
+              </span>
+            )}
             {intents.state === 'done' && (
               <span className="text-2xs flex items-center gap-0.5 flex-shrink-0" style={{ color: STATUS_SUCCESS }}>
                 <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
@@ -103,7 +111,7 @@ export const SearchResultRow = memo(function SearchResultRow({
       {intents.run && (
         <button
           onClick={() => onRun(result)}
-          aria-label={`Run quick action ${plainTitle}`}
+          aria-label={`${homeKind === 'alert' ? 'Run fix' : 'Run quick action'} ${plainTitle}`}
           title="Run in the module's CLI session (shift+enter)"
           className="flex-shrink-0 self-center mr-3 flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs border border-border text-text-muted hover:text-text transition-colors focus-ring"
         >
