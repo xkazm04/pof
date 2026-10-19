@@ -10798,6 +10798,88 @@
         }
       ],
       "registryProposal": "Client-side web stores using browser localStorage (e.g. Zustand persist) represent an atomic JSON document store where version markers and state serialize together in a single key; failure modes typically stem from omitted version/migrate options and silent rehydration merges rather than split-write crash windows."
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/model-routing": {
+      "context": "ai-developer-tools-api",
+      "subject": "model-routing",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:36:55.675Z",
+      "techniques": [
+        {
+          "technique": "turn-classification",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:38 The forge-ability route hardcodes a model string directly at the call site rather than asserting a closed task class."
+        },
+        {
+          "technique": "capability-floors",
+          "verdict": "deviation",
+          "evidence": "src/app/api/model-policy/route.ts:30 Policy mutations accept arbitrary caller-supplied models and efforts without enforcing measured capability floors for critical tasks."
+        },
+        {
+          "technique": "consumer-overrides",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:41 The route reads an override from an environment variable inside the handler without caller edge scoping or an expiration reaper."
+        },
+        {
+          "technique": "routing-policy",
+          "verdict": "deviation",
+          "evidence": "src/lib/model-policy.ts:159 Explicit override arguments bypass policy evaluation without passing through an allowlist or compliance validation door."
+        },
+        {
+          "technique": "policy-governance",
+          "verdict": "deviation",
+          "evidence": "src/lib/model-policy.ts:231 The provenance stamp records the engine and model but omits the asserted task class, policy version, and decision rule."
+        },
+        {
+          "technique": "effort-calibration",
+          "verdict": "deviation",
+          "evidence": "src/lib/model-policy.ts:55 Default policy entries are static seed defaults rather than calibrated measurements carrying sample sizes and re-measure dates."
+        },
+        {
+          "technique": "cache-continuity",
+          "verdict": "deviation",
+          "evidence": "src/app/api/claude-terminal/query/route.ts:64 Resuming an existing session allows supplying a newly resolved model and effort without checking cache invalidation costs."
+        },
+        {
+          "technique": "candidate-ranking",
+          "verdict": "deviation",
+          "evidence": "src/lib/model-policy.ts:171 The router resolves models via a static database or dictionary lookup rather than dynamically ranking candidates from live metrics."
+        },
+        {
+          "technique": "model-identity",
+          "verdict": "deviation",
+          "evidence": "src/lib/model-policy.ts:43 The system maps single vendor model aliases directly without representing multi-provider endpoint groups sharing identical weights."
+        },
+        {
+          "technique": "failover-horizon",
+          "verdict": "deviation",
+          "evidence": "src/app/api/claude-terminal/stream/route.ts:59 SSE streaming starts immediately without tracking a first-delivered-byte horizon to bound silent candidate substitution."
+        },
+        {
+          "technique": "quality-axis-separation",
+          "verdict": "deviation",
+          "evidence": "src/lib/model-policy.ts:185 Policy overrides persist a single scalar benchmark score rather than separating operational metrics and asynchronous semantic evaluation."
+        },
+        {
+          "technique": "admission-is-not-a-tier",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:63 Model unreachability and deprecation are detected reactively after failure rather than through prior admission verification."
+        },
+        {
+          "technique": "failover-path-liveness",
+          "verdict": "deviation",
+          "evidence": "src/app/api/one-shot/step/route.ts:281 The pipeline step execution terminates on error without a configured fallback route or fault injection testing failover liveness."
+        }
+      ],
+      "registryProposal": "The standard assumes direct API invocation where prompt cache headers and model flags are passed per HTTP call, but for systems driving CLI agent harnesses (e.g. Claude Code CLI via subprocess stdin/stdout stream-json), model and effort are passed as CLI spawn arguments and cache continuity depends on session persistence across process spawns.",
+      "withdrawn": {
+        "worker": "e8cfdf66-2474-46a8-b3a3-fe08a74b868b",
+        "state": "deviation",
+        "at": "2026-10-19T01:37:11.831288+00:00",
+        "reason": "reviewer (sonnet): The cited line does return {} for an unmapped task, but the surrounding code documents that as a deliberate listed off-state. Two technique claims are contradicted: explicit overrides at model-policy.ts:157-161 are checked by isModel/isEffort, and model-policy/route.ts:25-27 only accepts values from"
+      }
     }
   }
 }

@@ -1,0 +1,49 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e8cfdf66-2474-46a8-b3a3-fe08a74b868b",
+  "subject": "model-routing",
+  "evaluatedAt": "2026-10-19T01:36:55.675187+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "model-routing",
+      "context": "visual-gen-3d-model-runners",
+      "reason": "The model-routing subject defines standards for language model agent orchestration (turn classification by human/pipeline wait, prompt cache continuity, reasoning effort calibration), whereas visual-gen-3d-model-runners coordinates 3D mesh and motion generation pipelines (Tripo, TripoSR, Trellis, Hunyuan, Ardy, SkinTokens) without LLM turn semantics."
+    },
+    {
+      "subject": "model-routing",
+      "context": "ai-developer-tools-api",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited line does return {} for an unmapped task, but the surrounding code documents that as a deliberate listed off-state. Two technique claims are contradicted: explicit overrides at model-policy.ts:157-161 are checked by isModel/isEffort, and model-policy/route.ts:25-27 only accepts values from"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T01:36:55.675187+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "model-routing"
+      ],
+      "techniques": [
+        "admission-is-not-a-tier",
+        "cache-continuity",
+        "candidate-ranking",
+        "capability-floors",
+        "consumer-overrides",
+        "effort-calibration",
+        "failover-horizon",
+        "failover-path-liveness",
+        "model-identity",
+        "policy-governance",
+        "quality-axis-separation",
+        "routing-policy",
+        "turn-classification"
+      ],
+      "deviations": 1,
+      "context": "ai-developer-tools-api",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
