@@ -7,6 +7,7 @@ import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_MUTED, STATUS_ERROR, withOpacity, OPACITY_15, OPACITY_25,
 } from '@/lib/chart-colors';
 import type { FilterAction, LootFilterRule } from '@/lib/loot-filter/types';
+import type { RulesetImpact } from '@/lib/loot-filter/impact';
 import { RuleEditor } from './RuleEditor';
 
 const ACTION_COLOR: Record<FilterAction, string> = {
@@ -21,9 +22,12 @@ function summarize(rule: LootFilterRule): string {
 }
 
 /** Ordered, editable list of rules — add / reorder / enable / duplicate / delete + inline editor. */
-export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rules: LootFilterRule[]; accent: string }) {
+export function RuleList({ rulesetId, rules, impact, accent }: { rulesetId: string; rules: LootFilterRule[]; impact?: RulesetImpact; accent: string }) {
   const { addRule, updateRule, removeRule, moveRule, duplicateRule } = useLootFilterStore.getState();
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  const impactById = new Map((impact?.rules ?? []).map((r) => [r.ruleId, r]));
+  const nameById = new Map(rules.map((r) => [r.id, r.name]));
 
   const onAdd = () => { const id = addRule(rulesetId); setExpanded(id); };
 
@@ -38,6 +42,13 @@ export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rule
         </button>
       </div>
 
+      {impact?.warnings.map((w) => (
+        <p key={w.ruleId} data-testid="lf-warning" title={w.itemNames.join(', ')}
+          className="text-xs font-mono px-2 py-1 rounded-md" style={{ color: STATUS_ERROR, backgroundColor: withOpacity(STATUS_ERROR, OPACITY_15) }}>
+          {nameById.get(w.ruleId)} {w.message}: {w.itemNames.join(', ')}
+        </p>
+      ))}
+
       {rules.length === 0 && (
         <p className="text-xs font-mono text-text-muted/70 py-4 text-center">No rules yet — every drop shows by default.</p>
       )}
@@ -45,6 +56,7 @@ export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rule
       {rules.map((rule, i) => {
         const color = ACTION_COLOR[rule.action];
         const open = expanded === rule.id;
+        const ri = impactById.get(rule.id);
         return (
           <div key={rule.id} className="rounded-lg border border-border/40 bg-surface-deep/60 overflow-hidden"
             style={{ borderLeft: `3px solid ${rule.enabled ? color : withOpacity(color, OPACITY_25)}` }}>
@@ -65,6 +77,16 @@ export function RuleList({ rulesetId, rules, accent }: { rulesetId: string; rule
                 <span className="text-sm font-medium text-text truncate">{rule.name}</span>
                 <span className="text-[10px] font-mono text-text-muted/60 truncate hidden md:inline">— {summarize(rule)}</span>
               </button>
+              {ri && rule.enabled && (
+                <span data-testid="lf-rule-wins" title={`${ri.matches} match, ${ri.wins} claimed`}
+                  className="text-[10px] font-mono tabular-nums text-text-muted flex-shrink-0">{ri.wins} wins</span>
+              )}
+              {ri?.flag && (
+                <span data-testid="lf-rule-flag" className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded flex-shrink-0"
+                  style={{ color: STATUS_WARNING, backgroundColor: withOpacity(STATUS_WARNING, OPACITY_15) }}>
+                  {ri.flag === 'dead' ? 'dead - matches nothing' : `shadowed by ${nameById.get(ri.shadowedBy ?? '') ?? 'earlier rule'}`}
+                </span>
+              )}
               <div className="flex items-center gap-0.5">
                 <button type="button" onClick={() => moveRule(rulesetId, rule.id, -1)} disabled={i === 0} title="Move up"
                   aria-label={`Move rule up: ${rule.name}`}

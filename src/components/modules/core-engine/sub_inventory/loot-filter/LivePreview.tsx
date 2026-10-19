@@ -6,6 +6,7 @@ import {
   RARITY_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_MUTED, withOpacity, OPACITY_8, OPACITY_15,
 } from '@/lib/chart-colors';
 import type { FilterEvaluation } from '@/lib/loot-filter/types';
+import type { EvaluationDelta } from './useEvaluationDelta';
 
 function StatChip({ label, value, color, testId }: { label: string; value: number; color: string; testId: string }) {
   return (
@@ -16,8 +17,10 @@ function StatChip({ label, value, color, testId }: { label: string; value: numbe
   );
 }
 
+const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
+
 /** Runs the ruleset live against the catalog and shows which drops surface (and how). */
-export function LivePreview({ evaluation, accent }: { evaluation: FilterEvaluation; accent: string }) {
+export function LivePreview({ evaluation, delta, accent }: { evaluation: FilterEvaluation; delta?: EvaluationDelta | null; accent: string }) {
   const [showHidden, setShowHidden] = useState(false);
   const rows = showHidden ? evaluation.outcomes : evaluation.outcomes.filter((o) => o.visible);
 
@@ -28,6 +31,17 @@ export function LivePreview({ evaluation, accent }: { evaluation: FilterEvaluati
         <StatChip label="Highlighted" value={evaluation.highlighted} color={STATUS_WARNING} testId="lf-count-highlighted" />
         <StatChip label="Hidden" value={evaluation.hidden} color={STATUS_MUTED} testId="lf-count-hidden" />
       </div>
+
+      {delta && (
+        <div data-testid="lf-delta" className="text-[11px] font-mono rounded-md px-2 py-1 border border-border/40 text-text-muted">
+          <div>
+            Last edit changed {delta.changed} drop{delta.changed === 1 ? '' : 's'}: surfaced {signed(delta.shown)}, highlighted {signed(delta.highlighted)}, hidden {signed(delta.hidden)}
+          </div>
+          <div className="truncate" title={delta.changes.map((c) => `${c.name}: ${c.from} to ${c.to}`).join('; ')}>
+            {delta.changes.slice(0, 4).map((c) => `${c.name} (${c.from} to ${c.to})`).join(', ')}{delta.changes.length > 4 ? ` +${delta.changes.length - 4} more` : ''}
+          </div>
+        </div>
+      )}
 
       <button type="button" onClick={() => setShowHidden((v) => !v)}
         className="flex items-center gap-1.5 text-[11px] font-mono text-text-muted hover:text-text cursor-pointer">
