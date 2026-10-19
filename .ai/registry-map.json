@@ -8308,7 +8308,11 @@
           "revision": 5,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/canonStore.ts:49 Canon hydration replaces the entire in-memory rule list, allowing a stale response to drop a rule saved while the fetch was pending.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:23e162dc11978fce",
+          "evaluatedRevision": 5
         },
         {
           "subject": "production-prompt-architecture",

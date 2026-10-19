@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "657e0717-44ad-4183-8a6b-2bd4b77f52c2",
+ "subject": "content-drift-and-revision",
+ "evaluatedAt": "2026-10-19T12:08:19.239284+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "content-drift-and-revision",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/canonStore.ts:49 Canon hydration replaces the entire in-memory rule list, allowing a stale response to drop a rule saved while the fetch was pending.",
+   "techniques": [
+    {
+     "technique": "add-only-hydration",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/canonStore.ts:49 Pipeline artifact hydration is additive, but canon hydration replaces the whole list instead of preserving concurrently added entries."
+    },
+    {
+     "technique": "batch-lease-on-a-non-reentrant-resource",
+     "verdict": "deviation",
+     "evidence": "src/lib/test-gate-runner/drain-lease.ts:88 The lab's drain acquires the batch atomically, but its lease registry has neither heartbeat nor expiry, contrary to the required lifetime guarantees."
+    },
+    {
+     "technique": "bounded-revision-history",
+     "verdict": "deviation",
+     "evidence": "src/lib/pipeline-artifacts-db.ts:201 Retention is bounded at 20, but raw JSON comparison archives bookkeeping and key-order changes excluded by the drift fingerprint; archive and trimming also occur before the live-write transaction."
+    },
+    {
+     "technique": "content-hash-vs-status-drift",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:224 Content is compared only when statuses match, so simultaneous status and content changes cannot produce the required independent classification."
+    },
+    {
+     "technique": "orphaned-artifact-visibility",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/CatalogTree.tsx:74 Entity discard deletes artifacts before deleting the entity, and the endpoint purges revisions and verdicts too; this destroys recoverable content instead of retaining visible orphans."
+    },
+    {
+     "technique": "produce-direction-stamping",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:461 Direction stamps are persisted and displayed, but the remounted Produce panel initializes from seed/template defaults rather than the artifact's recorded steer, losing default carry-forward."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T12:08:19.239284+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "content-drift-and-revision"
+   ],
+   "techniques": [
+    "add-only-hydration",
+    "batch-lease-on-a-non-reentrant-resource",
+    "bounded-revision-history",
+    "content-hash-vs-status-drift",
+    "orphaned-artifact-visibility",
+    "produce-direction-stamping"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
