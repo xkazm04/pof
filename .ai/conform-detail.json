@@ -10454,6 +10454,73 @@
           "evidence": "src/lib/visual-verification-db.ts:80 Free-form model notes enter durable history without secret scrubbing, a length cap, or a sanitization-failure marker."
         }
       ]
+    },
+    "a2f9922b-d729-43f1-8050-27103ff26664/app-shell": {
+      "context": "app-shell-and-chrome",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:38:54.687Z",
+      "worker": "633f3e14-107e-4fc5-8c7e-0ca560470a9e",
+      "techniques": [
+        {
+          "technique": "lazy-section-loading",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/AppShell.tsx:119 The shell frame renders a placeholder skeleton over the navigation rail and top bar during store hydration, and ModuleSkeleton lacks a warm-path appearance delay."
+        },
+        {
+          "technique": "badge-and-attention",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/SidebarL2/StatusBadge.tsx:19 Task status is indicated by color alone on a rounded dot with no alert icon or shape, and failed states have no exposure-based clearing rule."
+        },
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout/SidebarL1.tsx:19 Expand and collapse rail posture is persisted in the store, icons and active indicators survive collapse, and flyout reveals appear on hover and keyboard focus."
+        },
+        {
+          "technique": "navigation-model",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/SidebarL2/index.tsx:92 Navigation interactions directly call separate sub-module and category setters rather than passing through the unified navigateToModule entry point."
+        }
+      ]
+    },
+    "7e5113c1-2957-49ad-aeee-6f7effe35dce/app-shell": {
+      "context": "app-navigation",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:38:54.687Z",
+      "techniques": [
+        {
+          "technique": "navigation-model",
+          "verdict": "deviation",
+          "evidence": "src/stores/navigationStore.ts:58 The store maintains separate category and sub-module mutators alongside navigateToModule, bypassing the single navigate door and history synchronization."
+        },
+        {
+          "technique": "lazy-section-loading",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useSuspend.ts:17 Provides suspension hooks for keep-alive module caching, but the shell lacks a restoration path for module state when a pane is evicted from the bounded LRU."
+        },
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useViewportWidth.ts:57 Computes threshold-based viewport measurements to support responsive drawer collapse without overriding the user's persisted expand/collapse posture."
+        },
+        {
+          "technique": "shell-hosted-services",
+          "verdict": "deviation",
+          "evidence": "src/app/page.tsx:27 Toggling the shell preference between legacy and the lab unmounts AppShell, destroying its hosted session background workers and connections."
+        }
+      ],
+      "withdrawn": {
+        "worker": "633f3e14-107e-4fc5-8c7e-0ca560470a9e",
+        "state": "deviation",
+        "at": "2026-10-19T00:39:25.105222+00:00",
+        "reason": "reviewer (sonnet): The claim that the direct setters bypass history synchronization is contradicted by src/hooks/useShellRouteSync.ts, which subscribes to useNavigationStore and pushes a history entry on any change to the visible module, whichever setter caused it. The useSuspend.ts claim that the shell lacks a restor"
+      }
     }
   }
 }

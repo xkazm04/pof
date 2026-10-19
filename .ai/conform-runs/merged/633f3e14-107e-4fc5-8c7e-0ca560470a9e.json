@@ -1,0 +1,82 @@
+{
+  "schema": "conform-run/1",
+  "worker": "633f3e14-107e-4fc5-8c7e-0ca560470a9e",
+  "subject": "app-shell",
+  "evaluatedAt": "2026-10-19T00:38:54.687183+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "app-shell-and-chrome",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout/AppShell.tsx:119 The application shell renders a placeholder skeleton across the persistent top bar and navigation rail during Zustand store hydration rather than painting immediately from local knowledge.",
+      "techniques": [
+        {
+          "technique": "lazy-section-loading",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/AppShell.tsx:119 The shell frame renders a placeholder skeleton over the navigation rail and top bar during store hydration, and ModuleSkeleton lacks a warm-path appearance delay."
+        },
+        {
+          "technique": "badge-and-attention",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/SidebarL2/StatusBadge.tsx:19 Task status is indicated by color alone on a rounded dot with no alert icon or shape, and failed states have no exposure-based clearing rule."
+        },
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout/SidebarL1.tsx:19 Expand and collapse rail posture is persisted in the store, icons and active indicators survive collapse, and flyout reveals appear on hover and keyboard focus."
+        },
+        {
+          "technique": "navigation-model",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/SidebarL2/index.tsx:92 Navigation interactions directly call separate sub-module and category setters rather than passing through the unified navigateToModule entry point."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "app-shell",
+      "context": "app-navigation",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim that the direct setters bypass history synchronization is contradicted by src/hooks/useShellRouteSync.ts, which subscribes to useNavigationStore and pushes a history entry on any change to the visible module, whichever setter caused it. The useSuspend.ts claim that the shell lacks a restor"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T00:38:54.687183+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "app-shell"
+      ],
+      "techniques": [
+        "badge-and-attention",
+        "lazy-section-loading",
+        "nav-hierarchy",
+        "navigation-model"
+      ],
+      "deviations": 1,
+      "context": "app-shell-and-chrome",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-19T00:38:54.687183+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "app-shell"
+      ],
+      "techniques": [
+        "lazy-section-loading",
+        "nav-hierarchy",
+        "navigation-model",
+        "shell-hosted-services"
+      ],
+      "deviations": 1,
+      "context": "app-navigation",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
