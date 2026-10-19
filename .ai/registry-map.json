@@ -4272,7 +4272,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:300 Context and repository searches found no reading-surface identifiers in the shell files, which select registered module views rather than implement navigation within one document.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:ee082e781491937e",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-runtime-assembly",
@@ -22606,7 +22610,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/EventCard.tsx:91 Context and repository searches found no reading-surface identifiers in these files, whose content consists of compact event descriptions, search results, and project controls rather than an internally navigable document.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:ee082e781491937e",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"

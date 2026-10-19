@@ -10669,6 +10669,78 @@
           "evidence": "src/components/modules/content/materials/MaterialPatternCatalog/index.tsx:42 Preview explicitly awaits an HTTP request; no synchronous engine callback requires resources to be acquired ahead of entry."
         }
       ]
+    },
+    "8bf35604-2492-4c16-bca5-1c3b2787bd76/long-form-reading-surface": {
+      "context": "topbar-and-activity",
+      "subject": "long-form-reading-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:21:14.551Z",
+      "worker": "d53047f7-ca46-4142-abec-028023dabbc6",
+      "techniques": [
+        {
+          "technique": "anchor-id-single-assigner",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/useGlobalSearchPanel.ts:136 Search selection addresses modules; no document-heading address space is generated or consumed here."
+        },
+        {
+          "technique": "fixed-chrome-offset-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/index.tsx:121 This is a time separator within the feed's own scrolling list, without reading-panel or heading-clearance consumers."
+        },
+        {
+          "technique": "focus-transfer-on-in-place-navigation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/TopBar/useTopBar.ts:145 The switcher changes projects; these files do not swap articles within a reading surface."
+        },
+        {
+          "technique": "scroll-spy-reading-band",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ActivityFeedPanel/helpers.ts:45 Feed sections group events by time period rather than track a reader's position through prose."
+        },
+        {
+          "technique": "server-parsed-once-reused",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/GlobalSearchPanel/useGlobalSearchPanel.ts:95 The panel consumes search results, not an article body with extracted heading structure."
+        }
+      ]
+    },
+    "a2f9922b-d729-43f1-8050-27103ff26664/long-form-reading-surface": {
+      "context": "app-shell-and-chrome",
+      "subject": "long-form-reading-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:21:14.551Z",
+      "worker": "d53047f7-ca46-4142-abec-028023dabbc6",
+      "techniques": [
+        {
+          "technique": "anchor-id-single-assigner",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/SidebarL2/index.tsx:92 Sidebar destinations are module identities, not heading addresses derived from prose."
+        },
+        {
+          "technique": "fixed-chrome-offset-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:284 The shell provides a module scrolling region below the topbar; its files own no reading-panel offsets, heading clearances, or reading band."
+        },
+        {
+          "technique": "focus-transfer-on-in-place-navigation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:220 This resolves application-module visibility; article-to-article navigation is not implemented in these files."
+        },
+        {
+          "technique": "scroll-spy-reading-band",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/SidebarL2/ProgressRing.tsx:27 The progress ring measures checklist completion, not reading progress or the current document section."
+        },
+        {
+          "technique": "server-parsed-once-reused",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/registry.tsx:141 The shell delegates the design-document surface to a separate module; document-structure preparation is not performed here."
+        }
+      ]
     }
   }
 }
