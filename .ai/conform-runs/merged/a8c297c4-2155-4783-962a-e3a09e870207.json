@@ -1,0 +1,78 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a8c297c4-2155-4783-962a-e3a09e870207",
+ "subject": "branching-narrative-graph-validation",
+ "evaluatedAt": "2026-10-19T11:17:30.024466+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "localization-pipeline",
+   "subject": "branching-narrative-graph-validation",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/app/api/localization-pipeline/route.ts:57 The pipeline scans and translates individual strings; searches found dialogue classifications but no narrative graph inputs or traversal constructs in this context and its localization dependencies, so branching-graph validation has no artifact to judge.",
+   "techniques": [
+    {
+     "technique": "dead-end-versus-authored-ending",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/LocalizationPipelineView/QATab.tsx:34 QA checks translated strings; this pipeline supplies no conversation terminals or authored ending set."
+    },
+    {
+     "technique": "false-choice-and-convergence-audit",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringsTab.tsx:84 Dialogue is a string classification, with no narrative options, successor states, or convergence to compare."
+    },
+    {
+     "technique": "graph-revision-diffing",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/localizationPipelineStore.ts:39 Requests configure source scans and translation actions; no conversation graph revisions enter this flow."
+    },
+    {
+     "technique": "node-text-budget-and-localization-surface",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/localization/readiness.ts:121 Readiness assesses individual extracted strings; no branching scene, node authoring, branch allowance, or voiced graph surface is represented."
+    },
+    {
+     "technique": "reachability-and-orphan-detection",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/localization-pipeline/route.ts:51 The scan consumes extracted string units rather than nodes and edges with declared entries and endings."
+    },
+    {
+     "technique": "state-variable-declaration-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/localization-pipeline/route.ts:90 Validation consumes translations, source strings, glossary, and locales; it does not consume narrative guards or state writes."
+    }
+   ],
+   "absenceTerms": [
+    "reachability",
+    "softlock",
+    "entryNodes",
+    "declaredEndings",
+    "effectSignature"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T11:17:30.024466+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "branching-narrative-graph-validation"
+   ],
+   "techniques": [
+    "dead-end-versus-authored-ending",
+    "false-choice-and-convergence-audit",
+    "graph-revision-diffing",
+    "node-text-budget-and-localization-surface",
+    "reachability-and-orphan-detection",
+    "state-variable-declaration-contract"
+   ],
+   "deviations": 0,
+   "context": "localization-pipeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

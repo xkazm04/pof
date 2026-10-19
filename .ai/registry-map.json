@@ -16161,7 +16161,11 @@
           "revision": 2,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/localization-pipeline/route.ts:57 The pipeline scans and translates individual strings; searches found dialogue classifications but no narrative graph inputs or traversal constructs in this context and its localization dependencies, so branching-graph validation has no artifact to judge.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:e4f20a4b024b5563",
+          "evaluatedRevision": 2
         },
         {
           "subject": "engine-string-representation",

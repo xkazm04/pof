@@ -11660,6 +11660,47 @@
           "evidence": "src/app/api/weekly-digest/route.ts:16 The reporting window resolves from a single parameter with a default to the current week, without stored preference chains or competing sources."
         }
       ]
+    },
+    "6feb38b8-a274-49d1-b643-b9c7e058b344/branching-narrative-graph-validation": {
+      "context": "localization-pipeline",
+      "subject": "branching-narrative-graph-validation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T11:17:30.024Z",
+      "worker": "a8c297c4-2155-4783-962a-e3a09e870207",
+      "techniques": [
+        {
+          "technique": "dead-end-versus-authored-ending",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/QATab.tsx:34 QA checks translated strings; this pipeline supplies no conversation terminals or authored ending set."
+        },
+        {
+          "technique": "false-choice-and-convergence-audit",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringsTab.tsx:84 Dialogue is a string classification, with no narrative options, successor states, or convergence to compare."
+        },
+        {
+          "technique": "graph-revision-diffing",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/localizationPipelineStore.ts:39 Requests configure source scans and translation actions; no conversation graph revisions enter this flow."
+        },
+        {
+          "technique": "node-text-budget-and-localization-surface",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/localization/readiness.ts:121 Readiness assesses individual extracted strings; no branching scene, node authoring, branch allowance, or voiced graph surface is represented."
+        },
+        {
+          "technique": "reachability-and-orphan-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/localization-pipeline/route.ts:51 The scan consumes extracted string units rather than nodes and edges with declared entries and endings."
+        },
+        {
+          "technique": "state-variable-declaration-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/localization-pipeline/route.ts:90 Validation consumes translations, source strings, glossary, and locales; it does not consume narrative guards or state writes."
+        }
+      ]
     }
   }
 }
