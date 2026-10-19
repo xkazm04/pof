@@ -12054,6 +12054,47 @@
         "at": "2026-10-19T12:28:45.696012+00:00",
         "reason": "reviewer (sonnet): The anchors are incidental and mostly sit outside the context's files. cook-executor.ts:88 is a cmd.exe spawn of UAT, and cook-jobs.ts:314 is only SSE response headers (no-cache). PreflightGateBlock.tsx:35 is a 'measuring' phase message. build-profiles-db.ts:15 is a storage-key comment. PlatformProf"
       }
+    },
+    "b8a83374-4625-4d64-9823-c2a695ed155e/design-canon-as-executable-law": {
+      "context": "catalog-seed-data",
+      "subject": "design-canon-as-executable-law",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T12:33:48.224Z",
+      "techniques": [
+        {
+          "technique": "archetype-aware-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:242 Declared kinds select distinct envelopes, but an unknown kind fails instead of returning not-measured as the technique requires."
+        },
+        {
+          "technique": "canon-as-single-source-of-thresholds",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:200 The geometric base is parsed, but its acceptance tolerance is a checker parameter absent from the governing canon rule."
+        },
+        {
+          "technique": "parse-thresholds-from-prose",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:202 The progression pipeline grades only its declared exponent against the parsed base; it does not verify that the authored curve or sample values have geometric shape."
+        },
+        {
+          "technique": "self-declared-budget-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:362 budgetWithinCap correctly compares the artifact's value and cap, but classifies this canon-independent self-consistency check as a content invariant rather than reporting it separately."
+        },
+        {
+          "technique": "shape-check-vs-content-invariant",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/contentInvariant.ts:15 The classification explicitly promotes a composition of shape and self-consistency checks into the content-invariant class, although neither establishes compliance with external design law."
+        }
+      ],
+      "withdrawn": {
+        "worker": "3ab4cf23-df14-479f-b5d7-1b63a7da64ae",
+        "state": "deviation",
+        "at": "2026-10-19T12:34:08.291213+00:00",
+        "reason": "reviewer (sonnet): All the anchors (invariants.ts:200, 202, 242, 362) are in src/lib/catalog/acceptance/invariants.ts, which is not one of the context's seed*.ts files. The 10% tolerance sits beside a canon line that only says 'roughly geometrically (≈ base × 1.08^level)', so it is a checker design choice rather than "
+      }
     }
   }
 }
