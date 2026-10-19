@@ -11578,6 +11578,47 @@
           "evidence": "src/__tests__/lib/blueprint-cpp-surface.test.ts:79 Parity verification only re-parses the emitted C++ header artifact, leaving parity with the emitted source definitions unchecked by parsers."
         }
       ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/acceptance-verdict-spine": {
+      "context": "catalog-acceptance",
+      "subject": "acceptance-verdict-spine",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T11:04:28.016Z",
+      "worker": "7795e09e-8d13-44c3-be31-af904fe4cad2",
+      "techniques": [
+        {
+          "technique": "three-layer-merge-order",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/resolveStepAcceptance.ts:24 Directional overlay requires local deferred status before applying concrete server drain outcomes."
+        },
+        {
+          "technique": "explain-why-this-verdict",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/explainAcceptance.ts:159 Reconstructs the layer chain on demand and determines the specific authority that decided the verdict."
+        },
+        {
+          "technique": "first-non-pass-reporting-in-all-of",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/combinators.ts:18 Evaluates composed checks in declared order, returning the first non-pass result or the first when all pass."
+        },
+        {
+          "technique": "ungraded-marker-doctrine",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/stepGradability.ts:131 Annotates unverified claims with an UNGRADED prefix stating the reason before appending producer claim."
+        },
+        {
+          "technique": "hardcoded-pass-antipattern",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/itemsBespokeCheckers.ts:267 Prevents generative steps from passing on hardcoded stub constants by verifying actual generation assets."
+        },
+        {
+          "technique": "gate-check-dependency-map",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:123 Declares explicit gate check dependencies to prevent vacuous passes and evaluate resolved sibling verdicts."
+        }
+      ]
     }
   }
 }

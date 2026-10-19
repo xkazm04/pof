@@ -7029,7 +7029,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/catalog/acceptance/resolveStepAcceptance.ts:62 Provides the application's single pure acceptance truth merging local checker results, server drain overlays, and content-bound judge findings in strict deterministic order without re-grading.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:25217c1b6264a2cf",
+          "evaluatedRevision": 5
         },
         {
           "subject": "content-acceptance-tiering",
