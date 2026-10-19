@@ -21936,7 +21936,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:618 One entity's gate pass verifies the aggregated step before checker or judge failures are considered, allowing blocked work to count as reached R4+.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:69a3350020092471",
+          "evaluatedRevision": 2
         },
         {
           "subject": "eval-harness",

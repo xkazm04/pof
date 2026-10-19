@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4b012b3e-73e9-48c3-9139-f2ca778d767f",
+ "subject": "production-coverage-measurement",
+ "evaluatedAt": "2026-10-19T02:03:41.584634+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "status-health-dashboard",
+   "subject": "production-coverage-measurement",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/status/statusModel.ts:618 One entity's gate pass verifies the aggregated step before checker or judge failures are considered, allowing blocked work to count as reached R4+.",
+   "techniques": [
+    {
+     "technique": "audited-fact-drift-detection",
+     "verdict": "deviation",
+     "evidence": "src/lib/status/capabilityModel.ts:343 Capability grading substitutes the current rubric version before checking provenance and accepts panel rubric versions >=3, although rubrics.ts declares version 4; superseded v3 measurements can therefore retain grades instead of becoming unmeasured."
+    },
+    {
+     "technique": "craft-ladder-and-medium-ceilings",
+     "verdict": "deviation",
+     "evidence": "src/lib/craft/craftCell.ts:290 The cell projects only recorded verdicts: when one entity is gauged and another artifact-bearing entity has no verdict, the latter contributes neither A0 nor its full roof distance, so an incompletely measured step can report at-ceiling."
+    },
+    {
+     "technique": "engine-credibility-classes",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/statusModel.ts:429 Explicit producer mappings distinguish derivational code from hand-authored constants; unrecognized engines remain unaudited, outside the trusted set, and class explanations appear in the cell and evidence view."
+    },
+    {
+     "technique": "headless-operability-gate",
+     "verdict": "deviation",
+     "evidence": "scripts/headless-coverage.mjs:116 The audit marks operable after fetching a recipe and submitting fixture data that returns any verdict, including fail or deferred; this does not prove production or gate execution to completion, yet gateHeadless accepts the resulting flag."
+    },
+    {
+     "technique": "readiness-ladder",
+     "verdict": "deviation",
+     "evidence": "src/lib/status/statusModel.ts:618 Although waiting and blocked are separate states, the first grading branch lets a gate pass override another entity's checker failure or a current judge condemnation, reporting the aggregate as reached rather than blocked."
+    },
+    {
+     "technique": "source-provenance-marks",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/statusModel.ts:375 Engine resolution records audited, authored, inferred, and authored-demotion origins; shared glyph/word/note metadata renders missing provenance explicitly as UNSOURCED."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T02:03:41.584634+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "production-coverage-measurement"
+   ],
+   "techniques": [
+    "audited-fact-drift-detection",
+    "craft-ladder-and-medium-ceilings",
+    "engine-credibility-classes",
+    "headless-operability-gate",
+    "readiness-ladder",
+    "source-provenance-marks"
+   ],
+   "deviations": 1,
+   "context": "status-health-dashboard",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
