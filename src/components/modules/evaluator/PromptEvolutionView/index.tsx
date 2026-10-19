@@ -4,7 +4,6 @@ import { Dna } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { PromptVersionTimeline } from '@/components/modules/evaluator/PromptVersionTimeline';
 import type { SubModuleId } from '@/types/modules';
-import { toast } from 'sonner';
 import { ACCENT, MODULE_OPTIONS } from './constants';
 import { usePromptEvolution } from './usePromptEvolution';
 import { ModeToggle } from './ModeToggle';
@@ -19,18 +18,18 @@ import { StatsPanel } from './StatsPanel';
 
 export function PromptEvolutionView() {
   const {
-    variants, abTests, clusters, suggestions, stats, promptFitness, selectedModuleId,
+    variants, abTests, clusters, stats, promptFitness, selectedModuleId,
     isLoading, isMutating, isClustering, error, activeSubTab,
     lastOptimization, isOptimizing,
     setActiveSubTab, mutateVariant, clusterPrompts, concludeTestAction,
-    optimizePromptAction, getBestVariant, restoreVariant,
+    optimizePromptAction,
     newPrompt, setNewPrompt, newChecklistItemId, setNewChecklistItemId,
     showCreateForm, setShowCreateForm, selectedMutation, setSelectedMutation,
     expandedVariantId, setExpandedVariantId, expandedTestId, setExpandedTestId,
     formErrors, setFormErrors, mode,
     handleSelectModule, moduleChecklistItems, handleCreateVariant, handleMutate, handleSaveChallenger,
     handleCluster, handleStartTest, variantsByItem, historyItemOptions,
-    visibleTabs, handleSetMode,
+    visibleTabs, handleSetMode, adoptWinner, adoptBestForItem, visibleSuggestions,
   } = usePromptEvolution();
 
   return (
@@ -64,27 +63,12 @@ export function PromptEvolutionView() {
       </div>
 
       {/* Suggestions bar — actionable cards */}
-      {suggestions.length > 0 && (
+      {visibleSuggestions.length > 0 && (
         <SuggestionsBar
-          suggestions={suggestions}
+          suggestions={visibleSuggestions}
           onMutate={mutateVariant}
           onCluster={clusterPrompts}
-          onAdoptWinner={async (moduleId, itemId) => {
-            const best = await getBestVariant(moduleId, itemId);
-            if (!best) {
-              toast.error('No best variant available for this item yet.');
-              return;
-            }
-            // Adopt = make the winner the active variant. The dispatch path reads
-            // this flag, so the next real run of this checklist item sends the
-            // winning prompt (not just a clipboard copy).
-            const adopted = await restoreVariant(best.id);
-            if (!adopted) {
-              toast.error('Failed to adopt the winning variant.');
-              return;
-            }
-            toast.success(`Adopted “${best.label}” — the next run will use it`);
-          }}
+          onAdoptWinner={adoptBestForItem}
           onNavigateVariants={(variantId) => {
             setActiveSubTab('variants');
             if (variantId) setExpandedVariantId(variantId);
@@ -175,6 +159,7 @@ export function PromptEvolutionView() {
               expandedTestId={expandedTestId}
               setExpandedTestId={setExpandedTestId}
               concludeTest={concludeTestAction}
+              adoptWinner={adoptWinner}
               mode={mode}
             />
           )}

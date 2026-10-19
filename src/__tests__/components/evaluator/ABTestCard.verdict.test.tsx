@@ -64,3 +64,36 @@ describe('ABTestCard — decide-now is offered only when the server would accept
     expect(screen.getByTestId('verdict-basis').textContent).toMatch(/self-reported/i);
   });
 });
+
+describe('ABTestCard — adopting the winner', () => {
+  const winnerVariant = {
+    id: 'vb', moduleId: 'arpg-combat' as SubModuleId, checklistItemId: 'ac-1', label: 'B', prompt: 'new',
+    origin: 'default' as const, style: 'imperative' as const, parentId: null, active: false, createdAt: '',
+  };
+  const decided = (): ABTest => ({
+    ...runningTest(10, 10), variantBSuccesses: 9, variantASuccesses: 4, status: 'concluded', winnerId: 'vb', confidence: 0.95,
+  });
+
+  it('offers Adopt winner when the plan allows it, and Copy wording as a secondary action', () => {
+    render(
+      <ABTestCard
+        test={decided()} variantB={winnerVariant} isExpanded onToggle={() => {}} mode="simple"
+        adoption={{ ok: true, data: { winner: winnerVariant, incumbent: null, diff: { before: null, after: 'new', identical: false, lengthDelta: 3 }, contested: false, caution: null } }}
+        onAdopt={async () => true}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /adopt winner/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /copy wording/i })).toBeTruthy();
+  });
+
+  it('says why when the winner cannot be adopted', () => {
+    render(
+      <ABTestCard
+        test={decided()} variantB={winnerVariant} isExpanded onToggle={() => {}} mode="simple"
+        adoption={{ ok: false, error: { kind: 'already-active', message: 'B is already the version in use.' } }}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /adopt winner/i })).toBeNull();
+    expect(screen.getByTestId('adoption-blocked').textContent).toMatch(/already the version in use/);
+  });
+});
