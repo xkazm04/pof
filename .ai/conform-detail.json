@@ -12131,6 +12131,47 @@
           "evidence": "src/components/layout/CLIBottomPanel.tsx:33 This relation navigates from a CLI session to its owning module; it does not map documentation topics to product locations."
         }
       ]
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/drag-drop": {
+      "context": "inventory-catalog",
+      "subject": "drag-drop",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:17:40.513Z",
+      "worker": "d43063c0-59bb-4b51-bdec-9e8440149a98",
+      "techniques": [
+        {
+          "technique": "cross-surface-handoff",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashPalette.tsx:92 The palette publishes an untyped text ID; the receiving grid accepts from ambient intent without inspecting a declared transferable kind."
+        },
+        {
+          "technique": "drag-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:211 Source dragend clears intent while drop separately clears target hover; no common reaper handles both resources or clears module-level intent on unmount."
+        },
+        {
+          "technique": "drop-affordances",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:148 The grid provides a red/green footprint preview only after dragover sets hover; valid destinations do not announce themselves at drag start."
+        },
+        {
+          "technique": "keyboard-alternatives",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:111 The only stash-grid key operation rotates existing intent; no keyboard or click alternative creates or repositions a placement, and drag transitions lack live announcements."
+        },
+        {
+          "technique": "ownership-boundaries",
+          "verdict": "deviation",
+          "evidence": "src/stores/spatialInventoryStore.ts:125 Explicit drop coordinates bypass placement validation in the owning store, and placePlacement unconditionally appends; collision and bounds checks remain in the gesture handler against its tab snapshot."
+        },
+        {
+          "technique": "payload-and-identity",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:88 Stable IDs exist, but onDrop never reads dataTransfer.getData and instead authorizes placement using the singleton's identity."
+        }
+      ]
     }
   }
 }

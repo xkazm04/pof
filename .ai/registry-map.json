@@ -14543,7 +14543,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:88 The drop handler takes identity from ambient drag state instead of the received payload, allowing stale intent to authorize an unrelated drop.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:31c96c1f832f7148",
+          "evaluatedRevision": 5
         },
         {
           "subject": "canvas-graph",
