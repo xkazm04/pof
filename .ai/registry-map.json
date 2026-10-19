@@ -7505,7 +7505,11 @@
           "revision": 4,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/catalog/sections.ts:29 The manifests register game-content catalogs, and searches found no connector, authSchema, probeRecipe, or credential references under src/lib/catalog, so this context does not implement an external-service connector catalog.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d78c2c6c19304554",
+          "evaluatedRevision": 4
         },
         {
           "subject": "test-harness",

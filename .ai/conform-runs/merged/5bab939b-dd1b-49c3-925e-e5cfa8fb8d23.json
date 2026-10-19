@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5bab939b-dd1b-49c3-925e-e5cfa8fb8d23",
+ "subject": "connector-catalog",
+ "evaluatedAt": "2026-10-19T12:00:09.105474+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "catalog-core-infrastructure",
+   "subject": "connector-catalog",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/catalog/sections.ts:29 The manifests register game-content catalogs, and searches found no connector, authSchema, probeRecipe, or credential references under src/lib/catalog, so this context does not implement an external-service connector catalog.",
+   "techniques": [
+    {
+     "technique": "adapter-normalization",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/headless.ts:223 This mapping projects seeded game entities into the lab model; it does not normalize heterogeneous external-service APIs."
+    },
+    {
+     "technique": "catalog-as-data",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/sections.ts:32 The registered records describe game content rather than integration types with authentication, capabilities, and probe recipes."
+    },
+    {
+     "technique": "catalog-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/lifecycle.ts:5 This lifecycle tracks generation progress; it is not a connector adoption, deprecation, and retirement lifecycle."
+    },
+    {
+     "technique": "matching-and-ranking",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/tree.ts:69 Substring matching filters visible game entities interactively; it does not automatically bind foreign references to connector identities."
+    },
+    {
+     "technique": "schema-driven-forms",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/stepSpec.ts:69 These declarations describe artifact views, with no connector credential acquisition schema or credential probe in this context."
+    },
+    {
+     "technique": "shipped-vs-operator-ownership",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/sections.ts:66 This seed function constructs an in-memory game-content index; it does not reconcile installed connector rows shared by vendor and operator writers."
+    }
+   ],
+   "absenceTerms": [
+    "connector",
+    "authSchema",
+    "probeRecipe",
+    "credential"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T12:00:09.105474+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "connector-catalog"
+   ],
+   "techniques": [
+    "adapter-normalization",
+    "catalog-as-data",
+    "catalog-lifecycle",
+    "matching-and-ranking",
+    "schema-driven-forms",
+    "shipped-vs-operator-ownership"
+   ],
+   "deviations": 0,
+   "context": "catalog-core-infrastructure",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -11854,6 +11854,47 @@
           "evidence": "src/lib/visual-gen/rig-gate.ts:318 scoreRig implements checks directly as conditional branches, rather than an enumerable registry of independent rules."
         }
       ]
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/connector-catalog": {
+      "context": "catalog-core-infrastructure",
+      "subject": "connector-catalog",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T12:00:09.105Z",
+      "worker": "5bab939b-dd1b-49c3-925e-e5cfa8fb8d23",
+      "techniques": [
+        {
+          "technique": "adapter-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/headless.ts:223 This mapping projects seeded game entities into the lab model; it does not normalize heterogeneous external-service APIs."
+        },
+        {
+          "technique": "catalog-as-data",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/sections.ts:32 The registered records describe game content rather than integration types with authentication, capabilities, and probe recipes."
+        },
+        {
+          "technique": "catalog-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/lifecycle.ts:5 This lifecycle tracks generation progress; it is not a connector adoption, deprecation, and retirement lifecycle."
+        },
+        {
+          "technique": "matching-and-ranking",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/tree.ts:69 Substring matching filters visible game entities interactively; it does not automatically bind foreign references to connector identities."
+        },
+        {
+          "technique": "schema-driven-forms",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/stepSpec.ts:69 These declarations describe artifact views, with no connector credential acquisition schema or credential probe in this context."
+        },
+        {
+          "technique": "shipped-vs-operator-ownership",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/sections.ts:66 This seed function constructs an in-memory game-content index; it does not reconcile installed connector rows shared by vendor and operator writers."
+        }
+      ]
     }
   }
 }
