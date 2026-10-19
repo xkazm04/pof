@@ -15990,7 +15990,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:185 The level design editor maintains duplicate facts between its private document model and generated C++ code, relying on a bidirectional sync panel to reconcile drifting projections rather than treating the document as the engine's authoritative input.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:1104f28404244275",
+          "evaluatedRevision": 3
         },
         {
           "subject": "procedural-level-planning",

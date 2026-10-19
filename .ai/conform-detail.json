@@ -10880,6 +10880,32 @@
         "at": "2026-10-19T01:37:11.831288+00:00",
         "reason": "reviewer (sonnet): The cited line does return {} for an unmapped task, but the surrounding code documents that as a deliberate listed off-state. Two technique claims are contradicted: explicit overrides at model-policy.ts:157-161 are checked by isModel/isEffort, and model-policy/route.ts:25-27 only accepts values from"
       }
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/native-document-format": {
+      "context": "level-flow-editor",
+      "subject": "native-document-format",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:47:44.605Z",
+      "worker": "6b4ff271-4660-47ed-a864-132456707a4e",
+      "techniques": [
+        {
+          "technique": "format-is-the-engines-input",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:300 Instead of saving in an engine-native format with ignorable regions, the editor saves a private format and exports to the engine via code generation."
+        },
+        {
+          "technique": "one-writer-per-fact",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/SyncStatusPanel.tsx:185 The editor maintains duplicate representations of level design facts across documents and C++ code, providing a bidirectional sync panel to reconcile divergences."
+        },
+        {
+          "technique": "format-generations-are-declared",
+          "verdict": "deviation",
+          "evidence": "src/types/level-design.ts:35 LevelDesignDocument lacks a declared format generation number, relying on the presence or absence of optional fields like grants to detect vintage."
+        }
+      ]
     }
   }
 }
