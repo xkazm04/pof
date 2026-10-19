@@ -11752,6 +11752,52 @@
           "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:159 The client uses a relative same-origin endpoint and has no environment-variable or credential configuration reads in the searched context directories."
         }
       ]
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/ci-execution-trust": {
+      "context": "roadmap-workflow-management",
+      "subject": "ci-execution-trust",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T11:42:44.438Z",
+      "techniques": [
+        {
+          "technique": "control-plane-execution-boundary",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:123 The view creates an in-process task scheduler; inspection did not establish a delivery orchestrator and runner boundary."
+        },
+        {
+          "technique": "injected-code-scope-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/workflow-templates.ts:237 Template hydration constructs task dependencies; no build lifecycle injection or pipeline extension loading was found in this path."
+        },
+        {
+          "technique": "job-instruction-signing",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:144 Scheduling dispatches a browser event; repository search found its producer but no consumer establishing external instructions to internal runners."
+        },
+        {
+          "technique": "measure-apply-split",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/workflow-templates.ts:79 This is an editing task following a feature review; no contributor-code verification job with a write credential or proposal writeback was found."
+        },
+        {
+          "technique": "secret-materialization-discipline",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/workflow-templates.ts:88 The build task requests compilation verification; the inspected context and scheduler contain no publishing credential acquisition or materialization."
+        },
+        {
+          "technique": "untrusted-contribution-lanes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 Runs originate from locally selected templates and modules; no outside-contribution trigger or trusted delivery lane was found."
+        }
+      ],
+      "withdrawn": {
+        "worker": "eb76fb06-4ff9-4b64-82f7-4f4b1e79b688",
+        "state": "not-applicable",
+        "at": "2026-10-19T11:43:15.952928+00:00",
+        "reason": "reviewer (sonnet): The anchors don't show that the precondition is absent. src/lib/task-dag-orchestrator.ts:7 is a header comment saying the orchestrator emits events for the store layer to turn into CLI session dispatches, which is incidental. src/stores/taskDAGStore.ts:140-151 dispatches 'pof-dag-node-ready' to crea"
+      }
     }
   }
 }
