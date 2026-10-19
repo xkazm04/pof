@@ -1,40 +1,42 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Dices } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TabButtonGroup } from '../../unique-tabs/_shared';
 import { RARITY_TIERS, TOTAL_WEIGHT } from '../_shared/data';
 import { ACCENT_VIOLET, STATUS_WARNING, withOpacity, OPACITY_8, OPACITY_20 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
-import { mcStats } from './monte-carlo-utils';
+import { useLootTuningStore } from '../_shared/lootTuningStore';
+import { runBatch, mcSummary } from './lootSimEngine';
 import { Histogram } from './Histogram';
 
 const MC_RUNS = 50;
+/** The global rarity table as a binding: every kill drops, tiers by RARITY_TIERS weight. */
+const GLOBAL_BINDING = { dropChance: 1, rarityWeights: RARITY_TIERS.map(t => t.weight) };
 
 export function MonteCarloSim() {
   const [mcRollCount, setMcRollCount] = useState<number | null>(null);
   const [mcResults, setMcResults] = useState<{ tally: Record<string, number[]>; total: number } | null>(null);
   const [histoRarity, setHistoRarity] = useState('Rare');
+  const [seed, setSeed] = useState<number | null>(null);
+  const rarityGold = useLootTuningStore((s) => s.rarityGold);
 
   const runMonteCarlo = useCallback((n: number) => {
     setMcRollCount(n);
+    const baseSeed = (Date.now() ^ (n * 0x9e3779b1)) >>> 0;
+    setSeed(baseSeed);
     const tally: Record<string, number[]> = {};
     for (const t of RARITY_TIERS) tally[t.name] = [];
     for (let run = 0; run < MC_RUNS; run++) {
-      const counts: Record<string, number> = {};
-      for (const t of RARITY_TIERS) counts[t.name] = 0;
-      for (let i = 0; i < n; i++) {
-        let roll = Math.random() * TOTAL_WEIGHT;
-        for (const tier of RARITY_TIERS) {
-          roll -= tier.weight;
-          if (roll <= 0) { counts[tier.name]++; break; }
-        }
-      }
-      for (const t of RARITY_TIERS) tally[t.name].push(counts[t.name]);
+      const counts = runBatch(GLOBAL_BINDING, n, baseSeed + run);
+      RARITY_TIERS.forEach((t, i) => tally[t.name].push(counts[i]));
     }
     setMcResults({ tally, total: n });
   }, []);
+
+  const summary = useMemo(() => (mcResults ? mcSummary(mcResults.tally) : null), [mcResults]);
+  const evPerKill = RARITY_TIERS.reduce((s, t) => s + (t.weight / TOTAL_WEIGHT) * (rarityGold[t.name] ?? 0), 0);
 
   const histoColor = RARITY_TIERS.find(t => t.name === histoRarity)?.color ?? ACCENT_VIOLET;
 
@@ -74,7 +76,7 @@ export function MonteCarloSim() {
               </thead>
               <tbody>
                 {RARITY_TIERS.map((tier) => {
-                  const s = mcStats(mcResults.tally[tier.name]);
+                  const s = summary![tier.name];
                   return (
                     <tr key={tier.name} className="border-t border-border/20">
                       <td className="py-1 pr-2 flex items-center gap-1">
@@ -94,7 +96,7 @@ export function MonteCarloSim() {
           </div>
           {/* Distribution bars */}
           <div className="space-y-1">
-            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Distribution (avg of {MC_RUNS} runs)</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Distribution (avg of {MC_RUNS} runs, seed {seed})</div>
             {RARITY_TIERS.map((tier) => {
               const avg = mcResults.tally[tier.name].reduce((s, v) => s + v, 0) / mcResults.tally[tier.name].length;
               const pct = (avg / mcResults.total) * 100;
@@ -154,7 +156,7 @@ export function MonteCarloSim() {
           <div className="flex items-center gap-2 p-2 rounded border border-border/30 bg-surface/30">
             <span className="text-2xs text-text-muted">Expected value per kill:</span>
             <span className="text-xs font-mono font-semibold" style={{ color: STATUS_WARNING }}>
-              {(RARITY_TIERS.reduce((s, t) => s + (t.weight / TOTAL_WEIGHT) * ({ Common: 5, Uncommon: 15, Rare: 50, Epic: 200, Legendary: 1000 }[t.name] ?? 0), 0)).toFixed(1)} gold
+              {evPerKill.toFixed(1)} gold
             </span>
           </div>
         </div>

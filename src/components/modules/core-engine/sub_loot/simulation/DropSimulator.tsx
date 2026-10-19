@@ -4,8 +4,10 @@ import { useState, useCallback, useMemo } from 'react';
 import { Dices, Users } from 'lucide-react';
 import { ACCENT_CYAN, OPACITY_8, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, withOpacity, OPACITY_12 } from '@/lib/chart-colors';
 import { TabButtonGroup } from '../../unique-tabs/_shared';
-import { RARITY_TIERS, TOTAL_WEIGHT, DEFAULT_ENEMY_LOOT_BINDINGS } from '../_shared/data';
+import { RARITY_TIERS, DEFAULT_ENEMY_LOOT_BINDINGS } from '../_shared/data';
 import type { EnemyLootBinding } from '../_shared/data';
+import { useLootTuningStore } from '../_shared/lootTuningStore';
+import { runBatch, deviationFor } from './lootSimEngine';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { ScalableSelector } from '@/components/shared/ScalableSelector';
 
@@ -28,62 +30,39 @@ const SELECTABLE_BINDINGS: SelectableBinding[] = DEFAULT_ENEMY_LOOT_BINDINGS.map
   tier: deriveTier(b.dropChance),
 }));
 
+/** The global rarity table as a binding: every kill drops, tiers by RARITY_TIERS weight. */
+const GLOBAL_BINDING = { dropChance: 1, rarityWeights: RARITY_TIERS.map(t => t.weight) };
+
 export function DropSimulator() {
+  const tunedBindings = useLootTuningStore((s) => s.bindings);
   const [rollCount, setRollCount] = useState<number | null>(null);
   const [rollResults, setRollResults] = useState<Record<string, number>>({});
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEnemyId, setSelectedEnemyId] = useState<string | null>(null);
 
   const selectedBinding = useMemo(
-    () => selectedEnemyId ? DEFAULT_ENEMY_LOOT_BINDINGS.find(b => b.archetypeId === selectedEnemyId) : null,
-    [selectedEnemyId],
+    () => selectedEnemyId ? tunedBindings.find(b => b.archetypeId === selectedEnemyId) : null,
+    [selectedEnemyId, tunedBindings],
   );
+
+  const activeBinding = selectedBinding ?? GLOBAL_BINDING;
 
   const rollDrops = useCallback((n: number) => {
     setRollCount(n);
     const tally: Record<string, number> = {};
     for (const t of RARITY_TIERS) tally[t.name] = 0;
 
-    if (selectedBinding) {
-      // Per-enemy simulation using their rarity weights
-      const totalWeight = selectedBinding.rarityWeights.reduce((s, w) => s + w, 0);
-      for (let i = 0; i < n; i++) {
-        if (Math.random() > selectedBinding.dropChance) continue; // no drop
-        let roll = Math.random() * totalWeight;
-        for (let ri = 0; ri < RARITY_TIERS.length; ri++) {
-          roll -= selectedBinding.rarityWeights[ri];
-          if (roll <= 0) { tally[RARITY_TIERS[ri].name]++; break; }
-        }
-      }
-    } else {
-      // Default: simple weighted roll
-      for (let i = 0; i < n; i++) {
-        let roll = Math.random() * TOTAL_WEIGHT;
-        for (const tier of RARITY_TIERS) {
-          roll -= tier.weight;
-          if (roll <= 0) { tally[tier.name]++; break; }
-        }
-      }
-    }
+    const counts = runBatch(activeBinding, n, (Date.now() ^ (n * 0x9e3779b1)) >>> 0);
+    RARITY_TIERS.forEach((t, i) => { tally[t.name] = counts[i] ?? 0; });
     setRollResults(tally);
-  }, [selectedBinding]);
+  }, [activeBinding]);
 
-  const getDeviation = (tierName: string, weight: number) => {
+  const getDeviation = (tierIdx: number) => {
     if (rollCount === null) return null;
-    const actual = rollResults[tierName] ?? 0;
-    const expected = rollCount * (weight / TOTAL_WEIGHT);
-    const delta = actual - expected;
-    const rounded = Math.round(delta);
-    if (rounded === 0) return { label: 'as expected', color: STATUS_SUCCESS };
-    const absDelta = Math.abs(rounded);
-    const stdDev = Math.sqrt(rollCount * (weight / TOTAL_WEIGHT) * (1 - weight / TOTAL_WEIGHT));
-    const color = Math.abs(delta) > 2 * stdDev ? STATUS_ERROR
-      : Math.abs(delta) > stdDev ? STATUS_WARNING
-      : STATUS_SUCCESS;
-    return {
-      label: rounded > 0 ? `+${absDelta} above` : `−${absDelta} below`,
-      color,
-    };
+    const counts = RARITY_TIERS.map(t => rollResults[t.name] ?? 0);
+    const d = deviationFor(activeBinding, tierIdx, rollCount, counts);
+    const color = d.severity === 'error' ? STATUS_ERROR : d.severity === 'warn' ? STATUS_WARNING : STATUS_SUCCESS;
+    return { label: d.label, color };
   };
 
   const renderEnemyItem = useCallback((item: SelectableBinding, selected: boolean) => (
@@ -147,8 +126,8 @@ export function DropSimulator() {
       {rollCount !== null ? (
         <div>
           <div className="flex flex-wrap gap-2 mb-2" aria-live="polite">
-            {RARITY_TIERS.map((tier) => {
-              const dev = getDeviation(tier.name, tier.weight);
+            {RARITY_TIERS.map((tier, tierIdx) => {
+              const dev = getDeviation(tierIdx);
               return (
                 <div
                   key={tier.name}

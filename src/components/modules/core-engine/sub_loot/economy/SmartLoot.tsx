@@ -5,9 +5,11 @@ import { Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { OPACITY_8, STATUS_WARNING, ACCENT_VIOLET, STATUS_SUBDUED, withOpacity } from '@/lib/chart-colors';
 import { SMART_LOOT_DATA } from '../_shared/data';
+import { smartLootLift } from '../simulation/lootSimEngine';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 
 export function SmartLoot() {
+  const lift = smartLootLift();
   const [smartMode, setSmartMode] = useState(false);
 
   return (
@@ -32,7 +34,7 @@ export function SmartLoot() {
       {/* Effectiveness metric */}
       <div className="flex items-center gap-2 mb-3 px-2 py-1.5 rounded border border-border/30 bg-surface/30">
         <span className="text-2xs text-text-muted">Smart Loot Effectiveness:</span>
-        <span className="text-xs font-mono font-bold" style={{ color: ACCENT_VIOLET }}>23% better targeting</span>
+        <span className="text-xs font-mono font-bold" style={{ color: ACCENT_VIOLET }}>{lift.liftPct}% more drops to high-gap slots</span>
         <span className="text-2xs text-text-muted ml-auto">vs raw distribution</span>
       </div>
       {/* Side-by-side probability bars */}
