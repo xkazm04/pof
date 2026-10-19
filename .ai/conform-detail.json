@@ -11542,6 +11542,42 @@
           "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogFiltersBar.tsx:88 The feature defines the button's background, text and border treatments locally instead of selecting a shared control variant."
         }
       ]
+    },
+    "2751ffd7-47b9-4a50-ba17-cc730738e521/visual-script-to-code-transpilation": {
+      "context": "blueprint-tools",
+      "subject": "visual-script-to-code-transpilation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T10:52:19.134Z",
+      "worker": "c311030a-fd9e-48d5-8bf6-d8edf4f18800",
+      "techniques": [
+        {
+          "technique": "event-override-signature-resolution",
+          "verdict": "deviation",
+          "evidence": "src/lib/blueprint-cpp-surface.ts:61 Event override resolution is hardcoded to three engine events using a boolean component flag rather than walking the owner ancestry."
+        },
+        {
+          "technique": "graph-type-to-code-type-mapping",
+          "verdict": "deviation",
+          "evidence": "src/lib/blueprint-parser.ts:64 Execution control pins are mapped directly to void in the value type map, and unmapped types fall back to string literals instead of an explicit total representation."
+        },
+        {
+          "technique": "structural-round-trip-diff",
+          "verdict": "deviation",
+          "evidence": "src/lib/blueprint-semantic-diff.ts:48 The semantic diff explicitly skips function bodies and event graph node logic, bounding verification to declared member signatures."
+        },
+        {
+          "technique": "plain-language-jargon-layer",
+          "verdict": "conformant",
+          "evidence": "src/lib/blueprint-jargon.ts:35 The jargon glossary provides one-sentence, consequence-oriented explanations for engine specifiers and graph node types across designer and engineer audiences."
+        },
+        {
+          "technique": "declaration-definition-parity",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/blueprint-cpp-surface.test.ts:79 Parity verification only re-parses the emitted C++ header artifact, leaving parity with the emitted source definitions unchecked by parsers."
+        }
+      ]
     }
   }
 }

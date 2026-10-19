@@ -6256,7 +6256,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/blueprint-cpp-codegen.ts:105 The Blueprint-to-C++ codegen derives class members from a CppSurface model that restricts event overrides to three non-ancestral engine callbacks and maps types without totality.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:3471f66cad0688ed",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
