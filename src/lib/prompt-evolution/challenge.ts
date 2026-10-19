@@ -7,6 +7,7 @@ import type {
 } from '@/types/prompt-evolution';
 import { diffPrompts, type DiffSummary } from '@/lib/text-diff';
 import { type Result, ok, err } from '@/types/result';
+import { checkPairBlocks } from './start-plan';
 
 /**
  * Challenge the current prompt — the preflight for "test version X against the
@@ -100,19 +101,12 @@ export function planChallenge(input: ChallengeInput): Result<ChallengePlan, Chal
   if (challenger.variant.id === incumbent.variant.id) {
     return err({ kind: 'already-current', message: `“${incumbent.variant.label}” is already the current version.` });
   }
-  if (challenger.variant.prompt === incumbent.variant.prompt) {
-    return err({ kind: 'identical-prompt', message: 'This version’s prompt is identical to the current one — a test could only measure noise.' });
-  }
-  const running = runningTests.find(
-    (t) => t.status === 'running' && t.moduleId === history.moduleId && t.checklistItemId === history.checklistItemId,
+  const block = checkPairBlocks(
+    { a: incumbent.variant.prompt, b: challenger.variant.prompt },
+    { moduleId: history.moduleId, checklistItemId: history.checklistItemId },
+    runningTests,
   );
-  if (running) {
-    return err({
-      kind: 'test-running',
-      testId: running.id,
-      message: 'An A/B test is already running on this item. Conclude it before starting another — one live test per item keeps its trials honest.',
-    });
-  }
+  if (block) return err(block);
 
   return ok({
     moduleId: history.moduleId,

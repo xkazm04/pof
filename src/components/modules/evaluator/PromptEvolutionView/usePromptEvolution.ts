@@ -9,6 +9,7 @@ import type { PromptVariant, MutationType } from '@/types/prompt-evolution';
 import type { SubModuleId } from '@/types/modules';
 import { toast } from 'sonner';
 import { getModuleChecklist } from '@/lib/module-registry';
+import { planStart } from '@/lib/prompt-evolution/start-plan';
 import type { ViewMode } from './constants';
 
 export function usePromptEvolution() {
@@ -126,6 +127,16 @@ export function usePromptEvolution() {
       const storeError = usePromptEvolutionStore.getState().error;
       return { ok: false as const, message: storeError ?? 'Could not establish a baseline version.' };
     }
+    // Same rules as every other entry point, applied BEFORE the challenger is written
+    // so a refusal (running test, identical prompt) cannot strand an orphan variant.
+    const candidate: PromptVariant = { ...baseline.variant, id: '__candidate__', prompt, active: false };
+    const plan = planStart({
+      variants: [baseline.variant, candidate],
+      runningTests: usePromptEvolutionStore.getState().abTests,
+      aId: baseline.variant.id,
+      bId: candidate.id,
+    });
+    if (!plan.ok) return { ok: false as const, message: plan.error.message };
     const challenger = await createVariant(selectedModuleId, checklistItemId, prompt);
     if (!challenger) {
       const storeError = usePromptEvolutionStore.getState().error;
@@ -154,11 +165,14 @@ export function usePromptEvolution() {
 
   const handleStartTest = useCallback(async (variantAId: string, variantBId: string) => {
     if (!selectedModuleId) return;
-    const varA = variants.find((v) => v.id === variantAId);
-    if (!varA) return;
-    const started = await startABTest(selectedModuleId, varA.checklistItemId, variantAId, variantBId);
+    const plan = planStart({ variants, runningTests: abTests, aId: variantAId, bId: variantBId });
+    if (!plan.ok) {
+      toast.error(plan.error.message);
+      return;
+    }
+    const started = await startABTest(selectedModuleId, plan.data.checklistItemId, plan.data.aId, plan.data.bId);
     if (!started.ok) toast.error(started.reason);
-  }, [selectedModuleId, variants, startABTest]);
+  }, [selectedModuleId, variants, abTests, startABTest]);
 
   // Group variants by checklist item
   const variantsByItem = useMemo(() => {
