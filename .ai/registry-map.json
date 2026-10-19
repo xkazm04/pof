@@ -7825,7 +7825,11 @@
           "revision": 8,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/registry.ts:10 The registry stores bundled analysis objects in memory, and searches found no sidecar, child_process, download, or provision references in this context, so external-artifact provisioning does not apply.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:25f000a9ae879947",
+          "evaluatedRevision": 8
         },
         {
           "subject": "voice-io",
@@ -10954,7 +10958,11 @@
           "revision": 8,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/useSectionScaffold.ts:65 Feature Map scaffolding dispatches an external Claude CLI task through a path that uses ambient command discovery and provides no dependency-availability gate before dispatch.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:25f000a9ae879947",
+          "evaluatedRevision": 8
         }
       ],
       "governance": "governed"

@@ -11271,6 +11271,128 @@
           "evidence": "src/lib/catalog/gap-analysis/index.ts:101 Catalog plugins supply independent histogram dimensions and target distributions, rather than population-specific weight vectors for one shared composite."
         }
       ]
+    },
+    "27a34084-b33e-4538-8173-600d5162f922/sidecar-provisioning": {
+      "context": "catalog-gap-analysis",
+      "subject": "sidecar-provisioning",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T09:47:04.798Z",
+      "worker": "204db6c9-3e46-43c4-a1dd-d2fca9ce1e75",
+      "techniques": [
+        {
+          "technique": "atomic-downloads",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:101 Analysis computes distributions from supplied entities; the inspected context has no artifact transfer."
+        },
+        {
+          "technique": "capability-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:99 Missing analysis metadata falls back to inferred dimensions; no external executable capability is involved."
+        },
+        {
+          "technique": "change-rate-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:122 The output contains sampled entity data, with no downloadable runtime payload to partition."
+        },
+        {
+          "technique": "grade-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/bestiary.ts:4 Tiers are game-content histogram dimensions, not provisioned engine or model variants."
+        },
+        {
+          "technique": "model-storage-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/registry.ts:10 Registration retains an analysis object in memory; there is no resident downloaded model store."
+        },
+        {
+          "technique": "plugin-lazy-load-and-reload",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/index.ts:4 Plugins are bundled TypeScript modules registered by static imports, not mounted executable processes."
+        },
+        {
+          "technique": "process-isolation",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/types.ts:9 The extension contract supplies a JavaScript summary callback, without a native runtime requiring isolation."
+        },
+        {
+          "technique": "resolution-ladders",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/registry.ts:6 Resolution retrieves an already registered object, not an executable or model file."
+        },
+        {
+          "technique": "source-pinning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:100 Catalog metadata describes expected entity distributions; no external artifact source is fetched."
+        },
+        {
+          "technique": "split-trust-by-registration-path",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/registry.ts:9 This is object registration within the application, without API-versus-config registration of executable plugins."
+        }
+      ]
+    },
+    "4c0281bd-ea7b-44ba-86a0-ccda978296a4/sidecar-provisioning": {
+      "context": "core-engine-genre-tabs",
+      "subject": "sidecar-provisioning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T09:47:04.798Z",
+      "worker": "204db6c9-3e46-43c4-a1dd-d2fca9ce1e75",
+      "techniques": [
+        {
+          "technique": "atomic-downloads",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:119 The inspected import reads a user-selected text file; neither it nor the scaffold dispatch downloads dependency artifacts."
+        },
+        {
+          "technique": "capability-detection",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/ScaffoldPanel.tsx:97 The scaffold action gates on activity, without checking Claude availability or compatibility; tracing its dispatch through useModuleCLI, CompactTerminal, useTaskQueue and the query route found no dependency probe before spawn."
+        },
+        {
+          "technique": "change-rate-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport.tsx:34 Export encodes supplied genome data; the context has no provisioned archive with independently changing runtime parts."
+        },
+        {
+          "technique": "grade-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/ComparisonMatrix/index.tsx:25 The comparison picker selects game entities; the scaffold path does not provision host-sized model or engine variants."
+        },
+        {
+          "technique": "model-storage-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:125 Import applies validated game data to its consumer; no downloaded dependency residency or eviction is implemented here."
+        },
+        {
+          "technique": "plugin-lazy-load-and-reload",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:29 Registered tabs render bundled React components, rather than mounting out-of-process plugins."
+        },
+        {
+          "technique": "process-isolation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/charts/AccelCurve.tsx:49 Charts compute browser SVG geometry; the inspected context introduces no native runtime family requiring an isolation decision."
+        },
+        {
+          "technique": "resolution-ladders",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:356 The scaffold's traced execution service spawns a bare platform-specific command, with no explicit-override → managed-directory → system ladder or resolution report."
+        },
+        {
+          "technique": "source-pinning",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:90 Genome import parses supplied text, and the external CLI is invoked rather than fetched by this context."
+        },
+        {
+          "technique": "split-trust-by-registration-path",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:105 Tab lookup uses a compiled component map; there are no two registration doors for executable plugins."
+        }
+      ]
     }
   }
 }
