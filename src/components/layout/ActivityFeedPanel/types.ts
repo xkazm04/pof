@@ -9,6 +9,8 @@ export interface EventGroup {
   type: ActivityEventType;
   moduleId: SubModuleId | undefined;
   events: ActivityEvent[];
+  /** Undismissed events in this group. */
+  unread: number;
 }
 
 export interface TimePeriodSection {
