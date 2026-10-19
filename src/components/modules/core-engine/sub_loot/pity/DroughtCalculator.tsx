@@ -11,6 +11,7 @@ import { TabButtonGroup } from '../../unique-tabs/_shared';
 import { DROUGHT_RARITY_OPTIONS } from '../_shared/data';
 import { cumulativeProbCurve, findPercentileKill } from '../_shared/math';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { PityCohortChart } from './PityCohortChart';
 
 interface DroughtCalculatorProps {
   pityThreshold: number;
@@ -117,6 +118,8 @@ export function DroughtCalculator({ pityThreshold }: DroughtCalculatorProps) {
           <text x={215} y={175} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">Kills</text>
         </svg>
       </div>
+
+      <PityCohortChart rate={droughtData.rate} threshold={droughtData.pity} color={droughtData.opt.color} />
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 mt-1 text-2xs font-mono text-text-muted">
