@@ -2,13 +2,16 @@
 
 import { Loader2, Monitor, X, AlertTriangle } from 'lucide-react';
 import { scalePercent } from './exportPlan';
-import type { PendingBlenderExport } from './useProceduralLevelWizard';
+import type { PendingBlenderExport } from './exportFlow';
 
 interface BlenderExportConfirmProps {
   pending: PendingBlenderExport;
   planSummary: string;
   spawnSummary: string;
   exporting: boolean;
+  /** The spec changed since this plan was prepared; it must not be sent. */
+  stale?: boolean;
+  onReprepare?: () => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -32,7 +35,7 @@ function Row({ label, value, testId }: { label: string; value: string; testId?: 
  * count, and confirms those — or cancels.
  */
 export function BlenderExportConfirm({
-  pending, planSummary, spawnSummary, exporting, onConfirm, onCancel,
+  pending, planSummary, spawnSummary, exporting, stale = false, onReprepare, onConfirm, onCancel,
 }: BlenderExportConfirmProps) {
   const { plan } = pending;
   return (
@@ -42,9 +45,11 @@ export function BlenderExportConfirm({
     >
       <p
         data-testid="blender-export-headline"
-        className={`text-xs leading-relaxed ${plan.isFullSize ? 'text-emerald-300' : 'text-amber-300'}`}
+        className={`text-xs leading-relaxed ${stale || !plan.isFullSize ? 'text-amber-300' : 'text-emerald-300'}`}
       >
-        {planSummary}
+        {stale
+          ? 'Settings changed since this plan was prepared. The numbers below describe the old settings - re-prepare before exporting.'
+          : planSummary}
       </p>
 
       <div className="space-y-1.5 border-t border-emerald-500/20 pt-3">
@@ -76,6 +81,16 @@ export function BlenderExportConfirm({
       )}
 
       <div className="flex gap-2 pt-1">
+        {stale ? (
+          <button
+            onClick={onReprepare}
+            data-testid="blender-export-reprepare"
+            className="focus-ring-outline flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all border border-amber-500/40 bg-amber-500/15 text-amber-300"
+          >
+            <Monitor className="w-4 h-4" />
+            Re-prepare export
+          </button>
+        ) : (
         <button
           onClick={onConfirm}
           disabled={exporting}
@@ -85,6 +100,7 @@ export function BlenderExportConfirm({
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Monitor className="w-4 h-4" />}
           {exporting ? 'Exporting…' : `Confirm ${plan.width}x${plan.height} export`}
         </button>
+        )}
         <button
           onClick={onCancel}
           disabled={exporting}

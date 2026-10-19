@@ -4,7 +4,7 @@ import { Zap, Loader2, Monitor } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { ALGORITHMS } from './constants';
 import { BlenderExportConfirm } from './BlenderExportConfirm';
-import type { PendingBlenderExport } from './useProceduralLevelWizard';
+import type { ExportFlow, PendingBlenderExport } from './exportFlow';
 
 interface GenerateActionsProps {
   isGenerating: boolean;
@@ -18,6 +18,7 @@ interface GenerateActionsProps {
   spawnPlacementSummary: string | null;
   blenderConnected: boolean;
   blenderExporting: boolean;
+  exportStatus: ExportFlow['status'];
   blenderResult: { message: string; isError: boolean } | null;
   algDef: (typeof ALGORITHMS)[number];
 }
@@ -26,7 +27,7 @@ export function GenerateActions({
   isGenerating, handleGenerate,
   prepareBlenderExport, cancelBlenderExport, confirmBlenderExport,
   pendingExport, exportPlanSummary, spawnPlacementSummary,
-  blenderConnected, blenderExporting, blenderResult, algDef,
+  blenderConnected, blenderExporting, exportStatus, blenderResult, algDef,
 }: GenerateActionsProps) {
   return (
     <div className="pt-4 relative z-10">
@@ -62,9 +63,10 @@ export function GenerateActions({
       </button>
 
       {/* Export to Blender — opens the confirm step; never dispatches directly. */}
+      {!blenderExporting && (
       <button
         onClick={prepareBlenderExport}
-        disabled={!blenderConnected || blenderExporting}
+        disabled={!blenderConnected}
         className="focus-ring-outline relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group"
         style={{
           backgroundColor: 'rgba(16,185,129,0.12)',
@@ -75,18 +77,16 @@ export function GenerateActions({
         title={!blenderConnected ? 'Connect to Blender first' : 'Review the export size, then confirm'}
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent opacity-50" />
-        {blenderExporting ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Exporting to Blender...
-          </>
-        ) : (
-          <>
-            <Monitor className="w-5 h-5 group-hover:scale-110 transition-all" />
-            Export to Blender…
-          </>
-        )}
+        <Monitor className="w-5 h-5 group-hover:scale-110 transition-all" />
+        Export to Blender…
       </button>
+      )}
+      {blenderExporting && (
+        <div data-testid="blender-export-sending" className="flex items-center justify-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-widest text-emerald-300">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Exporting to Blender...
+        </div>
+      )}
 
       {/* Size, scale, seed and spawn placement — stated before anything is sent. */}
       {pendingExport && exportPlanSummary && spawnPlacementSummary && (
@@ -95,6 +95,8 @@ export function GenerateActions({
           planSummary={exportPlanSummary}
           spawnSummary={spawnPlacementSummary}
           exporting={blenderExporting}
+          stale={exportStatus === 'stale'}
+          onReprepare={prepareBlenderExport}
           onConfirm={confirmBlenderExport}
           onCancel={cancelBlenderExport}
         />

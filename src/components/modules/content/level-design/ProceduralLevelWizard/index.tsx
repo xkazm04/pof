@@ -38,6 +38,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
     seed, setSeed,
     blenderExporting,
     blenderResult,
+    exportStatus,
     blenderConnected,
     pendingExport,
     exportPlanSummary,
@@ -113,6 +114,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
         spawnPlacementSummary={spawnPlacementSummary}
         blenderConnected={blenderConnected}
         blenderExporting={blenderExporting}
+        exportStatus={exportStatus}
         blenderResult={blenderResult}
         algDef={algDef}
       />

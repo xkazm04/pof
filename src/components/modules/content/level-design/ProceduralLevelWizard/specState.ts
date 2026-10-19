@@ -17,6 +17,9 @@ import type { Dispatch } from 'react';
 import { buildProcgenSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { hashSeed } from '@/lib/level-design/frandom-stream';
 import { DEFAULT_SIZE } from './constants';
+import {
+  exportFlowReducer, exportKey, IDLE_EXPORT_FLOW, type ExportFlow, type ExportFlowAction,
+} from './exportFlow';
 import type { GenAlgorithm, LevelType, SizeParams, GameplayConstraints } from './types';
 
 export interface ProcgenSpecState {
@@ -26,6 +29,12 @@ export interface ProcgenSpecState {
    * from then on — a designer who never saw the preview has judged nothing.
    */
   shown: boolean;
+  /**
+   * The Blender export flow. It lives beside the spec, not in the wizard, for
+   * the same reason the spec does: the wizard unmounts on every tab switch, and
+   * an export in flight must still land its outcome.
+   */
+  flow: ExportFlow;
 }
 
 export type ProcgenSpecAction =
@@ -34,7 +43,8 @@ export type ProcgenSpecAction =
   | { type: 'updateSize'; key: keyof SizeParams; value: number }
   | { type: 'toggleConstraint'; key: keyof GameplayConstraints }
   | { type: 'setSeed'; seed: string }
-  | { type: 'shown' };
+  | { type: 'shown' }
+  | { type: 'exportFlow'; action: ExportFlowAction };
 
 /** The reducer's state and dispatch, handed to a wizard that does not own them. */
 export interface ProcgenSpecStore {
@@ -63,11 +73,15 @@ export function initialProcgenSpecState(): ProcgenSpecState {
       constraints: DEFAULT_CONSTRAINTS,
     }),
     shown: false,
+    flow: IDLE_EXPORT_FLOW,
   };
 }
 
 function withSpec(state: ProcgenSpecState, patch: Partial<ProcgenSpec>): ProcgenSpecState {
-  return { ...state, spec: { ...state.spec, ...patch } };
+  const spec = { ...state.spec, ...patch };
+  // An edit that moves what an export would ship marks a prepared plan stale.
+  const flow = exportFlowReducer(state.flow, { type: 'specChanged', exportKey: exportKey(spec) });
+  return { ...state, spec, flow };
 }
 
 export function procgenSpecReducer(state: ProcgenSpecState, action: ProcgenSpecAction): ProcgenSpecState {
@@ -85,6 +99,10 @@ export function procgenSpecReducer(state: ProcgenSpecState, action: ProcgenSpecA
       });
     case 'setSeed':
       return withSpec(state, { seedLabel: action.seed, seedValue: hashSeed(action.seed) });
+    case 'exportFlow': {
+      const flow = exportFlowReducer(state.flow, action.action);
+      return flow === state.flow ? state : { ...state, flow };
+    }
     case 'shown':
       return state.shown ? state : { ...state, shown: true };
   }
