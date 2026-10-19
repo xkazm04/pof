@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "40952988-4c00-4a92-911e-10ce4d54bcd9",
+ "subject": "design-doc-compliance-scoring",
+ "evaluatedAt": "2026-10-19T01:02:39.382906+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "gdd-compliance",
+   "subject": "design-doc-compliance-scoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/gdd-compliance.ts:49 The compliance engine retains a permanent 20-character substring heuristic fallback rather than treating it as a shrinking budget driven toward zero by declared mappings.",
+   "techniques": [
+    {
+     "technique": "bidirectional-gap-detection",
+     "verdict": "conformant",
+     "evidence": "src/lib/gdd-compliance.ts:186 Requires every mapped feature to be done before raising a code-ahead gap, and reports design-ahead when any feature is missing or low quality."
+    },
+    {
+     "technique": "coverage-vs-conformance-split",
+     "verdict": "conformant",
+     "evidence": "src/lib/gdd-compliance.ts:526 Calculates conformance over measured features rather than total features, separating reach from quality."
+    },
+    {
+     "technique": "declared-mapping-is-terminal",
+     "verdict": "deviation",
+     "evidence": "src/lib/gdd-compliance.ts:49 Retains a substring heuristic fallback permanently rather than enforcing a shrinking budget driven toward zero."
+    },
+    {
+     "technique": "evidence-age-envelope",
+     "verdict": "conformant",
+     "evidence": "src/types/gdd-compliance.ts:64 Computes evidence age envelope by passing audit timestamp in, deriving freshness state without reading the wall clock."
+    },
+    {
+     "technique": "no-neutral-constant-for-unmeasured",
+     "verdict": "conformant",
+     "evidence": "src/lib/gdd-compliance.ts:635 Guards score calculation on evidence.measured so that unmeasured modules yield no score rather than an imputed neutral constant."
+    },
+    {
+     "technique": "severity-weighted-scale-free-damping",
+     "verdict": "deviation",
+     "evidence": "src/lib/gdd-compliance.ts:485 Fixed weights lack a re-baselining mechanism for historical comparison when weights are adjusted."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:02:39.382906+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "design-doc-compliance-scoring"
+   ],
+   "techniques": [
+    "bidirectional-gap-detection",
+    "coverage-vs-conformance-split",
+    "declared-mapping-is-terminal",
+    "evidence-age-envelope",
+    "no-neutral-constant-for-unmeasured",
+    "severity-weighted-scale-free-damping"
+   ],
+   "deviations": 1,
+   "context": "gdd-compliance",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
