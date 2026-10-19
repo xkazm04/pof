@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ecb81991-2a97-461b-a26e-8ff173049f76",
+ "subject": "durable-agent-operations",
+ "evaluatedAt": "2026-10-19T21:35:38.252153+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "durable-agent-operations",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/crash-analyzer/analysis-engine.ts:267 Context and repository searches for tool_call, settlement, and operationId found no occurrences in this context or its implementation dependencies; diagnosis matches static analyses and persistence stores crash sightings, so no durable agent-operation lifecycle requires recovery here.",
+   "techniques": [
+    {
+     "technique": "close-is-a-controlled-crash",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashTimeMachine/index.tsx:68 Replay cleanup releases a presentation timer; this component does not shut down a runtime owning durable agent work."
+    },
+    {
+     "technique": "intent-mints-the-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/crash-analyzer/analysis-engine.ts:330 Diagnosis uses local signature comparison, without an uncertain provider or tool effect requiring an intent reservation."
+    },
+    {
+     "technique": "recovery-prefix-enumeration",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/crash-analyzer/route.ts:27 Loading recomputes analysis from samples and stored crash reports; there is no interrupted agent state machine whose recovery prefixes require enumeration."
+    },
+    {
+     "technique": "settlement-order-is-not-placement-order",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/crash-analyzer/analysis-engine.ts:498 Diagnoses are resolved synchronously over reports, without concurrent tool outcomes or ordered transcript placement."
+    },
+    {
+     "technique": "total-restart-point-by-reference",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/crash-history-db.ts:264 Persistence retrieves observed crash history, rather than restart points for partially executed agent operations."
+    },
+    {
+     "technique": "two-cancellations-and-a-synchronous-door",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:292 Closing details clears UI selection; there is no background agent operation requiring separate observer and durable cancellation mechanisms."
+    }
+   ],
+   "absenceTerms": [
+    "tool_call",
+    "settlement",
+    "operationId"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T21:35:38.252153+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "durable-agent-operations"
+   ],
+   "techniques": [
+    "close-is-a-controlled-crash",
+    "intent-mints-the-identity",
+    "recovery-prefix-enumeration",
+    "settlement-order-is-not-placement-order",
+    "total-restart-point-by-reference",
+    "two-cancellations-and-a-synchronous-door"
+   ],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
