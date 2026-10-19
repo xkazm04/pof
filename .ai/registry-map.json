@@ -21916,7 +21916,11 @@
           "revision": 2,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/stores/pofBridgeStore.ts:75 The context stores a supplied authentication token rather than issuing credentials, and searches of its files and the repository found no lease_id, lease_duration, renewLease, or revokeCredential operations.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:9d26f7a6264acd94",
+          "evaluatedRevision": 2
         },
         {
           "subject": "migrations",

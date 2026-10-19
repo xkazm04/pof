@@ -12172,6 +12172,47 @@
           "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:88 Stable IDs exist, but onDrop never reads dataTransfer.getData and instead authorizes placement using the singleton's identity."
         }
       ]
+    },
+    "a00c79d7-bd10-495a-8546-81ab1bfd797e/dynamic-secret-lifecycle": {
+      "context": "state-management",
+      "subject": "dynamic-secret-lifecycle",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:49:29.654Z",
+      "worker": "ed019fe0-b9ca-456b-88e1-73c236677f9f",
+      "techniques": [
+        {
+          "technique": "expiry-buffer-beyond-lease",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/pofBridgeStore.ts:19 The store holds a connection credential; it does not set an issued credential's remote expiry."
+        },
+        {
+          "technique": "idempotent-revoke-and-give-up",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/lifecycle.ts:87 This cleanup releases event subscriptions, not minted credentials."
+        },
+        {
+          "technique": "lease-vs-native-tracking",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/pofBridgeStore.ts:95 Persistence retains a configured token; there is no issued artifact class requiring a lease-versus-native decision."
+        },
+        {
+          "technique": "persist-before-provision",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/pofBridgeStore.ts:75 The action accepts an existing token without provisioning a credential or handing out minted plaintext."
+        },
+        {
+          "technique": "ttl-ladder-derivation",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/projectStore.ts:125 The time bound controls project-scan cache freshness, not a credential lease or renewal."
+        },
+        {
+          "technique": "wal-per-external-side-effect",
+          "verdict": "not-applicable",
+          "evidence": "src/services/ProjectModuleBridge.ts:92 The bridge saves project progress; it performs no issuer mutation requiring a credential rollback witness."
+        }
+      ]
     }
   }
 }
