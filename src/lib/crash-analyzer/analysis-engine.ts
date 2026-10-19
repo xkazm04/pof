@@ -10,7 +10,6 @@ import type {
   CrashStats,
   CrashAnalyzerResult,
   CrashType,
-  CrashSeverity,
 } from '@/types/crash-analyzer';
 import { emptyCrashTypeCounts, emptyCrashSeverityCounts } from '@/types/crash-analyzer';
 import { SAMPLE_CRASHES, SAMPLE_DIAGNOSES } from './sample-crashes';
@@ -538,97 +537,5 @@ export function analyzeSingleCrash(report: CrashReport): {
   return { report: processed, diagnosis: resolution.diagnosis, resolution };
 }
 
-/** Parse raw crash log text into a CrashReport */
-export function parseCrashLog(rawText: string): CrashReport | null {
-  const lines = rawText.split('\n');
-  const errorLine = lines.find((l) => l.includes('Error:') && !l.includes('[Callstack]'));
-  if (!errorLine) return null;
-
-  // Extract error message
-  const errorMatch = errorLine.match(/Error:\s*(.+)/);
-  const errorMessage = errorMatch?.[1]?.trim() ?? 'Unknown error';
-
-  // Detect crash type
-  let crashType: CrashType = 'unknown';
-  if (errorMessage.includes('ACCESS_VIOLATION') || errorMessage.includes('address 0x000000000000')) {
-    crashType = 'nullptr_deref';
-  } else if (errorMessage.includes('ACCESS_VIOLATION')) {
-    crashType = 'access_violation';
-  } else if (errorMessage.includes('Assertion failed')) {
-    crashType = 'assertion_failed';
-  } else if (errorMessage.includes('Ensure condition failed')) {
-    crashType = 'ensure_failed';
-  } else if (errorMessage.includes('garbage collected')) {
-    crashType = 'gc_reference';
-  } else if (errorMessage.includes('STACK_OVERFLOW')) {
-    crashType = 'stack_overflow';
-  } else if (errorMessage.includes('Fatal')) {
-    crashType = 'fatal_error';
-  }
-
-  // Determine severity
-  let severity: CrashSeverity = 'medium';
-  if (crashType === 'nullptr_deref' || crashType === 'stack_overflow') severity = 'critical';
-  else if (crashType === 'assertion_failed' || crashType === 'gc_reference') severity = 'high';
-  else if (crashType === 'ensure_failed') severity = 'low';
-
-  // Extract timestamp
-  const tsMatch = rawText.match(/\[(\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2})/);
-  const timestamp = tsMatch
-    ? tsMatch[1].replace(/\./g, (m, offset: number) => (offset <= 9 ? '-' : ':')).replace(/-(\d{2}):/, 'T$1:') + 'Z'
-    : new Date().toISOString();
-
-  // Parse callstack frames
-  const callstackStart = lines.findIndex((l) => l.includes('[Callstack]'));
-  const frames: typeof SAMPLE_CRASHES[0]['callstack'] = [];
-  if (callstackStart >= 0) {
-    let idx = 0;
-    for (let i = callstackStart + 1; i < lines.length; i++) {
-      const frameLine = lines[i];
-      const frameMatch = frameLine.match(/Error:\s*(\S+)!(\S+)\(\)\s*(?:\[(\S+?)(?::(\d+))?\])?/);
-      if (frameMatch) {
-        const moduleName = frameMatch[1];
-        const isGame = moduleName.includes('MyGame') || !moduleName.includes('UnrealEditor-');
-        frames.push({
-          index: idx,
-          address: `0x00007FF6${(0xA0000000 + idx * 0x1234).toString(16).toUpperCase()}`,
-          moduleName,
-          functionName: frameMatch[2],
-          sourceFile: frameMatch[3] ?? null,
-          lineNumber: frameMatch[4] ? parseInt(frameMatch[4]) : null,
-          isGameCode: isGame,
-          isCrashOrigin: false,
-        });
-        idx++;
-      }
-    }
-  }
-
-  const id = `crash-${Date.now().toString(36)}`;
-
-  return {
-    id,
-    timestamp,
-    crashType,
-    severity,
-    errorMessage,
-    callstack: frames,
-    culpritFrame: null,
-    machineState: {
-      platform: 'Windows',
-      cpuBrand: 'Unknown',
-      gpuBrand: 'Unknown',
-      ramMB: 0,
-      osVersion: 'Unknown',
-      engineVersion: '5.5',
-      buildConfig: 'Development',
-      isEditor: true,
-    },
-    crashDir: 'Imported',
-    mappedModule: null,
-    rawLog: rawText,
-    analyzed: false,
-    // Observed, not shipped — this is a crash from the operator's own project.
-    source: 'imported',
-  };
-}
+/** Parse raw crash log text into a CrashReport (see crash-log-parser.ts). */
+export { parseCrashLog } from './crash-log-parser';

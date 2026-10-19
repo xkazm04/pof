@@ -22,6 +22,7 @@
 
 import { type JargonEntry, lookupJargon } from './blueprint-jargon';
 import type { CrashType, CrashSeverity } from '@/types/crash-analyzer';
+import { CRASH_TAXONOMY } from './crash-analyzer/crash-taxonomy';
 
 export type { JargonEntry };
 
@@ -171,63 +172,9 @@ export interface PlainCrash {
   fix: string;
 }
 
-export const CRASH_TYPE_PLAIN: Record<CrashType, PlainCrash> = {
-  nullptr_deref: {
-    label: 'Empty reference used',
-    what: 'The game tried to use something that wasn’t there (an empty reference) and shut down.',
-    fix: 'Add a safety check before using that object, and make sure it’s created before it’s used.',
-  },
-  access_violation: {
-    label: 'Forbidden memory access',
-    what: 'The game tried to read or write memory it wasn’t allowed to, and crashed.',
-    fix: 'Track down the invalid pointer or out-of-range index behind it and guard it before use.',
-  },
-  assertion_failed: {
-    label: 'Safety assumption broke',
-    what: 'A built-in assumption the code relies on turned out to be false, so it stopped on purpose.',
-    fix: 'Look at the failed condition and make sure that assumption holds — or handle when it doesn’t.',
-  },
-  ensure_failed: {
-    label: 'Non-fatal warning',
-    what: 'A safety check failed and flagged a problem, but the game kept running.',
-    fix: 'It won’t crash the player, but fix the flagged condition so the warning stops.',
-  },
-  gc_reference: {
-    label: 'Freed object reused',
-    what: 'The game used an object that had already been cleaned up from memory.',
-    fix: 'Hold the object with a tracked reference (or re-fetch it each time) instead of a raw pointer.',
-  },
-  stack_overflow: {
-    label: 'Endless loop',
-    what: 'A piece of code kept calling itself without stopping until it ran out of room.',
-    fix: 'Find the recursion or loop that never ends and add a stopping condition.',
-  },
-  out_of_memory: {
-    label: 'Out of memory',
-    what: 'The game asked for more memory than the machine could give and had to quit.',
-    fix: 'Load less at once, or free things you no longer need.',
-  },
-  unhandled_exception: {
-    label: 'Uncaught error',
-    what: 'An unexpected error happened that nothing was set up to catch, so the game closed.',
-    fix: 'Find the failing operation and handle its error path gracefully.',
-  },
-  fatal_error: {
-    label: 'Fatal error',
-    what: 'The game hit an error serious enough that it couldn’t safely continue.',
-    fix: 'Read the error message for the specific cause and address it.',
-  },
-  gpu_crash: {
-    label: 'Graphics crash',
-    what: 'The graphics card stopped responding and the game lost its display connection.',
-    fix: 'Check for heavy or invalid rendering work and reduce GPU load; update drivers if needed.',
-  },
-  unknown: {
-    label: 'Uncategorized crash',
-    what: 'The cause of this crash couldn’t be categorized automatically.',
-    fix: 'Open the technical details below and inspect the error message and callstack.',
-  },
-};
+export const CRASH_TYPE_PLAIN = Object.fromEntries(
+  CRASH_TAXONOMY.map((row) => [row.id, row.plain]),
+) as Record<CrashType, PlainCrash>;
 
 // ─── Plain-language severity translations ────────────────────────────────────
 // What each severity means for the player + how urgent the fix is.
