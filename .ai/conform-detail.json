@@ -10587,6 +10587,88 @@
           "evidence": "src/hooks/useIsMounted.ts:26 Uses a stable reference cell with unmount cleanup to prevent asynchronous callbacks from executing against unmounted components."
         }
       ]
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/engine-binding-surface": {
+      "context": "character-overview-input",
+      "subject": "engine-binding-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:14:48.903Z",
+      "worker": "61d5883f-c644-4ee6-8168-393924348b26",
+      "techniques": [
+        {
+          "technique": "address-sensitive-construction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/CharacterScalingPreview.tsx:11 Scaling uses numeric React state; no foreign constructor records host storage addresses."
+        },
+        {
+          "technique": "ask-the-authority-not-the-shadow",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/CameraProfileComparison.tsx:107 The memoized selection controls displayed profiles, not safety-critical permission to touch a foreign runtime."
+        },
+        {
+          "technique": "capability-deferred-release",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/PropertyInspector.tsx:67 Cleanup cancels UI timers; there is no movable foreign-resource owner requiring release on a permitted thread."
+        },
+        {
+          "technique": "hierarchy-as-three-relations",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/ClassHierarchy.tsx:22 The hierarchy is rendered as a tree of descriptive data, without native handle widening, narrowing, or layout reinterpretation."
+        },
+        {
+          "technique": "phantom-capability-parameter",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/PropertyRow.tsx:53 The operation forwards a slider value to a UI callback; it requires no entered foreign region or runtime capability."
+        },
+        {
+          "technique": "pre-resolve-what-the-engine-cannot-await",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 Applying bindings dispatches a prompt rather than entering a synchronous engine with callbacks needing asynchronous resources."
+        }
+      ]
+    },
+    "b6266959-0161-4ca0-b9e9-249804753b1c/engine-binding-surface": {
+      "context": "material-configurator",
+      "subject": "engine-binding-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:14:48.903Z",
+      "worker": "61d5883f-c644-4ee6-8168-393924348b26",
+      "techniques": [
+        {
+          "technique": "address-sensitive-construction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/useMaterialParameterConfigurator.ts:20 Parameter storage is a React record of numbers; no foreign constructor retains its address."
+        },
+        {
+          "technique": "ask-the-authority-not-the-shadow",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialBudgetBar.tsx:28 Memoization computes a shader-budget estimate, not a foreign runtime's safety-critical ownership or lock answer."
+        },
+        {
+          "technique": "capability-deferred-release",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialPatternCatalog/index.tsx:56 The finally block clears UI request status; it does not release a foreign resource requiring a thread capability."
+        },
+        {
+          "technique": "hierarchy-as-three-relations",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialLayerGraph.tsx:35 This hierarchy declares checklist dependencies, not conversions between foreign runtime types."
+        },
+        {
+          "technique": "phantom-capability-parameter",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/useMaterialParameterConfigurator.ts:81 The guard refuses unsupported rendering-feature combinations; no foreign region must be entered to invoke generation."
+        },
+        {
+          "technique": "pre-resolve-what-the-engine-cannot-await",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialPatternCatalog/index.tsx:42 Preview explicitly awaits an HTTP request; no synchronous engine callback requires resources to be acquired ahead of entry."
+        }
+      ]
     }
   }
 }

@@ -8944,7 +8944,11 @@
           "revision": 2,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 The context dispatches textual CLI tasks and renders character data, while context and repository searches found no WebAssembly, PhantomData, MaybeUninit, or reinterpret_cast occurrences indicating the foreign-memory binding surface this subject requires.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -16999,7 +17003,11 @@
           "revision": 2,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/tabs/ConfiguratorTab.tsx:32 The configurator dispatches CLI configuration tasks and the catalog awaits HTTP preview requests, while context and repository searches found no WebAssembly, PhantomData, MaybeUninit, or reinterpret_cast occurrences indicating a foreign-memory binding surface.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
