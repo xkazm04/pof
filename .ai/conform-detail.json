@@ -11936,6 +11936,37 @@
           "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:461 Direction stamps are persisted and displayed, but the remounted Produce panel initializes from seed/template defaults rather than the artifact's recorded steer, losing default carry-forward."
         }
       ]
+    },
+    "4bf87448-56bb-4e01-b146-3a3139aeb801/context-hierarchy": {
+      "context": "game-ui-hud",
+      "subject": "context-hierarchy",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T12:15:22.316Z",
+      "worker": "9b9d9615-8fcb-4d63-b87f-aa86498e219e",
+      "techniques": [
+        {
+          "technique": "digest-gated-upward-refresh",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/hud-compositor/data.ts:44 Change detection compares widget visibility between HUD modes; no child-summary regeneration or ancestor refresh is involved."
+        },
+        {
+          "technique": "per-node-summary-tiers",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/hud-compositor/HudWidgetSummary.tsx:20 The summary directly renders widget names, with no corpus nodes requiring generated abstract and overview tiers."
+        },
+        {
+          "technique": "seeded-descent-retrieval",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:86 Graph interaction selects a screen node; it does not retrieve from a tree with summary tiers."
+        },
+        {
+          "technique": "stable-sampling-for-wide-nodes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/hud-compositor/index.tsx:134 The compositor renders the relevant widget placements directly; no bounded summary-generation call requires sampling children."
+        }
+      ]
     }
   }
 }

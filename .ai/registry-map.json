@@ -13126,7 +13126,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/hud-compositor/index.tsx:180 The module displays widget visibility lists rather than generated corpus summaries, and context searches found no embedding, reranker, or unsampled mechanisms; repository-wide matches concerned other features.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:09d2467f58c2c036",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
