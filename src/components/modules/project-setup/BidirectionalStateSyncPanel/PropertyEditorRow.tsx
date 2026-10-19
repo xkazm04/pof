@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { ACCENT_EMERALD, ACCENT_ORANGE } from '@/lib/chart-colors';
 import { truncate } from './helpers';
+import { WriteOutcomeChip } from './WriteOutcomeChip';
+import type { WriteOutcomeLabel } from './conflictResolution';
 
 // ── Property editor row ─────────────────────────────────────────────────
 
@@ -10,11 +12,17 @@ export function PropertyEditorRow({
   propertyName,
   currentValue,
   onPush,
+  outcome,
+  lastWritten,
 }: {
   objectPath: string;
   propertyName: string;
   currentValue: unknown;
   onPush: (objectPath: string, propertyName: string, value: unknown) => void;
+  /** Ledger state of the latest write on this property (null/undefined: none yet). */
+  outcome?: WriteOutcomeLabel | null;
+  /** The value that write carried; re-sent by Retry when it was not sent. */
+  lastWritten?: unknown;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -74,6 +82,17 @@ export function PropertyEditorRow({
             <span className="text-xs font-mono truncate" style={{ color: ACCENT_EMERALD }}>
               {truncate(displayValue, 40)}
             </span>
+          )}
+          {outcome && <WriteOutcomeChip outcome={outcome} />}
+          {outcome === 'not sent' && (
+            <button
+              type="button"
+              onClick={() => onPush(objectPath, propertyName, lastWritten)}
+              className="px-1 py-0.5 rounded border text-2xs font-bold"
+              style={{ borderColor: `${ACCENT_ORANGE}60`, color: ACCENT_ORANGE }}
+            >
+              Retry
+            </button>
           )}
         </div>
       </div>

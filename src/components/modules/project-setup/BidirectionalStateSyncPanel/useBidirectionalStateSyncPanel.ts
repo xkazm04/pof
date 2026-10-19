@@ -8,6 +8,7 @@ import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { MAX_LOG_ENTRIES } from './constants';
 import { nextLogId, truncate } from './helpers';
 import { diffSyncState, tallyEvents, EMPTY_TOTALS, type SyncView, type SyncTotals } from './syncEvents';
+import { planResolution, type ConflictChoice } from './conflictResolution';
 import type { WriteReceipt } from '@/types/ue5-bridge';
 import type { SyncDirection, LogLevel, SyncLogEntry, PropertyEdit, ViewportTarget } from './types';
 
@@ -129,7 +130,28 @@ export function useBidirectionalStateSyncPanel() {
 
   // ── Conflict detection: the WS client's write ledger, three-way compare on the exact key ──
   const [writes, setWrites] = useState<Ledger>(() => ue5LiveState.getState().writes);
-  const conflicts = useMemo(() => deriveConflicts(writes), [writes]);
+  // Local "Take UE5" dismissals: key -> seq of the write dismissed. A newer write on the key
+  // (higher seq) that diverges again resurfaces. Not a ledger mutation.
+  const [dismissed, setDismissed] = useState<ReadonlyMap<string, number>>(() => new Map());
+  const allConflicts = useMemo(() => deriveConflicts(writes), [writes]);
+  const conflicts = useMemo(
+    () => allConflicts.filter((c) => dismissed.get(c.key) !== writes.get(c.key)?.seq),
+    [allConflicts, dismissed, writes],
+  );
+
+  const resolveConflict = useCallback((key: string, choice: ConflictChoice) => {
+    const c = conflicts.find((x) => x.key === key);
+    if (!c) return;
+    const plan = planResolution(c, choice);
+    if (plan.kind === 'unavailable') return;
+    if (plan.kind === 'dismiss') {
+      const seq = writes.get(key)?.seq;
+      if (seq !== undefined) setDismissed((p) => new Map(p).set(key, seq));
+      return;
+    }
+    const receipt = setProperty(c.objectPath, c.propertyName, plan.value);
+    logWrite([receipt], 'SET', `${c.propertyName} = ${truncate(JSON.stringify(plan.value), 40)}`, `${c.objectPath} (${choice === 'revert' ? 'revert to base' : 'keep mine'})`);
+  }, [conflicts, writes, setProperty, logWrite]);
 
   // ── Stats: running totals, independent of the capped, clearable log ──
   const outboundCount = totals.outboundTotal;
@@ -193,6 +215,8 @@ export function useBidirectionalStateSyncPanel() {
     handleViewportPush,
     handleCopyFromSnapshot,
     conflicts,
+    writes,
+    resolveConflict,
     outboundCount,
     inboundCount,
     filteredLog,

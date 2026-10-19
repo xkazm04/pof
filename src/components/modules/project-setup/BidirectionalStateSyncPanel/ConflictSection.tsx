@@ -7,6 +7,7 @@ import {
 } from '@/lib/chart-colors';
 import { truncate } from './helpers';
 import type { SyncConflict } from './types';
+import type { ConflictChoice } from './conflictResolution';
 
 /** A ledger value as a short literal ('—' when the side was never known). */
 function show(v: unknown): string {
@@ -22,10 +23,13 @@ export function ConflictSection({
   showConflicts,
   setShowConflicts,
   conflicts,
+  onResolve,
 }: {
   showConflicts: boolean;
   setShowConflicts: Dispatch<SetStateAction<boolean>>;
   conflicts: SyncConflict[];
+  /** When given, each row offers Keep mine / Take UE5 / Revert to base. */
+  onResolve?: (key: string, choice: ConflictChoice) => void;
 }) {
   return (
     <div>
@@ -77,6 +81,35 @@ export function ConflictSection({
                   <span className="font-mono text-2xs">
                     UE5: <span style={{ color: ACCENT_CYAN }} data-testid="sync-conflict-inbound">{show(c.inbound)}</span>
                   </span>
+                  {onResolve && (
+                    <span className="flex items-center gap-1 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => onResolve(c.key, 'keep-mine')}
+                        className="px-1.5 py-0.5 rounded border text-2xs font-bold"
+                        style={{ borderColor: `${ACCENT_ORANGE}60`, color: ACCENT_ORANGE }}
+                      >
+                        Keep mine
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onResolve(c.key, 'accept-ue5')}
+                        className="px-1.5 py-0.5 rounded border text-2xs font-bold"
+                        style={{ borderColor: `${ACCENT_CYAN}60`, color: ACCENT_CYAN }}
+                      >
+                        Take UE5
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onResolve(c.key, 'revert')}
+                        disabled={c.base === undefined}
+                        title={c.base === undefined ? 'No base value was known when this was written' : undefined}
+                        className="px-1.5 py-0.5 rounded border border-border/40 text-2xs font-bold text-text disabled:opacity-40"
+                      >
+                        Revert to base
+                      </button>
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
