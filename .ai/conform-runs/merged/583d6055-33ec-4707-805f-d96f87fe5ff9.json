@@ -1,0 +1,89 @@
+{
+ "schema": "conform-run/1",
+ "worker": "583d6055-33ec-4707-805f-d96f87fe5ff9",
+ "subject": "browser-credential-boundary",
+ "evaluatedAt": "2026-10-19T11:35:35.813592+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "asset-viewer-and-browser",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/visual-gen/asset-sources.ts:82 Context and repository searches found no credential configuration in the context directories; the inspected dependencies use public asset APIs, browser-side downloads, and server-mediated SQLite rather than browser-held datastore credentials or server-attached upstream secrets.",
+   "techniques": [
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/asset-browser/LibraryPanel.tsx:46 Counts derive from asset records already needed for library browsing, without a public datastore grant exposing identifying participation rows."
+    },
+    {
+     "technique": "allowlisted-operator-stream",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:112 This diagnostic reports a browser model-load failure, rather than emitting credential-bearing request records through an operator stream."
+    },
+    {
+     "technique": "broker-proxy-attaches-secret",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/asset-sources.ts:153 The inspected public asset API calls attach no privileged credential; Blender imports likewise send asset identifiers as commands without attaching an upstream secret in repository code."
+    },
+    {
+     "technique": "default-deny-plus-defaulted-owner",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/visual-gen/library/route.ts:23 Library reads pass through application code into server-owned SQLite, rather than a browser-facing datastore role subject to row-level policies."
+    },
+    {
+     "technique": "omit-the-column-not-the-value",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/asset-library-db.ts:96 The inspected library schema stores asset metadata, contains no credential column, and is accessed through server routes rather than public database grants."
+    },
+    {
+     "technique": "opaque-upstream-errors",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/asset-sources.ts:93 The public provider address is deliberately returned as asset metadata, and this context has no inspected secret-attaching broker whose upstream topology must remain opaque."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:219 Dependency-supplied file URLs are fetched in the browser, an explicit exception in the technique; inspected server metadata fetches use fixed provider hosts."
+    },
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:159 The client uses a relative same-origin endpoint and has no environment-variable or credential configuration reads in the searched context directories."
+    }
+   ],
+   "absenceTerms": [
+    "NEXT_PUBLIC",
+    "supabase",
+    "Authorization",
+    "apiKey"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T11:35:35.813592+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "allowlisted-operator-stream",
+    "broker-proxy-attaches-secret",
+    "default-deny-plus-defaulted-owner",
+    "omit-the-column-not-the-value",
+    "opaque-upstream-errors",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split"
+   ],
+   "deviations": 0,
+   "context": "asset-viewer-and-browser",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -4608,7 +4608,11 @@
           "revision": 3,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/visual-gen/asset-sources.ts:82 Context and repository searches found no credential configuration in the context directories; the inspected dependencies use public asset APIs, browser-side downloads, and server-mediated SQLite rather than browser-held datastore credentials or server-attached upstream secrets.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d3eef10e9ed8459f",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-browser-control",
