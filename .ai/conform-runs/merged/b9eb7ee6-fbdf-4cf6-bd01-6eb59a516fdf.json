@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b9eb7ee6-fbdf-4cf6-bd01-6eb59a516fdf",
+ "subject": "agent-addressable-ui",
+ "evaluatedAt": "2026-10-19T11:08:03.001810+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "agent-addressable-ui",
+   "context": "progression-rewards-internals",
+   "reason": "evidence leans on unique-tabs/_design.tsx, which is not a tracked file"
+  }
+ ],
+ "consults": []
+}
