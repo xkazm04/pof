@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ab0a90dd-b50a-482c-a404-e397f5e38232",
+ "subject": "release-pipeline",
+ "evaluatedAt": "2026-10-19T02:14:46.375243+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "release-pipeline",
+   "context": "catalog-pipeline-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "release-pipeline",
+   "context": "ue5-build-bridge",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
