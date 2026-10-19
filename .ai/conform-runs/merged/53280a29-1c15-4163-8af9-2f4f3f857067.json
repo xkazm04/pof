@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "53280a29-1c15-4163-8af9-2f4f3f857067",
+ "subject": "embedded-db",
+ "evaluatedAt": "2026-10-19T01:09:19.548788+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "embedded-db",
+   "context": "character-overview-input",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "embedded-db",
+   "context": "loot-metrics-designer",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
