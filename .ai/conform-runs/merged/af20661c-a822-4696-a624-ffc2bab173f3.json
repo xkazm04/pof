@@ -1,0 +1,67 @@
+{
+  "schema": "conform-run/1",
+  "worker": "af20661c-a822-4696-a624-ffc2bab173f3",
+  "subject": "production-work-prioritization",
+  "evaluatedAt": "2026-10-19T02:08:51.774210+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "production-work-prioritization",
+      "context": "streaming-zone-planner",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchor useStreamingZonePlanner.ts:70 is only a useMemo that builds the config object. It doesn't show that production-work prioritization is absent, and the claim rests on a grep for terms that may not be the right ones for this subject."
+    },
+    {
+      "subject": "production-work-prioritization",
+      "context": "project-exploration-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchor BlueprintInspector/index.tsx:52 is only an API fetch of a blueprint manifest. It doesn't show that production-work prioritization is absent, and the claim rests on a grep for terms that may not be the right ones for this subject."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T02:08:51.774210+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "production-work-prioritization"
+      ],
+      "techniques": [
+        "blocked-if-any-produced-feature-is-blocked",
+        "curriculum-prerequisite-graph",
+        "declared-scope-as-a-shaping-budget",
+        "fan-out-max-not-sum",
+        "five-factor-weighted-scoring",
+        "fixed-deadline-scope-triage",
+        "null-success-odds-with-sample-provenance",
+        "urgency-ladder-for-what-next",
+        "vertical-slice-as-the-first-milestone"
+      ],
+      "deviations": 0,
+      "context": "streaming-zone-planner",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-19T02:08:51.774210+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "production-work-prioritization"
+      ],
+      "techniques": [
+        "blocked-if-any-produced-feature-is-blocked",
+        "curriculum-prerequisite-graph",
+        "declared-scope-as-a-shaping-budget",
+        "fan-out-max-not-sum",
+        "five-factor-weighted-scoring",
+        "fixed-deadline-scope-triage",
+        "null-success-odds-with-sample-provenance",
+        "urgency-ladder-for-what-next",
+        "vertical-slice-as-the-first-milestone"
+      ],
+      "deviations": 0,
+      "context": "project-exploration-tools",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

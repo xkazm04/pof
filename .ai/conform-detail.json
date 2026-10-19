@@ -10979,6 +10979,128 @@
           "evidence": "src/lib/status/statusModel.ts:375 Engine resolution records audited, authored, inferred, and authored-demotion origins; shared glyph/word/note metadata renders missing provenance explicitly as UNSOURCED."
         }
       ]
+    },
+    "023f8e03-d83d-49d1-b740-04ecdd77362c/production-work-prioritization": {
+      "context": "streaming-zone-planner",
+      "subject": "production-work-prioritization",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T02:08:51.774Z",
+      "techniques": [
+        {
+          "technique": "blocked-if-any-produced-feature-is-blocked",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:161 This blocks generation on compilation defects, not production candidates on unmet output dependencies."
+        },
+        {
+          "technique": "curriculum-prerequisite-graph",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/TransitionList.tsx:63 Conditions describe travel between zones, not prerequisites for meaningfully building project areas."
+        },
+        {
+          "technique": "declared-scope-as-a-shaping-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:98 The numeric setting controls streaming distance; it is not an intended production scope allowance."
+        },
+        {
+          "technique": "fan-out-max-not-sum",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:77 The count summarizes spatial transitions without scoring downstream work unblocked by a candidate."
+        },
+        {
+          "technique": "five-factor-weighted-scoring",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:75 Priority is a designer-selected runtime loading property, not a production recommendation score."
+        },
+        {
+          "technique": "fixed-deadline-scope-triage",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:137 Generation submits the selected configuration; this context does not schedule delivery against an immovable date."
+        },
+        {
+          "technique": "null-success-odds-with-sample-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:76 The statistic counts configured persistent zones rather than forecasting work success."
+        },
+        {
+          "technique": "urgency-ladder-for-what-next",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/PreflightPanel.tsx:16 This orders configuration diagnostics by severity, not production acceptance states or next-work recommendations."
+        },
+        {
+          "technique": "vertical-slice-as-the-first-milestone",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:94 The grid visualizes streaming residency, not milestone completion or a declared production slice."
+        }
+      ],
+      "withdrawn": {
+        "worker": "af20661c-a822-4696-a624-ffc2bab173f3",
+        "state": "not-applicable",
+        "at": "2026-10-19T02:09:15.160611+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor useStreamingZonePlanner.ts:70 is only a useMemo that builds the config object. It doesn't show that production-work prioritization is absent, and the claim rests on a grep for terms that may not be the right ones for this subject."
+      }
+    },
+    "c83e4533-113e-44e3-b005-bd44b22bf20a/production-work-prioritization": {
+      "context": "project-exploration-tools",
+      "subject": "production-work-prioritization",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T02:08:51.774Z",
+      "techniques": [
+        {
+          "technique": "blocked-if-any-produced-feature-is-blocked",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/index.tsx:101 Inspection is gated on request readiness and connectivity, not produced-feature dependencies."
+        },
+        {
+          "technique": "curriculum-prerequisite-graph",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:16 The displayed relation is asset inheritance, not eligibility to build a project area."
+        },
+        {
+          "technique": "declared-scope-as-a-shaping-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/helpers.ts:9 This counts existing metadata without requesting or grading a producer's intended scope."
+        },
+        {
+          "technique": "fan-out-max-not-sum",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/sections.tsx:104 Outgoing asset references are displayed without computing downstream production benefit."
+        },
+        {
+          "technique": "five-factor-weighted-scoring",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/index.tsx:160 Detected projects are rendered for selection, not scored as eligible production candidates."
+        },
+        {
+          "technique": "fixed-deadline-scope-triage",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:46 The operation requests a directory listing, with no delivery date or scope-cut decision."
+        },
+        {
+          "technique": "null-success-odds-with-sample-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/helpers.ts:12 The fallback is a metadata count, not an unsupported success probability."
+        },
+        {
+          "technique": "urgency-ladder-for-what-next",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/index.tsx:126 The inspector renders anatomical sections rather than choosing work from mixed production statuses."
+        },
+        {
+          "technique": "vertical-slice-as-the-first-milestone",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BlueprintInspector/index.tsx:176 The tool inspects an existing asset without declaring milestones or reporting playable-path completion."
+        }
+      ],
+      "withdrawn": {
+        "worker": "af20661c-a822-4696-a624-ffc2bab173f3",
+        "state": "not-applicable",
+        "at": "2026-10-19T02:09:15.219283+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor BlueprintInspector/index.tsx:52 is only an API fetch of a blueprint manifest. It doesn't show that production-work prioritization is absent, and the claim rests on a grep for terms that may not be the right ones for this subject."
+      }
     }
   }
 }
