@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f0570adc-d566-48e4-86bc-3de836f8876c",
+ "subject": "engine-integration-safety",
+ "evaluatedAt": "2026-10-19T22:14:58.733041+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "engine-integration-safety",
+   "context": "crash-analysis",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
