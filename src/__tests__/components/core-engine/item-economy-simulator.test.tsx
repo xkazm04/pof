@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, beforeAll, vi } from 'vitest';
 import type React from 'react';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 
@@ -46,6 +46,9 @@ vi.mock('@/components/modules/core-engine/unique-tabs/FeatureMapTab', () => ({
 
 import { ItemCatalog } from '@/components/modules/core-engine/sub_inventory';
 import { ItemEconomySimulator } from '@/components/modules/core-engine/sub_inventory/economy-simulator';
+import { BalanceAdvisorPanel } from '@/components/modules/core-engine/sub_inventory/mechanics/BalanceAdvisorPanel';
+import { useItemEconomySessionStore } from '@/stores/itemEconomySessionStore';
+import { runItemEconomySim, DEFAULT_ITEM_ECON_CONFIG } from '@/lib/economy/item-economy-engine';
 
 beforeAll(() => {
   if (!('ResizeObserver' in globalThis)) {
@@ -58,6 +61,7 @@ beforeAll(() => {
 });
 
 afterEach(cleanup);
+beforeEach(() => useItemEconomySessionStore.getState().reset());
 
 describe('Item Economy Simulator — reachable and honest', () => {
   it('case 7: the Item Catalog has an Economy Sim sub-tab that mounts the simulator', async () => {
@@ -93,5 +97,29 @@ describe('Item Economy Simulator — reachable and honest', () => {
     expect(strip).not.toMatch(/UNMEASURED/);
     expect(screen.queryByRole('button', { name: /Extend horizon/ })).toBeNull();
     expect((screen.getByLabelText('Hours') as HTMLInputElement).value).toBe('640');
+  });
+});
+
+describe('Item Economy session store — survives remount and feeds the advisor', () => {
+  it('a run is still rendered, with its config, after the simulator unmounts and remounts', async () => {
+    const first = render(<ItemEconomySimulator moduleId="arpg-inventory" />);
+    fireEvent.change(screen.getByLabelText('Players'), { target: { value: '120' } });
+    fireEvent.click(screen.getByRole('button', { name: /Simulate 120 Players/ }));
+    await screen.findByTestId('econ-coverage', {}, { timeout: 10_000 });
+    first.unmount();
+
+    render(<ItemEconomySimulator moduleId="arpg-inventory" />);
+    expect(screen.getByTestId('econ-coverage')).toBeTruthy();
+    expect((screen.getByLabelText('Players') as HTMLInputElement).value).toBe('120');
+    expect(screen.getByRole('button', { name: /Simulate 120 Players/ })).toBeTruthy();
+  });
+
+  it('the Balance Advisor panel names the backing run, or says rarity is UNMEASURED', () => {
+    const view = render(<BalanceAdvisorPanel items={[]} isRunning={false} onAnalyze={() => {}} />);
+    expect(screen.getByTestId('advisor-sim-evidence').textContent).toBe('rarity UNMEASURED - run the Economy Simulator');
+    view.unmount();
+    const sim = runItemEconomySim({ ...DEFAULT_ITEM_ECON_CONFIG, playerCount: 30 });
+    render(<BalanceAdvisorPanel items={[]} sim={sim} isRunning={false} onAnalyze={() => {}} />);
+    expect(screen.getByTestId('advisor-sim-evidence').textContent).toBe('sim evidence: seed 42, 30 players, 80 h');
   });
 });

@@ -5,16 +5,19 @@ import { Scale, Loader2 } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { ACCENT, ITEM_SETS, SCALING_LINES, type ItemData } from '../_shared/data';
 import { deriveAffixPool, deriveDpsTable } from '../_shared/balance-evidence';
+import type { ItemEconomyResult } from '@/lib/economy/item-economy-engine';
 import { withOpacity, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_37 } from '@/lib/chart-colors';
 
 interface Props {
   /** The item set the advisor prompt is built from. */
   items: ItemData[];
+  /** The Economy Simulator run backing the prompt's rarity section, if any. */
+  sim?: ItemEconomyResult | null;
   isRunning: boolean;
   onAnalyze: () => void;
 }
 
-export function BalanceAdvisorPanel({ items, isRunning, onAnalyze }: Props) {
+export function BalanceAdvisorPanel({ items, sim = null, isRunning, onAnalyze }: Props) {
   // The tiles count the same derived evidence the prompt quotes.
   const counts = useMemo(() => {
     const weapons = items.filter(i => i.type === 'Weapon');
@@ -29,6 +32,11 @@ export function BalanceAdvisorPanel({ items, isRunning, onAnalyze }: Props) {
           <SectionHeader icon={Scale} label="AI Balance Advisor" color={ACCENT} />
           <p className="text-xs font-mono text-text-muted">
             Analyze power budgets, affix scaling, DPS outliers, set bonus balance, and rarity distribution health.
+          </p>
+          <p data-testid="advisor-sim-evidence" className="text-xs font-mono text-text-muted mt-1">
+            {sim
+              ? `sim evidence: seed ${sim.config.seed}, ${sim.config.playerCount} players, ${sim.config.maxHours} h`
+              : 'rarity UNMEASURED - run the Economy Simulator'}
           </p>
         </div>
         <button onClick={onAnalyze} disabled={isRunning}

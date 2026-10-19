@@ -12,6 +12,8 @@ import { AffixSunburst } from '../catalog/AffixSunburst';
 import { ItemScalingChart } from '../economy/ItemScalingChart';
 import { ItemDetailDrawer } from '../catalog/ItemDetailDrawer';
 import { buildBalancePrompt } from '../_shared/balance-prompt';
+import { useItemEconomySessionStore } from '@/stores/itemEconomySessionStore';
+import { evidenceLevel } from '@/lib/economy/item-economy-session';
 import { useInventoryItems } from '../_shared/useInventoryItems';
 import type { ItemData } from '../_shared/data';
 import {
@@ -53,10 +55,13 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
     [items, selectedItemId],
   );
 
+  // The Economy Simulator's latest run (session lifetime) is the advisor's rarity evidence.
+  const sim = useItemEconomySessionStore((s) => s.result);
+
   const handleAnalyzeBalance = useCallback(() => {
-    const prompt = buildBalancePrompt(items);
+    const prompt = buildBalancePrompt(items, { sim, level: evidenceLevel(sim) });
     executeBalanceAdvisor({ type: 'ask-claude', moduleId, prompt, label: 'Affix Balance Advisor' });
-  }, [items, moduleId, executeBalanceAdvisor]);
+  }, [items, sim, moduleId, executeBalanceAdvisor]);
 
   return (
     <motion.div key="mechanics-scaling" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
@@ -175,7 +180,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
       </BlueprintPanel>
 
       {/* AI Balance Advisor */}
-      <BalanceAdvisorPanel items={items} isRunning={isBalanceRunning} onAnalyze={handleAnalyzeBalance} />
+      <BalanceAdvisorPanel items={items} sim={sim} isRunning={isBalanceRunning} onAnalyze={handleAnalyzeBalance} />
     </motion.div>
   );
 }
