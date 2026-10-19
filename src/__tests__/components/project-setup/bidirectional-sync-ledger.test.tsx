@@ -111,3 +111,27 @@ describe('ConflictSection', () => {
     expect(screen.getByTestId('sync-conflict-inbound').textContent).toBe('80');
   });
 });
+
+describe("sync log events and totals (hook integration)", () => {
+  it("a write then a diverged read-back logs a conflict-level row; header counts equal the reducer totals", () => {
+    ue5LiveState.connect("127.0.0.1", 30041);
+    const ws = FakeWebSocket.instances.at(-1)!;
+    ws.fireOpen();
+    const { result } = renderHook(() => useBidirectionalStateSyncPanel());
+
+    act(() => { health(ws, 50); });
+    act(() => { result.current.handleWatchedPush("/Game/A", "Health", 120); });
+    act(() => { health(ws, 80); });
+
+    const conflictRow = result.current.syncLog.find((e) => e.level === "conflict");
+    expect(conflictRow).toMatchObject({ direction: "inbound" });
+    expect(result.current.outboundCount).toBe(1);
+    const inboundRows = result.current.syncLog.filter((e) => e.direction === "inbound").length;
+    expect(result.current.inboundCount).toBe(inboundRows);
+
+    act(() => { result.current.setSyncLog([]); });
+    expect(result.current.syncLog).toEqual([]);
+    expect(result.current.outboundCount).toBe(1);
+    expect(result.current.inboundCount).toBe(inboundRows);
+  });
+});

@@ -7,6 +7,7 @@ import { appendLog, deriveConflicts, sameLedger, type Ledger } from '@/lib/ue5-b
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { MAX_LOG_ENTRIES } from './constants';
 import { nextLogId, truncate } from './helpers';
+import { diffSyncState, tallyEvents, EMPTY_TOTALS, type SyncView, type SyncTotals } from './syncEvents';
 import type { WriteReceipt } from '@/types/ue5-bridge';
 import type { SyncDirection, LogLevel, SyncLogEntry, PropertyEdit, ViewportTarget } from './types';
 
@@ -28,13 +29,21 @@ export function useBidirectionalStateSyncPanel() {
   const [syncLog, setSyncLog] = useState<SyncLogEntry[]>([]);
   const [showLog, setShowLog] = useState(true);
   const [logFilter, setLogFilter] = useState<SyncDirection | 'all'>('all');
+  const [totals, setTotals] = useState<SyncTotals>(EMPTY_TOTALS);
   const logEndRef = useRef<HTMLDivElement>(null);
+
+  /** Append to the bounded display log and fold into the unbounded totals. */
+  const pushEvents = useCallback((entries: SyncLogEntry[]) => {
+    if (entries.length === 0) return;
+    setSyncLog((prev) => entries.reduce((log, e) => appendLog(log, e, MAX_LOG_ENTRIES), prev));
+    setTotals((prev) => tallyEvents(prev, entries));
+  }, []);
 
   const addLog = useCallback((direction: SyncDirection, level: LogLevel, category: string, message: string, detail?: string, dropped?: boolean) => {
     const entry: SyncLogEntry = { id: nextLogId(), ts: Date.now(), direction, level, category, message, detail };
     if (dropped) entry.dropped = true;
-    setSyncLog((prev) => appendLog(prev, entry, MAX_LOG_ENTRIES));
-  }, []);
+    pushEvents([entry]);
+  }, [pushEvents]);
 
   /** Log an outbound action as it actually went: a dropped frame is a warning, not a send. */
   const logWrite = useCallback((receipts: WriteReceipt[], category: string, message: string, detail: string) => {
@@ -122,55 +131,33 @@ export function useBidirectionalStateSyncPanel() {
   const [writes, setWrites] = useState<Ledger>(() => ue5LiveState.getState().writes);
   const conflicts = useMemo(() => deriveConflicts(writes), [writes]);
 
-  // ── Stats (a dropped write never went out, so it is not counted as sent) ──
-  const outboundCount = useMemo(() => syncLog.filter((e) => e.direction === 'outbound' && !e.dropped).length, [syncLog]);
-  const inboundCount = useMemo(() => syncLog.filter((e) => e.direction === 'inbound').length, [syncLog]);
+  // ── Stats: running totals, independent of the capped, clearable log ──
+  const outboundCount = totals.outboundTotal;
+  const inboundCount = totals.inboundTotal;
 
   const filteredLog = useMemo(() => {
     if (logFilter === 'all') return syncLog;
     return syncLog.filter((e) => e.direction === logFilter);
   }, [syncLog, logFilter]);
 
-  // Track inbound WS events via singleton subscription (callback-based, avoids setState-in-effect)
+  // Derive inbound/outcome events from each client-state change (callback-based, avoids setState-in-effect)
   useEffect(() => {
-    let prevTs: number | null = null;
-    let prevWatchCount = 0;
+    const toView = (st: ReturnType<typeof ue5LiveState.getState>): SyncView => ({
+      snapshot: st.snapshot, propertyWatches: st.propertyWatches, writes: st.writes,
+    });
+    let prev = toView(ue5LiveState.getState());
 
     const unsub = ue5LiveState.onStateChange((state) => {
       // Mirror the write ledger (skip the re-render when only the clone changed)
-      setWrites((prev) => (sameLedger(prev, state.writes) ? prev : state.writes));
+      setWrites((p) => (sameLedger(p, state.writes) ? p : state.writes));
 
-      // Track snapshot changes
-      if (state.snapshot && prevTs !== null && state.snapshot.timestamp !== prevTs) {
-        const entry: SyncLogEntry = {
-          id: nextLogId(), ts: Date.now(), direction: 'inbound', level: 'info',
-          category: 'SNAP', message: `Editor: ${state.snapshot.editorState}`,
-          detail: `Level: ${state.snapshot.openLevel}`,
-        };
-        setSyncLog((prev) => appendLog(prev, entry, MAX_LOG_ENTRIES));
-      }
-      if (state.snapshot) prevTs = state.snapshot.timestamp;
-
-      // Track new property watches
-      const watchCount = state.propertyWatches.size;
-      if (watchCount > prevWatchCount) {
-        const entries = [...state.propertyWatches.entries()];
-        const latest = entries.at(-1);
-        if (latest) {
-          const entry: SyncLogEntry = {
-            id: nextLogId(), ts: Date.now(), direction: 'inbound', level: 'info',
-            category: 'PROP',
-            message: `${latest[1].propertyName} = ${truncate(JSON.stringify(latest[1].value), 30)}`,
-            detail: latest[1].objectPath,
-          };
-          setSyncLog((prev) => appendLog(prev, entry, MAX_LOG_ENTRIES));
-        }
-      }
-      prevWatchCount = watchCount;
+      const next = toView(state);
+      pushEvents(diffSyncState(prev, next));
+      prev = next;
     });
 
     return unsub;
-  }, []);
+  }, [pushEvents]);
 
   return {
     snapshot,
