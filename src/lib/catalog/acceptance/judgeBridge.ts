@@ -1,7 +1,8 @@
 import type { AcceptanceResult, JudgeAttribution, VerdictProvenance } from './types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { newestRubricVerdicts, isCurrentRubric, isFutureRubric, rubricOf, RUBRIC_VERSION } from '@/lib/judge/rubrics';
-import { stepContentHash, isComparableHash, hashScheme, CONTENT_HASH_SCHEME } from '@/lib/judge/contentHash';
+import { classifyBinding } from '@/lib/judge/bindingRule';
+import { stepContentHash, hashScheme, CONTENT_HASH_SCHEME } from '@/lib/judge/contentHash';
 
 /**
  * Judge → Acceptance bridge (pure).
@@ -69,14 +70,6 @@ export function judgedContentFromHash(hash: string | undefined, updatedAt?: stri
   return { ...(hash ? { hash } : {}), ...(updatedAt ? { updatedAt } : {}) };
 }
 
-/** Tolerant timestamp parse: SQLite `datetime('now')` ("YYYY-MM-DD HH:MM:SS", UTC) and ISO
- *  both appear in this data, so they can't be compared as strings. `NaN` → unknown. */
-function ts(v: string | undefined): number {
-  if (!v) return NaN;
-  const s = v.includes('T') || /[Zz]|[+-]\d\d:?\d\d$/.test(v) ? v : `${v.replace(' ', 'T')}Z`;
-  return Date.parse(s);
-}
-
 /**
  * How much a verdict still speaks for the content on record:
  *  - `superseded` — scored under an older rubric; provisional by the program's own rule.
@@ -101,14 +94,12 @@ export function verdictProvenance(v: JudgeVerdict, content?: JudgedContent): Ver
   // A rubric this build does not hold: condemns (fail), never elevates (pass) — see rubrics.ts.
   if (isFutureRubric(v)) return 'unknown';
   if (!isCurrentRubric(v)) return 'superseded';
-  if (v.contentHash && !isComparableHash(v.contentHash)) return 'unknown';
-  if (v.contentHash && content?.hash) return v.contentHash === content.hash ? 'current' : 'stale';
-  if (!v.contentHash) {
-    const judged = ts(v.judgedAt);
-    const written = ts(content?.updatedAt);
-    if (!Number.isNaN(judged) && !Number.isNaN(written) && judged < written) return 'stale';
-  }
-  return 'unknown';
+  return classifyBinding({
+    recordedHash: v.contentHash,
+    recordedAt: v.judgedAt,
+    currentHash: content?.hash,
+    currentUpdatedAt: content?.updatedAt,
+  }).state;
 }
 
 /**

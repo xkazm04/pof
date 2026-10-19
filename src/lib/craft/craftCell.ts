@@ -10,6 +10,7 @@ import stepFactsJson from '@/lib/status/step-facts.json';
 import ceilingsJson from './craft-ceilings.json';
 import { lensForStep, type DeliverableClass, type LensId } from './lens-map';
 import { LENS_VERSIONS } from './lens-versions';
+import { sameContent } from '@/lib/judge/bindingRule';
 import {
   craftOf,
   craftRank,
@@ -68,6 +69,8 @@ export interface CraftTrendInput {
   model: string;
   /** The artifact `updatedAt` this gauge was bound to — the A-axis content anchor. */
   artifactUpdatedAt?: string;
+  /** The content hash this gauge was bound to; preferred over `artifactUpdatedAt` when both rows carry one. */
+  contentHash?: string;
   judgedAt?: string;
 }
 
@@ -117,10 +120,9 @@ export function buildCraftTrend(history: readonly CraftTrendInput[]): CraftTrend
     sameContentAsPrevious:
       i === 0
         ? null
-        : Boolean(
-            v.artifactUpdatedAt &&
-              ordered[i - 1].artifactUpdatedAt &&
-              v.artifactUpdatedAt === ordered[i - 1].artifactUpdatedAt,
+        : sameContent(
+            { contentHash: ordered[i - 1].contentHash, anchor: ordered[i - 1].artifactUpdatedAt },
+            { contentHash: v.contentHash, anchor: v.artifactUpdatedAt },
           ),
   }));
 
