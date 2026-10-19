@@ -28,8 +28,8 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { useStatusArtifacts } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, getStepFact, judgedContentOfRow, type Swimlane, type StepCell, type StepMeta } from '@/lib/status/statusModel';
-import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
+import { getStepFact, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import { assembleLanes, type UnknownLane } from '@/lib/status/statusReads';
 import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import {
   readinessOf,
@@ -43,7 +43,7 @@ import {
   type ReadinessState,
 } from '@/lib/status/readiness';
 import { capabilityClassOf } from '@/lib/status/capabilityModel';
-import { craftForCell, cellDistanceToRoof, type CellCraft, type CraftVerdictView } from '@/lib/craft/craftCell';
+import { cellDistanceToRoof, type CraftVerdictView } from '@/lib/craft/craftCell';
 import { StatusCell } from './StatusCell';
 import { EvidenceModal } from './EvidenceModal';
 
@@ -181,15 +181,6 @@ function Legend() {
   );
 }
 
-/** One catalog whose artifacts could not be read. It is deliberately NOT a `Swimlane`:
- *  a lane built from a failed fetch's `[]` would paint every step R0 NOT WIRED, which is
- *  a GRADE — the map would report "nothing was ever produced here" on the strength of a
- *  network blip, and understate the one way this surface must never be wrong. */
-interface UnknownLane {
-  catalogId: string;
-  error: string;
-}
-
 /** Stable empty row list for the evidence modal's ledger when a catalog has no rows. */
 const NO_ROWS: ArtifactVerdictRow[] = [];
 
@@ -315,43 +306,7 @@ export function PipelinesView({
    */
   const built = useMemo(() => {
     if (!catalogs || !verdicts) return null;
-    const specs = new Map(allCatalogPipelines().map((p) => [p.catalogId, p]));
-    const craft = verdicts.craftByCatalog ? new Map<string, CellCraft>() : null;
-    const lanes: Swimlane[] = [];
-    const unknown: UnknownLane[] = [];
-    for (const c of catalogs) {
-      const p = specs.get(c.catalogId);
-      if (!p) continue;
-      // A failed read is NOT an empty catalog: building a lane from `[]` would grade every
-      // step R0 NOT WIRED. It is held out of `lanes` and reported as UNKNOWN instead.
-      if (c.error !== null) {
-        unknown.push({ catalogId: c.catalogId, error: c.error });
-        continue;
-      }
-      const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
-      if (craft && verdicts.craftByCatalog) {
-        // Per-step entity → what the artifact holds NOW (content hash + updatedAt), via
-        // THE row-hash rule the judge path uses (`judgedContentOfRow`). A gauge whose
-        // content was re-produced reads stale; a drain re-upserting identical data does not.
-        const contentByStep = new Map<string, Map<string, JudgedContent>>();
-        for (const a of c.rows) {
-          const m = contentByStep.get(a.step) ?? new Map<string, JudgedContent>();
-          m.set(a.entityId, judgedContentOfRow(a));
-          contentByStep.set(a.step, m);
-        }
-        for (const s of p.steps) {
-          const cc = craftForCell(
-            c.catalogId,
-            s.label,
-            verdicts.craftByCatalog.get(c.catalogId) ?? [],
-            contentByStep.get(s.label) ?? new Map(),
-          );
-          if (cc) craft.set(`${c.catalogId} ${s.label}`, cc);
-        }
-      }
-      lanes.push(buildSwimlane(c.catalogId, c.catalogId, metas, c.rows, verdicts.byCatalog.get(c.catalogId) ?? []));
-    }
-    return { lanes: sortLanes(lanes), unknown, craft };
+    return assembleLanes({ catalogs, byCatalog: verdicts.byCatalog, craftByCatalog: verdicts.craftByCatalog });
   }, [catalogs, verdicts]);
 
   const lanes = built?.lanes ?? null;

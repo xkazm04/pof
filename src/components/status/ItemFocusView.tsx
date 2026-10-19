@@ -16,25 +16,18 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import '@/lib/catalog/pipelines/registry.generated';
-import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { useCatalogStore } from '@/stores/catalogStore';
-import type { StepMeta } from '@/lib/status/statusModel';
 import {
   buildDependencyIndex,
   resolveItemFocus,
   entityKey,
-  unknownRead,
   type ItemFocusCtx,
 } from '@/lib/status/itemFocusModel';
 import { useStatusArtifacts } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
-import { MiniSwimlane, EvidenceReadNotice } from './MiniSwimlane';
+import { swimlaneCtxFromReads, readNotices } from '@/lib/status/statusReads';
+import { MiniSwimlane, ReadNotices } from './MiniSwimlane';
 import { EntitySearch } from './EntitySearch';
-
-function stepsFor(catalogId: string): StepMeta[] {
-  const p = getCatalogPipeline(catalogId);
-  return p ? p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine })) : [];
-}
 
 /**
  * Group separator. A real `h2` (the page's only `h1` is the /status title) so the three
@@ -84,27 +77,11 @@ export function ItemFocusView({
   const { catalogs, retryCatalog } = useStatusArtifacts(involvedCatalogs);
   const { verdicts, reload: reloadVerdicts } = useStatusVerdicts();
   const settled = catalogs !== null && verdicts !== null;
-  const failedCatalogs = useMemo(() => (catalogs ?? []).filter((c) => c.error !== null), [catalogs]);
+  const notices = useMemo(() => readNotices({ catalogs, verdicts }), [catalogs, verdicts]);
 
   const result = useMemo(() => {
     if (!focus) return null;
-    const reads = new Map((catalogs ?? []).map((c) => [c.catalogId, c]));
-    const ctx: ItemFocusCtx = {
-      entitiesByCatalog,
-      index,
-      stepsFor,
-      // Nothing grades until BOTH reads settle; a catalog outside the read is not "empty".
-      artifactsFor: (c) => {
-        if (!catalogs || !verdicts) return unknownRead('evidence still loading');
-        const read = reads.get(c);
-        if (!read) return unknownRead('not read');
-        return read.error !== null ? unknownRead(read.error) : read.rows;
-      },
-      verdictsFor: (c) => {
-        if (verdicts && !verdicts.ok) return unknownRead(verdicts.error);
-        return (verdicts && verdicts.ok && verdicts.byCatalog.get(c)) || [];
-      },
-    };
+    const ctx: ItemFocusCtx = { ...swimlaneCtxFromReads({ catalogs, verdicts }), entitiesByCatalog, index };
     return resolveItemFocus(focus.catalogId, focus.entityId, ctx);
   }, [focus, entitiesByCatalog, index, catalogs, verdicts]);
 
@@ -141,12 +118,7 @@ export function ItemFocusView({
       </div>
 
       {/* A failed read is SAID, never graded around (same wording family as Pipelines). */}
-      {result && failedCatalogs.map((c) => (
-        <EvidenceReadNotice key={c.catalogId} kind="artifacts" subject={c.catalogId} error={c.error ?? ''} onRetry={() => retryCatalog(c.catalogId)} />
-      ))}
-      {result && verdicts && !verdicts.ok && (
-        <EvidenceReadNotice kind="verdicts" error={verdicts.error} onRetry={reloadVerdicts} />
-      )}
+      {result && <ReadNotices notices={notices} onRetryCatalog={retryCatalog} onRetryVerdicts={reloadVerdicts} />}
 
       {result && (
         <div
