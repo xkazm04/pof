@@ -10741,6 +10741,63 @@
           "evidence": "src/components/layout/ModuleRenderer/registry.tsx:141 The shell delegates the design-document surface to a separate module; document-structure preparation is not performed here."
         }
       ]
+    },
+    "a00c79d7-bd10-495a-8546-81ab1bfd797e/migrations": {
+      "context": "state-management",
+      "subject": "migrations",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:30:45.992Z",
+      "worker": "9ee55bbd-7fef-4bb5-a86f-a007c0c93345",
+      "techniques": [
+        {
+          "technique": "idempotent-steps",
+          "verdict": "deviation",
+          "evidence": "src/stores/navigationStore.ts:94 Persist configuration omits a version ledger and migration steps, providing no ordered chain of idempotent transitions for schema evolution."
+        },
+        {
+          "technique": "pre-migration-snapshots",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:430 Rehydration mutates persisted state in place without taking a pre-migration snapshot or backup of the localStorage store."
+        },
+        {
+          "technique": "transactional-ddl",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:436 Rehydration updates fields through direct non-transactional property mutations without an atomic commit or rollback unit."
+        },
+        {
+          "technique": "error-propagation",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:38 Reading the persisted project path catches all exceptions and silently returns null, advancing progressAdopted to true with a null owner."
+        },
+        {
+          "technique": "migrate-from-data-shape",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:63 Legacy unowned progress is classified by negative elimination rather than a positive signature or atomic store version marker."
+        },
+        {
+          "technique": "schema-drift-detection",
+          "verdict": "deviation",
+          "evidence": "src/stores/projectStore.ts:287 Persisted properties are sliced into storage without any boot-time fingerprint assertion or schema drift verification."
+        },
+        {
+          "technique": "data-migrations",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:431 The progress backfill to the active project is fused directly into rehydration lifecycle without batching or escrow."
+        },
+        {
+          "technique": "expand-deploy-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/projectStore.ts:286 The store runs in single-process client localStorage where rolling two-version deployment does not apply."
+        },
+        {
+          "technique": "dynamic-table-set-migrations",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/moduleStore.ts:415 The persist key is statically declared rather than an operator-defined dynamic table set discovered at runtime."
+        }
+      ],
+      "registryProposal": "Client-side web stores using browser localStorage (e.g. Zustand persist) represent an atomic JSON document store where version markers and state serialize together in a single key; failure modes typically stem from omitted version/migrate options and silent rehydration merges rather than split-write crash windows."
     }
   }
 }

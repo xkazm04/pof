@@ -21844,7 +21844,11 @@
           "revision": 10,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/stores/projectStore.ts:285 The Zustand persist configuration lacks a schema version ledger and migration function, relying instead on unversioned rehydration and ad-hoc mutations across releases.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b7d5afcb859dfff9",
+          "evaluatedRevision": 10
         },
         {
           "subject": "agent-runtime-assembly",
