@@ -11480,6 +11480,68 @@
           "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:102 Playback clamps at totalTimeline and pauses, preventing one-gesture replay from the end where play immediately re-clamps."
         }
       ]
+    },
+    "db5bb171-c9ed-4d1f-9ef5-dab6d67580c1/ui-controls": {
+      "context": "hud-theme-and-inventory",
+      "subject": "ui-controls",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T10:42:35.211Z",
+      "worker": "96a0f97e-2b97-4380-9543-d9b87283b2cf",
+      "techniques": [
+        {
+          "technique": "adoption-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:53 The feature implements the raw clipboard signature and its own confirmation state instead of adopting the existing shared CopyButton."
+        },
+        {
+          "technique": "composition-contracts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/Fields.tsx:29 The wrapper accepts only its enumerated props and forwards neither a focus ref nor arbitrary host attributes to the underlying input; the inspected StyledSlider also lacks these forwarding seams."
+        },
+        {
+          "technique": "micro-interaction-contracts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:55 Re-presses stack reset timers rather than restarting one confirmation window; the handler also provides no clipboard failure state."
+        },
+        {
+          "technique": "variant-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/Fields.tsx:37 Slider appearance accepts an unrestricted color string, passed into StyledSlider as accentColor, rather than a closed semantic variant vocabulary."
+        }
+      ]
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/ui-controls": {
+      "context": "inventory-catalog",
+      "subject": "ui-controls",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T10:42:35.211Z",
+      "worker": "96a0f97e-2b97-4380-9543-d9b87283b2cf",
+      "techniques": [
+        {
+          "technique": "adoption-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashSection.tsx:95 The feature retains the native-title tooltip signature instead of adopting the existing shared Tooltip primitive."
+        },
+        {
+          "technique": "composition-contracts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/TradingCard.tsx:51 The interactive card forwards its ref and composes onFocus, but its closed props omit host-attribute forwarding, preventing callers from attaching data hooks or aria-describedby."
+        },
+        {
+          "technique": "micro-interaction-contracts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/AffixSunburst.tsx:97 Hover and focus write one shared state instead of independent flags, allowing pointer exit to dismiss a keyboard-focused tooltip."
+        },
+        {
+          "technique": "variant-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogFiltersBar.tsx:88 The feature defines the button's background, text and border treatments locally instead of selecting a shared control variant."
+        }
+      ]
     }
   }
 }

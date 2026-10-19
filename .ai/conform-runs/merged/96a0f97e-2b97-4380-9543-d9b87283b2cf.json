@@ -1,0 +1,105 @@
+{
+ "schema": "conform-run/1",
+ "worker": "96a0f97e-2b97-4380-9543-d9b87283b2cf",
+ "subject": "ui-controls",
+ "evaluatedAt": "2026-10-19T10:42:35.211028+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "hud-theme-and-inventory",
+   "subject": "ui-controls",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:55 Each successful copy starts an independent reset timer, so pressing again during confirmation can have its feedback prematurely cleared by the earlier timer.",
+   "techniques": [
+    {
+     "technique": "adoption-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:53 The feature implements the raw clipboard signature and its own confirmation state instead of adopting the existing shared CopyButton."
+    },
+    {
+     "technique": "composition-contracts",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/Fields.tsx:29 The wrapper accepts only its enumerated props and forwards neither a focus ref nor arbitrary host attributes to the underlying input; the inspected StyledSlider also lacks these forwarding seams."
+    },
+    {
+     "technique": "micro-interaction-contracts",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:55 Re-presses stack reset timers rather than restarting one confirmation window; the handler also provides no clipboard failure state."
+    },
+    {
+     "technique": "variant-discipline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/Fields.tsx:37 Slider appearance accepts an unrestricted color string, passed into StyledSlider as accentColor, rather than a closed semantic variant vocabulary."
+    }
+   ]
+  },
+  {
+   "context": "inventory-catalog",
+   "subject": "ui-controls",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_inventory/catalog/AffixSunburst.tsx:97 Pointer exit clears the same tooltip state set by keyboard focus, so a focused arc loses its description when the pointer leaves.",
+   "techniques": [
+    {
+     "technique": "adoption-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashSection.tsx:95 The feature retains the native-title tooltip signature instead of adopting the existing shared Tooltip primitive."
+    },
+    {
+     "technique": "composition-contracts",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/TradingCard.tsx:51 The interactive card forwards its ref and composes onFocus, but its closed props omit host-attribute forwarding, preventing callers from attaching data hooks or aria-describedby."
+    },
+    {
+     "technique": "micro-interaction-contracts",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/AffixSunburst.tsx:97 Hover and focus write one shared state instead of independent flags, allowing pointer exit to dismiss a keyboard-focused tooltip."
+    },
+    {
+     "technique": "variant-discipline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogFiltersBar.tsx:88 The feature defines the button's background, text and border treatments locally instead of selecting a shared control variant."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T10:42:35.211028+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "ui-controls"
+   ],
+   "techniques": [
+    "adoption-enforcement",
+    "composition-contracts",
+    "micro-interaction-contracts",
+    "variant-discipline"
+   ],
+   "deviations": 1,
+   "context": "hud-theme-and-inventory",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T10:42:35.211028+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "ui-controls"
+   ],
+   "techniques": [
+    "adoption-enforcement",
+    "composition-contracts",
+    "micro-interaction-contracts",
+    "variant-discipline"
+   ],
+   "deviations": 1,
+   "context": "inventory-catalog",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

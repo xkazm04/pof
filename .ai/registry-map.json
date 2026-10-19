@@ -14114,7 +14114,11 @@
           "revision": 4,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:55 Each successful copy starts an independent reset timer, so pressing again during confirmation can have its feedback prematurely cleared by the earlier timer.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a6af68867a07fdfa",
+          "evaluatedRevision": 4
         },
         {
           "subject": "motion",
@@ -14543,7 +14547,11 @@
           "revision": 4,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/AffixSunburst.tsx:97 Pointer exit clears the same tooltip state set by keyboard focus, so a focused arc loses its description when the pointer leaves.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a6af68867a07fdfa",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
