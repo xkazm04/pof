@@ -45,6 +45,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
     spawnPlacementSummary,
     preview,
     spec,
+    pinned, canUndo, canRedo, pin, unpin, swapPinned, undo, redo,
     selectLevelType,
     toggleConstraint,
     updateSize,
@@ -100,6 +101,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
         setSeed={setSeed}
         updateSize={updateSize}
         toggleConstraint={toggleConstraint}
+        explore={{ pinned, canUndo, canRedo, pin, unpin, swapPinned, undo, redo }}
       />
 
       {/* ─── Generate ─── */}

@@ -35,7 +35,14 @@ export interface ProcgenSpecState {
    * an export in flight must still land its outcome.
    */
   flow: ExportFlow;
+  /** A frozen copy of a spec to compare the live one against, or null. */
+  pinned: ProcgenSpec | null;
+  /** Undo / redo stacks of whole specs, oldest first, each capped at {@link HISTORY_CAP}. */
+  past: ProcgenSpec[];
+  future: ProcgenSpec[];
 }
+
+export const HISTORY_CAP = 20;
 
 export type ProcgenSpecAction =
   | { type: 'setAlgorithm'; algorithm: GenAlgorithm }
@@ -44,6 +51,11 @@ export type ProcgenSpecAction =
   | { type: 'toggleConstraint'; key: keyof GameplayConstraints }
   | { type: 'setSeed'; seed: string }
   | { type: 'shown' }
+  | { type: 'pin' }
+  | { type: 'unpin' }
+  | { type: 'restorePinned' }
+  | { type: 'undo' }
+  | { type: 'redo' }
   | { type: 'exportFlow'; action: ExportFlowAction };
 
 /** The reducer's state and dispatch, handed to a wizard that does not own them. */
@@ -74,14 +86,26 @@ export function initialProcgenSpecState(): ProcgenSpecState {
     }),
     shown: false,
     flow: IDLE_EXPORT_FLOW,
+    pinned: null,
+    past: [],
+    future: [],
   };
 }
 
+const sameSpec = (a: ProcgenSpec, b: ProcgenSpec) => JSON.stringify(a) === JSON.stringify(b);
+const capped = (stack: ProcgenSpec[]) => stack.slice(-HISTORY_CAP);
+
+/** Make `spec` current. An edit that moves what an export would ship marks a prepared plan stale. */
+function setSpec(state: ProcgenSpecState, spec: ProcgenSpec, history: Pick<ProcgenSpecState, 'past' | 'future'>): ProcgenSpecState {
+  const flow = exportFlowReducer(state.flow, { type: 'specChanged', exportKey: exportKey(spec) });
+  return { ...state, spec, flow, ...history };
+}
+
+/** A spec edit: records the replaced spec for undo and clears redo. A no-op edit records nothing. */
 function withSpec(state: ProcgenSpecState, patch: Partial<ProcgenSpec>): ProcgenSpecState {
   const spec = { ...state.spec, ...patch };
-  // An edit that moves what an export would ship marks a prepared plan stale.
-  const flow = exportFlowReducer(state.flow, { type: 'specChanged', exportKey: exportKey(spec) });
-  return { ...state, spec, flow };
+  if (sameSpec(spec, state.spec)) return state;
+  return setSpec(state, spec, { past: capped([...state.past, state.spec]), future: [] });
 }
 
 export function procgenSpecReducer(state: ProcgenSpecState, action: ProcgenSpecAction): ProcgenSpecState {
@@ -102,6 +126,27 @@ export function procgenSpecReducer(state: ProcgenSpecState, action: ProcgenSpecA
     case 'exportFlow': {
       const flow = exportFlowReducer(state.flow, action.action);
       return flow === state.flow ? state : { ...state, flow };
+    }
+    case 'pin':
+      return { ...state, pinned: { ...state.spec, constraints: { ...state.spec.constraints } } };
+    case 'unpin':
+      return state.pinned ? { ...state, pinned: null } : state;
+    case 'restorePinned': {
+      // A swap, and its own inverse: the pinned layout becomes live and the one
+      // it replaces is pinned, so history is left alone and two swaps are a no-op.
+      if (!state.pinned) return state;
+      const next = setSpec(state, state.pinned, { past: state.past, future: state.future });
+      return { ...next, pinned: state.spec };
+    }
+    case 'undo': {
+      const prior = state.past[state.past.length - 1];
+      if (!prior) return state;
+      return setSpec(state, prior, { past: state.past.slice(0, -1), future: [state.spec, ...state.future].slice(0, HISTORY_CAP) });
+    }
+    case 'redo': {
+      const [next, ...rest] = state.future;
+      if (!next) return state;
+      return setSpec(state, next, { past: capped([...state.past, state.spec]), future: rest });
     }
     case 'shown':
       return state.shown ? state : { ...state, shown: true };

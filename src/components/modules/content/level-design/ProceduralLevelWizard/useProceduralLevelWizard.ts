@@ -72,7 +72,7 @@ interface UseProceduralLevelWizardArgs {
 
 export function useProceduralLevelWizard({ onGenerate, specStore }: UseProceduralLevelWizardArgs) {
   const [ownState, ownDispatch] = useReducer(procgenSpecReducer, undefined, initialProcgenSpecState);
-  const { spec, flow } = specStore?.state ?? ownState;
+  const { spec, flow, pinned, past, future } = specStore?.state ?? ownState;
   const dispatch = specStore?.dispatch ?? ownDispatch;
   const { algorithm, levelType, constraints, seedLabel: seed } = spec;
   const size = useMemo<SizeParams>(() => ({
@@ -114,6 +114,11 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
   const selectLevelType = useCallback((lt: LevelType) => dispatch({ type: 'selectLevelType', levelType: lt }), [dispatch]);
   const toggleConstraint = useCallback((key: keyof GameplayConstraints) => dispatch({ type: 'toggleConstraint', key }), [dispatch]);
   const updateSize = useCallback((key: keyof SizeParams, value: number) => dispatch({ type: 'updateSize', key, value }), [dispatch]);
+  const pin = useCallback(() => dispatch({ type: 'pin' }), [dispatch]);
+  const unpin = useCallback(() => dispatch({ type: 'unpin' }), [dispatch]);
+  const swapPinned = useCallback(() => dispatch({ type: 'restorePinned' }), [dispatch]);
+  const undo = useCallback(() => dispatch({ type: 'undo' }), [dispatch]);
+  const redo = useCallback(() => dispatch({ type: 'redo' }), [dispatch]);
 
   // The spec on screen, as is. What the C++ prompt uses of it is decided by the
   // prompt builder against `PROCGEN_ENGINES['llm-codegen'].reads` (enforced by
@@ -221,6 +226,10 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
     spawnPlacementSummary: pendingExport ? describeSpawnPlacement(pendingExport.placement) : null,
     preview,
     spec,
+    pinned,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    pin, unpin, swapPinned, undo, redo,
     selectLevelType,
     toggleConstraint,
     updateSize,
