@@ -5155,7 +5155,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioEventCatalog/constants.ts:72 Critical-priority boss music can survive while lower-priority gameplay sounds are stolen or dropped by the shared voice limiter, violating the requirement that music yield first.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:fccf430fd4de0e8d",
+          "evaluatedRevision": 5
         },
         {
           "subject": "subtext-and-voice-differentiation",
@@ -8447,7 +8451,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:393 The adaptive music pipeline declares loop boundaries in milliseconds rather than samples at a stated sample rate, leaving the required loop contract unrealized.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:fccf430fd4de0e8d",
+          "evaluatedRevision": 5
         },
         {
           "subject": "game-economy-tuning",

@@ -10203,6 +10203,63 @@
         "at": "2026-10-18T23:56:10.820630+00:00",
         "reason": "reviewer (sonnet): The code claims hold (UnderlineTabs.tsx has role=tab buttons with no roving tabindex or arrow keys; Tooltip unmounts when closed; CopyButton has no live region), but the context's file list holds only src/lib and src/types files. None of the anchored src/components/ui files or the test file is in it"
       }
+    },
+    "f9a4a5bc-b02a-4085-83f0-32492b13c805/adaptive-music-authoring": {
+      "context": "audio-module",
+      "subject": "adaptive-music-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:05:21.142Z",
+      "worker": "4eed2206-77d7-4128-835b-59ca2bc3edcd",
+      "techniques": [
+        {
+          "technique": "stem-and-voice-budget-derivation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioEventCatalog/constants.ts:72 Footsteps are low priority at constants.ts:62, while audio-event-budget.ts:175–182 steals or drops voices by priority without making music yield first."
+        }
+      ]
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/adaptive-music-authoring": {
+      "context": "catalog-pipelines",
+      "subject": "adaptive-music-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:05:21.142Z",
+      "worker": "4eed2206-77d7-4128-835b-59ca2bc3edcd",
+      "techniques": [
+        {
+          "technique": "intensity-mapping-from-declared-game-state",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:201 Adjacent tiers share single thresholds; the authored mapping supplies neither separate rise/fall thresholds nor minimum dwell in bars."
+        },
+        {
+          "technique": "loop-boundary-and-tail-contract",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:430 The pad seam uses a 200 ms crossfade, the technique's named concealment failure; loop points also use milliseconds without a sample-based boundary and tail declaration."
+        },
+        {
+          "technique": "music-acceptance-beyond-decode-checks",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:501 Mix acceptance rechecks this authored constant rather than independently measured audio; the pipeline also lacks measured tempo/grid and layer-subset acceptance rungs."
+        },
+        {
+          "technique": "stem-and-voice-budget-derivation",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:670 The four-stem peak is not derived from a scene reservation and omits accent voices, silent phase-locked layers, and outgoing transition overlap."
+        },
+        {
+          "technique": "transition-quantization-and-perceived-latency",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:267 Within-set stem gain changes wait for a bar, contrary to the explicit rule against quantizing layer gain ramps; immediate accents and a declared commit horizon do not remove that failure."
+        },
+        {
+          "technique": "vertical-layering-versus-horizontal-resequencing",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/music.ts:665 Demand-loading inactive stems on layer changes does not preserve the required shared phrase position, and neither shared-loop-origin entry nor interchangeable-bar authoring is declared."
+        }
+      ]
     }
   }
 }
