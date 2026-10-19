@@ -13,6 +13,7 @@ import { bucketKeyOf, readPath } from './coverage';
 import { pluginFor } from './plugins';
 import type { Histogram } from './plugins/types';
 import type { GapTargetSpec } from './rankGaps';
+import { isFacet } from './facets';
 
 export interface LandingBucket { label: string; before: number; after: number }
 
@@ -90,7 +91,8 @@ export function proposalLanding(
   expectedShare: Shares = pluginFor(d.catalogId)?.expectedShare ?? {},
 ): ProposalLanding {
   const dimensions: Record<string, DimensionLanding> = {};
-  for (const [attr, h] of Object.entries(d.byAttribute)) dimensions[attr] = landDimension(d, attr, h, data, expectedShare);
+  // A proposal is data-only: envelope facets (`@...`) have nothing to land.
+  for (const [attr, h] of Object.entries(d.byAttribute).filter(([a]) => !isFacet(a))) dimensions[attr] = landDimension(d, attr, h, data, expectedShare);
   for (const attr of d.unmeasured ?? []) {
     if (!dimensions[attr]) dimensions[attr] = landDimension(d, attr, {}, data, expectedShare);
   }
