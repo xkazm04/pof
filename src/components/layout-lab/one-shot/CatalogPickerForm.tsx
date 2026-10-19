@@ -60,6 +60,15 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
           {gaps.ranking.targets.length === 0 && (
             <div className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>No measured gap in any catalog.</div>
           )}
+          {Object.keys(gaps.ranking.plans ?? {}).sort().map((id) => {
+            const n = gaps.ranking.plans[id].entities.length;
+            const m = gaps.ranking.targets.filter((g) => g.catalogId === id).length;
+            return (
+              <div key={id} data-testid="one-shot-closure-plan" className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+                {id}: {n} {n === 1 ? 'entity closes' : 'entities close'} {m} {m === 1 ? 'gap' : 'gaps'}{gaps.ranking.plans[id].converged ? '' : ' (not converged)'}
+              </div>
+            );
+          })}
           {gaps.ranking.targets.map((g) => (
             <button
               key={`${g.catalogId}:${g.attribute}=${g.value}`}

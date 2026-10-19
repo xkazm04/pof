@@ -75,3 +75,20 @@ describe('gapTargetAction', () => {
       .toBe('Add a items entity with rarity=Common (have 34, expected ~57)');
   });
 });
+
+describe('rankCatalogGaps plans (closure plan per catalog)', () => {
+  it('adds plans keyed by catalogId for catalogs with targets; targets/unmeasured/balanced unchanged', () => {
+    const r = rankCatalogGaps([itemsDist, bestiaryDist]);
+    expect(r.plans.items.entities.length).toBeGreaterThan(0);
+    expect(r.plans.items.entities.length).toBeLessThanOrEqual(r.targets.filter((t) => t.catalogId === 'items').length * 50);
+    expect(r.plans.items.converged).toBe(true);
+    expect(r.targets.map((t) => t.deficit)).toEqual([23, 18, 4]);
+    expect(r.unmeasured).toEqual([]);
+    expect(r.balanced).toEqual([]);
+  });
+
+  it('a catalog without targets has no plan', () => {
+    const r = rankCatalogGaps([{ catalogId: 'quests', total: 1, byAttribute: {}, underrepresented: [], sample: [] }]);
+    expect(r.plans).toEqual({});
+  });
+});

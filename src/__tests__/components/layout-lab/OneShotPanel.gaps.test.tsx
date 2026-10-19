@@ -24,6 +24,10 @@ const RANKING = {
   ],
   unmeasured: ['quests', 'vendors'],
   balanced: [],
+  plans: {
+    items: { entities: [{ assignments: [] }, { assignments: [] }], converged: true, basis: 'expected-share' },
+    bestiary: { entities: [{ assignments: [] }], converged: true, basis: 'expected-share' },
+  },
 };
 
 const ITEMS_DIST = {
@@ -63,6 +67,9 @@ describe('OneShotPanel — gap-first idle', () => {
     expect(rows[0].textContent).toContain('Add a items entity with rarity=Common (have 34, expected ~57)');
     expect(rows).toHaveLength(3);
     expect(screen.getByText(/quests/)).toBeTruthy();
+    // The catalog-level cost: 2 entities close items' 2 gaps; 1 closes bestiary's 1.
+    const plans = screen.getAllByTestId('one-shot-closure-plan').map((n) => n.textContent);
+    expect(plans).toEqual(expect.arrayContaining([expect.stringContaining('2 entities close 2 gaps'), expect.stringContaining('1 entity closes 1 gap')]));
 
     fireEvent.click(rows[0]);
     await waitFor(() => expect(useOneShotJobStore.getState().proposal).toEqual(PROPOSAL));
