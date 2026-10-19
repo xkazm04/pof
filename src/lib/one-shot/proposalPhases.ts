@@ -8,14 +8,15 @@
  * its failure: a failed step returns the store to the resting phase it came from (idle /
  * analyzed / proposing) and rethrows, so the panel shows the reason and nothing is left
  * stranded in an in-flight phase that `canStart()` refuses forever. `cancel` abandons the
- * in-flight request the same way: every request holds a ticket, and an answer (or error) that
- * arrives for an invalidated ticket is dropped — it rejects with `cancelled` and writes nothing.
+ * in-flight request the same way: every request is a run of the shared run session, and an answer (or error) that
+ * arrives for a run that is no longer live is dropped — it rejects with `cancelled` and writes nothing.
  */
 import { useOneShotJobStore, type OneShotProposal } from '@/stores/oneShotJobStore';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
+import { createRunSession, type RunSession } from './runSession';
 
-export type PostJson = <T>(url: string, body: unknown) => Promise<T>;
+export type PostJson = <T>(url: string, body: unknown, signal?: AbortSignal) => Promise<T>;
 
 export interface ProposalPhases {
   /** POST /analyze only; ends in phase `analyzed` with the distribution stored. */
@@ -33,11 +34,12 @@ function mkJobId(): string {
 
 /** POST a JSON body and unwrap the `{ success, data }` envelope (throws on error). */
 export function createPostJson(fetchImpl: typeof fetch): PostJson {
-  return async <T>(url: string, body: unknown): Promise<T> => {
+  return async <T>(url: string, body: unknown, signal?: AbortSignal): Promise<T> => {
     const res = await fetchImpl(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      ...(signal ? { signal } : {}),
     });
     const env = (await res.json()) as { success: boolean; data?: T; error?: string };
     if (!res.ok || !env.success) throw new Error(env.error ?? `HTTP ${res.status} for ${url}`);
@@ -47,20 +49,21 @@ export function createPostJson(fetchImpl: typeof fetch): PostJson {
 
 const store = () => useOneShotJobStore.getState();
 
-export function createProposalPhases(postJson: PostJson): ProposalPhases {
-  let ticket = 0;
-  /** Await `p` for the newest ticket; a superseded/cancelled one rejects and runs no `onFail`. */
-  async function current<T>(p: Promise<T>, onFail: (e: unknown) => void): Promise<T> {
-    const mine = ++ticket;
+export function createProposalPhases(postJson: PostJson, session: RunSession = createRunSession()): ProposalPhases {
+  /** Run `send` as the newest run; a superseded/cancelled one rejects and runs no `onFail`. */
+  async function current<T>(send: (signal: AbortSignal) => Promise<T>, onFail: (e: unknown) => void): Promise<T> {
+    const run = session.begin('phase');
     let value: T;
     try {
-      value = await p;
+      value = await send(run.signal);
     } catch (e) {
-      if (mine !== ticket) throw new Error('cancelled');
+      if (!run.isLive()) throw new Error('cancelled');
+      run.end();
       onFail(e);
       throw e;
     }
-    if (mine !== ticket) throw new Error('cancelled');
+    if (!run.isLive()) throw new Error('cancelled');
+    run.end();
     return value;
   }
 
@@ -70,7 +73,7 @@ export function createProposalPhases(postJson: PostJson): ProposalPhases {
       store().reset();
       store().setPhase('analyzing', { catalogId, jobId: mkJobId(), userHint });
       const distribution = await current(
-        postJson<CatalogDistribution>('/api/one-shot/analyze', { catalogId, userHint }),
+        (signal) => postJson<CatalogDistribution>('/api/one-shot/analyze', { catalogId, userHint }, signal),
         (e) => store().setPhase('idle', { failureReason: e instanceof Error ? e.message : String(e) }),
       );
       store().setDistribution(distribution);
@@ -91,12 +94,12 @@ export function createProposalPhases(postJson: PostJson): ProposalPhases {
       s.setProposal(null);
       s.setPhase('proposing', { userHint: hint });
       const proposal = await current(
-        postJson<OneShotProposal>('/api/one-shot/propose', {
+        (signal) => postJson<OneShotProposal>('/api/one-shot/propose', {
           catalogId: s.catalogId,
           distribution: s.distribution,
           userHint: hint,
           ...(target ? { target } : {}),
-        }),
+        }, signal),
         () => { store().setTarget(null); store().setPhase('analyzed'); },
       );
       store().setProposal(proposal);
@@ -112,13 +115,13 @@ export function createProposalPhases(postJson: PostJson): ProposalPhases {
       }
       s.setPhase('refining');
       const proposal = await current(
-        postJson<OneShotProposal>('/api/one-shot/refine', {
+        (signal) => postJson<OneShotProposal>('/api/one-shot/refine', {
           catalogId: s.catalogId,
           distribution: s.distribution,
           prior: s.proposal,
           userInput,
           ...(s.target ? { target: s.target } : {}),
-        }),
+        }, signal),
         () => store().setPhase('proposing'),
       );
       store().setProposal(proposal);
@@ -135,7 +138,7 @@ export function createProposalPhases(postJson: PostJson): ProposalPhases {
         s.setTarget(null);
         s.setPhase(s.distribution ? 'analyzed' : 'idle', reason);
       } else return false;
-      ticket++;
+      session.cancel();
       return true;
     },
   };
