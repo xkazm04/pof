@@ -4356,7 +4356,11 @@
           "revision": 2,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 Searches found no topic, sitemap, or includeDrafts references in the layout context, whose navigation resolves application modules rather than a documentation-topic corpus.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:95cdaebc076df84d",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"

@@ -12095,6 +12095,42 @@
         "at": "2026-10-19T12:34:08.291213+00:00",
         "reason": "reviewer (sonnet): All the anchors (invariants.ts:200, 202, 242, 362) are in src/lib/catalog/acceptance/invariants.ts, which is not one of the context's seed*.ts files. The 10% tolerance sits beside a canon line that only says 'roughly geometrically (≈ base × 1.08^level)', so it is a checker design choice rather than "
       }
+    },
+    "a2f9922b-d729-43f1-8050-27103ff26664/docs-content-model": {
+      "context": "app-shell-and-chrome",
+      "subject": "docs-content-model",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:04:05.615Z",
+      "worker": "2683f2e2-f78f-48db-a838-051742671927",
+      "techniques": [
+        {
+          "technique": "catalog-referential-invariants",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/registry.tsx:107 The renderer binds application module IDs to feature views; it does not split documentation topic records from prose bodies."
+        },
+        {
+          "technique": "derived-navigation-projection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/SidebarL2/index.tsx:92 Sidebar entries select application submodules, so this is not navigation projected from a documentation catalog."
+        },
+        {
+          "technique": "draft-visibility-gating",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/helpers.ts:48 Visibility resolves the selected application pane; no documentation draft or publication-readiness predicate was found in this context."
+        },
+        {
+          "technique": "per-topic-freshness-metadata",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/SidebarL2/ProgressRing.tsx:25 The sidebar reports module checklist completion and owns no documentation topic records requiring review metadata."
+        },
+        {
+          "technique": "product-location-mapping",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/CLIBottomPanel.tsx:33 This relation navigates from a CLI session to its owning module; it does not map documentation topics to product locations."
+        }
+      ]
     }
   }
 }

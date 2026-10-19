@@ -1,0 +1,70 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2683f2e2-f78f-48db-a838-051742671927",
+ "subject": "docs-content-model",
+ "evaluatedAt": "2026-10-19T21:04:05.615367+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "app-shell-and-chrome",
+   "subject": "docs-content-model",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 Searches found no topic, sitemap, or includeDrafts references in the layout context, whose navigation resolves application modules rather than a documentation-topic corpus.",
+   "techniques": [
+    {
+     "technique": "catalog-referential-invariants",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/ModuleRenderer/registry.tsx:107 The renderer binds application module IDs to feature views; it does not split documentation topic records from prose bodies."
+    },
+    {
+     "technique": "derived-navigation-projection",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL2/index.tsx:92 Sidebar entries select application submodules, so this is not navigation projected from a documentation catalog."
+    },
+    {
+     "technique": "draft-visibility-gating",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/ModuleRenderer/helpers.ts:48 Visibility resolves the selected application pane; no documentation draft or publication-readiness predicate was found in this context."
+    },
+    {
+     "technique": "per-topic-freshness-metadata",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL2/ProgressRing.tsx:25 The sidebar reports module checklist completion and owns no documentation topic records requiring review metadata."
+    },
+    {
+     "technique": "product-location-mapping",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/CLIBottomPanel.tsx:33 This relation navigates from a CLI session to its owning module; it does not map documentation topics to product locations."
+    }
+   ],
+   "absenceTerms": [
+    "topic",
+    "sitemap",
+    "includeDrafts"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T21:04:05.615367+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-content-model"
+   ],
+   "techniques": [
+    "catalog-referential-invariants",
+    "derived-navigation-projection",
+    "draft-visibility-gating",
+    "per-topic-freshness-metadata",
+    "product-location-mapping"
+   ],
+   "deviations": 0,
+   "context": "app-shell-and-chrome",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
