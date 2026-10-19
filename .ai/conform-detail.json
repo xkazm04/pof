@@ -11798,6 +11798,62 @@
         "at": "2026-10-19T11:43:15.952928+00:00",
         "reason": "reviewer (sonnet): The anchors don't show that the precondition is absent. src/lib/task-dag-orchestrator.ts:7 is a header comment saying the orchestrator emits events for the store layer to turn into CLI session dispatches, which is incidental. src/stores/taskDAGStore.ts:140-151 dispatches 'pof-dag-node-ready' to crea"
       }
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/conformance-checking": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "conformance-checking",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T11:51:18.980Z",
+      "worker": "e43207e6-ed1f-4cf0-a5c6-597699ed5d07",
+      "techniques": [
+        {
+          "technique": "checker-false-positive-discipline",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/reference-conformance.ts:78 The prompt excludes expected presentation differences, and the inspected job-store implementation and tests keep this uncalibrated comparison advisory."
+        },
+        {
+          "technique": "claim-write-back",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:90 This executes generated asset-transformation code, rather than a contract-declared verification command with a stored proof stamp."
+        },
+        {
+          "technique": "derived-expectation-needs-an-evidence-floor",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/rig-presets.ts:156 Required endpoints resolve directly through reachable preset objects; this is not source-based expectation derivation for an unavailable subject."
+        },
+        {
+          "technique": "edition-stratified-conformance",
+          "verdict": "not-applicable",
+          "evidence": "src/__tests__/lib/visual-gen/rig-gate.test.ts:219 The inspected conformance tests use repository-owned artifact fixtures, rather than an independently growing upstream suite classified by specification edition."
+        },
+        {
+          "technique": "finding-severity-ladder",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:418 An explicitly unverifiable binding is placed in failures, although the binding helper distinguishes unavailable evidence from a partial mapping."
+        },
+        {
+          "technique": "fixture-repo-testing",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:438 The checker consumes individual GLB files and has real artifact fixtures; its subject is not a whole repository requiring repository fixtures."
+        },
+        {
+          "technique": "inline-predicate-rung-inference",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/reference-conformance.ts:93 The comparison protocol carries visual findings and severity, not specification claims with inline verification commands."
+        },
+        {
+          "technique": "pass-ratio-comparability",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:426 This score is a warning-penalty heuristic, not a weighted pass ratio over applicable and runnable conformance checks."
+        },
+        {
+          "technique": "rule-registry-enumerated-fixtures",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/rig-gate.ts:318 scoreRig implements checks directly as conditional branches, rather than an enumerable registry of independent rules."
+        }
+      ]
     }
   }
 }
