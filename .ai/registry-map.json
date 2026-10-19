@@ -18219,7 +18219,11 @@
           "revision": 3,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/test-gate-runner/spawnExecutor.ts:151 The scenario gate records missing observations as failure, conflating an inability to measure with an observed defect.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:336e809d69d5be3a",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",
@@ -23426,7 +23430,11 @@
           "revision": 3,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:399 The experiment result retains only the first 60 observations, potentially discarding the action's conclusion instead of preserving samples across the run.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:336e809d69d5be3a",
+          "evaluatedRevision": 4
         },
         {
           "subject": "machine-authored-documentation",

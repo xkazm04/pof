@@ -11101,6 +11101,89 @@
         "at": "2026-10-19T02:09:15.219283+00:00",
         "reason": "reviewer (sonnet): The not-applicable anchor BlueprintInspector/index.tsx:52 is only an API fetch of a blueprint manifest. It doesn't show that production-work prioritization is absent, and the claim rests on a grep for terms that may not be the right ones for this subject."
       }
+    },
+    "89b3215f-69e9-4aa4-8c8b-27316cccc59d/runtime-observation-evidence": {
+      "context": "observation-testing",
+      "subject": "runtime-observation-evidence",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T08:34:21.998Z",
+      "worker": "6bc1d1c6-ad77-4d46-8788-7cf6a03d3e16",
+      "techniques": [
+        {
+          "technique": "behavioural-discriminators-over-symbolic-pass",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/spawnExecutor.ts:105 The attribute-drop discriminator measures unsigned range rather than a decrease from the same-run baseline, so a resource increase can satisfy a drop assertion."
+        },
+        {
+          "technique": "bounded-evidence-with-provenance",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/spawnExecutor.ts:288 The complete evidence construction bounds samples and includes statistics and a timestamp, but omits the judged-content fingerprint, build identity, observed tier, and timing conditions."
+        },
+        {
+          "technique": "deterministic-headless-timestep",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/spawnExecutor.ts:291 The shared launcher fixes simulation at 60 Hz, but the returned measurement record does not carry that rate or the scenario's settle interval and isolation settings."
+        },
+        {
+          "technique": "observation-spine-contract",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/scenarioRegistry.ts:63 Built-in ability scenarios synthesize runtime identifiers from entity names without grounding them against registered live abilities before authoring the stimulus."
+        },
+        {
+          "technique": "tiers-of-truth",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/drain.ts:152 Write-back preserves the requested acceptance tier without recording the observation tier actually achieved; symbolic automation and measured scenarios can both be persisted as L3."
+        },
+        {
+          "technique": "unverifiable-is-not-fail",
+          "verdict": "deviation",
+          "evidence": "src/lib/test-gate-runner/spawnExecutor.ts:151 A parsed observation payload with no samples becomes fail instead of an explicit inability to observe."
+        }
+      ],
+      "registryProposal": "Reconcile judge-outage guidance: the golden path describes an unavailable interpreting observer as unverifiable, while unverifiable-is-not-fail permits pass at a mechanical frame floor; specify separate floor evidence and satisfaction of the requested perceptual tier."
+    },
+    "178c9468-7f24-4c1e-b1ef-daa2d14bc88d/runtime-observation-evidence": {
+      "context": "ue5-experiment-runner",
+      "subject": "runtime-observation-evidence",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T08:34:21.998Z",
+      "worker": "6bc1d1c6-ad77-4d46-8788-7cf6a03d3e16",
+      "techniques": [
+        {
+          "technique": "behavioural-discriminators-over-symbolic-pass",
+          "verdict": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:388 Experiment assertions use the inspected shared parser, whose attribute-drop calculation accepts unsigned resource variation rather than requiring a decrease from baseline."
+        },
+        {
+          "technique": "bounded-evidence-with-provenance",
+          "verdict": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:399 The sample cap truncates the beginning of the stream rather than down-sampling across it and retaining both endpoints; aggregate summaries do use the full stream."
+        },
+        {
+          "technique": "deterministic-headless-timestep",
+          "verdict": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:365 Every scenario uses the offscreen rendering path, including behavioral-only requests with capture disabled and no visual verification, rather than selecting a renderer-disabled mode for those measurements."
+        },
+        {
+          "technique": "observation-spine-contract",
+          "verdict": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:389 The experiment path defines its own weaker observation sample shape and double-casts it into the shared parser contract, bypassing structural compatibility checks at the observation seam."
+        },
+        {
+          "technique": "tiers-of-truth",
+          "verdict": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:185 The complete experiment request makes visual verification optional and declares no required observation tier; result verdicts likewise do not carry an achieved tier."
+        },
+        {
+          "technique": "unverifiable-is-not-fail",
+          "verdict": "deviation",
+          "evidence": "src/lib/ue-experiment/runner.ts:217 Behavioral verdicts cannot represent unverifiable, and requested assertions are evaluated even when observations are empty, causing the shared parser to return fail; visual judge outages are separately represented as deferred."
+        }
+      ]
     }
   }
 }
