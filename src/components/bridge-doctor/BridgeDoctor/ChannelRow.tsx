@@ -35,11 +35,14 @@ export function ChannelRow({
   result,
   running,
   cfg,
+  note,
 }: {
   id: ChannelId;
   result: ProbeResult | null;
   running: boolean;
   cfg: ProbeConfig;
+  /** Optional hint comparing this channel's settings with the last-known-good config. */
+  note?: string;
 }) {
   const meta = CHANNEL_META[id];
   const port = id === 'pof-bridge' ? cfg.pofPort : id === 'remote-control' ? cfg.rcPort : cfg.wsPort;
@@ -81,6 +84,7 @@ export function ChannelRow({
           </span>
         </div>
         <div className="text-[11px] text-text-muted truncate">{meta.purpose}</div>
+        {note && status === 'fail' && <div className="text-[11px] text-amber-300 truncate">{note}</div>}
       </div>
       <div className="text-right text-[11px] text-text-muted shrink-0">
         {status === 'probing' ? (
