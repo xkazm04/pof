@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cd2e8b68-bc90-412d-a36b-7500a3685e39",
+ "subject": "retrieval",
+ "evaluatedAt": "2026-10-19T07:34:18.683090+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "retrieval",
+   "context": "item-catalog-pipeline",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "retrieval",
+   "context": "ue5-bridge-client",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
