@@ -13211,7 +13211,11 @@
           "revision": 9,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/level-design-db.ts:162 Level-document deletion removes the document without recording an audit event in either the route or its owning service, leaving destructive-action coverage incomplete.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "test-harness",
@@ -23442,7 +23446,11 @@
           "revision": 9,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/ue-experiment/experiment-db.ts:85 Saving an existing experiment ID replaces its historical record instead of appending a correction, allowing experimental evidence to be rewritten.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "perf-regression-gating",

@@ -1,0 +1,165 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c1d4854b-164c-48f6-9026-d902dd061ed5",
+ "subject": "audit-logging",
+ "evaluatedAt": "2026-10-19T00:31:19.549573+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "game-world-content-api",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/level-design-db.ts:162 Level-document deletion removes the document without recording an audit event in either the route or its owning service, leaving destructive-action coverage incomplete.",
+   "techniques": [
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "src/lib/audio-import-db.ts:29 The audio-import history module exposes insertion and reads without update or targeted deletion; timestamps originate inside the writer and IDs break ordering ties."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "deviation",
+     "evidence": "src/lib/procgen-db.ts:67 History supports a document filter and row limit, but lacks actor/action/time filters and returns capped rows without completeness or gap metadata."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "deviation",
+     "evidence": "src/app/api/audio-gen/route.ts:152 This unguarded accounting write follows provider generation and asset creation; its exception prevents the success response, and the writer has no failure counter."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "src/lib/pattern-library-db.ts:334 Changing human verification overwrites current state and clears attribution on reversal, without an append-only act recording previous/new status and reason."
+    },
+    {
+     "technique": "record-axis-predicate",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/level-design/run-ledger.ts:84 The checked run histories do not implement recorded/invalidation intervals or a two-clock store requiring a shared rewind predicate."
+    },
+    {
+     "technique": "retention-and-partitioning",
+     "verdict": "deviation",
+     "evidence": "src/lib/procgen-db.ts:41 The complete insert path admits records without an age/count retention policy or trim; the history query limit only bounds returned rows."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "deviation",
+     "evidence": "src/lib/audio-import-db.ts:27 The callback records an already-performed UE import using only receipt-time createdAt, with no separately labeled effective time or explicit unknown effective time."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "deviation",
+     "evidence": "src/app/api/level-design/route.ts:76 Neither this destructive route nor deleteDoc writes an audit event, so recording is not attached to the mutation's unavoidable service seam."
+    },
+    {
+     "technique": "write-path-sanitization",
+     "verdict": "deviation",
+     "evidence": "src/lib/level-design/run-ledger.ts:88 Arbitrary parameter keys and nested values are serialized directly into retained history without an allowlist, secret scrubber, or size cap."
+    }
+   ]
+  },
+  {
+   "context": "ue5-experiment-runner",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/ue-experiment/experiment-db.ts:85 Saving an existing experiment ID replaces its historical record instead of appending a correction, allowing experimental evidence to be rewritten.",
+   "techniques": [
+    {
+     "technique": "append-only-design",
+     "verdict": "deviation",
+     "evidence": "src/lib/ue-experiment/experiment-db.ts:160 The durable run-history module exports targeted deletion as well as replacement, contrary to an append-only audit surface."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-verification-db.ts:94 The visual-history reader filters only by module; it lacks actor/action/item/time filters and gap provenance."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "deviation",
+     "evidence": "src/lib/ue-experiment/job-store.ts:31 Experiment-history persistence failures are swallowed without a counter, diagnostic emission, or watched health signal."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/verify/visual/route.ts:164 This path records a model-produced assessment, rather than a human acceptance, dismissal, or waiver; balance snapshots likewise are comparison state."
+    },
+    {
+     "technique": "record-axis-predicate",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-verification-db.ts:96 The checked stores do not carry recorded/invalidation intervals, so there is no existing two-clock row predicate to centralize."
+    },
+    {
+     "technique": "retention-and-partitioning",
+     "verdict": "deviation",
+     "evidence": "src/lib/ue-experiment/experiment-db.ts:154 The history explicitly chooses unbounded retention with manual deletion, rather than a bounded per-ledger horizon enforced on insertion."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "deviation",
+     "evidence": "src/lib/ue-experiment/job-store.ts:30 Completed results are persisted with the job's start time as their sole created_at clock, without recording when the history actually learned the results."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-verification-db.ts:69 The visual-history door does not require actor attribution or preserve the provider/model provenance returned by the route."
+    },
+    {
+     "technique": "write-path-sanitization",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-verification-db.ts:80 Free-form model notes enter durable history without secret scrubbing, a length cap, or a sanitization-failure marker."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T00:31:19.549573+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "decision-records",
+    "record-axis-predicate",
+    "retention-and-partitioning",
+    "two-clock-records",
+    "write-chokepoint",
+    "write-path-sanitization"
+   ],
+   "deviations": 1,
+   "context": "game-world-content-api",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T00:31:19.549573+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "decision-records",
+    "record-axis-predicate",
+    "retention-and-partitioning",
+    "two-clock-records",
+    "write-chokepoint",
+    "write-path-sanitization"
+   ],
+   "deviations": 1,
+   "context": "ue5-experiment-runner",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
