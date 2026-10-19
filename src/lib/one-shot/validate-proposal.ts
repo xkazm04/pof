@@ -4,7 +4,12 @@ export interface ValidationIssue {
 }
 
 export interface ValidationContext {
-  seededIds: Set<string>;
+  /** Link-target ids of the proposal's own catalog; the fallback when no `resolveLink` is given. */
+  seededIds?: Set<string>;
+  /** Does `entityId` exist in `catalogId`? Catalog-aware, so a cross-catalog link resolves. */
+  resolveLink?: (catalogId: string, entityId: string) => boolean;
+  /** Is `catalogId` a catalog at all? An unknown one is reported as such, not as a missing id. */
+  knownCatalog?: (catalogId: string) => boolean;
   bands?: Record<string, { min: number; max: number }>;
 }
 
@@ -50,7 +55,14 @@ export function validateProposal(
   if (Array.isArray(links)) {
     for (const l of links) {
       if (!l || typeof l !== 'object') continue;
-      if (typeof l.entityId === 'string' && !ctx.seededIds.has(l.entityId)) {
+      if (typeof l.entityId !== 'string') continue;
+      if (ctx.resolveLink) {
+        if (ctx.knownCatalog && typeof l.catalogId === 'string' && !ctx.knownCatalog(l.catalogId)) {
+          issues.push({ field: `links.${l.entityId}`, message: `link target '${l.entityId}' names unknown catalog '${l.catalogId}'` });
+        } else if (!ctx.resolveLink(l.catalogId, l.entityId)) {
+          issues.push({ field: `links.${l.entityId}`, message: `link target '${l.entityId}' does not exist in catalog '${l.catalogId}'` });
+        }
+      } else if (!(ctx.seededIds ?? new Set<string>()).has(l.entityId)) {
         issues.push({ field: `links.${l.entityId}`, message: `link target '${l.entityId}' (catalog '${l.catalogId}') does not exist among seeded ids` });
       }
     }

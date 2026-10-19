@@ -28,3 +28,27 @@ describe('validate-proposal', () => {
     expect(issues.some((i) => /level.*9999/.test(i.message))).toBe(true);
   });
 });
+
+describe('validate-proposal — catalog-aware link resolution', () => {
+  const proposal = (entityId: string, catalogId = 'spellbook') => ({
+    name: 'Xy', data: { type: 'Weapon', rarity: 'Common', links: [{ catalogId, entityId, role: 'innate' }] },
+  });
+
+  it('accepts a cross-catalog link the resolver knows', () => {
+    const issues = validateProposal('items', proposal('off-fire-01'), { resolveLink: (c, id) => c === 'spellbook' && id === 'off-fire-01' });
+    expect(issues).toEqual([]);
+  });
+
+  it('names both catalog and entity when the resolver says no', () => {
+    const issues = validateProposal('items', proposal('off-fire-01'), { resolveLink: () => false });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/spellbook/);
+    expect(issues[0].message).toMatch(/off-fire-01/);
+  });
+
+  it('reports an unknown catalog as its own issue, not a missing id', () => {
+    const issues = validateProposal('items', proposal('x-1', 'nope'), { resolveLink: () => false, knownCatalog: () => false });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toMatch(/unknown catalog 'nope'/);
+  });
+});

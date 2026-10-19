@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
+import type { ValidationIssue } from '@/lib/one-shot/validate-proposal';
 import type { StepModeOverride, StepModeOverrides } from '@/lib/one-shot/runPlan';
 
 /**
@@ -18,7 +19,13 @@ export type StepOutcome = 'pass' | 'fail' | 'skipped' | 'deferred';
 
 export interface StepResult { step: string; outcome: StepOutcome; reason?: string }
 
-export interface OneShotProposal { name: string; data: unknown; rationale: string }
+export interface OneShotProposal {
+  name: string;
+  data: unknown;
+  rationale: string;
+  /** What the validator found wrong; absent on a proposal persisted before the field existed. */
+  issues?: ValidationIssue[];
+}
 
 export interface OneShotSummary { ran: number; passed: number; failed: number; skipped: number; deferred: number }
 

@@ -8,6 +8,8 @@ import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/d
 import { useDispatchPlan } from '../steps/shared/useDispatchPlan';
 import { RunPlanView } from './RunPlanView';
 import { ProposalLanding } from './ProposalLanding';
+import { ProposalIssues } from './ProposalIssues';
+import { runIssueNote } from '@/lib/one-shot/proposal-issues';
 import { proposalLanding, refineToTargetDirection } from '@/lib/catalog/gap-analysis/landing';
 
 interface Props {
@@ -80,6 +82,8 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
           onRefineToTarget={toTarget ? () => onRefine(toTarget, forceMore) : undefined}
         />
       )}
+
+      <ProposalIssues t={t} issues={proposal.issues ?? []} refineDisabled={refineDisabled} forceMore={forceMore} onRefine={onRefine} />
 
       {/* JSON data */}
       <details style={{ marginBottom: 12 }}>
@@ -170,7 +174,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
             fontWeight: 600,
           }}
         >
-          Run pipeline{models > 0 && ` · ${models} model dispatch${models === 1 ? '' : 'es'}`}{toTarget && ' · off target'}
+          Run pipeline{models > 0 && ` · ${models} model dispatch${models === 1 ? '' : 'es'}`}{toTarget && ' · off target'}{runIssueNote(proposal)}
         </button>
       </div>
     </div>
