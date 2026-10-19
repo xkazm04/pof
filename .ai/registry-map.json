@@ -7895,7 +7895,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/gap-analysis/rankGaps.ts:42 The queue ranks raw entity deficits without impact or effort estimates, so deterministic ordering does not establish which gap offers the best improvement per cost.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:476078a37f34137d",
+          "evaluatedRevision": 3
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -15166,7 +15170,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:109 The judge chooses the overall score without an explicit influence budget, preventing reproducible weighting and additive explanation.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:476078a37f34137d",
+          "evaluatedRevision": 3
         },
         {
           "subject": "llm-dialogue-quality-control",

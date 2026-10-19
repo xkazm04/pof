@@ -11184,6 +11184,93 @@
           "evidence": "src/lib/ue-experiment/runner.ts:217 Behavioral verdicts cannot represent unverifiable, and requested assertions are evaluated even when observations are empty, causing the shared parser to return fail; visual judge outages are separately represented as deferred."
         }
       ]
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/scoring-rubrics": {
+      "context": "judge-craft-quality",
+      "subject": "scoring-rubrics",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T08:53:30.755Z",
+      "worker": "7ae98d18-b0b2-4843-959e-809aa1d2351d",
+      "techniques": [
+        {
+          "technique": "gap-ranking",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:118 The judge returns one authored directive instead of computed gaps with targets, impact, effort, and deterministic priority."
+        },
+        {
+          "technique": "normalization",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:219 Out-of-range scores are clamped without retaining the raw value or disclosing saturation in the result."
+        },
+        {
+          "technique": "rubric-stability",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/verdictTrend.ts:87 The trend compares endpoints across rubric versions; VerdictScoreTrend renders the series without marking version boundaries."
+        },
+        {
+          "technique": "score-explanation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictDetailModal.tsx:77 The breakdown displays dimension scores without weights or contributions that account for the holistic total."
+        },
+        {
+          "technique": "unmeasured-honesty",
+          "verdict": "deviation",
+          "evidence": "src/app/api/judge-verdicts/route.ts:54 A current-rubric score or pass can omit every dimension; admission checks score and rubric version without requiring measured coverage."
+        },
+        {
+          "technique": "weight-design",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:110 The weakest-dimension cap is delegated to judgment without a declared aggregation formula or explicit dimension weights."
+        }
+      ]
+    },
+    "27a34084-b33e-4538-8173-600d5162f922/scoring-rubrics": {
+      "context": "catalog-gap-analysis",
+      "subject": "scoring-rubrics",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T08:53:30.755Z",
+      "worker": "7ae98d18-b0b2-4843-959e-809aa1d2351d",
+      "techniques": [
+        {
+          "technique": "gap-ranking",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/gap-analysis/rankGaps.ts:57 Gap objects carry count deficits but no weighted impact or effort; stable identity tie-breaks are implemented."
+        },
+        {
+          "technique": "normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:23 This compares observed and expected entity counts directly; it does not normalize heterogeneous signals into a composite or present goal movement."
+        },
+        {
+          "technique": "rubric-stability",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/gap-analysis/landing.ts:90 Landing combines a persisted distribution's gap findings with current plugin targets without checking or recovering the policy version that produced those findings."
+        },
+        {
+          "technique": "score-explanation",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:112 The output exposes individual count-versus-target findings rather than a composite requiring additive contribution accounting."
+        },
+        {
+          "technique": "unmeasured-honesty",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/one-shot/AnalyzedView.tsx:29 The analyzed view renders only measured histograms, omitting the recorded unmeasured dimensions and per-dimension coverage."
+        },
+        {
+          "technique": "weight-design",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/plugins/items.ts:6 These fractions describe expected bucket populations, not dimension importance in a weighted composite."
+        },
+        {
+          "technique": "weight-lenses",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/gap-analysis/index.ts:101 Catalog plugins supply independent histogram dimensions and target distributions, rather than population-specific weight vectors for one shared composite."
+        }
+      ]
     }
   }
 }
