@@ -5586,7 +5586,11 @@
           "revision": 3,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/ai-logic/DecisionDebugger.tsx:18 The decision debugger displays a hard-coded log rather than observations of the selected enemy deciding, so it supplies no behavioral execution evidence.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b39a982c7a2e1077",
+          "evaluatedRevision": 3
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -12205,7 +12209,11 @@
           "revision": 3,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/SquadChoreographyEditor/CodeGenView.tsx:101 The downloadable director centrally allocates squad positions without the target-owned leased claims required by the coordination technique.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b39a982c7a2e1077",
+          "evaluatedRevision": 3
         },
         {
           "subject": "realtime-combat-semantics",

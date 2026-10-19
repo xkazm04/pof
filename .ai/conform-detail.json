@@ -10260,6 +10260,88 @@
           "evidence": "src/lib/catalog/pipelines/music.ts:665 Demand-loading inactive stems on layer changes does not preserve the required shared phrase position, and neither shared-loop-origin entry nor interchangeable-bar authoring is declared."
         }
       ]
+    },
+    "2fd8d59d-6d5d-4aed-aeca-7926be0ca764/agent-behaviour-authoring": {
+      "context": "eqs-squad-combat-spatial",
+      "subject": "agent-behaviour-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:17:00.759Z",
+      "worker": "3fd73180-f00f-4029-8e83-ca4f16b2fbcc",
+      "techniques": [
+        {
+          "technique": "ai-corner-speed-from-grip-limit",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/EQSComponentInventory/eqsComponents.ts:29 This context authors melee positioning, not vehicle corner speeds."
+        },
+        {
+          "technique": "blackboard-as-declared-shared-state",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/EQSComponentInventory/eqsComponents.ts:23 The TargetActor contract names a reader and a generic BT writer but declares no key scope, lifetime, clearing event or distinct unset semantics."
+        },
+        {
+          "technique": "decision-trace-as-evidence",
+          "verdict": "deviation",
+          "evidence": "src/lib/ai-director/squad-engine.ts:341 The allocator discards considered candidates and returns only its winner, without a decision record containing alternatives, winning margin, consulted facts or commitment."
+        },
+        {
+          "technique": "group-coordination-without-a-hive-mind",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/SquadChoreographyEditor/CodeGenView.tsx:129 The generated subsystem owns controller-to-position assignments rather than target-owned claims with request, offer, confirmation, expiry and cancellation."
+        }
+      ]
+    },
+    "0d0917c4-e64c-49c7-befe-85c6c3933c2f/agent-behaviour-authoring": {
+      "context": "bestiary-archetypes-ai",
+      "subject": "agent-behaviour-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:17:00.759Z",
+      "worker": "3fd73180-f00f-4029-8e83-ca4f16b2fbcc",
+      "techniques": [
+        {
+          "technique": "ai-corner-speed-from-grip-limit",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:497 The authored decision concerns melee engagement, not a driven vehicle entering a bend."
+        },
+        {
+          "technique": "ai-distances-from-car-size",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:101 The inspected movement vocabulary describes walking and sprinting combatants; vehicle passing and size-relative driving distances were not found."
+        },
+        {
+          "technique": "behaviour-model-selection",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypeBuilder.tsx:15 New archetypes default to a behavior-tree temperament preset; the builder records no arbitration-family choice, intent budget or selection rationale."
+        },
+        {
+          "technique": "blackboard-as-declared-shared-state",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:490 The displayed tree introduces a blackboard dependency in prose without declaring its type, scope, authoritative writer, lifetime or unset contract."
+        },
+        {
+          "technique": "decision-trace-as-evidence",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:623 This is a literal fixture consumed by the debugger, not a revision-bound runtime trace with structured consulted facts, alternatives, commitment and independently observed action."
+        },
+        {
+          "technique": "group-coordination-without-a-hive-mind",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:527 The authored teamwork task synchronizes strikes without declaring scarce claims, leases or a concurrent-attack cap."
+        },
+        {
+          "technique": "no-double-grip-penalty",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:501 The context authors enemy attacks rather than grip-dependent racing pace or race completion."
+        },
+        {
+          "technique": "perception-before-decision",
+          "verdict": "deviation",
+          "evidence": "src/lib/bestiary/sense-profile.ts:116 Perception produces immediate geometric booleans rather than attributed facts with confidence, age, accumulation, decay and unknown states; those results do not drive the fixed behavior-tree display."
+        }
+      ]
     }
   }
 }

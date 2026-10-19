@@ -1,0 +1,129 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3fd73180-f00f-4029-8e83-ca4f16b2fbcc",
+ "subject": "agent-behaviour-authoring",
+ "evaluatedAt": "2026-10-19T00:17:00.759552+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "eqs-squad-combat-spatial",
+   "subject": "agent-behaviour-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/game-systems/SquadChoreographyEditor/CodeGenView.tsx:101 The downloadable director centrally allocates squad positions without the target-owned leased claims required by the coordination technique.",
+   "techniques": [
+    {
+     "technique": "ai-corner-speed-from-grip-limit",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/EQSComponentInventory/eqsComponents.ts:29 This context authors melee positioning, not vehicle corner speeds."
+    },
+    {
+     "technique": "blackboard-as-declared-shared-state",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/EQSComponentInventory/eqsComponents.ts:23 The TargetActor contract names a reader and a generic BT writer but declares no key scope, lifetime, clearing event or distinct unset semantics."
+    },
+    {
+     "technique": "decision-trace-as-evidence",
+     "verdict": "deviation",
+     "evidence": "src/lib/ai-director/squad-engine.ts:341 The allocator discards considered candidates and returns only its winner, without a decision record containing alternatives, winning margin, consulted facts or commitment."
+    },
+    {
+     "technique": "group-coordination-without-a-hive-mind",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/SquadChoreographyEditor/CodeGenView.tsx:129 The generated subsystem owns controller-to-position assignments rather than target-owned claims with request, offer, confirmation, expiry and cancellation."
+    }
+   ]
+  },
+  {
+   "context": "bestiary-archetypes-ai",
+   "subject": "agent-behaviour-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_bestiary/ai-logic/DecisionDebugger.tsx:18 The decision debugger displays a hard-coded log rather than observations of the selected enemy deciding, so it supplies no behavioral execution evidence.",
+   "techniques": [
+    {
+     "technique": "ai-corner-speed-from-grip-limit",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:497 The authored decision concerns melee engagement, not a driven vehicle entering a bend."
+    },
+    {
+     "technique": "ai-distances-from-car-size",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:101 The inspected movement vocabulary describes walking and sprinting combatants; vehicle passing and size-relative driving distances were not found."
+    },
+    {
+     "technique": "behaviour-model-selection",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypeBuilder.tsx:15 New archetypes default to a behavior-tree temperament preset; the builder records no arbitration-family choice, intent budget or selection rationale."
+    },
+    {
+     "technique": "blackboard-as-declared-shared-state",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:490 The displayed tree introduces a blackboard dependency in prose without declaring its type, scope, authoritative writer, lifetime or unset contract."
+    },
+    {
+     "technique": "decision-trace-as-evidence",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:623 This is a literal fixture consumed by the debugger, not a revision-bound runtime trace with structured consulted facts, alternatives, commitment and independently observed action."
+    },
+    {
+     "technique": "group-coordination-without-a-hive-mind",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:527 The authored teamwork task synchronizes strikes without declaring scarce claims, leases or a concurrent-attack cap."
+    },
+    {
+     "technique": "no-double-grip-penalty",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data-expanded.ts:501 The context authors enemy attacks rather than grip-dependent racing pace or race completion."
+    },
+    {
+     "technique": "perception-before-decision",
+     "verdict": "deviation",
+     "evidence": "src/lib/bestiary/sense-profile.ts:116 Perception produces immediate geometric booleans rather than attributed facts with confidence, age, accumulation, decay and unknown states; those results do not drive the fixed behavior-tree display."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T00:17:00.759552+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "agent-behaviour-authoring"
+   ],
+   "techniques": [
+    "ai-corner-speed-from-grip-limit",
+    "blackboard-as-declared-shared-state",
+    "decision-trace-as-evidence",
+    "group-coordination-without-a-hive-mind"
+   ],
+   "deviations": 1,
+   "context": "eqs-squad-combat-spatial",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T00:17:00.759552+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "agent-behaviour-authoring"
+   ],
+   "techniques": [
+    "ai-corner-speed-from-grip-limit",
+    "ai-distances-from-car-size",
+    "behaviour-model-selection",
+    "blackboard-as-declared-shared-state",
+    "decision-trace-as-evidence",
+    "group-coordination-without-a-hive-mind",
+    "no-double-grip-penalty",
+    "perception-before-decision"
+   ],
+   "deviations": 1,
+   "context": "bestiary-archetypes-ai",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
