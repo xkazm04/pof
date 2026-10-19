@@ -1,0 +1,69 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bfbe6dd6-44d9-4ff7-ba61-119873345dd6",
+ "subject": "optional-dependency-degradation",
+ "evaluatedAt": "2026-10-19T01:53:04.455097+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "build-history-config",
+   "subject": "optional-dependency-degradation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:142 A failed initial history read only logs an error, leaving empty builds and null scope to render as no recorded builds instead of an explicit refusal.",
+   "techniques": [
+    {
+     "technique": "capability-honest-refusal",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:142 The catch preserves the initial empty builds and null scope, then clears loading; HistoryTab calls emptyHistoryCopy, whose null-scope result claims no builds were recorded."
+    }
+   ]
+  },
+  {
+   "context": "asset-visual-studio",
+   "subject": "optional-dependency-degradation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/PostProcessStudioView/StudioHeader.tsx:116 Post-process generation remains actionable without checking CLI availability, while the backing execution path reports a missing executable as a generic failure without a stable unavailable-capability code.",
+   "techniques": [
+    {
+     "technique": "capability-honest-refusal",
+     "verdict": "deviation",
+     "evidence": "src/lib/claude-terminal/cli-service.ts:466 PostProcessStudioView dispatches through useModuleCLI to this service; spawn errors, including a missing CLI executable, lose their error code and become generic error events rather than a distinct capability refusal."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:53:04.455097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "optional-dependency-degradation"
+   ],
+   "techniques": [
+    "capability-honest-refusal"
+   ],
+   "deviations": 1,
+   "context": "build-history-config",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T01:53:04.455097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "optional-dependency-degradation"
+   ],
+   "techniques": [
+    "capability-honest-refusal"
+   ],
+   "deviations": 1,
+   "context": "asset-visual-studio",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

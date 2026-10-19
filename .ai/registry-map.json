@@ -4909,7 +4909,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/StudioHeader.tsx:116 Post-process generation remains actionable without checking CLI availability, while the backing execution path reports a missing executable as a generic failure without a stable unavailable-capability code.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:641cb6bf0b2c6916",
+          "evaluatedRevision": 17
         }
       ],
       "governance": "governed"
@@ -6606,7 +6610,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:142 A failed initial history read only logs an error, leaving empty builds and null scope to render as no recorded builds instead of an explicit refusal.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:641cb6bf0b2c6916",
+          "evaluatedRevision": 17
         },
         {
           "subject": "packaging",

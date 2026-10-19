@@ -10906,6 +10906,38 @@
           "evidence": "src/types/level-design.ts:35 LevelDesignDocument lacks a declared format generation number, relying on the presence or absence of optional fields like grants to detect vintage."
         }
       ]
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/optional-dependency-degradation": {
+      "context": "build-history-config",
+      "subject": "optional-dependency-degradation",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:53:04.455Z",
+      "worker": "bfbe6dd6-44d9-4ff7-ba61-119873345dd6",
+      "techniques": [
+        {
+          "technique": "capability-honest-refusal",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:142 The catch preserves the initial empty builds and null scope, then clears loading; HistoryTab calls emptyHistoryCopy, whose null-scope result claims no builds were recorded."
+        }
+      ]
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/optional-dependency-degradation": {
+      "context": "asset-visual-studio",
+      "subject": "optional-dependency-degradation",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:53:04.455Z",
+      "worker": "bfbe6dd6-44d9-4ff7-ba61-119873345dd6",
+      "techniques": [
+        {
+          "technique": "capability-honest-refusal",
+          "verdict": "deviation",
+          "evidence": "src/lib/claude-terminal/cli-service.ts:466 PostProcessStudioView dispatches through useModuleCLI to this service; spawn errors, including a missing CLI executable, lose their error code and become generic error events rather than a distinct capability refusal."
+        }
+      ]
     }
   }
 }
