@@ -1,0 +1,107 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fcd35399-5309-4883-8231-790029836d52",
+ "subject": "client-state",
+ "evaluatedAt": "2026-10-19T00:45:16.754861+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "state-management",
+   "subject": "client-state",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/services/ProjectModuleBridge.ts:36 The circular dependency between project and module stores is broken via mutable late-bound module references in a bridge instead of declaring the store dependency topology as data and asserting acyclicity.",
+   "techniques": [
+    {
+     "technique": "store-dependency-topology",
+     "verdict": "deviation",
+     "evidence": "src/services/ProjectModuleBridge.ts:36 The circular dependency between projectStore and moduleStore is resolved using mutable module-level registration variables rather than declaring the store topology as data and verifying acyclicity."
+    },
+    {
+     "technique": "persistence-and-migration",
+     "verdict": "deviation",
+     "evidence": "src/stores/projectStore.ts:285 Stores use Zustand persist middleware with hardcoded local storage keys and omit schema versions and migration chains to safely evolve stored payloads across releases."
+    },
+    {
+     "technique": "status-fsms",
+     "verdict": "deviation",
+     "evidence": "src/stores/projectStore.ts:36 Asynchronous operations track lifecycle states using independent boolean and nullable error fields rather than explicit finite state machines."
+    },
+    {
+     "technique": "async-race-guards",
+     "verdict": "deviation",
+     "evidence": "src/stores/projectStore.ts:128 Async requests are dispatched without latest-wins request tokens or keyed deduplication, allowing stale responses to overwrite subsequent state."
+    },
+    {
+     "technique": "store-slicing",
+     "verdict": "deviation",
+     "evidence": "src/stores/moduleStore.ts:33 moduleStore directly reads projectStore's raw localStorage key to circumvent store boundaries and circular import cycles."
+    },
+    {
+     "technique": "rehydration-narrowing",
+     "verdict": "deviation",
+     "evidence": "src/stores/navigationStore.ts:94 Rehydration loads raw stored objects into state without validating closed set vocabulary membership or narrowing invalid states to defaults."
+    },
+    {
+     "technique": "optimistic-write-path",
+     "verdict": "deviation",
+     "evidence": "src/stores/moduleStore.ts:184 Checklist mutations update local state optimistically without an entity mutex, attempt-keyed undo ledger, or compare-and-swap rollback."
+    },
+    {
+     "technique": "identity-scoped-eviction",
+     "verdict": "conformant",
+     "evidence": "src/services/projectTransition.ts:28 Defines an enumerated list of project flip triggers and coordinates cache and store teardown through a centralized owner routine."
+    },
+    {
+     "technique": "singleton-lifecycle",
+     "verdict": "conformant",
+     "evidence": "src/lib/event-bus.ts:182 The singleton event bus provides an explicit reset hatch to clear all subscriptions and replay buffers between test cases."
+    },
+    {
+     "technique": "invalidation-strategy",
+     "verdict": "conformant",
+     "evidence": "src/stores/projectStore.ts:198 Client mutations write through by adopting updated collections directly from the mutation response."
+    },
+    {
+     "technique": "effect-identity-and-latched-callbacks",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useIsMounted.ts:26 Uses a stable reference cell with unmount cleanup to prevent asynchronous callbacks from executing against unmounted components."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "client-state",
+   "context": "module-topology-graph",
+   "reason": "The client-state subject defines architectural standards for client state stores, caching, persistence, rehydration, and invalidation. module-topology-graph is a UI component tree that renders SVG graph visualizations of Unreal Engine game-dev module dependencies rather than a client-state store layer."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-19T00:45:16.754861+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-state"
+   ],
+   "techniques": [
+    "async-race-guards",
+    "effect-identity-and-latched-callbacks",
+    "identity-scoped-eviction",
+    "invalidation-strategy",
+    "optimistic-write-path",
+    "persistence-and-migration",
+    "rehydration-narrowing",
+    "singleton-lifecycle",
+    "status-fsms",
+    "store-dependency-topology",
+    "store-slicing"
+   ],
+   "deviations": 1,
+   "context": "state-management",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

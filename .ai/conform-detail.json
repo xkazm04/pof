@@ -10521,6 +10521,72 @@
         "at": "2026-10-19T00:39:25.105222+00:00",
         "reason": "reviewer (sonnet): The claim that the direct setters bypass history synchronization is contradicted by src/hooks/useShellRouteSync.ts, which subscribes to useNavigationStore and pushes a history entry on any change to the visible module, whichever setter caused it. The useSuspend.ts claim that the shell lacks a restor"
       }
+    },
+    "a00c79d7-bd10-495a-8546-81ab1bfd797e/client-state": {
+      "context": "state-management",
+      "subject": "client-state",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:45:16.754Z",
+      "worker": "fcd35399-5309-4883-8231-790029836d52",
+      "techniques": [
+        {
+          "technique": "store-dependency-topology",
+          "verdict": "deviation",
+          "evidence": "src/services/ProjectModuleBridge.ts:36 The circular dependency between projectStore and moduleStore is resolved using mutable module-level registration variables rather than declaring the store topology as data and verifying acyclicity."
+        },
+        {
+          "technique": "persistence-and-migration",
+          "verdict": "deviation",
+          "evidence": "src/stores/projectStore.ts:285 Stores use Zustand persist middleware with hardcoded local storage keys and omit schema versions and migration chains to safely evolve stored payloads across releases."
+        },
+        {
+          "technique": "status-fsms",
+          "verdict": "deviation",
+          "evidence": "src/stores/projectStore.ts:36 Asynchronous operations track lifecycle states using independent boolean and nullable error fields rather than explicit finite state machines."
+        },
+        {
+          "technique": "async-race-guards",
+          "verdict": "deviation",
+          "evidence": "src/stores/projectStore.ts:128 Async requests are dispatched without latest-wins request tokens or keyed deduplication, allowing stale responses to overwrite subsequent state."
+        },
+        {
+          "technique": "store-slicing",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:33 moduleStore directly reads projectStore's raw localStorage key to circumvent store boundaries and circular import cycles."
+        },
+        {
+          "technique": "rehydration-narrowing",
+          "verdict": "deviation",
+          "evidence": "src/stores/navigationStore.ts:94 Rehydration loads raw stored objects into state without validating closed set vocabulary membership or narrowing invalid states to defaults."
+        },
+        {
+          "technique": "optimistic-write-path",
+          "verdict": "deviation",
+          "evidence": "src/stores/moduleStore.ts:184 Checklist mutations update local state optimistically without an entity mutex, attempt-keyed undo ledger, or compare-and-swap rollback."
+        },
+        {
+          "technique": "identity-scoped-eviction",
+          "verdict": "conformant",
+          "evidence": "src/services/projectTransition.ts:28 Defines an enumerated list of project flip triggers and coordinates cache and store teardown through a centralized owner routine."
+        },
+        {
+          "technique": "singleton-lifecycle",
+          "verdict": "conformant",
+          "evidence": "src/lib/event-bus.ts:182 The singleton event bus provides an explicit reset hatch to clear all subscriptions and replay buffers between test cases."
+        },
+        {
+          "technique": "invalidation-strategy",
+          "verdict": "conformant",
+          "evidence": "src/stores/projectStore.ts:198 Client mutations write through by adopting updated collections directly from the mutation response."
+        },
+        {
+          "technique": "effect-identity-and-latched-callbacks",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useIsMounted.ts:26 Uses a stable reference cell with unmount cleanup to prevent asynchronous callbacks from executing against unmounted components."
+        }
+      ]
     }
   }
 }

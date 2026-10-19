@@ -21715,7 +21715,11 @@
           "revision": 15,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/services/ProjectModuleBridge.ts:36 The circular dependency between project and module stores is broken via mutable late-bound module references in a bridge instead of declaring the store dependency topology as data and asserting acyclicity.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b667f5c1f4abdd9d",
+          "evaluatedRevision": 15
         },
         {
           "subject": "agent-memory",
