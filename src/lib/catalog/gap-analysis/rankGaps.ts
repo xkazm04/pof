@@ -9,6 +9,8 @@
  */
 import type { CatalogDistribution } from './index';
 import { gapBasisOf } from './coverage';
+import { pluginFor } from './plugins';
+import { planClosure, type ClosurePlan } from './closurePlan';
 
 /** One under-represented bucket of one catalog, as a proposal target. */
 export interface GapTarget {
@@ -31,6 +33,8 @@ export interface CatalogGapRanking {
   unmeasured: string[];
   /** Catalogs with an expected share and every bucket within tolerance. */
   balanced: string[];
+  /** Per catalog with targets: how many new entities close its gaps together. */
+  plans: Record<string, ClosurePlan>;
 }
 
 /** Code-unit order — never locale-dependent, so every machine ranks identically. */
@@ -45,12 +49,17 @@ function byStableIdentity(a: GapTarget, b: GapTarget): number {
     || cmp(a.value, b.value);
 }
 
-export function rankCatalogGaps(distributions: CatalogDistribution[]): CatalogGapRanking {
+export function rankCatalogGaps(
+  distributions: CatalogDistribution[],
+  sharesOf: (catalogId: string) => Record<string, Record<string, number>> = (id) => pluginFor(id)?.expectedShare ?? {},
+): CatalogGapRanking {
+  const plans: Record<string, ClosurePlan> = {};
   const targets: GapTarget[] = [];
   const unmeasured: string[] = [];
   const balanced: string[] = [];
   for (const d of distributions) {
     if (d.underrepresented.length) {
+      plans[d.catalogId] = planClosure(d, sharesOf(d.catalogId));
       for (const u of d.underrepresented) {
         targets.push({
           catalogId: d.catalogId, attribute: u.attribute, value: u.value,
@@ -67,6 +76,7 @@ export function rankCatalogGaps(distributions: CatalogDistribution[]): CatalogGa
     targets: targets.sort(byStableIdentity),
     unmeasured: unmeasured.sort(cmp),
     balanced: balanced.sort(cmp),
+    plans: Object.fromEntries(Object.keys(plans).sort(cmp).map((k) => [k, plans[k]])),
   };
 }
 

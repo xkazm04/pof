@@ -79,9 +79,11 @@ describe('analyzeCatalog — coverage, unmeasured, degenerate, gapBasis', () => 
 
   it('quests: declared dimensions that read 0 of 3 are reported, not dropped', () => {
     const out = analyzeCatalog('quests', quests);
-    expect(out.coverage).toEqual({ status: { covered: 0, of: 3 }, area: { covered: 0, of: 3 } });
+    expect(out.coverage.status).toEqual({ covered: 0, of: 3 });
+    expect(out.coverage.area).toEqual({ covered: 0, of: 3 });
     expect(out.unmeasured).toEqual(['status', 'area']);
-    expect(out.byAttribute).toEqual({});
+    // Declared data dimensions stay out; only the envelope-facet fallback measured anything.
+    expect(Object.keys(out.byAttribute).every((k) => k.startsWith('@'))).toBe(true);
   });
 
   it('gapBasis is "none" without an expected share and "expected-share" with one', () => {

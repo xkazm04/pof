@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, ChevronDown, ChevronRight } from 'lucide-react';
 import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import type { PropertyWatchUpdate } from '@/types/ue5-bridge';
+import { writeKey, type Ledger } from '@/lib/ue5-bridge/sync-ledger';
+import { outcomeFor } from './conflictResolution';
 import { PropertyEditorRow } from './PropertyEditorRow';
 import type { PropertyEdit } from './types';
 
@@ -11,6 +13,7 @@ export function PropertyWriteSection({
   setShowPropertyWrite,
   watchEntries,
   handleWatchedPush,
+  writes,
   propEdit,
   setPropEdit,
   handleDirectPropertyPush,
@@ -19,6 +22,7 @@ export function PropertyWriteSection({
   setShowPropertyWrite: Dispatch<SetStateAction<boolean>>;
   watchEntries: [string, PropertyWatchUpdate][];
   handleWatchedPush: (objectPath: string, propertyName: string, value: unknown) => void;
+  writes?: Ledger;
   propEdit: PropertyEdit;
   setPropEdit: Dispatch<SetStateAction<PropertyEdit>>;
   handleDirectPropertyPush: () => void;
@@ -57,6 +61,8 @@ export function PropertyWriteSection({
                       propertyName={update.propertyName}
                       currentValue={update.value}
                       onPush={handleWatchedPush}
+                      outcome={writes ? outcomeFor(writes, update.objectPath, update.propertyName) : null}
+                      lastWritten={writes?.get(writeKey(update.objectPath, update.propertyName))?.written}
                     />
                   ))}
                 </div>

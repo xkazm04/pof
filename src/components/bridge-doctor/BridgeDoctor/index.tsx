@@ -13,7 +13,6 @@
 import { useCallback, useMemo } from 'react';
 import {
   Activity,
-  History,
   RefreshCw,
   Stethoscope,
 } from 'lucide-react';
@@ -25,10 +24,13 @@ import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { useBridgeDoctorStore } from '@/stores/bridgeDoctorStore';
 import {
   runDiagnostics,
+  type ChannelId,
   type ProbeConfig,
 } from '@/lib/bridge-doctor/probes';
 import { CHANNEL_ORDER } from './constants';
-import { configMatches, formatRelative } from './helpers';
+import { formatRelative } from './helpers';
+import { RestorePanel } from './RestorePanel';
+import { diffConfig, editorSideChannels, implicatedChannels } from './restorePlan';
 import { OverallPill, PortInput, SettingInput } from './parts';
 import { ChannelRow } from './ChannelRow';
 
@@ -85,16 +87,36 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
     });
   }, [autoRun, running, latest, handleRun]);
 
-  const handleRestore = useCallback(() => {
-    if (!lastKnownGood) return;
-    setHost(lastKnownGood.host);
-    setPofPort(lastKnownGood.pofPort);
-    setRcPort(lastKnownGood.rcPort);
-    setWsPort(lastKnownGood.wsPort);
-    setPofAuthToken(lastKnownGood.authToken);
-  }, [lastKnownGood, setHost, setPofPort, setRcPort, setWsPort, setPofAuthToken]);
+  const setters = useMemo(
+    () => ({ setHost, setPofPort, setRcPort, setWsPort, setPofAuthToken }),
+    [setHost, setPofPort, setRcPort, setWsPort, setPofAuthToken],
+  );
 
-  const canRestore = !!lastKnownGood && !configMatches(cfg, lastKnownGood);
+  // Re-verify against the settings as they are NOW (the setters just ran, so the
+  // render-time `cfg` is stale).
+  const verifyLive = useCallback(async () => {
+    const ue = useUE5BridgeStore.getState();
+    const pof = usePofBridgeStore.getState();
+    if (useBridgeDoctorStore.getState().running) return;
+    beginRun();
+    endRun(
+      await runDiagnostics({
+        host: ue.host,
+        pofPort: pof.pofPort,
+        rcPort: ue.httpPort,
+        wsPort: ue.wsPort,
+        authToken: pof.pofAuthToken || undefined,
+      }),
+    );
+  }, [beginRun, endRun]);
+
+  const diff = useMemo(() => (lastKnownGood ? diffConfig(cfg, lastKnownGood) : []), [cfg, lastKnownGood]);
+  const channelNote = useMemo(() => {
+    const note: Partial<Record<ChannelId, string>> = {};
+    for (const id of implicatedChannels(latest, diff)) note[id] = 'differs from last good config';
+    for (const id of editorSideChannels(latest, diff)) note[id] = 'matches last good config - editor side';
+    return note;
+  }, [latest, diff]);
 
   return (
     <section
@@ -134,17 +156,6 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {canRestore && (
-            <button
-              type="button"
-              onClick={handleRestore}
-              title={`Restore last-known-good config from ${formatRelative(lastKnownGood!.capturedAt)}`}
-              className="focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold transition-colors bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
-            >
-              <History className="w-3.5 h-3.5" aria-hidden="true" />
-              Restore last good
-            </button>
-          )}
           <button
             type="button"
             onClick={handleRun}
@@ -164,6 +175,17 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
           </button>
         </div>
       </header>
+
+      <RestorePanel
+        cfg={cfg}
+        good={lastKnownGood}
+        latest={latest}
+        running={running}
+        setters={setters}
+        onApplied={() => {
+          void verifyLive();
+        }}
+      />
 
       {/* Settings strip */}
       <div className="relative z-10 grid grid-cols-2 sm:grid-cols-5 gap-2 px-3 py-2 text-[12px]" style={{ borderBottom: `1px solid ${ACCENT_CYAN}1a` }}>
@@ -204,6 +226,7 @@ export function BridgeDoctor({ className = '', autoRun = false }: BridgeDoctorPr
             result={latest?.channels[id] ?? null}
             running={running}
             cfg={cfg}
+            note={channelNote[id]}
           />
         ))}
       </ul>

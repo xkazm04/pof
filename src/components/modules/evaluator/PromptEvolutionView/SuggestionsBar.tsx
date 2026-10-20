@@ -21,7 +21,7 @@ const SUGGESTION_CONFIG: Record<
 > = {
   'try-variant':    { icon: Sparkles,     color: ACCENT_EMERALD_DARK,  label: 'Try Variant',     actionLabel: 'Spawn mutation' },
   'start-ab-test':  { icon: FlaskConical, color: MODULE_COLORS.content, label: 'Start A/B Test', actionLabel: 'Open in History' },
-  'adopt-winner':   { icon: Trophy,       color: STATUS_WARNING,        label: 'Adopt Winner',    actionLabel: 'Copy best prompt' },
+  'adopt-winner':   { icon: Trophy,       color: STATUS_WARNING,        label: 'Adopt Winner',    actionLabel: 'Adopt winner' },
   'cluster-insight':{ icon: Layers,       color: ACCENT_PURPLE,         label: 'Cluster Insight', actionLabel: 'Analyze clusters' },
 };
 

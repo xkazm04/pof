@@ -29,7 +29,7 @@
  *    (`src/lib/craft/admission.ts`) refuses both; this is the defence for rows already stored.
  */
 import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
-import { isComparableHash } from '@/lib/judge/contentHash';
+import { classifyBinding } from '@/lib/judge/bindingRule';
 
 /** The ladder, ascending. `A_LADDER` below is the single source of order. */
 export type CraftLevel = 'A0' | 'A1' | 'A2' | 'A3' | 'A4';
@@ -120,19 +120,18 @@ export interface CraftInput {
  *    gauge reads stale. Unprovable never elevates a gauge to current.
  */
 function staleBecause(verdict: CraftVerdictLite, artifact: JudgedContent | undefined): string | null {
-  if (isComparableHash(verdict.contentHash) && isComparableHash(artifact?.hash)) {
-    return verdict.contentHash === artifact?.hash
-      ? null
-      : 'content changed since it was gauged — this level grades content the step no longer holds';
-  }
-  const rewritten =
-    verdict.artifactUpdatedAt != null &&
-    artifact?.updatedAt != null &&
-    artifact.updatedAt > verdict.artifactUpdatedAt;
-  // Said as what it is: a later WRITE, with no content binding able to prove the content held.
-  return rewritten
-    ? 'artifact rewritten since it was gauged and no content binding proves it unchanged — this level may grade content the step no longer holds'
-    : null;
+  const b = classifyBinding({
+    recordedHash: verdict.contentHash,
+    recordedAt: verdict.artifactUpdatedAt,
+    currentHash: artifact?.hash,
+    currentUpdatedAt: artifact?.updatedAt,
+    timestampFallback: 'unprovable',
+  });
+  if (b.state !== 'stale') return null;
+  return b.basis === 'hash'
+    ? 'content changed since it was gauged — this level grades content the step no longer holds'
+    : // Said as what it is: a later WRITE, with no content binding able to prove the content held.
+      'artifact rewritten since it was gauged and no content binding proves it unchanged — this level may grade content the step no longer holds';
 }
 
 /**

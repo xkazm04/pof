@@ -1,7 +1,7 @@
 export interface Histogram { [value: string]: number }
 
 export interface GapAnalysisPlugin {
-  /** Attribute paths (dot-notation against `entity.data`) to histogram. */
+  /** Attribute paths (dot-notation against `entity.data`) to histogram. `@` facets are the analyzer's own fallback (../facets.ts); never declare them. */
   dimensions: string[];
   /** Per-attribute expected-share map for under-rep detection (sum should be ~1). */
   expectedShare?: Record<string, Record<string, number>>;

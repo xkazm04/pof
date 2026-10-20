@@ -84,6 +84,7 @@ const { storeState } = vi.hoisted(() => {
     loadStats: vi.fn().mockResolvedValue(undefined),
     loadSuggestions: vi.fn().mockResolvedValue(undefined),
     getBestVariant: vi.fn().mockResolvedValue(null),
+    restoreVariant: vi.fn().mockResolvedValue({ ...variantB, active: true }),
     optimizePrompt: vi.fn().mockResolvedValue(null),
   };
   return { storeState: state };
@@ -135,11 +136,34 @@ describe('PromptEvolutionView — Simple Mode', () => {
   it('lets the user adopt the winning wording with one click', async () => {
     render(<PromptEvolutionView />);
     expandTestCard();
-    fireEvent.click(screen.getByRole('button', { name: /use this wording/i }));
+    fireEvent.click(screen.getByRole('button', { name: /copy wording/i }));
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith('Do the thing the better way, with detail.');
       expect(toastSuccess).toHaveBeenCalled();
     });
+  });
+});
+
+describe('PromptEvolutionView — adopting a decided winner', () => {
+  it('previews the change, then adopts via restoreVariant once on confirm', async () => {
+    render(<PromptEvolutionView />);
+    expandTestCard();
+    fireEvent.click(screen.getByRole('button', { name: /adopt winner/i }));
+    expect(screen.getByTestId('adoption-preview')).toBeTruthy();
+    expect(storeState.restoreVariant).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /confirm adopt/i }));
+    await waitFor(() => expect(storeState.restoreVariant).toHaveBeenCalledTimes(1));
+    expect(storeState.restoreVariant).toHaveBeenCalledWith('vb');
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+  });
+
+  it('cancel leaves the active version untouched', () => {
+    render(<PromptEvolutionView />);
+    expandTestCard();
+    fireEvent.click(screen.getByRole('button', { name: /adopt winner/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(storeState.restoreVariant).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /adopt winner/i })).toBeTruthy();
   });
 });
 

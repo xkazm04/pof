@@ -40,5 +40,7 @@ describe('GET /api/one-shot/gaps', () => {
     expect(common).toMatchObject({ catalogId: 'items', count: 0 });
     expect(common.deficit).toBe(common.expected - common.count);
     expect(body.data.unmeasured).toEqual(['quests']);
+    expect(body.data.plans.items.entities.length).toBeGreaterThan(0);
+    expect(body.data.plans.quests).toBeUndefined();
   });
 });

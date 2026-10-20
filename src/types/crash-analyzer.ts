@@ -2,6 +2,8 @@
 /*  UE5 Crash Log Analyzer Types                                      */
 /* ------------------------------------------------------------------ */
 
+import { CRASH_TAXONOMY, CRASH_TAXONOMY_IDS } from '@/lib/crash-analyzer/crash-taxonomy';
+
 /** A single frame in a crash callstack */
 export interface CallstackFrame {
   index: number;
@@ -32,19 +34,8 @@ export interface CallstackFrame {
  */
 export type CrashSeverity = 'critical' | 'high' | 'medium' | 'low';
 
-/** Crash type categories */
-export type CrashType =
-  | 'nullptr_deref'
-  | 'access_violation'
-  | 'assertion_failed'
-  | 'ensure_failed'
-  | 'gc_reference'
-  | 'stack_overflow'
-  | 'out_of_memory'
-  | 'unhandled_exception'
-  | 'fatal_error'
-  | 'gpu_crash'
-  | 'unknown';
+/** Crash type categories - derived from the single taxonomy table. */
+export type CrashType = (typeof CRASH_TAXONOMY)[number]['id'];
 
 /** Machine state at crash time */
 export interface MachineState {
@@ -265,19 +256,7 @@ export interface CrashAnalyzerResult {
  * a mutable accumulator.
  */
 export function emptyCrashTypeCounts(): Record<CrashType, number> {
-  return {
-    nullptr_deref: 0,
-    access_violation: 0,
-    assertion_failed: 0,
-    ensure_failed: 0,
-    gc_reference: 0,
-    stack_overflow: 0,
-    out_of_memory: 0,
-    unhandled_exception: 0,
-    fatal_error: 0,
-    gpu_crash: 0,
-    unknown: 0,
-  };
+  return Object.fromEntries(CRASH_TAXONOMY_IDS.map((id) => [id, 0])) as Record<CrashType, number>;
 }
 
 /**

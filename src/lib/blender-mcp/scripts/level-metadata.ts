@@ -1,3 +1,6 @@
+import { py, pyNum } from '@/lib/blender-mcp/escape';
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
+
 export interface SpawnPoint {
   x: number;
   y: number;
@@ -10,9 +13,9 @@ export function levelMetadataScript(params: {
   const spawns = params.spawnPoints
     .map(
       (sp, i) => `
-bpy.ops.object.empty_add(type='PLAIN_AXES', location=(${sp.x}, ${sp.y}, 0))
+bpy.ops.object.empty_add(type='PLAIN_AXES', location=(${pyNum(sp.x)}, ${pyNum(sp.y)}, 0))
 obj = bpy.context.active_object
-obj.name = "Spawn_${sp.type}_${i}"
+obj.name = "Spawn_${py(sp.type)}_${i}"
 obj.empty_display_size = 0.5
 meta_coll.objects.link(obj)
 bpy.context.scene.collection.objects.unlink(obj)`,
@@ -28,5 +31,6 @@ bpy.context.scene.collection.children.link(meta_coll)
 ${spawns}
 
 print(f"Added ${params.spawnPoints.length} spawn points")
+${pyReceipt('level-metadata', { spawns: 'len(meta_coll.objects)' })}
 `.trim();
 }

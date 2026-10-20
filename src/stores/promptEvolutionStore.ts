@@ -424,8 +424,14 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
       // Reflect the new active version locally without a round-trip: flip the
       // active flag on the matching item's versions in the loaded history.
       set((s) => {
+        // The loaded variants carry the same flag: keep it in step so "is this the
+        // served version" reads true everywhere (adoption plans, suggestions).
+        const variants = s.variants.map((v) =>
+          v.moduleId === restored.moduleId && v.checklistItemId === restored.checklistItemId
+            ? { ...v, active: v.id === restored.id }
+            : v);
         if (!s.versionHistory || s.versionHistory.checklistItemId !== restored.checklistItemId) {
-          return { isRestoring: false };
+          return { isRestoring: false, variants };
         }
         const versions = s.versionHistory.versions.map((v) => ({
           ...v,
@@ -440,6 +446,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         });
         return {
           isRestoring: false,
+          variants,
           versionHistory: {
             ...s.versionHistory,
             versions,

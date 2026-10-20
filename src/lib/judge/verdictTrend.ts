@@ -1,4 +1,5 @@
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import { sameContent } from './bindingRule';
 
 /**
  * A step's SCORE TREND across re-judges — the pure model behind "did my fix actually improve
@@ -70,8 +71,7 @@ export function buildVerdictTrend(history: readonly JudgeVerdict[]): VerdictTren
     // Only a REAL comparison counts: two verdicts both carrying a content hash. A missing hash
     // on either side is unknown, never "same" — an unbound verdict must not imply the content
     // stood still.
-    sameContentAsPrevious:
-      i === 0 ? null : Boolean(v.contentHash && ordered[i - 1].contentHash && v.contentHash === ordered[i - 1].contentHash),
+    sameContentAsPrevious: i === 0 ? null : sameContent(ordered[i - 1], v),
   }));
 
   if (points.length < 2) {

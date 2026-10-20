@@ -1,8 +1,9 @@
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { pluginFor } from './plugins';
 import type { Histogram } from './plugins/types';
+import { FACET_DIMENSIONS } from './facets';
 import {
-  SAMPLE_MAX, measureDimensions, readPath, scopeToProfile,
+  SAMPLE_MAX, bucketKeyOf, measureDimensions, readEntityPath, scopeToProfile,
   type DimensionCoverage, type GapBasis,
 } from './coverage';
 
@@ -58,8 +59,7 @@ export interface AnalyzeOptions {
 function pickStratifiedSample(entities: StoredCatalogEntity[], path: string, max = SAMPLE_MAX): StoredCatalogEntity[] {
   const byKey = new Map<string, StoredCatalogEntity[]>();
   for (const e of entities) {
-    const v = readPath(e.data, path);
-    const k = v === undefined ? '__none__' : String(v);
+    const k = bucketKeyOf(readEntityPath(e, path)) ?? '__none__';
     if (!byKey.has(k)) byKey.set(k, []);
     byKey.get(k)!.push(e);
   }
@@ -99,6 +99,15 @@ export function analyzeCatalog(
   const dimensions = plugin?.dimensions ?? inferDimensions(entities);
   const expected = plugin?.expectedShare ?? {};
   const { byAttribute, coverage, unmeasured, degenerate } = measureDimensions(dimensions, entities, expected);
+  // Stale or absent plugin: every declared dimension measured nothing. Fall back to the envelope
+  // facets so the catalog still has a histogram; they carry no expected share (no gaps invented).
+  let primary = dimensions[0] ?? '';
+  if (entities.length > 0 && Object.keys(byAttribute).length === 0 && degenerate.length === 0) {
+    const facets = measureDimensions(FACET_DIMENSIONS, entities);
+    Object.assign(byAttribute, facets.byAttribute);
+    Object.assign(coverage, facets.coverage);
+    primary = FACET_DIMENSIONS.find((f) => f in facets.byAttribute) ?? primary;
+  }
   const underrepresented: CatalogDistribution['underrepresented'] = [];
   let gapBasis: GapBasis = 'none';
   for (const [attr, h] of Object.entries(byAttribute)) {
@@ -113,7 +122,6 @@ export function analyzeCatalog(
       }
     }
   }
-  const primary = dimensions[0] ?? '';
   return {
     catalogId,
     total: entities.length,

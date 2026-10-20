@@ -6,11 +6,13 @@ import { useActiveRuleset } from '@/stores/lootFilterStore';
 import { ACCENT } from '../_shared/data';
 import { useInventoryItems } from '../_shared/useInventoryItems';
 import { evaluateRuleset } from '@/lib/loot-filter/engine';
+import { analyzeRuleset } from '@/lib/loot-filter/impact';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { RulesetToolbar } from './RulesetToolbar';
 import { RuleList } from './RuleList';
 import { LivePreview } from './LivePreview';
 import { ExportPanel } from './ExportPanel';
+import { useEvaluationDelta } from './useEvaluationDelta';
 
 /**
  * Loot Filter Rule Builder — ordered Show/Hide/Highlight rules keyed on rarity,
@@ -23,6 +25,8 @@ export function LootFilterRuleBuilder() {
   const previewItems = useInventoryItems();
 
   const evaluation = useMemo(() => evaluateRuleset(previewItems, ruleset), [previewItems, ruleset]);
+  const impact = useMemo(() => analyzeRuleset(previewItems, ruleset.rules), [previewItems, ruleset.rules]);
+  const delta = useEvaluationDelta(evaluation);
 
   return (
     <div className="space-y-3">
@@ -31,12 +35,12 @@ export function LootFilterRuleBuilder() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <BlueprintPanel color={ACCENT} className="p-3">
           <SectionHeader label="Rules" color={ACCENT} icon={ListFilter} />
-          <RuleList rulesetId={ruleset.id} rules={ruleset.rules} accent={ACCENT} />
+          <RuleList rulesetId={ruleset.id} rules={ruleset.rules} impact={impact} accent={ACCENT} />
         </BlueprintPanel>
 
         <BlueprintPanel color={ACCENT} className="p-3">
           <SectionHeader label={`Live Preview · ${previewItems.length} drops`} color={ACCENT} icon={Eye} />
-          <LivePreview evaluation={evaluation} accent={ACCENT} />
+          <LivePreview evaluation={evaluation} delta={delta} accent={ACCENT} />
         </BlueprintPanel>
       </div>
 

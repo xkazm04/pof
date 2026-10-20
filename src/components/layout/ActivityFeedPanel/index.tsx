@@ -18,7 +18,7 @@ import type { ActivityEvent } from '@/stores/activityFeedStore';
 import type { SubModuleId } from '@/types/modules';
 import { STATUS_SUCCESS, MODULE_COLORS } from '@/lib/chart-colors';
 import { PANEL_WIDTH, OVERLAY_BREAKPOINT } from './constants';
-import { buildSections } from './helpers';
+import { buildSections, countUnread } from './feedModel';
 import { CollapsedGroup } from './CollapsedGroup';
 import { EventCard } from './EventCard';
 
@@ -49,7 +49,7 @@ export function ActivityFeedPanel() {
   // a LIFO layer, so it only closes when it is the topmost open layer.
   useEscapeLayer('activity-feed', isOpen && overlay, () => setOpen(false));
 
-  const unreadCount = useMemo(() => events.filter((e) => !e.dismissed).length, [events]);
+  const unreadCount = useMemo(() => countUnread(events), [events]);
   const sections = useMemo(() => buildSections(events), [events]);
 
   const handleDismiss = useCallback(

@@ -42,7 +42,7 @@ describe('judgeSkipDecision', () => {
 
   it('judges a step that has never been judged', () => {
     const d = judgeSkipDecision({ data: DATA, prior: undefined, rubricVersion: RUBRIC });
-    expect(d).toEqual({ skip: false, reason: 'never judged' });
+    expect(d).toEqual({ skip: false, bucket: 'never', reason: 'never judged' });
   });
 
   it('judges when the content changed since the verdict (the hash, never a timestamp)', () => {
@@ -55,7 +55,7 @@ describe('judgeSkipDecision', () => {
     // All 424 stored verdicts have content_hash NULL, so nothing skips until a fresh run
     // stamps hashes. That is the correct, conservative behaviour, not a broken skip.
     const d = judgeSkipDecision({ data: DATA, prior: prior({ contentHash: undefined }), rubricVersion: RUBRIC });
-    expect(d).toEqual({ skip: false, reason: 'verdict has no content binding' });
+    expect(d).toEqual({ skip: false, bucket: 'scheme', reason: 'verdict has no content binding' });
   });
 
   it('judges a hash from an older scheme — comparing across schemes would skip unjudged content', () => {
@@ -72,7 +72,7 @@ describe('judgeSkipDecision', () => {
 
   it('--rejudge forces a re-judge of an otherwise skippable step', () => {
     const d = judgeSkipDecision({ data: DATA, prior: prior(), rubricVersion: RUBRIC, force: true });
-    expect(d).toEqual({ skip: false, reason: 'forced re-judge (--rejudge)' });
+    expect(d).toEqual({ skip: false, bucket: 'forced', reason: 'forced re-judge (--rejudge)' });
   });
 
   it('is insensitive to the volatile keys the hash excludes (a browse must not force a re-judge)', () => {

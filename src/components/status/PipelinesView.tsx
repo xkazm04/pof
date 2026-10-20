@@ -28,8 +28,8 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { useStatusArtifacts } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, getStepFact, judgedContentOfRow, type Swimlane, type StepCell, type StepMeta } from '@/lib/status/statusModel';
-import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
+import { getStepFact, type StepCell, type StepMeta } from '@/lib/status/statusModel';
+import { assembleLanes, type UnknownLane } from '@/lib/status/statusReads';
 import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
 import {
   readinessOf,
@@ -43,8 +43,11 @@ import {
   type ReadinessState,
 } from '@/lib/status/readiness';
 import { capabilityClassOf } from '@/lib/status/capabilityModel';
-import { craftForCell, cellDistanceToRoof, type CellCraft, type CraftVerdictView } from '@/lib/craft/craftCell';
+import { cellDistanceToRoof, type CraftVerdictView } from '@/lib/craft/craftCell';
 import { StatusCell } from './StatusCell';
+import { WorkQueuePanel } from './WorkQueuePanel';
+import { buildWorkQueue, cellMatches, queueSummary, type Highlight } from '@/lib/status/workQueue';
+import { ROUTES, type ReadinessRoute } from '@/lib/status/readinessRoute';
 import { EvidenceModal } from './EvidenceModal';
 
 /** True when a step belongs to the given capability class (via its audited deliverable). */
@@ -53,18 +56,6 @@ function cellInClass(catalogId: string, cell: StepCell, klass: string | null): b
   const fact = getStepFact(catalogId, cell.label);
   if (!fact) return false;
   return capabilityClassOf(fact.deliverable, catalogId) === klass;
-}
-
-/** `readiness` picks out a rung (only cells that REACHED it); `state` picks out the two
- *  off-ladder states (waiting / blocked); `engine` is unchanged. */
-type Highlight = { kind: 'readiness' | 'state' | 'engine'; value: string } | null;
-
-function cellMatches(cell: StepCell, hl: Highlight): boolean {
-  if (!hl) return true;
-  if (hl.kind === 'engine') return cell.engine === hl.value;
-  const r = readinessOf(cell);
-  if (hl.kind === 'state') return r.state === hl.value;
-  return r.state === 'reached' && r.level === hl.value;
 }
 
 /** Swatch for a chip / legend entry, matching exactly how the cell paints that rung:
@@ -181,15 +172,6 @@ function Legend() {
   );
 }
 
-/** One catalog whose artifacts could not be read. It is deliberately NOT a `Swimlane`:
- *  a lane built from a failed fetch's `[]` would paint every step R0 NOT WIRED, which is
- *  a GRADE — the map would report "nothing was ever produced here" on the strength of a
- *  network blip, and understate the one way this surface must never be wrong. */
-interface UnknownLane {
-  catalogId: string;
-  error: string;
-}
-
 /** Stable empty row list for the evidence modal's ledger when a catalog has no rows. */
 const NO_ROWS: ArtifactVerdictRow[] = [];
 
@@ -246,6 +228,8 @@ export function PipelinesView({
   onFocusEntity,
   filterClass = null,
   onClearFilter,
+  route = null,
+  onRouteChange,
 }: {
   onFocusCatalog: (catalogId: string) => void;
   /** The evidence modal's per-entity hand-off to Item Focus. */
@@ -254,6 +238,10 @@ export function PipelinesView({
    *  deliverable maps to this class render, and lanes with zero matching steps hide. */
   filterClass?: string | null;
   onClearFilter?: () => void;
+  /** Addressed route highlight (`?route=`). When `onRouteChange` is given the route chips
+   *  are controlled by it (so the choice is linkable); otherwise they highlight locally. */
+  route?: ReadinessRoute | null;
+  onRouteChange?: (route: ReadinessRoute | null) => void;
 }) {
   // The artifact half of the map comes from the SHARED whole-project read (one deduped
   // fetch per catalog, cached across tabs) — not a private per-mount fan-out.
@@ -315,43 +303,7 @@ export function PipelinesView({
    */
   const built = useMemo(() => {
     if (!catalogs || !verdicts) return null;
-    const specs = new Map(allCatalogPipelines().map((p) => [p.catalogId, p]));
-    const craft = verdicts.craftByCatalog ? new Map<string, CellCraft>() : null;
-    const lanes: Swimlane[] = [];
-    const unknown: UnknownLane[] = [];
-    for (const c of catalogs) {
-      const p = specs.get(c.catalogId);
-      if (!p) continue;
-      // A failed read is NOT an empty catalog: building a lane from `[]` would grade every
-      // step R0 NOT WIRED. It is held out of `lanes` and reported as UNKNOWN instead.
-      if (c.error !== null) {
-        unknown.push({ catalogId: c.catalogId, error: c.error });
-        continue;
-      }
-      const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
-      if (craft && verdicts.craftByCatalog) {
-        // Per-step entity → what the artifact holds NOW (content hash + updatedAt), via
-        // THE row-hash rule the judge path uses (`judgedContentOfRow`). A gauge whose
-        // content was re-produced reads stale; a drain re-upserting identical data does not.
-        const contentByStep = new Map<string, Map<string, JudgedContent>>();
-        for (const a of c.rows) {
-          const m = contentByStep.get(a.step) ?? new Map<string, JudgedContent>();
-          m.set(a.entityId, judgedContentOfRow(a));
-          contentByStep.set(a.step, m);
-        }
-        for (const s of p.steps) {
-          const cc = craftForCell(
-            c.catalogId,
-            s.label,
-            verdicts.craftByCatalog.get(c.catalogId) ?? [],
-            contentByStep.get(s.label) ?? new Map(),
-          );
-          if (cc) craft.set(`${c.catalogId} ${s.label}`, cc);
-        }
-      }
-      lanes.push(buildSwimlane(c.catalogId, c.catalogId, metas, c.rows, verdicts.byCatalog.get(c.catalogId) ?? []));
-    }
-    return { lanes: sortLanes(lanes), unknown, craft };
+    return assembleLanes({ catalogs, byCatalog: verdicts.byCatalog, craftByCatalog: verdicts.craftByCatalog });
   }, [catalogs, verdicts]);
 
   const lanes = built?.lanes ?? null;
@@ -377,8 +329,18 @@ export function PipelinesView({
     setReload((n) => n + 1);
   };
 
-  const toggle = (kind: 'readiness' | 'state' | 'engine', value: string) =>
-    setHighlight((h) => (h && h.kind === kind && h.value === value ? null : { kind, value }));
+  /** The addressed route wins; otherwise the locally chosen chip. */
+  const activeHighlight = useMemo<Highlight>(() => (route ? { kind: 'route', value: route } : highlight), [route, highlight]);
+
+  const toggle = (kind: 'readiness' | 'state' | 'engine' | 'route', value: string) => {
+    if (kind === 'route' && onRouteChange) {
+      setHighlight(null);
+      onRouteChange(route === value ? null : (value as ReadinessRoute));
+      return;
+    }
+    if (route) onRouteChange?.(null);
+    setHighlight((h) => (!route && h && h.kind === kind && h.value === value ? null : { kind, value }));
+  };
 
   /** Lanes with cells restricted to the active capability-class filter (empty lanes hidden). */
   const visibleLanes = useMemo(() => {
@@ -455,11 +417,15 @@ export function PipelinesView({
 
   /** Exactly how many rendered cells the active highlight keeps at full opacity. */
   const matchCount = useMemo(() => {
-    if (!highlight || !visibleLanes) return 0;
+    if (!activeHighlight || !visibleLanes) return 0;
     let n = 0;
-    for (const lane of visibleLanes) for (const c of lane.cells) if (cellMatches(c, highlight)) n += 1;
+    for (const lane of visibleLanes) for (const c of lane.cells) if (cellMatches(c, activeHighlight)) n += 1;
     return n;
-  }, [visibleLanes, highlight]);
+  }, [visibleLanes, activeHighlight]);
+
+  /** The ranked Next-up list and the per-route chip counts, over the lanes rendered. */
+  const workQueue = useMemo(() => buildWorkQueue(visibleLanes), [visibleLanes]);
+  const routeCounts = useMemo(() => queueSummary(visibleLanes), [visibleLanes]);
 
   return (
     <>
@@ -505,6 +471,32 @@ export function PipelinesView({
                   : 'A checker or a judge condemned these outputs.'
               }
               onClick={() => toggle('state', state)}
+            />
+          );
+        })}
+      </div>
+      <div role="group" aria-label="Highlight steps by route" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)' }}>
+        <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)', alignSelf: 'center', width: 56 }}>route</span>
+        {ROUTES.map((r) => {
+          const active = activeHighlight?.kind === 'route' && activeHighlight.value === r;
+          const count = routeCounts[r];
+          return (
+            <Chip
+              key={r}
+              label={r}
+              count={count}
+              active={active}
+              disabled={count === 0 && !active}
+              title={
+                r === 'model-blocked'
+                  ? 'Needs a commercial or local model - recorded, never attempted (2026-10-07 boundary).'
+                  : r === 'at-r3'
+                    ? 'Already reached R3 or above.'
+                    : r === 'text'
+                      ? 'Worked by the Claude engine or judge through the claude CLI.'
+                      : 'UE runtime, deterministic code, packaging or a human gate.'
+              }
+              onClick={() => toggle('route', r)}
             />
           );
         })}
@@ -676,6 +668,11 @@ export function PipelinesView({
         </div>
       )}
 
+      <WorkQueuePanel
+        items={workQueue}
+        onOpen={(i) => setEvidence({ catalogId: i.catalogId, step: i.step, cell: i.cell })}
+      />
+
       {/* Live region so the load/empty/highlight transitions are announced, not just drawn —
           the highlight is otherwise a pure opacity change no screen reader can perceive. */}
       <div role="status" aria-live="polite" style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
@@ -688,12 +685,12 @@ export function PipelinesView({
             No steps match the <strong>{filterClass}</strong> capability class. Clear the filter above to see the whole map.
           </>
         )}
-        {highlight && totalCells > 0 && (
+        {activeHighlight && totalCells > 0 && (
           <>
-            Highlighting {highlight.kind === 'readiness' ? 'readiness' : highlight.kind === 'state' ? 'state' : 'engine'}{' '}
-            <strong>{highlight.value}</strong> — {matchCount} of {totalCells} steps
+            Highlighting {activeHighlight.kind}{' '}
+            <strong>{activeHighlight.value}</strong> — {matchCount} of {totalCells} steps
             {matchCount === 0 ? '; nothing matches, so the whole map is dimmed' : '; the rest are dimmed'}. Click the{' '}
-            {highlight.value} chip again to clear.
+            {activeHighlight.value} chip again to clear.
           </>
         )}
       </div>
@@ -732,7 +729,7 @@ export function PipelinesView({
                 >
                   <StatusCell
                     cell={cell}
-                    dimmed={!cellMatches(cell, highlight)}
+                    dimmed={!cellMatches(cell, activeHighlight)}
                     craft={craftByKey?.get(`${lane.catalogId} ${cell.label}`)}
                   />
                 </button>

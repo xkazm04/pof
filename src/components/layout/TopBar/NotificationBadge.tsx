@@ -2,12 +2,13 @@
 
 import { Bell } from 'lucide-react';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
+import { countUnread } from '@/components/layout/ActivityFeedPanel/feedModel';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 
 // --- Notification badge (unchanged) ---
 
 export function NotificationBadge() {
-  const unreadCount = useActivityFeedStore((s) => s.events.filter((e) => !e.dismissed).length);
+  const unreadCount = useActivityFeedStore((s) => countUnread(s.events));
   const toggleOpen = useActivityFeedStore((s) => s.toggleOpen);
   const isOpen = useActivityFeedStore((s) => s.isOpen);
 

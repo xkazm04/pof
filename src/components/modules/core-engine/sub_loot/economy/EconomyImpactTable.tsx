@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ACCENT_EMERALD, STATUS_WARNING } from '@/lib/chart-colors';
 import { RARITY_TIERS } from '../_shared/data';
 import type { LootEditorEntryExpanded } from '../_shared/data';
+import { useLootTuningStore } from '../_shared/lootTuningStore';
 
 interface EconomyImpactTableProps {
   pagedItems: LootEditorEntryExpanded[];
@@ -19,6 +20,7 @@ export function EconomyImpactTable({
   pagedItems, totalWeight, economyProfile,
   safePage, totalPages, setPage,
 }: EconomyImpactTableProps) {
+  const rarityGold = useLootTuningStore((s) => s.rarityGold);
   return (
     <>
       {/* Paginated impact table */}
@@ -38,7 +40,7 @@ export function EconomyImpactTable({
             {pagedItems.map(item => {
               const pct = totalWeight > 0 ? (item.weight / totalWeight) * 100 : 0;
               const tierColor = RARITY_TIERS.find(t => t.name === item.rarity)?.color ?? ACCENT_EMERALD;
-              const goldBase = { Common: 5, Uncommon: 15, Rare: 50, Epic: 200, Legendary: 1000 }[item.rarity] ?? 5;
+              const goldBase = rarityGold[item.rarity] ?? 0;
               const goldImpact = goldBase * (item.maxQuantity ?? 1) * (economyProfile === 'hardcore' ? 3 : 1);
               return (
                 <tr key={item.id} className="border-t border-border/20 hover:bg-surface/30">

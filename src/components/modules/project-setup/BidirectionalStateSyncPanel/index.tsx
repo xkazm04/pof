@@ -62,6 +62,7 @@ export function BidirectionalStateSyncPanel() {
             setShowPropertyWrite={s.setShowPropertyWrite}
             watchEntries={s.watchEntries}
             handleWatchedPush={s.handleWatchedPush}
+            writes={s.writes}
             propEdit={s.propEdit}
             setPropEdit={s.setPropEdit}
             handleDirectPropertyPush={s.handleDirectPropertyPush}
@@ -84,6 +85,7 @@ export function BidirectionalStateSyncPanel() {
               showConflicts={s.showConflicts}
               setShowConflicts={s.setShowConflicts}
               conflicts={s.conflicts}
+              onResolve={s.resolveConflict}
             />
           )}
 

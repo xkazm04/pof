@@ -1,5 +1,12 @@
 import type { GenerationProvider, ImportedObject } from '@/lib/blender-mcp/types';
 import type { Result } from '@/types/result';
+import {
+  createCoalescer,
+  defaultLedgerPath,
+  loadLedgerFile,
+  removeLedgerFile,
+  saveLedgerFile,
+} from '@/lib/blender-mcp/ledger-file';
 
 /**
  * Server custody of paid, in-flight Blender-MCP generations (Hyper3D / Hunyuan3D).
@@ -10,11 +17,13 @@ import type { Result } from '@/types/result';
  * a state), never credentials. A reloaded forge queue re-adopts the resumable entries via
  * `GET /api/blender-mcp/generate/jobs` instead of the operator paying again.
  *
- * IN-PROCESS BY DESIGN (single replica; degrades to nothing): anchored on `globalThis`
- * like the visual-gen `*-job-store.ts` maps so a dev hot-reload of a route module keeps
- * it, but a real server restart forgets it. That is why every listing carries
- * `ownerEpoch` — minted once per process — so a client can say "the server restarted and
- * tracking was lost" rather than reading an empty list as "nothing in flight".
+ * SINGLE-PROCESS, FILE-BACKED: anchored on `globalThis` like the visual-gen
+ * `*-job-store.ts` maps so a dev hot-reload keeps it, and written through to
+ * `.pof/blender-mcp-ledger.json` (atomic, coalesced) so a real restart rehydrates the
+ * paid jobs AND the epoch. A missing, corrupt or unwritable file degrades to the old
+ * in-memory behaviour: an empty list under a freshly minted `ownerEpoch`, which is what
+ * lets a client say "the server restarted and tracking was lost" rather than reading an
+ * empty list as "nothing in flight". Unfinished entries older than 24h are dropped on load.
  */
 export type LedgerState = 'generating' | 'completed' | 'imported' | 'failed';
 
@@ -30,9 +39,13 @@ export interface LedgerEntry {
 
 /** Oldest entries past this are evicted (terminal ones first) — a bounded memo, not a log. */
 const MAX_ENTRIES = 200;
+/** Unfinished entries older than this are dropped when the file is loaded. */
+const UNFINISHED_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface LedgerStore {
   epoch: string;
+  /** True when the epoch (and entries) came from the persisted file. */
+  restored: boolean;
   entries: Map<string, LedgerEntry>;
   /** In-flight imports, so two concurrent callers share ONE scene import. */
   importing: Map<string, Promise<Result<ImportedObject, string>>>;
@@ -45,12 +58,7 @@ function mintEpoch(): string {
 }
 
 function fresh(): LedgerStore {
-  return { epoch: mintEpoch(), entries: new Map(), importing: new Map() };
-}
-
-function store(): LedgerStore {
-  if (!g.pofBlenderMcpLedger) g.pofBlenderMcpLedger = fresh();
-  return g.pofBlenderMcpLedger;
+  return { epoch: mintEpoch(), restored: false, entries: new Map(), importing: new Map() };
 }
 
 function evict(entries: Map<string, LedgerEntry>): void {
@@ -63,10 +71,58 @@ function evict(entries: Map<string, LedgerEntry>): void {
   }
 }
 
+/** `undefined` = default path (off under vitest); `null` = persistence disabled. */
+let fileOverride: string | null | undefined;
+
+function ledgerFile(): string | null {
+  if (fileOverride !== undefined) return fileOverride;
+  if (process.env.VITEST) return null;
+  return process.env.POF_BLENDER_LEDGER_FILE || defaultLedgerPath();
+}
+
+function rehydrate(): LedgerStore {
+  const s = fresh();
+  const file = ledgerFile();
+  const snap = file ? loadLedgerFile<LedgerEntry>(file) : null;
+  if (!snap) return s;
+  const now = Date.now();
+  for (const e of snap.entries) {
+    if (!e || typeof e.jobId !== 'string' || typeof e.createdAt !== 'number') continue;
+    const unfinished = e.state === 'generating' || e.state === 'completed';
+    if (unfinished && now - e.createdAt > UNFINISHED_TTL_MS) continue;
+    s.entries.set(e.jobId, e);
+  }
+  evict(s.entries);
+  s.epoch = snap.epoch;
+  s.restored = true;
+  return s;
+}
+
+function store(): LedgerStore {
+  if (!g.pofBlenderMcpLedger) g.pofBlenderMcpLedger = rehydrate();
+  return g.pofBlenderMcpLedger;
+}
+
+const writer = createCoalescer(() => {
+  const file = ledgerFile();
+  const s = g.pofBlenderMcpLedger;
+  if (!file || !s) return;
+  saveLedgerFile(file, { epoch: s.epoch, entries: [...s.entries.values()] });
+});
+
+function persist(): void {
+  if (ledgerFile()) writer.schedule();
+}
+
 export const ledger = {
   /** Per-process id; differs after a restart (or `resetLedgerForTest`). */
   get ownerEpoch(): string {
     return store().epoch;
+  },
+
+  /** True when the epoch came from disk, i.e. the server restarted but tracking survived. */
+  get restored(): boolean {
+    return store().restored;
   },
 
   /** Record a job the provider accepted (and billed). */
@@ -75,6 +131,7 @@ export const ledger = {
     const entry: LedgerEntry = { ...input, createdAt: Date.now(), state: 'generating' };
     entries.set(input.jobId, entry);
     evict(entries);
+    persist();
     return entry;
   },
 
@@ -87,6 +144,7 @@ export const ledger = {
     const entry = store().entries.get(jobId);
     if (!entry || entry.state === 'imported') return;
     entry.state = state;
+    persist();
   },
 
   /** The one import happened — recorded even for a job submitted before this process. */
@@ -96,10 +154,12 @@ export const ledger = {
     if (entry) {
       entry.state = 'imported';
       entry.objectName = objectName;
+      persist();
       return;
     }
     entries.set(jobId, { jobId, provider, prompt: '', createdAt: Date.now(), state: 'imported', objectName });
     evict(entries);
+    persist();
   },
 
   /**
@@ -140,5 +200,23 @@ export const ledger = {
 
 /** Test-only: forget every entry AND mint a new epoch, as a process restart would. */
 export function resetLedgerForTest(): void {
+  const file = ledgerFile();
+  if (file) removeLedgerFile(file);
   g.pofBlenderMcpLedger = fresh();
+}
+
+/** Test-only: point persistence at a file (`null` restores the default, which is off under vitest). */
+export function setLedgerFileForTest(file: string | null): void {
+  fileOverride = file === null ? undefined : file;
+}
+
+/** Test-only: write any pending snapshot now. */
+export function flushLedgerForTest(): void {
+  writer.flush();
+}
+
+/** Test-only: a process restart - flush, drop the in-memory store, rehydrate lazily from the file. */
+export function simulateRestartForTest(): void {
+  writer.flush();
+  g.pofBlenderMcpLedger = undefined;
 }

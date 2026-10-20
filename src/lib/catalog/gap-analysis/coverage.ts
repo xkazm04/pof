@@ -16,6 +16,9 @@ import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import { pluginFor } from './plugins';
 import type { Histogram } from './plugins/types';
+import { readEntityPath, readPath } from './facets';
+
+export { readEntityPath, readPath };
 
 /** Where an under-represented row can come from: a declared expected share, or nothing. */
 export type GapBasis = 'expected-share' | 'none';
@@ -25,15 +28,6 @@ export interface DimensionCoverage { covered: number; of: number }
 
 /** The stratified sample size — also the degenerate threshold (see `measureDimensions`). */
 export const SAMPLE_MAX = 5;
-
-/** Read a dot-path value from an entity's `data` payload. */
-export function readPath(data: unknown, path: string): unknown {
-  if (data == null || typeof data !== 'object') return undefined;
-  return path.split('.').reduce<unknown>((acc, key) => {
-    if (acc == null || typeof acc !== 'object') return undefined;
-    return (acc as Record<string, unknown>)[key];
-  }, data);
-}
 
 /**
  * The histogram key of a dimension value (`String(v)`), or `null` for null/undefined — a value
@@ -47,7 +41,7 @@ export function bucketKeyOf(v: unknown): string | null {
 export function aggregateByAttr(entities: StoredCatalogEntity[], path: string): Histogram {
   const out: Histogram = {};
   for (const e of entities) {
-    const key = bucketKeyOf(readPath(e.data, path));
+    const key = bucketKeyOf(readEntityPath(e, path));
     if (key === null) continue;
     out[key] = (out[key] ?? 0) + 1;
   }

@@ -170,3 +170,31 @@ describe('PipelinesView — a failed read is not a grade', () => {
     expect(fetchStepSummaryResult.mock.calls.map((c) => c[0])).toEqual(['items', 'npcs', 'npcs']);
   });
 });
+
+describe('PipelinesView - next-up worklist', () => {
+  it('lists sub-R3 steps, and one click opens the evidence modal on that step', async () => {
+    const { container, getByTestId } = render(<PipelinesView onFocusCatalog={vi.fn()} />);
+    const panel = await waitFor(() => getByTestId('work-queue'));
+    const items = panel.querySelectorAll('button[data-queue-item]');
+    expect(items.length).toBeGreaterThan(0);
+    // The failed catalog contributes nothing to the queue.
+    expect(panel.textContent).not.toContain('npcs');
+    expect(document.querySelector('[aria-label="Close evidence"]')).toBeNull();
+
+    const first = items[0] as HTMLButtonElement;
+    expect(first.getAttribute('data-catalog')).toBe('items');
+    const stepLabel = first.getAttribute('data-step')!;
+    fireEvent.click(first);
+
+    await waitFor(() => expect(document.querySelector('[aria-label="Close evidence"]')).toBeTruthy());
+    expect(document.body.textContent).toContain(stepLabel);
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('marks the addressed route chip as active', async () => {
+    const { container } = render(<PipelinesView onFocusCatalog={vi.fn()} route="other-gate" />);
+    await waitFor(() => expect(lane(container, 'items')).toBeTruthy());
+    const pressed = [...container.querySelectorAll('button[aria-pressed="true"]')].map((b) => b.textContent ?? '');
+    expect(pressed.some((t) => t.startsWith('other-gate'))).toBe(true);
+  });
+});

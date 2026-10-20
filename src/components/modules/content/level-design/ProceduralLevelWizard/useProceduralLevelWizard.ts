@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo, useEffect, useDeferredValue, useReducer } from 'react';
+import { useCallback, useRef, useMemo, useEffect, useDeferredValue, useReducer } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { tryApiFetch } from '@/lib/api-utils';
-import { dungeonToGeometryScript, type CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
+import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
@@ -13,19 +13,14 @@ import { previewConfigFromSpec, type ProcgenSpec } from '@/lib/level-design/proc
 import { ALGORITHMS, LEVEL_TYPES } from './constants';
 import {
   MAX_EXPORT_SIZE, EXPORT_CELL_SIZE, EXPORT_WALL_HEIGHT,
-  buildExportPlan, describeExportPlan, describeSpawnPlacement, type ExportPlan,
+  buildExportPlan, describeExportPlan, describeSpawnPlacement,
 } from './exportPlan';
-import { planSpawns, type SpawnPlacement } from './spawnPlacement';
+import { planSpawns } from './spawnPlacement';
 import { procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore } from './specState';
+import { exportKey } from './exportFlow';
 import type { GenAlgorithm, LevelType, SizeParams, GameplayConstraints } from './types';
 
-/** A prepared export, held until the operator confirms the size it states. */
-export interface PendingBlenderExport {
-  plan: ExportPlan;
-  placement: SpawnPlacement;
-  /** The regenerated full-size grid this export will ship — NOT the preview grid. */
-  grid: CellType[][];
-}
+export type { PendingBlenderExport } from './exportFlow';
 
 /**
  * Roving-tabindex keyboard navigation for a single-select `role="radiogroup"`.
@@ -77,7 +72,7 @@ interface UseProceduralLevelWizardArgs {
 
 export function useProceduralLevelWizard({ onGenerate, specStore }: UseProceduralLevelWizardArgs) {
   const [ownState, ownDispatch] = useReducer(procgenSpecReducer, undefined, initialProcgenSpecState);
-  const { spec } = specStore?.state ?? ownState;
+  const { spec, flow, pinned, past, future } = specStore?.state ?? ownState;
   const dispatch = specStore?.dispatch ?? ownDispatch;
   const { algorithm, levelType, constraints, seedLabel: seed } = spec;
   const size = useMemo<SizeParams>(() => ({
@@ -92,9 +87,14 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
   // from the first time a designer has seen its preview.
   useEffect(() => { dispatch({ type: 'shown' }); }, [dispatch]);
 
-  const [blenderExporting, setBlenderExporting] = useState(false);
-  const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
-  const [pendingExport, setPendingExport] = useState<PendingBlenderExport | null>(null);
+  // The export flow is a reducer transition on the spec state (see exportFlow).
+  const blenderExporting = flow.status === 'sending';
+  const pendingExport = flow.status === 'prepared' || flow.status === 'stale' || flow.status === 'sending' || flow.status === 'failed'
+    ? flow.pending : null;
+  const blenderResult = flow.status === 'done' ? { message: flow.message, isError: false }
+    : flow.status === 'failed' ? { message: flow.message, isError: true } : null;
+  // Same-tick guard: two confirms before React re-renders both see the old flow.
+  const sendingRef = useRef(false);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   // ── Spec → live preview ──
@@ -114,6 +114,11 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
   const selectLevelType = useCallback((lt: LevelType) => dispatch({ type: 'selectLevelType', levelType: lt }), [dispatch]);
   const toggleConstraint = useCallback((key: keyof GameplayConstraints) => dispatch({ type: 'toggleConstraint', key }), [dispatch]);
   const updateSize = useCallback((key: keyof SizeParams, value: number) => dispatch({ type: 'updateSize', key, value }), [dispatch]);
+  const pin = useCallback(() => dispatch({ type: 'pin' }), [dispatch]);
+  const unpin = useCallback(() => dispatch({ type: 'unpin' }), [dispatch]);
+  const swapPinned = useCallback(() => dispatch({ type: 'restorePinned' }), [dispatch]);
+  const undo = useCallback(() => dispatch({ type: 'undo' }), [dispatch]);
+  const redo = useCallback(() => dispatch({ type: 'redo' }), [dispatch]);
 
   // The spec on screen, as is. What the C++ prompt uses of it is decided by the
   // prompt builder against `PROCGEN_ENGINES['llm-codegen'].reads` (enforced by
@@ -128,7 +133,7 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
   // from the LIVE config rather than the deferred one, so the operator confirms
   // the settings currently on screen.
   const prepareBlenderExport = useCallback(() => {
-    setBlenderResult(null);
+    if (flow.status === 'sending') return;
     const full = generatePreview(previewConfigFromSpec(spec, MAX_EXPORT_SIZE));
     const plan = buildExportPlan({
       algorithm: spec.algorithm,
@@ -139,16 +144,26 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
       seedLabel: spec.seedLabel,
       seedValue: full.seedValue,
     });
-    setPendingExport({ plan, placement: planSpawns(full.grid, constraints, EXPORT_CELL_SIZE), grid: full.grid });
-  }, [spec, constraints]);
+    dispatch({
+      type: 'exportFlow',
+      action: {
+        type: 'prepared',
+        pending: { plan, placement: planSpawns(full.grid, constraints, EXPORT_CELL_SIZE), grid: full.grid },
+        exportKey: exportKey(spec),
+      },
+    });
+  }, [spec, constraints, flow.status, dispatch]);
 
-  const cancelBlenderExport = useCallback(() => setPendingExport(null), []);
+  const cancelBlenderExport = useCallback(() => dispatch({ type: 'exportFlow', action: { type: 'cancel' } }), [dispatch]);
 
   const confirmBlenderExport = useCallback(async () => {
-    if (!pendingExport) return;
+    // Only a fresh plan, or a failed one (Retry), may send; stale and sending may not.
+    if (!pendingExport || sendingRef.current || (flow.status !== 'prepared' && flow.status !== 'failed')) return;
+    sendingRef.current = true;
     const { plan, placement, grid } = pendingExport;
-    setBlenderExporting(true);
-    setBlenderResult(null);
+    dispatch({ type: 'exportFlow', action: { type: 'confirm' } });
+    const settle = (ok: boolean, message: string) =>
+      dispatch({ type: 'exportFlow', action: { type: 'settled', ok, message } });
     try {
       // The header carries the same numbers the confirm step showed, so the
       // script stays honest once it is read in Blender with no UI beside it.
@@ -176,18 +191,17 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
       if (result.ok) {
         // Report the size that was actually shipped, never the configured one.
         const shipped = `Exported ${plan.width}x${plan.height} ${plan.isFullSize ? '' : `(${Math.round(plan.scale * 100)}% of requested) `}level to Blender. ${describeSpawnPlacement(placement)}`;
-        setBlenderResult({ message: result.data.output || shipped, isError: false });
-        setPendingExport(null);
+        settle(true, result.data.output || shipped);
       } else {
-        setBlenderResult({ message: result.error, isError: true });
+        settle(false, result.error);
       }
     } catch (e) {
       logger.warn('Blender export failed', e);
-      setBlenderResult({ message: e instanceof Error ? e.message : 'Export failed', isError: true });
+      settle(false, e instanceof Error ? e.message : 'Export failed');
     } finally {
-      setBlenderExporting(false);
+      sendingRef.current = false;
     }
-  }, [pendingExport]);
+  }, [pendingExport, flow.status, dispatch]);
 
   const algNav = useRovingRadioGroup(ALGORITHMS.length, (i) => setAlgorithm(ALGORITHMS[i].id));
   const ltNav = useRovingRadioGroup(LEVEL_TYPES.length, (i) => selectLevelType(LEVEL_TYPES[i].id));
@@ -205,12 +219,17 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
     setSeed,
     blenderExporting,
     blenderResult,
+    exportStatus: flow.status,
     blenderConnected,
     pendingExport,
     exportPlanSummary: pendingExport ? describeExportPlan(pendingExport.plan) : null,
     spawnPlacementSummary: pendingExport ? describeSpawnPlacement(pendingExport.placement) : null,
     preview,
     spec,
+    pinned,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    pin, unpin, swapPinned, undo, redo,
     selectLevelType,
     toggleConstraint,
     updateSize,

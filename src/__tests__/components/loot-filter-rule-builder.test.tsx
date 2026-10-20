@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, fireEvent, cleanup } from '@testing-library/react';
+import { render, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { LootFilterRuleBuilder } from '@/components/modules/core-engine/sub_inventory/loot-filter/LootFilterRuleBuilder';
 import { useLootFilterStore } from '@/stores/lootFilterStore';
 import { mockFetch } from '@/__tests__/setup';
@@ -65,5 +65,22 @@ describe('LootFilterRuleBuilder', () => {
     const toggles = getAllByTestId('lf-rule-toggle');
     fireEvent.click(toggles[0]);
     expect(useLootFilterStore.getState().rulesetsById.rs.rules[0].enabled).toBe(false);
+  });
+  it('shows wins per rule, flags a shadowed rule, and a transient delta after an edit', () => {
+    const { getAllByTestId, getByTestId, queryByTestId } = render(<LootFilterRuleBuilder />);
+    expect(getAllByTestId('lf-rule-wins')).toHaveLength(2);
+    expect(queryByTestId('lf-delta')).toBeNull();
+    // A second rule on the same condition is fully shadowed by the first.
+    useLootFilterStore.getState().addRule('rs', { id: 'c', name: 'Dupe Legendaries', condition: { rarities: ['Legendary'] } });
+    return waitFor(() => {
+      expect(getByTestId('lf-rule-flag').textContent).toContain('shadowed by Highlight Legendaries');
+    });
+  });
+
+  it('shows a delta chip when an edit flips drops, and warns when Hide swallows epic+ drops', async () => {
+    const { findByTestId, findAllByTestId } = render(<LootFilterRuleBuilder />);
+    useLootFilterStore.getState().updateRule('rs', 'a', { action: 'hide' });
+    expect((await findByTestId('lf-delta')).textContent).toMatch(/Last edit changed [1-9]/);
+    expect((await findAllByTestId('lf-warning')).length).toBe(1);
   });
 });

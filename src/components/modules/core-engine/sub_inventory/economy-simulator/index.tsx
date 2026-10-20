@@ -11,11 +11,8 @@ import {
 import { EASE_OUT } from '@/lib/motion';
 import { focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import {
-  runItemEconomySim, DEFAULT_ITEM_ECON_CONFIG,
-  type ItemEconomyConfig, type ItemEconomyResult,
-} from '@/lib/economy/item-economy-engine';
-import { economyVerdicts, summarizeRun, runToCoverage, HORIZON_LADDER } from '@/lib/economy/item-economy-verdicts';
+import { economyVerdicts, summarizeRun } from '@/lib/economy/item-economy-verdicts';
+import { useItemEconomySessionStore, type ItemEconomyRunKind } from '@/stores/itemEconomySessionStore';
 import { ACCENT } from './constants';
 import { ConfigInput } from './ConfigInput';
 import { SimulationSkeleton } from './SimulationSkeleton';
@@ -31,46 +28,22 @@ interface Props { moduleId: string }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ItemEconomySimulator({ moduleId }: Props) {
-  const [config, setConfig] = useState<ItemEconomyConfig>({ ...DEFAULT_ITEM_ECON_CONFIG });
-  const [result, setResult] = useState<ItemEconomyResult | null>(null);
+  // Run state lives in the session store so it survives this tab unmounting and
+  // the Balance Advisor can quote it; only the sub-tab selection stays local.
+  const { config, result, status, error, extendNote, updateConfig, start, execute } = useItemEconomySessionStore();
   const [activeTab, setActiveTab] = useState('power');
-  const [isRunning, setIsRunning] = useState(false);
-  const [extendNote, setExtendNote] = useState<string | null>(null);
+  const isRunning = status === 'running';
 
   // One deferred-work site (the rAF callsite inventory in suspendable-raf.test pins it):
   // paint the skeleton first, then run the synchronous Monte Carlo work.
-  const runDeferred = useCallback((work: () => void) => {
-    setIsRunning(true);
-    requestAnimationFrame(() => {
-      work();
-      setIsRunning(false);
-    });
-  }, []);
+  const runDeferred = useCallback((kind: ItemEconomyRunKind) => {
+    const runId = start();
+    requestAnimationFrame(() => execute(runId, kind));
+  }, [start, execute]);
 
-  const runSim = useCallback(() => {
-    setExtendNote(null);
-    runDeferred(() => setResult(runItemEconomySim(config)));
-  }, [config, runDeferred]);
-
+  const runSim = useCallback(() => runDeferred('run'), [runDeferred]);
   // Walk the horizon ladder at the same seed; adopt the smallest horizon that samples the endgame.
-  const extendHorizon = useCallback(() => {
-    runDeferred(() => {
-      const covered = runToCoverage(config);
-      if (covered) {
-        setConfig(covered.result.config);
-        setResult(covered.result);
-        setExtendNote(`extended to ${covered.horizon} h, the first rung that samples the endgame`);
-      } else {
-        setExtendNote(`endgame not reached within ${HORIZON_LADDER[HORIZON_LADDER.length - 1]} h; lower Max Level`);
-      }
-    });
-  }, [config, runDeferred]);
-
-  const updateConfig = useCallback(
-    <K extends keyof ItemEconomyConfig>(key: K, value: ItemEconomyConfig[K]) => {
-      setConfig((prev) => ({ ...prev, [key]: value }));
-    }, [],
-  );
+  const extendHorizon = useCallback(() => runDeferred('extend'), [runDeferred]);
 
   const summary = useMemo(() => (result ? summarizeRun(result) : null), [result]);
   const verdicts = useMemo(() => (result ? economyVerdicts(result) : []), [result]);
@@ -132,6 +105,11 @@ export function ItemEconomySimulator({ moduleId }: Props) {
             {isRunning ? 'Running...' : `Simulate ${config.playerCount} Players`}
           </button>
         </div>
+        {status === 'error' && (
+          <p role="alert" className="text-xs font-mono text-text-muted">
+            Simulation failed: {error}{result ? ' (showing the previous run)' : ''}
+          </p>
+        )}
       </BlueprintPanel>
 
       {/* Running skeleton / Results / Empty state */}

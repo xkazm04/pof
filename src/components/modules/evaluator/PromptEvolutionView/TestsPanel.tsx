@@ -5,6 +5,7 @@ import type { PromptVariant, ABTest, ABTestView } from '@/types/prompt-evolution
 import type { ConcludeOutcome } from '@/stores/promptEvolutionStore';
 import { STATUS_COLORS, type ViewMode } from './constants';
 import { ABTestCard } from './ABTestCard';
+import { planAdoption } from './adoption';
 import { EmptyState } from './EmptyState';
 
 // ── Tests Panel ─────────────────────────────────────────────────────────────
@@ -15,6 +16,7 @@ export function TestsPanel({
   expandedTestId,
   setExpandedTestId,
   concludeTest,
+  adoptWinner,
   mode,
 }: {
   abTests: Array<ABTest | ABTestView>;
@@ -22,6 +24,7 @@ export function TestsPanel({
   expandedTestId: string | null;
   setExpandedTestId: (id: string | null) => void;
   concludeTest: (id: string) => Promise<ConcludeOutcome | null>;
+  adoptWinner?: (testId: string) => Promise<{ ok: boolean }>;
   mode: ViewMode;
 }) {
   const variantMap = useMemo(() => {
@@ -103,6 +106,8 @@ export function TestsPanel({
               variantB={variantMap.get(test.variantBId)}
               isExpanded={expandedTestId === test.id}
               onToggle={() => setExpandedTestId(expandedTestId === test.id ? null : test.id)}
+              adoption={adoptWinner ? planAdoption({ test, variants, tests: abTests }) : undefined}
+              onAdopt={adoptWinner ? async () => (await adoptWinner(test.id)).ok : undefined}
               mode={mode}
             />
           ))}

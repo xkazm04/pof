@@ -1,4 +1,5 @@
 import { py } from '@/lib/blender-mcp/escape';
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
 
 export function autoWeightsScript(params: {
   armatureName: string;
@@ -19,5 +20,6 @@ armature.select_set(True)
 bpy.ops.object.parent_set(type='ARMATURE_AUTO')
 
 print(f"Auto weights applied: {mesh.name} -> {armature.name}")
+${pyReceipt('auto-weights', { mesh: 'mesh.name', armature: 'armature.name', groups: 'len(mesh.vertex_groups)' })}
 `.trim();
 }

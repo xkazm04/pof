@@ -1,3 +1,6 @@
+import { pyJson } from '@/lib/blender-mcp/escape';
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
+
 export interface ScatterPoint {
   x: number;
   y: number;
@@ -10,16 +13,13 @@ export function scatterVegetationScript(params: {
   points: ScatterPoint[];
   speciesNames: Record<string, string>;
 }): string {
-  const pointsJson = JSON.stringify(params.points);
-  const speciesJson = JSON.stringify(params.speciesNames);
-
   return `
 import bpy
 import json
 import math
 
-points = json.loads('${pointsJson.replace(/'/g, "\\'")}')
-species = json.loads('${speciesJson.replace(/'/g, "\\'")}')
+points = ${pyJson(params.points)}
+species = ${pyJson(params.speciesNames)}
 
 collection = bpy.data.collections.new("Vegetation")
 bpy.context.scene.collection.children.link(collection)
@@ -37,5 +37,6 @@ for i, pt in enumerate(points):
     bpy.context.scene.collection.objects.unlink(obj)
 
 print(f"Scattered {len(points)} vegetation objects")
+${pyReceipt('scatter-vegetation', { objects: 'len(collection.objects)' })}
 `.trim();
 }

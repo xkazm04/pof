@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { coalesce, retain, FEED_CAP } from '@/components/layout/ActivityFeedPanel/feedModel';
 
 // ── Activity event types ──
 
@@ -33,6 +34,8 @@ export interface ActivityEvent {
     prevScore?: number;
     priority?: string;
     prompt?: string;
+    /** Repeats folded into this event (absent = 1). */
+    count?: number;
   };
 }
 
@@ -61,15 +64,10 @@ export const useActivityFeedStore = create<ActivityFeedState>()(
 
       addEvent: (event) =>
         set((state) => ({
-          events: [
-            {
-              ...event,
-              id: `evt-${Date.now()}-${_eventCounter++}`,
-              timestamp: Date.now(),
-              dismissed: false,
-            },
-            ...state.events,
-          ].slice(0, 50), // Keep last 50 events
+          events: retain(
+            coalesce(state.events, event, Date.now(), () => `evt-${Date.now()}-${_eventCounter++}`),
+            FEED_CAP,
+          ),
         })),
 
       dismissEvent: (id) =>

@@ -26,6 +26,38 @@ const LEGEND: { cell: CellType; label: string }[] = [
   { cell: 'wall', label: 'Wall' },
 ];
 
+/** Paint a grid at 1px per cell. Shared by the preview, contact-sheet thumbnails and the compare view. */
+export function paintGrid(canvas: HTMLCanvasElement | null, grid: CellType[][], width: number, height: number) {
+  const ctx = canvas?.getContext('2d');
+  if (!canvas || !ctx) return; // jsdom / unsupported — stats still render.
+  canvas.width = width;
+  canvas.height = height;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      ctx.fillStyle = CELL_COLORS[grid[y][x]];
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+}
+
+/** A grid as a small pixelated canvas, CSS-scaled to its container. */
+export function GridCanvas({ grid, width, height, label, testId }: {
+  grid: CellType[][]; width: number; height: number; label: string; testId?: string;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => paintGrid(ref.current, grid, width, height), [grid, width, height]);
+  return (
+    <canvas
+      ref={ref}
+      role="img"
+      aria-label={label}
+      data-testid={testId}
+      className="w-full block rounded border border-violet-900/40 bg-black/60"
+      style={{ aspectRatio: `${width} / ${height}`, imageRendering: 'pixelated' }}
+    />
+  );
+}
+
 function connectivityColor(c: number): string {
   return c >= 0.95 ? STATUS_SUCCESS : c >= 0.8 ? STATUS_WARNING : STATUS_ERROR;
 }
@@ -46,18 +78,7 @@ export function ProcgenPreviewCanvas({ result, seedLabel }: ProcgenPreviewCanvas
   const { grid, width, height, stats } = result;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return; // jsdom / unsupported — stats still render.
-    canvas.width = width;
-    canvas.height = height;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        ctx.fillStyle = CELL_COLORS[grid[y][x]];
-        ctx.fillRect(x, y, 1, 1);
-      }
-    }
+    paintGrid(canvasRef.current, grid, width, height);
   }, [grid, width, height]);
 
   const connPct = Math.round(stats.connectivity * 100);

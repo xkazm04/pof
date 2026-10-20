@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 import { createPostJson, createProposalPhases } from './proposalPhases';
+import { createRunSession, type Run } from './runSession';
 import { decideStep, stepRefsFor, type OrchestratorStepRef } from './runPlan';
 
 export type { OrchestratorStepRef } from './runPlan';
@@ -38,17 +39,18 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
   // Resolve the global lazily: a module-level orchestrator must see a fetch installed later.
   const fetchImpl: typeof fetch = opts.fetchImpl ?? ((input, init) => fetch(input, init));
   const stepsFor = opts.stepsFor ?? stepRefsFor;
-  let _cancelled = false;
+  // One session for the whole job: a pipeline run and the proposal phases share one cancellation vocabulary.
+  const session = createRunSession();
 
   const postJson = createPostJson(fetchImpl);
-  const phases = createProposalPhases(postJson);
+  const phases = createProposalPhases(postJson, session);
 
   /**
    * Run one step on the draft through the skip policy → its recorded result. The mode is the run
    * plan's (`decideStep` with the operator's `stepModeOverrides`), read at dispatch time so
    * approveAndRun, resume and retryFailed all send what the plan showed.
    */
-  async function runStep(catalogId: string, entityId: string, s: OrchestratorStepRef): Promise<StepResult> {
+  async function runStep(run: Run, catalogId: string, entityId: string, s: OrchestratorStepRef): Promise<StepResult> {
     const dec = decideStep(s, useOneShotJobStore.getState().stepModeOverrides);
     if (dec.mode === 'skip-needs-art') return { step: s.label, outcome: 'skipped', reason: 'needs human selection' };
     if (dec.mode === 'defer-runtime') return { step: s.label, outcome: 'deferred', reason: `${dec.tier} pending the test-gate runner` };
@@ -67,6 +69,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
           mode: dec.mode === 'run-cli' ? 'cli' : 'deterministic',
           proposal: currentProposal ? { name: currentProposal.name, data: currentProposal.data } : undefined,
         },
+        run.signal,
       );
       // A deferral must always carry a reason (Rule 4); if the checker gave none,
       // say at least which tier deferred it rather than logging a bare "deferred".
@@ -85,7 +88,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
    * still unrecorded, so a partial retry never passes an interrupted run off as complete.
    */
   async function runPlan(
-    catalogId: string, draftId: string, include: ((label: string) => boolean) | null,
+    run: Run, catalogId: string, draftId: string, include: ((label: string) => boolean) | null,
     write: 'record' | 'replace', entry: OneShotPhase, priorReason?: string,
   ): Promise<void> {
     const steps = stepsFor(catalogId);
@@ -94,9 +97,11 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
     eventBus.emit('oneshot.started', { jobId, jobName: catalogId, totalSteps: steps.length, catalogId, entityId: draftId });
 
     for (let i = 0; i < steps.length; i++) {
-      if (_cancelled) break;
+      if (!run.isLive()) break;
       if (include && !include(steps[i].label)) continue;
-      const r = await runStep(catalogId, draftId, steps[i]);
+      const r = await runStep(run, catalogId, draftId, steps[i]);
+      // A result that returns after its run ended (cancelled, or superseded by a resume) is discarded.
+      if (!run.isLive()) return;
       const st = useOneShotJobStore.getState();
       if (write === 'replace') st.upsertStep(r); else st.recordStep(r);
       eventBus.emit('oneshot.step-completed', {
@@ -104,12 +109,14 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
       });
     }
 
-    if (_cancelled) return;
+    if (!run.isLive()) return;
     const recorded = new Set(useOneShotJobStore.getState().stepResults.map((r) => r.step));
     if (entry === 'failed' && !steps.every((s) => recorded.has(s.label))) {
+      run.end();
       useOneShotJobStore.getState().setPhase('failed', { failureReason: priorReason ?? 'incomplete' });
       return;
     }
+    run.end();
     useOneShotJobStore.getState().markCompleted();
     const sum = useOneShotJobStore.getState().lastSummary!;
     if (sum.failed > 0 && sum.passed === 0) {
@@ -121,14 +128,12 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
 
   return {
     async analyze(catalogId: string, userHint?: string) {
-      _cancelled = false;
       return phases.analyze(catalogId, userHint);
     },
 
     proposeFor: phases.proposeFor,
 
     async start(catalogId: string, userHint?: string) {
-      _cancelled = false;
       await phases.analyze(catalogId, userHint);
       await phases.proposeFor(null);
     },
@@ -136,61 +141,70 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
     refine: phases.refine,
 
     async approveAndRun() {
-      _cancelled = false;
       const store = useOneShotJobStore.getState();
       if (!['proposing', 'awaitingRun'].includes(store.phase)) {
         throw new Error('no approvable proposal');
       }
       if (!store.proposal || !store.catalogId) throw new Error('no proposal');
-
-      const draftId = `draft-${store.catalogId}-${Date.now()}`;
-      useCatalogStore.getState().addDraft(store.catalogId, {
-        id: draftId,
-        catalogId: store.catalogId,
-        name: store.proposal.name,
-        categoryPath: [],
-        tags: ['one-shot'],
-        lifecycle: 'planned',
-        data: store.proposal.data as unknown,
-      });
-
-      // Make the entity RESOLVABLE BY THE SERVER before a single artifact is written for it.
-      // Until this route existed, the draft lived only in `localStorage` while its ~11
-      // pipeline artifacts went to SQLite: `seededEntities` missed it, so `listEntitySummaries`
-      // omitted it, the server `CheckerContext.has()` said false and the static-verify resolver
-      // returned `null` — the entity silently exempted itself from every gate. The browser
-      // store is now the cache; `catalog_entities` is the record.
-      //
-      // A failed persist is NOT swallowed: the draft is flagged `browserOnly` with the reason,
-      // which the catalog tree renders as "gates cannot run". The run still proceeds, because
-      // stopping it would destroy work the user already approved — but nothing pretends the
-      // entity is durable.
+      // Claimed synchronously, before any await: the phase only becomes `running` after the persist
+      // below, so without this a second click in that window would add a second draft and a second run.
+      const run = session.claim('pipeline');
+      if (!run) throw new Error('a run is already starting');
       try {
-        await postJson('/api/catalog-entities', {
-          catalogId: store.catalogId,
-          entityId: draftId,
-          name: store.proposal.name,
-          source: 'one-shot',
-          tags: ['one-shot'],
-          data: store.proposal.data,
-        });
-      } catch (e) {
-        const reason = e instanceof Error ? e.message : String(e);
-        logger.warn(`one-shot: could not persist ${store.catalogId}/${draftId} server-side — ${reason}`);
-        useCatalogStore.getState().markDraftBrowserOnly(store.catalogId, draftId, reason);
-      }
 
-      store.setPhase('running', { draftEntityId: draftId });
-      await runPlan(store.catalogId, draftId, null, 'record', 'completed');
+        const draftId = `draft-${store.catalogId}-${Date.now()}`;
+        useCatalogStore.getState().addDraft(store.catalogId, {
+          id: draftId,
+          catalogId: store.catalogId,
+          name: store.proposal.name,
+          categoryPath: [],
+          tags: ['one-shot'],
+          lifecycle: 'planned',
+          data: store.proposal.data as unknown,
+        });
+
+        // Make the entity RESOLVABLE BY THE SERVER before a single artifact is written for it.
+        // Until this route existed, the draft lived only in `localStorage` while its ~11
+        // pipeline artifacts went to SQLite: `seededEntities` missed it, so `listEntitySummaries`
+        // omitted it, the server `CheckerContext.has()` said false and the static-verify resolver
+        // returned `null` — the entity silently exempted itself from every gate. The browser
+        // store is now the cache; `catalog_entities` is the record.
+        //
+        // A failed persist is NOT swallowed: the draft is flagged `browserOnly` with the reason,
+        // which the catalog tree renders as "gates cannot run". The run still proceeds, because
+        // stopping it would destroy work the user already approved — but nothing pretends the
+        // entity is durable.
+        try {
+          await postJson('/api/catalog-entities', {
+            catalogId: store.catalogId,
+            entityId: draftId,
+            name: store.proposal.name,
+            source: 'one-shot',
+            tags: ['one-shot'],
+            data: store.proposal.data,
+          });
+        } catch (e) {
+          const reason = e instanceof Error ? e.message : String(e);
+          logger.warn(`one-shot: could not persist ${store.catalogId}/${draftId} server-side — ${reason}`);
+          useCatalogStore.getState().markDraftBrowserOnly(store.catalogId, draftId, reason);
+        }
+
+        if (!run.isLive()) throw new Error('cancelled');
+        store.setPhase('running', { draftEntityId: draftId });
+        await runPlan(run, store.catalogId, draftId, null, 'record', 'completed');
+      } finally {
+        run.end();
+      }
     },
 
     async resume() {
       const s = useOneShotJobStore.getState();
       if (s.phase !== 'failed' || !s.catalogId || !s.draftEntityId) throw new Error('nothing to resume — no interrupted run with a draft');
       const done = new Set(s.stepResults.map((r) => r.step));
-      _cancelled = false;
+      const run = session.claim('pipeline');
+      if (!run) throw new Error('a run is already in flight');
       s.setPhase('running', { failureReason: undefined });
-      await runPlan(s.catalogId, s.draftEntityId, (l) => !done.has(l), 'record', 'failed');
+      await runPlan(run, s.catalogId, s.draftEntityId, (l) => !done.has(l), 'record', 'failed');
     },
 
     async retryFailed() {
@@ -201,16 +215,17 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
       }
       const entry = s.phase;
       const priorReason = s.failureReason;
-      _cancelled = false;
+      const run = session.claim('pipeline');
+      if (!run) throw new Error('a run is already in flight');
       s.setPhase('running', { failureReason: undefined });
-      await runPlan(s.catalogId, s.draftEntityId, (l) => failed.has(l), 'replace', entry, priorReason);
+      await runPlan(run, s.catalogId, s.draftEntityId, (l) => failed.has(l), 'replace', entry, priorReason);
     },
 
     cancel() {
       if (phases.cancel()) return;
       const cancelStore = useOneShotJobStore.getState();
       if (cancelStore.phase !== 'running') return;
-      _cancelled = true;
+      session.cancel();
       cancelStore.setPhase('failed', { failureReason: 'cancelled' });
       const cancelStepIndex = cancelStore.stepResults.length > 0 ? cancelStore.stepResults.length - 1 : 0;
       const cancelTotalSteps = cancelStore.totalSteps ?? 0;

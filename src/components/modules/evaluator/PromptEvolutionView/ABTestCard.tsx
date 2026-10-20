@@ -1,7 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ChevronDown, ChevronRight, CheckCircle2, Clock, Trophy,
-  Target, Copy, FlaskConical,
+  Target, Copy, FlaskConical, Rocket,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -12,6 +12,8 @@ import { verdictOf } from '@/lib/prompt-evolution/verdict';
 import { STATUS_WARNING, STATUS_SUCCESS, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { toast } from 'sonner';
 import { ACCENT, STATUS_COLORS, type ViewMode } from './constants';
+import type { AdoptionResult } from './adoption';
+import { AdoptionPreview } from './AdoptionPreview';
 
 // ── A/B Test Card ───────────────────────────────────────────────────────────
 
@@ -23,6 +25,8 @@ export function ABTestCard({
   onToggle,
   onConclude,
   concludeRefusal,
+  adoption,
+  onAdopt,
   mode,
 }: {
   test: ABTest | ABTestView;
@@ -33,6 +37,10 @@ export function ABTestCard({
   onConclude?: () => void;
   /** Why the last decide-now press was refused, shown next to the test. */
   concludeRefusal?: string;
+  /** Whether (and how) this decided test's winner can be adopted; omit to hide the action. */
+  adoption?: AdoptionResult;
+  /** Make the winner the served version; resolves true when it took. */
+  onAdopt?: () => Promise<boolean>;
   mode: ViewMode;
 }) {
   // The ONE reading (verdict.ts): the server's when it sent one, else self-reported.
@@ -90,6 +98,8 @@ export function ABTestCard({
                 verdict={verdict}
                 canUseWording={Boolean(winnerVariant)}
                 onUseWording={handleUseWording}
+                adoption={adoption}
+                onAdopt={onAdopt}
               />
               <VerdictBasisLine reading={reading} mode={mode} />
 
@@ -193,12 +203,25 @@ function PlainVerdictBanner({
   verdict,
   canUseWording,
   onUseWording,
+  adoption,
+  onAdopt,
 }: {
   verdict: PlainVerdict;
   canUseWording: boolean;
   onUseWording: () => void;
+  adoption?: AdoptionResult;
+  onAdopt?: () => Promise<boolean>;
 }) {
   const hasWinner = verdict.winnerSlot !== null;
+  const [previewing, setPreviewing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const confirm = async () => {
+    if (!onAdopt) return;
+    setBusy(true);
+    const done = await onAdopt();
+    setBusy(false);
+    if (done) setPreviewing(false);
+  };
   const accent = hasWinner ? STATUS_SUCCESS : STATUS_NEUTRAL;
 
   return (
@@ -223,15 +246,45 @@ function PlainVerdictBanner({
         </div>
       </div>
 
+      {hasWinner && adoption && (
+        <div className="mt-2.5" data-testid="adoption">
+          {adoption.ok ? (
+            <>
+              {!previewing && (
+                <button
+                  onClick={() => setPreviewing(true)}
+                  className="focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors"
+                  style={{ backgroundColor: STATUS_SUCCESS }}
+                >
+                  <Rocket className="w-3 h-3" />
+                  Adopt winner
+                </button>
+              )}
+              {previewing && (
+                <AdoptionPreview
+                  plan={adoption.data}
+                  busy={busy}
+                  onConfirm={() => void confirm()}
+                  onCancel={() => setPreviewing(false)}
+                />
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-text-muted" data-testid="adoption-blocked" data-kind={adoption.error.kind}>
+              {adoption.error.message}
+            </p>
+          )}
+        </div>
+      )}
+
       {hasWinner && canUseWording && (
-        <div className="mt-2.5">
+        <div className="mt-2">
           <button
             onClick={onUseWording}
-            className="focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors"
-            style={{ backgroundColor: STATUS_SUCCESS }}
+            className="focus-ring inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md text-text-muted hover:text-text transition-colors"
           >
             <Copy className="w-3 h-3" />
-            Use this wording
+            Copy wording
           </button>
         </div>
       )}

@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { buildRefinePrompt } from '@/lib/one-shot/design-prompts';
-import { validateProposal } from '@/lib/one-shot/validate-proposal';
-import { seededEntities } from '@/lib/catalog/seed';
+import { proposalEnvelope, seededLinkContext } from '@/lib/one-shot/proposal-issues';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
 import { resolveDispatchModelChoice } from '@/lib/model-policy';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -43,17 +42,7 @@ export async function POST(req: NextRequest) {
     });
     const parsed = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
-    const seededIds = new Set(seededEntities(catalogId).map((e) => e.id));
-    const issues = validateProposal(catalogId, parsed as { name?: string; data?: unknown }, { seededIds });
-
-    const proposal = {
-      name: (parsed.name as string) ?? '',
-      data: parsed.data ?? {},
-      rationale: (parsed.rationale as string) ?? '',
-      issues,
-    };
-
-    return apiSuccess(proposal);
+    return apiSuccess(proposalEnvelope(parsed, { catalogId, ...seededLinkContext() }));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'refine failed', 500);
   }

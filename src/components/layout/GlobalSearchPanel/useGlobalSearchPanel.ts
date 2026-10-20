@@ -9,7 +9,10 @@ import { useModuleActions } from '@/hooks/useModuleActions';
 import { useHotkey, useEscapeLayer } from '@/hooks/useHotkey';
 import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
+import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { resolveSearchIntents } from './searchIntents';
+import { buildHome } from './paletteHome';
+import { readRecents, recordRecent } from './recentSelections';
 
 // ── Index freshness ───────────────────────────────────────────────────────────
 // The search index source is almost entirely static (categories, sub-modules,
@@ -28,7 +31,8 @@ let indexEnsuredForPath: string | null = null;
 export function useGlobalSearchPanel() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searchResults, setResults] = useState<SearchResult[]>([]);
+  const [recents, setRecents] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -45,6 +49,7 @@ export function useGlobalSearchPanel() {
   const navigateToModule = useNavigationStore((s) => s.navigateToModule);
   const projectPath = useProjectStore((s) => s.projectPath);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
+  const feedEvents = useActivityFeedStore((s) => s.events);
   const { sendPromptToModule } = useModuleActions();
   const prefersReduced = useReducedMotion();
 
@@ -56,6 +61,7 @@ export function useGlobalSearchPanel() {
   // ── Focus input when opening ──
   useEffect(() => {
     if (open) {
+      setRecents(readRecents(projectPath));
       // Small delay to let animation start
       requestAnimationFrame(() => inputRef.current?.focus());
       // Build the index once per project; reuse the persisted index thereafter.
@@ -125,26 +131,45 @@ export function useGlobalSearchPanel() {
   }, [projectPath]);
 
   // ── Resolve every hit to its intents (navigate / run / done-state) ──
+  // A blank query shows the palette home (unread Fix alerts, then recents) in
+  // place of results, so the same arrow/Enter/Shift+Enter model drives it.
+  const blank = !query.trim();
+  const homeRows = useMemo(
+    () => (blank ? buildHome({ recents, events: feedEvents }) : []),
+    [blank, recents, feedEvents],
+  );
+  const results = useMemo(
+    () => (blank ? homeRows.map((h) => h.result) : searchResults),
+    [blank, homeRows, searchResults],
+  );
+  const homeKinds = blank ? homeRows.map((h) => h.kind) : null;
   const intents = useMemo(
-    () => results.map((r) => resolveSearchIntents(r, checklistProgress)),
-    [results, checklistProgress],
+    () => results.map((r, i) => {
+      const base = resolveSearchIntents(r, checklistProgress);
+      const run = blank ? homeRows[i]?.run : null;
+      return run ? { ...base, run } : base;
+    }),
+    [results, checklistProgress, blank, homeRows],
   );
 
   // ── Navigate to result (Enter / row click — never a paid run) ──
   const handleSelect = useCallback((result: SearchResult) => {
     const { primary } = resolveSearchIntents(result, checklistProgress);
+    recordRecent(projectPath, result);
     if (primary) navigateToModule(primary.moduleId);
     setOpen(false);
-  }, [navigateToModule, checklistProgress]);
+  }, [navigateToModule, checklistProgress, projectPath]);
 
   // ── Run a quick action (Shift+Enter / Run button only) ──
   // A hit with no run intent falls back to its navigation.
   const handleRun = useCallback((result: SearchResult) => {
-    const { run } = resolveSearchIntents(result, checklistProgress);
+    const homeRun = homeRows.find((h) => h.result.id === result.id)?.run;
+    const run = homeRun ?? resolveSearchIntents(result, checklistProgress).run;
     if (!run) { handleSelect(result); return; }
+    recordRecent(projectPath, result);
     sendPromptToModule(run.moduleId, run.prompt);
     setOpen(false);
-  }, [checklistProgress, handleSelect, sendPromptToModule]);
+  }, [checklistProgress, handleSelect, sendPromptToModule, homeRows, projectPath]);
 
   // ── Keyboard navigation ──
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -184,6 +209,7 @@ export function useGlobalSearchPanel() {
     query, setQuery,
     results,
     intents,
+    homeKinds,
     loading,
     rebuilding,
     activeIndex, setActiveIndex,

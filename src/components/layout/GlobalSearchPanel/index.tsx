@@ -17,6 +17,7 @@ export function GlobalSearchPanel() {
     query, setQuery,
     results,
     intents,
+    homeKinds,
     loading,
     rebuilding,
     activeIndex, setActiveIndex,
@@ -137,7 +138,7 @@ export function GlobalSearchPanel() {
 
             {/* Results */}
             <div ref={resultsRef} className="max-h-[50vh] overflow-y-auto">
-              {!query.trim() ? (
+              {!query.trim() && results.length === 0 ? (
                 <div className="px-4 py-8 text-center">
                   <Search className="w-8 h-8 text-border-bright mx-auto mb-2" aria-hidden="true" />
                   <p className="text-xs text-text-muted">
@@ -160,6 +161,7 @@ export function GlobalSearchPanel() {
                     intents={intents[i]}
                     active={i === activeIndex}
                     index={i}
+                    homeKind={homeKinds?.[i]}
                     onSelect={handleSelect}
                     onRun={handleRun}
                     onHover={setActiveIndex}
@@ -177,7 +179,9 @@ export function GlobalSearchPanel() {
                 {loading
                   ? 'Searching…'
                   : results.length > 0
-                    ? `${results.length} result${results.length !== 1 ? 's' : ''}`
+                    ? !query.trim()
+                      ? 'Alerts and recent'
+                      : `${results.length} result${results.length !== 1 ? 's' : ''}`
                     : query.trim()
                       ? 'No results'
                       : 'Global search'}

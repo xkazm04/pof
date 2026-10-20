@@ -1,17 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import { ACCENT_CYAN, STATUS_WARNING } from '@/lib/chart-colors';
 import { LiveMetricGauge } from '../../unique-tabs/_shared';
 import { DROPS_PER_HOUR_GAUGE, GOLD_PER_HOUR_GAUGE, DROP_SOURCE_BREAKDOWN } from '../_shared/data';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { useLootTuningStore } from '../_shared/lootTuningStore';
+import { deriveEconomy, ECONOMY_KILLS_PER_HOUR } from './lootSimEngine';
 
 export function DropsPerHour() {
   const [playerLevel, setPlayerLevel] = useState(20);
   const levelMultiplier = 1 + (playerLevel - 1) * 0.04;
-  const adjItemsPerHour = Math.round(45 * levelMultiplier);
-  const adjGoldPerHour = Math.round(2300 * levelMultiplier);
+  const bindings = useLootTuningStore((s) => s.bindings);
+  const rarityGold = useLootTuningStore((s) => s.rarityGold);
+  const eco = useMemo(
+    () => deriveEconomy(bindings, rarityGold, ECONOMY_KILLS_PER_HOUR, 'casual'),
+    [bindings, rarityGold],
+  );
+  const adjItemsPerHour = Math.round(eco.itemsPerHour * levelMultiplier);
+  const adjGoldPerHour = Math.round(eco.goldPerHour * levelMultiplier);
 
   return (
     <BlueprintPanel className="p-3">
@@ -38,7 +46,7 @@ export function DropsPerHour() {
         <div className="flex flex-col items-center justify-center gap-1">
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Time to Legendary</span>
           <span className="text-lg font-mono font-bold" style={{ color: STATUS_WARNING }}>
-            {(8.5 / levelMultiplier).toFixed(1)}h
+            {eco.hoursPerLegendary === null ? 'never' : `${(eco.hoursPerLegendary / levelMultiplier).toFixed(1)}h`}
           </span>
           <span className="text-2xs text-text-muted">estimated</span>
         </div>

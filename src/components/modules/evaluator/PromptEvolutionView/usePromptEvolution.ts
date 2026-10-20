@@ -9,6 +9,8 @@ import type { PromptVariant, MutationType } from '@/types/prompt-evolution';
 import type { SubModuleId } from '@/types/modules';
 import { toast } from 'sonner';
 import { getModuleChecklist } from '@/lib/module-registry';
+import { planStart } from '@/lib/prompt-evolution/start-plan';
+import { planAdoption, filterAdoptSuggestions, runAdoption, type AdoptionPlan, type AdoptionHandle } from './adoption';
 import type { ViewMode } from './constants';
 
 export function usePromptEvolution() {
@@ -126,6 +128,16 @@ export function usePromptEvolution() {
       const storeError = usePromptEvolutionStore.getState().error;
       return { ok: false as const, message: storeError ?? 'Could not establish a baseline version.' };
     }
+    // Same rules as every other entry point, applied BEFORE the challenger is written
+    // so a refusal (running test, identical prompt) cannot strand an orphan variant.
+    const candidate: PromptVariant = { ...baseline.variant, id: '__candidate__', prompt, active: false };
+    const plan = planStart({
+      variants: [baseline.variant, candidate],
+      runningTests: usePromptEvolutionStore.getState().abTests,
+      aId: baseline.variant.id,
+      bId: candidate.id,
+    });
+    if (!plan.ok) return { ok: false as const, message: plan.error.message };
     const challenger = await createVariant(selectedModuleId, checklistItemId, prompt);
     if (!challenger) {
       const storeError = usePromptEvolutionStore.getState().error;
@@ -154,11 +166,69 @@ export function usePromptEvolution() {
 
   const handleStartTest = useCallback(async (variantAId: string, variantBId: string) => {
     if (!selectedModuleId) return;
-    const varA = variants.find((v) => v.id === variantAId);
-    if (!varA) return;
-    const started = await startABTest(selectedModuleId, varA.checklistItemId, variantAId, variantBId);
+    const plan = planStart({ variants, runningTests: abTests, aId: variantAId, bId: variantBId });
+    if (!plan.ok) {
+      toast.error(plan.error.message);
+      return;
+    }
+    const started = await startABTest(selectedModuleId, plan.data.checklistItemId, plan.data.aId, plan.data.bId);
     if (!started.ok) toast.error(started.reason);
-  }, [selectedModuleId, variants, startABTest]);
+  }, [selectedModuleId, variants, abTests, startABTest]);
+
+  /** Adopt a planned winner through restoreVariant; the toast carries Undo. */
+  const adoptPlanned = useCallback(async (
+    plan: Pick<AdoptionPlan, 'winner' | 'incumbent'>,
+  ): Promise<AdoptionHandle | { ok: false; message: string }> => {
+    const handle = await runAdoption(plan, restoreVariant);
+    if (!handle.ok) {
+      toast.error(handle.message);
+      return handle;
+    }
+    const undo = handle.undo;
+    toast.success(`Adopted “${plan.winner.label}” — the next run will use it`, undo ? {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          void undo().then((ok) => {
+            if (ok) toast.success(`Restored “${plan.incumbent?.label ?? 'previous version'}”`);
+            else toast.error('Could not restore the previous version.');
+          });
+        },
+      },
+    } : undefined);
+    return handle;
+  }, [restoreVariant]);
+
+  /** Adopt the winner of a decided test (re-planned at click time). */
+  const adoptWinner = useCallback(async (testId: string) => {
+    const test = abTests.find((t) => t.id === testId);
+    if (!test) return { ok: false as const, message: 'Test not found.' };
+    const plan = planAdoption({ test, variants, tests: abTests });
+    if (!plan.ok) {
+      toast.error(plan.error.message);
+      return { ok: false as const, message: plan.error.message };
+    }
+    return adoptPlanned(plan.data);
+  }, [abTests, variants, adoptPlanned]);
+
+  /** The suggestions bar's path: the best variant of an item, adopted the same way. */
+  const adoptBestForItem = useCallback(async (moduleId: SubModuleId, checklistItemId: string) => {
+    const best = await getBestVariant(moduleId, checklistItemId);
+    if (!best) {
+      toast.error('No best variant available for this item yet.');
+      return;
+    }
+    const winner = variants.find((v) => v.id === best.id) ?? best;
+    if (winner.active) {
+      toast.info(`“${winner.label}” is already the version in use`);
+      return;
+    }
+    const incumbent = variants.find((v) => v.checklistItemId === checklistItemId && v.active) ?? null;
+    await adoptPlanned({ winner, incumbent });
+  }, [getBestVariant, variants, adoptPlanned]);
+
+  // An adopted winner stops being re-suggested.
+  const visibleSuggestions = useMemo(() => filterAdoptSuggestions(suggestions, variants), [suggestions, variants]);
 
   // Group variants by checklist item
   const variantsByItem = useMemo(() => {
@@ -217,6 +287,6 @@ export function usePromptEvolution() {
     // derived + handlers
     handleSelectModule, moduleChecklistItems, handleCreateVariant, handleMutate, handleSaveChallenger,
     handleCluster, handleStartTest, variantsByItem, historyItemOptions,
-    visibleTabs, handleSetMode,
+    visibleTabs, handleSetMode, adoptWinner, adoptBestForItem, visibleSuggestions,
   };
 }

@@ -37,3 +37,11 @@ describe('summarizeRoutes', () => {
     expect(summarizeRoutes([]).total).toBe(0);
   });
 });
+
+describe('isReadinessRoute', () => {
+  it('accepts exactly the four routes', async () => {
+    const { isReadinessRoute } = await import('@/lib/status/readinessRoute');
+    for (const r of ['at-r3', 'text', 'model-blocked', 'other-gate']) expect(isReadinessRoute(r)).toBe(true);
+    for (const r of ['', 'bogus', null, undefined]) expect(isReadinessRoute(r)).toBe(false);
+  });
+});

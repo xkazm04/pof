@@ -18,21 +18,16 @@
 import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import '@/lib/catalog/pipelines/registry.generated';
-import { allCatalogPipelines, getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { useCatalogStore } from '@/stores/catalogStore';
-import type { StepMeta } from '@/lib/status/statusModel';
-import { buildCategoryNodes, unknownRead, type SwimlaneCtx } from '@/lib/status/itemFocusModel';
+import { buildCategoryNodes } from '@/lib/status/itemFocusModel';
+import { swimlaneCtxFromReads, readNotices } from '@/lib/status/statusReads';
 import { useStatusArtifacts } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
-import { MiniSwimlane, EvidenceReadNotice } from './MiniSwimlane';
+import { MiniSwimlane, ReadNotices } from './MiniSwimlane';
 
 const PAGE_SIZE = 20;
-
-function stepsFor(catalogId: string): StepMeta[] {
-  const p = getCatalogPipeline(catalogId);
-  return p ? p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine })) : [];
-}
 
 const LABELS = new Map(CATALOG_SECTIONS.map((s) => [s.catalogId, s.label]));
 function catalogLabel(catalogId: string): string {
@@ -125,22 +120,10 @@ export function CategoryView({
 
   const nodes = useMemo(() => {
     if (!catalogId) return [];
-    const ctx: SwimlaneCtx = {
-      stepsFor,
-      // Both reads must settle before anything grades — a row graded before its verdicts
-      // land would flash a grade the verdicts then change (Pipelines waits the same way).
-      artifactsFor: (c) => {
-        if (c !== catalogId) return [];
-        if (!read || !verdicts) return unknownRead('evidence still loading');
-        return read.error !== null ? unknownRead(read.error) : read.rows;
-      },
-      verdictsFor: (c) => {
-        if (verdicts && !verdicts.ok) return unknownRead(verdicts.error);
-        return verdicts?.byCatalog.get(c) ?? [];
-      },
-    };
+    // Both reads must settle before anything grades (Pipelines waits the same way).
+    const ctx = swimlaneCtxFromReads({ catalogs, verdicts });
     return buildCategoryNodes(catalogId, entitiesByCatalog, ctx);
-  }, [catalogId, entitiesByCatalog, read, verdicts]);
+  }, [catalogId, entitiesByCatalog, catalogs, verdicts]);
 
   if (!catalogId) return <CatalogPicker onPick={onPickCatalog} />;
 
@@ -181,12 +164,7 @@ export function CategoryView({
       </div>
 
       {/* A failed read is SAID, never graded around (same wording family as Pipelines). */}
-      {read && read.error !== null && (
-        <EvidenceReadNotice kind="artifacts" subject={catalogLabel(catalogId)} error={read.error} onRetry={() => retryCatalog(catalogId)} />
-      )}
-      {verdicts && !verdicts.ok && (
-        <EvidenceReadNotice kind="verdicts" error={verdicts.error} onRetry={reloadVerdicts} />
-      )}
+      <ReadNotices notices={readNotices({ catalogs, verdicts })} onRetryCatalog={retryCatalog} onRetryVerdicts={reloadVerdicts} />
 
       {/* Entity names are store-local and correct immediately; only the cells/percentages
           wait on the fetch, so the list stays up but reads as provisional until it lands.

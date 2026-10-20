@@ -12,6 +12,7 @@
  * without judge verdicts (`node.verdictsUnknown`) says so in its readiness label.
  */
 import type { FocusNode } from '@/lib/status/itemFocusModel';
+import type { ReadNotice } from '@/lib/status/statusReads';
 import { StatusCell } from './StatusCell';
 
 /** Spoken form of the edge direction. The `▸`/`◂` glyph is decorative, so without this
@@ -182,5 +183,37 @@ export function EvidenceReadNotice({
         Retry
       </button>
     </div>
+  );
+}
+
+/**
+ * Every degraded-read notice for the entity-scoped tabs, fed by `readNotices()` - one
+ * component, so Category and Item Focus say the same PARTIAL words for the same failure.
+ */
+export function ReadNotices({
+  notices,
+  onRetryCatalog,
+  onRetryVerdicts,
+}: {
+  notices: readonly ReadNotice[];
+  onRetryCatalog: (catalogId: string) => void;
+  onRetryVerdicts: () => void;
+}) {
+  return (
+    <>
+      {notices.map((n) =>
+        n.kind === 'verdicts' ? (
+          <EvidenceReadNotice key="verdicts" kind="verdicts" error={n.error} onRetry={onRetryVerdicts} />
+        ) : (
+          <EvidenceReadNotice
+            key={`artifacts:${n.subject}`}
+            kind="artifacts"
+            subject={n.subject}
+            error={n.error}
+            onRetry={() => n.subject && onRetryCatalog(n.subject)}
+          />
+        ),
+      )}
+    </>
   );
 }
