@@ -16205,7 +16205,11 @@
           "revision": 2,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:105 This view processes localization content rather than implementing an engine string value, and searches of its directory and the repository found no interner, encodingFlag, zero-copy, or static string table constructs.",
+          "evaluatedAt": "2026-10-20",
+          "evaluatedAgainst": "sha256-b2:70121ae88b78b37e",
+          "evaluatedRevision": 2
         },
         {
           "subject": "quality-gates",

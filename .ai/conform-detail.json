@@ -12213,6 +12213,42 @@
           "evidence": "src/services/ProjectModuleBridge.ts:92 The bridge saves project progress; it performs no issuer mutation requiring a credential rollback witness."
         }
       ]
+    },
+    "6feb38b8-a274-49d1-b643-b9c7e058b344/engine-string-representation": {
+      "context": "localization-pipeline",
+      "subject": "engine-string-representation",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-20",
+      "evaluatedTs": "2026-10-20T21:19:59.074Z",
+      "worker": "533bc5d9-083e-4025-83c1-4376bfd588fd",
+      "techniques": [
+        {
+          "technique": "compile-time-static-string-table",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringTableCard.tsx:17 These tables serialize localization records as CSV; they are not compiled allocations for a runtime's closed vocabulary."
+        },
+        {
+          "technique": "dual-encoding-symbol-interner",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/useLocalizationPipelineView.ts:66 The map indexes localization records by their existing IDs; this context does not compile identifiers into integer symbols."
+        },
+        {
+          "technique": "inline-vtable-thin-handle",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringCard.tsx:27 The component renders source text through JSX and defines no engine string handle, tagged value slot, or allocation dispatch layout."
+        },
+        {
+          "technique": "narrowest-encoding-at-construction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/TranslationCard.tsx:11 Text arrives as a host-language string; this component does not construct or control an engine's code-unit storage."
+        },
+        {
+          "technique": "zero-copy-slice-string",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:151 The view's slice limits an array of replacement records; it does not implement substring storage or owner retention."
+        }
+      ]
     }
   }
 }
