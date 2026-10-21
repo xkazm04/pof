@@ -6609,7 +6609,11 @@
           "revision": 1,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/DialogueView/QuestGeneratorPanel.tsx:140 Searches found no speech, voice, tts, consent, or voice_asset hits in the context directory; repository hits concern other modules, while this context generates dialogue text and JSON rather than synthesized spoken lines.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:2b9fce8d0d8cbaed",
+          "evaluatedRevision": 1
         },
         {
           "subject": "native-shell-integration",
