@@ -1,0 +1,231 @@
+{
+  "schema": "conform-run/1",
+  "worker": "6d1a9d66-4aa1-4158-a4cd-dd13ffe669b1",
+  "subject": "standalone-headset-frame-budgets",
+  "evaluatedAt": "2026-10-21T21:37:11.005454+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "material-style-tools",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/index.tsx:63 Context searches found no headset, OpenXR or multiview references; these tools generate material properties and post-process recipes without selecting a standalone-headset target.",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/constants.ts:35 The declared target is a resolution tier, with no mobile headset shading-path selection found."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/constants.ts:42 Translucency appears as a reference description; no rendered coverage, overlapping layers or tile-GPU workload is established."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/index.tsx:59 This estimates an effect stack by resolution rather than allocating a headset refresh interval across content classes."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/index.tsx:101 The preview generates Blender compositor settings, with no two-eye submission accounting."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/EffectRow.tsx:127 The displayed quantity is a resolution-based estimate, not a headset sustained-session budget."
+        }
+      ],
+      "absenceTerms": [
+        "headset",
+        "OpenXR",
+        "multiview"
+      ]
+    },
+    {
+      "context": "audio-scene-designer",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:75 Context searches found no headset, OpenXR or multiview references; the module provides a desktop SVG audio editor rather than a standalone-headset renderer or frame-budget authoring system.",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:103 The painter draws an SVG editing surface and does not select a game shading path."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/DrawPreview.tsx:32 The fill belongs to an SVG drawing preview, not a translucent effect rendered near a headset eye."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioPropertyPanel/EmitterPropertyPanel.tsx:111 The panel authors sound-emitter properties rather than headset rendering shares."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:130 The scene uses one pan-and-zoom SVG projection, with no two-eye render."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useAudioScenePainter.ts:48 The interaction stages editor changes and commits gestures; it does not manage headset performance levels or thermal reserves."
+        }
+      ],
+      "absenceTerms": [
+        "headset",
+        "OpenXR",
+        "multiview"
+      ]
+    },
+    {
+      "context": "asset-visual-studio",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/PostProcessStudioView/constants.ts:30 Context searches found no headset, OpenXR or multiview references; asset scouting and resolution-tier post-process estimates do not establish standalone-headset authoring budgets.",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/StudioHeader.tsx:61 The studio authors a general post-process stack, with no mobile headset shading-path selection found."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:106 Asset scouting matches project feature gaps rather than evaluating view-filling effects or a tile-GPU scene."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/CostByCategory.tsx:15 Categories aggregate post-process effect estimates; they are not allocations across headset content classes."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:160 Effect cards receive estimated milliseconds, with no two-eye draw submissions being counted."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/CompareBar.tsx:87 A/B slots compare stack-cost snapshots rather than cold and sustained headset captures."
+        }
+      ],
+      "absenceTerms": [
+        "headset",
+        "OpenXR",
+        "multiview"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "standalone-headset-frame-budgets",
+      "context": "build-quality-monitoring",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited lines (empty-state copy, editor-target text, a CSV hint, a budget prop pass-through, a draw-call label) are incidental and none shows the project has no standalone-headset target; the profiler's frame budget is a generic 16.67ms default set in lib/profiling/csv-parser.ts, which the verdict"
+    },
+    {
+      "subject": "standalone-headset-frame-budgets",
+      "context": "debug-performance",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited lines (component state hook, console-command catalog, draw-call panel text, frame waterfall) are incidental and none shows the absence of a headset target; frame and draw-call budgets are design-intent defaults in debugSnapshot.ts, which the verdict does not cite."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-21T21:37:11.005454+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [
+        "forward-path-feature-allowance",
+        "overdraw-and-transparency-ceiling",
+        "per-content-class-frame-budget",
+        "stereo-draw-call-budget",
+        "thermal-headroom-reserve"
+      ],
+      "deviations": 0,
+      "context": "build-quality-monitoring",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-21T21:37:11.005454+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [
+        "forward-path-feature-allowance",
+        "overdraw-and-transparency-ceiling",
+        "per-content-class-frame-budget",
+        "stereo-draw-call-budget",
+        "thermal-headroom-reserve"
+      ],
+      "deviations": 0,
+      "context": "material-style-tools",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-21T21:37:11.005454+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [
+        "forward-path-feature-allowance",
+        "overdraw-and-transparency-ceiling",
+        "per-content-class-frame-budget",
+        "stereo-draw-call-budget",
+        "thermal-headroom-reserve"
+      ],
+      "deviations": 0,
+      "context": "audio-scene-designer",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-21T21:37:11.005454+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [
+        "forward-path-feature-allowance",
+        "overdraw-and-transparency-ceiling",
+        "per-content-class-frame-budget",
+        "stereo-draw-call-budget",
+        "thermal-headroom-reserve"
+      ],
+      "deviations": 0,
+      "context": "debug-performance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-21T21:37:11.005454+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [
+        "forward-path-feature-allowance",
+        "overdraw-and-transparency-ceiling",
+        "per-content-class-frame-budget",
+        "stereo-draw-call-budget",
+        "thermal-headroom-reserve"
+      ],
+      "deviations": 0,
+      "context": "asset-visual-studio",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

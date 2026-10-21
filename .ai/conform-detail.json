@@ -12275,6 +12275,196 @@
           "evidence": "src/components/cli/taskRegistry.ts:148 Evaluates staleness of a running task via elapsed wall-clock timeout rather than verifying actual process activity or liveness."
         }
       ]
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/standalone-headset-frame-budgets": {
+      "context": "build-quality-monitoring",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:37:11.005Z",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:97 The build operation targets the editor; it does not choose a mobile headset shading path."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/CSVImportPanel.tsx:64 This imports profiler statistics rather than authoring translucent effects or evaluating tile-GPU coverage."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/index.tsx:307 The frame budget is an input to actor-cost reporting, with no standalone-headset content allocation being set here."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/FrameTimeChart.tsx:71 The chart displays the imported draw count; no two-eye render or stereo submission cap is established."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/index.tsx:64 Sample generation does not exercise a passively cooled headset or establish sustained-clock budgets."
+        }
+      ],
+      "withdrawn": {
+        "worker": "6d1a9d66-4aa1-4158-a4cd-dd13ffe669b1",
+        "state": "not-applicable",
+        "at": "2026-10-21T21:37:53.044994+00:00",
+        "reason": "reviewer (sonnet): The cited lines (empty-state copy, editor-target text, a CSV hint, a budget prop pass-through, a draw-call label) are incidental and none shows the project has no standalone-headset target; the profiler's frame budget is a generic 16.67ms default set in lib/profiling/csv-parser.ts, which the verdict"
+      }
+    },
+    "15282b56-0d42-43ed-b76d-d61c8e6e0309/standalone-headset-frame-budgets": {
+      "context": "material-style-tools",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:37:11.005Z",
+      "worker": "6d1a9d66-4aa1-4158-a4cd-dd13ffe669b1",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/constants.ts:35 The declared target is a resolution tier, with no mobile headset shading-path selection found."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/constants.ts:42 Translucency appears as a reference description; no rendered coverage, overlapping layers or tile-GPU workload is established."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/index.tsx:59 This estimates an effect stack by resolution rather than allocating a headset refresh interval across content classes."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/index.tsx:101 The preview generates Blender compositor settings, with no two-eye submission accounting."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/EffectRow.tsx:127 The displayed quantity is a resolution-based estimate, not a headset sustained-session budget."
+        }
+      ]
+    },
+    "973ff033-ee2b-4edd-bdc7-e04454f54c7b/standalone-headset-frame-budgets": {
+      "context": "audio-scene-designer",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:37:11.005Z",
+      "worker": "6d1a9d66-4aa1-4158-a4cd-dd13ffe669b1",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:103 The painter draws an SVG editing surface and does not select a game shading path."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/DrawPreview.tsx:32 The fill belongs to an SVG drawing preview, not a translucent effect rendered near a headset eye."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioPropertyPanel/EmitterPropertyPanel.tsx:111 The panel authors sound-emitter properties rather than headset rendering shares."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:130 The scene uses one pan-and-zoom SVG projection, with no two-eye render."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useAudioScenePainter.ts:48 The interaction stages editor changes and commits gestures; it does not manage headset performance levels or thermal reserves."
+        }
+      ]
+    },
+    "0f8602ad-d98f-4d1d-9644-0467be9e70b9/standalone-headset-frame-budgets": {
+      "context": "debug-performance",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:37:11.005Z",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data.ts:69 The command catalog exposes general runtime diagnostics rather than selecting a mobile shading path."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/performance/DrawCallSection.tsx:44 The panel reports aggregate draws and does not establish translucent coverage or a tile-GPU fill bottleneck."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/system/SystemHealthSection.tsx:53 This compares a captured frame against its supplied budget rather than setting headset content-class authoring limits."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/performance/DrawCallSection.tsx:11 The quantity is explicitly per frame, but no two-eye rendering path is established to trigger stereo accounting."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/crashes/StatDashboardSection.tsx:12 The dashboard projects session statistics, with no headset clock-level or sustained-thermal budgeting operation found."
+        }
+      ],
+      "withdrawn": {
+        "worker": "6d1a9d66-4aa1-4158-a4cd-dd13ffe669b1",
+        "state": "not-applicable",
+        "at": "2026-10-21T21:37:53.093728+00:00",
+        "reason": "reviewer (sonnet): The cited lines (component state hook, console-command catalog, draw-call panel text, frame waterfall) are incidental and none shows the absence of a headset target; frame and draw-call budgets are design-intent defaults in debugSnapshot.ts, which the verdict does not cite."
+      }
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/standalone-headset-frame-budgets": {
+      "context": "asset-visual-studio",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:37:11.005Z",
+      "worker": "6d1a9d66-4aa1-4158-a4cd-dd13ffe669b1",
+      "techniques": [
+        {
+          "technique": "forward-path-feature-allowance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/StudioHeader.tsx:61 The studio authors a general post-process stack, with no mobile headset shading-path selection found."
+        },
+        {
+          "technique": "overdraw-and-transparency-ceiling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:106 Asset scouting matches project feature gaps rather than evaluating view-filling effects or a tile-GPU scene."
+        },
+        {
+          "technique": "per-content-class-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/CostByCategory.tsx:15 Categories aggregate post-process effect estimates; they are not allocations across headset content classes."
+        },
+        {
+          "technique": "stereo-draw-call-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:160 Effect cards receive estimated milliseconds, with no two-eye draw submissions being counted."
+        },
+        {
+          "technique": "thermal-headroom-reserve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/CompareBar.tsx:87 A/B slots compare stack-cost snapshots rather than cold and sustained headset captures."
+        }
+      ]
     }
   }
 }
