@@ -111,7 +111,7 @@ registerCatalogPipeline({
               tcIn: 0,
               tcOut: 8,
               description: 'BLACK. Distant rumble — the echo of the Sundering. Fade from black to ash-grey sky, smoke drifting left-to-right.',
-              shot: 'Wide aerial — Thornwall garrison from above, 300 m elevation.  Slow push-in, lens ~35 mm.  Depth of field locked on ruins.',
+              shot: 'Wide aerial — Thornwall garrison from above, 300 m elevation, bearing 210° (south-west, gatehouse frame-left, keep frame-right).  Slow push-in, lens ~35 mm.  Depth of field locked on ruins.  Bearing is fixed here because Beat 6 must match this frame; a described aerial without one cannot be matched.',
               event: 'none — establishing hold',
             },
             {
@@ -127,7 +127,7 @@ registerCatalogPipeline({
               tcIn: 20,
               tcOut: 38,
               description: 'Player character stands.  POV sweep of the garrison — burning beams, soldiers down, ash falling.  A survivor reaches out from rubble, then goes still.',
-              shot: 'OTS (over-the-shoulder) push forward, 360° slow orbit half-complete.  One insert cut: low-angle on the still survivor hand.',
+              shot: 'OTS (over-the-shoulder) push forward, slow orbit through 180° and no further — the orbit stays on the north side of the player/Vael axis established in Beat 4, because Beat 5 reverses across that axis and a full 360° crosses the line before the reverse exists.  One insert cut: low-angle on the still survivor hand.',
               event: 'none — world-state reveal',
             },
             {
@@ -135,7 +135,7 @@ registerCatalogPipeline({
               tcIn: 38,
               tcOut: 58,
               description: 'Captain Vael enters frame left, moving at purpose.  He reaches a wounded soldier and hauls them clear of a collapsed arch — professional, no hesitation.',
-              shot: 'Medium long-shot, Vael left-screen, fire-orange background right.  Cut to medium two-shot: Vael crouching over wounded, player watching in background (MG soft-focus).',
+              shot: 'Medium long-shot, Vael left-screen, fire-orange background right.  Cut to medium two-shot: Vael crouching over wounded, player watching in background (MG soft-focus).  This two-shot establishes the player/Vael axis Beats 3 and 5 are both measured against: Vael camera-left, player camera-right, line running east-west.',
               event: `Gameplay event marker "${evt('VaelIntroEnter')}" fires at tcIn:38 (UARPGCinematicComponent notified; no player input at this beat)`,
             },
             {
@@ -143,7 +143,7 @@ registerCatalogPipeline({
               tcIn: 58,
               tcOut: 72,
               description: 'Vael stands.  Pauses.  Turns.  Eyes find the player character across the debris field.  Two-second hold on eye contact — Vael unreadable.',
-              shot: 'Push-in on Vael face: bust shot, slight Dutch angle +3°, 50 mm lens.  Then match-cut reverse on player (Vael POV), similar framing.',
+              shot: 'Push-in on Vael face: bust shot, slight Dutch angle +3°, 50 mm lens.  Then match-cut reverse on player (Vael POV), similar framing, from camera-right of the Beat 4 axis.  Vael reference sheets are minted with the gaze at rest off-camera left; this is the one beat that overrides it, so the sheet carries a second head with the gaze to lens — an unstated reference gaze becomes every shot\'s eyeline, and this beat IS the eyeline.',
               event: `Beat marker "${evt('VaelEyeContact')}" fires at tcIn:58`,
             },
             {
@@ -166,6 +166,14 @@ registerCatalogPipeline({
           totalDurationSecs: 90,
           skipWindowSecs: 3,
           note:
+            'FORWARD LIST (what later beats need from the shared assets, settled before those ' +
+            'assets graduate; three entries, the rest of the beats need nothing): ' +
+            '(1) establishing aerial plate -> Beat 6 must MATCH it, so the plate declares a bearing, ' +
+            'not only an elevation and a lens; ' +
+            '(2) debris-field ground layout -> Beat 5 reverses across the player/Vael axis, so Beat 3 ' +
+            "orbits 180° and not 360°, and Beat 4's two-shot is where the axis is declared; " +
+            "(3) Vael's character sheet -> Beat 5 is an eye-contact beat, so the sheet carries a " +
+            'gaze-to-lens head beside the at-rest gaze. ' +
             'Beat indices are contiguous; no gaps in timeline. ' +
             'Total runtime 90 s — all beats sum exactly.  ' +
             'GameplayEvent names follow Cutscene.<Sequence>.<BeatName> convention per proj-naming. ' +
