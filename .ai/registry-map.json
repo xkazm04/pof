@@ -5206,7 +5206,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:255 Audio-component-directory searches found no viseme, faceSignal or talkingAvatar matches, and the inspected tools preview generated clips with native audio controls alongside library and room-configuration displays.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "module-design",
@@ -5304,7 +5308,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/audio-codegen.ts:4 Searches covering the context's library, type, store and audio-generation directories found no viseme, faceSignal or talkingAvatar matches; the inspected implementation persists audio assets and generates spatial-audio code without a speaking-face consumer.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "adaptive-music-authoring",
@@ -5486,7 +5494,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioPropertyPanel/constants.ts:10 Searches of both designer directories found no viseme, faceSignal or talkingAvatar matches, and inspection showed zone and emitter editing plus spatial audition rather than a voice-driven face.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "procedural-level-planning",
@@ -13599,7 +13611,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/audio-gen/providers/elevenlabs.ts:36 API-directory searches found no viseme, faceSignal or talkingAvatar matches, and the audio-generation route's sole registered provider serves sound effects and ambient assets rather than speech for a talking face.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mcp-tools",
@@ -19703,7 +19719,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView/GeneratorTab.tsx:89 Context-directory searches found no viseme, faceSignal or talkingAvatar matches; the inspected generators, scene tools and skeletal-rig authoring workflow do not animate a speaking presence.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mcp-tools",

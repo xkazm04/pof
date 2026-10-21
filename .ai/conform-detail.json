@@ -12465,6 +12465,86 @@
           "evidence": "src/components/modules/evaluator/PostProcessStudioView/CompareBar.tsx:87 A/B slots compare stack-cost snapshots rather than cold and sustained headset captures."
         }
       ]
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/talking-avatar": {
+      "context": "procedural-scene-tools",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T22:23:57.334Z",
+      "worker": "0e0fb430-69ee-465a-b761-4036005234b9",
+      "techniques": [
+        {
+          "technique": "motion-route-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/index.tsx:61 This selects a target skeleton for asset authoring; no talking-avatar animation route was found."
+        }
+      ]
+    },
+    "01327ce7-fd73-460c-841a-3cd2466211ba/talking-avatar": {
+      "context": "game-world-content-api",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T22:23:57.334Z",
+      "worker": "0e0fb430-69ee-465a-b761-4036005234b9",
+      "techniques": [
+        {
+          "technique": "viseme-drive",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/audio-gen/route.ts:105 The provider capability gate refuses unsupported TTS; no synthesized-speech mouth driver was found in these routes."
+        }
+      ]
+    },
+    "f9a4a5bc-b02a-4085-83f0-32492b13c805/talking-avatar": {
+      "context": "audio-module",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T22:23:57.334Z",
+      "worker": "0e0fb430-69ee-465a-b761-4036005234b9",
+      "techniques": [
+        {
+          "technique": "procedural-presence-motion",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/audio-codegen.ts:192 The procedural path generates ambient soundscape layers for zones; no avatar idle or gesture generator was found."
+        }
+      ]
+    },
+    "973ff033-ee2b-4edd-bdc7-e04454f54c7b/talking-avatar": {
+      "context": "audio-scene-designer",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T22:23:57.334Z",
+      "worker": "0e0fb430-69ee-465a-b761-4036005234b9",
+      "techniques": [
+        {
+          "technique": "motion-route-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:57 The painter selects spatial editing and audition tools; no avatar animation route is selected here."
+        }
+      ]
+    },
+    "60f0c3d8-4b81-4acf-9d2c-cfd92cf58737/talking-avatar": {
+      "context": "audio-generation-tools",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T22:23:57.334Z",
+      "worker": "0e0fb430-69ee-465a-b761-4036005234b9",
+      "techniques": [
+        {
+          "technique": "viseme-drive",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioLibraryPanel.tsx:440 The library previews audio assets without a mouth or speaking-element renderer."
+        }
+      ]
     }
   }
 }
