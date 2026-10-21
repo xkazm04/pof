@@ -23220,7 +23220,11 @@
           "revision": 4,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout/ActivityFeedPanel/feedModel.ts:73 Repeated occurrences replace a stored event with a summary, preventing expansion from recovering the atomic history.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:fdaa24ca3f5177d9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "test-harness",

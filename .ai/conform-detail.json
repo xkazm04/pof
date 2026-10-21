@@ -12545,6 +12545,42 @@
           "evidence": "src/components/modules/content/audio/AudioLibraryPanel.tsx:440 The library previews audio assets without a mouth or speaking-element renderer."
         }
       ]
+    },
+    "8bf35604-2492-4c16-bca5-1c3b2787bd76/feed": {
+      "context": "topbar-and-activity",
+      "subject": "feed",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T23:30:09.855Z",
+      "worker": "34279077-705d-416e-94e7-6c7e4a393a1a",
+      "techniques": [
+        {
+          "technique": "event-clustering",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/ActivityFeedPanel/feedModel.ts:73 Write-time coalescing replaces the matching occurrence with a refreshed summary instead of preserving atomic occurrences and deriving clusters at read time."
+        },
+        {
+          "technique": "feed-retention",
+          "verdict": "deviation",
+          "evidence": "src/stores/activityFeedStore.ts:94 The runtime cap is 50, but persistence silently keeps only 30; the panel provides no retention horizon or notice that history disappeared."
+        },
+        {
+          "technique": "live-prepend",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/ActivityFeedPanel/index.tsx:130 Cluster identity uses its position within the section, so prepending another group can transfer expansion state to another cluster or remount an existing cluster."
+        },
+        {
+          "technique": "read-position-and-unseen",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/ActivityFeedPanel/feedModel.ts:14 Unread is derived from retained rows' dismissal flags rather than a durable ordering-tuple anchor; coalesced repeats count once and evicted unread occurrences disappear from the badge."
+        },
+        {
+          "technique": "reverse-chronology-semantics",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/ActivityFeedPanel/feedModel.ts:65 New entries receive the store's current time and prepend in delivery order without a timestamp-and-identity comparator, leaving tied timestamps ordered by arrival rather than a declared total order."
+        }
+      ]
     }
   }
 }
