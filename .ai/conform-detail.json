@@ -12249,6 +12249,32 @@
           "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:151 The view's slice limits an array of replacement records; it does not implement substring storage or owner retention."
         }
       ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/concurrent-vcs": {
+      "context": "cli-terminal-shell",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:07:07.069Z",
+      "worker": "0e2e5426-2b79-4a09-8ea5-973c4e200db4",
+      "techniques": [
+        {
+          "technique": "physical-isolation",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/useTaskQueue.ts:770 Dispatches code generation prompts directly against the shared projectPath without creating an isolated worktree branch for multi-file tasks."
+        },
+        {
+          "technique": "intent-ledgers",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/taskRegistry.ts:52 Task start registration records only taskId, sessionId, and requirementName without declaring a path scope, preventing sessions from scanning for path collisions."
+        },
+        {
+          "technique": "shared-resource-arbitration",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/taskRegistry.ts:148 Evaluates staleness of a running task via elapsed wall-clock timeout rather than verifying actual process activity or liveness."
+        }
+      ]
     }
   }
 }

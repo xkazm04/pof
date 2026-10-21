@@ -1,0 +1,74 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0e2e5426-2b79-4a09-8ea5-973c4e200db4",
+ "subject": "concurrent-vcs",
+ "evaluatedAt": "2026-10-21T21:07:07.069155+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "cli-terminal-shell",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/cli/useTaskQueue.ts:770 The task queue dispatches AI code-generation tasks directly into the shared projectPath without provisioning an isolated git worktree or checking declared path scopes, allowing concurrent tasks to collide in the working tree.",
+   "techniques": [
+    {
+     "technique": "physical-isolation",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/useTaskQueue.ts:770 Dispatches code generation prompts directly against the shared projectPath without creating an isolated worktree branch for multi-file tasks."
+    },
+    {
+     "technique": "intent-ledgers",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/taskRegistry.ts:52 Task start registration records only taskId, sessionId, and requirementName without declaring a path scope, preventing sessions from scanning for path collisions."
+    },
+    {
+     "technique": "shared-resource-arbitration",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/taskRegistry.ts:148 Evaluates staleness of a running task via elapsed wall-clock timeout rather than verifying actual process activity or liveness."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "concurrent-vcs",
+   "context": "session-analytics-reporting",
+   "reason": "The context provides developer productivity analytics, spend dashboards, and project activity visualizations; it contains no version-control operations, commit hooks, or concurrent repository workspace management."
+  },
+  {
+   "subject": "concurrent-vcs",
+   "context": "audio-view-and-catalog",
+   "reason": "The context provides UI tabs and catalog editors for audio events and scenes with debounced local-first state updates; it contains no version-control operations or concurrent workspace mechanics."
+  },
+  {
+   "subject": "concurrent-vcs",
+   "context": "game-director-system",
+   "reason": "The context tracks project health, build quality scores, and regression metrics in SQLite/Zustand; it contains no repository version-control operations or concurrent workspace mechanisms."
+  },
+  {
+   "subject": "concurrent-vcs",
+   "context": "core-engine-genre-tabs",
+   "reason": "The context provides shared tab infrastructure, comparison matrices, and dataviz charts for engine features; it contains no version-control operations or workspace isolation mechanisms."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-21T21:07:07.069155+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [
+    "intent-ledgers",
+    "physical-isolation",
+    "shared-resource-arbitration"
+   ],
+   "deviations": 1,
+   "context": "cli-terminal-shell",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
