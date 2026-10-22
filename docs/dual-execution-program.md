@@ -198,8 +198,8 @@ author the mapping into the IMC asset itself.
   gate-covered, but no in-map enemy runs it yet (the duel's FSM proof is browser-side);
   Malgrave has no gate of his own; and `player-movement`'s Playable Gate (L4) still needs a
   live editor + PIE to run.
-  → the in-map StateTree enemy is triaged 2026-10-22 in §7.1 (B1); Malgrave's gate and the
-  Playable Gate were outside that triage's scope and stay open as written here.
+  → all three Group B items are triaged 2026-10-22 in §7.1 as B1 (the in-map StateTree
+  enemy), B2 (Malgrave's missing gate) and B3 (player-movement's Playable Gate, L4).
 - **Group C persistence — FOLDED 2026-07-23**: factions/codex/tutorial/cutscene are
   envelope sections now (schema v2, additive no-op migration + straggler sweep for v1
   envelopes coexisting with later legacy keys; Playwright 13/13).
@@ -228,9 +228,20 @@ scripts/, shots/) plus `src/lib/preview/realization-facts.json`.
   `scripts/diablo/ue_arm_probe.ts` (`docs/research/diablo/Findings.md` F-G2-4, fleet-memory
   2026-10-22 `[ue] DECISION`), which measured a passing C++ editor-target build, a passing
   headless `-run=pythonscript` run and a passing D3D12 init on this device.
-  *Surviving caveat:* every compile here is emulated x64 (no native ARM64 UBT host), measured
-  on a partial install, so build times are a floor, and nothing about PIE-driven automation on
-  this device has been observed yet.
+  *Surviving caveat (corrected 2026-10-22, `b5175f5a` and `3c39c724`):* every compile here is
+  emulated x64 (no native ARM64 UBT host), and nothing about PIE-driven automation on this
+  device has been observed yet. The earlier clause "measured on a partial install, so build
+  times are a floor" was WRONG. (1) The install is COMPLETE: the authoritative record is
+  `C:/ProgramData/Epic/EpicGamesLauncher/Data/Manifests/*.item`, reporting UE_5.8 /
+  5.8.4-58902052 / InstallSize 31,682,048,217 / `bIsIncompleteInstall: False`, corroborated by
+  32.1 GB on disk, an empty `Manifests/Pending` and `Engine/Build/InstalledBuild.txt`. The
+  "partial" reading came from `LauncherInstalled.dat`, whose `InstallationList` is empty even
+  for a finished install and is not the launcher's per-install record. (2) The measured build
+  times are therefore FINAL numbers for this engine, not a floor. (3) The emulated-x64 ceiling
+  hardens rather than softens: `ThirdParty/DotNet/10.0/win-arm64`, `Engine/Templates` and UBT's
+  `runtimes/win-arm64` are absent as Epic's packaging for a complete install, so "every compile
+  here is emulated x64" is structural, not provisional. The PIE clause is unchanged: it is
+  still unobserved for PoF on this device.
 - `[BROWSER]`: `C:\Users\kazda\kiro\saber-arpg` is also absent on this machine, so the browser
   proofs below are the 2026-07-23 recorded runs. They were not re-run on 2026-10-22.
 
@@ -302,6 +313,47 @@ scripts/, shots/) plus `src/lib/preview/realization-facts.json`.
   *Still needed UE-side:* an enemy placed in FeatureLab/VerticalSlice that actually owns and
   ticks the component, and a `-game` run whose log markers or frames show the state
   transitions. *Blocker:* `[UE]`.
+- **B2 · Malgrave has no gate of his own (`char-darth-malgrave`): UE-GATED.** *Real state:
+  seeded and browser-realized, ungated.* `src/lib/catalog/seed-characters.ts` seeds
+  `char-darth-malgrave` deliberately thin on numbers: his attributes (50 hp / 12 attackPower)
+  MIRROR `bestiary-sith-lord`, linked as `role: 'archetype'`, so the two rows cannot drift
+  (§3 row 31). `src/lib/catalog/new-catalogs.ts` carries him in the quest and dialogue starters
+  (`quest-lords-challenge`, `dialog-duel-intro`). The only gate in the repo is Vael's:
+  `CHARACTER_GATE_TEST_BY_ENTITY` in `src/lib/catalog/pipelines/characters.ts` maps just
+  `char-captain-vael` to `PoF.CharacterVael.NPCConfig` (re-run headless, Result=Success; §3
+  row 31). For any other entity the Test Gate falls back to a derived
+  `PoF.Character<Slug>.RoleConfig` name, which for him would be a name only; nothing in the repo
+  registers or runs it. realization-facts `characters.Test Gate` says "Malgrave has no gate of
+  his own — honestly ungated", and `characters.UE Packaging` says his BP_/SK_/DT_ are "declared,
+  not built". e2e/ and scripts/ hold no Malgrave reference. *Browser leg:* identity/outfit
+  execute on the live boss (robe #1a1016, trim #7a1020, blade #ff2a2a) while hp/damage/speed
+  stay the archetype's 50 / 12 / 600 cm/s (§3 row 31, Playwright 24/24). *Still needed UE-side:*
+  a Malgrave-specific gate would have to assert his `DT_AttributeDefaults` row `DarthMalgrave`
+  equals the `bestiary-sith-lord` archetype numbers (50 hp, 12 attackPower, level 3), that
+  `npcId` / role `None` / the `dialog-duel-intro` host binding / the `quest-lords-challenge`
+  target hold in `UARPGNPCActor`, and that the boss runs the archetype's speed at runtime. No
+  such gate exists in the repo, and the UE tree that would hold the test is unreadable.
+  *Blocker:* `[UE]`. Not DROPPED: Vael's gate covers Vael only, and the archetype's gate does not
+  assert the individual's row. No verdict is upgraded.
+- **B3 · player-movement Playable Gate (L4): UE-GATED.** *Real state: defined, never
+  executed.* `src/lib/catalog/pipelines/player-movement.ts` (step 10) produces
+  `player_movement.run_playable_gate` and accepts via `visualDeferred('PIE + WASD/Sprint/Roll +
+  4-frame variance proves not-T-pose')`. step-facts says that accept "always returns
+  status:'deferred' regardless of the captured data", so the visual verdict has not run and the
+  checker is not meaningful. realization-facts `player-movement.Playable Gate` is browser "no" /
+  ue "probable": "Needs a live editor; not run this review." The wiring is covered by
+  `src/__tests__/lib/catalog/pipelines/player-movement.test.ts` (step 10 is L4 deferred), which
+  proves the declaration and nothing about a PIE run. The same L4 gate is described in
+  `docs/features/player-movement/README.md`. *Browser leg:* the FEEL the gate would exercise is
+  dual-executed per §3 row 30 (walk 6.0 / sprint 9.0 m/s, stamina, and the AM_Roll DodgeWindow
+  notify: hit at 0.033 s lands, 0.133 s ignored, 0.300 s lands; Playwright 26/26). That proves
+  the numbers, not that the AnimBP drives the mesh in PIE. *Still needed UE-side:* a live
+  editor, a PIE session with injected WASD + Shift + Space, 4 captured frames, a variance
+  assertion, and a real VLM verdict in place of the deferred stub. *Blocker:* BOTH `[UE]` (the
+  PoF project is absent) AND the surviving caveat above: an L4 playable gate is exactly
+  PIE-driven automation, which nothing has observed on this device, so even a restored project
+  would not make it a known-good run. Not DROPPED: no other gate captures PIE locomotion
+  frames. No verdict is upgraded.
 
 - **2026-10-22, what the probe changes:** once the PoF UE project is restored on this machine, registering and draining these gates is no longer hardware-blocked, only project-blocked. No gate above was registered, run or drained by this correction.
 
