@@ -6,6 +6,10 @@
  *
  * POST /api/filesystem/watch { action: 'status' }
  *   Returns current watcher state.
+ *
+ * Both verbs change server state (GET retargets the one process-wide watcher, POST stop
+ * ends it), so both sit behind the operator guard: a cross-site page must not be able to
+ * point the watcher elsewhere or stop the operator's live stream.
  */
 
 import { NextRequest } from 'next/server';
@@ -17,11 +21,14 @@ import {
   type FileChangeEvent,
 } from '@/lib/file-watcher';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   const { searchParams } = new URL(request.url);
   const projectPath = searchParams.get('projectPath');
 
@@ -99,6 +106,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     const action = body.action as string;

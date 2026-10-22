@@ -13,7 +13,7 @@ import { checkLocalPath, checkModuleName, MAX_PATH_LENGTH } from '@/app/api/file
 import { POST as scanProject } from '@/app/api/filesystem/scan-project/route';
 import { POST as scanAnimbp } from '@/app/api/filesystem/scan-animbp/route';
 import { POST as scanAssets } from '@/app/api/filesystem/scan-assets/route';
-import { GET as watch } from '@/app/api/filesystem/watch/route';
+import { GET as watch, POST as watchPost } from '@/app/api/filesystem/watch/route';
 
 const REFUSED = [
   '\\\\attacker.example\\share',
@@ -126,5 +126,29 @@ describe('Source/<moduleName> cannot leave Source/', () => {
     const res = await scanProject(post('/api/filesystem/scan-project', { projectPath, moduleName: 'Game' }));
     expect(res.status).toBe(200);
     expect((await res.json()).data.projectType).toBe('ue5');
+  });
+});
+
+describe('watch sits behind the operator guard', () => {
+  const FOREIGN = { origin: 'https://evil.example', host: 'localhost' };
+
+  it('refuses a foreign-Origin GET and stop with 403', async () => {
+    const get = await watch(new NextRequest('http://localhost/api/filesystem/watch?projectPath=C%3A%5CGame', { headers: FOREIGN }));
+    expect(get.status).toBe(403);
+    const stop = await watchPost(new NextRequest('http://localhost/api/filesystem/watch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...FOREIGN },
+      body: JSON.stringify({ action: 'stop' }),
+    }));
+    expect(stop.status).toBe(403);
+  });
+
+  it('[guard] a same-origin status call still answers', async () => {
+    const res = await watchPost(new NextRequest('http://localhost/api/filesystem/watch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', origin: 'http://localhost', host: 'localhost' },
+      body: JSON.stringify({ action: 'status' }),
+    }));
+    expect(res.status).toBe(200);
   });
 });
