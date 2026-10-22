@@ -73,3 +73,65 @@ The install itself stops at an interactive wall, not a technical one: the Epic G
 (v20.3.3, signed by Epic Games Inc., 264 MB, downloaded and verified) needs **elevation**
 (`net session` → not elevated; the silent install refused before writing a log), and the engine
 download needs an **Epic account sign-in**. Neither can be done unattended.
+
+## F-G2-4 — UE builds and runs on this ARM64 device; the ceiling is the toolchain host (2026-10-22, W109)
+
+Measured by `scripts/diablo/ue_arm_probe.ts` against UE 5.8 on a **partial, stalled 31 GB install**
+(the launcher never finished: `LauncherInstalled.dat` still reads `"InstallationList": []`). So these
+are floor numbers, not the device's best.
+
+| Criterion | Result |
+|---|---|
+| C++ editor target builds | **PASS** — 7 actions, compile + link of `UnrealEditor-ArmProbe.dll`, UBA over 20 physical cores, **63.5–72.2 s** clean across four runs |
+| headless `-run=pythonscript` | **PASS** — the script ran in-engine and wrote its result: `5.8.4-58902052+++UE5+Release-5.8` (12.7 s) |
+| D3D12 on the NVIDIA GPU | **PASS** — `Creating D3D12 RHI with Max Feature Level SM5`, editor up in 13–24 s |
+
+So Epic's "The Unreal Editor is not supported on ARM64" is a SUPPORT statement, not a technical
+wall: the emulated x64 editor compiles C++, runs commandlets and initialises D3D12 here.
+
+**The real ceiling, and the chain that sets it.** UnrealBuildTool chooses its MSVC host from its own
+process architecture — `Engine/Source/Programs/UnrealBuildTool/Platform/Windows/MicrosoftPlatformSDK.cs:1317`,
+`RuntimeInformation.ProcessArchitecture == Arm64 ? Arm64 : X64` — and `Build.bat` resolves the
+bundled .NET by host architecture, announcing `Using bundled DotNet SDK version: 10.0 win-arm64`.
+But this install ships only `Engine/Binaries/ThirdParty/DotNet/10.0/win-x64`. Hence:
+
+1. `Build.bat` dies instantly (`0x80008096`, no output) reaching for a runtime that is not there.
+2. Driving UBT under the x64 `dotnet` works, but UBT then selects
+   `…/MSVC/14.44.35207/bin/**Hostx64**/x64/cl.exe` — so every compile and link is emulated.
+3. `Hostarm64/x64/cl.exe` **is installed** and unused. A native ARM64 .NET for UBT is the single
+   thing standing between this device and native-speed compilation of the x64 editor target.
+
+**That open question is now CLOSED, and the answer is the ceiling.** The bundled .NET turned out not
+to be the deciding factor at all. A native ARM64 .NET 10.0.13 was installed per-user (no elevation,
+`~/.dotnet-arm64`, `RID: win-arm64`) and UnrealBuildTool was run on it directly. It does not work:
+
+```
+Unhandled exception: DllNotFoundException: Unable to load DLL 'blake3_dotnet'
+  or one of its dependencies (0x8007007E)   at Blake3.Hasher.New()
+```
+
+UBT's own `runtimes/` folder publishes that native for `win-x64`, `win-x86` and `win-arm` — and
+**not `win-arm64`**. So the shipped UnrealBuildTool cannot run as a native ARM64 process at all,
+whether or not Epic ever delivers `ThirdParty/DotNet/10.0/win-arm64`: it would crash on Blake3
+before reaching a compiler. `Build.bat`'s `win-arm64` announcement is therefore a dead end on this
+engine version.
+
+**Verdict: on UE 5.8 the emulated `Hostx64` compiler is this device's ceiling, not a
+misconfiguration.** 63.5 s for a trivial 7-action module is the baseline. Nothing in PoF's control
+changes it; it would take an ARM64 build of `blake3_dotnet` inside UBT, which is Epic's to ship.
+The number that decides where UE lives is therefore a build of PoF's REAL module, compared against
+Wolf with the same command (`ue_arm_probe.ts --engine <path>`), once the repo sync lands.
+
+### Three traps this probe hit, recorded so the next session does not re-pay for them
+
+- **UE python `print()` does not reach the process stdout.** A marker grep over the output reported
+  a WORKING commandlet as a failure, twice. Success is read off a file the script writes, or off
+  `LogPythonScriptCommandlet`.
+- **`--skip-build` invalidates the python criterion**: a C++ project whose module was never compiled
+  cannot finish loading, and the editor exits quietly with no error in its log.
+- **A partial install fails in ways that mimic an ISA problem.** Every failure here had to be traced
+  to a missing file before it could be scored, and none of them was the ARM64 ISA.
+- **An ARM64 .NET makes UBT worse, not better** — it crashes on a missing native. The probe now
+  tries the native host, recognises that crash and falls back to the emulated x64 one, reporting the
+  fallback as the finding. A future engine version that ships a win-arm64 `blake3_dotnet` would make
+  the same probe report `Hostarm64` with no code change, which is how this stays measurable.

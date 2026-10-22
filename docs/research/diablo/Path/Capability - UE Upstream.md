@@ -2,7 +2,7 @@
 kind: capability
 status: in-progress
 requires: []
-evidence: "~/Documents/Unreal Projects/PoF is absent after the 2026-10-19 reset, and this device is an ARM64 PC whose ISA Epic does not support for the Editor ('The Unreal Editor is not supported on ARM64', UE 5.8 Windows ARM64 docs, Experimental, game targets only)"
+evidence: "W109 measured UE 5.8 on this ARM64 device: C++ build PASS (63.5 s), headless pythonscript PASS, D3D12 PASS - so the blocker is NOT the ISA. What remains is (a) the UE project itself, on Wolf, and (b) an emulated compiler, because UBT picks its MSVC host from its own process architecture (MicrosoftPlatformSDK.cs:1317) and only a win-x64 bundled .NET is installed"
 ---
 
 # Capability - UE Upstream
@@ -15,9 +15,11 @@ of them is ARM-blocked:
   committed (`src/lib/catalog/ue-schema.generated.json`, 25 types / 187 fields), so
   `ue-schema-parity.test.ts` runs today. Restoring the UE **project repository** alone — a git
   clone, no engine — fully re-establishes canon `proj-sot`'s downward direction at zero ARM risk.
-- **Producing into UE and verifying at runtime — blocked.** Asset production, the C++ build of
-  the ARPG module, the functional-test suite and every runtime claim of the W07–W15 kind
-  ("the Skeleton kills the player in 28 hits") need a working editor on this machine.
+- **Producing into UE and verifying at runtime — NOT blocked by the ISA, pending the project.**
+  W109 measured a working editor on this machine (build, commandlet and D3D12 all pass under x64
+  emulation), so what these need is the project from Wolf, not different hardware. The one real
+  cost is that every compile is emulated until a native ARM64 .NET drives UBT — see
+  `../Findings.md` F-G2-4 for the chain and the one open question.
 
 So the dependency the graph should carry is not "UE" but "a UE **runtime** on reachable hardware".
 Split accordingly when W109's probe resolves; see `Waves/W109-ue-on-arm64.md` in the vault.

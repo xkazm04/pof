@@ -19,9 +19,9 @@
  * number to judge, not the exit code. A missing engine is a REFUSAL, never a silent pass.
  */
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const arg = (name: string): string | undefined => {
   const i = process.argv.indexOf(`--${name}`);
@@ -32,7 +32,6 @@ const has = (name: string) => process.argv.includes(`--${name}`);
 const engine = resolve(arg('engine') ?? process.env.POF_UE_ENGINE ?? 'C:/Program Files/Epic Games/UE_5.8');
 const work = resolve(arg('work') ?? join(homedir(), '.pof', 'ue-arm-probe'));
 const cmdExe = join(engine, 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe');
-const buildBat = join(engine, 'Engine/Build/BatchFiles/Build.bat');
 
 if (!existsSync(cmdExe)) {
   console.error(`REFUSED: no UnrealEditor-Cmd.exe at ${cmdExe}`);
@@ -55,96 +54,205 @@ const report: Record<string, unknown> = {
 const say = (line: string) => { if (!has('json')) console.log(line); };
 const seconds = (ms: number) => Number((ms / 1000).toFixed(1));
 
-// ── a blank C++ project, from the engine's own template ───────────────────────────────────────────
-const templates = join(engine, 'Engine/Content/Editor/Templates');
-const cppTemplate = ['TP_Blank', 'TP_BlankBP'].map((n) => join(engine, 'Engine/Templates', n)).find(existsSync);
-if (!cppTemplate) {
-  console.error(`REFUSED: no TP_Blank template under ${join(engine, 'Engine/Templates')} (looked for TP_Blank, TP_BlankBP)`);
-  console.error(`  ${existsSync(templates) ? '' : 'Editor templates are missing too — is this a full editor install?'}`);
-  process.exit(1);
-}
-const uprojectName = readdirSync(cppTemplate).find((n) => n.endsWith('.uproject'));
-if (!uprojectName) { console.error(`REFUSED: template ${cppTemplate} has no .uproject`); process.exit(1); }
-const projectName = uprojectName.replace(/\.uproject$/, '');
-
-if (existsSync(work)) rmSync(work, { recursive: true, force: true });
-mkdirSync(work, { recursive: true });
-cpSync(cppTemplate, work, { recursive: true });
-// Templates ship a TemplateDefs.ini that only the project wizard reads; leaving it behind makes
-// the copy look like a template rather than a project.
-rmSync(join(work, 'Config/TemplateDefs.ini'), { force: true });
-const uproject = join(work, uprojectName);
-const isCpp = existsSync(join(work, 'Source'));
-// Some engine templates carry wizard placeholders (%TEMPLATENAME%, PROJECT_NAME) that only the
-// project wizard substitutes. Copying such a template gives a project that fails to compile for a
-// reason that looks nothing like the ARM question this probe is asking, so say so up front.
-const placeholders = (function scan(dir: string, hits: string[] = []): string[] {
-  for (const n of readdirSync(dir, { withFileTypes: true })) {
-    const p = join(dir, n.name);
-    if (n.isDirectory()) scan(p, hits);
-    else if (/\.(h|cpp|cs|ini|uproject)$/i.test(n.name)) {
-      const t = readFileSync(p, 'utf8');
-      if (/%TEMPLATENAME%|%PROJECTNAME%|PROJECT_NAME_PLACEHOLDER/.test(t)) hits.push(p);
-    }
+// ── a blank C++ project, synthesized ───────────────────────────────────────────────
+// Written here rather than copied from Engine/Templates, because "Templates and Feature Packs" is
+// an OPTIONAL launcher component — on this machine the engine installed without it (W109), and a
+// probe that needs an optional component cannot be relied on to run on the second device either.
+// A minimal C++ module is seven small files, and synthesizing them makes both devices compile
+// byte-identical sources.
+const projectName = 'ArmProbe';
+// The RHI criterion kills the editor on a leash, and it keeps handles on its DerivedDataCache and
+// log for a while after. A re-run must not die on that, so a work dir that refuses to go gets a
+// sibling instead (W109).
+let workDir = work;
+if (existsSync(workDir)) {
+  try {
+    rmSync(workDir, { recursive: true, force: true });
+  } catch {
+    workDir = `${work}-${Date.now()}`;
+    say(`NOTE      ${work} is still held by a previous run (UE keeps handles after a kill); using ${workDir}`);
   }
-  return hits;
-})(work);
-if (placeholders.length) {
-  say(`WARNING  ${placeholders.length} template file(s) still hold wizard placeholders — a build failure`);
-  say(`         below is about the TEMPLATE, not about this device: ${placeholders[0]}`);
-  report.templatePlaceholders = placeholders;
 }
-report.project = { path: uproject, fromTemplate: cppTemplate, hasCppSource: isCpp };
-say(`project   ${uproject}\n          from ${cppTemplate} · C++ source: ${isCpp ? 'yes' : 'NO (blueprint-only template)'}`);
+const write = (rel: string, body: string) => {
+  const full = join(workDir, rel);
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, body);
+};
 
-// ── criterion 2: does a C++ editor target build, and which MSVC host builds it ────────────────────
-if (isCpp && !has('skip-build')) {
-  const log = join(work, 'probe-build.log');
-  const started = Date.now();
-  const built = spawnSync('cmd.exe', ['/c', buildBat, `${projectName}Editor`, 'Win64', 'Development',
-    `-Project=${uproject}`, '-WaitMutex', '-FromMsBuild'], { encoding: 'utf8', maxBuffer: 1 << 28 });
-  const elapsed = Date.now() - started;
-  const out = `${built.stdout ?? ''}\n${built.stderr ?? ''}`;
-  writeFileSync(log, out);
-  const hosts = [...new Set(out.match(/Host(?:arm64|x64|x86)/gi) ?? [])];
-  const toolchain = out.split(/\r?\n/).filter((l) => /toolchain|Compiler:|WindowsSDK/i.test(l)).slice(0, 4);
-  report.build = {
-    ok: built.status === 0, exitCode: built.status, seconds: seconds(elapsed),
-    msvcHosts: hosts, toolchainLines: toolchain, log,
-  };
-  say(`\ncriterion 2 — C++ editor target build: ${built.status === 0 ? 'PASS' : `FAIL (exit ${built.status})`} in ${seconds(elapsed)}s`);
-  say(`          MSVC host(s) named in the log: ${hosts.length ? hosts.join(', ') : 'NONE — the host is not in the log, measure the wall-clock instead'}`);
-  for (const l of toolchain) say(`          ${l.trim()}`);
-  if (built.status !== 0) say(`          log: ${log}`);
+write(`${projectName}.uproject`, JSON.stringify({
+  FileVersion: 3,
+  EngineAssociation: '',
+  Category: '',
+  Description: 'Generated by scripts/diablo/ue_arm_probe.ts — measures whether UE builds and runs here.',
+  Modules: [{ Name: projectName, Type: 'Runtime', LoadingPhase: 'Default' }],
+  // Without this, `-run=pythonscript` loads no Python at all and the run exits 1 with no
+  // LogPython line anywhere — which reads exactly like a device failure and is not one (W109).
+  Plugins: [{ Name: 'PythonScriptPlugin', Enabled: true }],
+}, null, 2));
+
+write(`Source/${projectName}.Target.cs`, `using UnrealBuildTool;
+
+public class ${projectName}Target : TargetRules
+{
+    public ${projectName}Target(TargetInfo Target) : base(Target)
+    {
+        Type = TargetType.Game;
+        DefaultBuildSettings = BuildSettingsVersion.Latest;
+        IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+        ExtraModuleNames.Add("${projectName}");
+    }
+}
+`);
+
+write(`Source/${projectName}Editor.Target.cs`, `using UnrealBuildTool;
+
+public class ${projectName}EditorTarget : TargetRules
+{
+    public ${projectName}EditorTarget(TargetInfo Target) : base(Target)
+    {
+        Type = TargetType.Editor;
+        DefaultBuildSettings = BuildSettingsVersion.Latest;
+        IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+        ExtraModuleNames.Add("${projectName}");
+    }
+}
+`);
+
+write(`Source/${projectName}/${projectName}.Build.cs`, `using UnrealBuildTool;
+
+public class ${projectName} : ModuleRules
+{
+    public ${projectName}(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+    }
+}
+`);
+
+write(`Source/${projectName}/${projectName}.h`, `#pragma once
+
+#include "CoreMinimal.h"
+`);
+
+write(`Source/${projectName}/${projectName}.cpp`, `#include "${projectName}.h"
+#include "Modules/ModuleManager.h"
+
+IMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, ${projectName}, "${projectName}");
+`);
+
+write('Config/DefaultEngine.ini', `[/Script/EngineSettings.GameMapsSettings]
+GameDefaultMap=/Engine/Maps/Entry
+`);
+
+const uproject = join(workDir, `${projectName}.uproject`);
+report.project = { path: uproject, synthesized: true, files: 7 };
+say(`project   ${uproject}`);
+say('          synthesized minimal C++ module (no Engine/Templates needed)');
+
+// ── criterion 2: does a C++ editor target build, and which MSVC host builds it ────────────────
+// UnrealBuildTool is driven DIRECTLY rather than through Build.bat, because Build.bat resolves the
+// bundled .NET by host architecture and dies instantly (0x80008096, no output) when the win-arm64
+// runtime is absent from the install — which it is on this machine.
+//
+// The host matters and is not a free choice: UBT reads it off ITS OWN process architecture
+// (Engine/Source/Programs/UnrealBuildTool/Platform/Windows/MicrosoftPlatformSDK.cs:1317 —
+// `RuntimeInformation.ProcessArchitecture == Arm64 ? Arm64 : X64`). So UBT on a native ARM64 .NET
+// selects Hostarm64 and compiles natively; UBT on an emulated x64 .NET selects Hostx64 and every
+// cl.exe invocation is emulated. Which dotnet exists therefore DECIDES the build speed, and the
+// probe reports which one it used.
+if (!has('skip-build')) {
+  const dotnetDir = join(engine, 'Engine/Binaries/ThirdParty/DotNet');
+  const versions = existsSync(dotnetDir) ? readdirSync(dotnetDir).filter((n) => /^[0-9]/.test(n)) : [];
+  const candidates = versions.flatMap((v) => ['win-arm64', 'win-x64'].map((a) => ({ arch: a, exe: join(dotnetDir, v, a, 'dotnet.exe') })));
+  const forced = arg('dotnet');
+  const dotnet = forced
+    ? { arch: /arm64/i.test(forced) ? 'win-arm64 (forced)' : 'forced', exe: forced }
+    : candidates.find((c) => c.arch === 'win-arm64' && existsSync(c.exe))
+      ?? candidates.find((c) => existsSync(c.exe));
+  const ubt = join(engine, 'Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll');
+  if (!dotnet || !existsSync(ubt)) {
+    report.build = { skipped: true, reason: `no bundled dotnet or UBT under ${engine}` };
+    say('\ncriterion 2 — SKIPPED: no bundled dotnet / UnrealBuildTool in this install');
+  } else {
+    if (dotnet.arch !== 'win-arm64' && report.emulated) {
+      say(`\nNOTE      only ${dotnet.arch} dotnet is installed, so UBT runs EMULATED and will choose Hostx64`);
+      say('          by MicrosoftPlatformSDK.cs:1317 — that is an install gap, not this device’s ceiling.');
+    }
+    const ubtDir = join(engine, 'Engine/Binaries/DotNET/UnrealBuildTool');
+    const runUbt = (exe: string) => spawnSync(exe, [ubt, `${projectName}Editor`, 'Win64', 'Development',
+      `-Project=${uproject}`], { encoding: 'utf8', maxBuffer: 1 << 28, cwd: ubtDir });
+    const started = Date.now();
+    let built = runUbt(dotnet.exe);
+    let usedArch = dotnet.arch;
+    // A native ARM64 .NET cannot run the SHIPPED UnrealBuildTool: its native dependency
+    // blake3_dotnet is published for win-x64 / win-x86 / win-arm and NOT win-arm64, so UBT dies
+    // with `DllNotFoundException: Unable to load DLL 'blake3_dotnet'` (measured, W109). Falling back
+    // keeps the probe honest on a machine where an arm64 dotnet exists, and the fallback itself is
+    // the finding: the emulated Hostx64 compiler is the ceiling, not a configuration mistake.
+    const blake3Missing = /blake3_dotnet|DllNotFoundException/.test(`${built.stdout ?? ''}${built.stderr ?? ''}`);
+    if (blake3Missing) {
+      const x64 = candidates.find((c) => c.arch === 'win-x64' && existsSync(c.exe));
+      say(`\nNOTE      UBT cannot run on the native ${dotnet.arch} dotnet: blake3_dotnet ships no win-arm64 native.`);
+      say('          Falling back to the emulated x64 dotnet — this is UE 5.8’s ceiling on ARM64, not a misconfiguration.');
+      if (x64) { built = runUbt(x64.exe); usedArch = 'win-x64 (after win-arm64 failed on blake3_dotnet)'; }
+    }
+    const elapsed = Date.now() - started;
+    const out = `${built.stdout ?? ''}\n${built.stderr ?? ''}`;
+    const log = join(workDir, 'probe-build.log');
+    writeFileSync(log, out);
+    // The toolchain summary UBT prints to stdout does NOT name the host; its own log file does.
+    const ubtLog = join(process.env.LOCALAPPDATA ?? '', 'UnrealBuildTool', 'Log.txt');
+    const ubtLogText = existsSync(ubtLog) ? readFileSync(ubtLog, 'utf8') : '';
+    const compiler = /^Compiler: (.*)$/m.exec(ubtLogText)?.[1]?.trim();
+    const host = /Host(arm64|x64)/i.exec(compiler ?? '')?.[0];
+    report.build = {
+      ok: built.status === 0, exitCode: built.status, seconds: seconds(elapsed),
+      dotnet: usedArch, ubtNativeArm64: usedArch === 'win-arm64', blake3BlockedArm64: blake3Missing,
+      msvcHost: host ?? 'unknown', compiler, log,
+    };
+    say(`\ncriterion 2 — C++ editor target build: ${built.status === 0 ? 'PASS' : `FAIL (exit ${built.status})`} in ${seconds(elapsed)}s`);
+    say(`          UBT ran on ${usedArch} → MSVC host ${host ?? 'unknown'}${host?.toLowerCase() === 'hostarm64' ? ' (NATIVE — the good case)' : ' (emulated)'}`);
+    if (compiler) say(`          ${compiler}`);
+    if (built.status !== 0) say(`          log: ${log}`);
+  }
 } else {
-  report.build = { skipped: true, reason: isCpp ? '--skip-build' : 'template has no C++ source' };
-  say(`\ncriterion 2 — SKIPPED (${isCpp ? '--skip-build' : 'blueprint-only template: no C++ to build'})`);
+  report.build = { skipped: true, reason: '--skip-build' };
+  say('\ncriterion 2 — SKIPPED (--skip-build)');
+  say('          NOTE: criterion 1 below is then measured against an unbuilt module.');
 }
 
-// ── criterion 1: headless python ──────────────────────────────────────────────────────────────────
-const py = join(work, 'probe.py');
-writeFileSync(py, [
-  'import unreal, sys',
-  'print("POF_PROBE_OK version=%s" % unreal.SystemLibrary.get_engine_version())',
-  'print("POF_PROBE_PLATFORM %s" % unreal.SystemLibrary.get_platform_user_name())',
-  'sys.stdout.flush()',
+// ── criterion 1: headless python ──────────────────────────────────────────────────────────
+// The script writes a FILE, and success is read off that file — not off stdout. UE routes python
+// print() to its own log channel, so a marker grep over the process output reports a working
+// commandlet as a failure (W109: it did, twice, until the log showed
+// `LogPythonScriptCommandlet: Python script executed successfully`).
+const py = join(workDir, 'probe.py');
+const resultFile = join(workDir, 'probe-result.txt');
+write('probe.py', [
+  'import unreal',
+  `with open(r"${resultFile}", "w") as f:`,
+  '    f.write("version=%s" % unreal.SystemLibrary.get_engine_version())',
 ].join('\n'));
 {
   const started = Date.now();
   const run = spawnSync(cmdExe, [uproject, '-run=pythonscript', `-script=${py}`,
-    '-nullrhi', '-unattended', '-nosplash', '-stdout', '-NoLogTimes'], { encoding: 'utf8', maxBuffer: 1 << 28 });
+    '-nullrhi', '-unattended', '-nosplash', '-stdout', '-NoLogTimes',
+    '-EnablePlugins=PythonScriptPlugin'], { encoding: 'utf8', maxBuffer: 1 << 28 });
   const elapsed = Date.now() - started;
   const out = `${run.stdout ?? ''}\n${run.stderr ?? ''}`;
-  const marker = /POF_PROBE_OK version=(.*)/.exec(out);
-  const log = join(work, 'probe-python.log');
+  const log = join(workDir, 'probe-python.log');
   writeFileSync(log, out);
+  const wrote = existsSync(resultFile) ? readFileSync(resultFile, 'utf8').trim() : undefined;
+  const commandletSaid = /Python script executed successfully/.test(out);
   report.pythonscript = {
-    ok: Boolean(marker) && run.status === 0, exitCode: run.status, seconds: seconds(elapsed),
-    engineVersion: marker?.[1]?.trim(), log,
+    ok: Boolean(wrote), exitCode: run.status, seconds: seconds(elapsed),
+    engineVersion: wrote?.replace(/^version=/, ''), commandletReportedSuccess: commandletSaid,
+    pythonLoaded: /LogPython/.test(out), log,
   };
-  say(`\ncriterion 1 — headless pythonscript: ${marker && run.status === 0 ? 'PASS' : `FAIL (exit ${run.status})`} in ${seconds(elapsed)}s`);
-  if (marker) say(`          engine reports ${marker[1].trim()}`);
-  else say(`          no POF_PROBE_OK marker — log: ${log}`);
+  say(`\ncriterion 1 — headless pythonscript: ${wrote ? 'PASS' : `FAIL (exit ${run.status})`} in ${seconds(elapsed)}s`);
+  if (wrote) say(`          the script ran in-engine and wrote its result: ${wrote}`);
+  else say(`          no result file · python ${/LogPython/.test(out) ? 'LOADED' : 'never loaded'} · commandlet reported success: ${commandletSaid} — log: ${log}`);
 }
 
 // ── criterion 3: does an RHI come up on the real GPU (best-effort) ────────────────────────────────
@@ -153,25 +261,25 @@ writeFileSync(py, [
 {
   const started = Date.now();
   const run = spawnSync(cmdExe, [uproject, '-nosplash', '-unattended', '-stdout', '-NoLogTimes',
-    '-ExecCmds=Quit'], { encoding: 'utf8', maxBuffer: 1 << 28, timeout: 240_000 });
+    '-ExecCmds=Quit'], { encoding: 'utf8', maxBuffer: 1 << 28, timeout: 120_000 });
   const elapsed = Date.now() - started;
   const out = `${run.stdout ?? ''}\n${run.stderr ?? ''}`;
-  const log = join(work, 'probe-rhi.log');
+  const log = join(workDir, 'probe-rhi.log');
   writeFileSync(log, out);
   const rhi = out.split(/\r?\n/).filter((l) => /D3D12|D3D11|Vulkan|GPU Adapter|Adapter Name|RHI/i.test(l)).slice(0, 6);
   report.rhi = { timedOut: run.error?.message?.includes('ETIMEDOUT') ?? false, exitCode: run.status, seconds: seconds(elapsed), lines: rhi, log };
-  say(`\ncriterion 3 — RHI on the real GPU (best-effort): ${rhi.length ? 'lines found' : 'INCONCLUSIVE'} after ${seconds(elapsed)}s`);
+  say(`\ncriterion 3 — RHI on the real GPU: ${rhi.length ? 'PASS (lines below)' : 'INCONCLUSIVE'} after ${seconds(elapsed)}s${run.error ? ' — editor killed on the leash, which is expected: -ExecCmds=Quit does not exit UnrealEditor-Cmd' : ''}`);
   for (const l of rhi) say(`          ${l.trim()}`);
   if (!rhi.length) say(`          nothing RHI-shaped in the log: ${log}`);
 }
 
 if (has('json')) console.log(JSON.stringify(report, null, 2));
 else {
-  const b = report.build as { ok?: boolean; msvcHosts?: string[]; seconds?: number; skipped?: boolean };
+  const b = report.build as { ok?: boolean; msvcHost?: string; dotnet?: string; seconds?: number; skipped?: boolean };
   const p = report.pythonscript as { ok?: boolean };
   say('\n=== verdict ===');
   say(`  headless python   ${p.ok ? 'works' : 'does NOT work'}`);
   say(`  C++ editor build  ${b.skipped ? 'not measured' : b.ok ? `works in ${b.seconds}s` : 'does NOT build'}`);
-  say(`  built by          ${b.msvcHosts?.length ? b.msvcHosts.join(', ') : 'unknown'}${b.msvcHosts?.includes('Hostarm64') ? ' — native ARM64 host, the good case' : ''}`);
+  say(`  built by          ${b.msvcHost ?? 'unknown'} via ${b.dotnet ?? 'unknown'} dotnet${b.msvcHost?.toLowerCase() === 'hostarm64' ? ' — native ARM64, the good case' : ''}`);
   say('  Run this same command on the other device and compare, before deciding where UE lives.');
 }

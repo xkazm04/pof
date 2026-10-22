@@ -31,3 +31,12 @@ one-line DELIVERED entries in the repo's `.claude/fleet-memory.md` and
   from "blocked" to "needs a git clone" — `snapshot-ue-schema.ts` reads headers as text and the
   25-type / 187-field snapshot is committed, so schema-down parity never needed an engine. No
   store number moves; this is a graph correction, and the kind the loop exists to find.
+- **A-G2-5 (2026-10-22, W109)** — `scripts/diablo/ue_arm_probe.ts`: one command that measures whether
+  UE builds and runs on a given device, on a synthesized seven-file C++ module (no optional
+  `Engine/Templates` component, so both devices compile identical sources) and driving UBT directly
+  (so `Build.bat`'s missing `win-arm64` runtime cannot mask the result). *Measured:* the UE question
+  went from undocumented to three measured criteria on this box — build PASS 63.5-72.2 s over four
+  runs, headless python PASS in 12.7 s on engine 5.8.4, D3D12 PASS — plus the named cause of the
+  emulated-compiler ceiling (`MicrosoftPlatformSDK.cs:1317` + no `win-arm64` `blake3_dotnet`), with
+  the native-host attempt and its fallback both exercised (`--dotnet` forces the attempt without
+  writing into the engine install). Takes `--engine`, so the same command prices Wolf.
