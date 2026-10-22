@@ -14440,7 +14440,11 @@
           "revision": 11,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:83 Accumulated damage labels assert an equality using a rounded average, so two hits totaling 201 display '2x 101 = 201' although the displayed product is 202.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:b702c58e785c6c51",
+          "evaluatedRevision": 11
         },
         {
           "subject": "game-economy-tuning",
