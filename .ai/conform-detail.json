@@ -12827,6 +12827,52 @@
           "evidence": "src/lib/health-engine.ts:320 Localization is marked healthy even while its detail instructs the user to run the pipeline to check readiness, collapsing an unobserved result into green."
         }
       ]
+    },
+    "6feb38b8-a274-49d1-b643-b9c7e058b344/i18n": {
+      "context": "localization-pipeline",
+      "subject": "i18n",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:01:46.583Z",
+      "worker": "be6e8a23-cc0b-48da-95c6-97cf6b4d995f",
+      "techniques": [
+        {
+          "technique": "catalog-architecture",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:103 The heading is literal display text rather than a typed catalog reference."
+        },
+        {
+          "technique": "completeness-gates",
+          "verdict": "deviation",
+          "evidence": "src/lib/localization/qa-engine.ts:282 Readiness requires some entries and no findings, but never requires an entry for every source string; a partially translated locale can pass."
+        },
+        {
+          "technique": "incomplete-bundle-kill-switch",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/TranslationsTab.tsx:67 This control filters translation records for review; it does not select a reader's runtime language or deliver a shipped locale bundle."
+        },
+        {
+          "technique": "interpolation-and-plurals",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:142 The message builds English plurals by appending 's' and inserts a conditional prose fragment instead of using complete catalog messages and locale plural rules."
+        },
+        {
+          "technique": "locale-runtime",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/MiniStat.tsx:7 Stat labels truncate without a tooltip, expansion control, or other full-value recourse, violating the layout-tolerance requirement."
+        },
+        {
+          "technique": "script-aware-presentation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/TranslationCard.tsx:33 Translated previews use the same typography across scripts; the inherited font is Latin-subset Geist, and searches found no script-based font or metric rules."
+        },
+        {
+          "technique": "token-label-separation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/HazardCard.tsx:47 The badge renders a known severity token directly instead of resolving a category-specific catalog label."
+        }
+      ]
     }
   }
 }

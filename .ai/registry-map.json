@@ -16730,7 +16730,11 @@
           "revision": 7,
           "changedAt": "2026-09-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:103 The view renders authored English copy directly in JSX, bypassing the catalog required for user-facing strings.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:13f1a2698a82c874",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mcp-tools",
