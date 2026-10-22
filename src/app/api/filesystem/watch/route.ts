@@ -17,6 +17,7 @@ import {
   type FileChangeEvent,
 } from '@/lib/file-watcher';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,11 @@ export async function GET(request: NextRequest) {
     return new Response('projectPath query parameter required', { status: 400 });
   }
 
-  const started = startWatching(decodeURIComponent(projectPath));
+  // searchParams is already decoded; a second decodeURIComponent threw on any literal '%'.
+  const checked = checkLocalPath(projectPath, 'projectPath');
+  if (!checked.ok) return new Response(checked.error, { status: 400 });
+
+  const started = startWatching(checked.data);
   if (!started) {
     return new Response('Failed to watch — Source/ directory not found', { status: 404 });
   }

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
 // ── Types ──
 
@@ -323,11 +324,11 @@ async function scanAnimBP(projectPath: string, moduleName: string): Promise<Anim
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { projectPath, moduleName } = body;
+    const { moduleName } = body;
 
-    if (!projectPath || typeof projectPath !== 'string') {
-      return apiError('projectPath is required', 400);
-    }
+    const checked = checkLocalPath(body.projectPath, 'projectPath');
+    if (!checked.ok) return apiError(checked.error, 400);
+    const projectPath = checked.data;
     if (!moduleName || typeof moduleName !== 'string') {
       return apiError('moduleName is required', 400);
     }
