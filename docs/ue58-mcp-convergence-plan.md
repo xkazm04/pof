@@ -102,3 +102,9 @@ Adjacent cleanup (do with #1/#2): the project is already on 5.8 — standardize 
 ## What we deliberately keep (the moat)
 
 `execute_script` (full/unsandboxed — Epic's `execute_tool_script` is sandboxed/read-only) · `capture_viewport` (Epic ships no screenshot tool) · `gas_ops` mutations (Epic GAS only inspects) · the L3 observation.json behavioral spine + L4 Gemini visual gate · the auth'd `:30040` bridge · the SQLite authoring-truth + harness orchestration. The official MCP gives Claude *hands*; PoF keeps the *eyes and the rules*. Full tool-by-tool verdict: [`ue58-mcp-phase2-tool-map.md`](./ue58-mcp-phase2-tool-map.md).
+
+## Evidence
+
+| Date | Goal | Evidence |
+|---|---|---|
+| 2026-10-22 | Milestone 3 goal 4 — remaining 5.7 references standardized on 5.8: CLOSED | No live `UE_5.7` engine-path literal remains in `src/`, `scripts/`, `e2e/` outside test fixtures (guarded by `src/__tests__/lib/engine-version-claims.test.ts`). Claims fixed: canon `game-genre` now says UE5.8. Survivors kept, each commented: animation checklist `constants.ts` 5.7.3 facts (SavePackage returns bool, AnimBP state machine not programmable) are marked "not re-verified on 5.8, 2026-10-22" — no editor available, AnimBP claim cites `.ai/directions/2026-10-22-anim-blueprint-retire-blocker.md`; `skills.ts` "5.7+" markers are availability floors, commented as such; `SetupWizard.tsx` keeps the 5.7 pill (now "supported", 5.8 "latest · tooling default"); `engine-facts.ts` 5.7 branch is a deliberate supported-version branch, now stated at `FACTS_5_7`. Decision: `.ai/directions/2026-10-22-engine-version-claim-survivors.md` (proposed). |

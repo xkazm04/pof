@@ -13,7 +13,7 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
     title: 'Run Asset Automation Commandlet',
     type: 'auto',
     icon: Terminal,
-    description: 'Headless creation of blend spaces + montage shells via UAnimAssetCommandlet (verified UE 5.7.3, ~0.06s for 8 assets).',
+    description: 'Headless creation of blend spaces + montage shells via UAnimAssetCommandlet (verified UE 5.7.3, not re-verified on 5.8 as of 2026-10-22; ~0.06s for 8 assets).',
     details: [
       'Run: UnrealEditor-Cmd.exe PoF.uproject -run=AnimAsset -nopause -unattended -nosplash',
       'Creates BS1D_Locomotion (1D Blend Space, Speed axis 0-600, GridNum=2) at /Game/Characters/Player/Animations/.',
@@ -21,11 +21,11 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
       'Creates AM_Dodge_Forward, AM_Dodge_Backward, AM_Dodge_Left, AM_Dodge_Right (each with single Dodge section).',
       'Creates AM_HitReact and AM_Death montage shells.',
       'All 8 .uasset files are valid and openable in the editor. Skeleton + AnimSequences must be assigned in-editor afterward.',
-      'Technical: BlendSpace uses FProperty reflection on protected BlendParameters. Montages use NewObject<UAnimMontage> + CompositeSections. SavePackage returns bool in UE 5.7 (not FSavePackageResultStruct).',
+      'Technical: BlendSpace uses FProperty reflection on protected BlendParameters. Montages use NewObject<UAnimMontage> + CompositeSections. SavePackage returns bool in UE 5.7.3 (not FSavePackageResultStruct; not re-verified on 5.8, 2026-10-22).',
     ],
     prompt: `Create a UAnimAssetCommandlet in a PoFEditor module for headless animation asset creation.
 
-## VERIFIED APPROACH (UE 5.7.3)
+## VERIFIED APPROACH (UE 5.7.3; not re-verified on 5.8, 2026-10-22)
 
 ### Module Setup
 - Separate PoFEditor module (Type: Editor in .uproject, added to EditorTarget.cs)
@@ -49,7 +49,7 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
 - Link combo: CompositeSections[i].NextSectionName = Sections[i+1]
 
 ### Saving (KEY FINDING)
-- UPackage::SavePackage(Package, Asset, *FilePath, SaveArgs) returns BOOL in UE 5.7
+- UPackage::SavePackage(Package, Asset, *FilePath, SaveArgs) returns BOOL in UE 5.7.3 (not re-verified on 5.8, 2026-10-22)
 - Do NOT use FSavePackageResultStruct — that's the Save() method, not SavePackage()
 - Must create directory tree first via IPlatformFile::CreateDirectoryTree
 
@@ -118,7 +118,7 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
     details: [
       'C++ UARPGAnimInstance already exists with Speed, Direction, IsInAir, bIsDodging, bIsAttacking, etc.',
       'Blend space asset (BS1D_Locomotion) already created by commandlet — just needs sample anims assigned.',
-      'AnimBP state machine CANNOT be created programmatically in UE 5.7 — it requires the editor AnimGraph.',
+      'AnimBP state machine CANNOT be created programmatically (claim from UE 5.7, not re-verified on 5.8, 2026-10-22; see .ai/directions/2026-10-22-anim-blueprint-retire-blocker.md) — it requires the editor AnimGraph.',
       'Create AnimBP in editor: right-click Skeleton > Create > Anim Blueprint, parent to UARPGAnimInstance.',
       'Wire states: Locomotion (BS1D), Attacking, Dodging, HitReact, Death. Transitions use C++ variables.',
       'This is the ONE step that truly requires manual editor work for animation setup.',
