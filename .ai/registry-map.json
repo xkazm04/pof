@@ -11445,7 +11445,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ImplementationPlan/index.tsx:39 Context and repository searches found no planApproval, approvePlan, self-challenge or decision-sized constructs; this shell dispatches a deterministic feature backlog through readiness checks without an adopted approval gate over agent-authored plans.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:53b4cdb9f8d08966",
+          "evaluatedRevision": 4
         },
         {
           "subject": "voice-io",
