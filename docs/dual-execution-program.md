@@ -1,6 +1,6 @@
 # Dual-Execution Program — progress handbook
 
-> **Status 2026-07-23: 32 of ~31 pipelines summarized below** (Groups A + B + C + D all
+> **Status 2026-10-22: 32 pipelines summarized below** (Groups A + B + C + D all
 > landed — the registry holds 32). This is the working handbook for the
 > browser⇄UE dual-execution program: what exists, how a domain review runs, and how the
 > remaining domains are grouped for PARALLEL sessions. Companion spec (the why + contract
@@ -31,7 +31,7 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | UE gates | `Source/PoF/Test/**` + `entityRuntimeDeferred` accepts | per-entity automation names (`data.automationName`), drained via spawn executor |
 | Audio pipeline | `POST /api/audio-gen` (elevenlabs) → `/api/audio-asset` | real generation + serving; UE import via `Content/Python/import_duel_audio.py` |
 
-## 3. Reviewed pipelines (27) — the evidence in one line each
+## 3. Reviewed pipelines (32) — the evidence in one line each
 
 | # | Pipeline | Browser proof | UE proof |
 |---|---|---|---|
