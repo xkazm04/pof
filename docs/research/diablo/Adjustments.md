@@ -26,3 +26,8 @@ one-line DELIVERED entries in the repo's `.claude/fleet-memory.md` and
   from `pin: undefined` to a 40-char commit, and a re-ingest after the change moved nothing
   (created 0 · rawChanged 0 · reprojected 0 · unchanged 1983) — the pin is provenance, not a
   projection input, which is the correct outcome and is now pinned by a test.
+- **A-G2-4 (2026-10-22, W109)** — the UE dependency split into its two real halves after being
+  conflated since W10 (`Path/Capability - UE Upstream`). *Measured:* one of the two halves moved
+  from "blocked" to "needs a git clone" — `snapshot-ue-schema.ts` reads headers as text and the
+  25-type / 187-field snapshot is committed, so schema-down parity never needed an engine. No
+  store number moves; this is a graph correction, and the kind the loop exists to find.
