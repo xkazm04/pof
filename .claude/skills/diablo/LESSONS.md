@@ -196,3 +196,22 @@
 - **Predict `created` as well as the deltas.** W108 could not check its own rebuild against a
   target because the only record of the expected row count was in the lost vault. Write the
   absolute totals into the wave note, not just the deltas.
+
+## 2026-10-22 — probing a toolchain you did not build (W109)
+
+- **Trace every failure to a named file before scoring it against the hypothesis.** On a partial UE
+  install, four separate failures all looked like "ARM64 doesn't work" and none of them were: a
+  missing `win-arm64` .NET (Build.bat dying at 0x80008096), an optional Templates component, an
+  uncompiled module stopping editor load silently, and UE routing python `print()` to its log
+  channel rather than stdout. The ISA was never the cause of anything measured.
+- **A probe's own success detection is a claim too.** The marker grep reported a WORKING commandlet
+  as failed twice in a row. Have the thing under test write a file; read the file.
+- **When a workaround changes the result, the result is about the workaround.** Driving UBT under
+  the x64 dotnet made it select the emulated compiler — and that was mine, not UE's behaviour.
+  Say which number came from the real path and which from the detour.
+- **Exercise the fallback, don't just write it.** The blake3 fallback was only believable once a
+  `--dotnet` override forced the native attempt — and the override exists precisely so the test
+  needs no write into the engine install.
+- **"Unsupported" is a support statement.** Read it as "nobody will help you", not "it will not
+  run", and then go and measure. The reverse also holds: a vendor's *aspirational* code path
+  (Build.bat reaching for a win-arm64 runtime) is not evidence the capability ships.
