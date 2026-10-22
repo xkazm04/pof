@@ -9,7 +9,8 @@
 import { describe, it, expect } from 'vitest';
 import { auditColumns } from '@/lib/catalog/ingest/fieldMap';
 import { applyDecode } from '@/lib/catalog/ingest/decode';
-import { MONSTER_MAP, ITEM_MAP, SPELL_MAP, TARGET_GAPS, provenanceFor } from '@/lib/catalog/ingest/diablo1';
+import { DIABLO1_OBTAIN, DIABLO1_PIN, MONSTER_MAP, ITEM_MAP, SPELL_MAP, TARGET_GAPS, provenanceFor } from '@/lib/catalog/ingest/diablo1';
+import { DIABLO1, getReferenceSource } from '@/lib/catalog/reference/sources';
 
 const REAL_HEADERS: Record<string, string[]> = {
   // assets/txtdata/monsters/monstdat.tsv — 112 rows
@@ -146,5 +147,25 @@ describe('items: slot, drop level and attribute requirements have homes (W10, D2
     expect(a.mapped).toHaveLength(19);
     expect(a.gap).toHaveLength(2);
     expect(a.mapped.length + a.dropped.length + a.gap.length).toBe(23);
+  });
+});
+
+// W108: the pin lived only in a vault note (SKILL.md: "pinned (see State.md)") and survived the
+// machine reset by accident, through the canon profile's refs: strings. It is repo state now, and
+// the recipe that reproduces the data root travels with it — /zelda's BOTW source already did
+// this, which is why its pin was never at risk.
+describe('DIABLO1 source pin', () => {
+  it('is registered, pinned to a full commit, and carries the pin in its obtain recipe', () => {
+    expect(getReferenceSource('diablo1')).toBe(DIABLO1);
+    expect(DIABLO1.pin).toBe(DIABLO1_PIN);
+    expect(DIABLO1_PIN).toMatch(/^[0-9a-f]{40}$/);
+    expect(DIABLO1.obtain).toBe(DIABLO1_OBTAIN);
+    expect(DIABLO1.obtain).toContain(DIABLO1_PIN);
+    expect(DIABLO1.obtain).toContain('assets/txtdata');
+  });
+
+  it('agrees with the pin the canon profile quotes in its refs — the redundancy that saved it', () => {
+    const short = DIABLO1_PIN.slice(0, 7);
+    expect(short).toBe('4138a82');
   });
 });
