@@ -18861,7 +18861,11 @@
           "revision": 3,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/test-gate-runner/bridgeExecutor.ts:174 The bridge timeout aborts the HTTP request without issuing an editor execution cancellation, so it bounds waiting rather than the handed-off automation work.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:a59e479b7cea486b",
+          "evaluatedRevision": 3
         },
         {
           "subject": "perf-regression-gating",
