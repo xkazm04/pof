@@ -1,11 +1,15 @@
 import { NextRequest } from 'next/server';
 import { apiError, respondFromResult, withRoute } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getService } from '@/lib/blender-mcp/service';
 import { ledger } from '@/lib/blender-mcp/generation-ledger';
 import type { GenerationProvider } from '@/lib/blender-mcp/types';
 
 // POST /api/blender-mcp/generate — { provider, prompt }
+// Starts a PAID provider job, so it sits behind the operator guard like execute.
 export const POST = withRoute(async (req: NextRequest) => {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   const body = await req.json();
   const provider = body.provider as GenerationProvider;
   const prompt = body.prompt as string;
