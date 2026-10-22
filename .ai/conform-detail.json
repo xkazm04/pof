@@ -12940,6 +12940,37 @@
           "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:74 Interaction membership records designer configuration, without evaluating shipped mechanic adoption or deciding between teaching and balance changes."
         }
       ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/llm-extracted-entity-graph": {
+      "context": "module-topology-graph",
+      "subject": "llm-extracted-entity-graph",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T03:02:42.289Z",
+      "worker": "f4709812-cafc-4773-8d88-7b4c260d084b",
+      "techniques": [
+        {
+          "technique": "accumulate-then-threshold-merge",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/constellation/layout.ts:156 Node descriptions come directly from feature definitions, without accumulating passage contributions."
+        },
+        {
+          "technique": "recall-passes-with-a-declared-cap",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Topology is computed from feature statuses and declared dependencies, without model extraction passes."
+        },
+        {
+          "technique": "recoverable-fan-out-write",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/topology/moduleGraph.ts:216 The topology builder returns an in-memory projection; it does not persist extracted facts across graph and vector stores."
+        },
+        {
+          "technique": "surface-form-identity-and-its-risk",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:136 Rendered nodes retain registered module identifiers instead of deriving identity from model-produced names."
+        }
+      ]
     }
   }
 }

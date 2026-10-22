@@ -18776,7 +18776,11 @@
           "revision": 2,
           "changedAt": "2026-09-16",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/topology/moduleGraph.ts:170 Searches for passage, embedding, and recall found no hits in the context directories; these views project registered feature dependencies rather than extract entities and relations from prose.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:bd7032bc2fb05c3b",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
