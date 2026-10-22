@@ -14686,7 +14686,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:88 Context searches found no tutorial, onboarding, teaching, competence or taught references, and inspection of both editors and their generation paths shows presentation and inventory configuration rather than player learning design.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:ad86d31cbebbbb39",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"

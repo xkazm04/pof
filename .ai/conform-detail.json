@@ -12904,6 +12904,42 @@
           "evidence": "src/hooks/useShellRouteSync.ts:38 Arrival activates the addressed module through state; scrolling toward an unmounted section is not the mounting trigger."
         }
       ]
+    },
+    "db5bb171-c9ed-4d1f-9ef5-dab6d67580c1/learning-curve-and-teaching-design": {
+      "context": "hud-theme-and-inventory",
+      "subject": "learning-curve-and-teaching-design",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:35:25.525Z",
+      "worker": "5d3e805b-b147-42b2-980f-b308ef1fea7a",
+      "techniques": [
+        {
+          "technique": "flow-corridor-as-two-sided-envelope",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/helpers.ts:57 Preview health follows a scripted clock; this context does not place gameplay demands against a taught set."
+        },
+        {
+          "technique": "skill-atom-inventory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/SlotTypesSection.tsx:22 This inventory enumerates item classifications for widget generation; it is not presented as a teaching plan."
+        },
+        {
+          "technique": "teaching-escalation-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/InteractSection.tsx:22 The controls select generated input handlers rather than teaching methods for player skill atoms."
+        },
+        {
+          "technique": "time-to-competence-measurement",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/useAnimationLoop.ts:29 Elapsed time drives preview animation; the context makes no onboarding effectiveness claim or competence measurement."
+        },
+        {
+          "technique": "unused-mechanic-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:74 Interaction membership records designer configuration, without evaluating shipped mechanic adoption or deciding between teaching and balance changes."
+        }
+      ]
     }
   }
 }
