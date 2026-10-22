@@ -1,0 +1,63 @@
+{
+ "schema": "conform-run/1",
+ "worker": "38d3fc38-e6bb-4326-9b90-b2ef6022a651",
+ "subject": "lazy-section-addressability",
+ "evaluatedAt": "2026-10-22T02:19:04.240876+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "app-navigation",
+   "subject": "lazy-section-addressability",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout/ModuleRenderer/index.tsx:265 Searches found no data-anchor or anchorId declarations; this shell selects mutually exclusive module panes through navigation state rather than resolving named positions on a lazily assembled long page.",
+   "techniques": [
+    {
+     "technique": "always-present-anchor-wrappers",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/ModuleRenderer/index.tsx:291 Modules occupy the selected workspace pane, rather than separate addressable positions requiring reserved scroll geometry."
+    },
+    {
+     "technique": "anchor-coverage-guard",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/navigationStore.ts:57 Shell navigation selects category state; it does not declare an in-page vocabulary whose entries must match DOM anchor hosts."
+    },
+    {
+     "technique": "external-anchor-vs-internal-id",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/shell/shellRoute.ts:70 Published module addresses select a workspace through query parameters; they do not resolve a section position or an internal scroll-tracking element."
+    },
+    {
+     "technique": "scroll-to-hydrate-then-retry",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useShellRouteSync.ts:38 Arrival activates the addressed module through state; scrolling toward an unmounted section is not the mounting trigger."
+    }
+   ],
+   "absenceTerms": [
+    "data-anchor",
+    "anchorId"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T02:19:04.240876+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "lazy-section-addressability"
+   ],
+   "techniques": [
+    "always-present-anchor-wrappers",
+    "anchor-coverage-guard",
+    "external-anchor-vs-internal-id",
+    "scroll-to-hydrate-then-retry"
+   ],
+   "deviations": 0,
+   "context": "app-navigation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

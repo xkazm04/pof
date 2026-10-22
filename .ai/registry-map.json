@@ -4168,7 +4168,11 @@
           "revision": 2,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:265 Searches found no data-anchor or anchorId declarations; this shell selects mutually exclusive module panes through navigation state rather than resolving named positions on a lazily assembled long page.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:7932d7ba8929c786",
+          "evaluatedRevision": 2
         },
         {
           "subject": "prompt-assembly",

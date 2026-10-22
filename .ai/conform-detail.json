@@ -12873,6 +12873,37 @@
           "evidence": "src/components/modules/evaluator/LocalizationPipelineView/HazardCard.tsx:47 The badge renders a known severity token directly instead of resolving a category-specific catalog label."
         }
       ]
+    },
+    "7e5113c1-2957-49ad-aeee-6f7effe35dce/lazy-section-addressability": {
+      "context": "app-navigation",
+      "subject": "lazy-section-addressability",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:19:04.240Z",
+      "worker": "38d3fc38-e6bb-4326-9b90-b2ef6022a651",
+      "techniques": [
+        {
+          "technique": "always-present-anchor-wrappers",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:291 Modules occupy the selected workspace pane, rather than separate addressable positions requiring reserved scroll geometry."
+        },
+        {
+          "technique": "anchor-coverage-guard",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/navigationStore.ts:57 Shell navigation selects category state; it does not declare an in-page vocabulary whose entries must match DOM anchor hosts."
+        },
+        {
+          "technique": "external-anchor-vs-internal-id",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/shell/shellRoute.ts:70 Published module addresses select a workspace through query parameters; they do not resolve a section position or an internal scroll-tracking element."
+        },
+        {
+          "technique": "scroll-to-hydrate-then-retry",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useShellRouteSync.ts:38 Arrival activates the addressed module through state; scrolling toward an unmounted section is not the mounting trigger."
+        }
+      ]
     }
   }
 }
