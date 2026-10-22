@@ -10636,7 +10636,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/index.tsx:32 Context and repository searches found no career, garage, payout, raceTicket, or repairShare matches; the inspected module visualizes ARPG health effects, so the racing career economy precondition does not hold.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:f968f177447a2754",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
