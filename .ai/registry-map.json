@@ -26215,7 +26215,11 @@
           "revision": 2,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:479 The inspected module models topology, difficulty, combat and timing, while context and repository searches found no dissenter, tithe or coalition content, placing it within the standard's procedural-level-planning boundary.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:16c0d7b272928521",
+          "evaluatedRevision": 2
         },
         {
           "subject": "game-economy-tuning",
