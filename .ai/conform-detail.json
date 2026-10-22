@@ -12617,6 +12617,47 @@
           "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/TranspilePane.tsx:116 The transpiler generates C++, and the dialogue generator produces quest data; neither manages a speech model or an accepted voice cast."
         }
       ]
+    },
+    "dc6bda3e-9219-49b5-bdc5-844f99f5c4c2/generative-provider-auditing": {
+      "context": "models-asset-inventory",
+      "subject": "generative-provider-auditing",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T00:15:56.757Z",
+      "worker": "d01f7f39-b01c-4f9e-8352-9bad339d26da",
+      "techniques": [
+        {
+          "technique": "arena-benchmark-protocol",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:119 The inventory compares asset names for sorting; no model-variant comparison or grader selection was found."
+        },
+        {
+          "technique": "capability-is-not-registry-membership",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/index.tsx:173 Asset kinds populate inventory filter chips; this context does not register providers or authorize generation capabilities."
+        },
+        {
+          "technique": "never-the-account-default",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/filesystem/scan-assets/route.ts:228 The inventory's scan endpoint collects existing files from Content/ without invoking a hosted generative service."
+        },
+        {
+          "technique": "pin-a-model-per-asset-class",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetPipelineDiagram.tsx:53 The diagram resolves import-workflow checklist stages; their inspected definitions configure existing meshes rather than select generative models."
+        },
+        {
+          "technique": "record-negative-benchmarks-in-place",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/AssetCard.tsx:112 Cards display filesystem modification dates; no evaluated or rejected model variants were found in this context."
+        },
+        {
+          "technique": "refuse-with-reason-not-greyed-out",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetPipelineDiagram.tsx:270 The run action forwards a checklist task; it does not request an unregistered asset-provider capability."
+        }
+      ]
     }
   }
 }

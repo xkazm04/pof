@@ -18056,7 +18056,11 @@
           "revision": 3,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 Searches for provider, benchmark, model_version and modelId found no context matches and found integrations elsewhere in the repository; this context inventories existing UE assets and dispatches import-workflow checklist tasks, so the subject's provider-integration precondition does not hold.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:0f247756551c6777",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
