@@ -19,7 +19,7 @@
  * number to judge, not the exit code. A missing engine is a REFUSAL, never a silent pass.
  */
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -75,6 +75,25 @@ cpSync(cppTemplate, work, { recursive: true });
 rmSync(join(work, 'Config/TemplateDefs.ini'), { force: true });
 const uproject = join(work, uprojectName);
 const isCpp = existsSync(join(work, 'Source'));
+// Some engine templates carry wizard placeholders (%TEMPLATENAME%, PROJECT_NAME) that only the
+// project wizard substitutes. Copying such a template gives a project that fails to compile for a
+// reason that looks nothing like the ARM question this probe is asking, so say so up front.
+const placeholders = (function scan(dir: string, hits: string[] = []): string[] {
+  for (const n of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, n.name);
+    if (n.isDirectory()) scan(p, hits);
+    else if (/\.(h|cpp|cs|ini|uproject)$/i.test(n.name)) {
+      const t = readFileSync(p, 'utf8');
+      if (/%TEMPLATENAME%|%PROJECTNAME%|PROJECT_NAME_PLACEHOLDER/.test(t)) hits.push(p);
+    }
+  }
+  return hits;
+})(work);
+if (placeholders.length) {
+  say(`WARNING  ${placeholders.length} template file(s) still hold wizard placeholders — a build failure`);
+  say(`         below is about the TEMPLATE, not about this device: ${placeholders[0]}`);
+  report.templatePlaceholders = placeholders;
+}
 report.project = { path: uproject, fromTemplate: cppTemplate, hasCppSource: isCpp };
 say(`project   ${uproject}\n          from ${cppTemplate} · C++ source: ${isCpp ? 'yes' : 'NO (blueprint-only template)'}`);
 
