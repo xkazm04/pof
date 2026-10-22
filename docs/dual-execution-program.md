@@ -212,7 +212,7 @@ author the mapping into the IMC asset itself.
 ### 7.1 Triage cards — 2026-10-22 (milestone 4, dual-execution review)
 
 One card per open UE-side item so a later session can close them one at a time. The
-session that wrote these had **no UE editor and no UE project**. Every verdict is either
+session that wrote these had **no UE project tree** to read (see `[UE]` below). Every verdict is either
 UE-GATED (it names what is missing) or DROPPED (only where the repo shows the mechanic is
 covered elsewhere). Nothing here claims a UE pass, a registration or a render that was not
 observed. Evidence comes from read-only `git grep` over the whole repo (src/, docs/, e2e/,
@@ -220,10 +220,17 @@ scripts/, shots/) plus `src/lib/preview/realization-facts.json`.
 
 **Shared blockers (2026-10-22), named once and cited by each card as `[UE]` / `[BROWSER]`:**
 - `[UE]`: the UE project at `…\Documents\Unreal Projects\PoF` does not exist on this machine
-  (the directory was absent on 2026-10-22, most likely because of the ~2026-10-19 machine reset), so none of its `Source/PoF/**`
-  is readable from here. The machine is also ARM64, where Epic does not support the Unreal
-  Editor (fleet-memory 2026-10-22 `[ue] DECISION`), so no live editor + PIE is available to
-  register, run or drain a gate.
+  (verified absent again 2026-10-22, most likely because of the ~2026-10-19 machine reset), so
+  none of its `Source/PoF/**` is readable and no gate can be registered, run or drained from
+  here. This is the blocker that actually stands.
+  *Retraction:* the earlier text of this bullet claimed the machine's ARM64 architecture
+  meant no live editor + PIE was available. That 2026-10-22 claim was refuted the same day by
+  `scripts/diablo/ue_arm_probe.ts` (`docs/research/diablo/Findings.md` F-G2-4, fleet-memory
+  2026-10-22 `[ue] DECISION`), which measured a passing C++ editor-target build, a passing
+  headless `-run=pythonscript` run and a passing D3D12 init on this device.
+  *Surviving caveat:* every compile here is emulated x64 (no native ARM64 UBT host), measured
+  on a partial install, so build times are a floor, and nothing about PIE-driven automation on
+  this device has been observed yet.
 - `[BROWSER]`: `C:\Users\kazda\kiro\saber-arpg` is also absent on this machine, so the browser
   proofs below are the 2026-07-23 recorded runs. They were not re-run on 2026-10-22.
 
@@ -276,13 +283,13 @@ scripts/, shots/) plus `src/lib/preview/realization-facts.json`.
   two-caller/one-guard grants). `VSCodexUnlockTest` drained to L3 pass. *Still needed UE-side:*
   seed the `DT_Codex` row (`seed_codex.py`), create the unlock and spoiler GEs, and observe
   `UARPGCodexComponent` reveal the entry at runtime. *Blocker:* `[UE]`, because seeding a
-  DataTable and authoring GEs needs a live editor.
+  DataTable and authoring GEs needs the PoF project, which is absent here.
 - **C3 · `BP_TutorialBeat_LearntoDodge`: UE-GATED.** *Browser leg:* proven per §3 row 26
   (500/700 ms timings, i-frame contact, concede at attempt 3, 800 ms hold-to-skip, never
   re-arms). `VSTutorialComprehensionTest` drained to L3 pass. *Still needed UE-side:* the
   Blueprint actor (BeginBeat via `AARPGTriggerBox`, `UARPGInputSandboxSubsystem::LockInputs`,
   WaitGameplayTagAdded stepping), placed in a map and walked in PIE. *Blocker:* `[UE]`, because
-  a Blueprint asset can only be authored in the editor.
+  a Blueprint asset can only be authored in the editor, and the PoF project it opens is absent here.
 - **C4 · `LS_PrologueTheFall` + `UARPGCinematicComponent`: UE-GATED.** *Browser leg:* proven per
   §3 row 27 (7 beats over 90 s, markers within 0.4 s of authored, grace/hold-to-skip,
   watched-bypass). `VSCutsceneTimingTest` drained to L3 pass. *Still needed UE-side:* the C++
@@ -295,6 +302,8 @@ scripts/, shots/) plus `src/lib/preview/realization-facts.json`.
   *Still needed UE-side:* an enemy placed in FeatureLab/VerticalSlice that actually owns and
   ticks the component, and a `-game` run whose log markers or frames show the state
   transitions. *Blocker:* `[UE]`.
+
+- **2026-10-22, what the probe changes:** once the PoF UE project is restored on this machine, registering and draining these gates is no longer hardware-blocked, only project-blocked. No gate above was registered, run or drained by this correction.
 
 #### Row 32 reconcile
 
