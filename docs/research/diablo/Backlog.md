@@ -40,18 +40,24 @@ loop rebuilds forward, and a defect that still exists will be re-found by the wa
 
 ## open (W109's gate, 2026-10-22)
 
-- **B-G2-4 — does the UE project repository still exist?** The operator is checking. Generation 1
+- **B-G2-4 — sync the UE project repository from Wolf.** Answered 2026-10-22: it lives on the
+  operator's other machine, **Wolf**, and will be synced after the engine probe. So the schema-down
+  half of `Path/Capability - UE Upstream` is *pending transfer*, not lost — and the committed
+  `ue-schema.generated.json` stops being the only surviving copy once the sync lands. Until it does,
+  still do not regenerate it: a diff between the synced headers and the committed snapshot is
+  evidence about drift that a regeneration would destroy.
+- ~~**B-G2-4(old) — does the UE project repository still exist?**~~ The operator checked. Generation 1
   committed to it as a separate repo (`eef4d88`, `f38c44c`, `25812c2`, `974a739`, `396d47c`, …).
   Until the answer is in, `Path/Capability - UE Upstream` cannot be closed on its schema-down half,
   and the committed `src/lib/catalog/ue-schema.generated.json` (25 types / 187 fields) is treated as
-  **load-bearing evidence** — possibly the only surviving record of PoF's UE schema. Do not
-  regenerate or delete it without knowing the answer.
-- **B-G2-5 — the ARM64 probe is split by what it can reach.** Operator chose "probe the engine now,
-  repo after" (2026-10-22). Pass criteria 1 and 4 (headless `pythonscript`, editor on D3D12) run on
-  a fresh blank project and are answerable right after the install. Criteria 2 and 3 (the ARPG C++
-  build and which MSVC host UBT picks; the functional suite) **need the project repo** and therefore
-  depend on B-G2-4 — the install alone cannot settle the build-time question that decides the
-  device.
+  **load-bearing evidence** until Wolf's copy arrives.
+- **B-G2-5 — the ARM64 probe runs on a BLANK project, so it needs nothing from Wolf.** Operator
+  chose "probe the engine now, repo after" (2026-10-22), and the earlier reading of this — that the
+  decisive criterion 2 needed PoF's own project — was wrong: UnrealBuildTool names its MSVC host
+  while building *any* C++ editor target, so the engine's own `TP_Blank` template answers it.
+  `scripts/diablo/ue_arm_probe.ts` measures criteria 1-3 on that template and takes `--engine`, so
+  the same command runs on Wolf and the two devices become directly comparable. Only the functional
+  suite and PoF's own module genuinely wait on B-G2-4.
 
 ## decision (never decided by the loop — collected for the gate)
 
