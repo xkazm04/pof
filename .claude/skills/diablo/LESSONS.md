@@ -175,3 +175,24 @@
   AI wrong 22→11 %, dialog/quest design ~91 %); a direction that FORBIDS a structure removes invented states (14.6 → 0 %); a direction
   that DEMANDS more facts backfires (spells −4..−8: more claims, more errors); paraphrased lore adds little. Before a produce round,
   ask: does the entity carry a complete engine model of the thing being designed? If not, build that ledger first.
+
+## 2026-10-22 — what a machine reset taught the loop (generation 2, W108–W109)
+
+- **A loop's memory must be as durable as its engine.** The vault held `Adjustments.md`, `Path/`
+  and `Backlog.md` — the loop's stated PRODUCT — on one unversioned disk for 107 waves, and a
+  machine reset erased all of it while every file in the repo survived. The rows were trivially
+  rebuilt (two commands, under a minute, byte-identical); the record of what had already been
+  tried was not rebuilt at all. If a loop's output is findings, commit the findings.
+- **A pin named only in prose is not pinned.** `SKILL.md` said "pinned (see State.md)"; the pin
+  survived only because it was also quoted in ~100 canon `refs:` strings. The newer /zelda loop
+  already did this right (`BOTW_PIN`, asserted by its mapping test) — when two loops share a
+  chassis, copy the younger one's contract, not the older one's habit.
+- **Check a tool's empty path before trusting it at a gate.** `status.ts` crashed on a cold store
+  for 107 waves, undetected, because the store was never empty again after W00. The GATE snapshot
+  is most needed exactly when there is nothing to show.
+- **A dependency node that bundles a free half with an expensive half blocks the free one.** "UE"
+  was one Path node; schema-down parity inside it needed no engine at all (a header parser plus a
+  committed snapshot). Before accepting a blocker, ask which PART of it is actually blocking.
+- **Predict `created` as well as the deltas.** W108 could not check its own rebuild against a
+  target because the only record of the expected row count was in the lost vault. Write the
+  absolute totals into the wave note, not just the deltas.
