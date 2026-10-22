@@ -38,6 +38,21 @@ loop rebuilds forward, and a defect that still exists will be re-found by the wa
   environment installed and running here, and the ARM64 question answered: overcome it, or split
   UE onto a second device. That is wave W109 and it outranks every Phase B content wave.
 
+## open (W109's gate, 2026-10-22)
+
+- **B-G2-4 — does the UE project repository still exist?** The operator is checking. Generation 1
+  committed to it as a separate repo (`eef4d88`, `f38c44c`, `25812c2`, `974a739`, `396d47c`, …).
+  Until the answer is in, `Path/Capability - UE Upstream` cannot be closed on its schema-down half,
+  and the committed `src/lib/catalog/ue-schema.generated.json` (25 types / 187 fields) is treated as
+  **load-bearing evidence** — possibly the only surviving record of PoF's UE schema. Do not
+  regenerate or delete it without knowing the answer.
+- **B-G2-5 — the ARM64 probe is split by what it can reach.** Operator chose "probe the engine now,
+  repo after" (2026-10-22). Pass criteria 1 and 4 (headless `pythonscript`, editor on D3D12) run on
+  a fresh blank project and are answerable right after the install. Criteria 2 and 3 (the ARPG C++
+  build and which MSVC host UBT picks; the functional suite) **need the project repo** and therefore
+  depend on B-G2-4 — the install alone cannot settle the build-time question that decides the
+  device.
+
 ## decision (never decided by the loop — collected for the gate)
 
 - ~~**D-G2-1 — where the loop's memory lives.**~~ *(decided — see above)* Options: (a) keep the vault as-is and accept that a
