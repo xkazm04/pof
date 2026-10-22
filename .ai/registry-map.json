@@ -18694,7 +18694,11 @@
           "revision": 9,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Context and repository searches found feature-topology projections and individual task dispatches, with no pipeline, executor, or paused terms in the context directories, so this context does not execute a pipeline graph.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:396bc727ea6bcf37",
+          "evaluatedRevision": 9
         },
         {
           "subject": "dependency-declaration",
