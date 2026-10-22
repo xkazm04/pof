@@ -16758,7 +16758,11 @@
           "revision": 2,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/localization/translation-engine.ts:107 The translation emitter records a string reference without a source-content pin, production date, or agent identity, preventing later verification of its derivation.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:5fb570c0ab07039a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "ship-pipeline-gating",

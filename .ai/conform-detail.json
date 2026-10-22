@@ -12750,6 +12750,47 @@
         "at": "2026-10-22T00:56:26.800873+00:00",
         "reason": "reviewer (sonnet): The primary anchor, index.tsx:37, is only a comment saying the perf panels project one ProfilingSession. It doesn't show that Remote Control dispatch is present or that a guest language is absent, so the anchor is incidental. The technique anchors (ConsoleSection:76 calls executeConsoleCommand, data"
       }
+    },
+    "6feb38b8-a274-49d1-b643-b9c7e058b344/hash-pinned-translation-pipeline": {
+      "context": "localization-pipeline",
+      "subject": "hash-pinned-translation-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T01:16:49.916Z",
+      "worker": "9c290d5e-00da-41ab-a41a-8f2eb049e0ad",
+      "techniques": [
+        {
+          "technique": "drift-classification",
+          "verdict": "not-applicable",
+          "evidence": "src/types/localization-pipeline.ts:97 These are workflow and review statuses; the inspected pipeline implements output QA rather than a freshness detector whose classification vocabulary could be assessed."
+        },
+        {
+          "technique": "emitter-detector-hash-parity",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/localization/hash.ts:7 The shared hash supports identifiers and lookup keys; there is no source-pin emitter and freshness detector computing comparable digests."
+        },
+        {
+          "technique": "hash-scope-choice",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/localization/scan-engine.ts:86 This text digest generates a localization key, not a stored source-revision pin; no freshness-hash scope is implemented."
+        },
+        {
+          "technique": "shape-sync-is-not-content-sync",
+          "verdict": "deviation",
+          "evidence": "src/lib/localization/qa-engine.ts:282 Shipping readiness requires entries and no blocking output-QA findings, without checking structural completeness or source-hash freshness."
+        },
+        {
+          "technique": "source-hash-provenance",
+          "verdict": "deviation",
+          "evidence": "src/lib/localization/scan-engine.ts:256 Unit identity changes when source prose or its file path changes, violating stable identity; the inspected translation record also lacks source hash, date, and agent."
+        },
+        {
+          "technique": "translation-fan-out-sizing",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/localization/translation-engine.ts:95 The current engine uses glossary/fixture lookups and simulated fallback, with no metered translation service or maintained re-translation job to budget and resume."
+        }
+      ]
     }
   }
 }
