@@ -49,7 +49,16 @@ arrays["text"] = np.asarray(" + ".join(str(d["text"]) for d in parts))
 # Readers that know these members can verify them; readers that do not are unaffected (extra members).
 arrays["skeleton"] = np.asarray(f"core-{joints}")
 arrays["sources"] = np.asarray([str(p) for p in ins])
-arrays["applied_ops"] = np.asarray(["concat:reanchor-root-xz"])
+# A join is a domain operation, so it builds the combined journal itself: every input's recorded ops,
+# in input order and without repeats, then this join. Overwriting with the join alone made a
+# concatenated retarget or retime look like a raw capture.
+ops = []
+for d in parts:
+    for op in (str(x) for x in d.get("applied_ops", [])):
+        if op not in ops:
+            ops.append(op)
+ops.append("concat:reanchor-root-xz")
+arrays["applied_ops"] = np.asarray(ops)
 np.savez(out, **arrays)
 total = arrays["local_rot_mats"].shape[0] / fps
 print(f"wrote {out}: {arrays['local_rot_mats'].shape[0]} frames, {total:.2f}s")
