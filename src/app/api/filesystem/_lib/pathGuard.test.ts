@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import fsPromises from 'fs/promises';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import os from 'os';
 import path from 'path';
 import { checkLocalPath, checkModuleName, MAX_PATH_LENGTH } from '@/app/api/filesystem/_lib/pathGuard';
@@ -25,7 +26,19 @@ const REFUSED = [
   '..\\..\\Windows',
 ];
 
-afterEach(() => vi.restoreAllMocks());
+const dirs: string[] = [];
+afterEach(() => {
+  vi.restoreAllMocks();
+  while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true });
+});
+
+/** A throwaway directory that reads as a UE project (one .uproject at its root). */
+function ueProject(): string {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'pof-path-guard-'));
+  dirs.push(root);
+  writeFileSync(path.join(root, 'Game.uproject'), '{}');
+  return root;
+}
 
 describe('checkLocalPath', () => {
   it.each(REFUSED)('refuses %s', (p) => {
@@ -93,5 +106,25 @@ describe('filesystem routes refuse a non-local path before touching the disk', (
     expect(unc.status).toBe(400);
     const pct = await watch(new NextRequest(`http://localhost/api/filesystem/watch?projectPath=${encodeURIComponent('relative%zz')}`));
     expect(pct.status).toBe(400);
+  });
+});
+
+describe('Source/<moduleName> cannot leave Source/', () => {
+  it.each(['..', '../..', '..\\..\\..', 'Game/../..'])('scan-project and scan-animbp answer 400 for moduleName %s', async (moduleName) => {
+    const projectPath = ueProject();
+    const readdir = vi.spyOn(fsPromises, 'readdir');
+    const project = await scanProject(post('/api/filesystem/scan-project', { projectPath, moduleName }));
+    expect(project.status).toBe(400);
+    const anim = await scanAnimbp(post('/api/filesystem/scan-animbp', { projectPath, moduleName }));
+    expect(anim.status).toBe(400);
+    // scan-project's type detection lists the project root; nothing below it is walked.
+    for (const [dir] of readdir.mock.calls) expect(path.resolve(String(dir))).toBe(path.resolve(projectPath));
+  });
+
+  it('[guard] a real module name still scans', async () => {
+    const projectPath = ueProject();
+    const res = await scanProject(post('/api/filesystem/scan-project', { projectPath, moduleName: 'Game' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.projectType).toBe('ue5');
   });
 });
