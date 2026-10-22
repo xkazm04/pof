@@ -12791,6 +12791,42 @@
           "evidence": "src/lib/localization/translation-engine.ts:95 The current engine uses glossary/fixture lookups and simulated fallback, with no metered translation service or maintained re-translation job to budget and resume."
         }
       ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/health-checks": {
+      "context": "holistic-quality-overview",
+      "subject": "health-checks",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T01:40:51.325Z",
+      "worker": "23b561ff-7df6-4aad-9cd1-fd685163b1de",
+      "techniques": [
+        {
+          "technique": "check-scheduling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/HolisticHealthView/useHolisticHealthView.tsx:82 The effect schedules aggregation when stored inputs change; it does not launch dependency probes."
+        },
+        {
+          "technique": "health-rollup",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/index.tsx:126 This composite aggregates project metrics rather than operational check verdicts; the standard assigns general scoring mathematics elsewhere."
+        },
+        {
+          "technique": "probe-caching",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:105 The memoized value is a metric derivation, not a cached dependency-probe result."
+        },
+        {
+          "technique": "probe-design",
+          "verdict": "deviation",
+          "evidence": "src/lib/health-engine.ts:328 Combat Simulator is unconditionally marked healthy and Ready; its signal performs no interaction with the simulator."
+        },
+        {
+          "technique": "three-state-outcomes",
+          "verdict": "deviation",
+          "evidence": "src/lib/health-engine.ts:320 Localization is marked healthy even while its detail instructs the user to run the pipeline to check readiness, collapsing an unobserved result into green."
+        }
+      ]
     }
   }
 }

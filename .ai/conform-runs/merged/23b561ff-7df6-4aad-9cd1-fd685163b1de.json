@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "23b561ff-7df6-4aad-9cd1-fd685163b1de",
+ "subject": "health-checks",
+ "evaluatedAt": "2026-10-22T01:40:51.325388+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "holistic-quality-overview",
+   "subject": "health-checks",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/health-engine.ts:320 The localization readiness signal is always healthy without an observation, so the dashboard presents an unverified subsystem as working.",
+   "techniques": [
+    {
+     "technique": "check-scheduling",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/HolisticHealthView/useHolisticHealthView.tsx:82 The effect schedules aggregation when stored inputs change; it does not launch dependency probes."
+    },
+    {
+     "technique": "health-rollup",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/UnifiedSummaryView/index.tsx:126 This composite aggregates project metrics rather than operational check verdicts; the standard assigns general scoring mathematics elsewhere."
+    },
+    {
+     "technique": "probe-caching",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:105 The memoized value is a metric derivation, not a cached dependency-probe result."
+    },
+    {
+     "technique": "probe-design",
+     "verdict": "deviation",
+     "evidence": "src/lib/health-engine.ts:328 Combat Simulator is unconditionally marked healthy and Ready; its signal performs no interaction with the simulator."
+    },
+    {
+     "technique": "three-state-outcomes",
+     "verdict": "deviation",
+     "evidence": "src/lib/health-engine.ts:320 Localization is marked healthy even while its detail instructs the user to run the pipeline to check readiness, collapsing an unobserved result into green."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T01:40:51.325388+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "health-checks"
+   ],
+   "techniques": [
+    "check-scheduling",
+    "health-rollup",
+    "probe-caching",
+    "probe-design",
+    "three-state-outcomes"
+   ],
+   "deviations": 1,
+   "context": "holistic-quality-overview",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

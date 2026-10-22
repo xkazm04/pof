@@ -14228,7 +14228,11 @@
           "revision": 11,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/health-engine.ts:320 The localization readiness signal is always healthy without an observation, so the dashboard presents an unverified subsystem as working.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:9254e4fb7feef6b1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "alerting",
