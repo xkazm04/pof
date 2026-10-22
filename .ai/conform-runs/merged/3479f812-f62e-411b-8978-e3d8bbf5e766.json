@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3479f812-f62e-411b-8978-e3d8bbf5e766",
+ "subject": "repo-manifest-standard",
+ "evaluatedAt": "2026-10-22T22:06:25.413620+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "repo-manifest-standard",
+   "context": "prompt-evolution",
+   "reason": "absence contradicted: src/components/modules/evaluator/DependencyGraph/GraphLegend.tsx:6 contains 'manifest' (26 hit(s) in the context's directories)"
+  }
+ ],
+ "consults": []
+}
