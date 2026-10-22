@@ -35,8 +35,8 @@ one-line DELIVERED entries in the repo's `.claude/fleet-memory.md` and
   UE builds and runs on a given device, on a synthesized seven-file C++ module (no optional
   `Engine/Templates` component, so both devices compile identical sources) and driving UBT directly
   (so `Build.bat`'s missing `win-arm64` runtime cannot mask the result). *Measured:* the UE question
-  went from undocumented to three measured criteria on this box — build PASS 63.5-72.2 s over four
-  runs, headless python PASS in 12.7 s on engine 5.8.4, D3D12 PASS — plus the named cause of the
+  went from undocumented to three measured criteria on this box, on a COMPLETE 5.8.4 install — build
+  PASS 63.5-72.2 s over four runs, headless python PASS in 12.7 s, D3D12 PASS — plus the named cause of the
   emulated-compiler ceiling (`MicrosoftPlatformSDK.cs:1317` + no `win-arm64` `blake3_dotnet`), with
   the native-host attempt and its fallback both exercised (`--dotnet` forces the attempt without
   writing into the engine install). Takes `--engine`, so the same command prices Wolf.

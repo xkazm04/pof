@@ -76,9 +76,17 @@ download needs an **Epic account sign-in**. Neither can be done unattended.
 
 ## F-G2-4 — UE builds and runs on this ARM64 device; the ceiling is the toolchain host (2026-10-22, W109)
 
-Measured by `scripts/diablo/ue_arm_probe.ts` against UE 5.8 on a **partial, stalled 31 GB install**
-(the launcher never finished: `LauncherInstalled.dat` still reads `"InstallationList": []`). So these
-are floor numbers, not the device's best.
+Measured by `scripts/diablo/ue_arm_probe.ts` against UE **5.8.4** on a **COMPLETE** install.
+
+(Corrects this note's first version, which called the install partial and the numbers floors. The
+evidence for "partial" was `LauncherInstalled.dat` reading `"InstallationList": []` — that file is
+not the launcher's per-install record. The authoritative one is
+`C:/ProgramData/Epic/EpicGamesLauncher/Data/Manifests/*.item`, which reports
+`UE_5.8 | Unreal Engine`, `5.8.4-58902052`, `InstallSize 31,682,048,217`,
+**`bIsIncompleteInstall: False`** — matched by 32.1 GB on disk, an empty `Manifests/Pending`, and
+`Engine/Build/InstalledBuild.txt`. 31.7 GB is simply the full size for the selected components. The
+numbers below are therefore final for this engine, not floors, and the three absences are Epic's
+packaging rather than an unfinished download.)
 
 | Criterion | Result |
 |---|---|
@@ -102,7 +110,9 @@ But this install ships only `Engine/Binaries/ThirdParty/DotNet/10.0/win-x64`. He
    thing standing between this device and native-speed compilation of the x64 editor target.
 
 **That open question is now CLOSED, and the answer is the ceiling.** The bundled .NET turned out not
-to be the deciding factor at all. A native ARM64 .NET 10.0.13 was installed per-user (no elevation,
+to be the deciding factor at all — and on a COMPLETE install neither
+`ThirdParty/DotNet/10.0/win-arm64` nor `Engine/Templates` nor UBT's `runtimes/win-arm64` is shipped,
+so none of what follows is a partial-install artifact. A native ARM64 .NET 10.0.13 was installed per-user (no elevation,
 `~/.dotnet-arm64`, `RID: win-arm64`) and UnrealBuildTool was run on it directly. It does not work:
 
 ```
@@ -129,8 +139,11 @@ Wolf with the same command (`ue_arm_probe.ts --engine <path>`), once the repo sy
   `LogPythonScriptCommandlet`.
 - **`--skip-build` invalidates the python criterion**: a C++ project whose module was never compiled
   cannot finish loading, and the editor exits quietly with no error in its log.
-- **A partial install fails in ways that mimic an ISA problem.** Every failure here had to be traced
-  to a missing file before it could be scored, and none of them was the ARM64 ISA.
+- **A missing file fails in ways that mimic an ISA problem.** Every failure here had to be traced to
+  a named absent file before it could be scored, and none of them was the ARM64 ISA.
+- **Read the authoritative record, not the plausible one.** `LauncherInstalled.dat` is empty on a
+  perfectly complete install; `Data/Manifests/*.item` carries `bIsIncompleteInstall`. Half this
+  wave's hedging ("these are floors") rested on the wrong file.
 - **An ARM64 .NET makes UBT worse, not better** — it crashes on a missing native. The probe now
   tries the native host, recognises that crash and falls back to the emulated x64 one, reporting the
   fallback as the finding. A future engine version that ships a win-arm64 `blake3_dotnet` would make
