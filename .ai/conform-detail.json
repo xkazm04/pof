@@ -13037,6 +13037,47 @@
           "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:58 Frame timestamps drive simulation integration, rather than measuring and reporting the execution cost of hosted work."
         }
       ]
+    },
+    "17532a7f-57f4-4480-8329-e4964e85a0b6/narrative-scroll-surface": {
+      "context": "animation-combo-workflow",
+      "subject": "narrative-scroll-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T03:46:22.328Z",
+      "worker": "09234062-dead-4182-b2f1-81948e57ab1b",
+      "techniques": [
+        {
+          "technique": "illustration-carries-the-claim",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/RootMotionPreview.tsx:47 The diagram displays generated combo data for an operator, rather than mockup art evidencing an explanatory station's claim."
+        },
+        {
+          "technique": "motion-carries-the-mechanism",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/MontageTimeline.tsx:28 Motion reveals finished timeline rows; the technique explicitly excludes reveal motion whose final frame carries the information."
+        },
+        {
+          "technique": "no-orientation-tax",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationsView.tsx:71 Checklist interaction dispatches an operator's task; the technique explicitly excludes task-oriented surfaces."
+        },
+        {
+          "technique": "reveal-without-loss",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationChecklist/StepCard.tsx:120 Instructions mount through explicit accordion expansion, not scroll approach on an explanatory page."
+        },
+        {
+          "technique": "scroll-bound-progression",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationChecklist/index.tsx:32 Progress communicates task completion, which the technique excludes from scroll-driven state."
+        },
+        {
+          "technique": "sequence-as-spine",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationsView.tsx:78 The sequence tracks completed production tasks; the technique explicitly excludes pages whose reader arrived with a task."
+        }
+      ]
     }
   }
 }

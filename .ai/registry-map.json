@@ -3168,7 +3168,11 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/index.tsx:61 The context implements operator-driven generation, import, and checklist tasks; context and repository searches found no scrollYProgress, view-timeline, or scroll-timeline constructs supporting a narrative scroll surface.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:e93abcf9f70a6c36",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
