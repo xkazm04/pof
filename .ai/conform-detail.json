@@ -13294,6 +13294,52 @@
         }
       ],
       "registryProposal": "The standard assumes geometric comparison rigs with numeric deviation bands (e.g. cross-sections, silhouettes, vertex measurements), and could clarify how reference parity principles map onto multimodal vision model evaluation where continuous coordinate registration and real-unit delta reporting are unavailable."
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/regeneration-vs-repair-economics": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "regeneration-vs-repair-economics",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:52:25.882Z",
+      "techniques": [
+        {
+          "technique": "best-of-n-parameter-sweep",
+          "verdict": "deviation",
+          "evidence": "src/lib/motion-gate/loopFixRun.ts:127 ARDY attempts reuse the same seed, prompt and constraints; only destinations change, providing no controlled parameter variation before selecting the best."
+        },
+        {
+          "technique": "bounded-refine-iteration",
+          "verdict": "deviation",
+          "evidence": "src/lib/motion-gate/loopFixRun.ts:157 Attempts are capped and generation has a timeout, but every attempt rebuilds constraints from the original clip and unchanged plan rather than the preceding critique."
+        },
+        {
+          "technique": "defect-class-to-remedy-map",
+          "verdict": "deviation",
+          "evidence": "src/lib/motion-gate/loopRemedy.ts:99 The remedy selector consumes these above-pass axes, so a warning-only pose gap can authorize repair despite the rule requiring a failing class."
+        },
+        {
+          "technique": "refuse-the-fix-that-cannot-help",
+          "verdict": "deviation",
+          "evidence": "src/lib/motion-gate/loopFixRun.ts:128 Although ineffective remedies receive typed refusals, output paths derive directly from the supplied NPZ path without resolving input and output inside an allow-listed location."
+        },
+        {
+          "technique": "reroll-economics-per-credit",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/ardy/pof_loop_fix.ts:83 This context performs local critique, conversion and ARDY correction; its correction runner does not purchase paid generation attempts."
+        },
+        {
+          "technique": "score-basis-must-be-stated",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 The exception handler substitutes a clean measurement; mesh-score.ts consumes that value when deriving findings and score, without identifying the missing measurement."
+        }
+      ],
+      "withdrawn": {
+        "worker": "d1d8df68-56c4-465e-bd7f-454546bf3832",
+        "state": "deviation",
+        "at": "2026-10-22T21:52:47.196687+00:00",
+        "reason": "reviewer (sonnet): The anchor line pof_mesh_critique.py:67 does say a failed degeneracy measurement is reported as 0, but I could not confirm that any downstream scoring consumes it, and it has no bearing on regeneration-vs-repair economics. All four technique anchors are in src/lib/motion-gate/loopFixRun.ts and loopR"
+      }
     }
   }
 }
