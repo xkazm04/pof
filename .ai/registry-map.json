@@ -25888,7 +25888,11 @@
           "revision": 1,
           "changedAt": "2026-08-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/reference-conformance.ts:224 The reference conformance gate evaluates generated meshes against reference images through an uncalibrated single-view vision critique that lacks dual-anchor constraints, invariant registration, or real-unit work order findings.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:a18e94679e7706ee",
+          "evaluatedRevision": 1
         },
         {
           "subject": "generated-asset-world-scale",

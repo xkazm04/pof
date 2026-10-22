@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "38c54987-ae4d-435c-968e-020128ff1850",
+ "subject": "reference-parity-gating",
+ "evaluatedAt": "2026-10-22T21:43:09.039108+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "visual-gen-rigging-conformance",
+   "subject": "reference-parity-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/reference-conformance.ts:224 The reference conformance gate evaluates generated meshes against reference images through an uncalibrated single-view vision critique that lacks dual-anchor constraints, invariant registration, or real-unit work order findings.",
+   "techniques": [
+    {
+     "technique": "dual-anchor-scoring",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/reference-conformance.ts:246 The gate compares only the reference image and rendered view via a single vision prompt, lacking an independent specification anchor that constrains scale or dimensions."
+    },
+    {
+     "technique": "register-once-from-the-invariant",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/reference-conformance.ts:83 Rather than establishing a coordinate frame from an invariant region, the comparison relies on unaligned images and instructs the model that camera distance, framing, and lens differ."
+    },
+    {
+     "technique": "findings-carry-the-correction",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/reference-conformance.ts:93 The comparison payload emits unstructured comma-separated textual descriptions rather than located, signed deviations in real units directing automated correction."
+    },
+    {
+     "technique": "instrument-blindness-register",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/reference-conformance.ts:22 The gate acknowledges that invented non-front sides are entirely unreferenced and unmeasured, but maintains no structured blindness register assigning distinct witnesses to these blind views."
+    },
+    {
+     "technique": "no-average-hides-a-failure",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/reference-conformance.ts:127 Parity scoring collapses into a discrete 0-3 severity clamp rather than a weighted sum of constituent terms including high percentiles and symmetric coverage."
+    },
+    {
+     "technique": "defect-cap-bounded-to-its-reach",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/reference-conformance.ts:84 The prompt instructs the model to ignore stylised reference presentation without any mechanism for bounding defect reach to specific rows or repairing references."
+    }
+   ],
+   "registryProposal": "The standard assumes geometric comparison rigs with numeric deviation bands (e.g. cross-sections, silhouettes, vertex measurements), and could clarify how reference parity principles map onto multimodal vision model evaluation where continuous coordinate registration and real-unit delta reporting are unavailable."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T21:43:09.039108+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "reference-parity-gating"
+   ],
+   "techniques": [
+    "defect-cap-bounded-to-its-reach",
+    "dual-anchor-scoring",
+    "findings-carry-the-correction",
+    "instrument-blindness-register",
+    "no-average-hides-a-failure",
+    "register-once-from-the-invariant"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-rigging-conformance",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
