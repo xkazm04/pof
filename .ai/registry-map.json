@@ -22130,7 +22130,11 @@
           "revision": 3,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/session-analytics-db.ts:198 Searches of the context and repository found no authorId, contributorId, employeeId, or personId fields, and the inspected producers report CLI runs and module aggregates rather than identified people's performance.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:cb03bdda55f3119d",
+          "evaluatedRevision": 3
         },
         {
           "subject": "analytics-time-windows",

@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d9e51af0-88e5-4dfb-a873-94037e8ae7f5",
+ "subject": "people-analytics-ethics",
+ "evaluatedAt": "2026-10-22T04:04:44.512865+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "session-analytics-reporting",
+   "subject": "people-analytics-ethics",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/session-analytics-db.ts:198 Searches of the context and repository found no authorId, contributorId, employeeId, or personId fields, and the inspected producers report CLI runs and module aggregates rather than identified people's performance.",
+   "techniques": [
+    {
+     "technique": "aggregate-vs-individual-split",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/cli-spend-db.ts:255 Spend grouping admits modules and task types; no organizational per-person dataset or paired individual report was found."
+    },
+    {
+     "technique": "contribution-eligibility-floors",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/WeeklyDigestView/ModuleLeaderboard.tsx:17 Leaderboard entries represent modules, so the standard's per-person eligibility floors do not apply."
+    },
+    {
+     "technique": "naming-population-floor",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/QualityScoreRow.tsx:19 Quality rows identify modules rather than people; no named-person cohort was found."
+    },
+    {
+     "technique": "private-view-separation",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/project-wrapped.ts:353 The recap reads module execution facts without a person dimension; it does not implement a selectable person's private report."
+    },
+    {
+     "technique": "producer-enforced-suppression",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/weekly-digest.ts:24 The digest producer reads non-identifying module activity; the standard explicitly excludes such aggregates from suppression floors."
+    },
+    {
+     "technique": "risk-framing-anonymization",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/session-analytics-db.ts:384 The deficit finding concerns a module and carries no human name, so no person-shaped claim requires rewriting."
+    }
+   ],
+   "absenceTerms": [
+    "authorId",
+    "contributorId",
+    "employeeId",
+    "personId"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T04:04:44.512865+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "people-analytics-ethics"
+   ],
+   "techniques": [
+    "aggregate-vs-individual-split",
+    "contribution-eligibility-floors",
+    "naming-population-floor",
+    "private-view-separation",
+    "producer-enforced-suppression",
+    "risk-framing-anonymization"
+   ],
+   "deviations": 0,
+   "context": "session-analytics-reporting",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
