@@ -17632,12 +17632,11 @@
           "changedAt": "2026-10-16",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/helpers.ts:15 The configurator seeds a picked surface from authoring slider defaults and, when adopting a live UE parent, leaves an unreported scalar null; the same materials-tree search found no srgb, smoothness, colourSpace, alphaMode, or metallicFactor.",
-          "evaluatedAt": "2026-10-15",
-          "evaluatedAgainst": "sha256-b2:1a78990f85143545",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/helpers.ts:16 The configurator starts a picked surface from authoring values in the one surface spec (or from a live UE master already inside the engine), so it never receives a material across an interchange format. A case-insensitive search of the whole src/components/modules/content/materials tree for srgb, smoothness, gltf/glb, alphaMode and metallicFactor found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ea32a2326d2c666f",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 1
         },
         {
           "subject": "shader-budget-authoring",
@@ -17820,12 +17819,11 @@
           "changedAt": "2026-10-16",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/__tests__/lib/visual-gen/material-boundary-swatch.test.ts:88 The calibration shared by the preview, Blender, and UE varies only base-colour hex and holds roughness at the midpoint and metallic at 0, so it cannot fail a gloss inversion, a metallic default, or an empty delivery.",
-          "evaluatedAt": "2026-10-15",
-          "evaluatedAgainst": "sha256-b2:1a78990f85143545",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/__tests__/lib/visual-gen/material-boundary-swatch.test.ts:88 The swatch that checks all three outputs together (preview, Blender, UE) covers base colour on both sides of the sRGB curve but holds roughness at the 0.5 midpoint and metallic at 0. Separate per-output tests each check one off-centre gloss value (Blender 0.25, UE 0.2 with metallic 1, preview 0.7), but no shared known object spans both gloss extremes and no per-role ramp is read back.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ea32a2326d2c666f",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 1
         },
         {
           "subject": "shader-budget-authoring",
@@ -17933,12 +17931,11 @@
           "changedAt": "2026-10-16",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:14 Style transfer takes a reference screenshot and post-process builds a compositor stack; a search of src/components/modules/content/materials for srgb, smoothness, colourSpace, alphaMode, and metallicFactor found none.",
-          "evaluatedAt": "2026-10-15",
-          "evaluatedAgainst": "sha256-b2:1a78990f85143545",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:14 Style transfer reads a reference screenshot and the post-process builder authors a compositor stack, so no delivered material crosses an import edge here. A case-insensitive search of src/components/modules/content/materials for srgb, smoothness, gltf/glb, alphaMode and metallicFactor found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ea32a2326d2c666f",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -20032,8 +20029,8 @@
           "revision": 4,
           "changedAt": "2026-10-16",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "voice-io",
