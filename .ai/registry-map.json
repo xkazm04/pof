@@ -9452,7 +9452,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/feedback/FeedbackBalanceSimulator.tsx:69 The feedback simulator seeds every comparison from the wall clock, so the same question re-rolls on every click, and the predictive panel shows a bare 'Avg EHP' with no reference hit.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",
@@ -11070,7 +11074,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/ThreatBreakdownPanel.tsx:19 The Death Recap headline names the top source as the cause whenever it has any kill share at all, with no dominance threshold and no 'danger is spread out' state, which sends designers to nerf noise.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
@@ -22568,7 +22576,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/combat-simulator/route.ts:49 The combat route falls back to a random seed and the CombatSimConfig type makes iterations a free per-run field, so reproducibility and comparability depend on each caller, even though the result types carry correctly denominated kill and damage shares per (enemy, ability).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
