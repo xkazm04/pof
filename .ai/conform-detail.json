@@ -13568,6 +13568,63 @@
           "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:172 This generic suggestion accompanies a duration adjustment; it supplies no world fact, opening scene or exposition whose delivery could be judged."
         }
       ]
+    },
+    "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/test-harness": {
+      "context": "catalog-pipeline-state",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:51:58.402Z",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "e2e/helpers/walk-status.ts:14 Claims that a changed pipeline goes red, but the record is keyed only by catalogId with no content digest or rebuild trigger, so a changed pipeline that was walked once stays 'walked' (a stale fixture validating yesterday's world)."
+        },
+        {
+          "technique": "long-lane-certification",
+          "verdict": "deviation",
+          "evidence": "e2e/helpers/walk-status.ts:40 The same no-write branch also fires when a walk fails, so lane health can record only first-green and never an observed red; a now-failing walker leaves the old green in place."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:24 The derived walker population declares a floor, so an empty registry is red rather than a vacuous green."
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:51 The exemption list is checked in both directions against the full registry denominator, and each skip needs a reason."
+        },
+        {
+          "technique": "suite-partitioning",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:73 The report reconciles walked ids against every registered, non-skipped pipeline, so an e2e tier that never ran cannot hide behind a green unit badge."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:14 The e2e lane over the lab declares its inheritance: a hermetic DB, not the operator's judge/drain history."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/Baseline/index.tsx:227 The Baseline view exposes test identifiers that the walker drives through the real /layout UI, not pixel locators."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Adoption of the shared acceptance resolver is asserted per consuming surface (banner, rail, matrix, coach), not only the predicate."
+        }
+      ],
+      "registryProposal": "fixture-economics' freshness rule is phrased for build-once environment templates; a committed 'last green run' record read back by a cheap gate is the same staleness hazard (no fingerprint, and a write-only-on-success policy that cannot record red). A short note naming recorded-result files as fixtures would make this case findable.",
+      "withdrawn": {
+        "worker": "bda0f4cd-8e2f-43c8-b7aa-68a011e447e0",
+        "state": "deviation",
+        "at": "2026-10-24T00:52:43.541068+00:00",
+        "reason": "reviewer (sonnet): The claim is about e2e/helpers/walk-status.ts and pipeline-e2e-coverage.test.ts, which context-map.json puts in the item-catalog-pipeline context; catalog-pipeline-state lists only the layout-lab store files, none of which the evidence cites, so the verdict is about a different context."
+      }
     }
   }
 }
