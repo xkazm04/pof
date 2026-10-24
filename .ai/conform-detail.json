@@ -898,95 +898,139 @@
       "context": "project-ops-api",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T23:10:58.434Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:53:10.267Z",
+      "worker": "dc563ea1-24c3-4b39-a8dd-9cfc08746153",
       "techniques": [
-        {
-          "technique": "decay-and-forgetting",
-          "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:32 Errors are upserted into SQLite indefinitely without decay, importance scoring, demotion tiers, or category caps, keeping stale build errors in memory forever."
-        },
-        {
-          "technique": "cross-context-promotion",
-          "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:47 getRelevantErrors promotes errors across modules if occurrences >= 3, which counts occurrences within a single module rather than recurrence across distinct module contexts."
-        },
         {
           "technique": "recall-injection",
           "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:48 Returns candidate errors without reporting the considered/eligible candidate count, budget limit, or distinguishing empty from failed recall."
+          "evidence": "src/lib/prompt-context.ts:374 The header's errorMemory option defaults to empty, and a repo grep finds no caller that passes it or calls get-relevant-errors, so the 'for prompt injection' recall never reaches context, and nothing marks that as a failure."
         },
         {
-          "technique": "episodic-capture",
+          "technique": "owner-and-counterpart-scope",
           "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:27 Fingerprinting flattens raw errors into message hashes while stripping episode boundaries, tool execution context, and session trace provenance."
+          "evidence": "src/lib/error-memory-db.ts:191 The table has no project column (build-error-recurrence.ts:14 says so), so the owner cannot be derived from a row's address, yet prompt-context labels the entries 'occurred previously in this project'; cross-module rows with 3+ occurrences also join in."
         },
         {
-          "technique": "memory-governance",
+          "technique": "memory-value-model",
           "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:23 Validates only parameter presence on the write path, omitting review gates, human confirmation, or proposal staging for stored errors."
+          "evidence": "src/lib/error-memory-db.ts:192 The candidate window is chosen by usage count alone before the blended score runs, so 'popular once stays popular forever' decides what can be scored at all; there is also no trust axis."
+        },
+        {
+          "technique": "loss-site-inventory",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:193 Three read paths each take their own number (30 then top 5, module list 20, stats 5), and the formatted prompt section gives no notice of what was left out."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:213 A resolved error is demoted by only 5 points and stays a recall candidate forever; the module has no retirement, decay or tombstone path, so the store only grows."
         },
         {
           "technique": "coverage-instrumentation",
           "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:61 Reports aggregate statistics computed solely over existing error rows without tracking the population of build runs or uncaptured failures."
+          "evidence": "src/lib/error-memory-db.ts:280 get-stats reports raw row counts with no population denominator (modules or projects), so a store that build-error-recurrence.ts:15 says no build writes still reads as a health figure."
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "conformant",
+          "evidence": "src/lib/error-memory-db.ts:112 Each error fingerprint is one item, upserted atomically inside a transaction: a recurrence increments the count rather than adding a duplicate row, so concurrent writers cannot claim the same item twice."
+        },
+        {
+          "technique": "cross-context-promotion",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:47 getRelevantErrors promotes errors across modules if occurrences >= 3, which counts occurrences within a single module rather than recurrence across distinct module contexts.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "memory-governance",
+          "verdict": "deviation",
+          "evidence": "src/app/api/error-memory/route.ts:23 Validates only parameter presence on the write path, omitting review gates, human confirmation, or proposal staging for stored errors.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "durable-store-failure-posture",
           "verdict": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:69 Catches internal failures and returns an opaque 500 response without distinguishing parse failure, corrupt database posture, or fallback recovery."
+          "evidence": "src/app/api/error-memory/route.ts:69 Catches internal failures and returns an opaque 500 response without distinguishing parse failure, corrupt database posture, or fallback recovery.",
+          "carriedFrom": "2026-10-12"
         }
-      ],
-      "registryProposal": "The standard's cross-context-promotion technique assumes distinct storage tables or namespaces per context; when a single table holds records from multiple contexts (e.g. unique on module_id and fingerprint), a query on local occurrence counts can accidentally masquerade as cross-context recurrence unless the schema explicitly tracks distinct context sightings.",
-      "withdrawn": {
-        "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
-        "state": "deviation",
-        "at": "2026-10-12T23:11:56.826835+00:00",
-        "reason": "reviewer (sonnet): The technique text says getRelevantErrors has no importance scoring, but src/lib/error-memory-db.ts:200-216 scores each error by log occurrences, a recency bonus, an unresolved bonus and a module match bonus; the stated 'no decay or importance scoring' claim is contradicted, and the 'occurrences >= "
-      }
+      ]
     },
     "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/agent-memory": {
       "context": "status-health-dashboard",
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T23:10:58.434Z",
-      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:53:10.267Z",
       "techniques": [
         {
           "technique": "working-memory",
           "verdict": "not-applicable",
-          "evidence": "src/components/status/StatusTabs.tsx:15 Status dashboard tablist manages navigation views rather than operative agent working memory."
+          "evidence": "src/components/status/StatusTabs.tsx:15 Status dashboard tablist manages navigation views rather than operative agent working memory.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "decay-and-forgetting",
           "verdict": "not-applicable",
-          "evidence": "src/lib/status/statusModel.ts:57 Static step-facts map audits engine generators without maintaining a durable agent memory store subject to decay."
+          "evidence": "src/lib/status/statusModel.ts:57 Static step-facts map audits engine generators without maintaining a durable agent memory store subject to decay.",
+          "carriedFrom": "2026-10-12"
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/status/StatusTabs.tsx:15 Searching context files for memory, recall, episodic, and consolidation returns only UI filter state and audio RAM limits, showing this module is a static artifact and pipeline status visualization dashboard where the agent-memory subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-12T23:10:58.434Z",
+          "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+          "reason": "replaced by dc563ea1-24c3-4b39-a8dd-9cfc08746153"
+        }
+      ],
+      "withdrawn": {
+        "worker": "dc563ea1-24c3-4b39-a8dd-9cfc08746153",
+        "state": "not-applicable",
+        "at": "2026-10-24T01:53:33.714847+00:00",
+        "reason": "reviewer (sonnet): The anchor EntitySearch.tsx:7 is a comment about an in-memory entity filter, so it doesn't show that agent memory is absent. EntitySearch.tsx also isn't in this context's file list."
+      }
     },
     "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/agent-memory": {
       "context": "pipeline-step-components",
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T23:10:58.434Z",
-      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:53:10.267Z",
       "techniques": [
         {
           "technique": "working-memory",
           "verdict": "not-applicable",
-          "evidence": "src/components/layout-lab/steps/index.ts:33 Step component registry renders manual UI panels without maintaining an operative agent working memory."
+          "evidence": "src/components/layout-lab/steps/index.ts:33 Step component registry renders manual UI panels without maintaining an operative agent working memory.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "procedure-promotion",
           "verdict": "not-applicable",
-          "evidence": "src/components/layout-lab/steps/index.ts:19 Pipeline steps are hardcoded UI components rather than capabilities promoted from distilled agent memories."
+          "evidence": "src/components/layout-lab/steps/index.ts:19 Pipeline steps are hardcoded UI components rather than capabilities promoted from distilled agent memories.",
+          "carriedFrom": "2026-10-12"
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/index.ts:33 Searching context files for memory, recall, episodic, and consolidation returns zero hits, confirming that this module is a React component registry for catalog step inspection and editing where the agent-memory subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-12T23:10:58.434Z",
+          "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+          "reason": "replaced by dc563ea1-24c3-4b39-a8dd-9cfc08746153"
+        }
+      ],
+      "withdrawn": {
+        "worker": "dc563ea1-24c3-4b39-a8dd-9cfc08746153",
+        "state": "not-applicable",
+        "at": "2026-10-24T01:53:33.766994+00:00",
+        "reason": "reviewer (sonnet): The anchor steps/index.ts:33 is the STEP_REGISTRY declaration, which doesn't show absence of agent memory. The genHistory and buildPrompt claims aren't traced to that line."
+      }
     },
     "5d7501be-122c-46a1-8d33-a35dc76215b9/agent-memory": {
       "context": "cli-terminal-shell",
@@ -1014,21 +1058,37 @@
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T23:10:58.434Z",
-      "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:53:10.267Z",
       "techniques": [
         {
           "technique": "working-memory",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Sub-tab navigation structure serves an in-game trait editor without maintaining agent working memory."
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Sub-tab navigation structure serves an in-game trait editor without maintaining agent working memory.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "decay-and-forgetting",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:30 Genome trait axes define static gameplay stats and do not manage an agent memory store requiring decay."
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:30 Genome trait axes define static gameplay stats and do not manage an agent memory store requiring decay.",
+          "carriedFrom": "2026-10-12"
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Searching context files for memory, recall, episodic, and consolidation returns zero hits (only an unrelated UI action prompt note in EconomySourcingTab.tsx:35), proving that this module is an in-game item genome editor and economy sourcing UI (SUB_TABS) where the agent-memory subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-12T23:10:58.434Z",
+          "worker": "e5b3f0af-a364-4d4e-aa15-b6ea2cb0cb79",
+          "reason": "replaced by dc563ea1-24c3-4b39-a8dd-9cfc08746153"
+        }
+      ],
+      "withdrawn": {
+        "worker": "dc563ea1-24c3-4b39-a8dd-9cfc08746153",
+        "state": "not-applicable",
+        "at": "2026-10-24T01:53:33.823597+00:00",
+        "reason": "reviewer (sonnet): The anchor dna-genome/data.ts:37 is the SUB_TABS constant, which doesn't itself show that agent memory is absent. The economy directory also isn't covered by the anchor."
+      }
     },
     "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/eval-harness": {
       "context": "quality-evaluation-api",

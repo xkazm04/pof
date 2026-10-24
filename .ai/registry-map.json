@@ -15324,11 +15324,7 @@
           "confidence": "strong",
           "state": "not-applicable",
           "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Searching context files for memory, recall, episodic, and consolidation returns zero hits (only an unrelated UI action prompt note in EconomySourcingTab.tsx:35), proving that this module is an in-game item genome editor and economy sourcing UI (SUB_TABS) where the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:23599eae61aa7119",
-          "evaluatedRevision": 47,
-          "revisionsBehind": 4,
-          "stale": true
+          "evaluatedAt": "2026-10-12"
         },
         {
           "subject": "game-economy-tuning",
@@ -19157,11 +19153,7 @@
           "confidence": "strong",
           "state": "not-applicable",
           "evidence": "src/components/layout-lab/steps/index.ts:33 Searching context files for memory, recall, episodic, and consolidation returns zero hits, confirming that this module is a React component registry for catalog step inspection and editing where the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:23599eae61aa7119",
-          "evaluatedRevision": 47,
-          "revisionsBehind": 4,
-          "stale": true
+          "evaluatedAt": "2026-10-12"
         },
         {
           "subject": "hitl-approval",
@@ -20726,8 +20718,12 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/error-memory/route.ts:47 The error-memory route recalls build-error memories by module only: there is no project owner, nothing in the tree feeds the result into the prompt header, and nothing ever forgets an entry, so the memory is either never recalled or recalled out of scope.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
+          "evaluatedRevision": 51
         },
         {
           "subject": "agent-runtime-assembly",
@@ -22621,11 +22617,7 @@
           "confidence": "strong",
           "state": "not-applicable",
           "evidence": "src/components/status/StatusTabs.tsx:15 Searching context files for memory, recall, episodic, and consolidation returns only UI filter state and audio RAM limits, showing this module is a static artifact and pipeline status visualization dashboard where the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:23599eae61aa7119",
-          "evaluatedRevision": 47,
-          "revisionsBehind": 4,
-          "stale": true
+          "evaluatedAt": "2026-10-12"
         },
         {
           "subject": "production-coverage-measurement",
