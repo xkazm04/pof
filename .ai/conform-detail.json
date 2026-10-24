@@ -14881,6 +14881,33 @@
       "evaluatedTs": "2026-10-24T05:48:18.257Z",
       "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
       "techniques": []
+    },
+    "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/docs-sync": {
+      "context": "catalog-pipeline-state",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:59:52.615Z",
+      "worker": "7d363191-a87a-4329-bba8-84b996e13cf5",
+      "techniques": [
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labPipelineStore.ts:465 ui-shell.md:445 says `(line 91–92)` and :446 says `(line 51)`; actual lines are 465-466 and 256. No scan checks line-number claims, and an unchecked doc reads as clean."
+        },
+        {
+          "technique": "negative-claims-are-pinned",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/test-gate-runner/drainPreviewTruth.test.ts:99 L3-L4-RUNNER.md's negative claim 'the GET has no UI consumer' is pinned by wording (lines 108/110) against this context's labArtifactClient.ts, and the test also blocks the old false claim from coming back."
+        },
+        {
+          "technique": "dated-corrections",
+          "verdict": "conformant",
+          "evidence": "docs/architecture/ui-shell.md:236 The doc section for this context's activityModel/ActivityChip is corrected in place, with a date and the reason."
+        }
+      ],
+      "registryProposal": "Line-number citations in prose (\"line 91–92\") are a claim class that goes false on any edit above the cited line, even when every symbol name still resolves. doc-rot-detection or source-doc-mapping could tell authors to cite symbols, not line numbers, or have the rot scan check that a cited line number still holds the named symbol."
     }
   }
 }

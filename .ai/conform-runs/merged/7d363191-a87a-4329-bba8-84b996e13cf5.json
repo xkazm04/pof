@@ -1,0 +1,75 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7d363191-a87a-4329-bba8-84b996e13cf5",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-10-24T05:59:52.615791+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/labPipelineStore.ts:465 docs/architecture/ui-shell.md:445-446 still tells readers `_labSync` is at labPipelineStore.ts \"line 91\u201392\" and `store.produce()` at \"line 51\", but they are now at 465 and 256; nothing caught the drift, so this coupled architecture doc carries claims that are false today.",
+   "techniques": [
+    {
+     "technique": "doc-rot-detection",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/labPipelineStore.ts:465 ui-shell.md:445 says `(line 91\u201392)` and :446 says `(line 51)`; actual lines are 465-466 and 256. No scan checks line-number claims, and an unchecked doc reads as clean."
+    },
+    {
+     "technique": "negative-claims-are-pinned",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/test-gate-runner/drainPreviewTruth.test.ts:99 L3-L4-RUNNER.md's negative claim 'the GET has no UI consumer' is pinned by wording (lines 108/110) against this context's labArtifactClient.ts, and the test also blocks the old false claim from coming back."
+    },
+    {
+     "technique": "dated-corrections",
+     "verdict": "conformant",
+     "evidence": "docs/architecture/ui-shell.md:236 The doc section for this context's activityModel/ActivityChip is corrected in place, with a date and the reason."
+    }
+   ],
+   "registryProposal": "Line-number citations in prose (\"line 91\u201392\") are a claim class that goes false on any edit above the cited line, even when every symbol name still resolves. doc-rot-detection or source-doc-mapping could tell authors to cite symbols, not line numbers, or have the rot scan check that a cited line number still holds the named symbol."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "gdd-compliance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "project-setup-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "ue5-state-sync",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "game-design-studio-api",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T05:59:52.615791+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "dated-corrections",
+    "doc-rot-detection",
+    "negative-claims-are-pinned"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

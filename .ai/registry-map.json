@@ -8634,7 +8634,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/labPipelineStore.ts:465 docs/architecture/ui-shell.md:445-446 still tells readers `_labSync` is at labPipelineStore.ts \"line 91–92\" and `store.produce()` at \"line 51\", but they are now at 465 and 256; nothing caught the drift, so this coupled architecture doc carries claims that are false today.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
