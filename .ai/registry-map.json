@@ -22860,12 +22860,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 An incomplete two-field record is unsafely cast to the broader StepSpec type to satisfy an over-specified function parameter signature without verifying missing members.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:a33adfb4a8edc0eb",
-          "evaluatedRevision": 17,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 A two-field Pick is cast to the full StepSpec, and a checked alternative costs almost nothing: genericFixCopy.ts already narrows its other parameter with a Pick (`GradedGate`, line 57), so narrowing `spec` the same way would remove the hatch. Line 64 casts `base as AcceptanceResult` with no stated invariant at all, even though `tier` is optional on Acceptance and required on AcceptanceResult.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18,
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -26168,12 +26167,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Generic catalog entities from an external store are unsafely cast to ZoneEntry without runtime validation or an invariant comment verifying the array element shapes.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:a33adfb4a8edc0eb",
-          "evaluatedRevision": 17,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 The store returns CatalogEntityBase[], and all 5 callers repo-wide each cast it to their own entry type with no invariant. Entries carry a literal `catalogId` discriminant, so a typed catalogId-to-entry overload at the store would close every hatch at once.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18,
+          "revisionsBehind": 1
         },
         {
           "subject": "canvas-graph",

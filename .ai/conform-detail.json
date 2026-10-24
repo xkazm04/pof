@@ -2743,39 +2743,58 @@
       "subject": "module-design",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:45:49.160Z",
-      "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:12:02.521Z",
+      "worker": "2c5cd3ce-4a68-4d3c-8a75-c26a450fb35b",
       "techniques": [
         {
           "technique": "marked-unverifiable-region",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 Unchecked type assertion bypasses the compiler to pass an incomplete record where a typed partial signature should have been used."
-        },
-        {
-          "technique": "module-depth",
-          "verdict": "deviation",
-          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:75 Demands a complete StepSpec interface even though the body only reads archetype and label, expanding the parameter interface unnecessarily."
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 The doc comment at lines 8-9 does state the invariant (only archetype and label are read). But the standard's 'when not to use it' rule applies: a verified Pick<StepSpec,'archetype'|'label'> parameter is cheap and the same pattern is already used one parameter over. The sibling cast at line 64 carries no invariant."
         },
         {
           "technique": "io-free-core",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:10 Candidate history transitions are pure functions without framework or I/O dependencies."
-        },
-        {
-          "technique": "declarative-or-sequential",
-          "verdict": "conformant",
-          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:147 Uses an explicit sequential loop to compute the maximum sequence number where a declarative pipeline would add destructured accumulator overhead."
-        },
-        {
-          "technique": "seams-and-adapters",
-          "verdict": "conformant",
-          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:70 Exposes the liveEligible seam enabling substitution between simulated stub production and real model execution."
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:157 The history model is a pure transition core. Time arrives as a parameter (`at`), and the hook does the store I/O."
         },
         {
           "technique": "locality-and-leverage",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:17 Delivers high caller leverage by unifying direction, validation, async state, and retry handling into a standard produce component."
+          "evidence": "src/components/layout-lab/steps/shared/hash.ts:6 One FNV hash is shared by the generic and Items generators, so they cannot drift apart."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:33 The prompt logic is a callback seam that about 33 real call sites substitute at, while the panel owns dispatch, retry and live mode."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:62 A mode flag lets a caller switch off the async rejection surfacing, which the doc calls 'the real Rule 4 enforcement path' - the decision the module exists to make. Only the test file uses it."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:125 Single-output transforms are written as pipelines. nextSeq is a small loop tracking a running max, which is fine."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/useDispatchPlan.ts:27 The async fetch is confined to an edge hook gated on `enabled`. describeDispatchPlan and genHistory stay synchronous."
+        },
+        {
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:108 Inputs are plain records that a test can construct, so no host-minted type needs mirroring."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 An incomplete two-field record is unsafely cast to the broader StepSpec type to satisfy an over-specified function parameter signature without verifying missing members.",
+          "evaluatedAt": "2026-10-13T11:45:49.160Z",
+          "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+          "reason": "replaced by 2c5cd3ce-4a68-4d3c-8a75-c26a450fb35b"
         }
       ]
     },
@@ -2784,29 +2803,43 @@
       "subject": "module-design",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:45:49.160Z",
-      "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:12:02.521Z",
+      "worker": "2c5cd3ce-4a68-4d3c-8a75-c26a450fb35b",
       "techniques": [
         {
           "technique": "marked-unverifiable-region",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Unchecked type assertion casts generic catalog entities to ZoneEntry without runtime type guard or invariant comment."
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 There is no invariant comment, and the 5/5 call sites each opening their own hatch is the standard's growth signal: the checked surface (catalogStore.ts:212) cannot express what callers need."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/PlaytimeEstimator.tsx:4 A pure re-export pass-through kept only because of a length metric. The standard says 'Extracting for length is a metric, not a reason'."
         },
         {
           "technique": "io-free-core",
           "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:6 Calculations for playtime budgets and interest curves are kept pure and free of React or external I/O."
-        },
-        {
-          "technique": "declarative-or-sequential",
-          "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:271 detectPacingRegions uses an explicit sequential while-loop with index tracking to group contiguous spans."
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:4 The budget and lever logic is pure and the components stay thin."
         },
         {
           "technique": "locality-and-leverage",
           "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:51 applyLevers provides a centralized scenario transformation that synchronously reprices all downstream playtime panels."
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:5 Pricing goes through one shared cost table (resolveCosts) and is not restated."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:77 allocateZoneBudgets is a pipeline. suggestLevers (line 108) is explicitly sequential because its branch arms do different work."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 Generic catalog entities from an external store are unsafely cast to ZoneEntry without runtime validation or an invariant comment verifying the array element shapes.",
+          "evaluatedAt": "2026-10-13T11:45:49.160Z",
+          "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+          "reason": "replaced by 2c5cd3ce-4a68-4d3c-8a75-c26a450fb35b"
         }
       ]
     },
@@ -13795,6 +13828,42 @@
           "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictDetailModal.tsx:77 Judge output arrives through a structured verdict channel: per-dimension 0-100 scores keyed by rubric dimension, not prose only."
         }
       ]
+    },
+    "8037f4d0-1cc1-4567-8afd-5d50481bbc30/module-design": {
+      "context": "combat-damage-pipeline",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:12:02.521Z",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/polish/combat-feel-export.ts:5 Information leakage: one decision (the property vocabulary) is kept in two hand-maintained encodings, and the stated interface no longer matches what the emitter does."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/polish/combat-feel-export.ts:8 The emitter is a pure values-to-text function. Execution happens at the edge."
+        },
+        {
+          "technique": "emitted-code-names-from-a-root",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/polish/combat-feel-export.ts:11 The output is a standalone script that imports its own root rather than code spliced into a caller's scope."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/combos/helpers.ts:6 Combo stats come from the one schedule (scheduleCombo) and are not recomputed."
+        }
+      ],
+      "withdrawn": {
+        "worker": "2c5cd3ce-4a68-4d3c-8a75-c26a450fb35b",
+        "state": "deviation",
+        "at": "2026-10-24T02:14:56.341720+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on GA_MeleeAttack.h:131 and a C++ HitStopDuration default of 0.08, but no GA_MeleeAttack.h exists anywhere in the kiro tree, so the claimed drift against the header cannot be confirmed."
+      }
     }
   }
 }
