@@ -14831,6 +14831,56 @@
           "evidence": "src/components/layout-lab/steps/ItemGate.tsx:23 A check that cannot be observed reads DEFER, and any non-deferred blocker reads FAIL. Uncertainty never resolves to PASS."
         }
       ]
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/engine-host-contract": {
+      "context": "core-engine-planning-shell",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:48:18.257Z",
+      "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
+      "techniques": []
+    },
+    "4c0281bd-ea7b-44ba-86a0-ccda978296a4/engine-host-contract": {
+      "context": "core-engine-genre-tabs",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:48:18.257Z",
+      "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
+      "techniques": []
+    },
+    "d6a661e1-369c-4819-85cf-0a6c31282ef6/engine-host-contract": {
+      "context": "blender-mcp-bridge",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:48:18.257Z",
+      "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
+      "techniques": []
+    },
+    "074a6d1f-3e33-45a5-8144-5ef2af335d36/engine-host-contract": {
+      "context": "loot-affix-core",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:48:18.257Z",
+      "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
+      "techniques": []
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/engine-host-contract": {
+      "context": "ability-blueprint",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:48:18.257Z",
+      "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
+      "techniques": []
     }
   }
 }

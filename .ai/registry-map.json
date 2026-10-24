@@ -1803,7 +1803,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:22 The 'simulation sandbox' is a plain TypeScript fixed-step attribute and effect simulator, not an embedded language engine. A grep of the core-engine tree found no eval, new Function, vm, quickjs, job-queue or import-hook terms.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3
         },
         {
           "subject": "render-mount-pipeline",
@@ -6236,7 +6240,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/blender-mcp/service.ts:1 The bridge is a TCP client that sends commands, including 'execute_code' Python strings (service.ts:424), to a separate Blender process. It embeds no engine and runs no job loop or import hook in-process, and a grep of src/lib/blender-mcp found none of the engine-host terms.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-memory",
@@ -11176,7 +11184,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:1 This is the React tab registry and the shared chart and navigation primitives. A grep of the whole core-engine tree found no embedded-engine, job-queue or module-loader terms, so the engine-host contract does not apply.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3
         },
         {
           "subject": "multi-project",
@@ -11407,7 +11419,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/GenreModuleView.tsx:1 These files are React client components for planning views. A case-insensitive grep of src/components/modules/core-engine found no embedded-engine terms (isolated-vm, quickjs, importModuleDynamically, enqueueJob, HostHooks, eval(, new Function(), so this context has no engine and no host hooks to design.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3
         },
         {
           "subject": "canvas-graph",
@@ -17021,7 +17037,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/index.tsx:1 These are React loot editors and pure TypeScript loot math and codegen. A grep of the core-engine tree found no embedded language engine, executor or loader terms, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3
         },
         {
           "subject": "quality-gates",
