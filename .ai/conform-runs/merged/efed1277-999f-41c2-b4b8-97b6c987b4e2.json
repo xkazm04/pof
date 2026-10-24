@@ -1,0 +1,194 @@
+{
+ "schema": "conform-run/1",
+ "worker": "efed1277-999f-41c2-b4b8-97b6c987b4e2",
+ "subject": "procedural-level-planning",
+ "evaluatedAt": "2026-10-24T06:35:08.410026+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "level-design-module",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/types/procgen.ts:17 The UE generation run record (GenerationRunBase) stores seed, algorithm and params and claims that is the whole of 'what this run was', but it has no generator-version field (ZoneGraphPin likewise stores only seed+params), so a stored run cannot tell a reproducible regeneration from one made under a changed generator.",
+   "techniques": [
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "deviation",
+     "evidence": "src/types/procgen.ts:17 Three of the four contract terms are recorded (seed, algorithm, params); the generator version is missing, and a repo-wide grep for generatorVersion/GENERATOR_VERSION/algorithmVersion in src/lib and src/types finds nothing."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "conformant",
+     "evidence": "src/types/level-design.ts:65 A gate's satisfier is machine-readable data (requires, matched against RoomNode.grants at line 35). The doc comment says a prose-only condition counts as an undeclared, unproven gate, never an open one, and the fixpoint closure in src/lib/level-design/pacing-linter.ts does exist."
+    }
+   ]
+  },
+  {
+   "context": "progression-curves-builds",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_progression/index.tsx:9 This context draws XP and power curves and compares builds and has no generated room or zone graph: searching sub_progression/ for corridor, roomGraph, RoomNode, procgen and pacing-linter returned zero files, and the only 'room' hit is a chart-padding comment in chartMath.ts ('breathing room').",
+   "techniques": [],
+   "absenceTerms": [
+    "corridor",
+    "roomGraph",
+    "RoomNode",
+    "procgen"
+   ]
+  },
+  {
+   "context": "level-flow-editor",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:57 Every room added in the flow editor gets difficulty 2 (and type 'combat') as if those had been measured, so the pacing linter run on every document (useLevelDesignView.ts:367) grades rooms whose difficulty nobody set and cannot report the rules as unevaluated.",
+   "techniques": [
+    {
+     "technique": "pacing-linter-rules",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:57 Findings do show inline on the graph per primary room (findingsByRoom badges, LevelTabContent.tsx:115). But a default difficulty stands in for 'not measured', which is the collapse that procedure step 5 forbids."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:118 A prose-only condition shows as an undeclared gate, not as an open door. LinkInspector also offers grant rooms only from the set reachable with the gate shut (grantCandidates)."
+    }
+   ]
+  },
+  {
+   "context": "streaming-zone-planner",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/PreflightPanel.tsx:47 The planner prints a clean 'every zone is reachable' verdict from a walk over every transition with no regard to its free-text condition (e.g. 'Defeat Boss'), so a zone behind an unsatisfiable progression gate is reported reachable.",
+   "techniques": [
+    {
+     "technique": "zone-progression-linting",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/PreflightPanel.tsx:47 Reachability ignores gating conditions (streaming-preflight.ts walks every transition as an open, undirected edge), though the technique requires it computed with gates applied. To its credit, it states an explicit positive verdict and reports 'not evaluated' when there is no root (PreflightPanel.tsx:24)."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/TransitionList.tsx:63 Zone transition gates are free text only (ZoneTransition.condition), with no satisfier as data, and the preflight treats them as open rather than ungated and unproven."
+    }
+   ],
+   "registryProposal": "The golden path's 'What this subject is not' places a streaming layout outside the subject as downstream work. But a streaming zone plan whose transitions carry progression conditions is in practice a zone graph that zone-progression-linting governs. The subject should say whether a streaming planner's reachability verdict is in scope."
+  },
+  {
+   "context": "visual-gen-contact-sheet-ue5-export",
+   "subject": "procedural-level-planning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/generators/dungeon.ts:151 The BSP dungeon offers corridorWidth 1-3 (and the Procedural Engine slider exposes exactly 1-3), but floor(w/2) makes widths 2 and 3 both carve 3-cell corridors, so the '2' setting is a dead control value and no test differentially checks the parameter.",
+   "techniques": [
+    {
+     "technique": "algorithm-parameter-support-matrix",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:151 This is a single-algorithm panel per generator, so it falls under the technique's own clause that a one-backend tool must not expose a value the algorithm ignores. Width 2 and width 3 give identical output. Also, min room 8 above max room 6 silently yields zero rooms (line 101) with no flag."
+    },
+    {
+     "technique": "seed-determinism-contract",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:228 The draws all come from one mulberry32 stream (grep finds no Math.random in generators/), but the result carries neither the seed nor any generator version, so the plan does not travel with its contract."
+    },
+    {
+     "technique": "gate-and-key-solvability-proof",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:6 There are no locks or keys. 'door' exists in the cell type but is never assigned, and nothing is gated."
+    },
+    {
+     "technique": "pacing-linter-rules",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:8 Generated rooms are bare rectangles with no kind and no difficulty, so the rules have nothing to read."
+    },
+    {
+     "technique": "declare-what-each-engine-ignores",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/generators/dungeon.ts:16 Each generator (dungeon, terrain, vegetation) has its own request type shaped to fit it; no shared request type spans several engines here."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T06:35:08.410026+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "gate-and-key-solvability-proof",
+    "seed-determinism-contract"
+   ],
+   "deviations": 1,
+   "context": "level-design-module",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:35:08.410026+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "progression-curves-builds",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:35:08.410026+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "gate-and-key-solvability-proof",
+    "pacing-linter-rules"
+   ],
+   "deviations": 1,
+   "context": "level-flow-editor",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:35:08.410026+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "gate-and-key-solvability-proof",
+    "zone-progression-linting"
+   ],
+   "deviations": 1,
+   "context": "streaming-zone-planner",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:35:08.410026+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "procedural-level-planning"
+   ],
+   "techniques": [
+    "algorithm-parameter-support-matrix",
+    "declare-what-each-engine-ignores",
+    "gate-and-key-solvability-proof",
+    "pacing-linter-rules",
+    "seed-determinism-contract"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-contact-sheet-ue5-export",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

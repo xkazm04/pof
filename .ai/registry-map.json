@@ -16552,7 +16552,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/types/procgen.ts:17 The UE generation run record (GenerationRunBase) stores seed, algorithm and params and claims that is the whole of 'what this run was', but it has no generator-version field (ZoneGraphPin likewise stores only seed+params), so a stored run cannot tell a reproducible regeneration from one made under a changed generator.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         }
       ],
       "governance": "governed"
@@ -16689,7 +16693,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:57 Every room added in the flow editor gets difficulty 2 (and type 'combat') as if those had been measured, so the pacing linter run on every document (useLevelDesignView.ts:367) grades rooms whose difficulty nobody set and cannot report the rules as unevaluated.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mcp-tools",
@@ -20096,7 +20104,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/index.tsx:9 This context draws XP and power curves and compares builds and has no generated room or zone graph: searching sub_progression/ for corridor, roomGraph, RoomNode, procgen and pacing-linter returned zero files, and the only 'room' hit is a chart-padding comment in chartMath.ts ('breathing room').",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "voice-io",
@@ -23200,7 +23212,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/PreflightPanel.tsx:47 The planner prints a clean 'every zone is reachable' verdict from a walk over every transition with no regard to its free-text condition (e.g. 'Defeat Boss'), so a zone behind an unsatisfiable progression gate is reported reachable.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "chat-transcript",
@@ -25095,7 +25111,11 @@
           "revision": 7,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/generators/dungeon.ts:151 The BSP dungeon offers corridorWidth 1-3 (and the Procedural Engine slider exposes exactly 1-3), but floor(w/2) makes widths 2 and 3 both carve 3-cell corridors, so the '2' setting is a dead control value and no test differentially checks the parameter.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:94d17312c8f8a3c9",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
