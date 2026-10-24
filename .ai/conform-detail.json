@@ -15241,6 +15241,104 @@
         "at": "2026-10-24T21:18:44.305374+00:00",
         "reason": "reviewer (sonnet): The anchor wizard/wizard-data.ts is not one of this context's files (overview, features, _shared, index), and the absence search used narrow terms (no 'image', 'upload' or 'concept'), so the anchor does not show that no image-to-3D input exists here."
       }
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/catalog-pipeline-authoring": {
+      "context": "catalog-pipelines",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:35:36.940Z",
+      "worker": "262d9ade-9cbf-424b-9a86-d252145b7b9b",
+      "techniques": [
+        {
+          "technique": "view-produce-accept-triad",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:866 entityRuntimeDeferred (line 867) comes before wiringContractSound() (line 871). runtimeDeferred always returns status 'deferred', and allOf returns the first non-pass, so a wiring failure is masked. A scan of every allOf in pipelines/ found only this one with a deferred member that is not last."
+        },
+        {
+          "technique": "step-archetype-taxonomy",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/player-movement.ts:42 Each step declares one archetype from the closed nine-member ArchetypeId vocabulary, which is sliced by deliverable shape rather than by domain."
+        },
+        {
+          "technique": "archetype-view-coherence-ratchet",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/codex.ts:84 The codex Lore Body step was corrected from schema to brief+prose, toward the cohort its payload and checker already match, instead of widening the map. That correction is recorded in ARCHETYPE_VIEW_KINDS."
+        },
+        {
+          "technique": "packaging-exempt-two-state-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:34 Has no packaging step and declares a non-empty prose reason naming where its outputs land and the real terminal proof (L4 Visual Gate), with a revisit condition. player-movement.ts:23 also declares a reason but has no revisit clause."
+        },
+        {
+          "technique": "direction-as-first-class-produce-input",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/bestiary.ts:473 Producers take the optional steer and read it where the step can honestly be steered (frame size and pose here). Steps that cannot be steered keep a one-argument body, and the stamp is applied at dispatch, outside this context."
+        },
+        {
+          "technique": "producer-facts-are-observed-not-declared",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/items.ts:80 The authored engine field carries the code evidence quoted beside it, as the technique asks for authored producer facts. readsDirection is derived by an arity probe, not authored on these specs."
+        },
+        {
+          "technique": "seed-entities-and-walker-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:26 The representative seed carries real calibration (task ids, gate verdicts, failed attempts), not placeholder data."
+        }
+      ]
+    },
+    "3cfee2b0-99a9-45c8-a31a-b4dfa89c2d97/catalog-pipeline-authoring": {
+      "context": "catalog-pipeline-api",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:35:36.940Z",
+      "worker": "262d9ade-9cbf-424b-9a86-d252145b7b9b",
+      "techniques": [
+        {
+          "technique": "direction-as-first-class-produce-input",
+          "verdict": "deviation",
+          "evidence": "src/app/api/catalog/step-submit/route.ts:33 step-recipe takes ?direction= for the prompt, but step-submit drops it. Only the one-shot route and the lab stamp produceDirection, so the headless dispatch site is uncovered even though produceDirection.ts claims headless coverage."
+        },
+        {
+          "technique": "producer-facts-are-observed-not-declared",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:98 A client may declare only 'Code'. An explicit top-level claim fails the z.enum schema, which is a loud 400 naming the field. A claim smuggled into _provenance is downgraded to a stated absence, and a server-recorded claim survives the round trip."
+        },
+        {
+          "technique": "packaging-exempt-two-state-rule",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:35 The route returns the summary whose exempt list is filled from the registry by defaultListExemptions, so operators see exempt catalogs as decisions."
+        },
+        {
+          "technique": "view-produce-accept-triad",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:58 The server re-grades submitted data with the step's own checker and discards the caller's status, so the accept face is derived from persisted data."
+        }
+      ]
+    },
+    "b8a83374-4625-4d64-9823-c2a695ed155e/catalog-pipeline-authoring": {
+      "context": "catalog-seed-data",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:35:36.940Z",
+      "worker": "262d9ade-9cbf-424b-9a86-d252145b7b9b",
+      "techniques": [
+        {
+          "technique": "step-archetype-taxonomy",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/canon/archetypeCanon.ts:11 Not exhaustive over ArchetypeId, so a new archetype or 'custom' gets no compile error. The technique requires one published vocabulary that every per-kind table reads."
+        },
+        {
+          "technique": "seed-entities-and-walker-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/seed-materials.ts:8 The seed is a real, build-gated entity (build script plus gate result recorded), not a placeholder. Many new-catalogs.ts starters are thin, with only an id, a name and a description."
+        }
+      ]
     }
   }
 }

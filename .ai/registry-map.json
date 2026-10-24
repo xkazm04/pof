@@ -8332,7 +8332,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/catalog/step-submit/route.ts:33 The headless submit door accepts no direction or composed prompt and stamps no produceDirection: submitStepArtifact never calls withProduceDirection. So artifacts written through the MCP path lose the steer that /api/catalog/step-recipe read (line 22) to build the prompt, which leaves a hole in the direction stamp.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",
@@ -8757,7 +8761,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:866 The Items Test Gate puts the always-deferred entityRuntimeDeferred member ahead of wiringContractSound() inside a first-non-pass allOf, so a failing wiring contract shows up as 'deferred' (a red member turned into an unmeasured status). This is the inversion the triad technique says to prevent by putting deferred criteria last.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "procedural-level-planning",
@@ -8885,7 +8893,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/canon/archetypeCanon.ts:11 The archetype vocabulary is listed a second time here, keyed by a bare string instead of ArchetypeId, and it already omits 'custom'. So canonCategoriesForStep returns undefined for the five shape-only custom steps, and undefined means 'full canon, no filter', which is the same sentinel that content-invariant steps use on purpose. That is silent drift from listing the vocabulary in two places.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "design-canon-as-executable-law",
