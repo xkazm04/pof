@@ -15900,6 +15900,52 @@
         "at": "2026-10-24T23:25:31.471487+00:00",
         "reason": "reviewer (sonnet): The anchor, UnifiedSummaryView/types.ts:3, only declares TabId and ViewMode. It doesn't show that motion is absent. It also sits in UnifiedSummaryView, not in the context's own HolisticHealthView files. I only ran an evaluator-wide grep, not the claimed grep of HolisticHealthView, and the term list "
       }
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/session-continuation": {
+      "context": "session-analytics-reporting",
+      "subject": "session-continuation",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:31:59.064Z",
+      "worker": "ecb64452-8c4a-43cf-81ab-84c911848254",
+      "techniques": []
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/session-continuation": {
+      "context": "judge-craft-quality",
+      "subject": "session-continuation",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:31:59.064Z",
+      "worker": "ecb64452-8c4a-43cf-81ab-84c911848254",
+      "techniques": [],
+      "registryProposal": "runDrainPool (fleetPlan.ts:150-184) is a fleet-level match for boundary-applied-stop: the stop is checked before every claim, in-flight billed draws are awaited instead of killed, and the overshoot is returned as drainedAtStop. boundary-applied-stop's 'When not to use' calls a spend ceiling protective (interrupt). This code argues the opposite for a billed call whose cost only shows up when it finishes, because killing it still spends the tokens and makes the spend unmeasurable. That reason could be added to the technique or to admission-queue / cost-metering."
+    },
+    "234034cf-29e8-432e-aca8-490e30e9f45d/session-continuation": {
+      "context": "prompt-evolution",
+      "subject": "session-continuation",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:31:59.064Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ecb64452-8c4a-43cf-81ab-84c911848254",
+        "state": "not-applicable",
+        "at": "2026-10-24T23:33:22.699224+00:00",
+        "reason": "reviewer (sonnet): The anchor usePromptEvolution.ts:7 is an import line (`import type { PromptVariant, MutationType }`) that doesn't show that no agent session loop or stop hook is present, so the anchor is incidental."
+      }
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/session-continuation": {
+      "context": "roadmap-workflow-management",
+      "subject": "session-continuation",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:31:59.064Z",
+      "worker": "ecb64452-8c4a-43cf-81ab-84c911848254",
+      "techniques": []
     }
   }
 }

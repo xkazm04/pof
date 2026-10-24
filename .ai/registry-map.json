@@ -15916,7 +15916,11 @@
           "revision": 8,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/judge/fleetPlan.ts:150 The judge fleet runs one-shot CLI judge draws through a budget-stopped drain pool rather than keeping a single agent session working across turns, so the subject's precondition (a continuation loop enforced at one session's turn boundary) does not hold; a search of src/lib/judge, src/lib/craft, src/app/api/judge-verdicts and src/app/api/craft-verdicts for continuation, compaction, PreCompact, stopHook and stop-hook found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b0eabf78abd856a4",
+          "evaluatedRevision": 8
         }
       ],
       "governance": "governed"
@@ -22005,7 +22009,11 @@
           "revision": 8,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:21 WorkflowOrchestratorView starts, pauses, resumes and cancels runs of authored DAG templates held in taskDAGStore, outside this context. That is the authored-graph model of pipeline-dag, which sealed-stage-advance explicitly separates from model-driven stage advance, and it is not a loop that keeps one session working at its turn boundary. A search of CalendarRoadmapView and WorkflowOrchestratorView for continuation, compaction, PreCompact, stopHook and stop-hook found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b0eabf78abd856a4",
+          "evaluatedRevision": 8
         },
         {
           "subject": "agent-runtime-assembly",
@@ -22307,7 +22315,11 @@
           "revision": 8,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/index.tsx:22 This context only reads stored session, spend and quality analytics for display and holds no turn-boundary hook, continuation record or stop gate; a case-insensitive search of src/components/modules/evaluator (which covers SpendDashboard/SpendBudgetPanel/InsightCard's directory too) for continuation, compaction, PreCompact, stopHook, 'stop hook' and 'stop-hook' found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b0eabf78abd856a4",
+          "evaluatedRevision": 8
         },
         {
           "subject": "agent-memory",
