@@ -11371,7 +11371,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:120 The ComingSoon placeholder runs a spinner-shaped infinite rotation with no visible stop, on a surface where no work is happening, so the unprompted loop never ends and reads as progress.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "execution-state-checkpointing",
@@ -20227,7 +20231,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx:113 pathLength is outside the property set the app's MotionConfig reducedMotion=\"user\" reaches, and this draw-in has no motionSafe guard, so reduced-motion users still watch the curve trace for a second (same in PowerCurveDangerZones and MultiCurveOverlay).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "module-design",
@@ -22488,7 +22496,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useSuspend.ts:12 The hooks provide lifecycle, suspend, fetch and viewport primitives. A case-insensitive grep of src/hooks for motion, keyframes and prefers-reduced found no file, and the suspend plane pauses timers and polling rather than owning any animated gesture, so this context has no motion vocabulary to judge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "agent-instruction-files",
@@ -25988,7 +26000,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_anim_filmstrip.py:3 These are headless Blender/Python tools for game-animation data (NPZ/BVH/filmstrip) and mesh critique. A recursive grep of scripts/visual-gen for prefers-reduced, framer-motion, useReducedMotion, requestAnimationFrame and MotionConfig found no hit, so there is no UI motion surface here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",

@@ -15710,6 +15710,118 @@
           "evidence": "src/types/combat-simulator.ts:221 The iteration count lives on the per-run config, not on a versioned scenario preset."
         }
       ]
+    },
+    "cf5703ec-61df-45c3-9e35-b590480c7e76/motion": {
+      "context": "progression-curves-builds",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:11:31.219Z",
+      "worker": "24c20eda-bf5f-43b8-b53b-8c2b75a51919",
+      "techniques": [
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx:113 The engine-scoped reduce switch covers only positional keys. This non-positional draw-in has no fallback of its own; XpCurveChart guards the same gesture and its siblings do not."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/analysis/PowerCurveDangerZones.tsx:82 The same curve draw-in gesture is retyped per file with different inline durations (1, 1.2, 1.5) and no named preset."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/curves/XpCurveChart.tsx:131 Point entrances start only after 1s and stagger uncapped per level, so the entrance far exceeds the roughly-1s total cap."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:36 Bar fills animate width (layout) instead of a scaleX transform."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_progression/curves/XpCurveChart.tsx:110 When parameters change, the same path element morphs its d geometry instead of being remounted."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:45 The figure is rendered as static text (with a static-width bar at line 42), so the payload does not depend on the fill playing."
+        }
+      ]
+    },
+    "e00660d8-9dde-4409-9590-4c82d7a18eea/motion": {
+      "context": "shared-utility-hooks",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:11:31.219Z",
+      "worker": "24c20eda-bf5f-43b8-b53b-8c2b75a51919",
+      "techniques": []
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/motion": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:11:31.219Z",
+      "worker": "24c20eda-bf5f-43b8-b53b-8c2b75a51919",
+      "techniques": []
+    },
+    "4c0281bd-ea7b-44ba-86a0-ccda978296a4/motion": {
+      "context": "core-engine-genre-tabs",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:11:31.219Z",
+      "worker": "24c20eda-bf5f-43b8-b53b-8c2b75a51919",
+      "techniques": [
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:120 Self-starting infinite loop past 5s with no operable stop and no named stopper."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_shared/headers.tsx:28 Every implemented StatusDot pulses forever, so a feature grid carries far more concurrent ambient instances than 'countable on one hand'."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_shared/headers.tsx:29 The loop correctly reduces to stillness, but every component reads useReducedMotion and branches at the call site, collapsing to exact 0, rather than a vocabulary-level switch."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_shared/headers.tsx:136 Each loop picks its own deciders: the cursor blink uses suspend plus reduced, StatusDot uses reduced only, ComingSoon uses none. There is no merged pause signal."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_design.tsx:74 Spreads a deprecated preset and nudges its duration inline, which is the 'copy of a preset with numbers nudged' failure."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport.tsx:86 The panel reveal animates height. The scaleX bar in _design.tsx:72 shows the compositor form is known but not used consistently."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_shared/navigation.tsx:147 The active segment background is one animation identity held by one element at a time, tweened between options."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_design.tsx:160 Under reduced motion the bar starts at its resolved value, so it never shows a confident zero."
+        }
+      ]
     }
   }
 }
