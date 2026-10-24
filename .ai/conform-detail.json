@@ -1055,27 +1055,52 @@
       "context": "status-health-dashboard",
       "subject": "eval-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T00:06:40.636Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:16:30.972Z",
+      "worker": "41ccffcc-b60b-440f-b98f-0aee4332269b",
       "techniques": [
         {
           "technique": "judge-stability",
           "verdict": "deviation",
-          "evidence": "scripts/model-benchmark.ts:79 The benchmark persists candidate identity and score but omits the judge identity and rubric version; the opened BenchmarkSample schema and database table provide no fields for them."
+          "evidence": "src/lib/status/judge-verdicts-db.ts:28 Model, effort and rubric version are stamped, which is good. But the model stamp is an alias-style fleet label, nothing re-scores anchors, and ModelsView.tsx:82 states the Claude opus/high judge scores Claude-generated output: a single same-family judge."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/capabilityModel.ts:382 The latest re-judge per cell wins. Campaigns re-judge the same content (VerdictScoreTrend warns about same-content re-judges), so the grade can keep a favorable draw, and nothing counts or charges how many attempts were made."
         },
         {
           "technique": "resolution-precondition",
           "verdict": "deviation",
-          "evidence": "scripts/model-benchmark.ts:89 The complete benchmark main path selects and can persist the highest median without repeats, a within-condition SD, an instrument-resolution check or a draw outcome."
+          "evidence": "src/components/status/ModelsView.tsx:71 The panel publishes a 'benchmark winner' (the highest median, picked by scripts/model-benchmark.ts) with only a median and a run count. No within-condition spread is shown and no tie check runs before the order is presented."
+        },
+        {
+          "technique": "reliability-aggregation",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/capabilityModel.ts:298 'Proven' means the stack can ship this class. It comes from a median over cells with n>=3 alone. The aggregation is declared, but there is no all-attempts-succeed or worst-case twin beside it, which is the pair this technique asks for in a ship-readiness claim."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/judge-verdicts-db.ts:5 Shape checkers stay the deterministic layer. The judge is reserved for content quality and stored apart, so a checker re-grade cannot erase it."
+        },
+        {
+          "technique": "certification-levels",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/capabilityModel.ts:47 Runtime classes are graded only from live L3/L4 gates. Deferred (not-run) gates count against the grade, never as passes."
+        },
+        {
+          "technique": "failure-attribution",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/capabilityModel.ts:88 Low cells are attributed to a layer. Project-data and checker-structural ceilings are excluded from the capability median instead of being blamed on the generation technique."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/capabilityModel.ts:379 A verdict is bound to a hash of the content it judged. One whose content changed under the same step name is dropped, so it cannot poison the median."
         }
-      ],
-      "withdrawn": {
-        "worker": "e76977a5-196c-4685-9227-bffcb822ca01",
-        "state": "deviation",
-        "at": "2026-10-13T00:08:35.421505+00:00",
-        "reason": "reviewer (sonnet): The anchor scripts/model-benchmark.ts is not among the context's paths (src/components/status/* and the dev-inspector files); the status components never call it, so the verdict is about the benchmark producer, not this context's code."
-      }
+      ]
     },
     "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/prompt-assembly": {
       "context": "catalog-pipeline-state",
@@ -13625,6 +13650,57 @@
         "at": "2026-10-24T00:52:43.541068+00:00",
         "reason": "reviewer (sonnet): The claim is about e2e/helpers/walk-status.ts and pipeline-e2e-coverage.test.ts, which context-map.json puts in the item-catalog-pipeline context; catalog-pipeline-state lists only the layout-lab store files, none of which the evidence cites, so the verdict is about a different context."
       }
+    },
+    "940bbe98-a8c3-4d5e-b4e5-c447578e2123/eval-harness": {
+      "context": "ue5-bridge-monitoring",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:16:30.972Z",
+      "worker": "41ccffcc-b60b-440f-b98f-0aee4332269b",
+      "techniques": []
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/eval-harness": {
+      "context": "ai-behavior-testing",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:16:30.972Z",
+      "worker": "41ccffcc-b60b-440f-b98f-0aee4332269b",
+      "techniques": []
+    },
+    "8234e336-4af3-4c49-9e31-9740282bdde2/eval-harness": {
+      "context": "code-quality-evaluation",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:16:30.972Z",
+      "worker": "41ccffcc-b60b-440f-b98f-0aee4332269b",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictScoreTrend.tsx:49 The direction comes from buildVerdictTrend's raw delta (delta > 0). Points with different model or rubricVersion are joined into one series, and no self-agreement bound gates the tag. Only a muted note at line 111 flags same-content re-judges."
+        },
+        {
+          "technique": "measurement-revision",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:131 One new LLM deep-eval run is diffed against the baseline to tag findings NEW, PERSISTING or RESOLVED. A finding the second sample simply did not re-emit reads as resolved, which treats a second sample as a correction."
+        },
+        {
+          "technique": "failure-attribution",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:113 Harness failures (errored or cancelled passes) are kept out of scope and their reasons named per pass, so they are not read as clean modules: the harness's control flow is treated as its own failure owner."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictDetailModal.tsx:77 Judge output arrives through a structured verdict channel: per-dimension 0-100 scores keyed by rubric dimension, not prose only."
+        }
+      ]
     }
   }
 }

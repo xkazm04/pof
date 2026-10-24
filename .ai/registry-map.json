@@ -2596,7 +2596,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:91 The system under test is the game's behavior-tree AI, and each scenario is graded pass/fail/error by the server from UE's functional-test report. Claude CLI only generates the test code and stimuli; it is not the candidate being scored. A grep of AIBehaviorView/, AITestingSandbox/, TacticalCoverAnalysis/ and FlankAngleHeatmap/ found no judge or rubric vocabulary, so this is a deterministic test suite, not a model eval.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-runtime-assembly",
@@ -10272,7 +10276,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictScoreTrend.tsx:49 The score trend tags any non-zero first-to-last delta IMPROVED or REGRESSED. It ignores whether the judge model or rubric version changed between points, and it applies no repeatability floor, so judge variance and instrument swaps are shown as fix outcomes.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-memory",
@@ -22657,7 +22665,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/status/judge-verdicts-db.ts:28 Every verdict carries a judge identity, but it is a local fleet label rather than the dated model id the call resolved to. No frozen anchor set measures drift, and a Claude judge scores Claude-produced content (ModelsView.tsx:82). So the capability grades and the benchmark winners sit on an instrument that is only partly pinned and has an own-family bias.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "prompt-assembly",
@@ -23736,7 +23748,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:7 The TestHarnessPanel runs deterministic UE5 bridge scenarios (spawn, set properties, advance frames, assert values, screenshot diff) and BridgeEndpointHealth polls endpoint latency; a case-insensitive grep of BridgeEndpointHealth/, TestHarnessPanel/ and the wider project-setup/ folder found no judge, rubric or sampling-temperature vocabulary, so no model is scored here and this is test-harness territory, not the non-deterministic eval lane.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "prompt-assembly",

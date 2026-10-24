@@ -1,0 +1,184 @@
+{
+ "schema": "conform-run/1",
+ "worker": "41ccffcc-b60b-440f-b98f-0aee4332269b",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-10-24T01:16:30.972702+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ue5-bridge-monitoring",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:7 The TestHarnessPanel runs deterministic UE5 bridge scenarios (spawn, set properties, advance frames, assert values, screenshot diff) and BridgeEndpointHealth polls endpoint latency; a case-insensitive grep of BridgeEndpointHealth/, TestHarnessPanel/ and the wider project-setup/ folder found no judge, rubric or sampling-temperature vocabulary, so no model is scored here and this is test-harness territory, not the non-deterministic eval lane.",
+   "techniques": [],
+   "absenceTerms": [
+    "judge",
+    "rubric",
+    "temperature"
+   ]
+  },
+  {
+   "context": "status-health-dashboard",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/status/judge-verdicts-db.ts:28 Every verdict carries a judge identity, but it is a local fleet label rather than the dated model id the call resolved to. No frozen anchor set measures drift, and a Claude judge scores Claude-produced content (ModelsView.tsx:82). So the capability grades and the benchmark winners sit on an instrument that is only partly pinned and has an own-family bias.",
+   "techniques": [
+    {
+     "technique": "judge-stability",
+     "verdict": "deviation",
+     "evidence": "src/lib/status/judge-verdicts-db.ts:28 Model, effort and rubric version are stamped, which is good. But the model stamp is an alias-style fleet label, nothing re-scores anchors, and ModelsView.tsx:82 states the Claude opus/high judge scores Claude-generated output: a single same-family judge."
+    },
+    {
+     "technique": "selection-over-noise",
+     "verdict": "deviation",
+     "evidence": "src/lib/status/capabilityModel.ts:382 The latest re-judge per cell wins. Campaigns re-judge the same content (VerdictScoreTrend warns about same-content re-judges), so the grade can keep a favorable draw, and nothing counts or charges how many attempts were made."
+    },
+    {
+     "technique": "resolution-precondition",
+     "verdict": "deviation",
+     "evidence": "src/components/status/ModelsView.tsx:71 The panel publishes a 'benchmark winner' (the highest median, picked by scripts/model-benchmark.ts) with only a median and a run count. No within-condition spread is shown and no tie check runs before the order is presented."
+    },
+    {
+     "technique": "reliability-aggregation",
+     "verdict": "deviation",
+     "evidence": "src/lib/status/capabilityModel.ts:298 'Proven' means the stack can ship this class. It comes from a median over cells with n>=3 alone. The aggregation is declared, but there is no all-attempts-succeed or worst-case twin beside it, which is the pair this technique asks for in a ship-readiness claim."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/judge-verdicts-db.ts:5 Shape checkers stay the deterministic layer. The judge is reserved for content quality and stored apart, so a checker re-grade cannot erase it."
+    },
+    {
+     "technique": "certification-levels",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/capabilityModel.ts:47 Runtime classes are graded only from live L3/L4 gates. Deferred (not-run) gates count against the grade, never as passes."
+    },
+    {
+     "technique": "failure-attribution",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/capabilityModel.ts:88 Low cells are attributed to a layer. Project-data and checker-structural ceilings are excluded from the capability median instead of being blamed on the generation technique."
+    },
+    {
+     "technique": "scenario-design",
+     "verdict": "conformant",
+     "evidence": "src/lib/status/capabilityModel.ts:379 A verdict is bound to a hash of the content it judged. One whose content changed under the same step name is dropped, so it cannot poison the median."
+    }
+   ]
+  },
+  {
+   "context": "ai-behavior-testing",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:91 The system under test is the game's behavior-tree AI, and each scenario is graded pass/fail/error by the server from UE's functional-test report. Claude CLI only generates the test code and stimuli; it is not the candidate being scored. A grep of AIBehaviorView/, AITestingSandbox/, TacticalCoverAnalysis/ and FlankAngleHeatmap/ found no judge or rubric vocabulary, so this is a deterministic test suite, not a model eval.",
+   "techniques": [],
+   "absenceTerms": [
+    "judge",
+    "rubric"
+   ]
+  },
+  {
+   "context": "code-quality-evaluation",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictScoreTrend.tsx:49 The score trend tags any non-zero first-to-last delta IMPROVED or REGRESSED. It ignores whether the judge model or rubric version changed between points, and it applies no repeatability floor, so judge variance and instrument swaps are shown as fix outcomes.",
+   "techniques": [
+    {
+     "technique": "judge-stability",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictScoreTrend.tsx:49 The direction comes from buildVerdictTrend's raw delta (delta > 0). Points with different model or rubricVersion are joined into one series, and no self-agreement bound gates the tag. Only a muted note at line 111 flags same-content re-judges."
+    },
+    {
+     "technique": "measurement-revision",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:131 One new LLM deep-eval run is diffed against the baseline to tag findings NEW, PERSISTING or RESOLVED. A finding the second sample simply did not re-emit reads as resolved, which treats a second sample as a correction."
+    },
+    {
+     "technique": "failure-attribution",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:113 Harness failures (errored or cancelled passes) are kept out of scope and their reasons named per pass, so they are not read as clean modules: the harness's control flow is treated as its own failure owner."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/JudgeVerdictsView/VerdictDetailModal.tsx:77 Judge output arrives through a structured verdict channel: per-dimension 0-100 scores keyed by rubric dimension, not prose only."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "catalog-browser-ui",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T01:16:30.972702+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ue5-bridge-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:16:30.972702+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "certification-levels",
+    "failure-attribution",
+    "judge-stability",
+    "reliability-aggregation",
+    "resolution-precondition",
+    "scenario-design",
+    "selection-over-noise"
+   ],
+   "deviations": 1,
+   "context": "status-health-dashboard",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:16:30.972702+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ai-behavior-testing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:16:30.972702+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "failure-attribution",
+    "judge-stability",
+    "measurement-revision"
+   ],
+   "deviations": 1,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
