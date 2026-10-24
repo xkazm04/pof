@@ -14840,7 +14840,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:37 The gate asks the vision judge for free-text defects and a prose verdict sentence instead of a closed vocabulary and a closed verdict token, so defect classes cannot be counted across a batch and severity cannot be derived from class in the caller.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "repository-landing-document",
@@ -19976,7 +19980,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/scene-composer/useSceneDressStore.ts:88 The scene-dress decomposition sends only the image and an opt-in crop-gate flag (default false, line 62), with no declared inventory from a brief. A missing object can never show up as residue, and an empty partition is reported as an honest 'empty' answer (line 96) rather than a loud failure.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "supply-chain",
@@ -25663,7 +25671,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/scene-crop.ts:7 Scene gating scores each extracted crop (step 3 of the technique) but never checks the partition itself against a declared inventory, so an object no box selected is absent with every per-crop verdict green.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "tiling-texture-acceptance",

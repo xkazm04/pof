@@ -1,0 +1,157 @@
+{
+  "schema": "conform-run/1",
+  "worker": "34fc255d-9d77-4076-8afb-467ccf2f0369",
+  "subject": "image-to-3d-input-gating",
+  "evaluatedAt": "2026-10-24T21:17:50.717160+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "image-generation",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/input-gate.ts:37 The gate asks the vision judge for free-text defects and a prose verdict sentence instead of a closed vocabulary and a closed verdict token, so defect classes cannot be counted across a batch and severity cannot be derived from class in the caller.",
+      "techniques": [
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:37 DEFECTS is open free text and VERDICT is a sentence, not a closed token. The three honest states (ran/unavailable/skipped) and enforcement at the paid route are realized, but the closed vocabulary is not, and the middle band generates (route.ts:130)."
+        },
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:83 Isolation and in-frame are scored criteria (lines 30-33), but the frame-edge rule is not a hard fail regardless of score. The code's own arena admits cropped chest-up inputs at score 9."
+        },
+        {
+          "technique": "canonical-pose-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/input-gate.ts:32 The pose criterion is in the rubric. The limb-touching-torso and off-frontal hard-fail sub-rules fold into the single score rather than standing apart."
+        },
+        {
+          "technique": "reference-role-tagging",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:41 One 'style' role carries both lighting/colour and material, which the technique says must be split. The assembler (lines 173-182) also never rejects two identity masters or untagged duplicates, and it has no caller."
+        },
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:137 Only single-image mode is gated. multiview-to-3d submits go to the provider with no per-view gate and no set-consistency check."
+        }
+      ],
+      "registryProposal": "score-defect-verdict-protocol gives one default band (pass >= 7, fail < 5), but input-gate.ts:79-87 measured that graders spend the 0-10 scale differently. A local 27B model scored clearly bad inputs 5-9, so its refit line is pass 9 / fail 8, which leaves a one-point middle band. The technique should say that thresholds are a (grader, line) pair refit per judge on a labelled truth set, and that the middle band's width is part of that per-judge fit."
+    },
+    {
+      "context": "procedural-scene-tools",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/scene-composer/useSceneDressStore.ts:88 The scene-dress decomposition sends only the image and an opt-in crop-gate flag (default false, line 62), with no declared inventory from a brief. A missing object can never show up as residue, and an empty partition is reported as an honest 'empty' answer (line 96) rather than a loud failure.",
+      "techniques": [
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/scene-composer/useSceneDressStore.ts:88 There is no expected-inventory declaration before decomposition, no coverage check and no residue state. Per-region crop gating exists but is opt-in."
+        }
+      ]
+    },
+    {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/scene-crop.ts:7 Scene gating scores each extracted crop (step 3 of the technique) but never checks the partition itself against a declared inventory, so an object no box selected is absent with every per-crop verdict green.",
+      "techniques": [
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/scene-crop.ts:7 Crops are scored on the extracted region, which is correct. There is no coverage check, no region/backdrop/residue three-state record, and no minimum-over-regions frame verdict."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:208 Only 'fail' refuses spend. The middle-band 'warn' (line 105) proceeds to generation instead of prepare-and-re-gate."
+        },
+        {
+          "technique": "part-cut-planning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/mesh-split.ts:12 mesh-split separates independently shipped props after generation. The technique excludes parts that ship independently, and no single subject is cut into parts here."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "visual-gen-asset-pipeline",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "character-overview-input",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor wizard/wizard-data.ts is not one of this context's files (overview, features, _shared, index), and the absence search used narrow terms (no 'image', 'upload' or 'concept'), so the anchor does not show that no image-to-3D input exists here."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T21:17:50.717160+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "canonical-pose-rule",
+        "multi-view-master-reference",
+        "reference-role-tagging",
+        "score-defect-verdict-protocol",
+        "single-subject-plain-background"
+      ],
+      "deviations": 1,
+      "context": "image-generation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T21:17:50.717160+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "scene-partition-is-the-gated-unit"
+      ],
+      "deviations": 1,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T21:17:50.717160+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "part-cut-planning",
+        "scene-partition-is-the-gated-unit",
+        "score-defect-verdict-protocol"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T21:17:50.717160+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "character-overview-input",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

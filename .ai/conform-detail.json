@@ -3300,32 +3300,38 @@
       "context": "image-generation",
       "subject": "image-to-3d-input-gating",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T21:46:40.604Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:17:50.717Z",
+      "worker": "34fc255d-9d77-4076-8afb-467ccf2f0369",
       "techniques": [
         {
-          "technique": "canonical-pose-rule",
+          "technique": "score-defect-verdict-protocol",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:32 The complete rubric lacks frontal-angle, foreshortening and head-orientation checks, and does not prescribe their mandatory failures."
+          "evidence": "src/lib/visual-gen/input-gate.ts:37 DEFECTS is open free text and VERDICT is a sentence, not a closed token. The three honest states (ran/unavailable/skipped) and enforcement at the paid route are realized, but the closed vocabulary is not, and the middle band generates (route.ts:130)."
+        },
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:83 Isolation and in-frame are scored criteria (lines 30-33), but the frame-edge rule is not a hard fail regardless of score. The code's own arena admits cropped chest-up inputs at score 9."
+        },
+        {
+          "technique": "canonical-pose-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/input-gate.ts:32 The pose criterion is in the rubric. The limb-touching-torso and off-frontal hard-fail sub-rules fold into the single score rather than standing apart."
         },
         {
           "technique": "reference-role-tagging",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/reference-roles.ts:17 The closed role set has no separate colour and material roles; its style role supplies lighting, mood and material together."
+          "evidence": "src/lib/visual-gen/reference-roles.ts:41 One 'style' role carries both lighting/colour and material, which the technique says must be split. The assembler (lines 173-182) also never rejects two identity masters or untagged duplicates, and it has no caller."
         },
         {
-          "technique": "score-defect-verdict-protocol",
+          "technique": "multi-view-master-reference",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:37 Defect classes are unrestricted and VERDICT is explicitly prose rather than a closed token."
+          "evidence": "src/app/api/visual-gen/generate/route.ts:137 Only single-image mode is gated. multiview-to-3d submits go to the provider with no per-view gate and no set-consistency check."
         }
       ],
-      "withdrawn": {
-        "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
-        "state": "deviation",
-        "at": "2026-10-13T21:47:09.349635+00:00",
-        "reason": "reviewer (sonnet): The claims rest on input-gate.ts and reference-roles.ts, and neither is among this context's files (generated-assets, providers, style-dna and similar), so the verdict is about a different context."
-      }
+      "registryProposal": "score-defect-verdict-protocol gives one default band (pass >= 7, fail < 5), but input-gate.ts:79-87 measured that graders spend the 0-10 scale differently. A local 27B model scored clearly bad inputs 5-9, so its refit line is pass 9 / fail 8, which leaves a one-point middle band. The technique should say that thresholds are a (grader, line) pair refit per judge on a labelled truth set, and that the middle band's width is part of that per-judge fit."
     },
     "71f2dcdd-a894-4fda-a381-1ca0388f2b51/image-to-3d-input-gating": {
       "context": "visual-gen-core",
@@ -3352,42 +3358,45 @@
       "context": "visual-gen-mesh-quality-gates",
       "subject": "image-to-3d-input-gating",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T21:46:40.604Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:17:50.717Z",
+      "worker": "34fc255d-9d77-4076-8afb-467ccf2f0369",
       "techniques": [
         {
-          "technique": "canonical-pose-rule",
+          "technique": "scene-partition-is-the-gated-unit",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:32 The rubric omits the required frontal-angle, foreshortening and head-orientation failure rules."
-        },
-        {
-          "technique": "multi-view-master-reference",
-          "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/mesh-views.ts:189 These multiple views inspect an already generated mesh; they are not a reconstruction-source reference set."
-        },
-        {
-          "technique": "part-cut-planning",
-          "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/mesh-split.ts:188 This operation separates delivered independent objects rather than planning separately commissioned parts of one complex subject."
+          "evidence": "src/lib/visual-gen/scene-crop.ts:7 Crops are scored on the extracted region, which is correct. There is no coverage check, no region/backdrop/residue three-state record, and no minimum-over-regions frame verdict."
         },
         {
           "technique": "score-defect-verdict-protocol",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:56 The parser accepts arbitrary defect strings without closed-class validation; the refusal helper also permits middle-band warnings."
+          "evidence": "src/lib/visual-gen/input-gate.ts:208 Only 'fail' refuses spend. The middle-band 'warn' (line 105) proceeds to generation instead of prepare-and-re-gate."
+        },
+        {
+          "technique": "part-cut-planning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/mesh-split.ts:12 mesh-split separates independently shipped props after generation. The technique excludes parts that ship independently, and no single subject is cut into parts here."
+        },
+        {
+          "technique": "canonical-pose-rule",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:32 The rubric omits the required frontal-angle, foreshortening and head-orientation failure rules.",
+          "carriedFrom": "2026-10-13"
+        },
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/mesh-views.ts:189 These multiple views inspect an already generated mesh; they are not a reconstruction-source reference set.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "single-subject-plain-background",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:105 Verdict depends solely on the aggregate score, so a reported cropped or frame-edge subject cannot force the required hard failure."
+          "evidence": "src/lib/visual-gen/input-gate.ts:105 Verdict depends solely on the aggregate score, so a reported cropped or frame-edge subject cannot force the required hard failure.",
+          "carriedFrom": "2026-10-13"
         }
-      ],
-      "withdrawn": {
-        "worker": "aef911a3-bb19-4837-9b06-7ddb0d1e9e15",
-        "state": "deviation",
-        "at": "2026-10-13T21:47:09.399233+00:00",
-        "reason": "reviewer (sonnet): The deviation rests on input-gate.ts:208 and :56, which are not among this context's files. The in-context anchors, mesh-views.ts and mesh-split.ts, only show that those files are unrelated to input gating."
-      }
+      ]
     },
     "2fb73390-0315-4551-953a-09c67b495733/image-to-3d-input-gating": {
       "context": "visual-gen-rigging-conformance",
@@ -15201,6 +15210,37 @@
           "evidence": "src/lib/visual-gen/generators/dungeon.ts:16 Each generator (dungeon, terrain, vegetation) has its own request type shaped to fit it; no shared request type spans several engines here."
         }
       ]
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/image-to-3d-input-gating": {
+      "context": "procedural-scene-tools",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:17:50.717Z",
+      "worker": "34fc255d-9d77-4076-8afb-467ccf2f0369",
+      "techniques": [
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/scene-composer/useSceneDressStore.ts:88 There is no expected-inventory declaration before decomposition, no coverage check and no residue state. Per-region crop gating exists but is opt-in."
+        }
+      ]
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/image-to-3d-input-gating": {
+      "context": "character-overview-input",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:17:50.717Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "34fc255d-9d77-4076-8afb-467ccf2f0369",
+        "state": "not-applicable",
+        "at": "2026-10-24T21:18:44.305374+00:00",
+        "reason": "reviewer (sonnet): The anchor wizard/wizard-data.ts is not one of this context's files (overview, features, _shared, index), and the absence search used narrow terms (no 'image', 'upload' or 'concept'), so the anchor does not show that no image-to-3D input exists here."
+      }
     }
   }
 }
