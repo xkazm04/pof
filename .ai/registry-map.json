@@ -3124,7 +3124,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationsView.tsx:78 The \"Import into UE5 & Assign to Generated Assets\" step references BS1D_Locomotion, AM_MeleeCombo and AM_Dodge_* by name, but the only way to finish it is a manual \"Verify Complete\" button that writes true unconditionally. Nothing checks that the referenced clips exist, and nothing checks whether they hold real data or are hollow shells, so the checklist records an existence claim nobody tested.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3c222a31fd795fc1",
+          "evaluatedRevision": 1
         },
         {
           "subject": "design-tokens",
@@ -3236,7 +3240,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/FrameScrubberPanel.tsx:143 The montage panel shows root motion only as a cosmetic badge. It never runs the category-required root-motion, same-category memory-median or blend-in checks, even though montage entries carry memorySizeMB, hasRootMotion and blendInTime. The matching lintMontage in src/lib/animation/montage-analysis.ts is used only by its own test, so designers auditing montages here never see a structural finding.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3c222a31fd795fc1",
+          "evaluatedRevision": 1
         },
         {
           "subject": "test-harness",
@@ -9106,7 +9114,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:23 The Dodge Trajectories panel shows hardcoded \"Avg Distance 250cm\", \"Avg Duration 0.3s\" and \"I-Frames 0.15s\" as confident averages. Nothing states where they came from, and there is no label saying they are illustrative and not read from the project. This is the derived figure with no basis that the subject says must never be produced.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3c222a31fd795fc1",
+          "evaluatedRevision": 1
         },
         {
           "subject": "spatial-audio-scene-authoring",

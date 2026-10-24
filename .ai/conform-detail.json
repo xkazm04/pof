@@ -15822,6 +15822,84 @@
           "evidence": "src/components/modules/core-engine/unique-tabs/_design.tsx:160 Under reduced motion the bar starts at its resolved value, so it never shows a confident zero."
         }
       ]
+    },
+    "17532a7f-57f4-4480-8329-e4964e85a0b6/motion-quality-gating": {
+      "context": "animation-combo-workflow",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:24:27.668Z",
+      "worker": "41752fdf-e94f-4e33-b9aa-e16671a8c8b8",
+      "techniques": [
+        {
+          "technique": "asset-reality-ledger",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationsView.tsx:78 The completion handler is a bare manual toggle. It never compares referenced assets with what exists or is valid on disk, so missing or hollow imported clips still count as done."
+        },
+        {
+          "technique": "montage-budget-and-root-motion-lint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/helpers.ts:171 The choreographer writes a design struct (FComboSectionDef) built from template values plus seeded jitter. It does not compose a real montage asset with memory or blend-in data, so the lint's precondition does not hold in this context."
+        }
+      ]
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/motion-quality-gating": {
+      "context": "character-movement-playground",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:24:27.668Z",
+      "worker": "41752fdf-e94f-4e33-b9aa-e16671a8c8b8",
+      "techniques": [
+        {
+          "technique": "genre-response-latency-norms",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:23 The technique's own rule is that every derived number states what it was derived from. Here a dodge-timing average is a literal constant that reads as a measurement, with no basis string and no 'not your project' label."
+        }
+      ]
+    },
+    "37390a41-d9e6-4037-94d6-8e7df1256a55/motion-quality-gating": {
+      "context": "animation-combos-metrics",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:24:27.668Z",
+      "worker": "41752fdf-e94f-4e33-b9aa-e16671a8c8b8",
+      "techniques": [
+        {
+          "technique": "montage-budget-and-root-motion-lint",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/FrameScrubberPanel.tsx:143 The panel displays root motion but never lints it. An attack or dodge montage without root motion, a memory outlier or a long blend-in produces no warning, and there is no affirmative 'clean' state either."
+        },
+        {
+          "technique": "genre-response-latency-norms",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_animation/metrics/index.tsx:44 Each metric tile separates a measured value read from the bridge manifest, a declared target, and 'unread' with its reason. It never shows a fixture count, which matches the basis-labelling and omit-don't-estimate rules."
+        },
+        {
+          "technique": "absolute-not-curved-judgment",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboChainPanel.tsx:63 This context has no perceptual critic that grades craft. The combo chain view labels template data honestly but makes no craft judgment."
+        }
+      ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/motion-quality-gating": {
+      "context": "holistic-quality-overview",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:24:27.668Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "41752fdf-e94f-4e33-b9aa-e16671a8c8b8",
+        "state": "not-applicable",
+        "at": "2026-10-24T23:25:31.471487+00:00",
+        "reason": "reviewer (sonnet): The anchor, UnifiedSummaryView/types.ts:3, only declares TabId and ViewMode. It doesn't show that motion is absent. It also sits in UnifiedSummaryView, not in the context's own HolisticHealthView files. I only ran an evaluator-wide grep, not the claimed grep of HolisticHealthView, and the term list "
+      }
     }
   }
 }
