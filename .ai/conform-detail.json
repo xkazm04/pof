@@ -1306,30 +1306,33 @@
       "subject": "supply-chain",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:24:22.042Z",
       "techniques": [
         {
           "technique": "reading-is-not-running",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/DeepEvalResults/constants.tsx:12 Evaluation findings are collected via static rule analysis and categorized by UI severity tokens; inspected C++ code is never compiled or executed during evaluation."
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/constants.tsx:12 Evaluation findings are collected via static rule analysis and categorized by UI severity tokens; inspected C++ code is never compiled or executed during evaluation.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "scheduled-deep-analysis",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/DeepEvalResults/ProgressPanel.tsx:36 ProgressPanel monitors interactive user-initiated 4-pass evaluation progress in the UI, not automated recurring background cron scans of third-party dependencies."
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/ProgressPanel.tsx:36 ProgressPanel monitors interactive user-initiated 4-pass evaluation progress in the UI, not automated recurring background cron scans of third-party dependencies.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "secret-scanning-architecture",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/PatternLibraryView/constants.ts:20 Pattern categories inspect architectural C++ gameplay idioms (e.g. class hierarchies and GAS integration), not commit-time secret scanning or credential pattern matching."
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/constants.ts:20 Pattern categories inspect architectural C++ gameplay idioms (e.g. class hierarchies and GAS integration), not commit-time secret scanning or credential pattern matching.",
+          "carriedFrom": "2026-10-13"
         }
       ],
       "withdrawn": {
-        "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+        "worker": "8a13991e-e460-4b04-a7c8-d2d432a6234d",
         "state": "not-applicable",
-        "at": "2026-10-13T02:22:28.311299+00:00",
-        "reason": "reviewer (sonnet): The anchors are incidental: DeepEvalResults/constants.tsx:12 is only a severity-token map and ProgressPanel.tsx:36 only renders progress text, so neither shows the claim that evaluation is static and never compiles or executes code."
+        "at": "2026-10-24T22:24:59.135088+00:00",
+        "reason": "reviewer (sonnet): The anchor useDeepEvalResults.ts:259 is an ordinary POST to /api/evaluator/deep-eval. It shows a call, not that dependency, secret, archive or deserialization handling is absent, so the not-applicable rests on an incidental line."
       }
     },
     "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/supply-chain": {
@@ -1363,30 +1366,33 @@
       "subject": "supply-chain",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T02:20:45.271Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:24:22.042Z",
       "techniques": [
         {
           "technique": "dependency-policy-gates",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:34 PreflightGateBlock checks map cook measurements before starting packaging; it does not gate pull requests or builds on package lockfile vulnerabilities."
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:34 PreflightGateBlock checks map cook measurements before starting packaging; it does not gate pull requests or builds on package lockfile vulnerabilities.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "toolchain-floor-drift",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/BuildConfigSelector/ProfileEditor.tsx:69 ProfileEditor configures user-selected deployment platform targets (e.g. Win64, Linux); it does not pin or verify compiler runtime toolchain minimum floors."
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/ProfileEditor.tsx:69 ProfileEditor configures user-selected deployment platform targets (e.g. Win64, Linux); it does not pin or verify compiler runtime toolchain minimum floors.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "build-time-dependency-tier",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:39 buildScope manages query scope descriptions for historical build count reporting, not build-time dependency categorization or compilation tiering."
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:39 buildScope manages query scope descriptions for historical build count reporting, not build-time dependency categorization or compilation tiering.",
+          "carriedFrom": "2026-10-13"
         }
       ],
       "withdrawn": {
-        "worker": "bac4bd47-1559-4bfb-8471-e26476b4e4c5",
+        "worker": "8a13991e-e460-4b04-a7c8-d2d432a6234d",
         "state": "not-applicable",
-        "at": "2026-10-13T02:22:28.352708+00:00",
-        "reason": "reviewer (sonnet): The 'zero hits' search claim is contradicted: BuildConfigSelector/ProfileEditor.tsx, which the evidence itself cites, has an 'Archive Directory' field and an 'Archive' toggle, and constants.ts:17 only lists build-config options without showing the supply-chain precondition is absent."
+        "at": "2026-10-24T22:24:59.217036+00:00",
+        "reason": "reviewer (sonnet): The anchor BuildHistoryDashboard/index.tsx:152 is a POST to the packaging API. It does not show the precondition is absent, and BuildConfigSelector/index.tsx:46 builds UAT build commands from profiles, which is build-pipeline code that the not-applicable claim leaves unexamined."
       }
     },
     "12c245d3-0dae-4736-afc8-fb30a8f60f76/game-economy-tuning": {
@@ -15434,6 +15440,36 @@
         }
       ],
       "registryProposal": "reserve-before-dispatch-stop-latch is scoped to 'a metered image generator', but the same failure (an unenforced informational quota, a per-take paid loop) shows up on metered audio generators. Consider widening use_when to any metered media generator."
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/supply-chain": {
+      "context": "build-quality-monitoring",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:24:22.042Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "8a13991e-e460-4b04-a7c8-d2d432a6234d",
+        "state": "not-applicable",
+        "at": "2026-10-24T22:24:59.048579+00:00",
+        "reason": "reviewer (sonnet): The anchor CSVImportPanel.tsx:51 is an onImport click handler. It sits in the context but does not show that a supply-chain crossing is absent, and the same file reads a user-chosen file with FileReader, which is the kind of untrusted-input crossing the claim denies."
+      }
+    },
+    "dc6bda3e-9219-49b5-bdc5-844f99f5c4c2/supply-chain": {
+      "context": "models-asset-inventory",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:24:22.042Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "8a13991e-e460-4b04-a7c8-d2d432a6234d",
+        "state": "not-applicable",
+        "at": "2026-10-24T22:24:59.286522+00:00",
+        "reason": "reviewer (sonnet): The anchor useAssetInventory.ts:45 is a fetch call. It does not show the precondition is absent, and the context handles a bridge manifest with checksumSha256 (useAssetInventory.ts:25, BridgeManifestCard.tsx:17), which is an artifact-integrity concern the claim does not address."
+      }
     }
   }
 }
