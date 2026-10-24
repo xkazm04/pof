@@ -15339,6 +15339,47 @@
           "evidence": "src/lib/catalog/seed-materials.ts:8 The seed is a real, build-gated entity (build script plus gate result recorded), not a placeholder. Many new-catalogs.ts starters are thin, with only an id, a name and a description."
         }
       ]
+    },
+    "b6266959-0161-4ca0-b9e9-249804753b1c/codebase-scanning": {
+      "context": "material-configurator",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:52:12.774Z",
+      "worker": "18275cdf-318f-4434-8323-516f5d99d6c5",
+      "techniques": []
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/codebase-scanning": {
+      "context": "project-setup-core",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:52:12.774Z",
+      "worker": "18275cdf-318f-4434-8323-516f5d99d6c5",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/useProjectScan.ts:98 Each sensor is isolated in its own try/catch (good), but the skip is not recorded. A failed engine-detection call shows as 'Not found' and is counted by missingRequirements toward 'Fix N Missing', so a failed read is scored as a missing tool."
+        }
+      ]
+    },
+    "60f0c3d8-4b81-4acf-9d2c-cfd92cf58737/codebase-scanning": {
+      "context": "audio-generation-tools",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:52:12.774Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "18275cdf-318f-4434-8323-516f5d99d6c5",
+        "state": "not-applicable",
+        "at": "2026-10-24T21:53:00.340725+00:00",
+        "reason": "reviewer (sonnet): The anchor (AudioCodeGenPanel.tsx:14) is only a type import and does not show that the precondition is absent. The directory also calls /api/audio-gen and /api/audio-codegen, whose server code I did not open, so I could not confirm 'deterministic' or that no model-generated artifact is consumed as t"
+      }
     }
   }
 }
