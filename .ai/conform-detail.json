@@ -2033,27 +2033,39 @@
       "context": "audio-generation-tools",
       "subject": "spatial-audio-scene-authoring",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T08:10:42.272Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:59:22.257Z",
+      "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
       "techniques": [
-        {
-          "technique": "event-priority-concurrency-cooldown",
-          "verdict": "deviation",
-          "evidence": "src/lib/spatial-audio-generator.ts:454 The generated voice limit grows without an upper bound with room count instead of staying within a deliberately chosen playback budget."
-        },
         {
           "technique": "room-type-to-acoustic-profile",
           "verdict": "deviation",
-          "evidence": "src/lib/spatial-audio-generator.ts:14 The generator reached through SpatialAudioGeneratorPanel's API defines and populates its profile radius without the required stated distance unit."
+          "evidence": "src/lib/spatial-audio-generator.ts:14 The per-room-type table exists (ROOM_ACOUSTICS), and the override/regeneration contract is surfaced in SyncPlanPreview ('hand-tuned ... left as is', per-room overwrite). But the radius is unitless in the authoring row, `priority: number` (0-10) is a second scale beside the catalog's low/normal/high/critical weights, and a room with no keyword match silently gets a type-default emitter (lines 388-394) instead of showing 'no emitters derived'."
+        },
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "conformant",
+          "evidence": "src/lib/audio-codegen.ts:353 Inner radius is 30% of the zone radius with a 50uu floor. Codegen then emits a sphere shape, Logarithmic falloff (line 384) and an LPF sweep from 20000 to 2000 Hz between the inner radius and the falloff distance (lines 390-393). The generated comment puts 'uu' beside the radius (line 354)."
+        },
+        {
+          "technique": "occlusion-to-volume-and-filter",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:433 OCCLUSION_VALUES (audio-scene-acoustics.ts:69) keeps volume and cutoff together in one row. But the generated ASceneAudioVolume only declares OcclusionVolumeMultiplier/OcclusionLPFCutoff, and no BeginPlay or ApplyReverbSettings code reads them (grep: they appear only in the declaration and the spawn comment). There is no glide, no hysteresis, and no separate obstruction path."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-scene-acoustics.ts:17 REVERB_PARAMS is a single authority with the nine presets plus custom and an explicit all-zero 'none', resolved through resolveZoneReverb (ReverbDecayGlyph.tsx imports it). But decay and the two delays are handed on with no unit stated, and the generated ApplyReverbSettings sets Density/Diffusion/DecayTime/LateDelay but never ReflectionsDelay, so early delay (the near-surface cue) never reaches UE."
+        },
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "deviation",
+          "evidence": "src/lib/spatial-audio-generator.ts:454 The generated voice limit grows without an upper bound with room count instead of staying within a deliberately chosen playback budget.",
+          "carriedFrom": "2026-10-13"
         }
       ],
-      "withdrawn": {
-        "worker": "e985da9b-f4d0-4640-8c68-a148e0bc5ff6",
-        "state": "deviation",
-        "at": "2026-10-13T08:11:34.913764+00:00",
-        "reason": "reviewer (sonnet): The cited `spatial-audio-generator.ts` is not one of this context's files, and nothing in the SpatialAudioGeneratorPanel files references a radius or the generator (the radius reaches it only through the API route), so the verdict is about the game-world-content-api context's code."
-      }
+      "registryProposal": "occlusion-to-volume-and-filter could name a 'declared-not-wired' failure: a generator emits the ladder's volume and cutoff as engine properties that no runtime code applies, so the table looks conformant while walls do nothing."
     },
     "8982772c-2414-4c6a-a49b-0d33e98deaec/spatial-audio-scene-authoring": {
       "context": "audio-view-and-catalog",
@@ -14587,6 +14599,51 @@
           "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:190 No filter controls on these rows."
         }
       ]
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/spatial-audio-scene-authoring": {
+      "context": "level-flow-editor",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:59:22.257Z",
+      "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
+      "techniques": []
+    },
+    "2991dc7e-92df-4e72-a7fe-ea3d15646718/spatial-audio-scene-authoring": {
+      "context": "world-module",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:59:22.257Z",
+      "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
+      "techniques": []
+    },
+    "781544e4-d4e7-4f67-8118-e5f903f0fb23/spatial-audio-scene-authoring": {
+      "context": "procedural-level-generation",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:59:22.257Z",
+      "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
+      "techniques": []
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/spatial-audio-scene-authoring": {
+      "context": "character-movement-playground",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:59:22.257Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
+        "state": "not-applicable",
+        "at": "2026-10-24T04:59:57.649209+00:00",
+        "reason": "reviewer (sonnet): The anchor MovementTab.tsx:10 is a bare `interface Props { moduleId }` line that does not show the audio precondition is absent; the claim rests only on a grep, so the anchor is incidental."
+      }
     }
   }
 }

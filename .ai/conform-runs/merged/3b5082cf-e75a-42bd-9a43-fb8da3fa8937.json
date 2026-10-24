@@ -1,0 +1,156 @@
+{
+  "schema": "conform-run/1",
+  "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
+  "subject": "spatial-audio-scene-authoring",
+  "evaluatedAt": "2026-10-24T04:59:22.257875+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "audio-generation-tools",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/spatial-audio-generator.ts:14 The room-type profile row that SpatialAudioGeneratorPanel's derivation reads carries its base radius as a bare number with no world unit, and its priority is a 0-10 integer that does not match the event catalog's four-band 0-3 weights, so the table breaks the unit and one-authority rules the technique names.",
+      "techniques": [
+        {
+          "technique": "room-type-to-acoustic-profile",
+          "verdict": "deviation",
+          "evidence": "src/lib/spatial-audio-generator.ts:14 The per-room-type table exists (ROOM_ACOUSTICS), and the override/regeneration contract is surfaced in SyncPlanPreview ('hand-tuned ... left as is', per-room overwrite). But the radius is unitless in the authoring row, `priority: number` (0-10) is a second scale beside the catalog's low/normal/high/critical weights, and a room with no keyword match silently gets a type-default emitter (lines 388-394) instead of showing 'no emitters derived'."
+        },
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "conformant",
+          "evidence": "src/lib/audio-codegen.ts:353 Inner radius is 30% of the zone radius with a 50uu floor. Codegen then emits a sphere shape, Logarithmic falloff (line 384) and an LPF sweep from 20000 to 2000 Hz between the inner radius and the falloff distance (lines 390-393). The generated comment puts 'uu' beside the radius (line 354)."
+        },
+        {
+          "technique": "occlusion-to-volume-and-filter",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-codegen.ts:433 OCCLUSION_VALUES (audio-scene-acoustics.ts:69) keeps volume and cutoff together in one row. But the generated ASceneAudioVolume only declares OcclusionVolumeMultiplier/OcclusionLPFCutoff, and no BeginPlay or ApplyReverbSettings code reads them (grep: they appear only in the declaration and the spawn comment). There is no glide, no hysteresis, and no separate obstruction path."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/audio-scene-acoustics.ts:17 REVERB_PARAMS is a single authority with the nine presets plus custom and an explicit all-zero 'none', resolved through resolveZoneReverb (ReverbDecayGlyph.tsx imports it). But decay and the two delays are handed on with no unit stated, and the generated ApplyReverbSettings sets Density/Diffusion/DecayTime/LateDelay but never ReflectionsDelay, so early delay (the near-surface cue) never reaches UE."
+        }
+      ],
+      "registryProposal": "occlusion-to-volume-and-filter could name a 'declared-not-wired' failure: a generator emits the ladder's volume and cutoff as engine properties that no runtime code applies, so the table looks conformant while walls do nothing."
+    },
+    {
+      "context": "level-flow-editor",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/level-design/LevelFlowEditor/types.ts:19 This context authors the room graph (rooms, connections, pacing), which the golden path calls an upstream concern this subject consumes. A grep of all of src/components/modules/content/level-design for reverb/occlusion/attenuation/audio/sound found zero hits, so no audio scene is placed here.",
+      "techniques": [],
+      "absenceTerms": [
+        "reverb",
+        "occlusion",
+        "attenuation",
+        "audio"
+      ]
+    },
+    {
+      "context": "world-module",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:36 The world module's zone records carry map position, type, level range and topology rendering fields with no acoustic field. A grep of src/components/modules/core-engine/sub_world for reverb/occlusion/attenuation/audio/sound found zero hits, so no spatial audio is authored here.",
+      "techniques": [],
+      "absenceTerms": [
+        "reverb",
+        "occlusion",
+        "attenuation",
+        "audio"
+      ]
+    },
+    {
+      "context": "procedural-level-generation",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/types.ts:8 The wizard generates dungeon layouts and spawn and export specs, the room-graph production that the subject treats as upstream. A grep of the level-design directory for reverb/occlusion/attenuation/audio/sound found zero hits; the only near term was the word 'spatial' in a layout subtitle.",
+      "techniques": [],
+      "absenceTerms": [
+        "reverb",
+        "occlusion",
+        "attenuation",
+        "audio"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "spatial-audio-scene-authoring",
+      "context": "character-movement-playground",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor MovementTab.tsx:10 is a bare `interface Props { moduleId }` line that does not show the audio precondition is absent; the claim rests only on a grep, so the anchor is incidental."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T04:59:22.257875+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "attenuation-falloff-and-distance-filtering",
+        "occlusion-to-volume-and-filter",
+        "reverb-parameter-tables",
+        "room-type-to-acoustic-profile"
+      ],
+      "deviations": 1,
+      "context": "audio-generation-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:59:22.257875+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "level-flow-editor",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:59:22.257875+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "world-module",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:59:22.257875+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "procedural-level-generation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:59:22.257875+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "character-movement-playground",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

@@ -5086,7 +5086,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/spatial-audio-generator.ts:14 The room-type profile row that SpatialAudioGeneratorPanel's derivation reads carries its base radius as a bare number with no world unit, and its priority is a 0-10 integer that does not match the event catalog's four-band 0-3 weights, so the table breaks the unit and one-authority rules the technique names.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "voice-io",
@@ -16544,7 +16548,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/types.ts:19 This context authors the room graph (rooms, connections, pacing), which the golden path calls an upstream concern this subject consumes. A grep of all of src/components/modules/content/level-design for reverb/occlusion/attenuation/audio/sound found zero hits, so no audio scene is placed here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
@@ -19675,7 +19683,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/types.ts:8 The wizard generates dungeon layouts and spawn and export specs, the room-graph production that the subject treats as upstream. A grep of the level-design directory for reverb/occlusion/attenuation/audio/sound found zero hits; the only near term was the word 'spatial' in a layout subtitle.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
@@ -26284,7 +26296,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:36 The world module's zone records carry map position, type, level range and topology rendering fields with no acoustic field. A grep of src/components/modules/core-engine/sub_world for reverb/occlusion/attenuation/audio/sound found zero hits, so no spatial audio is authored here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "terrain-synthesis-acceptance",
