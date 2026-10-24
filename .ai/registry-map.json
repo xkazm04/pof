@@ -9610,7 +9610,11 @@
           "revision": 7,
           "changedAt": "2026-09-04",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:15 Per-session view state (expanded tool groups/pairs, selection) is held in the widget's own useState, so it survives parking (display:none) but is lost whenever the ModuleRenderer session LRU evicts and later remounts the terminal; the technique requires the manager to keep this state per session identity across detach as well as park.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c3ef11aba4a471f5",
+          "evaluatedRevision": 7
         },
         {
           "subject": "mcp-tools",
@@ -22456,7 +22460,11 @@
           "revision": 7,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useSuspend.ts:17 These are generic React hooks (suspend/LRU freeze, lifecycle, CRUD, viewport); the suspend context is a general pause-when-hidden signal, not terminal machinery, and a case-insensitive search of src/hooks found no node-pty, xterm, ConPTY or SIGWINCH.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c3ef11aba4a471f5",
+          "evaluatedRevision": 7
         },
         {
           "subject": "motion",
@@ -22611,7 +22619,11 @@
           "revision": 7,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/event-bus.ts:50 This context's only replay ring is the app event bus (200 entries of typed bus events), and none of its stores hold terminal sessions (the CLI session manager is cliPanelStore under src/components/cli/store, outside this context); a case-insensitive search of src/lib, src/stores, src/services and src/hooks found no node-pty, xterm, ConPTY or SIGWINCH.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c3ef11aba4a471f5",
+          "evaluatedRevision": 7
         },
         {
           "subject": "client-state",

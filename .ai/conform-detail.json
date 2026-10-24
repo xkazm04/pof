@@ -5047,22 +5047,18 @@
       "context": "state-management",
       "subject": "terminal-multiplexing",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-15",
-      "evaluatedTs": "2026-10-15T21:11:51.837Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:48:06.624Z",
+      "worker": "94387827-6782-4498-86de-9d24de56cc20",
       "techniques": [
         {
           "technique": "bounded-replay-buffers",
           "verdict": "not-applicable",
-          "evidence": "src/lib/event-bus.ts:37 The replay collection contains typed application bus events, not a per-session terminal output stream."
+          "evidence": "src/lib/event-bus.ts:37 The replay collection contains typed application bus events, not a per-session terminal output stream.",
+          "carriedFrom": "2026-10-15"
         }
-      ],
-      "withdrawn": {
-        "worker": "78bfdaa3-96fb-47ff-8586-207a5ea2c15a",
-        "state": "not-applicable",
-        "at": "2026-10-15T21:12:20.949228+00:00",
-        "reason": "reviewer (sonnet): The technique anchor src/lib/event-bus.ts:37 is the `payload: EventPayload<C>` parameter of emit(), not the replay buffer (that is at lines 30-31 and 49-52), so the not-applicable rests on an incidental line. The absence search used node-pty/xterm/conpty, which is a poor fit for this context's store"
-      }
+      ]
     },
     "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/terminal-multiplexing": {
       "context": "module-cli-orchestration-hooks",
@@ -15553,6 +15549,67 @@
           "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:43 The viewer inspects loaded files and commissions nothing."
         }
       ]
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/terminal-multiplexing": {
+      "context": "cli-terminal-output",
+      "subject": "terminal-multiplexing",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:48:06.624Z",
+      "worker": "94387827-6782-4498-86de-9d24de56cc20",
+      "techniques": [
+        {
+          "technique": "multiplexer-state",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:15 View state lives in the widget, not in the session-keyed manager (cliPanelStore), so it does not outlive the view on detach."
+        },
+        {
+          "technique": "renderer-economics",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:95 Output is DOM rows with content-visibility skipping offscreen paint. There is no GPU/WebGL renderer or glyph atlas, so there is no counted context to budget."
+        },
+        {
+          "technique": "pty-management",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:12 The view consumes structured LogEntry events (stream-json lane). A repo-wide search for node-pty/xterm/ConPTY found no pseudo-terminal."
+        },
+        {
+          "technique": "occupant-state-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:54 The occupant emits typed lifecycle events (tool_use/tool_result), so no screen classification is needed. The technique says not to build it in that case."
+        },
+        {
+          "technique": "keystroke-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:93 Actions dispatch a whole prompt string as a new task, not keystrokes into a device. There is no key notation to own."
+        }
+      ]
+    },
+    "e00660d8-9dde-4409-9590-4c82d7a18eea/terminal-multiplexing": {
+      "context": "shared-utility-hooks",
+      "subject": "terminal-multiplexing",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:48:06.624Z",
+      "worker": "94387827-6782-4498-86de-9d24de56cc20",
+      "techniques": []
+    },
+    "a43ea6ff-3c0b-411c-8ace-f97992845e63/terminal-multiplexing": {
+      "context": "ue5-bridge-client",
+      "subject": "terminal-multiplexing",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:48:06.624Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "94387827-6782-4498-86de-9d24de56cc20",
+        "state": "not-applicable",
+        "at": "2026-10-24T22:48:59.778586+00:00",
+        "reason": "reviewer (sonnet): The evidence says the UE5 bridges are HTTP request/response clients, but ue5BridgeStore.ts has a WebSocket live-state port and useUE5Connection.ts holds a shared SSE stream; the anchor pofBridgeStore.ts:17 only shows the PoF HTTP port, so it does not show that no interactive terminal sessions exist."
+      }
     }
   }
 }
