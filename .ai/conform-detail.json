@@ -15380,6 +15380,60 @@
         "at": "2026-10-24T21:53:00.340725+00:00",
         "reason": "reviewer (sonnet): The anchor (AudioCodeGenPanel.tsx:14) is only a type import and does not show that the precondition is absent. The directory also calls /api/audio-gen and /api/audio-codegen, whose server code I did not open, so I could not confirm 'deterministic' or that no model-generated artifact is consumed as t"
       }
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/generative-artifact-gating": {
+      "context": "asset-viewer-and-browser",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:10:13.269Z",
+      "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+      "techniques": [
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-browser/LibraryAssetCard.tsx:162 A blank licence is hidden rather than flagged. The acquisition record itself is written at download time (useAssetLibraryStore.ts:86-88: source, license, downloadUrl)."
+        }
+      ]
+    },
+    "dc6bda3e-9219-49b5-bdc5-844f99f5c4c2/generative-artifact-gating": {
+      "context": "models-asset-inventory",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:10:13.269Z",
+      "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+      "techniques": [
+        {
+          "technique": "grade-the-selected-candidate",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No candidate selection exists; assets come from a disk scan."
+        },
+        {
+          "technique": "placeholder-is-not-an-asset",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No generative step verdict is produced here."
+        }
+      ]
+    },
+    "60f0c3d8-4b81-4acf-9d2c-cfd92cf58737/generative-artifact-gating": {
+      "context": "audio-generation-tools",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:10:13.269Z",
+      "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+      "techniques": [
+        {
+          "technique": "reserve-before-dispatch-stop-latch",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 No ledger and no latch. AudioUsageMeter.tsx:52 says 'generation is never blocked at this limit', and grep of src/lib/audio-gen and api/audio-gen found no latch or reservation."
+        }
+      ],
+      "registryProposal": "reserve-before-dispatch-stop-latch is scoped to 'a metered image generator', but the same failure (an unenforced informational quota, a per-take paid loop) shows up on metered audio generators. Consider widening use_when to any metered media generator."
     }
   }
 }

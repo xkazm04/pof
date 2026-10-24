@@ -4686,7 +4686,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-browser/LibraryAssetCard.tsx:162 The library writes source, file URL and licence when an asset is acquired, but the card renders nothing when an acquired asset's licence is blank, so an unrecorded licence reads as no restriction, which the technique forbids.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "render-submission-economy",
@@ -5165,7 +5169,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 The Sound Forge sends one billed /api/audio-gen POST per take with no reservation taken under a lock, no per-slot attempt cap and no durable stop latch; the monthly quota is explicitly informational and never blocks, so a quota or rate-limit error stops only the current loop and nothing keeps the next run from dispatching.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "codebase-scanning",
@@ -18133,7 +18141,11 @@
           "revision": 7,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is a filesystem scan of the UE project reconciled against the bridge manifest; a recursive case-insensitive grep of src/components/modules/content/models for candidate, genHistory, acquir, licen and stand-in found no hits, so no generative slot, selection or paid generation is gated here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:e538545a02318806",
+          "evaluatedRevision": 7
         },
         {
           "subject": "multi-provider-gateway-plane",
