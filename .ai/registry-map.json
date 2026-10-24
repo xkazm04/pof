@@ -5902,7 +5902,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The encounter difficulty readout bands a unitless 0-100 'difficulty' value into DANGER/SWEET SPOT/TRIVIAL using cuts (70/40) that appear only inline and as coloured rects, never as numbers in the output. It restates its own cuts instead of reading the shared survival band law. Lifespans and death causes are shown with no envelope and no dominant-cause naming, so the designer gets a decorative chart rather than an actionable verdict.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "metric-surface-contract",
@@ -10594,7 +10598,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/index.tsx:27 This context visualizes the per-hit damage formula, combo cooldown scheduling and hit-feel export. Those are attack semantics upstream of the tension curve, which the golden path lists as a neighbouring subject. A search of combos/, damage-pipeline/, hits/ and polish/ found no climax, comeback, breather, survival or timeToKill construct.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "module-design",
@@ -10744,7 +10752,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/types.ts:19 The tooling rates dodge frame data (i-frame forgiveness, cancel-window responsiveness, stamina efficiency). That is attack escapability and cancel-rule semantics, which the golden path places upstream as a neighbouring subject. A search of dodge-chain/ and dodge-timeline/ found no climax, comeback, breather, survival or timeToKill construct, so there is no encounter-pacing instrument here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "time-travel-replay",
@@ -10836,7 +10848,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel.tsx:144 The weapon matchup grades time-to-kill into a fight-length band (instant/healthy/long/stall) but prints only the band name and colour, never the bound it was compared against or which side of it the value sits. The cuts are also one global table (instant <1s, stall >45s) rather than an envelope per encounter class, so the envelope technique is only partly realized.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "metric-surface-contract",
@@ -14447,7 +14463,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/types.ts:2 This context only mirrors HUD widget presentation (floating damage text physics, menu flow graph, low-health pulse), and a case-insensitive search of all of src/components/modules/content/ui-hud found no tension, climax, comeback, breather, survival or timeToKill construct, so it has no encounter-pacing instrument to judge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "measurement-honesty",

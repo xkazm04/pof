@@ -14644,6 +14644,106 @@
         "at": "2026-10-24T04:59:57.649209+00:00",
         "reason": "reviewer (sonnet): The anchor MovementTab.tsx:10 is a bare `interface Props { moduleId }` line that does not show the audio precondition is absent; the claim rests only on a grep, so the anchor is incidental."
       }
+    },
+    "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/combat-pacing-and-dramatic-arc": {
+      "context": "hud-damage-and-navigation",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:26:00.385Z",
+      "worker": "9aacfd01-f595-4bc0-8134-3246c32939b7",
+      "techniques": [
+        {
+          "technique": "intensity-and-threat-tension-curve",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/constants.ts:3 A low-health threshold that drives a HUD pulse effect. It is not a threat term in a pacing curve."
+        }
+      ]
+    },
+    "38cdf098-fcb5-4c48-8100-de599eb863e0/combat-pacing-and-dramatic-arc": {
+      "context": "combat-metrics",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:26:00.385Z",
+      "worker": "9aacfd01-f595-4bc0-8134-3246c32939b7",
+      "techniques": [
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel.tsx:132 The stall ceiling shows up only as bar length and the band only as a label (line 144). The measured value, the bound and the side are not given on one line. The floor is a global 1s, not about 3s per class, and there is no effective-health-ratio check."
+        },
+        {
+          "technique": "plain-language-fight-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:307 KPI cards (rendered in MetricsTab) show hardcoded literals as if they were measurements. The 'context' basis string is never rendered, and no card carries a design judgment. The standard says an unmeasured value must never be shown as a neutral one."
+        },
+        {
+          "technique": "proxy-driver-limit-declaration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/MetricsTab.tsx:29 These are closed-form DPS figures. No scripted or AI stand-in plays anything here, so there is no proxy to declare."
+        }
+      ]
+    },
+    "8037f4d0-1cc1-4567-8afd-5d50481bbc30/combat-pacing-and-dramatic-arc": {
+      "context": "combat-damage-pipeline",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:26:00.385Z",
+      "worker": "9aacfd01-f595-4bc0-8134-3246c32939b7",
+      "techniques": [
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/combos/index.tsx:143 This is the length of one combo chain, not an encounter's engaged time, so the encounter envelope does not apply."
+        }
+      ]
+    },
+    "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/combat-pacing-and-dramatic-arc": {
+      "context": "bestiary-encounters-metrics",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:26:00.385Z",
+      "worker": "9aacfd01-f595-4bc0-8134-3246c32939b7",
+      "techniques": [
+        {
+          "technique": "difficulty-band-classification",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The tooltip shows value + zone label but not the boundary. The measure has no stated unit or basis, there is no sample size, and there is no near-boundary note. The cuts are a second authority beside src/lib/balance/encounter-bands.ts."
+        },
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:55 Average lifespan (e.g. Stone Brute 42.1s, data.ts:600) is a bare string with no floor or ceiling per encounter class. A near-spongy archetype is not flagged."
+        },
+        {
+          "technique": "plain-language-fight-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:115 Death causes are shown only as a distribution. 'Sword' holds 45% (data.ts), above the ~30% dominant-cause threshold, and is never named as the thing to change. The figures are hardcoded literals presented as telemetry, with no basis."
+        }
+      ]
+    },
+    "24d18aef-2104-4889-9d67-d20a91d5fdea/combat-pacing-and-dramatic-arc": {
+      "context": "combat-dodge-timeline",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:26:00.385Z",
+      "worker": "9aacfd01-f595-4bc0-8134-3246c32939b7",
+      "techniques": [
+        {
+          "technique": "difficulty-band-classification",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/types.ts:11 These are action-named ratings over frame-data ratios, not a survival or win-rate outcome measure. Note, though, that their cuts (50/30, 40/20, 4/3) are not printed beside the badge in FrameDataTable."
+        }
+      ]
     }
   }
 }
