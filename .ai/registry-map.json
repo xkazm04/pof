@@ -7112,7 +7112,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:68 Every refetch, including the manual Refresh and the post-build onSettled refetch, sets loading and replaces the whole populated dashboard (target rows, error rows, chrome) with a centred spinner. That breaks the rule that a fetch never hides rendered rows.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "test-harness",
@@ -7618,9 +7622,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "added by /conform: the matcher scored `table` at zero; CatalogMatrix.tsx:241 is a real entities x steps <table>. Judged deviation - loading-and-empty-states and performance are realized (unconditional chrome :184-222, geometry-matched MatrixSkeleton :237, error-with-retry distinct from empty :227, identity row keys :252, per-status styles precomputed :126, stale-response drop labArtifactCache.ts:140), but sorting has no declared order or identity tiebreaker (useLabCatalogData.ts:81 renders Object.values() storage order) and pagination has no window bound (:251 mounts every entity), so row order shuffles on refetch and the grid fails at catalog size. [re-judged 2026-09-22: still holds - rows are still Object.values() storage order (useLabCatalogData.ts:90-91, anchor moved from :81) with no declared sort or identity tiebreaker, and CatalogMatrix still mounts every entity with no window bound.]",
-          "evaluatedAt": "2026-09-22",
-          "stale": true
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 The entities x steps <table> mounts every ranked and filtered entity, with no window bound and no growth bound written down, and every step cell is its own tab stop. The earlier sorting basis no longer holds: rows are now ranked by the coach ladder with an entity-id tiebreaker, so the deviation now stands on pagination and the keyboard model.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
@@ -14560,7 +14565,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:54 InventoryGridDesigner's 'grid' is a CSS-grid preview of spatial inventory slots, and HudThemeEditor is a parameter form. A search of the whole ui-hud directory for <table, <thead, aria-sort, pageSize and columnheader found nothing, so there is no data table comparing records across columns.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "design-tokens",
@@ -16940,7 +16949,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:80 The paged and filtered loot-table editor shows a single untyped empty message that blames a search even when the table simply has no entries. Its per-group counts are computed over the current page slice rather than the group, so two body/count truths the standard requires are broken.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "module-design",

@@ -1,0 +1,220 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ef150736-2344-4596-94ae-6d86fd40fb5d",
+ "subject": "table",
+ "evaluatedAt": "2026-10-24T04:41:52.654550+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-browser-ui",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 The entities x steps <table> mounts every ranked and filtered entity, with no window bound and no growth bound written down, and every step cell is its own tab stop. The earlier sorting basis no longer holds: rows are now ranked by the coach ladder with an entity-id tiebreaker, so the deviation now stands on pagination and the keyboard model.",
+   "techniques": [
+    {
+     "technique": "sorting",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/matrixTriage.ts:39 Declared order (the coach ladder rung) plus an identity tiebreaker. This replaces the Object.values() storage order the stale verdict cited."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 Every entity row is mounted. There is no page, window or written row bound, so the grid fails at some catalog size."
+    },
+    {
+     "technique": "grid-keyboard-model",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/CatalogMatrix.tsx:278 A native table whose every cell is a button puts rows x steps tab stops in the page sequence. The technique says to use a grid with one tab stop when cells are interactive and rows are many."
+    },
+    {
+     "technique": "filtering",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/CatalogMatrix.tsx:103 The rung and column predicates are enumerated controls that commit on change. Keying the predicate to the catalog clears it on catalog switch. The triage bar shows 'shown of total \u00b7 predicate' and a Clear action (MatrixTriageBar.tsx:51,53)."
+    },
+    {
+     "technique": "loading-and-empty-states",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/CatalogMatrix.tsx:215 Error with retry is distinct from empty (:205-214), the skeleton shows only on first load (:73), and empty is asserted only after settle (:217). Gaps: the skeleton has no appearance delay, and the thead is not rendered under it."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/CatalogMatrix.tsx:136 Per-status cell styles and td styles are hoisted out of the row loop. Rows are keyed by entity id (:242)."
+    },
+    {
+     "technique": "export-escapes-for-its-consumer",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout-lab/CatalogMatrix.tsx:220 A grep found no csv or clipboard export in this file."
+    }
+   ]
+  },
+  {
+   "context": "hud-theme-and-inventory",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:54 InventoryGridDesigner's 'grid' is a CSS-grid preview of spatial inventory slots, and HudThemeEditor is a parameter form. A search of the whole ui-hud directory for <table, <thead, aria-sort, pageSize and columnheader found nothing, so there is no data table comparing records across columns.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "<thead",
+    "aria-sort",
+    "pageSize",
+    "columnheader"
+   ]
+  },
+  {
+   "context": "loot-affix-core",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:80 The paged and filtered loot-table editor shows a single untyped empty message that blames a search even when the table simply has no entries. Its per-group counts are computed over the current page slice rather than the group, so two body/count truths the standard requires are broken.",
+   "techniques": [
+    {
+     "technique": "loading-and-empty-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:80 Fires whenever filteredEntries is empty, including when all entries were removed with no filter. It does not distinguish 'nothing exists' from 'nothing matches' and does not name the predicate."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:27 Offset paging of 20 (loot-table-editor-constants.ts:3) resets on filter change, but grouping runs after slicing (LootTableEditor.tsx:94-103), so a group header's count is the page-slice size presented as the group size."
+    },
+    {
+     "technique": "filtering",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:35 Keystroke filtering is fine in all-client mode and the window resets, but there is no single clear-all action ('All' clears only the source axis) and no status message announcing the result count."
+    },
+    {
+     "technique": "client-server-split",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:77 All-client: filter and window both run over the complete in-memory entry set."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:31 Rows are keyed by a UUID identity, and the page bound caps the mounted rows."
+    },
+    {
+     "technique": "export-escapes-for-its-consumer",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:158 Re-export is UE5 JSON or C++ to the clipboard, not CSV for a spreadsheet."
+    }
+   ]
+  },
+  {
+   "context": "build-quality-monitoring",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:68 Every refetch, including the manual Refresh and the post-build onSettled refetch, sets loading and replaces the whole populated dashboard (target rows, error rows, chrome) with a centred spinner. That breaks the rule that a fetch never hides rendered rows.",
+   "techniques": [
+    {
+     "technique": "loading-and-empty-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:68 The spinner replaces data on refresh (setLoading(true) at :42). Error (FetchError :77) and the typed empty states (:80-103) are otherwise distinct."
+    },
+    {
+     "technique": "sorting",
+     "verdict": "deviation",
+     "evidence": "src/lib/profiling/csv-parser.ts:251 ActorTickTable relies on this order. It has no identity tiebreaker on className, so equal tick costs fall in arbitrary order and the top-N boundary is undefined at ties."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PerformanceProfilingView/ActorTickTable.tsx:22 A bounded top-N window with a 'Show all' toggle and an honest 'Top 10 of N' count (:30)."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:191 Rows are keyed by target identity, not index. RecurringErrorRow is keyed by fingerprint (:213)."
+    },
+    {
+     "technique": "filtering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:190 No filter controls on these rows."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "table",
+   "context": "inventory-economy-simulator",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T04:41:52.654550+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "export-escapes-for-its-consumer",
+    "filtering",
+    "grid-keyboard-model",
+    "loading-and-empty-states",
+    "pagination",
+    "performance",
+    "sorting"
+   ],
+   "deviations": 1,
+   "context": "catalog-browser-ui",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:41:52.654550+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "hud-theme-and-inventory",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:41:52.654550+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "client-server-split",
+    "export-escapes-for-its-consumer",
+    "filtering",
+    "loading-and-empty-states",
+    "pagination",
+    "performance"
+   ],
+   "deviations": 1,
+   "context": "loot-affix-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:41:52.654550+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "filtering",
+    "loading-and-empty-states",
+    "pagination",
+    "performance",
+    "sorting"
+   ],
+   "deviations": 1,
+   "context": "build-quality-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

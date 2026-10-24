@@ -3993,43 +3993,62 @@
       "subject": "table",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-15",
-      "evaluatedTs": "2026-10-15T00:06:04.931Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:41:52.654Z",
+      "worker": "ef150736-2344-4596-94ae-6d86fd40fb5d",
       "techniques": [
         {
-          "technique": "clipboard-range-round-trip",
-          "verdict": "not-applicable",
-          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:278 Cells navigate to pipeline steps; the reviewed component provides no clipboard range operations."
-        },
-        {
-          "technique": "compressed-scroll-space",
-          "verdict": "not-applicable",
-          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:204 This is an ordinary overflow container with fully mounted rows, without virtual spacers or compressed coordinates."
-        },
-        {
-          "technique": "filtering",
+          "technique": "sorting",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:103 One applied in-memory predicate drives the displayed rows; controls commit immediately, counts receive that predicate, and Clear resets it."
-        },
-        {
-          "technique": "loading-and-empty-states",
-          "verdict": "deviation",
-          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:216 The skeleton replaces the entire table branch, including its column headers and column-filter buttons, instead of occupying only the body under persistent chrome."
-        },
-        {
-          "technique": "one-door-for-range-writes",
-          "verdict": "not-applicable",
-          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:244 The row action navigates; this matrix does not edit cell values or implement range writers."
+          "evidence": "src/components/layout-lab/matrixTriage.ts:39 Declared order (the coach ladder rung) plus an identity tiebreaker. This replaces the Object.values() storage order the stale verdict cited."
         },
         {
           "technique": "pagination",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 All filtered rows render without a page-size bound or continuation mechanism."
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:241 Every entity row is mounted. There is no page, window or written row bound, so the grid fails at some catalog size."
         },
         {
-          "technique": "sorting",
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:278 A native table whose every cell is a button puts rows x steps tab stops in the page sequence. The technique says to use a grid with one tab stop when cells are interactive and rows are many."
+        },
+        {
+          "technique": "filtering",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/matrixTriage.ts:39 The named coach-priority order now ends with an entity-ID tiebreaker; the earlier storage-order finding no longer applies to the matrix."
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:103 The rung and column predicates are enumerated controls that commit on change. Keying the predicate to the catalog clears it on catalog switch. The triage bar shows 'shown of total · predicate' and a Clear action (MatrixTriageBar.tsx:51,53)."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:215 Error with retry is distinct from empty (:205-214), the skeleton shows only on first load (:73), and empty is asserted only after settle (:217). Gaps: the skeleton has no appearance delay, and the thead is not rendered under it."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:136 Per-status cell styles and td styles are hoisted out of the row loop. Rows are keyed by entity id (:242)."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:220 A grep found no csv or clipboard export in this file."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:278 Cells navigate to pipeline steps; the reviewed component provides no clipboard range operations.",
+          "carriedFrom": "2026-10-15"
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:204 This is an ordinary overflow container with fully mounted rows, without virtual spacers or compressed coordinates.",
+          "carriedFrom": "2026-10-15"
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/CatalogMatrix.tsx:244 The row action navigates; this matrix does not edit cell values or implement range writers.",
+          "carriedFrom": "2026-10-15"
         }
       ],
       "superseded": [
@@ -4040,13 +4059,7 @@
           "worker": null,
           "reason": "replaced by 1f82a883-861b-4163-a984-d3463adfdf77"
         }
-      ],
-      "withdrawn": {
-        "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
-        "state": "deviation",
-        "at": "2026-10-15T00:06:39.649783+00:00",
-        "reason": "reviewer (sonnet): The technique anchor at CatalogMatrix.tsx:103 claims 'counts receive that predicate', but line 102 computes tallyRungs(rows) from the unfiltered rows, so only the displayed rows (shown) receive the predicate; the claim contradicts the code."
-      }
+      ]
     },
     "419ea285-f8b3-4f3c-b012-c75db90d3778/table": {
       "context": "harness-autonomy",
@@ -4162,72 +4175,78 @@
       "context": "hud-theme-and-inventory",
       "subject": "table",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-15",
-      "evaluatedTs": "2026-10-15T00:06:04.931Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:41:52.654Z",
+      "worker": "ef150736-2344-4596-94ae-6d86fd40fb5d",
       "techniques": [
         {
           "technique": "client-server-split",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:29 The surface edits a design configuration rather than querying a table dataset."
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:29 The surface edits a design configuration rather than querying a table dataset.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "clipboard-range-round-trip",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ExportPanel.tsx:55 Paste imports a C++ header, not a rectangular cell range."
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ExportPanel.tsx:55 Paste imports a C++ header, not a rectangular cell range.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "compressed-scroll-space",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:28 The grid is a bounded inventory-layout preview, not a virtualized record table."
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:28 The grid is a bounded inventory-layout preview, not a virtualized record table.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "export-escapes-for-its-consumer",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:63 The export consumer is a C++ header rather than CSV or a spreadsheet."
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:63 The export consumer is a C++ header rather than CSV or a spreadsheet.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "filtering",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ParameterEditor.tsx:105 Section tabs select a parameter editor panel rather than apply a record predicate."
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ParameterEditor.tsx:105 Section tabs select a parameter editor panel rather than apply a record predicate.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "grid-keyboard-model",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:56 Columns describe spatial inventory slots, not uniform attributes of record rows."
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:56 Columns describe spatial inventory slots, not uniform attributes of record rows.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "loading-and-empty-states",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:118 This is a theme animation preview, not an asynchronously loaded table body."
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:118 This is a theme animation preview, not an asynchronously loaded table body.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "one-door-for-range-writes",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:38 Writes update theme parameters; there are no table cell-range writers."
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/index.tsx:38 Writes update theme parameters; there are no table cell-range writers.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "pagination",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:82 The count is inventory capacity derived from layout dimensions, not a paged record count."
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:82 The count is inventory capacity derived from layout dimensions, not a paged record count.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "performance",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:44 This bounds a spatial design dimension; the table rendering ladder has no subject here."
+          "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:44 This bounds a spatial design dimension; the table rendering ladder has no subject here.",
+          "carriedFrom": "2026-10-15"
         },
         {
           "technique": "sorting",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ParameterEditor.tsx:125 The sequence consists of schema-defined parameter controls rather than sortable records."
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/ParameterEditor.tsx:125 The sequence consists of schema-defined parameter controls rather than sortable records.",
+          "carriedFrom": "2026-10-15"
         }
-      ],
-      "withdrawn": {
-        "worker": "1f82a883-861b-4163-a984-d3463adfdf77",
-        "state": "not-applicable",
-        "at": "2026-10-15T00:06:39.696889+00:00",
-        "reason": "reviewer (sonnet): The anchor GridSection.tsx:28 is a DimensionControl line, not the grid preview it is cited for, and ParameterEditor.tsx:54 is a color-picker line, so the not-applicable rests on incidental anchors plus a narrow grep that never covered all context directories."
-      }
+      ]
     },
     "0baa32d9-9127-4452-aaee-d679f899ee1d/generative-artifact-gating": {
       "context": "step-shared-primitives",
@@ -14489,6 +14508,83 @@
           "technique": "faucet-sink-balance-band",
           "verdict": "not-applicable",
           "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/data.ts:15 A combat-only simulator; grepping the context for faucet, currency, economy and gold found no resource economy."
+        }
+      ]
+    },
+    "074a6d1f-3e33-45a5-8144-5ef2af335d36/table": {
+      "context": "loot-affix-core",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:41:52.654Z",
+      "worker": "ef150736-2344-4596-94ae-6d86fd40fb5d",
+      "techniques": [
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:80 Fires whenever filteredEntries is empty, including when all entries were removed with no filter. It does not distinguish 'nothing exists' from 'nothing matches' and does not name the predicate."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:27 Offset paging of 20 (loot-table-editor-constants.ts:3) resets on filter change, but grouping runs after slicing (LootTableEditor.tsx:94-103), so a group header's count is the page-slice size presented as the group size."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:35 Keystroke filtering is fine in all-client mode and the window resets, but there is no single clear-all action ('All' clears only the source axis) and no status message announcing the result count."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:77 All-client: filter and window both run over the complete in-memory entry set."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:31 Rows are keyed by a UUID identity, and the page bound caps the mounted rows."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:158 Re-export is UE5 JSON or C++ to the clipboard, not CSV for a spreadsheet."
+        }
+      ]
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/table": {
+      "context": "build-quality-monitoring",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:41:52.654Z",
+      "worker": "ef150736-2344-4596-94ae-6d86fd40fb5d",
+      "techniques": [
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:68 The spinner replaces data on refresh (setLoading(true) at :42). Error (FetchError :77) and the typed empty states (:80-103) are otherwise distinct."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "deviation",
+          "evidence": "src/lib/profiling/csv-parser.ts:251 ActorTickTable relies on this order. It has no identity tiebreaker on className, so equal tick costs fall in arbitrary order and the top-N boundary is undefined at ties."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/ActorTickTable.tsx:22 A bounded top-N window with a 'Show all' toggle and an honest 'Top 10 of N' count (:30)."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:191 Rows are keyed by target identity, not index. RecurringErrorRow is keyed by fingerprint (:213)."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:190 No filter controls on these rows."
         }
       ]
     }
