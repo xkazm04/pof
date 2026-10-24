@@ -2805,12 +2805,11 @@
           "changedAt": "2026-10-18",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/app/api/agents/live-token/route.ts:143 The live-token route locks a Gemini Live session to cloud transcription and cloud speech, and an unmatched voice name, a key-only readiness flag, and an unmeasured live audio modality are all accepted.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
-          "evaluatedRevision": 20,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/app/api/agents/live-token/route.ts:177 The live-token health check reports the Gemini Live voice engine as available whenever an API key is set, without probing it. 'Not configured' and 'configured but failing' therefore collapse into one boolean, which is the absent-vs-broken merge that engine-abstraction names as a failure.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 3
         },
         {
           "subject": "agent-runtime-assembly",
@@ -5275,13 +5274,12 @@
           "changedAt": "2026-10-18",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/app/api/audio-gen/route.ts:80 This route treats text-to-speech as a kind the sound-generation path must refuse before a billed call (the refusal is the supportsKind check at line 86), and a search of the other listed files for speech, transcription, microphone, and tts found no capture or synthesis pipeline.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
-          "evaluatedRevision": 20,
+          "evidence": "src/app/api/audio-gen/route.ts:105 The audio-gen route generates sound effects and music through a provider, and refuses a 'tts' request at this capability gate before any billed call (the comment at line 99 names tts). A case-insensitive search of src/lib, src/stores, src/types and src/app/api/audio-gen for getUserMedia, speechSynthesis, SpeechRecognition and MediaRecorder found nothing, so this context has no capture or speaking channel; the golden path puts sound production outside this subject anyway.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23,
           "source": "conform",
-          "revisionsBehind": 3,
-          "stale": true
+          "revisionsBehind": 3
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -5620,12 +5618,11 @@
           "changedAt": "2026-10-18",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:79 voiceLimit here is the scene's max-concurrent-sounds draft, a mixer cap, and a search of the listed AudioView and AudioEventCatalog files found no transcription, microphone, or text-to-speech call.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
-          "evaluatedRevision": 20,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:80 Here 'voiceLimit' is the scene's Max Concurrent Sounds mixer cap, not a speaker voice. A case-insensitive search of the AudioView and AudioEventCatalog files and the audio event catalog store for getUserMedia, speechSynthesis, SpeechRecognition and MediaRecorder found no listening or speaking channel.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 3
         },
         {
           "subject": "client-fetch-cache",
@@ -7856,11 +7853,7 @@
           "confidence": "strong",
           "state": "not-applicable",
           "evidence": "src/app/api/catalog/route.ts:13 This route reads catalog lifecycle rows, and a search of the listed database, seed, store, and route files for transcription, microphone, text-to-speech, and speechConfig found no speech channel; the characters seed line 'a talker first' is NPC description prose.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
-          "evaluatedRevision": 20,
-          "revisionsBehind": 3,
-          "stale": true
+          "evaluatedAt": "2026-10-13"
         },
         {
           "subject": "agent-memory",
@@ -8986,12 +8979,11 @@
           "changedAt": "2026-10-18",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 This screen is a dodge-trajectory and movement-feel playground, and a search of the listed movement, playground, and ai-feel files for speech, voice, tts, transcription, microphone, and dictation found no matches.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
-          "evaluatedRevision": 20,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 These are dodge-trajectory, curve-editor and movement-feel tuning screens. A case-insensitive search of the listed movement, playground and ai-feel directories for voice, speech, tts, transcri, microphone and dictat found no matches, and getUserMedia, speechSynthesis, SpeechRecognition and MediaRecorder are absent from sub_character.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 3
         },
         {
           "subject": "steering-feel-profile-shaping",
