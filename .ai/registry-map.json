@@ -4324,7 +4324,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/ModuleErrorBoundary.tsx:40 The app shell reaches capabilities like the clipboard through document-runtime APIs, not a native host, and catches the rejection with a toast. The context's files contain no electron/tauri/ipcRenderer/contextBridge, so there is no native side to integrate.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "test-harness",
@@ -7497,7 +7501,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/labArtifactClient.ts:42 The homepage reads its data over relative HTTP calls to the Next.js server, with no native-process IPC. A search of src/components/layout-lab and src/app/layout for electron/tauri/ipcRenderer/contextBridge found nothing, so the subject's precondition (a native wrapper holding capabilities the page cannot reach) does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -9354,7 +9362,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/KeyboardVisualization.tsx:19 The input surface draws the persisted UE input-binding state as a keyboard picture. It neither captures nor synthesizes host input. A search of sub_character for electron/tauri/ipcRenderer/contextBridge found nothing, so input-synthesis and key-forwarding concerns do not apply.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
@@ -16230,7 +16242,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/LabBridgeStrip.tsx:6 The shell's only \"bridge\" is a status strip for the UE plugin connection. The /layout shell runs entirely inside the browser document, and a search of the context's directory for electron/tauri/ipcRenderer/contextBridge found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "chat-transcript",
@@ -23372,7 +23388,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout/TopBar/PofBridgeIndicator.tsx:11 The \"bridge\" in the top bar is a Zustand store's view of the connection to the UE editor plugin, not a native shell around this app. The context's files contain no electron/tauri/ipcRenderer/contextBridge, so the subject does not apply.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "feed",

@@ -1,0 +1,189 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3a238fd6-9077-48f8-b9c3-434116a79327",
+ "subject": "native-shell-integration",
+ "evaluatedAt": "2026-10-24T06:20:02.403305+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-browser-ui",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/labArtifactClient.ts:42 The homepage reads its data over relative HTTP calls to the Next.js server, with no native-process IPC. A search of src/components/layout-lab and src/app/layout for electron/tauri/ipcRenderer/contextBridge found nothing, so the subject's precondition (a native wrapper holding capabilities the page cannot reach) does not hold.",
+   "techniques": [
+    {
+     "technique": "native-side-owns-the-target-set",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout-lab/labArtifactClient.ts:107 This destructive call goes to an HTTP route handler, not a privileged native command. Whether that boundary is trustworthy is a question for the authorization/data-access subjects, not this one."
+    },
+    {
+     "technique": "host-forwarded-key-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/app/layout/page.tsx:4 A plain Next.js route page. No embedded web view is fed hardware keys from a wrapper."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "contextBridge"
+   ]
+  },
+  {
+   "context": "topbar-and-activity",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout/TopBar/PofBridgeIndicator.tsx:11 The \"bridge\" in the top bar is a Zustand store's view of the connection to the UE editor plugin, not a native shell around this app. The context's files contain no electron/tauri/ipcRenderer/contextBridge, so the subject does not apply.",
+   "techniques": [
+    {
+     "technique": "native-owned-stream",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/TopBar/PofBridgeIndicator.tsx:14 Connection state is read from an in-page store. There is no native process that could take ownership of the stream, so relocating it is impossible here."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "contextBridge"
+   ]
+  },
+  {
+   "context": "lab-shell-and-navigation",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/LabBridgeStrip.tsx:6 The shell's only \"bridge\" is a status strip for the UE plugin connection. The /layout shell runs entirely inside the browser document, and a search of the context's directory for electron/tauri/ipcRenderer/contextBridge found nothing.",
+   "techniques": [
+    {
+     "technique": "host-forwarded-key-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout-lab/LabSearch.tsx:195 Keys reach the page as ordinary in-document keydown events. No host keeps keys for itself and no wrapper forwards them."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "contextBridge"
+   ]
+  },
+  {
+   "context": "app-shell-and-chrome",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout/ModuleErrorBoundary.tsx:40 The app shell reaches capabilities like the clipboard through document-runtime APIs, not a native host, and catches the rejection with a toast. The context's files contain no electron/tauri/ipcRenderer/contextBridge, so there is no native side to integrate.",
+   "techniques": [
+    {
+     "technique": "capability-presence-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/ModuleErrorBoundary.tsx:45 This is a browser-API rejection handled in the page, not a per-host native capability matrix. The precondition (several native hosts) is absent."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "contextBridge"
+   ]
+  },
+  {
+   "context": "character-overview-input",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_character/input/KeyboardVisualization.tsx:19 The input surface draws the persisted UE input-binding state as a keyboard picture. It neither captures nor synthesizes host input. A search of sub_character for electron/tauri/ipcRenderer/contextBridge found nothing, so input-synthesis and key-forwarding concerns do not apply.",
+   "techniques": [
+    {
+     "technique": "layout-resolved-input-synthesis",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/input/KeyboardVisualization.tsx:13 The keyboard rows are static display data for a visualization. Nothing synthesizes input into a foreign application."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "contextBridge"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T06:20:02.403305+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "host-forwarded-key-contract",
+    "native-side-owns-the-target-set"
+   ],
+   "deviations": 0,
+   "context": "catalog-browser-ui",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:20:02.403305+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "native-owned-stream"
+   ],
+   "deviations": 0,
+   "context": "topbar-and-activity",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:20:02.403305+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "host-forwarded-key-contract"
+   ],
+   "deviations": 0,
+   "context": "lab-shell-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:20:02.403305+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "capability-presence-contract"
+   ],
+   "deviations": 0,
+   "context": "app-shell-and-chrome",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:20:02.403305+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "layout-resolved-input-synthesis"
+   ],
+   "deviations": 0,
+   "context": "character-overview-input",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

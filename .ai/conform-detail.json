@@ -14958,6 +14958,91 @@
       "evaluatedTs": "2026-10-24T06:07:30.303Z",
       "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
       "techniques": []
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/native-shell-integration": {
+      "context": "catalog-browser-ui",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:02.403Z",
+      "worker": "3a238fd6-9077-48f8-b9c3-434116a79327",
+      "techniques": [
+        {
+          "technique": "native-side-owns-the-target-set",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/labArtifactClient.ts:107 This destructive call goes to an HTTP route handler, not a privileged native command. Whether that boundary is trustworthy is a question for the authorization/data-access subjects, not this one."
+        },
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/app/layout/page.tsx:4 A plain Next.js route page. No embedded web view is fed hardware keys from a wrapper."
+        }
+      ]
+    },
+    "8bf35604-2492-4c16-bca5-1c3b2787bd76/native-shell-integration": {
+      "context": "topbar-and-activity",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:02.403Z",
+      "worker": "3a238fd6-9077-48f8-b9c3-434116a79327",
+      "techniques": [
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/TopBar/PofBridgeIndicator.tsx:14 Connection state is read from an in-page store. There is no native process that could take ownership of the stream, so relocating it is impossible here."
+        }
+      ]
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/native-shell-integration": {
+      "context": "lab-shell-and-navigation",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:02.403Z",
+      "worker": "3a238fd6-9077-48f8-b9c3-434116a79327",
+      "techniques": [
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/LabSearch.tsx:195 Keys reach the page as ordinary in-document keydown events. No host keeps keys for itself and no wrapper forwards them."
+        }
+      ]
+    },
+    "a2f9922b-d729-43f1-8050-27103ff26664/native-shell-integration": {
+      "context": "app-shell-and-chrome",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:02.403Z",
+      "worker": "3a238fd6-9077-48f8-b9c3-434116a79327",
+      "techniques": [
+        {
+          "technique": "capability-presence-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/ModuleErrorBoundary.tsx:45 This is a browser-API rejection handled in the page, not a per-host native capability matrix. The precondition (several native hosts) is absent."
+        }
+      ]
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/native-shell-integration": {
+      "context": "character-overview-input",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:02.403Z",
+      "worker": "3a238fd6-9077-48f8-b9c3-434116a79327",
+      "techniques": [
+        {
+          "technique": "layout-resolved-input-synthesis",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/KeyboardVisualization.tsx:13 The keyboard rows are static display data for a visualization. Nothing synthesizes input into a foreign application."
+        }
+      ]
     }
   }
 }
