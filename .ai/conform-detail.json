@@ -14360,6 +14360,137 @@
         }
       ],
       "registryProposal": "The golden path frames residency for games on small devices. A desktop authoring-tool preview that leaks GPU resources for every model viewed is covered only by the 'when not to use' sentence ('a total and a growth check suffice'). Stating that reduced form as an explicit decision rule for tool and preview renderers would make verdicts like this one less of a judgment call."
+    },
+    "7bd9e87a-be16-4ec4-b792-b4761bc0e742/game-economy-tuning": {
+      "context": "simulation-tools",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:28:57.879Z",
+      "worker": "74a64b94-be59-4996-8af4-c1f37916e5e5",
+      "techniques": [
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/types/economy-simulator.ts:59 The band verdict itself is realized (BalanceBandResult has a canon-read tolerance, a basis and unspecified/not-measured states), but the input type has no way to record an unestimated frequency, which the band's representation rule forbids."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "conformant",
+          "evidence": "src/types/economy-simulator.ts:20 Five-kind vocabulary, converter input legs required, unclassified reported and never absorbed."
+        },
+        {
+          "technique": "feedback-loop-topology-and-polarity",
+          "verdict": "conformant",
+          "evidence": "src/types/economy-simulator.ts:89 EconomyLoop needs polarity, a gain (or 'uncharacterised'), a latency and a path."
+        },
+        {
+          "technique": "structural-economy-simulation-before-numbers",
+          "verdict": "conformant",
+          "evidence": "src/types/economy-simulator.ts:148 The audit flags nodes whose declared throughput the structure cannot supply (a drain that never fires) and blocks a pass. This is checked on the stochastic run, not a separate deterministic unit-rate walk."
+        },
+        {
+          "technique": "wealth-concentration-and-price-imbalance-alerts",
+          "verdict": "conformant",
+          "evidence": "src/types/economy-simulator.ts:234 Gini is computed per level; the engine warns above 0.6 and goes critical above 0.8, and price-imbalance alerts exist."
+        },
+        {
+          "technique": "rarity-inflation-and-affix-saturation-alerts",
+          "verdict": "deviation",
+          "evidence": "src/types/economy-simulator.ts:250 The alert union covers monetary and distribution failures but has no reward-curve-decay family (power plateau, rarity obsolescence or inflation, modifier saturation, upgrade drought), even though items carry rarity and dropWeight."
+        },
+        {
+          "technique": "economy-philosophy-multipliers",
+          "verdict": "conformant",
+          "evidence": "src/types/economy-simulator.ts:312 The stance is chosen by name and resolved in lib/economy to a faucetMul/sinkMul/dropMul vector over neutral flows."
+        }
+      ]
+    },
+    "47435999-6b28-447c-93bb-73c02717477e/game-economy-tuning": {
+      "context": "inventory-genome-economy",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:28:57.879Z",
+      "worker": "74a64b94-be59-4996-8af4-c1f37916e5e5",
+      "techniques": [
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy/EconomySankeySection.tsx:24 Trade is a trader or converter (items to gold) but is drawn as a drain; salvage is likewise a converter drawn as a drain."
+        },
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy/EconomySankeySection.tsx:17 The flows are hardcoded numbers with no unit, per-hour frequency, scaling term or band; inflow and outflow both total exactly 100, a placeholder that looks balanced."
+        },
+        {
+          "technique": "rarity-inflation-and-affix-saturation-alerts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy/RarityDistributionSection.tsx:19 Expected vs actual rarity at one fixed mid level with up/down arrows only; no endgame top-rarity share threshold and no inflation-ratio alert. The genome roller's per-affix frequency also has no saturation threshold."
+        }
+      ]
+    },
+    "efa54d5b-69d9-4e56-a504-4ce0ebe76461/game-economy-tuning": {
+      "context": "loot-affix-workbench",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:28:57.879Z",
+      "worker": "74a64b94-be59-4996-8af4-c1f37916e5e5",
+      "techniques": [
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/types.ts:14 CurrencyDef has id, name, icon, color, description and defaultBalance, but no drain list and no faucet or drain throughput fields."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/constants.ts:27 Crafting actions consume currencies to change an item's state and are modeled as pure costs (one-leg drains), not converters. That matches the golden path's preferred drain: currencies as modification operations."
+        }
+      ]
+    },
+    "ee957a28-f90d-4863-8f75-c599520803a4/game-economy-tuning": {
+      "context": "ability-gas-balance",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:28:57.879Z",
+      "worker": "74a64b94-be59-4996-8af4-c1f37916e5e5",
+      "techniques": [
+        {
+          "technique": "tornado-sensitivity-sweeps",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/SensitivityPanel.tsx:48 Baseline-relative ±50% ranges (ResultsAnalysis.tsx:21) and a shared y-domain are realized, but there is no swing value and no sort by swing; results keep the SENSITIVITY_ATTRS order."
+        }
+      ],
+      "registryProposal": "tornado-sensitivity-sweeps is generic (any multi-lever model), and this repo applies it to combat attribute sweeps; the golden path gives combat validation to encounter-balance, so which subject owns non-economy sensitivity sweeps should be stated explicitly."
+    },
+    "078fa4be-c8be-460f-97da-b6230a0612f8/game-economy-tuning": {
+      "context": "character-simulator",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:28:57.879Z",
+      "worker": "74a64b94-be59-4996-8af4-c1f37916e5e5",
+      "techniques": [
+        {
+          "technique": "tornado-sensitivity-sweeps",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/ResultsPanel.tsx:117 Curves come in sensitivityAttributes order from lib/combat/predictive-balance; no swing is computed and nothing is sorted by swing."
+        },
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/data.ts:15 A combat-only simulator; grepping the context for faucet, currency, economy and gold found no resource economy."
+        }
+      ]
     }
   }
 }

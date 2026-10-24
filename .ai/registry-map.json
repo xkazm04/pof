@@ -2268,7 +2268,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/SensitivityPanel.tsx:48 The sensitivity sweep, which cites the tornado technique, shows per-attribute curves in a fixed order and never computes a swing or ranks inputs by it, so it cannot answer which lever to pull first.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "eval-harness",
@@ -9355,7 +9359,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/ResultsPanel.tsx:117 The predictive simulator's sensitivity section draws one curve per attribute in config order, with no swing value and no ranking, so it does not do the tornado job of identifying the dominant lever.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "encounter-balance-simulation",
@@ -15335,7 +15343,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy/EconomySankeySection.tsx:24 The economy Sankey counts a trade/sell transfer as a sink and draws 'Crafting' as a source with no input leg, which are exactly the enumeration errors the node vocabulary exists to prevent.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -17106,7 +17118,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/types.ts:14 Each crafting currency is defined only by a starting stock, with no faucet source or per-hour inflow and drain estimates, so the craft economy has drains but no specified income and cannot be checked against a band.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "prompt-assembly",
@@ -22338,7 +22354,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/types/economy-simulator.ts:59 Every flow's per-hour frequency has to be a number, so an unestimated drain can only be written as zero or a made-up default, never as 'unestimated'; the 'unspecified' verdict can come only from starvation, never from a frequency nobody estimated.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "realtime-combat-semantics",
