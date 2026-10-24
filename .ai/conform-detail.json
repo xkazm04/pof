@@ -2795,39 +2795,48 @@
       "subject": "canvas-graph",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:17:22.075Z",
-      "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:55:13.182Z",
+      "worker": "dbeda5ec-2faf-4f8e-9b85-70c450a08b36",
       "techniques": [
-        {
-          "technique": "canvas-accessibility",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:131 Rooms use one roving tab stop, but every link is its own tab stop; arrow keys walk DOM order via focusSibling and do not pan the focused room into view. The per-edge dash animation is also not reduced-motion gated."
-        },
         {
           "technique": "direct-manipulation",
           "verdict": "deviation",
-          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 No setPointerCapture in LevelFlowEditor. Any mousemove while dragState is set stages move-room (useLevelFlowEditor.ts:183) with no screen-space threshold, and selection is applied on mousedown."
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 No setPointerCapture anywhere in the context. Mouseleave ends the drag. There is no screen-space movement threshold: any mousemove after mousedown stages a move and mouseup commits it."
+        },
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:131 Rooms use a roving tabindex (index.tsx:71) and the svg is a named role=group, but every link is its own tab stop, which is the per-edge tab wall. There are no zoom or fit buttons."
         },
         {
           "technique": "edge-management",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/content/level-design/LevelDesignSpatialDiagram/index.tsx:117 The comment above says the 18% inset is approximate against pixel NODE_W/NODE_H. LevelFlowEditor itself shares ROOM_W/ROOM_H and uses a 20-wide hit stroke; this diagram does not."
-        },
-        {
-          "technique": "graph-layout",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:59 Dragged positions are stored by room id (move-room writes x,y on that room). A new room is a random point in the view with no neighbor or clearance probe, so it can stack."
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:129 Links have durable conn.id identity and a fat invisible hit stroke. Endpoints come from getRoomCenter, which uses the same ROOM_W/ROOM_H constants the node body draws with."
         },
         {
           "technique": "render-budget",
           "verdict": "deviation",
-          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:90 Every link runs an infinite SMIL dash animation. No population gate and no prefers-reduced-motion check in this folder."
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/ConnectionLines.tsx:90 Every link animates forever. The link count grows with user content, and there is neither a population gate nor a reduced-motion gate. Room nodes are also not memoized and get a fresh inline cancelConnecting closure on every render."
         },
         {
           "technique": "viewport-transform",
-          "verdict": "conformant",
-          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:144 Pan is one translate on the world group; this is the matching inverse. There is no zoom. addRoom repeats the same pan subtraction instead of calling getSVGPoint."
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:172 Pan is a React state commit on every mousemove, and it re-renders every unmemoized node. Screen-to-world conversion also appears twice: getSVGPoint (line 144) and addRoom's own '- pan.x' (line 59)."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts:59 New rooms land at a random point in the viewport with no probe for clear space and no placement near neighbors. Positions do persist, keyed by room id."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 The room drag is mouse listeners on the svg, so leaving the svg or crossing the toolbar overlay runs mouseup and the node lets go, with no pointer capture.",
+          "evaluatedAt": "2026-10-13T11:17:22.075Z",
+          "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+          "reason": "replaced by dbeda5ec-2faf-4f8e-9b85-70c450a08b36"
         }
       ]
     },
@@ -2836,39 +2845,48 @@
       "subject": "canvas-graph",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:17:22.075Z",
-      "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:55:13.182Z",
+      "worker": "dbeda5ec-2faf-4f8e-9b85-70c450a08b36",
       "techniques": [
         {
           "technique": "canvas-accessibility",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 NexusGraph nodes are clickable <g> elements with no role or tabIndex. FeatureConstellation is role=img and has no list twin. Zoom buttons on DependencyGraph are labelled; Nexus zoom buttons are not."
-        },
-        {
-          "technique": "direct-manipulation",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:141 Click selects a module. No drag, connect, or marquee in DependencyGraph, NexusGraph, or FeatureConstellation."
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 One stop per node in DependencyGraph. In NexusGraph the nodes are click-only g elements with no keyboard path at all (NexusGraph.tsx:146)."
         },
         {
           "technique": "edge-management",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:75 The y inset is uy*(NODE_H/2+4). On a diagonal that point is inside the rectangle, so the arrowhead is buried. Focus-dimming and bundled counts are present. Constellation edges do use NODE_W/2 on the horizontal side."
-        },
-        {
-          "technique": "graph-layout",
-          "verdict": "deviation",
-          "evidence": "src/lib/constellation/layout.ts:212 Every column's y depends on the widest layer's length, so one added feature recenters the picture. placeModules keeps curated anchors fixed, but overflow modules are slotted by sorted index i % cols."
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:77 Each axis is inset by its own half-size along the unit vector, which traces an ellipse rather than the rectangle border. On a 45-degree edge the end point (about 57,33) falls inside the 70x36 half-box, so the arrowhead is buried under the target node. NexusGraph copies the same math. Focus-context dimming is present (line 90)."
         },
         {
           "technique": "render-budget",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/NexusView/NexusGraph.tsx:167 Every node with critical findings pulses for as long as the builds layer is on. No population gate and no reduced-motion check. Constellation's single next-node pulse is one ornament; its entrance delay is by render index."
+          "evidence": "src/components/modules/evaluator/NexusView/NexusGraph.tsx:167 Each node with critical findings pulses forever, and reduced-motion is not honored. The technique requires reduced-motion to be honored unconditionally."
         },
         {
           "technique": "viewport-transform",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/NexusView/index.tsx:80 zoomViewBox (moduleGraph.ts:224) is the shared center-pinned mapping, but it does not clamp. The 0.5-1.5 clamp is re-written at each call site, here and in GraphControls."
+        },
+        {
+          "technique": "graph-layout",
           "verdict": "conformant",
-          "evidence": "src/lib/topology/moduleGraph.ts:227 Button zoom only, pinned to the graph center through this one function. The 0.5–1.5 clamp is copied in GraphControls and NexusView rather than inside zoomViewBox. No wheel listener."
+          "evidence": "src/lib/topology/moduleGraph.ts:95 Placement is fixed grid anchors plus category bands sorted by id. It is deterministic and canonically ordered, and nobody drags these nodes."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:141 This is a read-only renderer: selection is a plain click, with no drag, pan or marquee."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 Each dependency-graph module is its own tab stop, which is the tab-order wall canvas-accessibility tells you to turn off.",
+          "evaluatedAt": "2026-10-13T11:17:22.075Z",
+          "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+          "reason": "replaced by dbeda5ec-2faf-4f8e-9b85-70c450a08b36"
         }
       ]
     },
@@ -2877,34 +2895,48 @@
       "subject": "canvas-graph",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:17:22.075Z",
-      "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:55:13.182Z",
+      "worker": "dbeda5ec-2faf-4f8e-9b85-70c450a08b36",
       "techniques": [
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 The layout reads collection size and ordinal, and nothing reserves a place for arrivals."
+        },
         {
           "technique": "canvas-accessibility",
           "verdict": "deviation",
-          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:80 Each state is a native button, so Tab stops once per node. No roving tabindex and no list twin in this folder. Search for aria- and tabIndex in AnimationStateMachine found none."
-        },
-        {
-          "technique": "direct-manipulation",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:82 Read-only. The only pointer handler found is click. No drag, capture, or marquee."
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:80 Every state is a native button and so its own tab stop. The diagram region has no role or name, and transition rules show only on mouse hover."
         },
         {
           "technique": "edge-management",
           "verdict": "deviation",
-          "evidence": "src/components/ui/svg/graph-edges.ts:65 StateMachineEdges calls computeEdgeGeometry without a size. Nodes are NODE_W 110 by NODE_H 46 CSS pixels at percentage positions, so an 8% inset is not the node border and changes with panel width."
-        },
-        {
-          "technique": "graph-layout",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 The grid branch is also column/row index. Bridge input is Array.from(a Set) with no sort before layoutStates, so declaration order is an unstated input."
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:100 Edge endpoints are inset a fixed 8 percentage units from center, while nodes are a fixed 110px wide. Node size is never passed in, so edge and node geometry drift as the container resizes."
         },
         {
           "technique": "render-budget",
           "verdict": "deviation",
-          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Completed and sim edges loop forever. Reduced motion is checked (the line above); there is no population gate."
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineEdges.tsx:171 Reduced-motion is honored correctly. But every completed or simulated edge animates forever with no population gate, and the scanned state count is open-ended."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:91 There is no camera: nodes sit at CSS percentages and no code converts pointer coordinates."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/StateMachineNodes.tsx:82 Read-only: nodes are clicked, never dragged or connected."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 Scanned states are placed by index over count, so one added state moves every node on the ring.",
+          "evaluatedAt": "2026-10-13T11:17:22.075Z",
+          "worker": "5eab8f7f-ebf1-47f5-85a5-d21b16703ea9",
+          "reason": "replaced by dbeda5ec-2faf-4f8e-9b85-70c450a08b36"
         }
       ]
     },
@@ -14191,6 +14223,83 @@
           "technique": "pack-existing-vs-smart-unwrap",
           "verdict": "not-applicable",
           "evidence": "src/lib/blender-mcp/scripts/uv-projection.ts:4 This is a world-aligned tiling convention for level geometry, which falls under the technique's 'downstream layout convention' exclusion. It is not consolidating textured parts."
+        }
+      ]
+    },
+    "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/canvas-graph": {
+      "context": "hud-damage-and-navigation",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:55:13.182Z",
+      "worker": "dbeda5ec-2faf-4f8e-9b85-70c450a08b36",
+      "techniques": [
+        {
+          "technique": "direct-manipulation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:132 The model is written on every mousemove from the first event. There is no movement threshold, no commit point and no cancel. Mousedown selects immediately, and there is no pointer capture."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:197 Arrow endpoints use a hard-coded 40px radial inset that is independent of NODE_W/NODE_H, which is the second copy of node geometry that makes arrows float or bury. The 20px hit stroke and tr.id identity are fine."
+        },
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/ScreenNodeView.tsx:43 Screen nodes have no tabIndex, role or label, the svg has no role or name, and connect, delete and edit are pointer-only (double-click, contextmenu)."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:32 addScreen hand-rolls its own pan subtraction beside getSVGPoint (line 100). There is no zoom or fit."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:124 Pan commits state on every mousemove, and the unmemoized ScreenNodeView children re-render with the parent on each one."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:7 Screen positions the user drags are kept only in component state, which a search of index.tsx confirms (no persist or localStorage), so the arrangement is lost on reload. New screens land at random with no overlap probe."
+        }
+      ]
+    },
+    "2991dc7e-92df-4e72-a7fe-ea3d15646718/canvas-graph": {
+      "context": "world-module",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:55:13.182Z",
+      "worker": "dbeda5ec-2faf-4f8e-9b85-70c450a08b36",
+      "techniques": [
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/map/TopologyGraph.tsx:104 MapCanvas does it right: roving tabindex at MapCanvas.tsx:146, with edges aria-hidden and also listed in Region Details. TopologyGraph puts one stop per node with no list twin."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:151 The level filter is render state only: zones outside it dim and stay where they are. Positions are static data."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:286 There is a memo boundary with stabilized props. The ambient pulse on the 5 active zones runs through motionSafe for reduced-motion (line 187), and the zone population is fixed static data."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/map/TopologyGraph.tsx:58 A static fit-to-content viewBox with no camera, and no code converts pointer coordinates."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:147 Read-only: click to select only, no drag or connect."
         }
       ]
     }

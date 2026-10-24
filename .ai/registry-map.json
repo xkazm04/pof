@@ -3901,12 +3901,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 Scanned states are placed by index over count, so one added state moves every node on the ring.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:59c31182b8b6b4db",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/helpers.ts:44 Scanned states are placed by slot index over total count, so a single added or removed state re-places every node on the ring. Past 8 states, the column count from sqrt(count) re-flows the whole grid.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "motion",
@@ -14354,7 +14353,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/FlowCanvas.tsx:111 MenuFlowDiagram's screen drag uses svg mouse listeners with no capture, and mouseleave ends it, so a node lets go the moment the pointer leaves the svg.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "realtime-combat-semantics",
@@ -16497,12 +16500,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 The room drag is mouse listeners on the svg, so leaving the svg or crossing the toolbar overlay runs mouseup and the node lets go, with no pointer capture.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:59c31182b8b6b4db",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/level-design/LevelFlowEditor/index.tsx:115 The room drag is plain mouse listeners on the svg with no pointer capture, and leaving the svg runs the commit-and-release handler, so a fast flick past the edge lets go of the node mid-drag.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -18608,12 +18610,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 Each dependency-graph module is its own tab stop, which is the tab-order wall canvas-accessibility tells you to turn off.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:59c31182b8b6b4db",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:138 Each module node in the dependency graph is its own tab stop, and the svg has no role or name. That is the tab-order wall a read-only surface should avoid, with no list twin behind it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "supply-chain",
@@ -26187,7 +26188,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/map/TopologyGraph.tsx:104 Every node in the read-only zone topology graph is its own tab stop, opened only to show a tooltip, which recreates the tab wall that MapCanvas avoids with a roving listbox.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "regional-culture-worldbuilding",
