@@ -1,0 +1,239 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a1b8aa90-1d2b-4742-8879-7cec685ab4c9",
+ "subject": "mesh-finishing-for-engine-readiness",
+ "evaluatedAt": "2026-10-24T03:19:33.478146+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "visual-gen-mesh",
+   "subject": "mesh-finishing-for-engine-readiness",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/mesh-finish.ts:482 The mesh-finish route drives runMeshFinish. A requested bake whose unwrap was refused or never requested is quietly left out of the argv and never added to bakeSkipped, so a partial (even empty) map set carries no per-bake refusal, despite the status route's promise that refused bakes are listed.",
+   "techniques": [
+    {
+     "technique": "unwrap-only-the-low-poly",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/mesh-finish.ts:482 The unwrap is gated well: the plan needs targetFaces and a 200k-face ceiling, and the refusal carries a reason (line 389). Step 4 is missing: 'unwrap refused -> bake refused, and say so'. The bake is dropped without its own reason, and with unwrap:false it is dropped with no reason at all."
+    },
+    {
+     "technique": "high-to-low-bake-coverage",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-finish.ts:439 There is an explicit bakeable set. The request is deduplicated. Metallic is refused as data with a reason, and bakes that fail at run time go to bakeFailed. Diffuse and roughness are material transfers rather than geometric derivations, and the result does not label them as such."
+    },
+    {
+     "technique": "crease-angle-and-custom-normals",
+     "verdict": "conformant",
+     "evidence": "scripts/visual-gen/pof_mesh_finish.py:356 Authored normals are detected and the angle pass is refused with SHADING_SKIPPED and a reason. The default is 30 degrees, 0 disables it, and the applied rule is reported as auto_smooth@N."
+    },
+    {
+     "technique": "pack-existing-vs-smart-unwrap",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/mesh-finish.ts:480 Projection is the explicit default, so authored UVs get re-projected whenever a caller omits the mode. The HTTP route does not expose uvMode at all. The pack-to-smart fallback is reported, and requested and applied mode are kept as separate fields."
+    },
+    {
+     "technique": "export-proven-by-read-back",
+     "verdict": "deviation",
+     "evidence": "scripts/visual-gen/pof_mesh_finish.py:705 The finish script reports DONE once the file exists and records its size. The GLB is never parsed back for scene count, foreign nodes or mesh count. The later Tier-1 critique is import-side acceptance, which the technique treats as a separate check."
+    },
+    {
+     "technique": "headless-dcc-capability-limits",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-finish.ts:112 Headless behaviour (the custom-normal no-op, UV stretch bands, QuadriFlow fallback) is probed live and recorded with the Blender version and the date."
+    }
+   ],
+   "registryProposal": "mesh-finish.ts:111-149 records a measured counter-finding to pack-existing-vs-smart-unwrap. On 7 Tripo meshes (Blender 4.2.1, 2026-09-07/18), pack-existing after edge-collapse reduction measured worse texel-density evenness (p95 1.54-1.80 vs 1.12-1.17 for smart). Most of the loss came from the reduction distorting the carried UVs, and a blind 1024 render A/B showed no visible difference. The technique's 'authored layout present -> re-pack' should say that decimation degrades the authored coordinates it is preserving."
+  },
+  {
+   "context": "visual-gen-rigging-conformance",
+   "subject": "mesh-finishing-for-engine-readiness",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/metahuman-conform.ts:63 The MetaHuman conform passes the joint and repose mode as unlabeled positional flags, and ConformResult records neither the joint-inheritance mode nor the template version. The verification a conform target owes (orientation inherited from the template, not estimated) cannot be run, while checkPresetBinding passes the conform row on mapping emptiness alone.",
+   "techniques": [
+    {
+     "technique": "conform-target-is-not-a-remap-row",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/metahuman-conform.ts:63 The kind field is declared and branched on (rig-presets.ts:33, :187). But the conform row's check is 'ok: mixamoMapping.length === 0' (rig-presets.ts:194), and the conform run records no inheritance mode or template version. The technique says a conform target owes a different verification, not none."
+    },
+    {
+     "technique": "rig-preset-and-bone-remap-binding",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/rig-presets.ts:211 Presets are named, with bone count, root, finger/face flags and IK chains. One mapping table, the single owner. The totality check reports the unmapped set by name, not a boolean."
+    },
+    {
+     "technique": "headless-dcc-capability-limits",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/metahuman-conform.ts:14 The high-level wrapper was probed live on UE 5.8.0 (2026-07-05). The proven lower-level conform_body_to_target is used instead, as the technique's 'prefer the proven lower-level call' rule says."
+    },
+    {
+     "technique": "high-to-low-bake-coverage",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/finish-routing.ts:170 The routed finish requests only geometry-derivable channels."
+    },
+    {
+     "technique": "pack-existing-vs-smart-unwrap",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/finish-routing.ts:169 The remediation spec requests an unwrap with no uvMode, so generated meshes that arrive with provider UVs are always smart-projected. Nothing measures authored coordinates first."
+    }
+   ]
+  },
+  {
+   "context": "procedural-scene-tools",
+   "subject": "mesh-finishing-for-engine-readiness",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:38 'Create in Blender' builds an armature from the preset's IK-chain endpoints, and it is offered for every preset, the MetaHuman conform row included. This derives the target's shape from summary fields, which the technique says to refuse. The outcome message does disclose the stand-in.",
+   "techniques": [
+    {
+     "technique": "conform-target-is-not-a-remap-row",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:38 Step 3 says to refuse deriving the target's shape from chain endpoints. RigPresetCard.tsx:79 gates the button only on connection, not on kind. The UI does branch the mapping section on kind (index.tsx:140), and helpers.ts:33 names the stand-in."
+    },
+    {
+     "technique": "rig-preset-and-bone-remap-binding",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/index.tsx:136 The section is never hidden: it shows the totality or conform reason for the selected preset, and RigCheckPanel checks a produced rig against a target."
+    },
+    {
+     "technique": "export-proven-by-read-back",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:33 The success status comes from the export receipt, which export-scene prints only after its in-process read-back. A transport OK is never treated as success."
+    }
+   ]
+  },
+  {
+   "context": "blender-mcp-bridge",
+   "subject": "mesh-finishing-for-engine-readiness",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/blender-mcp/scripts/export-scene.ts:100 The GLB read-back is thorough: one scene, no foreign mesh nodes (line 76), a non-empty export. The FBX branch only counts meshes and never compares them with the intended set, so a foreign object from another scene or collection passes and the receipt says checked:True.",
+   "techniques": [
+    {
+     "technique": "export-proven-by-read-back",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/scripts/export-scene.ts:100 The in-process read-back, the intended set resolved before the write, and the named issues are all realized for GLB (line 76). In the FBX path the 'expected object set with nothing foreign' comparison is missing, and neither path checks bounds."
+    },
+    {
+     "technique": "rig-preset-and-bone-remap-binding",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/scripts/export-scene.ts:30 Step 6 says to normalise the export contract. This FBX call leaves add_leaf_bones and the axis settings at their defaults, while sibling repo exporters (scripts/diablo/glb_to_fbx.py:67, scripts/visual-gen/ardy/pof_bvh_blender.py:94) set add_leaf_bones=False."
+    },
+    {
+     "technique": "pack-existing-vs-smart-unwrap",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/blender-mcp/scripts/uv-projection.ts:4 This is a world-aligned tiling convention for level geometry, which falls under the technique's 'downstream layout convention' exclusion. It is not consolidating textured parts."
+    }
+   ]
+  },
+  {
+   "context": "material-lab",
+   "subject": "mesh-finishing-for-engine-readiness",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/visual-gen/material-lab/DeriveMapsButton.tsx:9 Material lab authors tiling PBR materials and estimates channels from a colour image. The golden path names both as neighbouring concerns outside mesh finishing, and a search of the context directory for bake, unwrap, retopo, decimat and armature found no hits.",
+   "techniques": [
+    {
+     "technique": "high-to-low-bake-coverage",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/material-lab/DeriveMapsButton.tsx:9 This is estimation from albedo, a different technique by the standard's own decision rule. Provenance chips do label how each channel was obtained."
+    }
+   ],
+   "absenceTerms": [
+    "bake",
+    "unwrap",
+    "retopo",
+    "decimat",
+    "armature"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T03:19:33.478146+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "mesh-finishing-for-engine-readiness"
+   ],
+   "techniques": [
+    "crease-angle-and-custom-normals",
+    "export-proven-by-read-back",
+    "headless-dcc-capability-limits",
+    "high-to-low-bake-coverage",
+    "pack-existing-vs-smart-unwrap",
+    "unwrap-only-the-low-poly"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-mesh",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:19:33.478146+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "mesh-finishing-for-engine-readiness"
+   ],
+   "techniques": [
+    "conform-target-is-not-a-remap-row",
+    "headless-dcc-capability-limits",
+    "high-to-low-bake-coverage",
+    "pack-existing-vs-smart-unwrap",
+    "rig-preset-and-bone-remap-binding"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-rigging-conformance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:19:33.478146+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "mesh-finishing-for-engine-readiness"
+   ],
+   "techniques": [
+    "conform-target-is-not-a-remap-row",
+    "export-proven-by-read-back",
+    "rig-preset-and-bone-remap-binding"
+   ],
+   "deviations": 1,
+   "context": "procedural-scene-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:19:33.478146+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "mesh-finishing-for-engine-readiness"
+   ],
+   "techniques": [
+    "export-proven-by-read-back",
+    "pack-existing-vs-smart-unwrap",
+    "rig-preset-and-bone-remap-binding"
+   ],
+   "deviations": 1,
+   "context": "blender-mcp-bridge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:19:33.478146+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "mesh-finishing-for-engine-readiness"
+   ],
+   "techniques": [
+    "high-to-low-bake-coverage"
+   ],
+   "deviations": 0,
+   "context": "material-lab",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

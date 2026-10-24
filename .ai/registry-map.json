@@ -6136,7 +6136,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/blender-mcp/scripts/export-scene.ts:100 The GLB read-back is thorough: one scene, no foreign mesh nodes (line 76), a non-empty export. The FBX branch only counts meshes and never compares them with the intended set, so a foreign object from another scene or collection passes and the receipt says checked:True.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",
@@ -17715,7 +17719,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/DeriveMapsButton.tsx:9 Material lab authors tiling PBR materials and estimates channels from a colour image. The golden path names both as neighbouring concerns outside mesh finishing, and a search of the context directory for bake, unwrap, retopo, decimat and armature found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "render-submission-economy",
@@ -19732,7 +19740,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:38 'Create in Blender' builds an armature from the preset's IK-chain endpoints, and it is offered for every preset, the MetaHuman conform row included. This derives the target's shape from summary fields, which the technique says to refuse. The outcome message does disclose the stand-in.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "talking-avatar",
@@ -25289,7 +25301,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:482 The mesh-finish route drives runMeshFinish. A requested bake whose unwrap was refused or never requested is quietly left out of the argv and never added to bakeSkipped, so a partial (even empty) map set carries no per-bake refusal, despite the status route's promise that refused bakes are listed.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "asset-class-poly-budgeting",
@@ -25799,7 +25815,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:63 The MetaHuman conform passes the joint and repose mode as unlabeled positional flags, and ConformResult records neither the joint-inheritance mode nor the template version. The verification a conform target owes (orientation inherited from the template, not estimated) cannot be run, while checkPresetBinding passes the conform row on mapping emptiness alone.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "image-to-3d-input-gating",

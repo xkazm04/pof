@@ -2641,47 +2641,49 @@
       "context": "visual-gen-rigging-conformance",
       "subject": "mesh-finishing-for-engine-readiness",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T10:27:53.357Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:19:33.478Z",
+      "worker": "a1b8aa90-1d2b-4742-8879-7cec685ab4c9",
       "techniques": [
         {
           "technique": "conform-target-is-not-a-remap-row",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/rig-presets.ts:187 Rig presets branch on kind='conform', returning unmappedChainBones: null because conform targets inherit template topology and rig without source skeleton remapping."
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:63 The kind field is declared and branched on (rig-presets.ts:33, :187). But the conform row's check is 'ok: mixamoMapping.length === 0' (rig-presets.ts:194), and the conform run records no inheritance mode or template version. The technique says a conform target owes a different verification, not none."
         },
         {
           "technique": "rig-preset-and-bone-remap-binding",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/rig-presets.ts:203 Rig presets verify totality over required IK chain endpoints, failing when an endpoint is missing from the mapping table."
+          "evidence": "src/lib/visual-gen/rig-presets.ts:211 Presets are named, with bone count, root, finger/face flags and IK chains. One mapping table, the single owner. The totality check reports the unmapped set by name, not a boolean."
         },
         {
           "technique": "headless-dcc-capability-limits",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/metahuman-conform.ts:63 Uses lower-level vertex conform call proven to execute unattended in headless UE instead of the high-level interactive wrapper."
-        },
-        {
-          "technique": "texture-pass-must-consume-the-bake",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/reference-roles.ts:105 Enforces splitting AI color from PBR properties so generative texturing does not fabricate conflicting material maps over geometric detail."
-        },
-        {
-          "technique": "unwrap-only-the-low-poly",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/finish-routing.ts:137 Enforces that unwrap is only planned when accompanied by a target face decimation budget."
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:14 The high-level wrapper was probed live on UE 5.8.0 (2026-07-05). The proven lower-level conform_body_to_target is used instead, as the technique's 'prefer the proven lower-level call' rule says."
         },
         {
           "technique": "high-to-low-bake-coverage",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/finish-routing.ts:139 Plans only derivable shape channels (normal, ao) for high-to-low baking."
+          "evidence": "src/lib/visual-gen/finish-routing.ts:170 The routed finish requests only geometry-derivable channels."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:169 The remediation spec requests an unwrap with no uvMode, so generated meshes that arrive with provider UVs are always smart-projected. Nothing measures authored coordinates first."
+        },
+        {
+          "technique": "texture-pass-must-consume-the-bake",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:105 Enforces splitting AI color from PBR properties so generative texturing does not fabricate conflicting material maps over geometric detail.",
+          "carriedFrom": "2026-10-13"
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:137 Enforces that unwrap is only planned when accompanied by a target face decimation budget.",
+          "carriedFrom": "2026-10-13"
         }
-      ],
-      "withdrawn": {
-        "worker": "c833e09c-1436-493f-86c8-14dc09c36212",
-        "state": "conformant",
-        "at": "2026-10-13T10:28:17.377487+00:00",
-        "reason": "reviewer (sonnet): The rig-presets.ts:187 conform branch and :203 totality check are real, but the evidence also claims enforced headless DCC limits, an unwrap restriction to low-poly targets and a baking-coverage guard, and I could not confirm the last two; reference-roles.ts:105 is a prose guidance entry, not an enf"
-      }
+      ]
     },
     "c120fef4-1da4-432b-9fac-7abb92a27830/mesh-finishing-for-engine-readiness": {
       "context": "visual-gen-asset-pipeline",
@@ -2728,62 +2730,65 @@
       "context": "material-lab",
       "subject": "mesh-finishing-for-engine-readiness",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T10:27:53.357Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:19:33.478Z",
+      "worker": "a1b8aa90-1d2b-4742-8879-7cec685ab4c9",
       "techniques": [
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/DeriveMapsButton.tsx:9 This is estimation from albedo, a different technique by the standard's own decision rule. Provenance chips do label how each channel was obtained."
+        },
         {
           "technique": "conform-target-is-not-a-remap-row",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not handle character skeletons or rig targets."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not handle character skeletons or rig targets.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "crease-angle-and-custom-normals",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not manage geometry smoothing or custom normal overrides."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not manage geometry smoothing or custom normal overrides.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "export-proven-by-read-back",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab generates Python code snippets for UE5 material instances rather than exporting mesh files."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab generates Python code snippets for UE5 material instances rather than exporting mesh files.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "headless-dcc-capability-limits",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab is an interactive browser UI component, not an unattended headless DCC stage."
-        },
-        {
-          "technique": "high-to-low-bake-coverage",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab edits 2D texture properties rather than running high-to-low geometry bakes."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab is an interactive browser UI component, not an unattended headless DCC stage.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "pack-existing-vs-smart-unwrap",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not compute or pack UV coordinates."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not compute or pack UV coordinates.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "rig-preset-and-bone-remap-binding",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not bind meshes to skeletons."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not bind meshes to skeletons.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "texture-pass-must-consume-the-bake",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab works with tiling textures, not baked normal maps from geometry decimation."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab works with tiling textures, not baked normal maps from geometry decimation.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "unwrap-only-the-low-poly",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not perform mesh retopology or unwrapping."
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:171 Material lab does not perform mesh retopology or unwrapping.",
+          "carriedFrom": "2026-10-13"
         }
-      ],
-      "withdrawn": {
-        "worker": "c833e09c-1436-493f-86c8-14dc09c36212",
-        "state": "not-applicable",
-        "at": "2026-10-13T10:28:17.424238+00:00",
-        "reason": "reviewer (sonnet): The anchor MaterialLabView.tsx:171 is only a `moduleId=\"material-lab\"` prop and shows no absence; the four technique claims all cite that same line, and the context includes an AdvancedTexturePanel I did not trace."
-      }
+      ]
     },
     "7041e335-744f-454d-9814-b474b9f31c37/canvas-graph": {
       "context": "level-flow-editor",
@@ -14094,6 +14099,100 @@
         "at": "2026-10-24T02:14:56.341720+00:00",
         "reason": "reviewer (sonnet): The deviation rests on GA_MeleeAttack.h:131 and a C++ HitStopDuration default of 0.08, but no GA_MeleeAttack.h exists anywhere in the kiro tree, so the claimed drift against the header cannot be confirmed."
       }
+    },
+    "6f37d3d5-8476-45cf-8598-a7a900cfe93c/mesh-finishing-for-engine-readiness": {
+      "context": "visual-gen-mesh",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:19:33.478Z",
+      "worker": "a1b8aa90-1d2b-4742-8879-7cec685ab4c9",
+      "techniques": [
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:482 The unwrap is gated well: the plan needs targetFaces and a 200k-face ceiling, and the refusal carries a reason (line 389). Step 4 is missing: 'unwrap refused -> bake refused, and say so'. The bake is dropped without its own reason, and with unwrap:false it is dropped with no reason at all."
+        },
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:439 There is an explicit bakeable set. The request is deduplicated. Metallic is refused as data with a reason, and bakes that fail at run time go to bakeFailed. Diffuse and roughness are material transfers rather than geometric derivations, and the result does not label them as such."
+        },
+        {
+          "technique": "crease-angle-and-custom-normals",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:356 Authored normals are detected and the angle pass is refused with SHADING_SKIPPED and a reason. The default is 30 degrees, 0 disables it, and the applied rule is reported as auto_smooth@N."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:480 Projection is the explicit default, so authored UVs get re-projected whenever a caller omits the mode. The HTTP route does not expose uvMode at all. The pack-to-smart fallback is reported, and requested and applied mode are kept as separate fields."
+        },
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:705 The finish script reports DONE once the file exists and records its size. The GLB is never parsed back for scene count, foreign nodes or mesh count. The later Tier-1 critique is import-side acceptance, which the technique treats as a separate check."
+        },
+        {
+          "technique": "headless-dcc-capability-limits",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:112 Headless behaviour (the custom-normal no-op, UV stretch bands, QuadriFlow fallback) is probed live and recorded with the Blender version and the date."
+        }
+      ],
+      "registryProposal": "mesh-finish.ts:111-149 records a measured counter-finding to pack-existing-vs-smart-unwrap. On 7 Tripo meshes (Blender 4.2.1, 2026-09-07/18), pack-existing after edge-collapse reduction measured worse texel-density evenness (p95 1.54-1.80 vs 1.12-1.17 for smart). Most of the loss came from the reduction distorting the carried UVs, and a blind 1024 render A/B showed no visible difference. The technique's 'authored layout present -> re-pack' should say that decimation degrades the authored coordinates it is preserving."
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/mesh-finishing-for-engine-readiness": {
+      "context": "procedural-scene-tools",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:19:33.478Z",
+      "worker": "a1b8aa90-1d2b-4742-8879-7cec685ab4c9",
+      "techniques": [
+        {
+          "technique": "conform-target-is-not-a-remap-row",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:38 Step 3 says to refuse deriving the target's shape from chain endpoints. RigPresetCard.tsx:79 gates the button only on connection, not on kind. The UI does branch the mapping section on kind (index.tsx:140), and helpers.ts:33 names the stand-in."
+        },
+        {
+          "technique": "rig-preset-and-bone-remap-binding",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/index.tsx:136 The section is never hidden: it shows the totality or conform reason for the selected preset, and RigCheckPanel checks a produced rig against a target."
+        },
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:33 The success status comes from the export receipt, which export-scene prints only after its in-process read-back. A transport OK is never treated as success."
+        }
+      ]
+    },
+    "d6a661e1-369c-4819-85cf-0a6c31282ef6/mesh-finishing-for-engine-readiness": {
+      "context": "blender-mcp-bridge",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:19:33.478Z",
+      "worker": "a1b8aa90-1d2b-4742-8879-7cec685ab4c9",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/scripts/export-scene.ts:100 The in-process read-back, the intended set resolved before the write, and the named issues are all realized for GLB (line 76). In the FBX path the 'expected object set with nothing foreign' comparison is missing, and neither path checks bounds."
+        },
+        {
+          "technique": "rig-preset-and-bone-remap-binding",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/scripts/export-scene.ts:30 Step 6 says to normalise the export contract. This FBX call leaves add_leaf_bones and the axis settings at their defaults, while sibling repo exporters (scripts/diablo/glb_to_fbx.py:67, scripts/visual-gen/ardy/pof_bvh_blender.py:94) set add_leaf_bones=False."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/blender-mcp/scripts/uv-projection.ts:4 This is a world-aligned tiling convention for level geometry, which falls under the technique's 'downstream layout convention' exclusion. It is not consolidating textured parts."
+        }
+      ]
     }
   }
 }
