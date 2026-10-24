@@ -15525,7 +15525,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:69 The Items gallery steps (Icon 2D, 3D Generation, Material) declare an L1 human-selection gate, but appendBatch auto-selects the first candidate on Produce and acceptance passes on that machine pick. The code keeps it that way because 'requiring a click would break the e2e walker', which only calls produceStep (catalog-pipeline-walker.spec.ts:68). The gated party opens its own gate; the SELECTION: AUTO chip records this but does not close the gate.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "quality-gates",
@@ -15743,7 +15747,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/judge/spendMeter.ts:163 The headless judge fleet turns the interactive preflight warning into a hard refusal with printed reasons. Verdicts are append-only and bound to content hash and rubric version, and judge calibration requires agreement with human labels that only an explicit operator act can confirm.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "scoring-rubrics",

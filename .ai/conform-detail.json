@@ -4380,25 +4380,40 @@
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-15",
-      "evaluatedTs": "2026-10-15T01:06:18.099Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:36:32.650Z",
       "techniques": [
         {
           "technique": "decision-records",
           "verdict": "deviation",
-          "evidence": "src/lib/one-shot/orchestrator.ts:183 approveAndRun persists an entity and changes client phase, but records no version-bound human verdict atomically with that transition."
+          "evidence": "src/lib/one-shot/orchestrator.ts:193 The approval exists only as a state flip. A grep of src/lib/one-shot for approv/decision/audit found no verdict record."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:203 appendBatch auto-selects the first candidate, which satisfies the L1 human-selection gate rendered by GenerativeStepFrame/ArchetypeStep galleries, so the machine opens its own gate. The one-shot approve path is guarded correctly by a phase check at orchestrator.ts:145."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:177 The spend consent shows the model-dispatch count, with the cost copy in RunPlanView and the off-target marker, before the operator approves."
         },
         {
           "technique": "resume-after-decision",
-          "verdict": "deviation",
-          "evidence": "src/lib/one-shot/orchestrator.ts:146 Each approval invocation creates a fresh draft before awaiting persistence; phase remains approvable during that await, allowing duplicate clicks to start duplicate continuations."
+          "verdict": "conformant",
+          "evidence": "src/stores/oneShotJobStore.ts:112 An unanswered proposal survives a reload as durable pending state rather than being lost or auto-run."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/ProposalLanding.tsx:94 The reviewer at the gate is shown what to compare the proposal against: the target and the analyzed distribution."
         }
       ],
       "withdrawn": {
-        "worker": "d90d1836-edf2-485a-9856-654c11ce1b3b",
+        "worker": "ec60dfae-727e-47b5-a6d0-699403ffa9d2",
         "state": "deviation",
-        "at": "2026-10-15T01:06:55.056236+00:00",
-        "reason": "reviewer (sonnet): The anchor src/lib/one-shot/orchestrator.ts is not in this context's layout-lab step components, and I could not confirm that those components call approveAndRun, so the verdict reads as about the one-shot orchestrator, a different context."
+        "at": "2026-10-24T05:36:56.019034+00:00",
+        "reason": "reviewer (sonnet): The deviation anchors on src/lib/one-shot/orchestrator.ts:193, which is outside this context (the layout-lab/steps components) and is not code those components call; the claim is about the one-shot job flow, a different context."
       }
     },
     "0baa32d9-9127-4452-aaee-d679f899ee1d/hitl-approval": {
@@ -14742,6 +14757,78 @@
           "technique": "difficulty-band-classification",
           "verdict": "not-applicable",
           "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/types.ts:11 These are action-named ratings over frame-data ratios, not a survival or win-rate outcome measure. Note, though, that their cuts (50/30, 40/20, 4/3) are not printed beside the badge in FrameDataTable."
+        }
+      ]
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/hitl-approval": {
+      "context": "judge-craft-quality",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:36:32.650Z",
+      "worker": "ec60dfae-727e-47b5-a6d0-699403ffa9d2",
+      "techniques": [
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/spendMeter.ts:163 With nobody to answer a confirm, warn becomes refuse, and the reasons are returned so the denial is never silent."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/spendMeter.ts:154 Spending beyond budget needs an explicit operator force flag and is never granted by default."
+        },
+        {
+          "technique": "unattended-mode",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/spendMeter.ts:196 The unattended run has a ceiling in dollars and a stop that trips. Overshoot after the stop is recorded, so ungated is not unrecorded."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:4 Verdicts are appended, and superseded or stale rows are kept as evidence rather than edited."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:41 A verdict under a rubric that is not in force keeps only its refusing arm. The general judge pass is a recoverable content acceptance, not a trust-boundary admission."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "src/lib/craft/craftCell.ts:118 An unknown content binding resolves to unknown, never to the cheap 'same'. verdictStanding:61 keeps an unknown-binding verdict condemning."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:29 Only a content-bound operator label moves a calibration target from provisional to confirmed. A source edit cannot."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:37 The judge is checked against a named oracle, confirmed human bands, with an enforced threshold."
+        }
+      ]
+    },
+    "3f0f619b-52a3-4238-b72a-8df88fd452fd/hitl-approval": {
+      "context": "item-catalog-pipeline",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:36:32.650Z",
+      "worker": "ec60dfae-727e-47b5-a6d0-699403ffa9d2",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:69 The machine-produced selection satisfies a human-only transition. Provenance is recorded, but acceptance is unchanged."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/ItemGate.tsx:23 A check that cannot be observed reads DEFER, and any non-deferred blocker reads FAIL. Uncertainty never resolves to PASS."
         }
       ]
     }
