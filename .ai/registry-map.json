@@ -2780,12 +2780,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/app/api/one-shot/step/route.ts:276 The one-shot execution route invokes autonomous agent runs with MCP tools enabled while bypassing consent and write-freshness gates.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/app/api/one-shot/step/route.ts:276 The one-shot step route spawns an autonomous Claude CLI with the configured MCP servers (pof-mcp plus unreal-official) loaded, and every spawn carries --dangerously-skip-permissions, so no tool call, however destructive, ever stops for a human.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34,
+          "revisionsBehind": 3
         },
         {
           "subject": "voice-io",
@@ -6117,12 +6116,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/lib/blender-mcp/service.ts:98 The service connects to a local TCP socket rather than using standard streams, exposing an unauthenticated network listener on localhost.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/lib/blender-mcp/scripts/create-material.ts:156 The material script applies its result to whatever object the Blender operator has active at execution time and reports only the material name, so a byte-identical call addresses a different object depending on ambient selection and the transcript never shows which object was changed.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34,
+          "revisionsBehind": 3
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -21866,12 +21864,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 The save-system module is purely a client-side React UI component for Unreal Engine save-game schema design, diffing, and budget tracking, without any tool protocol host or server integration.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 A case-insensitive grep of sub_save/ for mcp, callTool, inputSchema, tools/call and functionDeclarations found nothing; the context is a client React module for save-schema design with no tool-protocol host, client or server.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34,
+          "revisionsBehind": 3
         },
         {
           "subject": "supply-chain",
@@ -24275,12 +24272,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/app/api/blender-mcp/execute/route.ts:11 Exposes an unauthenticated HTTP route executing arbitrary Python code strings directly in Blender without positional auditing, grammar bounds, or transport-level access controls.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/app/api/blender-mcp/generate/route.ts:8 Only execute and connect/disconnect call requireOperator; the paid provider generation route and the scene-mutating import route dispatch with no guard, so authorization is a per-handler convention rather than one check before dispatch.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34,
+          "revisionsBehind": 3
         },
         {
           "subject": "codebase-scanning",
@@ -24409,12 +24405,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:4 This context implements human-facing editor state inspection and property syncing via WebSocket rather than an MCP tool protocol server or client.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 3,
-          "stale": true
+          "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:7 A case-insensitive grep of both panel directories for mcp, callTool, inputSchema, tools/call and functionDeclarations found nothing; the panels are human-operated views over the UE5 plugin's WebSocket (selection is shown to a person, not passed as a model tool argument).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34,
+          "revisionsBehind": 3
         },
         {
           "subject": "voice-io",
