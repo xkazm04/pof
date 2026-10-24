@@ -2144,24 +2144,34 @@
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T09:21:57.039Z",
-      "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:35:44.925Z",
+      "worker": "5da99d9a-a1b6-4c10-815a-a569b97418f0",
       "techniques": [
-        {
-          "technique": "activation-is-a-separate-mutation",
-          "verdict": "not-applicable",
-          "evidence": "src/components/cli/skills.ts:237 Skill packs are prompt text for a new session only; resume does not re-inject them, and nothing here registers a callback that runs on later sessions."
-        },
-        {
-          "technique": "additive-input-at-the-call-boundary",
-          "verdict": "deviation",
-          "evidence": "src/components/cli/CompactTerminal.tsx:80 A follow-up typed while the run is streaming is dropped, and TerminalInput marks the textarea readOnly for that time, so the message never joins the running unit."
-        },
         {
           "technique": "indeterminate-closure-on-interruption",
           "verdict": "deviation",
-          "evidence": "src/components/cli/useTaskQueue.ts:886 Abort omits outcomeUnknown. An unobserved server loss is handled separately: runArbiter returns outcomeUnknown on not-found, and sessionRun stores success null only when that flag is set."
+          "evidence": "src/components/cli/useTaskQueue.ts:596 This is the tell the technique names: the unknown outcome is recovered by matching an error message. endLostRun (line 458) does pass outcomeUnknown, but abort (886) and conflict recovery (741, registerTaskComplete(..., false)) both write failure."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/TerminalInput.tsx:47 The loop here is a one-shot CLI process with no injection point, so mid-unit typed input is refused visibly at the surface ('Working — press Esc to stop…'), which is what the technique's 'when not to reach for this' asks for. Caveat: a programmatic pof-cli-prompt dispatch that arrives while streaming is dropped silently (CompactTerminal.tsx:110)."
+        },
+        {
+          "technique": "activation-is-a-separate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/skills.ts:237 Skill packs are prompt text for a new session only; resume does not re-inject them, and nothing here registers a callback that runs on later sessions.",
+          "carriedFrom": "2026-10-13"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/cli/useTaskQueue.ts:886 A user abort ends the run as success false, with no outcomeUnknown flag, so a killed Claude process is recorded as a failure while its in-flight tool effects are unknown.",
+          "evaluatedAt": "2026-10-13T09:21:57.039Z",
+          "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+          "reason": "replaced by 5da99d9a-a1b6-4c10-815a-a569b97418f0"
         }
       ]
     },
@@ -2170,19 +2180,34 @@
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T09:21:57.039Z",
-      "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:35:44.925Z",
+      "worker": "5da99d9a-a1b6-4c10-815a-a569b97418f0",
       "techniques": [
         {
           "technique": "indeterminate-closure-on-interruption",
           "verdict": "deviation",
-          "evidence": "src/app/api/claude-terminal/stream/route.ts:134 The execution type includes aborted, but this replay frame publishes only result or error. The client completion path switches on that event type."
+          "evidence": "src/app/api/claude-terminal/query/route.ts:130 The lost-execution case, whose outcome is unknown, reaches clients only as an error message string and not as a first-class status. The stream route does the same at line 106."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/claude-terminal/query/route.ts:64 Each prompt spawns a fresh CLI execution. The route has no running loop that takes injected input, so the call-boundary injection precondition does not hold."
         },
         {
           "technique": "operator-tier-code-loading",
           "verdict": "conformant",
-          "evidence": "src/lib/claude-terminal/mcp-config.ts:25 One-shot step sets enableMcp true, and buildCliArgs appends --mcp-config only from this env var; the request body cannot name the config path. A missing file warns and spawns without it."
+          "evidence": "src/lib/claude-terminal/mcp-config.ts:25 One-shot step sets enableMcp true, and buildCliArgs appends --mcp-config only from this env var; the request body cannot name the config path. A missing file warns and spawns without it.",
+          "carriedFrom": "2026-10-13"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/app/api/claude-terminal/stream/route.ts:134 When a finished execution is replayed, every status other than completed is sent as an error event, so an aborted run is delivered as a failure.",
+          "evaluatedAt": "2026-10-13T09:21:57.039Z",
+          "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+          "reason": "replaced by 5da99d9a-a1b6-4c10-815a-a569b97418f0"
         }
       ]
     },
@@ -2191,14 +2216,23 @@
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T09:21:57.039Z",
-      "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:35:44.925Z",
+      "worker": "5da99d9a-a1b6-4c10-815a-a569b97418f0",
       "techniques": [
         {
           "technique": "indeterminate-closure-on-interruption",
           "verdict": "deviation",
-          "evidence": "src/app/api/cli-task-registry/route.ts:74 TaskStatus is only running, completed, or failed. The stale branch marks failed and then starts the new task; it does not return the old execution for the client to kill."
+          "evidence": "src/app/api/cli-task-registry/route.ts:88 Completion is binary: anything not reported as failed is stored as completed, and a stale run is stored as failed (line 74). No status means 'outcome unknown, not retried'."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/app/api/cli-task-registry/route.ts:74 A running task whose heartbeat went stale is stored as failed when another start arrives, and the registry status type has no unknown value.",
+          "evaluatedAt": "2026-10-13T09:21:57.039Z",
+          "worker": "590211e5-82d0-40c0-a9db-01c845fc12f8",
+          "reason": "replaced by 5da99d9a-a1b6-4c10-815a-a569b97418f0"
         }
       ]
     },

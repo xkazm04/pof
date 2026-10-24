@@ -2827,12 +2827,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/app/api/claude-terminal/stream/route.ts:134 When a finished execution is replayed, every status other than completed is sent as an error event, so an aborted run is delivered as a failure.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
-          "evaluatedRevision": 27,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/app/api/claude-terminal/stream/route.ts:134 When a finished execution is replayed, every non-completed status, including the server's own 'aborted', goes out as an SSE error frame (with no error field), so the client closes an aborted run as a failure; separately, the unknown-outcome case is sent as the error string 'Execution not found' (stream line 106, query line 130), which consumers must string-match.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -9783,12 +9782,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/cli/useTaskQueue.ts:886 A user abort ends the run as success false, with no outcomeUnknown flag, so a killed Claude process is recorded as a failure while its in-flight tool effects are unknown.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
-          "evaluatedRevision": 27,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/cli/useTaskQueue.ts:886 A user abort kills the server-side Claude process and then ends the run as a plain failure with no outcomeUnknown flag, even though the server keeps a distinct 'aborted' status; the client also recovers the lost-run case by comparing the error string 'Execution not found' (line 596), so the indeterminate verdict lives in prose instead of a first-class status.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28,
+          "revisionsBehind": 1
         },
         {
           "subject": "terminal-multiplexing",
@@ -19396,12 +19394,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/app/api/cli-task-registry/route.ts:74 A running task whose heartbeat went stale is stored as failed when another start arrives, and the registry status type has no unknown value.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
-          "evaluatedRevision": 27,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/app/api/cli-task-registry/route.ts:74 When a new start arrives, a running task whose heartbeat went stale is force-closed as 'failed'. That is a definite verdict about a run nobody observed ending, and the registry vocabulary (running|completed|failed) has no unknown status to write instead.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-cli-transport",
