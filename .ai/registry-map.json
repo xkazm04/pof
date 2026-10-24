@@ -6764,12 +6764,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:133 The dashboard loads packaging build records; a search of the listed files for prompt, claude, llm, and systemPrompt found only STATUS_TOKENS color tokens in BuildScopeBanner, no prompt assembler.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
-          "evaluatedRevision": 43,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:152 The dashboard and config selector read and write packaging build records through the REST API. The listed files contain no hits for prompt, PromptBuilder, systemPrompt, llm or useModuleCLI, so they assemble no model prompt.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44,
+          "revisionsBehind": 1
         },
         {
           "subject": "ship-pipeline-gating",
@@ -8440,11 +8439,7 @@
           "confidence": "strong",
           "state": "not-applicable",
           "evidence": "src/components/layout-lab/produceLog.ts:85 These files record whether a stored produce direction already contained a prompt and persist canon rules that prompts read elsewhere; a search of the listed files for PromptBuilder, '## ', 'You are', and buildPrompt found no assembler.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
-          "evaluatedRevision": 43,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-10-13"
         },
         {
           "subject": "test-harness",
@@ -9486,12 +9481,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/cli/TerminalOutput/index.tsx:244 Starter chips copy a one-line string into the input via onPromptFill; a search of the listed TerminalOutput files found no assembler, budget, or transcript compaction, and ToolRows.tsx:26 uses CSS truncate on the rendered log row.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
-          "evaluatedRevision": 43,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:244 The output renderer only drops a one-line starter string into the operator's input, and BuildBlock delegates the fix prompt to buildLedger. A search of the TerminalOutput directory found no PromptBuilder, systemPrompt, compaction or tokenBudget; the only truncation is display-side (helpers.tsx slice, CSS truncate).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-cli-transport",

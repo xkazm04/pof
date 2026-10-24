@@ -1191,30 +1191,62 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T01:28:21.100Z",
-      "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
-      "techniques": []
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:02:31.139Z",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:85 These files record whether a stored produce direction already contained a prompt and persist canon rules that prompts read elsewhere; a search of the listed files for PromptBuilder, '## ', 'You are', and buildPrompt found no assembler.",
+          "evaluatedAt": "2026-10-13T01:28:21.100Z",
+          "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+          "reason": "replaced by 06bf860b-ce15-4ee4-ac6a-41e5d5351b59"
+        }
+      ],
+      "withdrawn": {
+        "worker": "06bf860b-ce15-4ee4-ac6a-41e5d5351b59",
+        "state": "not-applicable",
+        "at": "2026-10-24T03:02:50.239837+00:00",
+        "reason": "reviewer (sonnet): The anchor produceLog.ts:85 (hadPrompt) is not one of the context's listed files, so it doesn't show that this context's stores assemble no prompt. The context's own files show only prompt-related comments (labProduceMode, labPipelineStore), and I couldn't confirm that the 'buildPrompt hits in sibli"
+      }
     },
     "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/prompt-assembly": {
       "context": "build-history-config",
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T01:28:21.100Z",
-      "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
-      "techniques": []
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:02:31.139Z",
+      "worker": "06bf860b-ce15-4ee4-ac6a-41e5d5351b59",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:133 The dashboard loads packaging build records; a search of the listed files for prompt, claude, llm, and systemPrompt found only STATUS_TOKENS color tokens in BuildScopeBanner, no prompt assembler.",
+          "evaluatedAt": "2026-10-13T01:28:21.100Z",
+          "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+          "reason": "replaced by 06bf860b-ce15-4ee4-ac6a-41e5d5351b59"
+        }
+      ]
     },
     "20166201-35ae-4729-8806-61f8cf8fa780/prompt-assembly": {
       "context": "cli-terminal-output",
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T01:28:21.100Z",
-      "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
-      "techniques": []
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:02:31.139Z",
+      "worker": "06bf860b-ce15-4ee4-ac6a-41e5d5351b59",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:244 Starter chips copy a one-line string into the input via onPromptFill; a search of the listed TerminalOutput files found no assembler, budget, or transcript compaction, and ToolRows.tsx:26 uses CSS truncate on the rendered log row.",
+          "evaluatedAt": "2026-10-13T01:28:21.100Z",
+          "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
+          "reason": "replaced by 06bf860b-ce15-4ee4-ac6a-41e5d5351b59"
+        }
+      ]
     },
     "30cdb5e6-8b36-4c5a-ba10-680374ae843a/supply-chain": {
       "context": "module-topology-graph",
