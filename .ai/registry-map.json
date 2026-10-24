@@ -5731,7 +5731,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/audioEventCatalogStore.ts:45 This context is an audio UI shell plus a persisted Zustand catalog store. Its 'commit' (useDebouncedCommit) is a debounced write of editor state, not a VCS commit. A search of src/components/modules/content/audio for git worktree, git stash, git add and GIT_INDEX_FILE found 0 hits, so the subject's precondition (sessions committing in a shared checkout) does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         },
         {
           "subject": "catalog-pipeline-authoring",
@@ -11418,7 +11422,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport.tsx:17 This context is shared tab, chart and genome-share UI; its 'build code' is a deflate+base64 genome string, not a VCS artifact. A search of src/components/modules/core-engine/unique-tabs for git worktree, git stash, git add and GIT_INDEX_FILE found 0 hits, so no concurrent-commit mechanics exist here to judge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         },
         {
           "subject": "sidecar-provisioning",
@@ -13030,7 +13038,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useEntityCommitBuffer.ts:8 These hooks fetch and mutate feature-matrix and design-doc state. The 'stage'/'commit' vocabulary in useEntityCommitBuffer describes when an editor's edit is written to the server, not git staging. A search of src/hooks for git worktree, git stash, git add and GIT_INDEX_FILE found 0 hits, so the subject's shared-checkout precondition does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -13529,7 +13541,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/stores/projectHealthStore.ts:53 This context holds a project-health store, game-director SQLite access, session-analytics types and hooks, and ECW helpers, all about playtest and session data, not version control. Searches for git worktree, git stash, git add and GIT_INDEX_FILE across src/stores, src/types, src/hooks, src/lib and src/app/api/project-health found 0 hits; bare 'stash' and 'worktree' do appear elsewhere in src/lib and src/stores, but not in this context's files.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -22352,7 +22368,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/index.tsx:21 This context is React dashboard UI that renders session, spend and quality analytics fetched from hooks. It runs no version-control operations: a search of src/components/modules/evaluator for git worktree, git stash, git add and GIT_INDEX_FILE (and for bare worktree and stash) found 0 hits, so the shared-checkout commit mechanics this subject covers have nothing to govern here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         },
         {
           "subject": "people-analytics-ethics",

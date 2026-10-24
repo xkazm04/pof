@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
+ "subject": "concurrent-vcs",
+ "evaluatedAt": "2026-10-24T23:45:52.231414+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "session-analytics-reporting",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/index.tsx:21 This context is React dashboard UI that renders session, spend and quality analytics fetched from hooks. It runs no version-control operations: a search of src/components/modules/evaluator for git worktree, git stash, git add and GIT_INDEX_FILE (and for bare worktree and stash) found 0 hits, so the shared-checkout commit mechanics this subject covers have nothing to govern here.",
+   "techniques": [],
+   "absenceTerms": [
+    "git worktree",
+    "git stash",
+    "git add",
+    "GIT_INDEX_FILE"
+   ]
+  },
+  {
+   "context": "audio-view-and-catalog",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/audioEventCatalogStore.ts:45 This context is an audio UI shell plus a persisted Zustand catalog store. Its 'commit' (useDebouncedCommit) is a debounced write of editor state, not a VCS commit. A search of src/components/modules/content/audio for git worktree, git stash, git add and GIT_INDEX_FILE found 0 hits, so the subject's precondition (sessions committing in a shared checkout) does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "git worktree",
+    "git stash",
+    "git add",
+    "GIT_INDEX_FILE"
+   ]
+  },
+  {
+   "context": "game-director-system",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/stores/projectHealthStore.ts:53 This context holds a project-health store, game-director SQLite access, session-analytics types and hooks, and ECW helpers, all about playtest and session data, not version control. Searches for git worktree, git stash, git add and GIT_INDEX_FILE across src/stores, src/types, src/hooks, src/lib and src/app/api/project-health found 0 hits; bare 'stash' and 'worktree' do appear elsewhere in src/lib and src/stores, but not in this context's files.",
+   "techniques": [],
+   "absenceTerms": [
+    "git worktree",
+    "git stash",
+    "git add",
+    "GIT_INDEX_FILE"
+   ]
+  },
+  {
+   "context": "core-engine-genre-tabs",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport.tsx:17 This context is shared tab, chart and genome-share UI; its 'build code' is a deflate+base64 genome string, not a VCS artifact. A search of src/components/modules/core-engine/unique-tabs for git worktree, git stash, git add and GIT_INDEX_FILE found 0 hits, so no concurrent-commit mechanics exist here to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "git worktree",
+    "git stash",
+    "git add",
+    "GIT_INDEX_FILE"
+   ]
+  },
+  {
+   "context": "feature-design-state-hooks",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/hooks/useEntityCommitBuffer.ts:8 These hooks fetch and mutate feature-matrix and design-doc state. The 'stage'/'commit' vocabulary in useEntityCommitBuffer describes when an editor's edit is written to the server, not git staging. A search of src/hooks for git worktree, git stash, git add and GIT_INDEX_FILE found 0 hits, so the subject's shared-checkout precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "git worktree",
+    "git stash",
+    "git add",
+    "GIT_INDEX_FILE"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:45:52.231414+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "session-analytics-reporting",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:45:52.231414+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-view-and-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:45:52.231414+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "game-director-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:45:52.231414+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "core-engine-genre-tabs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:45:52.231414+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "feature-design-state-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

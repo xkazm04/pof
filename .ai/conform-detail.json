@@ -15946,6 +15946,56 @@
       "evaluatedTs": "2026-10-24T23:31:59.064Z",
       "worker": "ecb64452-8c4a-43cf-81ab-84c911848254",
       "techniques": []
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/concurrent-vcs": {
+      "context": "session-analytics-reporting",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:45:52.231Z",
+      "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
+      "techniques": []
+    },
+    "8982772c-2414-4c6a-a49b-0d33e98deaec/concurrent-vcs": {
+      "context": "audio-view-and-catalog",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:45:52.231Z",
+      "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
+      "techniques": []
+    },
+    "43c8c748-ad7d-4ec7-866f-6049ed660349/concurrent-vcs": {
+      "context": "game-director-system",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:45:52.231Z",
+      "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
+      "techniques": []
+    },
+    "4c0281bd-ea7b-44ba-86a0-ccda978296a4/concurrent-vcs": {
+      "context": "core-engine-genre-tabs",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:45:52.231Z",
+      "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
+      "techniques": []
+    },
+    "18f62a30-bc54-4204-a7fb-e7ccde2aabc1/concurrent-vcs": {
+      "context": "feature-design-state-hooks",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:45:52.231Z",
+      "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
+      "techniques": []
     }
   }
 }
