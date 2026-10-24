@@ -9713,12 +9713,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/cli/store/cliPanelStore.ts:184 When reaching the session limit, idle terminal sessions are recycled by reassigning their session ID instead of managing distinct session entities, and if all sessions are busy the store spawns beyond MAX_SESSIONS without admission control.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
-          "evaluatedRevision": 26,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "src/components/cli/store/cliPanelStore.ts:184 At the 8-session cap, createSession returns an existing idle session's id (with its old label, moduleId, sessionKey and claudeSessionId) as if it were a new one, and when every session is busy it mints a 9th+ session with no admission queue, so identity is reused and the cap is a courtesy rather than a door.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28,
+          "revisionsBehind": 2
         },
         {
           "subject": "agent-memory",
@@ -18121,12 +18120,11 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/hooks/useChecklistCLI.ts:100 Competing checklist task dispatches against an active terminal session are silently dropped without queuing or caller rejection, risking task loss and leaving the user unaware of unexecuted instructions.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
-          "evaluatedRevision": 26,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "src/hooks/useChecklistCLI.ts:100 A checklist dispatch for a different item while a run is live hits a bare `return` (line 101): it is neither queued nor refused back to the caller, so the user's instruction disappears silently.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28,
+          "revisionsBehind": 2
         },
         {
           "subject": "agent-cli-transport",
@@ -22718,11 +22716,7 @@
           "confidence": "probable",
           "state": "deviation",
           "evidence": "src/components/status/ModelsView.tsx:81 Task class routing and judging allocate exclusively between models within the Claude family, preventing independent multi-model panel verification.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:3eafb649495c9498",
-          "evaluatedRevision": 26,
-          "revisionsBehind": 2,
-          "stale": true
+          "evaluatedAt": "2026-10-13"
         },
         {
           "subject": "mcp-tools",

@@ -3329,24 +3329,44 @@
       "subject": "fleet-orchestration",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T22:14:46.342Z",
-      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:45:22.614Z",
+      "worker": "d31aa84c-d922-4b73-baae-43163f865e5f",
       "techniques": [
         {
           "technique": "parallel-dispatch",
           "verdict": "deviation",
-          "evidence": "src/hooks/useChecklistCLI.ts:100 Dispatches drop silently when a session is busy rather than queueing, tracking concurrency tickets, or returning an explicit busy rejection."
+          "evidence": "src/hooks/useChecklistCLI.ts:100 An over-capacity request that cannot be queued must be refused, with the limit stated. Here sendPrompt returns void and drops it silently."
         },
         {
           "technique": "completion-claim-verification",
-          "verdict": "deviation",
-          "evidence": "src/hooks/useChecklistCLI.ts:65 Checklist item completion is marked true purely on Claude CLI report in onComplete without inspecting drop point files, build logs, or verifying artifacts parent-side."
+          "verdict": "conformant",
+          "evidence": "src/hooks/useChecklistCLI.ts:63 An item flips to done only when the server confirmed the callback POST landed, not on the run's own success."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useChecklistCLI.ts:71 'Completion claimed, result missing' is its own class, with a retry affordance, rather than being folded into success."
+        },
+        {
+          "technique": "lifecycle-signals",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useModuleCLI.ts:102 Completion is read from the endRun transition edge itself, which carries that run's outcome, not from a later getState."
         },
         {
           "technique": "heterogeneous-model-panels",
           "verdict": "deviation",
-          "evidence": "src/hooks/useModuleReviewCli.ts:111 Review tasks and downstream implementation tasks run through the same Claude Code CLI instance, coupling the reviewer and the generator to the same model family without cross-provider decorrelation."
+          "evidence": "src/hooks/useModuleReviewCli.ts:111 Review tasks and downstream implementation tasks run through the same Claude Code CLI instance, coupling the reviewer and the generator to the same model family without cross-provider decorrelation.",
+          "carriedFrom": "2026-10-13"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:100 Competing checklist task dispatches against an active terminal session are silently dropped without queuing or caller rejection, risking task loss and leaving the user unaware of unexecuted instructions.",
+          "evaluatedAt": "2026-10-13T22:14:46.342Z",
+          "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+          "reason": "replaced by d31aa84c-d922-4b73-baae-43163f865e5f"
         }
       ]
     },
@@ -3355,29 +3375,53 @@
       "subject": "fleet-orchestration",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T22:14:46.342Z",
-      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:45:22.614Z",
+      "worker": "d31aa84c-d922-4b73-baae-43163f865e5f",
       "techniques": [
         {
           "technique": "session-registry",
           "verdict": "deviation",
-          "evidence": "src/components/cli/store/cliPanelStore.ts:184 Session IDs are recycled from idle entries to reuse terminal tabs instead of treating each session lifecycle as an immutable registered record."
+          "evidence": "src/components/cli/store/cliPanelStore.ts:184 A create request is answered with another session's identity, and the caller's sessionKey/moduleId are never stamped on it. That violates the rule that identity is minted at creation and never reused."
         },
         {
-          "technique": "durable-fleet-state",
+          "technique": "parallel-dispatch",
           "verdict": "deviation",
-          "evidence": "src/components/cli/store/cliPanelStore.ts:458 Rehydration blindly resets all running sessions to idle without reconciling against surviving background processes or verifying actual process state."
+          "evidence": "src/components/cli/store/cliPanelStore.ts:175 The cap is not admit-to-cap/queue-beyond. With all sessions running it falls through and exceeds MAX_SESSIONS, and a second submitPrompt during a run silently returns (useTaskQueue.ts:799)."
         },
         {
-          "technique": "absent-status-passthrough",
+          "technique": "lifecycle-signals",
           "verdict": "conformant",
-          "evidence": "src/components/cli/runArbiter.ts:37 Correctly treats an unreachable observation as unknown/wait rather than fabricating an execution failure."
+          "evidence": "src/components/cli/useTaskQueue.ts:689 Positive frames end runs directly. Silence, onerror, the stuck poll and the hidden poll only consult the server and go through one arbiter."
         },
         {
           "technique": "evidence-outranks-a-liveness-claim",
           "verdict": "conformant",
-          "evidence": "src/components/cli/runArbiter.ts:38 When a session drop point/record is missing, it arbitrates outcomeUnknown rather than assuming success or fabricating an end state."
+          "evidence": "src/components/cli/useTaskQueue.ts:684 An unreachable server maps to 'wait' rather than death. Only an affirmative not-found ends the run, and then as outcome-unknown."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:20 null means the outcome was never observed (e.g. after a refresh) and is kept distinct from a failure. The rehydrate merge resets it to null."
+        },
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:46 The execution id is persisted so a reload re-attaches to a still-live server run (CompactTerminal.tsx:64 attachExecution) instead of orphaning it."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:560 A clean result is not taken as done. Callback confirmation is settled server-side and reported as confirmed, failed or missing."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:184 When reaching the session limit, idle terminal sessions are recycled by reassigning their session ID instead of managing distinct session entities, and if all sessions are busy the store spawns beyond MAX_SESSIONS without admission control.",
+          "evaluatedAt": "2026-10-13T22:14:46.342Z",
+          "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+          "reason": "replaced by d31aa84c-d922-4b73-baae-43163f865e5f"
         }
       ]
     },
@@ -3443,31 +3487,52 @@
       "subject": "fleet-orchestration",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T22:14:46.342Z",
-      "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:45:22.614Z",
       "techniques": [
         {
           "technique": "heterogeneous-model-panels",
           "verdict": "deviation",
-          "evidence": "src/components/status/ModelsView.tsx:81 Tasks and judges are configured exclusively within Claude tiers (Haiku/Sonnet/Opus) rather than decorrelated across heterogeneous model providers."
-        },
-        {
-          "technique": "session-registry",
-          "verdict": "deviation",
-          "evidence": "src/lib/status/statusModel.ts:41 Defines a domain-specific 8-state grading taxonomy that tracks artifact pipeline health rather than fleet worker lifecycles."
-        },
-        {
-          "technique": "evidence-outranks-a-liveness-claim",
-          "verdict": "conformant",
-          "evidence": "src/lib/status/statusModel.ts:602 Requires that a passing verdict be verified against current artifact provenance, degrading unproven or stale claims to not-proven."
+          "evidence": "src/lib/status/statusModel.ts:626 The produce-review pair needs a reviewer from another family, fixed by policy. Here a Claude judge alone elevates Claude-produced work to verified. The Qwen VLM tier is a different family but covers only vision."
         },
         {
           "technique": "completion-claim-verification",
           "verdict": "conformant",
-          "evidence": "src/lib/status/statusModel.ts:615 Enforces that completion claims meet strict numerical evaluation rubrics before marking a cell verified."
+          "evidence": "src/lib/status/statusModel.ts:602 Only a verdict bound to the current content hash elevates. Undeterminable provenance degrades to not-proven, never to passed."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:424 An unknown engine stays unknown instead of being defaulted into the trusted bucket."
+        },
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:41 Defines a domain-specific 8-state grading taxonomy that tracks artifact pipeline health rather than fleet worker lifecycles.",
+          "carriedFrom": "2026-10-13"
+        },
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:602 Requires that a passing verdict be verified against current artifact provenance, degrading unproven or stale claims to not-proven.",
+          "carriedFrom": "2026-10-13"
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/status/ModelsView.tsx:81 Task class routing and judging allocate exclusively between models within the Claude family, preventing independent multi-model panel verification.",
+          "evaluatedAt": "2026-10-13T22:14:46.342Z",
+          "worker": "32143763-4e51-4c1d-8c26-ac75b9cf8dcf",
+          "reason": "replaced by d31aa84c-d922-4b73-baae-43163f865e5f"
+        }
+      ],
+      "withdrawn": {
+        "worker": "d31aa84c-d922-4b73-baae-43163f865e5f",
+        "state": "deviation",
+        "at": "2026-10-24T02:45:40.814215+00:00",
+        "reason": "reviewer (sonnet): statusModel.ts:626 only shows a bound strict judge pass raising a cell to verified. ModelsView.tsx:82 only says the policy table lists Claude models. Nothing I opened shows the content is Claude-produced; the engine names in the file (Leonardo, Code (deterministic)) point to other producers, so the "
+      }
     },
     "5d7501be-122c-46a1-8d33-a35dc76215b9/agent-cli-transport": {
       "context": "cli-terminal-shell",

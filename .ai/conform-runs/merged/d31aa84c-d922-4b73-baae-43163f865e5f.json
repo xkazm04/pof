@@ -1,0 +1,155 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d31aa84c-d922-4b73-baae-43163f865e5f",
+  "subject": "fleet-orchestration",
+  "evaluatedAt": "2026-10-24T02:45:22.614933+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "cli-terminal-shell",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/cli/store/cliPanelStore.ts:184 At the 8-session cap, createSession returns an existing idle session's id (with its old label, moduleId, sessionKey and claudeSessionId) as if it were a new one, and when every session is busy it mints a 9th+ session with no admission queue, so identity is reused and the cap is a courtesy rather than a door.",
+      "techniques": [
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:184 A create request is answered with another session's identity, and the caller's sessionKey/moduleId are never stamped on it. That violates the rule that identity is minted at creation and never reused."
+        },
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:175 The cap is not admit-to-cap/queue-beyond. With all sessions running it falls through and exceeds MAX_SESSIONS, and a second submitPrompt during a run silently returns (useTaskQueue.ts:799)."
+        },
+        {
+          "technique": "lifecycle-signals",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:689 Positive frames end runs directly. Silence, onerror, the stuck poll and the hidden poll only consult the server and go through one arbiter."
+        },
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:684 An unreachable server maps to 'wait' rather than death. Only an affirmative not-found ends the run, and then as outcome-unknown."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:20 null means the outcome was never observed (e.g. after a refresh) and is kept distinct from a failure. The rehydrate merge resets it to null."
+        },
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/store/cliPanelStore.ts:46 The execution id is persisted so a reload re-attaches to a still-live server run (CompactTerminal.tsx:64 attachExecution) instead of orphaning it."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:560 A clean result is not taken as done. Callback confirmation is settled server-side and reported as confirmed, failed or missing."
+        }
+      ]
+    },
+    {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/hooks/useChecklistCLI.ts:100 A checklist dispatch for a different item while a run is live hits a bare `return` (line 101): it is neither queued nor refused back to the caller, so the user's instruction disappears silently.",
+      "techniques": [
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:100 An over-capacity request that cannot be queued must be refused, with the limit stated. Here sendPrompt returns void and drops it silently."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useChecklistCLI.ts:63 An item flips to done only when the server confirmed the callback POST landed, not on the run's own success."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useChecklistCLI.ts:71 'Completion claimed, result missing' is its own class, with a retry affordance, rather than being folded into success."
+        },
+        {
+          "technique": "lifecycle-signals",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useModuleCLI.ts:102 Completion is read from the endRun transition edge itself, which carries that run's outcome, not from a later getState."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "fleet-orchestration",
+      "context": "catalog-pipeline-api",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "fleet-orchestration",
+      "context": "catalog-pipeline-state",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "fleet-orchestration",
+      "context": "status-health-dashboard",
+      "reason": "withdrawn after review: reviewer (sonnet): statusModel.ts:626 only shows a bound strict judge pass raising a cell to verified. ModelsView.tsx:82 only says the policy table lists Claude models. Nothing I opened shows the content is Claude-produced; the engine names in the file (Leonardo, Code (deterministic)) point to other producers, so the "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T02:45:22.614933+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [
+        "absent-status-passthrough",
+        "completion-claim-verification",
+        "durable-fleet-state",
+        "evidence-outranks-a-liveness-claim",
+        "lifecycle-signals",
+        "parallel-dispatch",
+        "session-registry"
+      ],
+      "deviations": 1,
+      "context": "cli-terminal-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:45:22.614933+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [
+        "completion-claim-verification",
+        "lifecycle-signals",
+        "parallel-dispatch",
+        "result-harvest"
+      ],
+      "deviations": 1,
+      "context": "module-cli-orchestration-hooks",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:45:22.614933+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [
+        "absent-status-passthrough",
+        "completion-claim-verification",
+        "heterogeneous-model-panels"
+      ],
+      "deviations": 1,
+      "context": "status-health-dashboard",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
