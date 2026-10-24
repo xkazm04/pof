@@ -7627,7 +7627,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/labArtifactClient.ts:136 The LayoutLab UI only calls the app's own same-origin API, so it is a client of one backend and not a plane in front of interchangeable upstreams; a grep of layout-lab/ and app/layout/ found 0 hits for gateway, failover and loadBalance. 'upstream' does appear there, but only for pipeline steps that come earlier, and 'provider' only names a generator script.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "table",
@@ -7998,7 +8002,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/pipeline-artifacts-db.ts:357 This context is a single-SQLite persistence layer plus CRUD/drain routes, with no candidate tree, provider translation or stream framing; a recursive grep of src/lib, src/stores and the pipeline-artifacts and catalog API routes found 0 hits for failover, loadBalance and finish_reason.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "node-boot-and-declarative-bootstrap",
@@ -14994,7 +15002,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:15 The gear catalog reads item data from a local Zustand catalog store and fronts no set of interchangeable upstreams; a case-insensitive grep of sub_inventory/ for upstream, gateway, failover and provider found 0 hits, so the gateway-plane precondition does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-memory",
@@ -15250,7 +15262,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:14 The economy simulator and loot-filter builder run local simulation and verdict code over in-app data, with no multi-upstream request path; a recursive grep of sub_inventory/ found 0 hits for upstream, gateway, failover and provider.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "quality-gates",
@@ -15416,7 +15432,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy/EconomySourcingTab.tsx:13 The genome editor and economy sourcing views render local or dummy item data and route nothing to several providers; a grep of dna-genome/ and economy/ (and sub_inventory/ as a whole) found 0 hits for upstream, gateway, failover and provider.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "quality-gates",

@@ -14908,6 +14908,56 @@
         }
       ],
       "registryProposal": "Line-number citations in prose (\"line 91–92\") are a claim class that goes false on any edit above the cited line, even when every symbol name still resolves. doc-rot-detection or source-doc-mapping could tell authors to cite symbols, not line numbers, or have the rot scan check that a cited line number still holds the named symbol."
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/multi-provider-gateway-plane": {
+      "context": "inventory-catalog",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:07:30.303Z",
+      "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
+      "techniques": []
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/multi-provider-gateway-plane": {
+      "context": "inventory-economy-simulator",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:07:30.303Z",
+      "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
+      "techniques": []
+    },
+    "47435999-6b28-447c-93bb-73c02717477e/multi-provider-gateway-plane": {
+      "context": "inventory-genome-economy",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:07:30.303Z",
+      "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
+      "techniques": []
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/multi-provider-gateway-plane": {
+      "context": "catalog-browser-ui",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:07:30.303Z",
+      "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
+      "techniques": []
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/multi-provider-gateway-plane": {
+      "context": "catalog-database",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:07:30.303Z",
+      "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
+      "techniques": []
     }
   }
 }

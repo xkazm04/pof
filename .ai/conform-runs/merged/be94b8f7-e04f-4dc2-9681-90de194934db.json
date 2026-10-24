@@ -1,0 +1,141 @@
+{
+ "schema": "conform-run/1",
+ "worker": "be94b8f7-e04f-4dc2-9681-90de194934db",
+ "subject": "multi-provider-gateway-plane",
+ "evaluatedAt": "2026-10-24T06:07:30.303637+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "inventory-catalog",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:15 The gear catalog reads item data from a local Zustand catalog store and fronts no set of interchangeable upstreams; a case-insensitive grep of sub_inventory/ for upstream, gateway, failover and provider found 0 hits, so the gateway-plane precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "upstream",
+    "gateway",
+    "failover",
+    "provider"
+   ]
+  },
+  {
+   "context": "inventory-economy-simulator",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:14 The economy simulator and loot-filter builder run local simulation and verdict code over in-app data, with no multi-upstream request path; a recursive grep of sub_inventory/ found 0 hits for upstream, gateway, failover and provider.",
+   "techniques": [],
+   "absenceTerms": [
+    "upstream",
+    "gateway",
+    "failover",
+    "provider"
+   ]
+  },
+  {
+   "context": "inventory-genome-economy",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/economy/EconomySourcingTab.tsx:13 The genome editor and economy sourcing views render local or dummy item data and route nothing to several providers; a grep of dna-genome/ and economy/ (and sub_inventory/ as a whole) found 0 hits for upstream, gateway, failover and provider.",
+   "techniques": [],
+   "absenceTerms": [
+    "upstream",
+    "gateway",
+    "failover",
+    "provider"
+   ]
+  },
+  {
+   "context": "catalog-browser-ui",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/labArtifactClient.ts:136 The LayoutLab UI only calls the app's own same-origin API, so it is a client of one backend and not a plane in front of interchangeable upstreams; a grep of layout-lab/ and app/layout/ found 0 hits for gateway, failover and loadBalance. 'upstream' does appear there, but only for pipeline steps that come earlier, and 'provider' only names a generator script.",
+   "techniques": [],
+   "absenceTerms": [
+    "gateway",
+    "failover",
+    "loadBalance"
+   ]
+  },
+  {
+   "context": "catalog-database",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/pipeline-artifacts-db.ts:357 This context is a single-SQLite persistence layer plus CRUD/drain routes, with no candidate tree, provider translation or stream framing; a recursive grep of src/lib, src/stores and the pipeline-artifacts and catalog API routes found 0 hits for failover, loadBalance and finish_reason.",
+   "techniques": [],
+   "absenceTerms": [
+    "failover",
+    "loadBalance",
+    "finish_reason"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T06:07:30.303637+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "inventory-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:07:30.303637+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "inventory-economy-simulator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:07:30.303637+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "inventory-genome-economy",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:07:30.303637+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "catalog-browser-ui",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:07:30.303637+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "catalog-database",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
