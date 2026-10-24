@@ -4763,7 +4763,11 @@
           "revision": 2,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:176 The viewer builds a BudgetRequest from the class ceiling so the delivered-versus-requested grader can run. The visible budgetLine says 'ceiling', but the returned grade.budget carries requestedTriangles=ceiling and, past 1.1x, gradeFaceBudget's reason that 'the provider did not honour the requested budget' (or the quad-trap text) about a budget nobody sent. Example: chair.glb at 83,728 tris as a prop.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:83d174ba84bd1c83",
+          "evaluatedRevision": 2
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -6361,7 +6365,11 @@
           "revision": 2,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:54 The LOD tab commissions triangle targets from a measured source and an optional stated class. It then grades each delivered level against the target it was commissioned at, and leaves LOD0 ungraded when no class is chosen.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:83d174ba84bd1c83",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -25687,7 +25695,11 @@
           "revision": 2,
           "changedAt": "2026-09-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:473 The triangle budget in targetFaces goes straight to QuadriFlow, whose target_faces counts quads (scripts/visual-gen/pof_mesh_finish.py:307 passes int(target_faces) unchanged). Nothing calls providerFaceLimit({topology:'quads'}), so a quadriflow finish triangulates on GLB export at about 2x the authored budget, which is the exact quad trap face-budget.ts was written to prevent.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:83d174ba84bd1c83",
+          "evaluatedRevision": 2
         },
         {
           "subject": "image-to-3d-input-gating",

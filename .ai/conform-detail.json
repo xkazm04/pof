@@ -6612,47 +6612,42 @@
       "context": "visual-gen-mesh-quality-gates",
       "subject": "asset-class-poly-budgeting",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T21:17:27.710Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:37:20.460Z",
+      "worker": "f4105de4-d386-45e6-89e0-32f72ebb52ce",
       "techniques": [
         {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:29 face-budget.ts:29 declares FACE_BUDGET_UNIT='triangles', but the authoritative preset field is still the un-united faceLimit, and face-budget.ts:7 itself says presets author 'with no unit stated'. generationPlanFor and planPartBudget rationales say 'faces', and mesh-finish.ts:226 documents targetFaces as 'roughly this many faces'. The technique says to rename such a field, not leave it."
+        },
+        {
           "technique": "provider-face-limit-conversion",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/face-budget.ts:76 Converts authored triangle budget to provider face_limit at the edge, explicitly halving and flooring for quad topology."
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:473 The named floor-not-round function exists (face-budget.ts:76-80, undefined for junk input). The quad-counting remesher edge in this context skips it and hands the triangle budget over as a quad target."
         },
         {
           "technique": "quad-trap-detection",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/face-budget.ts:121 Tests measured/requested ratio against explicit [1.8, 2.2] band and attributes overruns inside it to the quad/triangle trap by name."
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/face-budget.ts:121 The ratio, the 1.1 tolerance and the named 1.8-2.2 band are all realized. But the attribution never checks request.topology, so a triangle-topology request (what every in-repo caller sends) at 2x is told 'a quad-topology request must be halved'. That is the misattribution the technique's decision rule forbids. A delivery far under budget is also silently 'honored'."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:148 The header comment (lines 13-17) states the shaping rule, but generationPlanFor gives every budgeted asset its class number as the generation request. RunnerStartInput has no per-asset budget field, which is the one-number-per-class policy the technique replaces."
         },
         {
           "technique": "part-split-budget-division",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/polycount-presets.ts:180 Divides assembled whole budget by part count when naive per-part modular budget overruns, returning constrained flag and rationale."
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:186 planPartBudget divides only when naive*parts overruns the whole, floors, returns a constrained flag plus a rationale, and refuses an unknown class or parts<1. It has no production caller, and no assembled-whole measurement is wired."
         },
         {
           "technique": "class-ceiling-vs-requested-budget",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/polycount-presets.ts:219 Enforces class ceiling resolution without promoting unclassified assets, reporting class-blind degradation explicitly."
-        },
-        {
-          "technique": "triangles-as-the-authored-unit",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/face-budget.ts:29 Declares triangles as the single exported constant unit for all authored geometry budgets in the codebase."
-        },
-        {
-          "technique": "budget-shapes-output-not-just-caps",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/polycount-presets.ts:144 Withholds faceLimit from the generator for bake-quality classes so surplus density is not capped or distorted at generation time, leaving retopo to hit target."
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:261 Budget-blind generators get the class ceiling and a declared stage with no fabricated request. gradeFaceBudget returns unmeasured with a reason when a request or measurement is missing, resolveAssetClass reports class-blind degradation, and warnAbove is 1.5x faceLimit."
         }
-      ],
-      "withdrawn": {
-        "worker": "a2d7f620-737d-4b38-b238-8a56fdaf429d",
-        "state": "conformant",
-        "at": "2026-10-16T21:17:41.469567+00:00",
-        "reason": "reviewer (sonnet): `planPartBudget` (polycount-presets.ts:180) has no caller in src outside tests, and `mesh-split.ts` never calls it, so the claim that the gate divides split-part budgets against the assembled whole is not shown in running code. The `providerFaceLimit` quad halving is also only called from `runner-di"
-      }
+      ]
     },
     "781544e4-d4e7-4f67-8118-e5f903f0fb23/difficulty-design-and-adaptation": {
       "context": "procedural-level-generation",
@@ -15470,6 +15465,94 @@
         "at": "2026-10-24T22:24:59.286522+00:00",
         "reason": "reviewer (sonnet): The anchor useAssetInventory.ts:45 is a fetch call. It does not show the precondition is absent, and the context handles a bridge manifest with checksumSha256 (useAssetInventory.ts:25, BridgeManifestCard.tsx:17), which is an artifact-integrity concern the claim does not address."
       }
+    },
+    "6f37d3d5-8476-45cf-8598-a7a900cfe93c/asset-class-poly-budgeting": {
+      "context": "visual-gen-mesh",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:37:20.460Z",
+      "techniques": [
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/mesh-finish/route.ts:44 The unit lives in the header comment (lines 19-20) rather than in the field name, and the response echoes the same bare targetFaces."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/mesh-finish/route.ts:64 Here the budget is a post-process decimation target, which the technique exempts because a decimator does not invent geometry."
+        },
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/mesh-finish/remediate/route.ts:43 The remediate route grades the input against the class ceiling with stage 'raw', sends no fabricated request, and returns gradedAs to the caller."
+        },
+        {
+          "technique": "part-split-budget-division",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/mesh-split/route.ts:14 Split parts ship as independent assets, each with its own class budget. That is the technique's own 'parts ship independently' exemption."
+        }
+      ],
+      "withdrawn": {
+        "worker": "f4105de4-d386-45e6-89e0-32f72ebb52ce",
+        "state": "deviation",
+        "at": "2026-10-24T22:38:54.347111+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on the bare `targetFaces` field name, but the route's own header (route.ts:19-20) says the number is in triangles. The route can only reach collapse decimation, because its body has no `retopo` option and `mesh-finish.ts:473` is the only place `--retopo quadriflow` is emitted. Th"
+      }
+    },
+    "9f70d5ae-c6d4-4414-8f3c-3aeebc66e756/asset-class-poly-budgeting": {
+      "context": "blender-pipeline",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:37:20.460Z",
+      "worker": "f4105de4-d386-45e6-89e0-32f72ebb52ce",
+      "techniques": [
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:64 Targets travel as targetTris from planLodChain into generateLodsScript."
+        },
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:54 Delivered is graded against the commissioned levels, and the grade is cleared on any edit. The class select offers 'No class (LOD0 ungraded)' (line 135) instead of a default class."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:95 The budget is applied by post-process decimation, not a generator, which the technique exempts."
+        }
+      ]
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/asset-class-poly-budgeting": {
+      "context": "asset-viewer-and-browser",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:37:20.460Z",
+      "worker": "f4105de4-d386-45e6-89e0-32f72ebb52ce",
+      "techniques": [
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:176 This synthesises a request from the preset, the move the technique forbids. CEILING_NOTE (lines 48-49) fixes the rendered sentence, but not the BudgetGrade data. Unclassified meshes are handled honestly as unmeasured (line 199)."
+        },
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:65 Fields and sentences name triangles. The rival UE5_PRESETS table was removed from assetStats.ts."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:43 The viewer inspects loaded files and commissions nothing."
+        }
+      ]
     }
   }
 }
