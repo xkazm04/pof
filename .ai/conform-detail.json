@@ -7475,55 +7475,63 @@
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T00:44:16.375Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:58:08.468Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/WriteToProjectButton.tsx:158 The reviewed artifacts are generated source files; no TV package or device architecture selection was found."
+          "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/WriteToProjectButton.tsx:158 The reviewed artifacts are generated source files; no TV package or device architecture selection was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "dhcp-scan-for-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/DialogueView/QuestGeneratorPanel.tsx:34 Loads editor documents through the application API; no streaming-stick debug connection was found."
+          "evidence": "src/components/modules/game-systems/DialogueView/QuestGeneratorPanel.tsx:34 Loads editor documents through the application API; no streaming-stick debug connection was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "price-the-durable-save-on-the-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/SaveLoadView.tsx:3 The inspected factory renders a review/checklist view; this file does not implement gameplay persistence."
+          "evidence": "src/components/modules/game-systems/SaveLoadView.tsx:3 The inspected factory renders a review/checklist view; this file does not implement gameplay persistence.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "read-the-priority-before-requesting-one",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/InputView.tsx:3 Input handling is represented by a module review view; no native input-thread scheduling was found."
+          "evidence": "src/components/modules/game-systems/InputView.tsx:3 Input handling is represented by a module review view; no native input-thread scheduling was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "server-socket-portability-hedge",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/multiplayer/ReplicationScaffoldPanel.tsx:79 The multiplayer panel inspects and generates replication declarations; it does not host a TV controller server."
+          "evidence": "src/components/modules/game-systems/multiplayer/ReplicationScaffoldPanel.tsx:79 The multiplayer panel inspects and generates replication declarations; it does not host a TV controller server.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "startup-work-belongs-at-first-use",
           "verdict": "not-applicable",
-          "evidence": "src/hooks/useBlueprintTranspiler.ts:44 The backing hook initializes an editor session on access; no streaming-stick content initialization path was found."
+          "evidence": "src/hooks/useBlueprintTranspiler.ts:44 The backing hook initializes an editor session on access; no streaming-stick content initialization path was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "unhandled-bind-failure-kills-process",
           "verdict": "not-applicable",
-          "evidence": "src/hooks/useBlueprintTranspiler.ts:83 Transpilation dispatches an application HTTP request; no game-owned worker listener or bind operation was found."
+          "evidence": "src/hooks/useBlueprintTranspiler.ts:83 Transpilation dispatches an application HTTP request; no game-owned worker listener or bind operation was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "wake-before-launch",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:36 The action starts source translation rather than a device install-and-launch sequence."
+          "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:36 The action starts source translation rather than a device install-and-launch sequence.",
+          "carriedFrom": "2026-10-17"
         }
       ],
       "withdrawn": {
-        "worker": "e911c681-8153-417a-89cf-38287a601cb6",
+        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
         "state": "not-applicable",
-        "at": "2026-10-17T00:44:36.166410+00:00",
-        "reason": "reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+        "at": "2026-10-24T23:59:45.296495+00:00",
+        "reason": "reviewer (sonnet): The anchor SaveLoadView.tsx:3 is only a createSimpleModuleView call. It does not show that the on-device save and socket preconditions are absent, and the context files I could name are a transpiler and a dialogue view, which I did not trace."
       }
     },
     "0f8602ad-d98f-4d1d-9644-0467be9e70b9/fire-tv-device-realities": {
@@ -7531,55 +7539,63 @@
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T00:44:16.375Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:58:08.468Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/performance/DrawCallSection.tsx:11 The panel projects capture metrics; no package creation, architecture selection, or native-library loading path was found."
+          "evidence": "src/components/modules/core-engine/sub_debug/performance/DrawCallSection.tsx:11 The panel projects capture metrics; no package creation, architecture selection, or native-library loading path was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "keep-screen-on-flag",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/system/CircularGauge.tsx:25 Animation behavior belongs to the browser dashboard; no unattended TV session or native window management was found."
+          "evidence": "src/components/modules/core-engine/sub_debug/system/CircularGauge.tsx:25 Animation behavior belongs to the browser dashboard; no unattended TV session or native window management was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "price-the-durable-save-on-the-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/crashes/StatDashboardSection.tsx:12 Displays captured statistics; no durable gameplay-save implementation was found."
+          "evidence": "src/components/modules/core-engine/sub_debug/crashes/StatDashboardSection.tsx:12 Displays captured statistics; no durable gameplay-save implementation was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "read-the-priority-before-requesting-one",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/system/SystemHealthSection.tsx:66 Thread values drive timing-bar widths; the context does not request operating-system thread priorities."
+          "evidence": "src/components/modules/core-engine/sub_debug/system/SystemHealthSection.tsx:66 Thread values drive timing-bar widths; the context does not request operating-system thread priorities.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "server-socket-portability-hedge",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/network/NetworkSection.tsx:36 The network panel renders actor fixtures; no device-hosted listener or controller transport dependency was found."
+          "evidence": "src/components/modules/core-engine/sub_debug/network/NetworkSection.tsx:36 The network panel renders actor fixtures; no device-hosted listener or controller transport dependency was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "startup-work-belongs-at-first-use",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:23 This is a fixed dashboard fixture, not a streaming-stick startup measurement or content initializer."
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:23 This is a fixed dashboard fixture, not a streaming-stick startup measurement or content initializer.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "unhandled-bind-failure-kills-process",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:76 The console sends commands through its existing bridge connection; no game worker binding a socket was found."
+          "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:76 The console sends commands through its existing bridge connection; no game worker binding a socket was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "wake-before-launch",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_debug/console/CommandCatalog.tsx:84 Run executes a console command against an existing editor connection; it does not launch a streaming-stick game."
+          "evidence": "src/components/modules/core-engine/sub_debug/console/CommandCatalog.tsx:84 Run executes a console command against an existing editor connection; it does not launch a streaming-stick game.",
+          "carriedFrom": "2026-10-17"
         }
       ],
       "withdrawn": {
-        "worker": "e911c681-8153-417a-89cf-38287a601cb6",
+        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
         "state": "not-applicable",
-        "at": "2026-10-17T00:44:36.166410+00:00",
-        "reason": "reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+        "at": "2026-10-24T23:59:45.420556+00:00",
+        "reason": "reviewer (sonnet): The anchor MemorySection.tsx:14 is a component signature and comment about memory slices. It does not show that thread-priority, audio-stream or device preconditions are absent, and I did not trace the other files."
       }
     },
     "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/fire-tv-device-realities": {
@@ -7587,55 +7603,63 @@
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T00:44:16.375Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:58:08.468Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/index.tsx:134 Exports authored menu configuration; no APK packaging or TV architecture selection was found."
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/index.tsx:134 Exports authored menu configuration; no APK packaging or TV architecture selection was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "dhcp-scan-for-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:75 Connections are local menu-graph edges; no network-device discovery path was found."
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:75 Connections are local menu-graph edges; no network-device discovery path was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "price-the-durable-save-on-the-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:107 The simulation updates transient particle state; no durable save of player money or progress was found."
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:107 The simulation updates transient particle state; no durable save of player money or progress was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "read-the-priority-before-requesting-one",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:110 The preview uses browser frame callbacks; no native thread-priority request was found."
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:110 The preview uses browser frame callbacks; no native thread-priority request was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "server-socket-portability-hedge",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:172 The authored model contains screens and transitions; no TV-hosted network-control dependency was found."
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:172 The authored model contains screens and transitions; no TV-hosted network-control dependency was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "startup-work-belongs-at-first-use",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:7 Initializes the small editor graph; no streaming-stick content catalogue or game startup bake was found."
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:7 Initializes the small editor graph; no streaming-stick content catalogue or game startup bake was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "unhandled-bind-failure-kills-process",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:67 The bind terminology refers to menu-widget routing; no socket bind or server worker was found."
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:67 The bind terminology refers to menu-widget routing; no socket bind or server worker was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "wake-before-launch",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/index.tsx:53 Play controls a browser animation; no device launch procedure was found."
+          "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/index.tsx:53 Play controls a browser animation; no device launch procedure was found.",
+          "carriedFrom": "2026-10-17"
         }
       ],
       "withdrawn": {
-        "worker": "e911c681-8153-417a-89cf-38287a601cb6",
+        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
         "state": "not-applicable",
-        "at": "2026-10-17T00:44:36.166410+00:00",
-        "reason": "reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+        "at": "2026-10-24T23:59:45.493759+00:00",
+        "reason": "reviewer (sonnet): The anchor simulation.ts:12 is a particle id counter and pickElement helper. It does not show that device-runtime, startup, socket or save preconditions are absent."
       }
     },
     "023f8e03-d83d-49d1-b740-04ecdd77362c/fire-tv-device-realities": {
@@ -7643,60 +7667,69 @@
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T00:44:16.375Z",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:58:08.468Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:137 Generate passes the zone document to its caller; no APK packaging or native-architecture selection was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:137 Generate passes the zone document to its caller; no APK packaging or native-architecture selection was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "dhcp-scan-for-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:26 Locates authored zones by grid coordinates; no device address or debug connection is involved."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:26 Locates authored zones by grid coordinates; no device address or debug connection is involved.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "keep-screen-on-flag",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/TransitionLines.tsx:38 Animates an SVG diagram in the editor; no unattended TV session or native window lifecycle was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/TransitionLines.tsx:38 Animates an SVG diagram in the editor; no unattended TV session or native window lifecycle was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "price-the-durable-save-on-the-device",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:33 Changes the editor's zone document through a reducer; no durable gameplay-save path was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:33 Changes the editor's zone document through a reducer; no durable gameplay-save path was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "read-the-priority-before-requesting-one",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:75 Priority is zone-loading metadata, not a request to the operating-system thread scheduler."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:75 Priority is zone-loading metadata, not a request to the operating-system thread scheduler.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "server-socket-portability-hedge",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:70 The generated document describes spatial streaming; no device-hosted controller transport was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:70 The generated document describes spatial streaming; no device-hosted controller transport was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "startup-work-belongs-at-first-use",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:16 Initializes planner document state; no game class-load content bake on a streaming stick was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:16 Initializes planner document state; no game class-load content bake on a streaming stick was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "unhandled-bind-failure-kills-process",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/PaintPalette.tsx:59 Link starts a graph-editing mode; no worker opening or binding a socket was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/PaintPalette.tsx:59 Link starts a graph-editing mode; no worker opening or binding a socket was found.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "wake-before-launch",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:81 The grid handles authoring gestures; no streaming-stick launch command was found."
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:81 The grid handles authoring gestures; no streaming-stick launch command was found.",
+          "carriedFrom": "2026-10-17"
         }
       ],
       "withdrawn": {
-        "worker": "e911c681-8153-417a-89cf-38287a601cb6",
+        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
         "state": "not-applicable",
-        "at": "2026-10-17T00:44:36.166410+00:00",
-        "reason": "reviewer (sonnet): Each not-applicable rests on an incidental anchor that sits in the context but does not show that a Fire TV device or deployment path is absent: a button title, an import line, a heading, a useState line, and a prompt-building callback. Several technique anchors also describe a different subject (sa"
+        "at": "2026-10-24T23:59:45.563856+00:00",
+        "reason": "reviewer (sonnet): The anchor types.ts:2 only says the plan's types live in lib. It does not say 'World Partition', and I did not open the lib streaming-plan file or other planner files to confirm what 'streaming' means here."
       }
     },
     "27a34084-b33e-4538-8173-600d5162f922/node-boot-and-declarative-bootstrap": {
@@ -15996,6 +16029,21 @@
       "evaluatedTs": "2026-10-24T23:45:52.231Z",
       "worker": "9db19ca2-8e55-4063-88e7-f90d32e75eb1",
       "techniques": []
+    },
+    "08075992-0eca-4e46-9923-aae255fe800d/fire-tv-device-realities": {
+      "context": "cook-packaging-pipeline",
+      "subject": "fire-tv-device-realities",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:58:08.468Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
+        "state": "not-applicable",
+        "at": "2026-10-24T23:59:45.364017+00:00",
+        "reason": "reviewer (sonnet): The anchor CookSettingsPanel.tsx:113 is an 'Iterative cooking' toggle, which is incidental. The context also contains SmokeTest.tsx, which launches the staged build and reads its platform and config, so 'no device launch' is not confirmed."
+      }
     }
   }
 }
