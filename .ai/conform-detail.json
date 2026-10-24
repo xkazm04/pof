@@ -534,29 +534,55 @@
       "subject": "quality-gates",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T22:16:02.881Z",
-      "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:33:28.583Z",
+      "worker": "c123d23e-2845-4c0c-9cb5-a4feb1e99c93",
       "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:182 Zero findings from a run that checked nothing is shown as success; the empty-state is not conditioned on failedModules being empty."
+        },
         {
           "technique": "unmeasurable-criteria",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 Missing provenance is treated as standing, so an unbound pass counts as current quality."
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 Missing provenance is a hole in the instrument, yet it is read as standing, so an unbound PASS raises the current pass count (fail-closed for fails, fail-open for passes)."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:3 The view reuses the acceptance layer's standing predicate rather than re-deriving its own (apart from the undefined-provenance branch above)."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:77 Non-standing verdicts are kept and counted by named state (superseded/stale) rather than blanked."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:134 The failed-module notice names the reason per pass and a remedy (re-run) that is reachable from the same surface."
         },
         {
           "technique": "fabrication-economics",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/PatternLibraryView/AuthorPatternModal.tsx:94 Typing a description is enough to mint verified; the flag is not checked for meaning."
-        },
-        {
-          "technique": "gate-liveness",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/DeepEvalResults/ResultsSection.tsx:187 Zero findings is rendered as passed, including when modules failed to evaluate and therefore produced no findings."
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/AuthorPatternModal.tsx:94 Typing a description is enough to mint verified; the flag is not checked for meaning.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "oracle-frozen-during-repair",
           "verdict": "conformant",
-          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:105 A remedy's CLI completion re-runs the oracle; the fixer's exit is not the verdict."
+          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:105 A remedy's CLI completion re-runs the oracle; the fixer's exit is not the verdict.",
+          "carriedFrom": "2026-10-12"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:50 A judge verdict with no provenance is counted as current quality, so a pass that was never bound to the content on record still raises the standing pass total.",
+          "evaluatedAt": "2026-10-12T22:16:02.881Z",
+          "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+          "reason": "replaced by c123d23e-2845-4c0c-9cb5-a4feb1e99c93"
         }
       ]
     },
@@ -565,146 +591,188 @@
       "subject": "quality-gates",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T22:16:02.881Z",
-      "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:33:28.583Z",
       "techniques": [
         {
           "technique": "waiver-names-its-finding",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:212 overrideInputGate is a presence flag; it does not name a defect code or site, and the generate route honors it for any fail."
-        },
-        {
-          "technique": "vacuous-by-evaluation",
-          "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/mesh-score.ts:255 scoreGeometry feeds the topology rules facts it just set clean, then returns scoreMesh's verdict, which can be pass."
-        },
-        {
-          "technique": "severity-by-construction",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/mesh-score.ts:203 Only fail-severity findings change the verdict to fail; warn never does, and summarizeGate accepts warn."
+          "evidence": "src/lib/visual-gen/input-gate.ts:212 Blanket waiver: one flag covers every listed defect; nothing names a finding by identity."
         },
         {
           "technique": "unmeasurable-criteria",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/face-budget.ts:25 A missing budget or measurement is unmeasured, and an unavailable critique is ungated rather than accepted."
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:46 A missing COMPONENTS marker is filled with the best value (one connected shell), so the scorer's fragmentation checks read an unmeasured fact as compliant; DEGENERATE_FACES defaults to 0 the same way."
         },
         {
           "technique": "false-positive-economics",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/view-critique.ts:167 One moderate view warns after a known-good control was condemned; two views are required to fail."
-        },
-        {
-          "technique": "excess-indicts-the-instrument",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/view-critique.ts:15 A control that failed every view was read as a prompt defect and the detector was narrowed."
-        },
-        {
-          "technique": "decidable-in-a-window",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/sheet-gate.ts:48 Blank-cell detection was measured as non-separable and left unnamed as a verdict rather than given a noisy threshold."
+          "evidence": "src/lib/visual-gen/input-gate.ts:80 The blocking line was refitted per grader against a labelled truth set, with the counts of good inputs refused and bad inputs admitted written down."
         },
         {
           "technique": "gate-liveness",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/mesh-critique.ts:170 An unavailable critic is ungated, not accepted, and an unparseable vision reply is ok:false rather than a score."
+          "evidence": "src/lib/visual-gen/input-gate.ts:142 A gate that could not run is reported as ran:false/ungated, never as a pass."
         },
         {
-          "technique": "gate-laddering",
+          "technique": "severity-by-construction",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/input-gate.ts:11 The image check runs on the spend path before a provider call; I did not find a second rung that repeats that same check."
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:170 An unavailable critic gives accepted:false with a stated ungated reason, so 'could not grade' never reads as accepted."
         },
         {
           "technique": "refusal-names-a-reachable-remedy",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/world-scale.ts:137 A scale miss names the import scale to apply, computed from the measured and target extents."
+          "evidence": "src/lib/visual-gen/input-gate.ts:211 The refusal names what to fix in the submitted image, which the caller can act on."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-score.ts:255 scoreGeometry feeds the topology rules facts it just set clean, then returns scoreMesh's verdict, which can be pass.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "excess-indicts-the-instrument",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/view-critique.ts:15 A control that failed every view was read as a prompt defect and the detector was narrowed.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "decidable-in-a-window",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/sheet-gate.ts:48 Blank-cell detection was measured as non-separable and left unnamed as a verdict rather than given a noisy threshold.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/input-gate.ts:11 The image check runs on the spend path before a provider call; I did not find a second rung that repeats that same check.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "policy-projection",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/mesh-fetch.ts:88 The admission ceiling is derived from the grader's own maxFacesWarn rather than a second copied number."
+          "evidence": "src/lib/visual-gen/mesh-fetch.ts:88 The admission ceiling is derived from the grader's own maxFacesWarn rather than a second copied number.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "renameable-detector-keys",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/polycount-presets.ts:228 An unknown class name does not silently become a class; the report says it was graded class-blind."
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:228 An unknown class name does not silently become a class; the report says it was graded class-blind.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "prose-rule-drift",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/input-gate.ts:6 Input-prep rules that had lived only in prompts are scored by the input gate before spend."
+          "evidence": "src/lib/visual-gen/input-gate.ts:6 Input-prep rules that had lived only in prompts are scored by the input gate before spend.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "enforcement-binding",
           "verdict": "conformant",
-          "evidence": "src/app/api/visual-gen/generate/route.ts:147 The generate route calls inputGateRefusal and returns 400 on a produced fail, so the check is bound to the spend."
+          "evidence": "src/app/api/visual-gen/generate/route.ts:147 The generate route calls inputGateRefusal and returns 400 on a produced fail, so the check is bound to the spend.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "self-reported-gate-inputs",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/mesh-fetch.ts:171 A missing declared triangle count is unmeasured; the grade is the loaded mesh, not the container's own number."
+          "evidence": "src/lib/visual-gen/mesh-fetch.ts:171 A missing declared triangle count is unmeasured; the grade is the loaded mesh, not the container's own number.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "shared-substrate-check-partition",
           "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/view-critique.ts:7 The view gate is a vision pass over renders; it is not a second check on the trimesh judgment."
+          "evidence": "src/lib/visual-gen/view-critique.ts:7 The view gate is a vision pass over renders; it is not a second check on the trimesh judgment.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "fabrication-economics",
           "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/mesh-score.ts:99 The geometry gate does not require a human-judged text field; VLM defects are deliberately left uncoded."
+          "evidence": "src/lib/visual-gen/mesh-score.ts:99 The geometry gate does not require a human-judged text field; VLM defects are deliberately left uncoded.",
+          "carriedFrom": "2026-10-12"
         }
       ],
-      "registryProposal": "scoreGeometry returns a pass/warn/fail verdict after substituting the topology facts the topology rules test. vacuous-by-evaluation tells the author to seed a counterexample per rule; it does not require a partial scorer's own verdict to name the rules that substitution made unfalsifiable. GATE_ONLY_CODES is a sibling export, not part of the verdict."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:212 One boolean override spends a generation through every failing input-gate defect, and the viewer scorer can still return pass after it fills in the topology facts those rules test.",
+          "evaluatedAt": "2026-10-12T22:16:02.881Z",
+          "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+          "reason": "replaced by c123d23e-2845-4c0c-9cb5-a4feb1e99c93"
+        }
+      ],
+      "withdrawn": {
+        "worker": "c123d23e-2845-4c0c-9cb5-a4feb1e99c93",
+        "state": "deviation",
+        "at": "2026-10-24T00:34:03.748890+00:00",
+        "reason": "reviewer (sonnet): The claim that the override stamp does not record which findings were waived is contradicted: inputGateOverridden spreads the whole outcome, so reasons and the fail note stay on the record (the test says 'with the fail still on the record'), and only the blanket flag itself is confirmed."
+      }
     },
     "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/quality-gates": {
       "context": "build-history-config",
       "subject": "quality-gates",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T22:16:02.881Z",
-      "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:33:28.583Z",
+      "worker": "c123d23e-2845-4c0c-9cb5-a4feb1e99c93",
       "techniques": [
         {
           "technique": "waiver-names-its-finding",
           "verdict": "deviation",
-          "evidence": "src/lib/packaging/package-flow.ts:120 The Package anyway control is a single override of the whole blocked pre-flight, not one waiver per failing check."
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:46 Unnamed blanket override; the record of the waiver loses which checks failed."
         },
         {
           "technique": "unmeasurable-criteria",
           "verdict": "conformant",
-          "evidence": "src/lib/packaging/package-flow.ts:86 A requested kind that has not run blocks the cook; the blocked copy says there is no verdict so no cook."
-        },
-        {
-          "technique": "gate-liveness",
-          "verdict": "conformant",
-          "evidence": "src/lib/packaging/package-flow.ts:82 A summary for a different map set does not release this cook."
-        },
-        {
-          "technique": "gate-laddering",
-          "verdict": "conformant",
-          "evidence": "src/lib/packaging/package-flow.ts:21 The press starts on the fast kind; slower checks are a later measuring step, not the first cook."
-        },
-        {
-          "technique": "severity-by-construction",
-          "verdict": "conformant",
-          "evidence": "src/lib/packaging/package-flow.ts:25 canCook ignores unrun checks, and decide() separately blocks requested kinds that are still unmeasured, so the flag is not the whole exit path."
-        },
-        {
-          "technique": "enforcement-binding",
-          "verdict": "conformant",
-          "evidence": "src/lib/packaging/package-flow.ts:106 A press enters measuring and cooks only when decide() releases it; the button is not a direct cook."
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:63 A pre-flight that measured nothing refuses rather than passing."
         },
         {
           "technique": "refusal-names-a-reachable-remedy",
           "verdict": "conformant",
-          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:63 The block names the profile and tells the operator to run the missing checks, and the button is Run missing checks, then cook."
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:66 The remedy is backed by an on-screen 'Run failing + missing checks, then cook' button."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/BuildConfigSelector/PreflightGateBlock.tsx:70 Never-measured checks are named as their own explicit state rather than blanked or folded into pass/fail."
         },
         {
           "technique": "policy-projection",
           "verdict": "conformant",
-          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:71 Build-scope state, level, and word come from the shared classifier; this file only rewrites the sentence."
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/buildScope.ts:7 Scope classification is projected from one shared classifier; only the wording differs per surface."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/lib/packaging/package-flow.ts:82 A summary for a different map set does not release this cook.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "src/lib/packaging/package-flow.ts:21 The press starts on the fast kind; slower checks are a later measuring step, not the first cook.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/lib/packaging/package-flow.ts:25 canCook ignores unrun checks, and decide() separately blocks requested kinds that are still unmeasured, so the flag is not the whole exit path.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "enforcement-binding",
+          "verdict": "conformant",
+          "evidence": "src/lib/packaging/package-flow.ts:106 A press enters measuring and cooks only when decide() releases it; the button is not a direct cook.",
+          "carriedFrom": "2026-10-12"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/packaging/package-flow.ts:120 From a blocked pre-flight, one override event starts the cook and does not record which failing check was waived.",
+          "evaluatedAt": "2026-10-12T22:16:02.881Z",
+          "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+          "reason": "replaced by c123d23e-2845-4c0c-9cb5-a4feb1e99c93"
         }
       ]
     },
@@ -713,56 +781,82 @@
       "subject": "quality-gates",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T22:16:02.881Z",
-      "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:33:28.583Z",
       "techniques": [
-        {
-          "technique": "gate-liveness",
-          "verdict": "deviation",
-          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 labGrade returns null when no checker resolves, and that null is persisted as pass."
-        },
-        {
-          "technique": "enforcement-binding",
-          "verdict": "deviation",
-          "evidence": "src/components/layout-lab/labCheckerContext.ts:128 No checker is an inapplicable check reported as success; a throw is kept off that path, the null is not."
-        },
         {
           "technique": "unmeasurable-criteria",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:141 A missing checker is not marked ungraded, while a thrown checker is failed and prefixed UNGRADED."
+          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 An instrument-side absence (no checker) is resolved to compliance instead of an announced ungraded/refused state."
         },
         {
-          "technique": "match-the-resolved-artifact",
-          "verdict": "conformant",
-          "evidence": "src/components/layout-lab/labContentDrift.ts:17 Drift and the verdict bridge share stepContentHash; the lab no longer keeps a second provenance strip."
-        },
-        {
-          "technique": "shared-substrate-check-partition",
-          "verdict": "conformant",
-          "evidence": "src/components/layout-lab/labAcceptance.ts:41 Two graders on the same labels were collapsed so the lab cannot read a step higher than the server checker."
+          "technique": "vacuous-by-evaluation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labCheckerContext.ts:144 The null 'no checker' result feeds a caller that converts it to pass, so steps without a grader can never record a failure."
         },
         {
           "technique": "policy-projection",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/statusLanguage.ts:52 Glyph, word, and color for a status are taken from one map shared by the banner, chips, matrix, and coach."
+          "evidence": "src/components/layout-lab/labAcceptance.ts:41 The lab's checker resolution follows the server's precedence so the on-screen verdict can only come down to, never above, the enforced one."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 labGrade returns null when no checker resolves, and that null is persisted as pass.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "enforcement-binding",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/labCheckerContext.ts:128 No checker is an inapplicable check reported as success; a throw is kept off that path, the null is not.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/labContentDrift.ts:17 Drift and the verdict bridge share stepContentHash; the lab no longer keeps a second provenance strip.",
+          "carriedFrom": "2026-10-12"
+        },
+        {
+          "technique": "shared-substrate-check-partition",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/labAcceptance.ts:41 Two graders on the same labels were collapsed so the lab cannot read a step higher than the server checker.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "advancement-evidence-fields",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/statusLanguage.ts:22 unproduced is a distinct display state from pending, so never-produced is not the same cell as still-resolving."
+          "evidence": "src/components/layout-lab/statusLanguage.ts:22 unproduced is a distinct display state from pending, so never-produced is not the same cell as still-resolving.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "severity-by-construction",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/Baseline/index.tsx:74 The header lifecycle is derived and cannot write an acceptance verdict; verified comes from a drained L3/L4 gate."
+          "evidence": "src/components/layout-lab/Baseline/index.tsx:74 The header lifecycle is derived and cannot write an acceptance verdict; verified comes from a drained L3/L4 gate.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "refusal-names-a-reachable-remedy",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:107 A thrown checker is stored with the thrown reason and an explicit statement that it is not a content verdict."
+          "evidence": "src/components/layout-lab/hooks/useEntityArtifacts.ts:107 A thrown checker is stored with the thrown reason and an explicit statement that it is not a content verdict.",
+          "carriedFrom": "2026-10-12"
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 When a step has no acceptance checker, the write-through persists pass, so the absence of a grader is stored as a passed gate.",
+          "evaluatedAt": "2026-10-12T22:16:02.881Z",
+          "worker": "538b0ff1-f613-4b29-b674-df7c98b0e6b6",
+          "reason": "replaced by c123d23e-2845-4c0c-9cb5-a4feb1e99c93"
+        }
+      ],
+      "withdrawn": {
+        "worker": "c123d23e-2845-4c0c-9cb5-a4feb1e99c93",
+        "state": "deviation",
+        "at": "2026-10-24T00:34:03.794146+00:00",
+        "reason": "reviewer (sonnet): useBaseline.ts:185 does fall back to 'pass' when labGrade returns null, but /api/pipeline-artifacts/route.ts (lines 41-96) stamps such rows with an explicit 'UNGRADED:' reason, so the missing grader is announced and not stored as a plain passed gate."
+      }
     },
     "80cab220-4eac-4a25-8873-f1c42c257174/quality-gates": {
       "context": "core-engine-scan-telemetry",
