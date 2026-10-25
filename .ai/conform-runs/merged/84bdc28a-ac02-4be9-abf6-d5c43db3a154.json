@@ -1,0 +1,87 @@
+{
+  "schema": "conform-run/1",
+  "worker": "84bdc28a-ac02-4be9-abf6-d5c43db3a154",
+  "subject": "client-fetch-cache",
+  "evaluatedAt": "2026-10-25T01:44:46.407195+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "gdd-compliance",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:29 CodebaseArcheologistView holds its expensive POST /api/codebase-archeologist result in component state and reruns it on every mount (line 59), so each tab return repaints cold and pays for a full analysis again. The GDD doc cache next to it has no lifetime, and its key leaves out the feature-matrix state the synthesis reads.",
+      "techniques": [
+        {
+          "technique": "warm-remount-caches",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:29 The analysis is view-scoped and has no module-level slot, so it dies on unmount and is recomputed cold on every mount."
+        },
+        {
+          "technique": "cache-key-discipline",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useGameDesignDoc.ts:78 The key is project name, project id and checklist hash, but gdd-synthesizer.ts also reads feature_matrix and review_snapshots. A review that changes statuses leaves the key unchanged, so the old document is served."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useGameDesignDoc.ts:61 The single slot has no fetchedAt or TTL, so a key match is believed forever. The warm paint never revalidates unless the user presses refresh."
+        },
+        {
+          "technique": "in-flight-dedup",
+          "verdict": "conformant",
+          "evidence": "src/stores/gddComplianceStore.ts:225 A second ensureAudit during a flight is refused rather than joined. The result still reaches every caller because it lands in the shared store."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "client-fetch-cache",
+      "context": "app-navigation",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "client-fetch-cache",
+      "context": "holistic-quality-overview",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation is about UnifiedSummaryView/useUnifiedSummaryView.ts and the shared useFeatureStatuses hook, neither of which is in this context's HolisticHealthView files. I found no HolisticHealthView file that imports either one. The only link is that the hook uses projectHealthStore, and that was "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T01:44:46.407195+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-fetch-cache"
+      ],
+      "techniques": [
+        "cache-key-discipline",
+        "in-flight-dedup",
+        "swr-design",
+        "warm-remount-caches"
+      ],
+      "deviations": 1,
+      "context": "holistic-quality-overview",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:44:46.407195+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-fetch-cache"
+      ],
+      "techniques": [
+        "cache-key-discipline",
+        "in-flight-dedup",
+        "swr-design",
+        "warm-remount-caches"
+      ],
+      "deviations": 1,
+      "context": "gdd-compliance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

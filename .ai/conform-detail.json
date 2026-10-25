@@ -8563,60 +8563,65 @@
       "subject": "client-fetch-cache",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T03:02:07.665Z",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:44:46.407Z",
       "techniques": [
         {
-          "technique": "admission-hypothesis",
-          "verdict": "conformant",
-          "evidence": "src/hooks/useFeatureStatuses.ts:19 The construction comment states the reuse bet: concurrent Evaluator mounts share one result for a short TTL."
-        },
-        {
-          "technique": "similarity-keyed-admission",
-          "verdict": "not-applicable",
-          "evidence": "src/hooks/useFeatureStatuses.ts:110 A hit requires the same project id; there is no distance metric or cut-point."
+          "technique": "warm-remount-caches",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:31 Analytics live in view-scoped state with no module-level last-result slot, so a remount starts cold. HolisticHealthView's projectHealthStore summary does survive a remount."
         },
         {
           "technique": "swr-design",
           "verdict": "deviation",
-          "evidence": "src/hooks/useFeatureStatuses.ts:119 Failure builds empty rows, the same object stamps fetchedAt with Date.now(), and freshCache treats that stamp as the only freshness threshold."
+          "evidence": "src/hooks/useFeatureStatuses.ts:153 loadStatuses never rejects, so a failed refresh is stored as the cache entry (empty map, failed=true) over the last good one, and subscribers then setEntry() it. Stale truth disappears after a failed refresh. Line 111 also defines only a fresh window (5s TTL) and no stale zone: a mount after 5s seeds null and paints cold even though the module still holds data."
         },
         {
           "technique": "in-flight-dedup",
           "verdict": "conformant",
-          "evidence": "src/hooks/useFeatureStatuses.ts:145 A second caller for the same project and generation receives the pending promise; settle clears that flight for success and for a resolved failure."
+          "evidence": "src/hooks/useFeatureStatuses.ts:145 Concurrent callers join the in-flight promise, keyed by project and invalidation generation. The promise is registered synchronously and the slot is cleared on settle."
         },
         {
           "technique": "cache-key-discipline",
           "verdict": "conformant",
-          "evidence": "src/hooks/useFeatureStatuses.ts:116 The request URL and the cache entry both carry the active project id, which the hit check refuses to cross."
+          "evidence": "src/hooks/useFeatureStatuses.ts:110 Project identity is part of the hit test, so one project's statuses are never served to another."
         },
         {
-          "technique": "warm-remount-caches",
+          "technique": "admission-hypothesis",
           "verdict": "conformant",
-          "evidence": "src/hooks/useFeatureStatuses.ts:189 The module-level entry survives remount and the first paint seeds from it when it is still inside the TTL."
+          "evidence": "src/hooks/useFeatureStatuses.ts:19 The construction comment states the reuse bet: concurrent Evaluator mounts share one result for a short TTL.",
+          "carriedFrom": "2026-10-17"
+        },
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useFeatureStatuses.ts:110 A hit requires the same project id; there is no distance metric or cut-point.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "prefetch-and-defer",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:71 This dashboard's own analytics read starts in the mount effect of the surface the user is looking at."
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:71 This dashboard's own analytics read starts in the mount effect of the surface the user is looking at.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "parse-and-derive-caches",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:95 The correlation is a render memo of the current inputs, replaced when those inputs change, and it does not accumulate content versions."
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:95 The correlation is a render memo of the current inputs, replaced when those inputs change, and it does not accumulate content versions.",
+          "carriedFrom": "2026-10-17"
         },
         {
           "technique": "plural-policy-claims",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:42 The summary calls the shared loader with no per-call TTL, and the loader itself accepts none."
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:42 The summary calls the shared loader with no per-call TTL, and the loader itself accepts none.",
+          "carriedFrom": "2026-10-17"
         }
       ],
       "withdrawn": {
-        "worker": "cadd1fd8-6680-49cd-9b1f-73a40e76dc16",
+        "worker": "84bdc28a-ac02-4be9-abf6-d5c43db3a154",
         "state": "deviation",
-        "at": "2026-10-17T03:02:38.895755+00:00",
-        "reason": "reviewer (sonnet): The anchor is real, but none of the HolisticHealthView files read useFeatureStatuses (the cache belongs to UnifiedSummaryView and other consumers), so the verdict is about a different context."
+        "at": "2026-10-25T01:45:24.222730+00:00",
+        "reason": "reviewer (sonnet): The deviation is about UnifiedSummaryView/useUnifiedSummaryView.ts and the shared useFeatureStatuses hook, neither of which is in this context's HolisticHealthView files. I found no HolisticHealthView file that imports either one. The only link is that the hook uses projectHealthStore, and that was "
       }
     },
     "7e5113c1-2957-49ad-aeee-6f7effe35dce/client-fetch-cache": {
