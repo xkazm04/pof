@@ -4934,7 +4934,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/IntegrationView.tsx:66 The context's only mention of shipping is this advisory list of scaffold TODOs on a generated adapter. A case-insensitive search of the evaluator tree for cook, WITH_EDITOR, liveness and smoke found zero hits, so no cook, package, shipping-configuration audit or size gate exists here for the subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:9441126e96ce0ac9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "generative-artifact-gating",
@@ -17047,7 +17051,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/ReadyToShipBadge.tsx:8 The context's 'ship gate' is a translation-QA content verdict per locale, not a gate around an expensive cook/package transform. A search of LocalizationPipelineView for cook, WITH_EDITOR, liveness and packag found zero hits, so none of the subject's techniques have anything to govern here.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:9441126e96ce0ac9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "codebase-scanning",

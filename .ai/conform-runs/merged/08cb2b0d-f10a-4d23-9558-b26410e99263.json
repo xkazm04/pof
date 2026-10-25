@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "08cb2b0d-f10a-4d23-9558-b26410e99263",
+ "subject": "ship-pipeline-gating",
+ "evaluatedAt": "2026-10-25T01:25:32.686054+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "asset-visual-studio",
+   "subject": "ship-pipeline-gating",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/AssetScoutView/IntegrationView.tsx:66 The context's only mention of shipping is this advisory list of scaffold TODOs on a generated adapter. A case-insensitive search of the evaluator tree for cook, WITH_EDITOR, liveness and smoke found zero hits, so no cook, package, shipping-configuration audit or size gate exists here for the subject to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "cook",
+    "WITH_EDITOR",
+    "liveness",
+    "smoke"
+   ]
+  },
+  {
+   "context": "localization-pipeline",
+   "subject": "ship-pipeline-gating",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/LocalizationPipelineView/ReadyToShipBadge.tsx:8 The context's 'ship gate' is a translation-QA content verdict per locale, not a gate around an expensive cook/package transform. A search of LocalizationPipelineView for cook, WITH_EDITOR, liveness and packag found zero hits, so none of the subject's techniques have anything to govern here.",
+   "techniques": [],
+   "absenceTerms": [
+    "cook",
+    "WITH_EDITOR",
+    "liveness",
+    "packag"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "ship-pipeline-gating",
+   "context": "catalog-pipeline-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "ship-pipeline-gating",
+   "context": "build-quality-monitoring",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:25:32.686054+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "ship-pipeline-gating"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "asset-visual-studio",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:25:32.686054+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "ship-pipeline-gating"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "localization-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

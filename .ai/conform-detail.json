@@ -16441,6 +16441,26 @@
           "evidence": "src/stores/projectStore.ts:274 Removal is a hard DELETE of the registry row (route: DELETE FROM recent_projects) with no archived state and no enumerate-and-confirm step. The lifecycle is only isSetupComplete/isNewProject booleans."
         }
       ]
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/ship-pipeline-gating": {
+      "context": "asset-visual-studio",
+      "subject": "ship-pipeline-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:25:32.686Z",
+      "worker": "08cb2b0d-f10a-4d23-9558-b26410e99263",
+      "techniques": []
+    },
+    "6feb38b8-a274-49d1-b643-b9c7e058b344/ship-pipeline-gating": {
+      "context": "localization-pipeline",
+      "subject": "ship-pipeline-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:25:32.686Z",
+      "worker": "08cb2b0d-f10a-4d23-9558-b26410e99263",
+      "techniques": []
     }
   }
 }
