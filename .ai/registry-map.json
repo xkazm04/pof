@@ -14985,7 +14985,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/seam-check.ts:82 The wrap-around check reduces each axis to a mean absolute difference only, with no maximum, so a short hard break across the edge (a shifted feature) is averaged away over the whole edge and passes, which is the case the technique says must fail.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:79554b00c93b3e3e",
+          "evaluatedRevision": 1
         },
         {
           "subject": "voice-io",
@@ -17814,7 +17818,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/constants.ts:34 The configurator sets scalar UE5 material parameters (Roughness, Metallic, IOR and the like) and never generates, accepts, derives or tiles texture images; a case-insensitive search of src/components/modules/content/materials for seam, texel, tileable and detectSeams found nothing, and the only texture mentions are shader-recipe prose in the pattern catalog and the ORM glossary entry.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:79554b00c93b3e3e",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
@@ -18150,7 +18158,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx:122 The style-transfer UI shows an inferred Metallic value next to Roughness with the same bar and no provenance label; the server defaults it to 0.2 when no keyword matches. That is the 'plausible grey metalness' the technique says must be refused or labelled, and it flows onward through effectiveAnalysis into generation.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:79554b00c93b3e3e",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -26360,7 +26372,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/biome-textures.ts:26 The biome table has a closed class list and material-noun vocabularies, but the tiling and quality suffix is pasted into all six entries instead of living in one place, the tiling request is textual only, and a repo-wide search found no production consumer of leonardoPrompt (only biome-textures.test.ts), so the themed prompt never reaches a generator and no texture records which class produced it.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:79554b00c93b3e3e",
+          "evaluatedRevision": 1
         },
         {
           "subject": "agent-instruction-files",

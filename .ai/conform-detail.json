@@ -6429,48 +6429,38 @@
       "context": "image-generation",
       "subject": "tiling-texture-acceptance",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T02:44:53.287Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:51:09.317Z",
+      "worker": "5afd11fc-ca4e-49de-b767-c941ad6039cf",
       "techniques": [
         {
           "technique": "wrap-around-edge-diff",
           "verdict": "deviation",
-          "evidence": "src/app/api/leonardo/route.ts:46 The Leonardo image generation endpoint deliberately omitted seam testing because tiling generation is not triggered by callers."
+          "evidence": "src/lib/visual-gen/seam-check.ts:82 One-pixel bands, per-axis scores, the worst edge named, and a non-throwing safe variant that returns null are all present; but only the mean is kept (no max), so 'mean clean, max high → fail' cannot happen."
         },
         {
           "technique": "seam-threshold-calibration",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/seam-check.ts:63 Allows callers to supply arbitrary thresholds rather than enforcing a single authority calibrated on corpus error rates."
+          "evidence": "src/lib/visual-gen/seam-check.ts:63 Any caller can pass its own cutoff per call, which the technique forbids. The 0.08 (~20/255) default is called 'conservative' but has no corpus, no catch/false-flag rates, no date and no provisional label."
         }
-      ],
-      "withdrawn": {
-        "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
-        "state": "deviation",
-        "at": "2026-10-16T02:45:32.788975+00:00",
-        "reason": "reviewer (sonnet): The anchor src/app/api/leonardo/route.ts is not among this context's files, and its comment says the seam path was removed on purpose because no caller requests tiling. It also names /api/scenario as the live seam check, which contradicts 'relying on callers to notice seams downstream'. The seam-che"
-      }
+      ]
     },
     "9a11b0c7-a013-434b-8325-086ee4151f70/tiling-texture-acceptance": {
       "context": "visual-gen-style-asset-library",
       "subject": "tiling-texture-acceptance",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T02:44:53.287Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:51:09.317Z",
+      "worker": "5afd11fc-ca4e-49de-b767-c941ad6039cf",
       "techniques": [
         {
           "technique": "biome-themed-tile-prompting",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/biome-textures.ts:74 Directly indexes the closed biome map without a declared fallback generic for unrecognized environment classes, and duplicates quality suffixes across static prompts."
+          "evidence": "src/lib/visual-gen/biome-textures.ts:26 Steps 1–2 are realized (closed Biome union, noun + condition words). Step 6 fails: the suffix is repeated in every entry. Step 7 fails: no class is recorded. The vocabulary is never composed into a live generation path."
         }
-      ],
-      "withdrawn": {
-        "worker": "1acb58e6-15dd-4dfa-b591-d07a2ee3a485",
-        "state": "deviation",
-        "at": "2026-10-16T02:45:32.837470+00:00",
-        "reason": "reviewer (sonnet): `pickBiomeTexture(biome: Biome)` indexes a closed TypeScript union, and I found no caller that passes an unrecognized biome. Both the unknown-biome lookup failure and the link to tiling acceptance are unconfirmed, and the one concrete detail, a repeated 'seamless tileable PBR texture' phrase in the "
-      }
+      ]
     },
     "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/settings": {
       "context": "save-system",
@@ -16253,6 +16243,32 @@
         "at": "2026-10-25T00:44:15.328814+00:00",
         "reason": "reviewer (sonnet): The anchor (db.ts:66) is the bootstrap() signature and sits next to a WAL pragma, so it doesn't show that vector, FTS or ranked recall is absent; my own grep over those files found no hit, but the cited line isn't what shows it, so the anchor is incidental."
       }
+    },
+    "b6266959-0161-4ca0-b9e9-249804753b1c/tiling-texture-acceptance": {
+      "context": "material-configurator",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:51:09.317Z",
+      "worker": "5afd11fc-ca4e-49de-b767-c941ad6039cf",
+      "techniques": []
+    },
+    "15282b56-0d42-43ed-b76d-d61c8e6e0309/tiling-texture-acceptance": {
+      "context": "material-style-tools",
+      "subject": "tiling-texture-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:51:09.317Z",
+      "worker": "5afd11fc-ca4e-49de-b767-c941ad6039cf",
+      "techniques": [
+        {
+          "technique": "derive-only-what-the-source-encodes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx:122 Metalness is shown at the same confidence as the other properties, with no heuristic or refused label per channel. Only surface type carries a confidence number."
+        }
+      ]
     }
   }
 }
