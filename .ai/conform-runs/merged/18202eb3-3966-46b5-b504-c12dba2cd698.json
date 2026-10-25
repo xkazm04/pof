@@ -1,0 +1,78 @@
+{
+ "schema": "conform-run/1",
+ "worker": "18202eb3-3966-46b5-b504-c12dba2cd698",
+ "subject": "llm-dialogue-quality-control",
+ "evaluatedAt": "2026-10-25T22:39:51.722655+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "judge-craft-quality",
+   "subject": "llm-dialogue-quality-control",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/judge/fleetPlan.ts:4 The judge fleet scores generated dialogue-tree artifacts (dialog-trees catalog, routed to the dialogue lens) with a Claude Opus judge, while the producer is Claude Sonnet. That is the 'mirror judge' the subject names: no other model family, so the judge's approval is not independent evidence. Separately, no voice entry reaches the judge, nothing filters stock phrasing mechanically, the line is never heard, and revisions are credited across draws.",
+   "techniques": [
+    {
+     "technique": "blind-rubric-scoring-by-another-family",
+     "verdict": "deviation",
+     "evidence": "src/lib/judge/fleetPlan.ts:4 The judge is Opus via the Claude CLI (each worker holds a real Claude CLI process, line 107). The generator is also Claude: model-policy has produce-text=sonnet. The aggregate is holistic ('roughly the weakest-few dimensions dominate', rubrics.ts:109), not hard per-dimension floors. In its favour: content-hash binding, rubric-version stamping, and a human calibration guard exist."
+    },
+    {
+     "technique": "voice-bible-in-every-prompt",
+     "verdict": "deviation",
+     "evidence": "src/lib/judge/rubrics.ts:156 The judge prompt carries subject, payload, siblingContext and canonContext only. No per-speaker voice entry, version for version, is given to the judge. The dialogue lens asks the judge for blind attribution (dialogue.md:42) with no voice reference to attribute against."
+    },
+    {
+     "technique": "measured-banned-pattern-list",
+     "verdict": "deviation",
+     "evidence": "src/lib/judge/dimensions.ts:58 Catching stock phrasing is left to the same-family model judge's impression. A repo-wide search for banned/stock-phrase/ban-list/slop constructs found no measured or editorial pattern list and no post-generation filter."
+    },
+    {
+     "technique": "critique-and-revise-with-human-checkpoints",
+     "verdict": "deviation",
+     "evidence": "src/lib/judge/verdictTrend.ts:87 'Did my fix improve this?' is answered by comparing the latest draw's score with the first draw's: the borrowed score. It is not a blind same-draw comparison of revision against original with a margin over draw spread, and no two-round bound exists. The judge's 'fix' field is a directive rather than a replacement (rubrics.ts:118), which partly conforms."
+    },
+    {
+     "technique": "read-aloud-pass",
+     "verdict": "deviation",
+     "evidence": "src/lib/craft/lenses/dialogue.md:10 The lens is explicitly page-only. Its 'speakable in one breath' criterion (line 50) is a page pass with a spoken checklist, and nothing labels accepted lines as unheard."
+    },
+    {
+     "technique": "candidates-under-rotating-constraints",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/judge/fleetPlan.ts:90 This context judges the one stored artifact per (entity, step, judge). It generates no candidates, so the candidate count and constraint deck belong to the producing side, which lies outside this context."
+    }
+   ],
+   "registryProposal": "The subject assumes the unit judged is one line in a slot with a candidate batch. This repo's judge grades a whole dialogue tree as one artifact with an A-level lens. The standard could say how the shortlist, attribution and floor rules apply when the judged unit is a tree or bark set rather than a line."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "llm-dialogue-quality-control",
+   "context": "blueprint-transpiler-game-systems",
+   "reason": "absence contradicted: src/components/modules/game-systems/BuildHistoryDashboard/TrendsTab.tsx:25 contains 'judge' (4 hit(s) in the context's directories)"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T22:39:51.722655+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "llm-dialogue-quality-control"
+   ],
+   "techniques": [
+    "blind-rubric-scoring-by-another-family",
+    "candidates-under-rotating-constraints",
+    "critique-and-revise-with-human-checkpoints",
+    "measured-banned-pattern-list",
+    "read-aloud-pass",
+    "voice-bible-in-every-prompt"
+   ],
+   "deviations": 1,
+   "context": "judge-craft-quality",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

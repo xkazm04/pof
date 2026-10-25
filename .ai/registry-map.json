@@ -16024,7 +16024,11 @@
           "revision": 3,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/judge/fleetPlan.ts:4 The judge fleet scores generated dialogue-tree artifacts (dialog-trees catalog, routed to the dialogue lens) with a Claude Opus judge, while the producer is Claude Sonnet. That is the 'mirror judge' the subject names: no other model family, so the judge's approval is not independent evidence. Separately, no voice entry reaches the judge, nothing filters stock phrasing mechanically, the line is never heard, and revisions are credited across draws.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:65f5fbeafc4961fc",
+          "evaluatedRevision": 3
         },
         {
           "subject": "session-continuation",

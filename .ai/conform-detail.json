@@ -10023,22 +10023,43 @@
       "context": "judge-craft-quality",
       "subject": "llm-dialogue-quality-control",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T01:21:53.322Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T22:39:51.722Z",
+      "worker": "18202eb3-3966-46b5-b504-c12dba2cd698",
       "techniques": [
         {
           "technique": "blind-rubric-scoring-by-another-family",
           "verdict": "deviation",
-          "evidence": "src/lib/model-policy.ts:60 Production uses Sonnet at line 56; MODEL_IDS identifies both as Claude, and the judge harness resolves this policy without enforcing family separation."
+          "evidence": "src/lib/judge/fleetPlan.ts:4 The judge is Opus via the Claude CLI (each worker holds a real Claude CLI process, line 107). The generator is also Claude: model-policy has produce-text=sonnet. The aggregate is holistic ('roughly the weakest-few dimensions dominate', rubrics.ts:109), not hard per-dimension floors. In its favour: content-hash binding, rubric-version stamping, and a human calibration guard exist."
+        },
+        {
+          "technique": "voice-bible-in-every-prompt",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:156 The judge prompt carries subject, payload, siblingContext and canonContext only. No per-speaker voice entry, version for version, is given to the judge. The dialogue lens asks the judge for blind attribution (dialogue.md:42) with no voice reference to attribute against."
+        },
+        {
+          "technique": "measured-banned-pattern-list",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/dimensions.ts:58 Catching stock phrasing is left to the same-family model judge's impression. A repo-wide search for banned/stock-phrase/ban-list/slop constructs found no measured or editorial pattern list and no post-generation filter."
+        },
+        {
+          "technique": "critique-and-revise-with-human-checkpoints",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/verdictTrend.ts:87 'Did my fix improve this?' is answered by comparing the latest draw's score with the first draw's: the borrowed score. It is not a blind same-draw comparison of revision against original with a margin over draw spread, and no two-round bound exists. The judge's 'fix' field is a directive rather than a replacement (rubrics.ts:118), which partly conforms."
+        },
+        {
+          "technique": "read-aloud-pass",
+          "verdict": "deviation",
+          "evidence": "src/lib/craft/lenses/dialogue.md:10 The lens is explicitly page-only. Its 'speakable in one breath' criterion (line 50) is a page pass with a spoken checklist, and nothing labels accepted lines as unheard."
+        },
+        {
+          "technique": "candidates-under-rotating-constraints",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/judge/fleetPlan.ts:90 This context judges the one stored artifact per (entity, step, judge). It generates no candidates, so the candidate count and constraint deck belong to the producing side, which lies outside this context."
         }
       ],
-      "withdrawn": {
-        "worker": "4d9c7ef7-d567-45fd-ae18-abdba983e75b",
-        "state": "deviation",
-        "at": "2026-10-18T01:22:15.660729+00:00",
-        "reason": "reviewer (sonnet): The anchor src/lib/model-policy.ts is outside this context's files, and the only judge-dir reference (spendMeter.ts) just labels spend as 'judge-content'. I found no code in src/lib/judge or src/lib/craft that resolves the model policy, so the claim that the judge harness resolves this policy is unc"
-      }
+      "registryProposal": "The subject assumes the unit judged is one line in a slot with a candidate batch. This repo's judge grades a whole dialogue tree as one artifact with an A-level lens. The standard could say how the shortlist, attribution and floor rules apply when the judged unit is a tree or bark set rather than a line."
     },
     "8234e336-4af3-4c49-9e31-9740282bdde2/llm-dialogue-quality-control": {
       "context": "code-quality-evaluation",
