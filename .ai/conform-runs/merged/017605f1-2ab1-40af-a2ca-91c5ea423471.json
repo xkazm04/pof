@@ -1,0 +1,101 @@
+{
+ "schema": "conform-run/1",
+ "worker": "017605f1-2ab1-40af-a2ca-91c5ea423471",
+ "subject": "generated-mesh-acceptance",
+ "evaluatedAt": "2026-10-25T22:08:35.728478+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-acceptance",
+   "subject": "generated-mesh-acceptance",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 A generated-mesh gallery step (3D Generation, 3D & Rig's mesh half) goes to `pass` at L1 when the selected candidate has a `glbUrl`, and no structural scorecard is read anywhere under src/lib/catalog or layout-lab (grep for scoreMesh/mesh-critique/CritiqueCard: 0 hits), so a shattered or empty mesh is accepted on file presence.",
+   "techniques": [
+    {
+     "technique": "structural-scorecard",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 Mesh candidates carry only `payload.glbUrl` (meshGalleryCandidates.ts:52). The step passes on asset presence with no structural verdict, findings or score consumed. Compare rigArtifact, which defers when the rig gate never ran; the mesh gate has no equivalent."
+    },
+    {
+     "technique": "unmeasured-is-not-pass",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/itemsBespokeCheckers.ts:256 The 'Mesh generated \u00b7 tri count under LOD0 budget' check grades `data.tris`, which the app itself hardcodes and never measures from the delivered .glb. An unmeasured face count is therefore shown as `N / cap tris` and can pass. withGeneratedAsset adds an asset-presence check but still measures nothing."
+    },
+    {
+     "technique": "defect-code-taxonomy-not-prose",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/acceptance/types.ts:36 AcceptanceResult is a generic step verdict (label/status/tier/detail/reason), not a mesh defect card. It has no mesh finding list to code, and a grep found no consumer under acceptance/ that regex-matches `reason`."
+    }
+   ],
+   "registryProposal": "The subject says how a gate emits its card but not how a downstream step-acceptance layer must consume it. Proposed addition: a pipeline step that admits a generated mesh must read the structural card, or defer as 'ungated', instead of passing on file presence."
+  },
+  {
+   "context": "visual-gen-quality-and-animation",
+   "subject": "generated-mesh-acceptance",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 When trimesh's nondegenerate_faces() throws, the extractor writes DEGENERATE_FACES=0, which reads exactly like a measured clean result. The scorer then raises no degenerate-faces warn for a check that never ran: a neutral constant standing in for a missing metric.",
+   "techniques": [
+    {
+     "technique": "unmeasured-is-not-pass",
+     "verdict": "deviation",
+     "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 The exception fallback emits 0 instead of omitting the key or emitting an explicit not-measured marker. The same file does it right elsewhere (VOLUME emits 'nan' when the mesh is not watertight, and the histogram's omitted count is always stated)."
+    },
+    {
+     "technique": "floater-vs-part-face-share-rule",
+     "verdict": "conformant",
+     "evidence": "scripts/visual-gen/pof_mesh_critique.py:54 The extractor emits the largest-first per-component face histogram (line 51 sorts it in reverse; it is capped at 4096) and the count of omitted components (line 57), which are the rule's only new inputs. The partition itself happens in the TS scorer."
+    },
+    {
+     "technique": "structural-scorecard",
+     "verdict": "conformant",
+     "evidence": "scripts/visual-gen/pof_mesh_critique.py:2 This covers the extractor half of step 1 only: the geometry library emits metric markers and never scores, so the scorer never touches the file. Verdict, findings and score are derived elsewhere (src/lib/visual-gen/mesh-score.ts, a different context)."
+    },
+    {
+     "technique": "defect-code-taxonomy-not-prose",
+     "verdict": "not-applicable",
+     "evidence": "scripts/visual-gen/pof_vlm_critique.py:57 The scripts emit metrics (mesh) or free-text perceptual defects (VLM), not mesh findings. The VLM image critic is the borrowed-envelope case, where the technique says the code field should stay absent, and it does."
+    }
+   ],
+   "registryProposal": "Structural-scorecard step 1 could state the extractor-side form of 'no neutral constant': when one sub-metric's computation fails, the extractor must omit that key or emit a per-metric error marker, never a value that equals the clean measurement."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T22:08:35.728478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generated-mesh-acceptance"
+   ],
+   "techniques": [
+    "defect-code-taxonomy-not-prose",
+    "structural-scorecard",
+    "unmeasured-is-not-pass"
+   ],
+   "deviations": 1,
+   "context": "catalog-acceptance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T22:08:35.728478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generated-mesh-acceptance"
+   ],
+   "techniques": [
+    "defect-code-taxonomy-not-prose",
+    "floater-vs-part-face-share-rule",
+    "structural-scorecard",
+    "unmeasured-is-not-pass"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-quality-and-animation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -7460,7 +7460,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:184 A generated-mesh gallery step (3D Generation, 3D & Rig's mesh half) goes to `pass` at L1 when the selected candidate has a `glbUrl`, and no structural scorecard is read anywhere under src/lib/catalog or layout-lab (grep for scoreMesh/mesh-critique/CritiqueCard: 0 hits), so a shattered or empty mesh is accepted on file presence.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
+          "evaluatedRevision": 1
         },
         {
           "subject": "voice-io",
@@ -26192,7 +26196,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 When trimesh's nondegenerate_faces() throws, the extractor writes DEGENERATE_FACES=0, which reads exactly like a measured clean result. The scorer then raises no degenerate-faces warn for a check that never ran: a neutral constant standing in for a missing metric.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
+          "evaluatedRevision": 1
         },
         {
           "subject": "regeneration-vs-repair-economics",
