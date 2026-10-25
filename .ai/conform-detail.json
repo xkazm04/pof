@@ -2484,25 +2484,27 @@
       "subject": "agent-instruction-files",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T09:58:11.317Z",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:28:59.390Z",
       "techniques": [
         {
           "technique": "capability-before-steering",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:4 UE scenario panel, not an instruction file."
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:4 UE scenario panel, not an instruction file.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "capability-coverage-contract",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:23 Hook owns ping state only."
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:23 Hook owns ping state only.",
+          "carriedFrom": "2026-10-13"
         }
       ],
       "withdrawn": {
-        "worker": "7dffc944-e185-4645-b83d-c5773c48f699",
+        "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
         "state": "not-applicable",
-        "at": "2026-10-13T09:58:54.818310+00:00",
-        "reason": "reviewer (sonnet): The anchor index.tsx:20 is a JSX line (SurfaceCard opening tag) that does not show the precondition is absent, so it is incidental; the claim rests only on a grep for filenames."
+        "at": "2026-10-25T01:29:30.352075+00:00",
+        "reason": "reviewer (sonnet): The anchor (useBridgeEndpointHealth.ts:23) is just the hook's declaration line. It shows what the hook does but not that no instruction file is authored or loaded, so the anchor is incidental."
       }
     },
     "419ea285-f8b3-4f3c-b012-c75db90d3778/agent-instruction-files": {
@@ -16460,6 +16462,46 @@
       "evaluatedAt": "2026-10-25",
       "evaluatedTs": "2026-10-25T01:25:32.686Z",
       "worker": "08cb2b0d-f10a-4d23-9558-b26410e99263",
+      "techniques": []
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/agent-instruction-files": {
+      "context": "status-health-dashboard",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:28:59.390Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
+        "state": "not-applicable",
+        "at": "2026-10-25T01:29:30.410523+00:00",
+        "reason": "reviewer (sonnet): The anchor (statusModel.ts:2) is a docblock describing aggregation, not an absence. The claim 'no agent instruction file ... touched by this code' is contradicted: src/lib/status/personalLoop.ts:3 references `.claude/skills/personal-loop/SKILL.md`, and ceiling-facts.json references `.claude/green-lo"
+      }
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/agent-instruction-files": {
+      "context": "animation-state-machine-editor",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:28:59.390Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
+        "state": "not-applicable",
+        "at": "2026-10-25T01:29:30.471192+00:00",
+        "reason": "reviewer (sonnet): The anchor (codegen.ts:5) is an import and comment header about compileMachine, so it is incidental. The absence claim rests only on a grep that missed 'Instructions' hits such as applyPlan.ts's buildApplyPrompt, which renders a CLI instruction."
+      }
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/agent-instruction-files": {
+      "context": "project-ops-api",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:28:59.390Z",
+      "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
       "techniques": []
     }
   }

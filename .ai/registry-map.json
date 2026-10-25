@@ -3799,8 +3799,8 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "test-harness",
@@ -21136,8 +21136,12 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/app/api/project-rules/route.ts:28 The closest construct here is project rules: DB rows that the app itself puts into the prompts it assembles. The golden path assigns that to the inverse subject, prompt-assembly. A case-insensitive grep of all 13 route directories for CLAUDE.md, AGENTS.md, GEMINI.md, 'instruction file' and .claude/rules found nothing, so no repo-owned harness instruction file is involved.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "mcp-tools",
@@ -23061,8 +23065,8 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "fleet-orchestration",
@@ -24135,8 +24139,8 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "on-device-verification-harness",
