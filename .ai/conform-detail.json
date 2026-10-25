@@ -6653,25 +6653,30 @@
       "subject": "difficulty-design-and-adaptation",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T21:39:24.570Z",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:00:14.907Z",
       "techniques": [
         {
           "technique": "four-term-difficulty-decomposition",
           "verdict": "deviation",
-          "evidence": "src/components/modules/content/level-design/DifficultyArcChart.tsx:61 The chart and RoomNode model provide scalar difficulty without the four terms or skill-assumption provenance."
+          "evidence": "src/components/modules/content/level-design/RoomDetailPanel/constants.ts:21 Room difficulty is one authored scalar with no tag for which term it moves and no stated skill assumption (not even an 'unestimated' state)."
         },
         {
           "technique": "reward-cadence-first-diagnosis",
           "verdict": "deviation",
-          "evidence": "src/lib/level-design/pacing-linter.ts:475 The pacing report's linter recommends restructuring the challenge curve without first auditing reward events, droughts, or clumps across that span."
+          "evidence": "src/components/modules/content/level-design/PacingReportPanel.tsx:89 The pacing/difficulty report can give a clean pacing verdict from difficulty cliffs, ramps, combat runs and reachability alone. It never plots or audits where rewards fall across the span, which the technique says to do before the curve."
+        },
+        {
+          "technique": "skill-scaling-versus-power-scaling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/RoomDetailPanel/SpawnEntriesPanel.tsx:71 Spawn count is a per-room power lever, but this context defines no difficulty tiers, so the tier change-list rule has nothing to bind on."
         }
       ],
       "withdrawn": {
-        "worker": "5c337a9a-91bd-42c4-acf8-a6183898e9e6",
+        "worker": "398590f1-2564-41f0-ac7f-e11fcf0bfc74",
         "state": "deviation",
-        "at": "2026-10-16T21:39:47.337131+00:00",
-        "reason": "reviewer (sonnet): Both anchors (level-design/DifficultyArcChart.tsx and lib/level-design/pacing-linter.ts) are outside the context's ProceduralLevelWizard file list, so the verdict is about a different context; the linter's line 475 also only suggests a difficulty dip and does not show missing reward-event auditing."
+        "at": "2026-10-25T01:01:04.080759+00:00",
+        "reason": "reviewer (sonnet): The cited files (DifficultyArcChart, RoomDetailPanel/constants, PacingReportPanel, SpawnEntriesPanel) are not among this context's ProceduralLevelWizard files, and nothing in the wizard references them or any 'difficulty' field, so the deviation describes the sibling level-design editor, not this co"
       }
     },
     "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/difficulty-design-and-adaptation": {
@@ -16269,6 +16274,42 @@
           "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx:122 Metalness is shown at the same confidence as the other properties, with no heuristic or refused label per channel. Only surface type carries a confidence number."
         }
       ]
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/difficulty-design-and-adaptation": {
+      "context": "inventory-economy-simulator",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:00:14.907Z",
+      "worker": "398590f1-2564-41f0-ac7f-e11fcf0bfc74",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/PowerCurveChart.tsx:111 Plots only player power (item power by level), with no opposition curve. The curve overlay belongs to a difficulty instrument this context does not claim to be."
+        }
+      ]
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/difficulty-design-and-adaptation": {
+      "context": "character-movement-playground",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:00:14.907Z",
+      "worker": "398590f1-2564-41f0-ac7f-e11fcf0bfc74",
+      "techniques": []
+    },
+    "3d2d832f-1c0e-4b17-a464-64f4fd087649/difficulty-design-and-adaptation": {
+      "context": "ability-design",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:00:14.907Z",
+      "worker": "398590f1-2564-41f0-ac7f-e11fcf0bfc74",
+      "techniques": []
     }
   }
 }

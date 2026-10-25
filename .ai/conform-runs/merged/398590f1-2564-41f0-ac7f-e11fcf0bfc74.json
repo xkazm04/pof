@@ -1,0 +1,120 @@
+{
+  "schema": "conform-run/1",
+  "worker": "398590f1-2564-41f0-ac7f-e11fcf0bfc74",
+  "subject": "difficulty-design-and-adaptation",
+  "evaluatedAt": "2026-10-25T01:00:14.907806+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "inventory-economy-simulator",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:68 This context simulates loot and affix economy (rarity shares and item power by player level) and does not author, tier or adjust difficulty. A grep of sub_inventory for 'difficult', 'adaptive', 'skill tier', 'enemy power' and 'playerSkill' returned no hits.",
+      "techniques": [
+        {
+          "technique": "four-term-difficulty-decomposition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/PowerCurveChart.tsx:111 Plots only player power (item power by level), with no opposition curve. The curve overlay belongs to a difficulty instrument this context does not claim to be."
+        }
+      ],
+      "absenceTerms": [
+        "difficult",
+        "adaptive",
+        "enemy power",
+        "playerSkill"
+      ]
+    },
+    {
+      "context": "character-movement-playground",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_character/ai-feel/constants.ts:28 The presets and layers here tune the player character's movement and camera feel (e.g. 'Dark Souls heavy'), not difficulty. A grep of movement/, playground/ and ai-feel/ for 'difficult', 'adaptive', 'skill', 'enemy' and 'tier' returned no hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "difficult",
+        "adaptive",
+        "skill",
+        "enemy"
+      ]
+    },
+    {
+      "context": "ability-design",
+      "subject": "difficulty-design-and-adaptation",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/stores/abilitySpecStore.ts:27 The only listed file is a Zustand cache of per-entity ability specs with no difficulty, tier or adaptation logic. A grep of src/stores and src/lib/ability for 'difficult', 'adaptive', 'skill tier' and 'dynamic difficulty' returned no hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "difficult",
+        "adaptive",
+        "dynamic difficulty"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "difficulty-design-and-adaptation",
+      "context": "procedural-level-generation",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited files (DifficultyArcChart, RoomDetailPanel/constants, PacingReportPanel, SpawnEntriesPanel) are not among this context's ProceduralLevelWizard files, and nothing in the wizard references them or any 'difficulty' field, so the deviation describes the sibling level-design editor, not this co"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T01:00:14.907806+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [
+        "four-term-difficulty-decomposition",
+        "reward-cadence-first-diagnosis",
+        "skill-scaling-versus-power-scaling"
+      ],
+      "deviations": 1,
+      "context": "procedural-level-generation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:00:14.907806+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [
+        "four-term-difficulty-decomposition"
+      ],
+      "deviations": 0,
+      "context": "inventory-economy-simulator",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:00:14.907806+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "character-movement-playground",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:00:14.907806+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "difficulty-design-and-adaptation"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ability-design",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

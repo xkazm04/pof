@@ -1991,7 +1991,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/stores/abilitySpecStore.ts:27 The only listed file is a Zustand cache of per-entity ability specs with no difficulty, tier or adaptation logic. A grep of src/stores and src/lib/ability for 'difficult', 'adaptive', 'skill tier' and 'dynamic difficulty' returned no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d760d5742a4fa29e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -9222,7 +9226,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/ai-feel/constants.ts:28 The presets and layers here tune the player character's movement and camera feel (e.g. 'Dark Souls heavy'), not difficulty. A grep of movement/, playground/ and ai-feel/ for 'difficult', 'adaptive', 'skill', 'enemy' and 'tier' returned no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d760d5742a4fa29e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "subtext-and-voice-differentiation",
@@ -15472,7 +15480,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:68 This context simulates loot and affix economy (rarity shares and item power by player level) and does not author, tier or adjust difficulty. A grep of sub_inventory for 'difficult', 'adaptive', 'skill tier', 'enemy power' and 'playerSkill' returned no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d760d5742a4fa29e",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
