@@ -16547,6 +16547,27 @@
         "at": "2026-10-25T01:37:06.290245+00:00",
         "reason": "reviewer (sonnet): helpers.ts:81 does emit ARPGGameplayTags::Data_${attribute}_Bonus. I couldn't confirm the central claim that UE's ARPGGameplayTags.cpp declares no *_Bonus tags: that file is not in the pof repo and a search found no copy. The only _Bonus match in the repo is that generator line."
       }
+    },
+    "a2e69711-c5de-469c-8672-5863ff80ba72/concurrency-guards": {
+      "context": "cross-module-features",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:49:34.367Z",
+      "worker": "4865c0a7-cfdf-4378-8013-f44c47002cb7",
+      "techniques": [
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:150 No try-begin and no second-caller policy. A second dispatch neither refuses, joins nor queues; it just overwrites the shared door's scalar inFlight ref (the 'boolean flag trampled by a second key' failure)."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:70 The error-memory stats fetch captures a per-effect cancelled flag and drops a late response after cleanup, so a superseded attempt cannot write state."
+        }
+      ]
     }
   }
 }

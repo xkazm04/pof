@@ -12308,7 +12308,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:150 Build dispatches a feature-fix CLI run with no in-flight check of its own. The only guard is the Build button's `disabled={isBuilding}`, and `isBuilding` comes from the CLI store's isRunning, which only flips once the terminal picks up the prompt (dispatchPromptWhenReady can wait for terminal-ready). Two Build clicks in that window both dispatch, and the shared door's scalar `inFlight.current = item` (src/hooks/usePlanDispatch.ts:81) is overwritten, so the first run's outcome is credited to the second feature.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         },
         {
           "subject": "fleet-orchestration",
