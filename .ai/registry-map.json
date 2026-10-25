@@ -7809,7 +7809,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/catalog/contractPrompt.ts:159 The shared produce-prompt builder states the graded-field list as a counted closure (total = described + named, counts interpolated from the arrays), so the spec a CLI authors against cannot silently omit a field the checker grades.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:85e0c3851c4a6027",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mcp-tools",
