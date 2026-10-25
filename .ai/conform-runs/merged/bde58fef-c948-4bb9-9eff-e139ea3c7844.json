@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bde58fef-c948-4bb9-9eff-e139ea3c7844",
+ "subject": "model-routing",
+ "evaluatedAt": "2026-10-25T23:03:19.432689+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "model-routing",
+   "context": "ai-developer-tools-api",
+   "reason": "evidence leans on stream/route.ts, which is not a tracked file"
+  },
+  {
+   "subject": "model-routing",
+   "context": "visual-gen-3d-model-runners",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
