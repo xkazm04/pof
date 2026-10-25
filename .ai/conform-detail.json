@@ -16871,6 +16871,78 @@
           "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/index.tsx:14 This is an internal UI registry, so there is no exported name surface to deprecate."
         }
       ]
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/agent-browser-control": {
+      "context": "asset-viewer-and-browser",
+      "subject": "agent-browser-control",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:33:26.063Z",
+      "worker": "47a43f3c-6fef-4731-89c2-4e395df1ab35",
+      "techniques": [
+        {
+          "technique": "persistent-browser-daemon",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:13 No browser process is started or kept alive; the panel only calls an HTTP catalog route."
+        },
+        {
+          "technique": "references-over-selectors",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:13 No agent names page elements; a person clicks rendered cards."
+        },
+        {
+          "technique": "effect-classed-commands",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:13 No set of browser commands for an agent exists in this context."
+        },
+        {
+          "technique": "agent-actionable-errors",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:13 Errors go to a person through InlineErrorRetry, not to an agent."
+        },
+        {
+          "technique": "socket-scoped-surface",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:13 No daemon and no remote or tunnel listener."
+        }
+      ]
+    },
+    "c83e4533-113e-44e3-b005-bd44b22bf20a/agent-browser-control": {
+      "context": "project-exploration-tools",
+      "subject": "agent-browser-control",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:33:26.063Z",
+      "worker": "47a43f3c-6fef-4731-89c2-4e395df1ab35",
+      "techniques": [
+        {
+          "technique": "persistent-browser-daemon",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:43 'Browse' here means listing a directory over HTTP; no browser process exists."
+        },
+        {
+          "technique": "references-over-selectors",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:43 No snapshot or element-reference vocabulary is used."
+        },
+        {
+          "technique": "effect-classed-commands",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:43 No set of browser commands for an agent."
+        },
+        {
+          "technique": "agent-actionable-errors",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:43 Errors go to UI state for a person to read."
+        },
+        {
+          "technique": "socket-scoped-surface",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:43 No daemon listener and no remote surface."
+        }
+      ]
     }
   }
 }
