@@ -4876,7 +4876,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:133 The viewer measures the raw bbox before its display fit, grades it through world-scale against a stated or honestly-nominal target, reports the derived import uniform scale even on a match, and labels generator-normalised extents as a unit box rather than a real size.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:792cdbe5a3573767",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -26646,7 +26650,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:18 The world module is data-driven zone topology, playtime and travel design over static zone tables; a search of sub_world for glb, gltf, fbx, importUniformScale, targetExtent and normaliz found no hits (the only 'mesh' hits are NavMesh continuity flags), so it never receives or imports a generated mesh.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:792cdbe5a3573767",
+          "evaluatedRevision": 1
         },
         {
           "subject": "voice-io",

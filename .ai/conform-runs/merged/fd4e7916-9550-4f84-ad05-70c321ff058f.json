@@ -1,0 +1,115 @@
+{
+  "schema": "conform-run/1",
+  "worker": "fd4e7916-9550-4f84-ad05-70c321ff058f",
+  "subject": "generated-asset-world-scale",
+  "evaluatedAt": "2026-10-25T01:10:12.555207+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "world-module",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_world/index.tsx:18 The world module is data-driven zone topology, playtime and travel design over static zone tables; a search of sub_world for glb, gltf, fbx, importUniformScale, targetExtent and normaliz found no hits (the only 'mesh' hits are NavMesh continuity flags), so it never receives or imports a generated mesh.",
+      "techniques": [
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:18 No mesh import path in this context."
+        }
+      ],
+      "absenceTerms": [
+        "glb",
+        "gltf",
+        "fbx",
+        "importUniformScale",
+        "targetExtent"
+      ]
+    },
+    {
+      "context": "asset-viewer-and-browser",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:133 The viewer measures the raw bbox before its display fit, grades it through world-scale against a stated or honestly-nominal target, reports the derived import uniform scale even on a match, and labels generator-normalised extents as a unit box rather than a real size.",
+      "techniques": [
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:133 The factor is derived and reported even on a match. Stats are computed (SceneViewer.tsx:93 reportLoaded) before the 2/maxDim viewport fit, so the measurement is of the delivered geometry."
+        },
+        {
+          "technique": "generator-normalization-band",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetStats.ts:41 The band carries a date and corpus size. Detection is exposed as generatorNormalized (assetGrade.ts:181), and inside the band the result reads as a unit box with no real-world size. Minor gap: the user-facing sentence at line 136 does not print the band interval."
+        },
+        {
+          "technique": "nominal-extent-only-where-honest",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:152 Class and target are stated inputs and never inferred from a filename (useViewerStore.ts:21-32). A missing class/target grades unmeasured, never pass."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "generated-asset-world-scale",
+      "context": "asset-forge",
+      "reason": "evidence leans on plan/route.ts, which is not a tracked file"
+    },
+    {
+      "subject": "generated-asset-world-scale",
+      "context": "procedural-scene-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited FBX slider and the glb-branch line are in import-automation/ImportAutomationView.tsx, which is not among this context's files. The claim is about a different context. The AutoRigView part rests only on a grep that found no height or proportion terms, and that does not make the slider this "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T01:10:12.555207+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-asset-world-scale"
+      ],
+      "techniques": [
+        "import-scale-derivation",
+        "reference-skeleton-size-check",
+        "unit-convention-at-the-engine-edge"
+      ],
+      "deviations": 1,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:10:12.555207+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-asset-world-scale"
+      ],
+      "techniques": [
+        "import-scale-derivation"
+      ],
+      "deviations": 0,
+      "context": "world-module",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:10:12.555207+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-asset-world-scale"
+      ],
+      "techniques": [
+        "generator-normalization-band",
+        "import-scale-derivation",
+        "nominal-extent-only-where-honest"
+      ],
+      "deviations": 0,
+      "context": "asset-viewer-and-browser",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

@@ -6914,25 +6914,30 @@
       "subject": "generated-asset-world-scale",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T22:54:05.401Z",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:10:12.555Z",
       "techniques": [
         {
           "technique": "import-scale-derivation",
           "verdict": "deviation",
-          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:114 FBX import automation lets users hand-tune scale via slider rather than deriving it."
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:114 FBX scale is typed via StyledSlider and not derived from target/measured; the glb branch (line 166, 'Scale: derived by the import route from the measured mesh — never typed here.') is conformant, but the FBX branch keeps a typed knob."
+        },
+        {
+          "technique": "unit-convention-at-the-engine-edge",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:112 A single 0.01-100 typed factor covers both the hundredfold cm/m unit fix and the per-asset size fix, so the two separate factors get merged into one hand-set number at the call site and there is no named conversion edge."
         },
         {
           "technique": "reference-skeleton-size-check",
           "verdict": "deviation",
-          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:40 Preset bone generation uses an arbitrary fixed spacing scalar rather than canonical reference skeleton proportions."
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/index.tsx:127 The AutoRig workflow goes from mesh to Mixamo to UE retarget with no height or segment-proportion comparison against the target skeleton (grep finds no height/proportion check in AutoRigView), so a wrong-build humanoid only surfaces as foot slide after retargeting."
         }
       ],
       "withdrawn": {
-        "worker": "d71f3058-263e-4f51-8917-9e4b2abc2b37",
+        "worker": "fd4e7916-9550-4f84-ad05-70c321ff058f",
         "state": "deviation",
-        "at": "2026-10-16T22:54:22.123287+00:00",
-        "reason": "reviewer (sonnet): Both anchors (import-automation/ImportAutomationView.tsx:114 and auto-rig/AutoRigView/helpers.ts:40) sit outside this context's file list, which covers procedural-engine, scene-composer and AutoRigView/index.tsx. The slider at line 114 is a real FBX scale control, but nothing I opened shows it is th"
+        "at": "2026-10-25T01:11:08.545502+00:00",
+        "reason": "reviewer (sonnet): The cited FBX slider and the glb-branch line are in import-automation/ImportAutomationView.tsx, which is not among this context's files. The claim is about a different context. The AutoRigView part rests only on a grep that found no height or proportion terms, and that does not make the slider this "
       }
     },
     "2fb73390-0315-4551-953a-09c67b495733/generated-asset-world-scale": {
@@ -16310,6 +16315,48 @@
       "evaluatedTs": "2026-10-25T01:00:14.907Z",
       "worker": "398590f1-2564-41f0-ac7f-e11fcf0bfc74",
       "techniques": []
+    },
+    "2991dc7e-92df-4e72-a7fe-ea3d15646718/generated-asset-world-scale": {
+      "context": "world-module",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:10:12.555Z",
+      "worker": "fd4e7916-9550-4f84-ad05-70c321ff058f",
+      "techniques": [
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:18 No mesh import path in this context."
+        }
+      ]
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/generated-asset-world-scale": {
+      "context": "asset-viewer-and-browser",
+      "subject": "generated-asset-world-scale",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:10:12.555Z",
+      "worker": "fd4e7916-9550-4f84-ad05-70c321ff058f",
+      "techniques": [
+        {
+          "technique": "import-scale-derivation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:133 The factor is derived and reported even on a match. Stats are computed (SceneViewer.tsx:93 reportLoaded) before the 2/maxDim viewport fit, so the measurement is of the delivered geometry."
+        },
+        {
+          "technique": "generator-normalization-band",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetStats.ts:41 The band carries a date and corpus size. Detection is exposed as generatorNormalized (assetGrade.ts:181), and inside the band the result reads as a unit box with no real-world size. Minor gap: the user-facing sentence at line 136 does not print the band interval."
+        },
+        {
+          "technique": "nominal-extent-only-where-honest",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:152 Class and target are stated inputs and never inferred from a filename (useViewerStore.ts:21-32). A missing class/target grades unmeasured, never pass."
+        }
+      ]
     }
   }
 }
