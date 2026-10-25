@@ -16133,6 +16133,76 @@
       "evaluatedTs": "2026-10-25T00:29:34.531Z",
       "worker": "84e00290-af4a-42c9-8e02-d92cf70440d6",
       "techniques": []
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/repository-landing-document": {
+      "context": "image-generation",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:34:10.829Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+        "state": "not-applicable",
+        "at": "2026-10-25T00:34:39.603677+00:00",
+        "reason": "reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+      }
+    },
+    "df3ac63a-e374-4e40-9f8c-abd0d4f87187/repository-landing-document": {
+      "context": "visual-gen-library",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:34:10.829Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+        "state": "not-applicable",
+        "at": "2026-10-25T00:34:39.603677+00:00",
+        "reason": "reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+      }
+    },
+    "aece38a1-8119-45ea-a968-6441cb31ee70/repository-landing-document": {
+      "context": "asset-forge",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:34:10.829Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+        "state": "not-applicable",
+        "at": "2026-10-25T00:34:39.603677+00:00",
+        "reason": "reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+      }
+    },
+    "9a11b0c7-a013-434b-8325-086ee4151f70/repository-landing-document": {
+      "context": "visual-gen-style-asset-library",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:34:10.829Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+        "state": "not-applicable",
+        "at": "2026-10-25T00:34:39.603677+00:00",
+        "reason": "reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+      }
+    },
+    "7e5113c1-2957-49ad-aeee-6f7effe35dce/repository-landing-document": {
+      "context": "app-navigation",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:34:10.829Z",
+      "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+      "techniques": []
     }
   }
 }

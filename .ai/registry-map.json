@@ -4277,7 +4277,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/layout.tsx:19 The only descriptive metadata in this context is the app's own HTML title and description, which the application renders itself (public-claim-provenance territory by the golden path's own seam), not the repository host's front page or About-box fields; searching src/app, src/hooks and src/stores for shields.io, img.shields, badge.svg, 'landing document' and 'front page' found nothing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
