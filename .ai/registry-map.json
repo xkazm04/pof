@@ -5986,7 +5986,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/index.tsx:26 Bestiary/encounter 'metrics' are React visualizations of encounter design data selected by section id, not quantities a service exports to unknown consumers; a search of sub_bestiary for prometheus/opentelemetry/statsd/scrape/prom-client found 0 hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:7fac3c16c37ab0cc",
+          "evaluatedRevision": 3
         },
         {
           "subject": "data-viz",
@@ -11000,7 +11004,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/index.tsx:26 Combat 'metrics' are dashboard panels rendered from static/derived game data (weapon rosters, DPS math) for designers, not an exported service metric surface; a search of sub_combat for prometheus/opentelemetry/statsd/scrape/prom-client found 0 hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:7fac3c16c37ab0cc",
+          "evaluatedRevision": 3
         },
         {
           "subject": "accumulate-then-aggregate-metrics",
@@ -17470,7 +17478,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/index.tsx:33 These 'metrics' are React glyphs re-derived in the browser from a Zustand loot-tuning store for a designer to view; nothing is published from a service for outside scrapers or consumers, and a search of sub_loot for prometheus/opentelemetry/statsd/scrape/prom-client found 0 hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:7fac3c16c37ab0cc",
+          "evaluatedRevision": 3
         },
         {
           "subject": "accumulate-then-aggregate-metrics",

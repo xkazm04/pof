@@ -16798,6 +16798,79 @@
       "evaluatedTs": "2026-10-25T02:25:23.791Z",
       "worker": "8f7949d1-6cc5-4641-8318-e8190b4a9f8f",
       "techniques": []
+    },
+    "e589fc28-aa8c-4cf7-805f-819d1b92d568/metric-surface-contract": {
+      "context": "loot-metrics-designer",
+      "subject": "metric-surface-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:29:58.344Z",
+      "worker": "7341a1ab-7b23-4c67-8063-22c7fa7db1c3",
+      "techniques": [
+        {
+          "technique": "export-terms-not-ratios",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/index.tsx:34 The only consumer is an in-app React hook reading a client store, not a time-series store, so there is no published counter/ratio to shape."
+        },
+        {
+          "technique": "derive-outside-the-hot-loop",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/index.tsx:35 The inputs are designer tuning values, not a latency-critical serving loop being instrumented."
+        },
+        {
+          "technique": "metric-removal-is-a-staged-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/index.tsx:19 The section glyph map is internal UI with no exported names that unknown consumers depend on."
+        }
+      ]
+    },
+    "38cdf098-fcb5-4c48-8100-de599eb863e0/metric-surface-contract": {
+      "context": "combat-metrics",
+      "subject": "metric-surface-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:29:58.344Z",
+      "worker": "7341a1ab-7b23-4c67-8063-22c7fa7db1c3",
+      "techniques": [
+        {
+          "technique": "export-terms-not-ratios",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:7 Values come from game-design weapon data shown in charts and are never published as counters or ratios for downstream consumers."
+        },
+        {
+          "technique": "same-process-monotonic-intervals",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:24 These are game-design data records; there are no runtime duration or queue-wait timestamps taken or shipped."
+        },
+        {
+          "technique": "metric-removal-is-a-staged-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/index.tsx:14 The metric map is an internal UI section registry, not an exported metric namespace."
+        }
+      ]
+    },
+    "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/metric-surface-contract": {
+      "context": "bestiary-encounters-metrics",
+      "subject": "metric-surface-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:29:58.344Z",
+      "worker": "7341a1ab-7b23-4c67-8063-22c7fa7db1c3",
+      "techniques": [
+        {
+          "technique": "export-terms-not-ratios",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/index.tsx:27 The output is a ReactNode for in-app display, not a published series."
+        },
+        {
+          "technique": "metric-removal-is-a-staged-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/index.tsx:14 This is an internal UI registry, so there is no exported name surface to deprecate."
+        }
+      ]
     }
   }
 }
