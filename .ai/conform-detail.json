@@ -6183,32 +6183,28 @@
       "context": "catalog-browser-ui",
       "subject": "page-load-pipeline",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:12:27.914Z",
+      "worker": "936addb8-2073-4b5d-8408-6f8c5290c23f",
       "techniques": [
         {
-          "technique": "script-cost-is-main-thread-time",
+          "technique": "font-loading-discipline",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/CatalogTree.tsx:382 Nested rows set their own entrance; LayoutLab's AnimatePresence initial={false} does not cover them. Server-side reduced-motion state stays null, so the opacity 0 branch is what is served."
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:243 className={t.fontMono} at line 241 maps to ibmPlexMono.className (theme.ts:30), declared 400/500/600 only, so 700 has no face. PipelineRail.tsx:387/404 also ask for 700 on var(--lab-font-mono)."
         },
         {
           "technique": "layout-stability-by-reservation",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/NewHome.tsx:71 The homepage hydration skeleton reserves a 260px rail plus canvas. The loaded Baseline grid on a wide viewport is 260px + 320px + canvas, so the work area shifts when the shell replaces the placeholder."
+          "evidence": "src/components/layout-lab/Baseline/index.tsx:242 The loaded Baseline is three columns (tree 260 + pipeline 320 + canvas). Its first-paint placeholder (NewHome.tsx:71) restates a two-column '260px 1fr' literal, so the canvas placeholder sits 320px off where the canvas lands. The placeholder is not derived from the same source as the loaded layout."
         },
         {
-          "technique": "font-loading-discipline",
+          "technique": "script-cost-is-main-thread-time",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/fonts.ts:11 The lab root always enables Inter, JetBrains Mono and IBM Plex Mono. None of the next/font calls sets preload:false; the installed loader defaults preload to true, so the dark-theme mono is preloaded on the default light theme too."
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:382 Nested rows set their own entrance; LayoutLab's AnimatePresence initial={false} does not cover them. Server-side reduced-motion state stays null, so the opacity 0 branch is what is served.",
+          "carriedFrom": "2026-10-16"
         }
-      ],
-      "withdrawn": {
-        "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
-        "state": "deviation",
-        "at": "2026-10-16T01:46:15.419339+00:00",
-        "reason": "reviewer (sonnet): The opacity-0 claim is not about served markup. NewHome.tsx's hydration gate uses getServerSnapshot `() => false`, so the server renders only NewHomeSkeleton and never renders CatalogTree or PipelineRail rows. Both verdicts therefore rest on an unconfirmed claim that the served HTML hides labels."
-      }
+      ]
     },
     "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/page-load-pipeline": {
       "context": "lab-shell-and-navigation",
@@ -16044,6 +16040,27 @@
         "at": "2026-10-24T23:59:45.364017+00:00",
         "reason": "reviewer (sonnet): The anchor CookSettingsPanel.tsx:113 is an 'Iterative cooking' toggle, which is incidental. The context also contains SmokeTest.tsx, which launches the staged build and reads its platform and config, so 'no device launch' is not confirmed."
       }
+    },
+    "a2f9922b-d729-43f1-8050-27103ff26664/page-load-pipeline": {
+      "context": "app-shell-and-chrome",
+      "subject": "page-load-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:12:27.914Z",
+      "worker": "936addb8-2073-4b5d-8408-6f8c5290c23f",
+      "techniques": [
+        {
+          "technique": "layout-stability-by-reservation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout/ShellSkeleton.tsx:13 Restated rather than derived from SidebarL1's COLLAPSED_WIDTH (SidebarL1.tsx:11). Plus: ModuleSkeleton is shared by the Suspense fallback and the shell skeleton (ShellSkeleton.tsx:68), so the one-placeholder rule is met for the content slot."
+        },
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "conformant",
+          "evidence": "src/components/layout/ModuleRenderer/registry.tsx:13 Module views are split per module with React.lazy, so each module's code loads on demand instead of riding the shell's first load."
+        }
+      ]
     }
   }
 }

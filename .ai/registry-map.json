@@ -4453,7 +4453,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout/ShellSkeleton.tsx:13 The first-paint shell skeleton restates the rail width as its own literal (the comment says it mirrors COLLAPSED_WIDTH in SidebarL1.tsx, kept un-imported on purpose). It also reserves only the collapsed 56px L1 rail, while SidebarL1 animates between 56 and EXPANDED_WIDTH 180. The placeholder and the loaded rail can disagree, which is the restated-constant failure the technique names.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:449e36ca8d3fe3a6",
+          "evaluatedRevision": 4
         },
         {
           "subject": "docs-content-model",
@@ -7513,7 +7517,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:243 The catalog tree asks for weight 700 in `t.fontMono`. Under the default Blueprint theme (theme.ts:30) that resolves to IBM Plex Mono, which is declared only at 400/500/600, so the browser falls back to the 600 face (or a synthesized bold) without a warning. The technique names exactly this failure: a requested weight with no face behind it.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:449e36ca8d3fe3a6",
+          "evaluatedRevision": 4
         },
         {
           "subject": "native-shell-integration",
