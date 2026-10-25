@@ -1,0 +1,107 @@
+{
+ "schema": "conform-run/1",
+ "worker": "eda030d7-1483-442b-a2f4-929ff770cff6",
+ "subject": "alerting",
+ "evaluatedAt": "2026-10-25T02:37:18.947898+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "inventory-economy-simulator",
+   "subject": "alerting",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:49 The 'Balance Alerts' are verdicts the simulator works out from a Monte Carlo run the user starts by hand, shown in a tab; nothing is fired, stored as a fire record, delivered or interrupted, so the subject's precondition (rules over collected signals that claim human attention) does not hold. A case-insensitive search of sub_inventory/ for acknowledg, lastFired, quietHours, snooze and toast found nothing; 'cooldown' appears only as the cooldownReduction stat label and 'Alert Sound' is an in-game loot-filter style field.",
+   "techniques": [
+    {
+     "technique": "evaluation-loop",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:41 A one-shot simulation the user starts by clicking; there is no evaluator watching a live signal."
+    },
+    {
+     "technique": "absence-as-a-condition",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AlertCard.tsx:17 There is a third 'unmeasured' state that is never shown as green, which matches the spirit of the technique, but it covers simulation coverage, not a metric that stopped arriving."
+    },
+    {
+     "technique": "escalation-routing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/constants.ts:41 Severity only picks a colour; there is no reach or routing. ALERT_COLORS (info/warning/critical) is an unused second severity vocabulary next to VerdictState (warn/critical)."
+    }
+   ],
+   "absenceTerms": [
+    "acknowledg",
+    "lastFired",
+    "quietHours",
+    "snooze",
+    "toast"
+   ]
+  },
+  {
+   "context": "holistic-quality-overview",
+   "subject": "alerting",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/UnifiedSummaryView/index.tsx:74 Severity here only filters which insights are counted on badges in a dashboard that is computed while the view is open. The golden path's line 21 puts status badges outside alerting. Nothing is fired, stored, delivered or acknowledged. A search of HolisticHealthView/ and UnifiedSummaryView/ for acknowledg, lastFired, quietHours, snooze and fireRecord found nothing (the one 'escalation' hit is about a scope banner).",
+   "techniques": [
+    {
+     "technique": "evaluation-loop",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/HolisticHealthView/useHolisticHealthView.tsx:69 Health is computed again only when the mounted view's inputs change. Nothing evaluates rules; this is a display refresh."
+    },
+    {
+     "technique": "escalation-routing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/UnifiedSummaryView/index.tsx:76 Good news is a band on the same severity axis, as the golden path suggests, but it only drives badge rendering; nothing is routed."
+    },
+    {
+     "technique": "absence-as-a-condition",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/HolisticHealthView/constants.ts:24 An 'inactive' signal status exists as a neutral colour, but there are no rules to apply a no-data policy to."
+    }
+   ],
+   "absenceTerms": [
+    "acknowledg",
+    "lastFired",
+    "quietHours",
+    "snooze",
+    "fireRecord"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:37:18.947898+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "alerting"
+   ],
+   "techniques": [
+    "absence-as-a-condition",
+    "escalation-routing",
+    "evaluation-loop"
+   ],
+   "deviations": 0,
+   "context": "inventory-economy-simulator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:37:18.947898+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "alerting"
+   ],
+   "techniques": [
+    "absence-as-a-condition",
+    "escalation-routing",
+    "evaluation-loop"
+   ],
+   "deviations": 0,
+   "context": "holistic-quality-overview",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

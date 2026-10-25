@@ -14475,7 +14475,11 @@
           "revision": 4,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/index.tsx:74 Severity here only filters which insights are counted on badges in a dashboard that is computed while the view is open. The golden path's line 21 puts status badges outside alerting. Nothing is fired, stored, delivered or acknowledged. A search of HolisticHealthView/ and UnifiedSummaryView/ for acknowledg, lastFired, quietHours, snooze and fireRecord found nothing (the one 'escalation' hit is about a scope banner).",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:90e16e9a2b80434b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "session-continuation",
@@ -15418,7 +15422,11 @@
           "revision": 4,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:49 The 'Balance Alerts' are verdicts the simulator works out from a Monte Carlo run the user starts by hand, shown in a tab; nothing is fired, stored as a fire record, delivered or interrupted, so the subject's precondition (rules over collected signals that claim human attention) does not hold. A case-insensitive search of sub_inventory/ for acknowledg, lastFired, quietHours, snooze and toast found nothing; 'cooldown' appears only as the cooldownReduction stat label and 'Alert Sound' is an in-game loot-filter style field.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:90e16e9a2b80434b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "multi-provider-gateway-plane",

@@ -16943,6 +16943,58 @@
           "evidence": "src/components/modules/project-setup/PathBrowser/usePathBrowser.ts:43 No daemon listener and no remote surface."
         }
       ]
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/alerting": {
+      "context": "inventory-economy-simulator",
+      "subject": "alerting",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:37:18.947Z",
+      "worker": "eda030d7-1483-442b-a2f4-929ff770cff6",
+      "techniques": [
+        {
+          "technique": "evaluation-loop",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/index.tsx:41 A one-shot simulation the user starts by clicking; there is no evaluator watching a live signal."
+        },
+        {
+          "technique": "absence-as-a-condition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AlertCard.tsx:17 There is a third 'unmeasured' state that is never shown as green, which matches the spirit of the technique, but it covers simulation coverage, not a metric that stopped arriving."
+        },
+        {
+          "technique": "escalation-routing",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/constants.ts:41 Severity only picks a colour; there is no reach or routing. ALERT_COLORS (info/warning/critical) is an unused second severity vocabulary next to VerdictState (warn/critical)."
+        }
+      ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/alerting": {
+      "context": "holistic-quality-overview",
+      "subject": "alerting",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:37:18.947Z",
+      "worker": "eda030d7-1483-442b-a2f4-929ff770cff6",
+      "techniques": [
+        {
+          "technique": "evaluation-loop",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/HolisticHealthView/useHolisticHealthView.tsx:69 Health is computed again only when the mounted view's inputs change. Nothing evaluates rules; this is a display refresh."
+        },
+        {
+          "technique": "escalation-routing",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/index.tsx:76 Good news is a band on the same severity axis, as the golden path suggests, but it only drives badge rendering; nothing is routed."
+        },
+        {
+          "technique": "absence-as-a-condition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/HolisticHealthView/constants.ts:24 An 'inactive' signal status exists as a neutral colour, but there are no rules to apply a no-data policy to."
+        }
+      ]
     }
   }
 }
