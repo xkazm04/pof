@@ -5553,7 +5553,11 @@
           "revision": 9,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:32 The painter makes 'shared buffer XOR own write callbacks' a shape-level invariant with a discriminated union (ZonePropertyPanel does the same for onCommit XOR record). No negative artifact asserts that passing both is rejected: src/__tests__ has `@ts-expect-error` in only five files, none of them audio. Loosening the union would leave every test green.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:c6563834f502429c",
+          "evaluatedRevision": 9
         },
         {
           "subject": "talking-avatar",

@@ -16716,6 +16716,47 @@
       "evaluatedTs": "2026-10-25T02:06:12.390Z",
       "worker": "04c46ce8-17c8-42f4-964f-e3637d21be32",
       "techniques": []
+    },
+    "973ff033-ee2b-4edd-bdc7-e04454f54c7b/invariant-placement": {
+      "context": "audio-scene-designer",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:13:51.339Z",
+      "worker": "81345922-2469-4565-81da-e9466bb37efd",
+      "techniques": [
+        {
+          "technique": "constraint-deletion-is-silent",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:32 A raised structural invariant with no artifact whose pass condition is a refusal. The repo-wide ts-expect-error search found no audio or painter fixture."
+        },
+        {
+          "technique": "completeness-at-emission",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioPropertyPanel/useAudioSetLibrary.ts:69 `clipMs` is declared optional (`clipMs?: number`), yet the emitter defaults an unknown length to 0. The consumer has to decode 0 back into 'not-measured' (audio-event-budget.ts:154). The technique's rule is that an absent optional part is omitted, never defaulted."
+        },
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/constants.ts:16 The sibling map EMITTER_COLORS (line 29) is keyed by `Record<EmitterType, ...>`, so its every-member-has-a-colour rule is enforced by its shape. ZONE_COLORS is keyed by `string`, so the same rule for reverb presets is only covered by the `|| 'var(--text-muted)'` call-site fallback in helpers.ts:8."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useAudioScenePainter.ts:241 ReverbPreset 'none' is a real state that gets produced (every new zone starts with it) and means 'no reverb'. That is the honest exception, not a resolver convenience."
+        },
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useAudioScenePainter.ts:55 Which zone an emitter belongs to is recomputed by the op reducer (resolveMembership) after every geometry op. No gesture writes it."
+        },
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/useAudioScenePainter.ts:192 The 40-unit minimum is the editor's specified resize behaviour, not a defensive repair of a violated contract."
+        }
+      ]
     }
   }
 }
