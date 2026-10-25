@@ -6050,7 +6050,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:709 The only aggregation is a module-load, single-pass sum/count over the static ARCHETYPES table, plus render-time reductions over constant arrays; there is no batched evaluation, buffer, multi-process gather or reduction vocabulary; a case-insensitive search of sub_bestiary/_shared, encounters and metrics for accumulator, allGather, detach, nanmean and buffer found no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a9ddc355691fe12f",
+          "evaluatedRevision": 2
         },
         {
           "subject": "encounter-balance-simulation",
@@ -17462,7 +17466,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:44 The designer gets the whole drop-simulation result from one memoized call into src/lib/loot-designer (outside this context) and the metric panels only render static or precomputed data, so there is no batched evaluation pass, accumulator, gather or reduction API here; a case-insensitive search of sub_loot/metrics and sub_loot/ai-designer for accumulator, allGather, detach, nanmean and buffer found no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a9ddc355691fe12f",
+          "evaluatedRevision": 2
         },
         {
           "subject": "game-economy-tuning",
@@ -20986,7 +20994,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:112 The dashboards read per-module averages that the DB layer has already computed (feature-matrix-db) and combine them once on render; no evaluation set arrives in batches and there is no accumulator, rank gather or metric reduction API, so the subject's precondition does not hold; a case-insensitive search of both dashboard folders for accumulator, allGather, detach, nanmean and buffer found no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a9ddc355691fe12f",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
