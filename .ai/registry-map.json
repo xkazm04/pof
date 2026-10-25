@@ -12509,7 +12509,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog-db.ts:153 When a catalog_entities row's data blob is corrupt, rowToEntity makes up a plausible 'planned' entity, and getEntity (a single-record read) returns it as a normal record instead of failing loud, so the corrupt row looks like real data to callers.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
@@ -18684,7 +18688,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/evaluator/evaluator-results-db.ts:126 A corrupt or wrong-shaped findings blob in evaluator_results silently decodes as zero findings, with no log, count or row identity, so a damaged regression baseline reads as 'everything resolved'.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
