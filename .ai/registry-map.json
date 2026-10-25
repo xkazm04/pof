@@ -14380,7 +14380,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:105 These views compute and render the health of the single open project across its modules and never list, rank or switch between projects; a case-insensitive search of both view directories for portfolio/recentProjects/switchProject/projectId returned zero hits, so the portfolio precondition does not hold here.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "table",
@@ -20639,7 +20643,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/types.ts:31 PathBrowser is a filesystem picker that hands a path (and optionally a detected name/path) to its parent, and BlueprintInspector reads one asset; neither keeps a project registry, joins, tabs, signals or comparisons. Searching both directories for portfolio/recentProjects/switchProject/projectId found nothing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "prompt-assembly",
@@ -21283,7 +21291,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/SetupWizard.tsx:108 At the admission door a project is matched and admitted by its lowercased filesystem path and display name, with no minted identity and no fingerprint/re-bind choice, so a re-clone or move to a new path admits an amnesiac twin.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "prompt-assembly",
@@ -22849,7 +22861,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/stores/projectStore.ts:262 Switching to a recent project restores its module progress by joining on the filesystem path (the recent_projects id is itself hash16 of the normalized path). A moved or re-cloned project therefore loses its checklist history and appears as a fresh twin.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "dynamic-secret-lifecycle",

@@ -16357,6 +16357,90 @@
           "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:152 Class and target are stated inputs and never inferred from a filename (useViewerStore.ts:21-32). A missing class/target grades unmeasured, never pass."
         }
       ]
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/multi-project": {
+      "context": "project-setup-core",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:17:41.820Z",
+      "worker": "fe461081-98c6-4fcd-b78a-8157471f209c",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/SetupWizard.tsx:108 Collision/duplicate check keys on path; admission passes only {projectName, projectPath} to the store, and downstream rows are keyed by hash of normalized path."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/SetupWizard.tsx:96 Open-existing marks setup complete right away. There is no metadata-contract equip step, no explicitly deferred gaps, and no closed lifecycle vocabulary (only the isSetupComplete/isNewProject booleans)."
+        }
+      ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/multi-project": {
+      "context": "holistic-quality-overview",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:17:41.820Z",
+      "worker": "fe461081-98c6-4fcd-b78a-8157471f209c",
+      "techniques": [
+        {
+          "technique": "cross-project-comparison",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:105 The composite is over modules of one project, not across projects."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:56 There is no portfolio wall to drill from; the view reads one project's dashboards."
+        }
+      ]
+    },
+    "c83e4533-113e-44e3-b005-bd44b22bf20a/multi-project": {
+      "context": "project-exploration-tools",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:17:41.820Z",
+      "worker": "fe461081-98c6-4fcd-b78a-8157471f209c",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/PathBrowser/types.ts:32 It only emits candidate name+path; identity minting is the admission door's job (project-setup-core)."
+        }
+      ]
+    },
+    "a00c79d7-bd10-495a-8546-81ab1bfd797e/multi-project": {
+      "context": "state-management",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:17:41.820Z",
+      "worker": "fe461081-98c6-4fcd-b78a-8157471f209c",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "deviation",
+          "evidence": "src/stores/projectStore.ts:262 Progress is joined by path. ProjectModuleBridge save/load/auto-save all take projectPath, and the row id is derived from the path (progressRowId = hash16(normalizeProjectId(path)))."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "deviation",
+          "evidence": "src/stores/navigationStore.ts:34 View state (activeCategory/activeSubModule/moduleTabs) is one global persisted slot keyed by moduleId, not by project, so project B opens on project A's view after switchProject."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/stores/projectStore.ts:274 Removal is a hard DELETE of the registry row (route: DELETE FROM recent_projects) with no archived state and no enumerate-and-confirm step. The lifecycle is only isSetupComplete/isNewProject booleans."
+        }
+      ]
     }
   }
 }
