@@ -21869,7 +21869,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/harness/route.ts:178 The harness route hands out the machine-authored build guide (assembled from the executor LLM's self-reported features, decisions and learnings, and billed as 'the ultimate deliverable') as finished markdown, with no semantic, structural or human-read result and no 'accepted (2 of 3 gates)' wording, so a reader gets a document with no receipt that it was ever accepted.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:346e2d5ca7d54fa1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "session-continuation",
@@ -24562,7 +24566,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/verify/visual/route.ts:7 Neither file in this context makes or accepts a model-authored document. One is a VLM verdict on a game screenshot and the other (baselineStore.ts:27) holds per-entity balance baselines. A search of src/stores and src/app/api/verify/visual for runbook, renderGuideMarkdown, guide.md, 'architecture map' and 'generated doc' found no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:346e2d5ca7d54fa1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "test-harness",
