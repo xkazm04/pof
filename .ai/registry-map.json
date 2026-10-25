@@ -12657,7 +12657,11 @@
           "revision": 7,
           "changedAt": "2026-09-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/_shared/data-perf.ts:26 Here 'build' means a shipped game version measured at runtime (fps, memory, drawCalls per v0.8.x), not the cost of compiling it. A grep of every sub_debug file found no hits for compile, incremental, pdb, cache or UnrealBuildTool, so this dashboard has no build cost (wall-clock, peak compile memory, cache disk) for build-economics to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2dc0e92ddb23f674",
+          "evaluatedRevision": 7
         },
         {
           "subject": "test-harness",
@@ -24420,7 +24424,11 @@
           "revision": 7,
           "changedAt": "2026-09-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/ue5-bridge/build-health.ts:246 The build-health route (src/app/api/ue5-bridge/build-health/route.ts:29) serves getBuildHealthReport, and its duration-regression baseline filters the earlier builds by success alone, so Editor and Game targets, Development and other configurations, and cold and incremental UBT runs are averaged into one baseline. The headless_builds schema (build-pipeline.ts:49-67) has no cold/incremental or machine column and no peak-memory sample, so a 'duration spiked N%' alert is a number with no scenario attached, which is the failure build-measurement names.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2dc0e92ddb23f674",
+          "evaluatedRevision": 7
         },
         {
           "subject": "agent-memory",
