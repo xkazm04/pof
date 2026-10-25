@@ -23619,7 +23619,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:98 Here 'streaming' means UE World Partition level streaming (zone load priority and preload radius on a grid), not media; rg over src/components/modules/content/level-design for new Audio, AudioContext, createObjectURL, playhead, playback and requestAnimationFrame found no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -23859,7 +23863,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useScrubBar.ts:17 The only time-shaped constructs in these hooks are pointer-to-time converters that pass a position to the caller (used by the dodge-chain simulation timeline) plus a one-shot rAF state sync in usePofBridge; rg over src/hooks for new Audio, AudioContext, HTMLAudioElement, createObjectURL, .play() and playhead found no hits, so no media engine, playback clock or transport exists here.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "mcp-tools",

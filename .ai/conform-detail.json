@@ -16767,6 +16767,37 @@
       "evaluatedTs": "2026-10-25T02:21:44.225Z",
       "worker": "9641c35b-3770-48e1-a8eb-401dca51e22f",
       "techniques": []
+    },
+    "fd7a2f11-0208-4ec9-9abc-192a14a0171b/media-playback": {
+      "context": "ue5-asset-generation-hooks",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:25:23.791Z",
+      "worker": "8f7949d1-6cc5-4641-8318-e8190b4a9f8f",
+      "techniques": [
+        {
+          "technique": "playback-clock",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useScrubBar.ts:17 Holds no clock. It converts the cursor to a time and hands it to the caller."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/usePofBridge.ts:66 One-shot connection-state sync, cancelled at teardown. It is not a media loop and no media resource is minted."
+        }
+      ]
+    },
+    "023f8e03-d83d-49d1-b740-04ecdd77362c/media-playback": {
+      "context": "streaming-zone-planner",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:25:23.791Z",
+      "worker": "8f7949d1-6cc5-4641-8318-e8190b4a9f8f",
+      "techniques": []
     }
   }
 }
