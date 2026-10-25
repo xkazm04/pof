@@ -16203,6 +16203,56 @@
       "evaluatedTs": "2026-10-25T00:34:10.829Z",
       "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
       "techniques": []
+    },
+    "3f0f619b-52a3-4238-b72a-8df88fd452fd/retrieval": {
+      "context": "item-catalog-pipeline",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:43:20.401Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "d9ef4810-e562-4596-8edc-e0e52b70f9ff",
+        "state": "not-applicable",
+        "at": "2026-10-25T00:44:15.256499+00:00",
+        "reason": "reviewer (sonnet): The anchor (ItemArt.tsx:59) is one step's buildPrompt template, and it doesn't speak for the pipeline's real prompt path: src/lib/catalog/headless.ts:415-430 builds produce prompts through buildStepProducePrompt with 'canon scoping' and canonCategoriesForStep(spec), which selects a category-filtered"
+      }
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/retrieval": {
+      "context": "inventory-catalog",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:43:20.401Z",
+      "worker": "d9ef4810-e562-4596-8edc-e0e52b70f9ff",
+      "techniques": []
+    },
+    "a43ea6ff-3c0b-411c-8ace-f97992845e63/retrieval": {
+      "context": "ue5-bridge-client",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:43:20.401Z",
+      "worker": "d9ef4810-e562-4596-8edc-e0e52b70f9ff",
+      "techniques": []
+    },
+    "a40f685e-6d5d-4fce-86a0-22e1d37f95d2/retrieval": {
+      "context": "database-layer",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:43:20.401Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "d9ef4810-e562-4596-8edc-e0e52b70f9ff",
+        "state": "not-applicable",
+        "at": "2026-10-25T00:44:15.328814+00:00",
+        "reason": "reviewer (sonnet): The anchor (db.ts:66) is the bootstrap() signature and sits next to a WAL pragma, so it doesn't show that vector, FTS or ranked recall is absent; my own grep over those files found no hit, but the cited line isn't what shows it, so the anchor is incidental."
+      }
     }
   }
 }

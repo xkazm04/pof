@@ -15233,7 +15233,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:92 The gear browser applies a boolean substring filter to a small in-memory catalog and orders it by a sort key the user picks (name/type/rarity/power), with every match paginated rather than a relevance-ranked slice; a search of sub_inventory/catalog for rerank/bm25/cosine/vec0 found no retrieval engine, so this belongs to the search UI subject, not retrieval.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a49d27f889212d3f",
+          "evaluatedRevision": 19
         },
         {
           "subject": "ui-controls",
@@ -23941,7 +23945,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/ue5-bridge/query/route.ts:110 The only search-shaped action passes the query straight to UE's own asset search over Remote Control, so no corpus is cut, indexed, fused or floored on this side; a search of the bridge stores, types, hooks and routes for rerank/bm25/cosine/vec0 found nothing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a49d27f889212d3f",
+          "evaluatedRevision": 19
         },
         {
           "subject": "terminal-multiplexing",
