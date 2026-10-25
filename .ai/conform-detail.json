@@ -6739,20 +6739,30 @@
       "subject": "ability-authoring-to-engine",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T22:06:11.735Z",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:36:17.788Z",
       "techniques": [
         {
           "technique": "declared-vs-referenced-tag-audit",
           "verdict": "deviation",
-          "evidence": "src/lib/ability/tag-audit.ts:118 Empty sets produce 100; the standard explicitly requires the unmeasured guard inside the scoring function, regardless of caller guards."
+          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:42 Done right: symmetric matched/undeclared/orphaned cards with named lists (lines 25-29, 64-74). Missing: no per-surface attribution line. `appReferenced` is computed in src/lib/ability/tag-audit.ts:127 and fed into an 'App-authored' category (data.ts:686), but TagAuditSection never renders TAG_AUDIT_CATEGORIES. Also, computeTagAudit returns 100 when the union is empty (tag-audit.ts:118) and hands the guard to callers (spellbookView.ts:74 and the line-130 check). If live tags parse but no ability references any tag, the audit scores 0 instead of 'unmeasured'."
+        },
+        {
+          "technique": "few-shot-reference-plus-tag-registry",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/index.tsx:15 The context is a deterministic Monte-Carlo plus tag views. A search for prompt/useModuleCLI/TaskFactory/codegen in gas-balance/ and tags/ found no generator to brief."
+        },
+        {
+          "technique": "server-derived-codegen-report",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:130 No codegen run in this context. The panel shows an observed live-parse audit, or an honest NOT SYNCED state."
         }
       ],
       "withdrawn": {
-        "worker": "478defd9-2348-4439-9976-a877660f5156",
+        "worker": "faeb8c21-883b-41b2-9287-771435259a0a",
         "state": "deviation",
-        "at": "2026-10-16T22:06:34.755255+00:00",
-        "reason": "reviewer (sonnet): The anchor TagAuditSection.tsx and tag-audit.ts sit in the tags/ and lib/ability code, not in the gas-balance context, and nothing in gas-balance imports or renders the tag audit score. The empty-set-gives-100 behaviour is real (tag-audit.ts:118), but it belongs to a different context."
+        "at": "2026-10-25T01:37:06.220431+00:00",
+        "reason": "reviewer (sonnet): The verdict is about TagAuditSection.tsx, tag-audit.ts and spellbookView.ts, and none of those are among this context's gas-balance files. The 'scores 0 instead of unmeasured' claim is also speculation that the code doesn't back up."
       }
     },
     "624dbc02-2484-441d-a200-9aa65fa41eab/ability-authoring-to-engine": {
@@ -16503,6 +16513,43 @@
       "evaluatedTs": "2026-10-25T01:28:59.390Z",
       "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
       "techniques": []
+    },
+    "c7fb4de3-6779-431b-9860-639fef9f98ea/ability-authoring-to-engine": {
+      "context": "progression-rewards-internals",
+      "subject": "ability-authoring-to-engine",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:36:17.788Z",
+      "techniques": [
+        {
+          "technique": "few-shot-reference-plus-tag-registry",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/helpers.ts:81 Plausible invention: the new tag name enters the artifact looking exactly like an existing one, and is not marked as a pending declaration (step 5). Verified: a search of the UE Source tree for _Bonus and .Bonus found no tag declarations."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:27 The cumulative XP column is derived from the primary per-level xpRequired (overrides included), not authored separately, so there is one authority per quantity."
+        },
+        {
+          "technique": "server-derived-codegen-report",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/index.tsx:67 The generators only produce text the user downloads or copies. Nothing is written to the engine, which is the technique's 'nothing external changed' exclusion."
+        },
+        {
+          "technique": "refinement-mode-minimal-diff",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/index.tsx:31 Edits are deterministic one-field updates and the output is regenerated by code. This is the technique's 'change is mechanical' exclusion; there is no probabilistic editor."
+        }
+      ],
+      "registryProposal": "The techniques are framed around briefing a model generator. Deterministic template code generators also mint vocabulary (tag symbols written into templates by hand) and fail the same 'agreement with the vocabulary' rule. A decision rule saying template generators must resolve emitted identifiers against the declared registry, or mark them pending, would cover this case explicitly.",
+      "withdrawn": {
+        "worker": "faeb8c21-883b-41b2-9287-771435259a0a",
+        "state": "deviation",
+        "at": "2026-10-25T01:37:06.290245+00:00",
+        "reason": "reviewer (sonnet): helpers.ts:81 does emit ARPGGameplayTags::Data_${attribute}_Bonus. I couldn't confirm the central claim that UE's ARPGGameplayTags.cpp declares no *_Bonus tags: that file is not in the pof repo and a search found no copy. The only _Bonus match in the repo is that generator line."
+      }
     }
   }
 }
