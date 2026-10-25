@@ -16061,6 +16061,78 @@
           "evidence": "src/components/layout/ModuleRenderer/registry.tsx:13 Module views are split per module with React.lazy, so each module's code loads on demand instead of riding the shell's first load."
         }
       ]
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/production-prompt-architecture": {
+      "context": "project-setup-core",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:29:34.531Z",
+      "worker": "84e00290-af4a-42c9-8e02-d92cf70440d6",
+      "techniques": [
+        {
+          "technique": "fixed-section-order",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/ProjectSetupModule.tsx:108 Raw sendPrompt (useModuleCLI does no context injection) with a hand-written string. It skips PromptBuilder/buildTaskPrompt, so there are no canonical sections and no project-context header."
+        },
+        {
+          "technique": "version-keyed-engine-facts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/prompts.ts:56 The .NET 8.x toolchain floor is typed into the prompt body. src/lib/engine-facts.ts has no dotnet entry, so a UE upgrade will not update it."
+        }
+      ]
+    },
+    "968f37ed-d663-4839-8eb0-4dd445d129ed/production-prompt-architecture": {
+      "context": "ability-forge",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:29:34.531Z",
+      "worker": "84e00290-af4a-42c9-8e02-d92cf70440d6",
+      "techniques": [
+        {
+          "technique": "fixed-section-order",
+          "verdict": "conformant",
+          "evidence": "src/lib/prompts/ability-forge.ts:288 Assembled by the shared builder, whose build() emits sections in a fixed order and throws when context or task is missing."
+        },
+        {
+          "technique": "scanned-project-state-do-not-recreate",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ability-forge.ts:17 The tag inventory is a hand-typed copy of the header, not a scan. ctx has no dynamicContext, so prompt-context's 'Do NOT recreate' block is left out with no explicit empty-scan line."
+        },
+        {
+          "technique": "wiring-requirements-section",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ability-forge.ts:294 Called with no reqs or moduleAssets, so formatWiringRequirements returns '' and the prompt has no wiring section, even though a GA_* class must be granted to the ASC."
+        },
+        {
+          "technique": "domain-scoped-knowledge-injection",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ability-forge.ts:289 No module or promptKind is passed even though the work is classified (moduleId is in scope). Gotchas take the superset fallback (prompt-context.ts:279), and knowledge-tips.ts:24 returns '' with no moduleId."
+        },
+        {
+          "technique": "acceptance-criteria-appended-not-replaced",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/ability-forge.ts:280 The producer is shown the grader's bar, but as a hand-restated copy of forgedAbilityRelationshipFaults in forge-errors.ts, not read from the grader's source. The two can drift."
+        },
+        {
+          "technique": "version-keyed-engine-facts",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:60 The project's version flows into withProjectContext, and the header reads getEngineFacts(ueVersion), which throws on an unparseable version."
+        }
+      ]
+    },
+    "aece38a1-8119-45ea-a968-6441cb31ee70/production-prompt-architecture": {
+      "context": "asset-forge",
+      "subject": "production-prompt-architecture",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:29:34.531Z",
+      "worker": "84e00290-af4a-42c9-8e02-d92cf70440d6",
+      "techniques": []
     }
   }
 }

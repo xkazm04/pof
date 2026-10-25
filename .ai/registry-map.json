@@ -2181,7 +2181,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/index.tsx:74 The forge assembles through the shared PromptBuilder, but it passes no dynamicContext (so the scanned-state and do-not-recreate block is silently left out), no module (so routing takes the superset fallback and knowledge tips are dropped), and an empty wiring call that renders nothing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
@@ -4644,7 +4648,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/PromptBuilder.tsx:30 The prompts composed here are image/mesh provider prompts (subject plus style chips and style DNA), which the golden path explicitly places in the generative-media discipline; a search of asset-forge/ found no buildProjectContextHeader, withProjectContext, useModuleCLI, buildTaskPrompt or sendPrompt, and UE import goes through a server route, not a producer prompt.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -21334,7 +21342,11 @@
           "revision": 4,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/prompts.ts:50 The create and build-verify prompts are hand-written template strings sent through raw sendPrompt, so they skip the shared builder's section skeleton and type toolchain facts straight into the prompt text.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:feb2460a10b6cf60",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
