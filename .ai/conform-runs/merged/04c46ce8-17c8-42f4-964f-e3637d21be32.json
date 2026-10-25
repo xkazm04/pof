@@ -1,0 +1,117 @@
+{
+ "schema": "conform-run/1",
+ "worker": "04c46ce8-17c8-42f4-964f-e3637d21be32",
+ "subject": "embedded-db",
+ "evaluatedAt": "2026-10-25T02:06:12.390377+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "database-layer",
+   "subject": "embedded-db",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/db.ts:66 Bootstrap sets WAL but ignores the pragma's returned effective mode and never sets or asserts a sync level, so a silent fallback (or the per-connection sync default) changes the durability contract without any diagnostic.",
+   "techniques": [
+    {
+     "technique": "journal-and-durability-modes",
+     "verdict": "deviation",
+     "evidence": "src/lib/db.ts:66 Mode requested but the result is not compared against the contract; no `synchronous` pragma anywhere in src/ or scripts/; no sidecar-aware backup or export path found."
+    },
+    {
+     "technique": "storage-accounting-and-pruning",
+     "verdict": "deviation",
+     "evidence": "src/lib/cli-spend-db.ts:33 Append-only spend ledger with no named reaper (the only `DELETE FROM cli_spend` is in tests); no per-table usage report. review_snapshots does have a keep-newest-N prune (feature-matrix-db.ts:774), but it has no dry-run or age floor."
+    },
+    {
+     "technique": "db-self-instrumentation",
+     "verdict": "deviation",
+     "evidence": "src/lib/db.ts:873 The shared statement choke point has no latency recording, per-table key or slow-operation counting; no instrument wraps the connection."
+    },
+    {
+     "technique": "connection-pooling",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/db.ts:28 One process-wide synchronous better-sqlite3 connection singleton; no pool exists to size or instrument."
+    },
+    {
+     "technique": "extension-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/db.ts:65 Bootstrap runs only pragmas and DDL; a repo-wide search for loadExtension found nothing outside tests, so no extension is registered."
+    }
+   ]
+  },
+  {
+   "context": "character-overview-input",
+   "subject": "embedded-db",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_character/index.tsx:1 These are browser-side React components; a case-insensitive grep of all of sub_character/ for sqlite, better-sqlite3, getDb, pragma and journal found no hits, so the context neither opens nor operates an embedded store.",
+   "techniques": [],
+   "absenceTerms": [
+    "sqlite",
+    "better-sqlite3",
+    "getDb",
+    "pragma"
+   ]
+  },
+  {
+   "context": "loot-metrics-designer",
+   "subject": "embedded-db",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:7 The designer computes in the browser through a pure simulator module, and a case-insensitive grep of sub_loot/metrics and sub_loot/ai-designer for sqlite, better-sqlite3, getDb, pragma and journal found no hits; no embedded store is opened here.",
+   "techniques": [],
+   "absenceTerms": [
+    "sqlite",
+    "better-sqlite3",
+    "getDb",
+    "pragma"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:06:12.390377+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "embedded-db"
+   ],
+   "techniques": [
+    "connection-pooling",
+    "db-self-instrumentation",
+    "extension-lifecycle",
+    "journal-and-durability-modes",
+    "storage-accounting-and-pruning"
+   ],
+   "deviations": 1,
+   "context": "database-layer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:06:12.390377+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "embedded-db"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "character-overview-input",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:06:12.390377+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "embedded-db"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "loot-metrics-designer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

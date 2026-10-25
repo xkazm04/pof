@@ -9430,7 +9430,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/index.tsx:1 These are browser-side React components; a case-insensitive grep of all of sub_character/ for sqlite, better-sqlite3, getDb, pragma and journal found no hits, so the context neither opens nor operates an embedded store.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:0722fec97cff5b66",
+          "evaluatedRevision": 15
         },
         {
           "subject": "native-shell-integration",
@@ -12378,7 +12382,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/db.ts:66 Bootstrap sets WAL but ignores the pragma's returned effective mode and never sets or asserts a sync level, so a silent fallback (or the per-connection sync default) changes the durability contract without any diagnostic.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:0722fec97cff5b66",
+          "evaluatedRevision": 15
         },
         {
           "subject": "voice-io",
@@ -17592,7 +17600,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:7 The designer computes in the browser through a pure simulator module, and a case-insensitive grep of sub_loot/metrics and sub_loot/ai-designer for sqlite, better-sqlite3, getDb, pragma and journal found no hits; no embedded store is opened here.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:0722fec97cff5b66",
+          "evaluatedRevision": 15
         },
         {
           "subject": "procedural-level-planning",
