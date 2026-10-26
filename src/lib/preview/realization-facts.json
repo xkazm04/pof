@@ -1,5 +1,5 @@
 {
-  "reviewedAt": "2026-07-22",
+  "reviewedAt": "2026-07-23",
   "note": "Dual-execution realization audit — per pipeline step: has this step's output been PROVEN to run in the Browser preview and/or in UE, independent of its quality grade? proven = demonstrated live; probable = the path exists but this step was never walked; no = no path (or the UE moat / no browser meaning). One pipeline reviewed at a time with human sign-off (dual-execution-preview-spec.md trio process).",
   "pipelines": {
     "spellbook": {

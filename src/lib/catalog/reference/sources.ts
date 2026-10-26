@@ -7,7 +7,7 @@
  * replicates a game (`/diablo`) grows these entries wave by wave.
  */
 import type { FieldMap } from '@/lib/catalog/ingest/fieldMap';
-import { DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
+import { DIABLO1_OBTAIN, DIABLO1_PIN, DIABLO1_SOURCE, ITEM_MAP, MONSTER_MAP, SPELL_MAP } from '@/lib/catalog/ingest/diablo1';
 import { UNIQUE_ITEM_MAP } from '@/lib/catalog/ingest/diablo1UniqueItems';
 import { UNIQUE_MAP } from '@/lib/catalog/ingest/diablo1Uniques';
 import { slug, type StringDecodeStep } from '@/lib/catalog/ingest/decode';
@@ -102,7 +102,8 @@ export const DIABLO1: ReferenceSource = {
   licenceNote: DIABLO1_SOURCE.licenceNote,
   idPrefix: 'd1',
   canonProfile: 'diablo1',
-  obtain: 'git clone https://github.com/diasurgical/devilutionX — the data root is assets/txtdata',
+  obtain: DIABLO1_OBTAIN,
+  pin: DIABLO1_PIN,
   tables: [
     { file: 'monsters/monstdat.tsv', catalogId: 'bestiary', technique: 'tsv', keyColumn: '_monster_id', map: MONSTER_MAP, derive: MONSTER_DERIVE },
     { file: 'objects/objdat.tsv', catalogId: 'props', technique: 'tsv', keyColumn: 'id', map: OBJECT_MAP },

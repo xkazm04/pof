@@ -19,6 +19,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { parseHeader, checkExpectations, type SemanticResult } from '@/lib/cpp-semantic-parser';
 import { getExpectationsFor, getExpectationsForItem } from '@/lib/checklist-expectations';
 import { collectHeaders } from '@/lib/ue-source/collect-headers';
+import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
 interface VerifyRequest {
   projectPath: string;
@@ -42,8 +43,10 @@ export async function POST(request: NextRequest) {
     if (!body.projectPath || !body.items?.length) {
       return apiError('projectPath and items[] required', 400);
     }
+    const checked = checkLocalPath(body.projectPath, 'projectPath');
+    if (!checked.ok) return apiError(checked.error, 400);
 
-    const sourceDir = path.join(body.projectPath, 'Source');
+    const sourceDir = path.join(checked.data, 'Source');
 
     // Collect all .h files from Source/ for parsing
     const headerFiles = await collectHeaders(sourceDir);

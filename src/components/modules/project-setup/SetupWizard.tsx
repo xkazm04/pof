@@ -14,8 +14,8 @@ import type { PlanIssue } from '@/lib/project-setup/newProjectPlan';
 const UE_VERSIONS = [
   { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
   { value: '5.6.1', label: '5.6', note: 'web search for newer APIs' },
-  { value: '5.7.3', label: '5.7', note: 'stable' },
-  { value: '5.8.0', label: '5.8', note: 'latest' },
+  { value: '5.7.3', label: '5.7', note: 'supported' },
+  { value: '5.8.0', label: '5.8', note: 'latest · tooling default' },
 ] as const;
 
 /** The pill value for an installed engine version (same major.minor), else the raw version. */

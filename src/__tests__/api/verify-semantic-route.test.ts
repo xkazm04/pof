@@ -79,3 +79,12 @@ describe('verify-semantic — per-file read tolerance', () => {
     expect(json.data.unreadable).toEqual([]);
   });
 });
+
+describe('verify-semantic — input guard', () => {
+  it('refuses a UNC projectPath with 400 before reading anything', async () => {
+    const readFile = vi.spyOn(fsPromises, 'readFile');
+    const res = await post({ projectPath: '\\\\attacker.example\\share', items: [{ itemId: 'ai-1' }] });
+    expect(res.status).toBe(400);
+    expect(readFile).not.toHaveBeenCalled();
+  });
+});

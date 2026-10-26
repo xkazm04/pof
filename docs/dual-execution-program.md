@@ -1,6 +1,6 @@
 # Dual-Execution Program — progress handbook
 
-> **Status 2026-07-23: 32 of ~31 pipelines summarized below** (Groups A + B + C + D all
+> **Status 2026-10-22: 32 pipelines summarized below** (Groups A + B + C + D all
 > landed — the registry holds 32). This is the working handbook for the
 > browser⇄UE dual-execution program: what exists, how a domain review runs, and how the
 > remaining domains are grouped for PARALLEL sessions. Companion spec (the why + contract
@@ -31,7 +31,7 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | UE gates | `Source/PoF/Test/**` + `entityRuntimeDeferred` accepts | per-entity automation names (`data.automationName`), drained via spawn executor |
 | Audio pipeline | `POST /api/audio-gen` (elevenlabs) → `/api/audio-asset` | real generation + serving; UE import via `Content/Python/import_duel_audio.py` |
 
-## 3. Reviewed pipelines (27) — the evidence in one line each
+## 3. Reviewed pipelines (32) — the evidence in one line each
 
 | # | Pipeline | Browser proof | UE proof |
 |---|---|---|---|
@@ -66,7 +66,7 @@ the realization registry. **Nothing is claimed without runtime evidence** (see �
 | 29 | vfx | The authored Niagara system IS the pooled impact burst: 12+48+20 = 80 particles at LOD0, per-emitter lifetimes 0.18/0.6/0.9 s so it decays in stages, embers at 300–600 cm/s under −980 cm/s², and the LOD table band-for-band with UE **including the edges** (15 m → LOD1, 35 m still LOD1, 36 m culls); LOD1 halves the spawn, LOD2 skips the burst entirely (Playwright 34/34) | VSVFXPerfTest re-run headless — it asserts the same six boundary cases the browser now mirrors |
 | 30 | player-movement | The asset steps stay editor-Python, but the FEEL they tune is now dual-executed: walk 6.0 / sprint 9.0 m/s over SprintSpeedInterpTime, AccelerationFromIdle 40.96, Braking 24, RotationRate 720→360 deg/s, stamina drain 20/s (32 over 1.6 s) + regen 15/s + empty bar cannot sustain a sprint, and the roll's i-frames are the **AM_Roll notify window** (hit at 0.033 s lands, 0.133 s ignored, 0.300 s lands) — closing a real 0.40 s vs 0.133 s divergence (Playwright 26/26) | Values mirror AARPGCharacterBase CDO + the player_movement constants (cited in the artifact); Playable Gate is L4 and still needs a live editor |
 | 31 | characters | A named row is an INDIVIDUAL, not a second balance surface: `char-darth-malgrave` seeded thin on numbers and single-sourcing bestiary-sith-lord. His identity/outfit execute on the live boss — robe #1a1016 (hood follows), trim #7a1020, blade #ff2a2a — while hp/damage/speed stay the archetype's (50 / 12 / 600 cm/s, cross-checked); an unauthored roster member is left untouched (Playwright 24/24) | PoF.CharacterVael.NPCConfig re-run headless (Result=Success); Malgrave himself is honestly ungated |
-| 32 | character-pipeline | ⚠ Config-complete only — NOT browser-proven. Both shape gaps closed (Game-Tier Convert's faceLimit/textureSize/sizeMB, UE Import's three Interchange `created` paths), so the Jinx row is fully graded. The real mesh exists (`bestof_fg095.glb`) but was NOT observed rendering: the duel vendors no glTF loader, and the `/layout` GlbViewer path was blocked by the asset-route outage in §7 — recorded `probable`, never claimed | UE imports were performed on the standalone jinx project, not re-verified here; Visual Gate correctly deferred |
+| 32 | character-pipeline | ⚠ Config-complete only — NOT browser-proven. Both shape gaps closed (Game-Tier Convert's faceLimit/textureSize/sizeMB, UE Import's three Interchange `created` paths), so the Jinx row is fully graded. The real mesh exists (`bestof_fg095.glb`) but was NOT observed rendering: the duel vendors no glTF loader, and the `/layout` GlbViewer path was blocked by the asset-route outage in §7 — recorded `probable` (2026-07-23; reconciled 2026-10-22, §7.1 card R32), never claimed | UE imports were performed on the standalone jinx project, not re-verified here; Visual Gate correctly deferred |
 
 ## 4. The domain-review loop (the recipe every session follows)
 
@@ -178,11 +178,13 @@ author the mapping into the IMC asset itself.
   `PoF.Materials.ArenaMasters` (MI parameter assertions) are named but never registered/run;
   `VSArenaSliceRulesTest` (waves + hazard ticks + shield at runtime) is scaffold-only.
   The browser leg proved the mechanics; these gates are the UE-side completion.
+  → triaged 2026-10-22, one card per gate in §7.1 (A1–A3).
 - **Group C UE consumers**: all four gates pass, but the runtime consumers behind them are
   unrealized — `UARPGFactionSubsystem::AddRepPoints` has no caller for the authored duel
   deltas, `DT_Codex` + the unlock/spoiler GEs are unseeded, `BP_TutorialBeat_LearntoDodge`
   does not exist, and `LS_PrologueTheFall` / `UARPGCinematicComponent` are unbuilt. The
   browser leg proved every mechanic; these are the UE-side halves.
+  → triaged 2026-10-22, one card per consumer in §7.1 (C1–C4).
 - **Dodge i-frame canon — RESOLVED 2026-07-23**: player-movement's AM_Roll DodgeWindow
   notify (66.7 ms onset, 133 ms) is canon (its artifact says "authoritative"); 300 ms is
   the fallback cap only. tutorial-dodge artifacts now cite it (Success/Skip/Fail flipped
@@ -196,6 +198,8 @@ author the mapping into the IMC asset itself.
   gate-covered, but no in-map enemy runs it yet (the duel's FSM proof is browser-side);
   Malgrave has no gate of his own; and `player-movement`'s Playable Gate (L4) still needs a
   live editor + PIE to run.
+  → all three Group B items are triaged 2026-10-22 in §7.1 as B1 (the in-map StateTree
+  enemy), B2 (Malgrave's missing gate) and B3 (player-movement's Playable Gate, L4).
 - **Group C persistence — FOLDED 2026-07-23**: factions/codex/tutorial/cutscene are
   envelope sections now (schema v2, additive no-op migration + straggler sweep for v1
   envelopes coexisting with later legacy keys; Playwright 13/13).
@@ -204,3 +208,164 @@ author the mapping into the IMC asset itself.
   browser realizes the skip half only.
 - **Judge-owned fails**: many artifact rows carry strict-judge sub-90 verdicts; content-quality
   raising is a separate campaign (see `project_green_loop_campaign`).
+
+### 7.1 Triage cards — 2026-10-22 (milestone 4, dual-execution review)
+
+One card per open UE-side item so a later session can close them one at a time. The
+session that wrote these had **no UE project tree** to read (see `[UE]` below). Every verdict is either
+UE-GATED (it names what is missing) or DROPPED (only where the repo shows the mechanic is
+covered elsewhere). Nothing here claims a UE pass, a registration or a render that was not
+observed. Evidence comes from read-only `git grep` over the whole repo (src/, docs/, e2e/,
+scripts/, shots/) plus `src/lib/preview/realization-facts.json`.
+
+**Shared blockers (2026-10-22), named once and cited by each card as `[UE]` / `[BROWSER]`:**
+- `[UE]`: the UE project at `…\Documents\Unreal Projects\PoF` does not exist on this machine
+  (verified absent again 2026-10-22, most likely because of the ~2026-10-19 machine reset), so
+  none of its `Source/PoF/**` is readable and no gate can be registered, run or drained from
+  here. This is the blocker that actually stands.
+  *Retraction:* the earlier text of this bullet claimed the machine's ARM64 architecture
+  meant no live editor + PIE was available. That 2026-10-22 claim was refuted the same day by
+  `scripts/diablo/ue_arm_probe.ts` (`docs/research/diablo/Findings.md` F-G2-4, fleet-memory
+  2026-10-22 `[ue] DECISION`), which measured a passing C++ editor-target build, a passing
+  headless `-run=pythonscript` run and a passing D3D12 init on this device.
+  *Surviving caveat (corrected 2026-10-22, `b5175f5a` and `3c39c724`):* every compile here is
+  emulated x64 (no native ARM64 UBT host), and nothing about PIE-driven automation on this
+  device has been observed yet. The earlier clause "measured on a partial install, so build
+  times are a floor" was WRONG. (1) The install is COMPLETE: the authoritative record is
+  `C:/ProgramData/Epic/EpicGamesLauncher/Data/Manifests/*.item`, reporting UE_5.8 /
+  5.8.4-58902052 / InstallSize 31,682,048,217 / `bIsIncompleteInstall: False`, corroborated by
+  32.1 GB on disk, an empty `Manifests/Pending` and `Engine/Build/InstalledBuild.txt`. The
+  "partial" reading came from `LauncherInstalled.dat`, whose `InstallationList` is empty even
+  for a finished install and is not the launcher's per-install record. (2) The measured build
+  times are therefore FINAL numbers for this engine, not a floor. (3) The emulated-x64 ceiling
+  hardens rather than softens: `ThirdParty/DotNet/10.0/win-arm64`, `Engine/Templates` and UBT's
+  `runtimes/win-arm64` are absent as Epic's packaging for a complete install, so "every compile
+  here is emulated x64" is structural, not provisional. The PIE clause is unchanged: it is
+  still unobserved for PoF on this device.
+- `[BROWSER]`: `C:\Users\kazda\kiro\saber-arpg` is also absent on this machine, so the browser
+  proofs below are the 2026-07-23 recorded runs. They were not re-run on 2026-10-22.
+
+#### Group A: named-but-unregistered UE gates
+
+- **A1 · `VSPropInteractTest` (props Test Gate): UE-GATED.** *Real state: named only.* The repo
+  carries the name in `src/lib/catalog/pipelines/props.ts` (the `runtimeDeferred` accept plus the
+  L3 verification strings), `docs/features/props/README.md`, and step-facts (a "static constant
+  deferred result, never executed"). There is also a synthetic fixture header in
+  `src/__tests__/lib/ue-automation/reachability.test.ts`, which proves nothing about the UE tree.
+  No registration and no result marker exist in the repo. e2e/ and scripts/ have no reference.
+  *Browser leg:* proven per §3 row 18 (HOLD-E 0.8 s open vs. loud smash, 80 HP / ≤40 damaged swap,
+  one-shot loot guard; realization-facts `props.Interaction` = browser proven). *Still needed UE-side:*
+  the crate actor (`AARPGDestructibleActor`-based; realization-facts says "the crate actor is
+  unbuilt"), the test class registered in `Source/PoF/Test/**`, a PIE run, and a drain to L3.
+  *Blocker:* `[UE]`. Not DROPPED: no other registered gate covers the crate's dual path.
+- **A2 · `PoF.Materials.ArenaMasters` (materials Test Gate): UE-GATED.** *Real state: named. A
+  run is claimed once, but the repo holds no result.* The name is the `entityRuntimeDeferred`
+  accept in `src/lib/catalog/pipelines/materials.ts`. The header of `shots/parameterize_arena_materials.py`
+  says a 2026-07-07 run of this gate found zero scalar/vector/texture params on the three
+  masters. That comment is the only trace of an execution. realization-facts `materials.Test Gate`
+  records "no per-test result marker (honest unobserved)", so this card treats the gate as
+  registration-unverified, not as registered. *Browser leg:* proven per §3 row 19
+  (#8a8378/0.82 and #7d766c/0.74 exact; `materials.Parameters` = browser proven). *Still needed
+  UE-side:* confirm the test is registered in the UE tree, run it against `MI_WeatheredStone` + the
+  parameterized masters, and drain a result marker. *Blocker:* `[UE]`.
+- **A3 · `VSArenaSliceRulesTest` (combat-map Test Gate, the fuller one): UE-GATED.** *Real state:
+  named only from this repo's view.* The name appears in `src/lib/catalog/pipelines/combat-map.ts`
+  and `docs/features/combat-map/README.md`. §3 row 17 and realization-facts call it a "scaffold",
+  but no scaffold lives in this repo (`src/lib/ue-test-scaffold/generate.ts` does not name it),
+  and the UE tree that would hold one is unreadable (`[UE]`). The narrower `VSArenaSetupTest`
+  passed and was drained, but it covers geometry/lighting/collision only. step-facts says so
+  explicitly, so it does NOT cover waves, hazard ticks or the shield, and DROPPED is not
+  supported. *Browser leg:* proven per §3 row 17 (waves + Proximity Shield gating, fire-floor
+  15/1 s, win/loss reset). *Still needed UE-side:* author or finish the test (an `ASpawnVolume`
+  built from the spec, both waves in order, `OnAllWavesComplete`, hazard ticks, the win/loss
+  delegates), register it, run it in PIE, and drain it. *Blocker:* `[UE]`.
+
+#### Group B / C: unrealized runtime consumers behind passing gates
+
+- **C1 · faction rep deltas → `UARPGFactionSubsystem::AddRepPoints`: UE-GATED.** *Browser leg:*
+  proven per §3 row 24 (+25 kill / +50 rare-elite / +75 sparring win = 175 a run; tier discount
+  charged). `VSFactionRepTest` drained to L3 pass (2026-07-23). *Still needed UE-side:* a
+  gameplay caller (the kill-credit / sparring-win events) that invokes `AddRepPoints` with the
+  authored deltas, then a runtime observation of the rep total and tier changing in-map. §3
+  row 24 records that `AddRepPoints` has no runtime consumer for these deltas, and the repo holds
+  nothing that shows otherwise. *Blocker:* `[UE]`.
+- **C2 · `DT_Codex` + `GE_Codex_Unlock_*` / `GE_Codex_Spoiler_*`: UE-GATED.** *Browser leg:*
+  proven per §3 row 25 (hidden-until-discovered, redaction stamp #E0A867, reveal swap,
+  two-caller/one-guard grants). `VSCodexUnlockTest` drained to L3 pass. *Still needed UE-side:*
+  seed the `DT_Codex` row (`seed_codex.py`), create the unlock and spoiler GEs, and observe
+  `UARPGCodexComponent` reveal the entry at runtime. *Blocker:* `[UE]`, because seeding a
+  DataTable and authoring GEs needs the PoF project, which is absent here.
+- **C3 · `BP_TutorialBeat_LearntoDodge`: UE-GATED.** *Browser leg:* proven per §3 row 26
+  (500/700 ms timings, i-frame contact, concede at attempt 3, 800 ms hold-to-skip, never
+  re-arms). `VSTutorialComprehensionTest` drained to L3 pass. *Still needed UE-side:* the
+  Blueprint actor (BeginBeat via `AARPGTriggerBox`, `UARPGInputSandboxSubsystem::LockInputs`,
+  WaitGameplayTagAdded stepping), placed in a map and walked in PIE. *Blocker:* `[UE]`, because
+  a Blueprint asset can only be authored in the editor, and the PoF project it opens is absent here.
+- **C4 · `LS_PrologueTheFall` + `UARPGCinematicComponent`: UE-GATED.** *Browser leg:* proven per
+  §3 row 27 (7 beats over 90 s, markers within 0.4 s of authored, grace/hold-to-skip,
+  watched-bypass). `VSCutsceneTimingTest` drained to L3 pass. *Still needed UE-side:* the C++
+  component (`PlayCutscene` / `SkipCutscene` / `NotifyBeat`), the LevelSequence asset with its
+  EventTrack bound to `NotifyBeat`, and a runtime observation of the markers firing. *Blocker:*
+  `[UE]`.
+- **B1 · in-map enemy running `UARPGStateTreeAIComponent`: UE-GATED.** *Browser leg:* proven per
+  §3 row 28 (the authored 6-state FSM drives the Sith; 800 cm alert, 175/250 cm hysteresis,
+  flee <25 %). `VSStateGraphTest` asserts every constant plus a component walk (headless pass).
+  *Still needed UE-side:* an enemy placed in FeatureLab/VerticalSlice that actually owns and
+  ticks the component, and a `-game` run whose log markers or frames show the state
+  transitions. *Blocker:* `[UE]`.
+- **B2 · Malgrave has no gate of his own (`char-darth-malgrave`): UE-GATED.** *Real state:
+  seeded and browser-realized, ungated.* `src/lib/catalog/seed-characters.ts` seeds
+  `char-darth-malgrave` deliberately thin on numbers: his attributes (50 hp / 12 attackPower)
+  MIRROR `bestiary-sith-lord`, linked as `role: 'archetype'`, so the two rows cannot drift
+  (§3 row 31). `src/lib/catalog/new-catalogs.ts` carries him in the quest and dialogue starters
+  (`quest-lords-challenge`, `dialog-duel-intro`). The only gate in the repo is Vael's:
+  `CHARACTER_GATE_TEST_BY_ENTITY` in `src/lib/catalog/pipelines/characters.ts` maps just
+  `char-captain-vael` to `PoF.CharacterVael.NPCConfig` (re-run headless, Result=Success; §3
+  row 31). For any other entity the Test Gate falls back to a derived
+  `PoF.Character<Slug>.RoleConfig` name, which for him would be a name only; nothing in the repo
+  registers or runs it. realization-facts `characters.Test Gate` says "Malgrave has no gate of
+  his own — honestly ungated", and `characters.UE Packaging` says his BP_/SK_/DT_ are "declared,
+  not built". e2e/ and scripts/ hold no Malgrave reference. *Browser leg:* identity/outfit
+  execute on the live boss (robe #1a1016, trim #7a1020, blade #ff2a2a) while hp/damage/speed
+  stay the archetype's 50 / 12 / 600 cm/s (§3 row 31, Playwright 24/24). *Still needed UE-side:*
+  a Malgrave-specific gate would have to assert his `DT_AttributeDefaults` row `DarthMalgrave`
+  equals the `bestiary-sith-lord` archetype numbers (50 hp, 12 attackPower, level 3), that
+  `npcId` / role `None` / the `dialog-duel-intro` host binding / the `quest-lords-challenge`
+  target hold in `UARPGNPCActor`, and that the boss runs the archetype's speed at runtime. No
+  such gate exists in the repo, and the UE tree that would hold the test is unreadable.
+  *Blocker:* `[UE]`. Not DROPPED: Vael's gate covers Vael only, and the archetype's gate does not
+  assert the individual's row. No verdict is upgraded.
+- **B3 · player-movement Playable Gate (L4): UE-GATED.** *Real state: defined, never
+  executed.* `src/lib/catalog/pipelines/player-movement.ts` (step 10) produces
+  `player_movement.run_playable_gate` and accepts via `visualDeferred('PIE + WASD/Sprint/Roll +
+  4-frame variance proves not-T-pose')`. step-facts says that accept "always returns
+  status:'deferred' regardless of the captured data", so the visual verdict has not run and the
+  checker is not meaningful. realization-facts `player-movement.Playable Gate` is browser "no" /
+  ue "probable": "Needs a live editor; not run this review." The wiring is covered by
+  `src/__tests__/lib/catalog/pipelines/player-movement.test.ts` (step 10 is L4 deferred), which
+  proves the declaration and nothing about a PIE run. The same L4 gate is described in
+  `docs/features/player-movement/README.md`. *Browser leg:* the FEEL the gate would exercise is
+  dual-executed per §3 row 30 (walk 6.0 / sprint 9.0 m/s, stamina, and the AM_Roll DodgeWindow
+  notify: hit at 0.033 s lands, 0.133 s ignored, 0.300 s lands; Playwright 26/26). That proves
+  the numbers, not that the AnimBP drives the mesh in PIE. *Still needed UE-side:* a live
+  editor, a PIE session with injected WASD + Shift + Space, 4 captured frames, a variance
+  assertion, and a real VLM verdict in place of the deferred stub. *Blocker:* BOTH `[UE]` (the
+  PoF project is absent) AND the surviving caveat above: an L4 playable gate is exactly
+  PIE-driven automation, which nothing has observed on this device, so even a restored project
+  would not make it a known-good run. Not DROPPED: no other gate captures PIE locomotion
+  frames. No verdict is upgraded.
+
+- **2026-10-22, what the probe changes:** once the PoF UE project is restored on this machine, registering and draining these gates is no longer hardware-blocked, only project-blocked. No gate above was registered, run or drained by this correction.
+
+#### Row 32 reconcile
+
+- **R32 · character-pipeline: already closed as `probable`, NOT upgraded.** The §3 row already
+  names the blocker (the asset-route outage in §7, plus no glTF loader in the duel), and
+  realization-facts `character-pipeline` (reviewedAt 2026-07-23) holds no `proven` browser
+  claim. This reconcile added the dates and this pointer to the row. The row stays `probable`
+  until a runtime observation shows `bestof_fg095.glb` rendering. *Blocker today:* `[BROWSER]`
+  for the duel path, and the `/layout` GlbViewer path still needs the asset-route
+  re-verification described in §7. That re-verification was not performed on 2026-10-22.
+
+**realization-facts.json:** left untouched. All 32 §3 pipelines already have an entry, and no
+§3 browser or UE proof is missing from the registry.

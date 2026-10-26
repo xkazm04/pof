@@ -71,3 +71,27 @@ describe('filesystem/browse list fails closed on an unreadable directory', () =>
     expect(body.data.directories.map((d: { name: string }) => d.name)).toEqual(['MyGame']);
   });
 });
+
+describe('filesystem/browse refuses a non-local path before touching the disk', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // On Windows a bare stat of \host\share opens an SMB session and offers the
+  // user's NTLM credentials to that host — so the refusal must come before stat.
+  it.each(['\\\\attacker.example\\share', '//attacker.example/share', '\\\\?\\C:\\', 'C:Windows', 'relative'])(
+    'list and validate-path answer 400 for %s',
+    async (p) => {
+      const listed = await POST(list(p));
+      expect(listed.status).toBe(400);
+      const validated = await POST(
+        new NextRequest('http://localhost/api/filesystem/browse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'validate-path', path: p }),
+        }),
+      );
+      expect(validated.status).toBe(400);
+      expect(fsMock.stat).not.toHaveBeenCalled();
+      expect(fsMock.readdir).not.toHaveBeenCalled();
+    },
+  );
+});

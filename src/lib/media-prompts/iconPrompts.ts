@@ -5,6 +5,8 @@
  * `iconPromptFor(catalogId, subject)` composes the Leonardo prompt: subject → family style/material
  * clause → shared negative tail.
  *
+ * Consumed by the contact-sheet path: `buildContactSheetPrompt` appends a mapped catalog's clause + NEG_TAIL.
+ *
  * NOTE (validated ceiling): these clauses reliably reach ~66-73 on Lucid Origin — competent
  * placeholder, not shippable-90. The wall is Lucid's materialRendering/edgeQuality fidelity, not
  * the prompt (see .claude/quality-hardening/*.json). Reaching 90 needs a refinement stage
