@@ -23638,7 +23638,11 @@
           "revision": 3,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/constants.ts:20 The context is a World Partition zone painter. Its only 'priority' is UE streaming load priority (always/high/normal/low) and its only 'blocked' is a compile preflight gate on Generate (index.tsx:161). I searched all its files for milestone, urgency, backlog, nextBest and prerequisite and got no hits, so nothing here ranks production work or decides which work is eligible.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:05b4ac47dcf9f7f8",
+          "evaluatedRevision": 3
         },
         {
           "subject": "terrain-synthesis-acceptance",
