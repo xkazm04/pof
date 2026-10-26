@@ -17208,6 +17208,26 @@
           "evidence": "src/app/api/pof-bridge/compile/hot-patch/route.ts:14 This checks a local editor hot-patch. It does not verify a shipped artifact set."
         }
       ]
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/self-describing-model-packages": {
+      "context": "save-system",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T22:21:44.181Z",
+      "worker": "65f026f7-e61c-4b70-9e18-26ed5e64d256",
+      "techniques": []
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/self-describing-model-packages": {
+      "context": "catalog-core-infrastructure",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T22:21:44.181Z",
+      "worker": "65f026f7-e61c-4b70-9e18-26ed5e64d256",
+      "techniques": []
     }
   }
 }

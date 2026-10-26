@@ -7940,7 +7940,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/catalog/ue-schema.ts:4 The catalog core defines game-entity envelopes, step specs and UE schema checks (UE type names mapped to UPROPERTY fields). It has no trained-model package, compiled model export or input-shape contract. Searches of src/lib/catalog/ for onnx, safetensors, torchscript, rdf.yaml and .ckpt found nothing. The only 'weights' hits are loot rarity weights in recipe.ts:214, which have nothing to do with model weights.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -22392,7 +22396,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/_shared/data.ts:35 This context only describes and visualizes UE USaveGame save-field schemas and migrations. It never packages, exports or loads a trained ML model, so the subject's precondition (a model carried to programs that never read its training code) does not hold. Searches of sub_save/ for onnx, safetensors, torchscript, rdf.yaml, checkpoint and model-package terms found nothing.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
+          "evaluatedRevision": 1
         },
         {
           "subject": "native-document-format",
