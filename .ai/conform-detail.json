@@ -17166,6 +17166,48 @@
       "evaluatedTs": "2026-10-26T22:01:32.889Z",
       "worker": "0c730c23-fed8-4225-b20f-d129ccc9c1dd",
       "techniques": []
+    },
+    "3cfee2b0-99a9-45c8-a31a-b4dfa89c2d97/release-pipeline": {
+      "context": "catalog-pipeline-api",
+      "subject": "release-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T22:15:29.309Z",
+      "worker": "407032df-2845-4682-99d2-2f4b0e1c8e67",
+      "techniques": [
+        {
+          "technique": "release-verification",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:7 Grades a pipeline content package (an L2 acceptance verdict). It does not verify shipped release artifacts across platforms."
+        },
+        {
+          "technique": "version-single-truth",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/catalog/step-submit/route.ts:11 PROMPT_VERSION is a provenance stamp on a recipe, not a release version copied across manifests."
+        }
+      ]
+    },
+    "6d876014-986d-4dbd-8fad-3609af2e0609/release-pipeline": {
+      "context": "ue5-build-bridge",
+      "subject": "release-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T22:15:29.309Z",
+      "worker": "407032df-2845-4682-99d2-2f4b0e1c8e67",
+      "techniques": [
+        {
+          "technique": "pipeline-staging",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/pof-bridge/compile/route.ts:12 A single live compile proxied to the editor bridge, with no tag, build or publish ordering."
+        },
+        {
+          "technique": "release-verification",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/pof-bridge/compile/hot-patch/route.ts:14 This checks a local editor hot-patch. It does not verify a shipped artifact set."
+        }
+      ]
     }
   }
 }

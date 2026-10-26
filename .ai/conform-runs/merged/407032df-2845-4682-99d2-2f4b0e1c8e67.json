@@ -1,0 +1,95 @@
+{
+ "schema": "conform-run/1",
+ "worker": "407032df-2845-4682-99d2-2f4b0e1c8e67",
+ "subject": "release-pipeline",
+ "evaluatedAt": "2026-10-26T22:15:29.309957+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-pipeline-api",
+   "subject": "release-pipeline",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:7 The closest this context gets to a release is an internal content package rebuilt under generated/packages/ and graded on disk; it ships no versioned artifact to installed copies, and a search of every context directory for changelog, semver, deprecat, updater and publish found nothing, so the release-pipeline precondition does not hold here.",
+   "techniques": [
+    {
+     "technique": "release-verification",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:7 Grades a pipeline content package (an L2 acceptance verdict). It does not verify shipped release artifacts across platforms."
+    },
+    {
+     "technique": "version-single-truth",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/catalog/step-submit/route.ts:11 PROMPT_VERSION is a provenance stamp on a recipe, not a release version copied across manifests."
+    }
+   ],
+   "absenceTerms": [
+    "changelog",
+    "semver",
+    "deprecat",
+    "updater",
+    "publish"
+   ]
+  },
+  {
+   "context": "ue5-build-bridge",
+   "subject": "release-pipeline",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/pof-bridge/compile/route.ts:12 This context proxies live-coding compiles and hot-patches into a running local UE editor and never cuts, versions, publishes or updates a release, and a search of its directories for changelog, semver, deprecat, updater and publish found nothing, so the release-pipeline precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "pipeline-staging",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/pof-bridge/compile/route.ts:12 A single live compile proxied to the editor bridge, with no tag, build or publish ordering."
+    },
+    {
+     "technique": "release-verification",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/pof-bridge/compile/hot-patch/route.ts:14 This checks a local editor hot-patch. It does not verify a shipped artifact set."
+    }
+   ],
+   "absenceTerms": [
+    "changelog",
+    "semver",
+    "deprecat",
+    "updater",
+    "publish"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T22:15:29.309957+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "release-pipeline"
+   ],
+   "techniques": [
+    "release-verification",
+    "version-single-truth"
+   ],
+   "deviations": 0,
+   "context": "catalog-pipeline-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-26T22:15:29.309957+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "release-pipeline"
+   ],
+   "techniques": [
+    "pipeline-staging",
+    "release-verification"
+   ],
+   "deviations": 0,
+   "context": "ue5-build-bridge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

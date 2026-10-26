@@ -8487,7 +8487,11 @@
           "revision": 11,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:7 The closest this context gets to a release is an internal content package rebuilt under generated/packages/ and graded on disk; it ships no versioned artifact to installed copies, and a search of every context directory for changelog, semver, deprecat, updater and publish found nothing, so the release-pipeline precondition does not hold here.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:faf052699c35ced4",
+          "evaluatedRevision": 11
         },
         {
           "subject": "mcp-tools",
@@ -24534,7 +24538,11 @@
           "revision": 11,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/pof-bridge/compile/route.ts:12 This context proxies live-coding compiles and hot-patches into a running local UE editor and never cuts, versions, publishes or updates a release, and a search of its directories for changelog, semver, deprecat, updater and publish found nothing, so the release-pipeline precondition does not hold.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:faf052699c35ced4",
+          "evaluatedRevision": 11
         },
         {
           "subject": "mcp-tools",
