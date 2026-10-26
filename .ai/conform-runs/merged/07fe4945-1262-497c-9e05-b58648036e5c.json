@@ -1,0 +1,189 @@
+{
+  "schema": "conform-run/1",
+  "worker": "07fe4945-1262-497c-9e05-b58648036e5c",
+  "subject": "voice-io",
+  "evaluatedAt": "2026-10-24T02:27:53.284182+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "audio-module",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/audio-gen/route.ts:105 The audio-gen route generates sound effects and music through a provider, and refuses a 'tts' request at this capability gate before any billed call (the comment at line 99 names tts). A case-insensitive search of src/lib, src/stores, src/types and src/app/api/audio-gen for getUserMedia, speechSynthesis, SpeechRecognition and MediaRecorder found nothing, so this context has no capture or speaking channel; the golden path puts sound production outside this subject anyway.",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/audio-gen/route.ts:99 tts is a declared kind that is refused, not served, so there is no synthesis queue or playback to judge"
+        },
+        {
+          "technique": "stt-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/audio-gen/route.ts:129 the only engine call is text-prompt to sound clip; no microphone capture anywhere in the listed files"
+        }
+      ],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "MediaRecorder"
+      ]
+    },
+    {
+      "context": "audio-view-and-catalog",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:80 Here 'voiceLimit' is the scene's Max Concurrent Sounds mixer cap, not a speaker voice. A case-insensitive search of the AudioView and AudioEventCatalog files and the audio event catalog store for getUserMedia, speechSynthesis, SpeechRecognition and MediaRecorder found no listening or speaking channel.",
+      "techniques": [
+        {
+          "technique": "voice-ux-integration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioView/SettingsTab.tsx:65 'voice' in this tab means concurrent mixer sounds; there is no read-aloud or narration control"
+        }
+      ],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "MediaRecorder"
+      ]
+    },
+    {
+      "context": "ai-developer-tools-api",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/agents/live-token/route.ts:177 The live-token health check reports the Gemini Live voice engine as available whenever an API key is set, without probing it. 'Not configured' and 'configured but failing' therefore collapse into one boolean, which is the absent-vs-broken merge that engine-abstraction names as a failure.",
+      "techniques": [
+        {
+          "technique": "engine-abstraction",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/live-token/route.ts:177 readiness is key presence, not a probe; the vendor model id is also hard-coded in the route (lines 138 and 160) instead of sitting behind an adapter"
+        },
+        {
+          "technique": "duplex-agent-sessions",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/live-token/route.ts:131 the credential mint that starts the meter has no rate limit or lifecycle check: no middleware/proxy file exists and nothing under src/app/api/agents mentions rate limiting. Server-side session config via liveConnectConstraints (line 137) does follow the technique"
+        },
+        {
+          "technique": "authored-voice-identity",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/agents/live-token/route.ts:147 only catalog-selected prebuilt voices; no voice is authored or cloned"
+        },
+        {
+          "technique": "caller-scoped-voice-binding",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/agents/live-token/route.ts:122 the caller is the app's own hosted client (the technique's 'when not to use' case); an unmatched explicit voice silently falls through to 'Puck', which would be a deviation if unhosted callers ever reached this door"
+        },
+        {
+          "technique": "unattended-caller-attribution",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/agents/live-token/route.ts:5 tokens are minted for the product's own browser client, not for unhosted automated callers"
+        },
+        {
+          "technique": "render-acceptance",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/agents/live-token/route.ts:140 the vendor streams audio live to the attended user; the route never receives a rendered artifact it could accept or refuse"
+        }
+      ]
+    },
+    {
+      "context": "character-movement-playground",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:13 These are dodge-trajectory, curve-editor and movement-feel tuning screens. A case-insensitive search of the listed movement, playground and ai-feel directories for voice, speech, tts, transcri, microphone and dictat found no matches, and getUserMedia, speechSynthesis, SpeechRecognition and MediaRecorder are absent from sub_character.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "MediaRecorder"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "voice-io",
+      "context": "catalog-database",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor src/app/api/catalog/route.ts:13 is only the GET doc comment and does not show that speech is absent, and the context's catalog files (seed-characters.ts, dialogue/bark/talk data) contain many voice/speech/dialogue hits that the verdict dismisses without showing they are only text data."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T02:27:53.284182+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [
+        "stt-pipeline",
+        "tts-pipeline"
+      ],
+      "deviations": 0,
+      "context": "audio-module",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:27:53.284182+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [
+        "voice-ux-integration"
+      ],
+      "deviations": 0,
+      "context": "audio-view-and-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:27:53.284182+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "catalog-database",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:27:53.284182+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [
+        "authored-voice-identity",
+        "caller-scoped-voice-binding",
+        "duplex-agent-sessions",
+        "engine-abstraction",
+        "render-acceptance",
+        "unattended-caller-attribution"
+      ],
+      "deviations": 1,
+      "context": "ai-developer-tools-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:27:53.284182+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "character-movement-playground",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

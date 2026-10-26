@@ -1,0 +1,178 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0e0fb430-69ee-465a-b761-4036005234b9",
+ "subject": "talking-avatar",
+ "evaluatedAt": "2026-10-21T22:23:57.334097+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "procedural-scene-tools",
+   "subject": "talking-avatar",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView/GeneratorTab.tsx:89 Context-directory searches found no viseme, faceSignal or talkingAvatar matches; the inspected generators, scene tools and skeletal-rig authoring workflow do not animate a speaking presence.",
+   "techniques": [
+    {
+     "technique": "motion-route-selection",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/index.tsx:61 This selects a target skeleton for asset authoring; no talking-avatar animation route was found."
+    }
+   ],
+   "absenceTerms": [
+    "viseme",
+    "faceSignal",
+    "talkingAvatar"
+   ]
+  },
+  {
+   "context": "game-world-content-api",
+   "subject": "talking-avatar",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/audio-gen/providers/elevenlabs.ts:36 API-directory searches found no viseme, faceSignal or talkingAvatar matches, and the audio-generation route's sole registered provider serves sound effects and ambient assets rather than speech for a talking face.",
+   "techniques": [
+    {
+     "technique": "viseme-drive",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/audio-gen/route.ts:105 The provider capability gate refuses unsupported TTS; no synthesized-speech mouth driver was found in these routes."
+    }
+   ],
+   "absenceTerms": [
+    "viseme",
+    "faceSignal",
+    "talkingAvatar"
+   ]
+  },
+  {
+   "context": "audio-module",
+   "subject": "talking-avatar",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/audio-codegen.ts:4 Searches covering the context's library, type, store and audio-generation directories found no viseme, faceSignal or talkingAvatar matches; the inspected implementation persists audio assets and generates spatial-audio code without a speaking-face consumer.",
+   "techniques": [
+    {
+     "technique": "procedural-presence-motion",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/audio-codegen.ts:192 The procedural path generates ambient soundscape layers for zones; no avatar idle or gesture generator was found."
+    }
+   ],
+   "absenceTerms": [
+    "viseme",
+    "faceSignal",
+    "talkingAvatar"
+   ]
+  },
+  {
+   "context": "audio-scene-designer",
+   "subject": "talking-avatar",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioPropertyPanel/constants.ts:10 Searches of both designer directories found no viseme, faceSignal or talkingAvatar matches, and inspection showed zone and emitter editing plus spatial audition rather than a voice-driven face.",
+   "techniques": [
+    {
+     "technique": "motion-route-selection",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:57 The painter selects spatial editing and audition tools; no avatar animation route is selected here."
+    }
+   ],
+   "absenceTerms": [
+    "viseme",
+    "faceSignal",
+    "talkingAvatar"
+   ]
+  },
+  {
+   "context": "audio-generation-tools",
+   "subject": "talking-avatar",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:255 Audio-component-directory searches found no viseme, faceSignal or talkingAvatar matches, and the inspected tools preview generated clips with native audio controls alongside library and room-configuration displays.",
+   "techniques": [
+    {
+     "technique": "viseme-drive",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioLibraryPanel.tsx:440 The library previews audio assets without a mouth or speaking-element renderer."
+    }
+   ],
+   "absenceTerms": [
+    "viseme",
+    "faceSignal",
+    "talkingAvatar"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-21T22:23:57.334097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "talking-avatar"
+   ],
+   "techniques": [
+    "motion-route-selection"
+   ],
+   "deviations": 0,
+   "context": "procedural-scene-tools",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-21T22:23:57.334097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "talking-avatar"
+   ],
+   "techniques": [
+    "viseme-drive"
+   ],
+   "deviations": 0,
+   "context": "game-world-content-api",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-21T22:23:57.334097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "talking-avatar"
+   ],
+   "techniques": [
+    "procedural-presence-motion"
+   ],
+   "deviations": 0,
+   "context": "audio-module",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-21T22:23:57.334097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "talking-avatar"
+   ],
+   "techniques": [
+    "motion-route-selection"
+   ],
+   "deviations": 0,
+   "context": "audio-scene-designer",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-21T22:23:57.334097+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "talking-avatar"
+   ],
+   "techniques": [
+    "viseme-drive"
+   ],
+   "deviations": 0,
+   "context": "audio-generation-tools",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

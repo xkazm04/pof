@@ -1,0 +1,69 @@
+{
+ "schema": "conform-run/1",
+ "worker": "59d506da-b5ed-44ba-8a2b-83313c24ce87",
+ "subject": "plan-review",
+ "evaluatedAt": "2026-10-22T04:36:04.780933+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "core-engine-planning-shell",
+   "subject": "plan-review",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/ImplementationPlan/index.tsx:39 Context and repository searches found no planApproval, approvePlan, self-challenge or decision-sized constructs; this shell dispatches a deterministic feature backlog through readiness checks without an adopted approval gate over agent-authored plans.",
+   "techniques": [
+    {
+     "technique": "decision-sized-slicing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/ImplementationPlan/PlanItemRow.tsx:147 The selected feature goes to execution; the traced dispatch creates a feature-fix task rather than handing slices to a planning agent and human plan gate."
+    },
+    {
+     "technique": "fresh-posture-self-challenge",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useImplementationPlan.ts:45 The displayed plan is computed synchronously from feature statuses, so this path has no agent drafting and critiquing its proposal."
+    },
+    {
+     "technique": "informational-fold-in",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/ImplementationPlan/SummaryCards.tsx:54 Effort appears in the backlog dashboard; no existing approval of an agent-authored plan was found for this advisory figure to accompany."
+    },
+    {
+     "technique": "objection-before-artifacts",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/DetailPanel.tsx:143 The implementation action depends on feature readiness, with no adopted plan-approval stage requiring a preimplementation objection record."
+    },
+    {
+     "technique": "silent-decision-surfacing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/usePlanMatrixMap.ts:49 The map lays out computed backlog items; it does not present an agent proposal at a human plan gate where implicit decisions would need surfacing."
+    }
+   ],
+   "absenceTerms": [
+    "planApproval",
+    "approvePlan"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T04:36:04.780933+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "plan-review"
+   ],
+   "techniques": [
+    "decision-sized-slicing",
+    "fresh-posture-self-challenge",
+    "informational-fold-in",
+    "objection-before-artifacts",
+    "silent-decision-surfacing"
+   ],
+   "deviations": 0,
+   "context": "core-engine-planning-shell",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "675c7abf-8c96-4896-9447-a653775dc968",
+ "subject": "regional-culture-worldbuilding",
+ "evaluatedAt": "2026-10-22T21:59:05.520227+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "world-module",
+   "subject": "regional-culture-worldbuilding",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:479 The inspected module models topology, difficulty, combat and timing, while context and repository searches found no dissenter, tithe or coalition content, placing it within the standard's procedural-level-planning boundary.",
+   "techniques": [
+    {
+     "technique": "economy-institution-slang-code-per-region",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/MapTopologyGroup.tsx:78 The region tooling presents level architecture and technical feature state rather than authoring a regional culture bible."
+    },
+    {
+     "technique": "follow-the-money-as-map-structure",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/ZoneGeneratorPanel.tsx:24 These parameters generate candidate connectivity and difficulty layouts; the inspected generator does not author a campaign's economic or narrative route."
+    },
+    {
+     "technique": "political-economy-of-spectacle",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/_shared/data.ts:325 The arena records describe ordinary boss encounter spaces and hazards; the inspected context contains no league, audience or staged-sport institution."
+    },
+    {
+     "technique": "the-moral-code-has-a-dissenter",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/_shared/helpers.ts:40 Regional comparison concerns encounter statistics; no regional moral code, supporting cast or cultural choice is authored here."
+    },
+    {
+     "technique": "what-the-local-power-wants-and-what-joining-costs",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/travel/BossArenaCards.tsx:49 Bosses are represented as combat encounters with phases, dimensions, hazards and music rather than regional political powers or recruitable allies."
+    },
+    {
+     "technique": "world-by-implication",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:172 This generic suggestion accompanies a duration adjustment; it supplies no world fact, opening scene or exposition whose delivery could be judged."
+    }
+   ],
+   "absenceTerms": [
+    "dissenter",
+    "tithe",
+    "coalition"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T21:59:05.520227+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "regional-culture-worldbuilding"
+   ],
+   "techniques": [
+    "economy-institution-slang-code-per-region",
+    "follow-the-money-as-map-structure",
+    "political-economy-of-spectacle",
+    "the-moral-code-has-a-dissenter",
+    "what-the-local-power-wants-and-what-joining-costs",
+    "world-by-implication"
+   ],
+   "deviations": 0,
+   "context": "world-module",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

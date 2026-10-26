@@ -1,0 +1,101 @@
+{
+ "schema": "conform-run/1",
+ "worker": "246b4345-3417-469c-a451-d16911dd1f80",
+ "subject": "measurement-honesty",
+ "evaluatedAt": "2026-10-22T03:25:57.810075+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "hud-damage-and-navigation",
+   "subject": "measurement-honesty",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:83 Accumulated damage labels assert an equality using a rounded average, so two hits totaling 201 display '2x 101 = 201' although the displayed product is 202.",
+   "techniques": [
+    {
+     "technique": "co-published-numbers-must-reconcile",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:83 The displayed count, rounded average and total need not satisfy the equality printed between them; SimulationCanvas.tsx:121 renders this string."
+    },
+    {
+     "technique": "control-failure-is-not-a-datum-state",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:42 Presets change one interactive simulation; the inspected context publishes no controlled comparison between measured arms."
+    },
+    {
+     "technique": "incomplete-not-verdict",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:108 Metrics consume locally generated particle state directly; there is no acquisition stage whose partial failure is interpreted as a report."
+    },
+    {
+     "technique": "instrument-exposure-control",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/simulation.ts:180 This score describes current simulated density and overlap, rather than claiming a learned capability against an exposed benchmark."
+    },
+    {
+     "technique": "lower-bound-disclosure",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/FlowCanvas.tsx:100 Graph counts enumerate the complete local collections; these are not reach tallies assembled from partial observation or ambiguous assessment rungs."
+    },
+    {
+     "technique": "minimum-sample-floors",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/CombatPanel.tsx:34 Combat percentages are configured probabilities, not estimates derived from sampled outcomes; local graph and particle counts enumerate their populations."
+    },
+    {
+     "technique": "noise-band-and-hysteresis",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/ClutterBadge.tsx:8 The badge classifies the current changing simulation state, rather than announcing changes between repeated measurements of an unchanged subject."
+    },
+    {
+     "technique": "renormalize-over-present",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/simulation.ts:179 The score combines available local overlap and density values; it does not average nullable detector inputs or handle a missing component."
+    },
+    {
+     "technique": "the-baseline-is-the-untouched-path",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/PhysicsPanel.tsx:65 Collision avoidance is an interactive configuration option; the context publishes no saving or reduction attributed to it against a baseline."
+    },
+    {
+     "technique": "tuning-corpus-disjointness",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/constants.ts:74 The stress preset configures a sandbox scenario; no inspected build fits an artifact on a corpus and publishes benchmark results over another corpus."
+    },
+    {
+     "technique": "unelidable-measurement",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:58 Frame timestamps drive simulation integration, rather than measuring and reporting the execution cost of hosted work."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T03:25:57.810075+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "measurement-honesty"
+   ],
+   "techniques": [
+    "co-published-numbers-must-reconcile",
+    "control-failure-is-not-a-datum-state",
+    "incomplete-not-verdict",
+    "instrument-exposure-control",
+    "lower-bound-disclosure",
+    "minimum-sample-floors",
+    "noise-band-and-hysteresis",
+    "renormalize-over-present",
+    "the-baseline-is-the-untouched-path",
+    "tuning-corpus-disjointness",
+    "unelidable-measurement"
+   ],
+   "deviations": 1,
+   "context": "hud-damage-and-navigation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

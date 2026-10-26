@@ -1,0 +1,84 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b88408ca-790d-4e29-90bf-f47f8b9ad23e",
+ "subject": "racing-career-economy",
+ "evaluatedAt": "2026-10-22T21:10:22.603741+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "combat-damage-pipeline",
+   "subject": "racing-career-economy",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/index.tsx:32 Context and repository searches found no career, garage, payout, raceTicket, or repairShare matches; the inspected module visualizes ARPG health effects, so the racing career economy precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "finite-garage-end-state-honesty",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/hits/HitsTab.tsx:19 The inspected catalogue supports weapon hit analysis; searches found no career garage or car-and-part purchasing system."
+    },
+    {
+     "technique": "idempotent-race-ticket-settlement",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/polish/combat-feel-export.ts:26 The emitted persistence operation saves a combat ability editor asset; no race-result money settlement was found."
+    },
+    {
+     "technique": "participation-floor-no-dead-end",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/combos/index.tsx:142 The combo resource display measures mana consumption; no race entry costs, career balance, or payout table was found."
+    },
+    {
+     "technique": "pr-ratio-boss-dip",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/ExecutionBreakdownPanel.tsx:116 The inspected comparison evaluates damage formulas for shared inputs; no persistent car rating, racing field, or races-to-afford curve was found."
+    },
+    {
+     "technique": "qualified-wreck-advancement",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data.ts:15 The terminal event concerns ARPG actor death; no racing wreck qualification, course progress, or opponent wreck bounty was found."
+    },
+    {
+     "technique": "repair-share-prize-cap",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data.ts:22 Restoration is represented as a health effect; no vehicle service bill or race prize deduction was found."
+    },
+    {
+     "technique": "rival-shopping-windows-no-player-read",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/combos/CooldownOverlapChart.tsx:20 The inspected scheduling chart concerns ability cooldowns; no opposing-car progression or rival shopping system was found."
+    }
+   ],
+   "absenceTerms": [
+    "career",
+    "garage",
+    "payout",
+    "raceTicket",
+    "repairShare"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T21:10:22.603741+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "racing-career-economy"
+   ],
+   "techniques": [
+    "finite-garage-end-state-honesty",
+    "idempotent-race-ticket-settlement",
+    "participation-floor-no-dead-end",
+    "pr-ratio-boss-dip",
+    "qualified-wreck-advancement",
+    "repair-share-prize-cap",
+    "rival-shopping-windows-no-player-read"
+   ],
+   "deviations": 0,
+   "context": "combat-damage-pipeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

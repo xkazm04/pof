@@ -1,0 +1,86 @@
+{
+  "schema": "conform-run/1",
+  "worker": "8a13991e-e460-4b04-a7c8-d2d432a6234d",
+  "subject": "supply-chain",
+  "evaluatedAt": "2026-10-24T22:24:22.042815+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "supply-chain",
+      "context": "ue5-build-bridge",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "supply-chain",
+      "context": "build-quality-monitoring",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor CSVImportPanel.tsx:51 is an onImport click handler. It sits in the context but does not show that a supply-chain crossing is absent, and the same file reads a user-chosen file with FileReader, which is the kind of untrusted-input crossing the claim denies."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "code-quality-evaluation",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor useDeepEvalResults.ts:259 is an ordinary POST to /api/evaluator/deep-eval. It shows a call, not that dependency, secret, archive or deserialization handling is absent, so the not-applicable rests on an incidental line."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "build-history-config",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor BuildHistoryDashboard/index.tsx:152 is a POST to the packaging API. It does not show the precondition is absent, and BuildConfigSelector/index.tsx:46 builds UAT build commands from profiles, which is build-pipeline code that the not-applicable claim leaves unexamined."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "models-asset-inventory",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor useAssetInventory.ts:45 is a fetch call. It does not show the precondition is absent, and the context handles a bridge manifest with checksumSha256 (useAssetInventory.ts:25, BridgeManifestCard.tsx:17), which is an artifact-integrity concern the claim does not address."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T22:24:22.042815+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "build-quality-monitoring",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:24:22.042815+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "code-quality-evaluation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:24:22.042815+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "build-history-config",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:24:22.042815+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "models-asset-inventory",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

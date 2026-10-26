@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4589b147-a228-421d-927c-42aeb43ef996",
+ "subject": "cross-runtime-rules-conformance",
+ "evaluatedAt": "2026-10-21T23:07:56.003326+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "cross-runtime-rules-conformance",
+   "context": "visual-gen-rigging-conformance",
+   "reason": "not-applicable without the 2+ search terms that prove the absence"
+  }
+ ],
+ "consults": []
+}

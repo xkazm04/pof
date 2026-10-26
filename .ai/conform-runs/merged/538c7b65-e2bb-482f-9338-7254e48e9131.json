@@ -1,0 +1,122 @@
+{
+ "schema": "conform-run/1",
+ "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+ "subject": "generative-artifact-gating",
+ "evaluatedAt": "2026-10-24T22:10:13.269544+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "asset-viewer-and-browser",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/visual-gen/asset-browser/LibraryAssetCard.tsx:162 The library writes source, file URL and licence when an asset is acquired, but the card renders nothing when an acquired asset's licence is blank, so an unrecorded licence reads as no restriction, which the technique forbids.",
+   "techniques": [
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/visual-gen/asset-browser/LibraryAssetCard.tsx:162 A blank licence is hidden rather than flagged. The acquisition record itself is written at download time (useAssetLibraryStore.ts:86-88: source, license, downloadUrl)."
+    }
+   ]
+  },
+  {
+   "context": "models-asset-inventory",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is a filesystem scan of the UE project reconciled against the bridge manifest; a recursive case-insensitive grep of src/components/modules/content/models for candidate, genHistory, acquir, licen and stand-in found no hits, so no generative slot, selection or paid generation is gated here.",
+   "techniques": [
+    {
+     "technique": "grade-the-selected-candidate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No candidate selection exists; assets come from a disk scan."
+    },
+    {
+     "technique": "placeholder-is-not-an-asset",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No generative step verdict is produced here."
+    }
+   ],
+   "absenceTerms": [
+    "candidate",
+    "genHistory",
+    "acquir",
+    "licen",
+    "stand-in"
+   ]
+  },
+  {
+   "context": "audio-generation-tools",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 The Sound Forge sends one billed /api/audio-gen POST per take with no reservation taken under a lock, no per-slot attempt cap and no durable stop latch; the monthly quota is explicitly informational and never blocks, so a quota or rate-limit error stops only the current loop and nothing keeps the next run from dispatching.",
+   "techniques": [
+    {
+     "technique": "reserve-before-dispatch-stop-latch",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 No ledger and no latch. AudioUsageMeter.tsx:52 says 'generation is never blocked at this limit', and grep of src/lib/audio-gen and api/audio-gen found no latch or reservation."
+    }
+   ],
+   "registryProposal": "reserve-before-dispatch-stop-latch is scoped to 'a metered image generator', but the same failure (an unenforced informational quota, a per-take paid loop) shows up on metered audio generators. Consider widening use_when to any metered media generator."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generative-artifact-gating",
+   "context": "pipeline-step-components",
+   "reason": "evidence leans on lib/catalog/acceptance/galleryArtifact.ts, which is not a tracked file"
+  },
+  {
+   "subject": "generative-artifact-gating",
+   "context": "visual-gen-quality-and-animation",
+   "reason": "evidence leans on ardy/pof_loop_closure.py, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T22:10:13.269544+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated"
+   ],
+   "deviations": 1,
+   "context": "asset-viewer-and-browser",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:10:13.269544+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "grade-the-selected-candidate",
+    "placeholder-is-not-an-asset"
+   ],
+   "deviations": 0,
+   "context": "models-asset-inventory",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:10:13.269544+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "reserve-before-dispatch-stop-latch"
+   ],
+   "deviations": 1,
+   "context": "audio-generation-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

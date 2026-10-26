@@ -1,0 +1,168 @@
+{
+  "schema": "conform-run/1",
+  "worker": "2c5cd3ce-4a68-4d3c-8a75-c26a450fb35b",
+  "subject": "module-design",
+  "evaluatedAt": "2026-10-24T02:12:02.521395+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "step-shared-primitives",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 A two-field Pick is cast to the full StepSpec, and a checked alternative costs almost nothing: genericFixCopy.ts already narrows its other parameter with a Pick (`GradedGate`, line 57), so narrowing `spec` the same way would remove the hatch. Line 64 casts `base as AcceptanceResult` with no stated invariant at all, even though `tier` is optional on Acceptance and required on AcceptanceResult.",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/itemFixCopy.ts:17 The doc comment at lines 8-9 does state the invariant (only archetype and label are read). But the standard's 'when not to use it' rule applies: a verified Pick<StepSpec,'archetype'|'label'> parameter is cheap and the same pattern is already used one parameter over. The sibling cast at line 64 carries no invariant."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:157 The history model is a pure transition core. Time arrives as a parameter (`at`), and the hook does the store I/O."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/hash.ts:6 One FNV hash is shared by the generic and Items generators, so they cannot drift apart."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:33 The prompt logic is a callback seam that about 33 real call sites substitute at, while the panel owns dispatch, retry and live mode."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:62 A mode flag lets a caller switch off the async rejection surfacing, which the doc calls 'the real Rule 4 enforcement path' - the decision the module exists to make. Only the test file uses it."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:125 Single-output transforms are written as pipelines. nextSeq is a small loop tracking a running max, which is fine."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/useDispatchPlan.ts:27 The async fetch is confined to an edge hook gated on `enabled`. describeDispatchPlan and genHistory stay synchronous."
+        },
+        {
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:108 Inputs are plain records that a test can construct, so no host-minted type needs mirroring."
+        }
+      ]
+    },
+    {
+      "context": "world-module",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 The store returns CatalogEntityBase[], and all 5 callers repo-wide each cast it to their own entry type with no invariant. Entries carry a literal `catalogId` discriminant, so a typed catalogId-to-entry overload at the store would close every hatch at once.",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:81 There is no invariant comment, and the 5/5 call sites each opening their own hatch is the standard's growth signal: the checked surface (catalogStore.ts:212) cannot express what callers need."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/PlaytimeEstimator.tsx:4 A pure re-export pass-through kept only because of a length metric. The standard says 'Extracting for length is a metric, not a reason'."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:4 The budget and lever logic is pure and the components stay thin."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:5 Pricing goes through one shared cost table (resolveCosts) and is not restated."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:77 allocateZoneBudgets is a pipeline. suggestLevers (line 108) is explicitly sequential because its branch arms do different work."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "module-design",
+      "context": "module-topology-graph",
+      "reason": "evidence leans on types/modules.ts, which is not a tracked file"
+    },
+    {
+      "subject": "module-design",
+      "context": "bestiary-archetypes-ai",
+      "reason": "evidence leans on sub_world/index.tsx, which is not a tracked file"
+    },
+    {
+      "subject": "module-design",
+      "context": "combat-damage-pipeline",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation rests on GA_MeleeAttack.h:131 and a C++ HitStopDuration default of 0.08, but no GA_MeleeAttack.h exists anywhere in the kiro tree, so the claimed drift against the header cannot be confirmed."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T02:12:02.521395+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "concurrency-at-the-edge",
+        "declarative-or-sequential",
+        "io-free-core",
+        "locality-and-leverage",
+        "marked-unverifiable-region",
+        "mirror-type-at-the-edge",
+        "module-depth",
+        "seams-and-adapters"
+      ],
+      "deviations": 1,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:12:02.521395+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "declarative-or-sequential",
+        "io-free-core",
+        "locality-and-leverage",
+        "marked-unverifiable-region",
+        "module-depth"
+      ],
+      "deviations": 1,
+      "context": "world-module",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T02:12:02.521395+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "module-design"
+      ],
+      "techniques": [
+        "emitted-code-names-from-a-root",
+        "io-free-core",
+        "locality-and-leverage",
+        "module-depth"
+      ],
+      "deviations": 1,
+      "context": "combat-damage-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

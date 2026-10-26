@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d01f7f39-b01c-4f9e-8352-9bad339d26da",
+ "subject": "generative-provider-auditing",
+ "evaluatedAt": "2026-10-22T00:15:56.757858+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "models-asset-inventory",
+   "subject": "generative-provider-auditing",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 Searches for provider, benchmark, model_version and modelId found no context matches and found integrations elsewhere in the repository; this context inventories existing UE assets and dispatches import-workflow checklist tasks, so the subject's provider-integration precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "arena-benchmark-protocol",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:119 The inventory compares asset names for sorting; no model-variant comparison or grader selection was found."
+    },
+    {
+     "technique": "capability-is-not-registry-membership",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetInventory/index.tsx:173 Asset kinds populate inventory filter chips; this context does not register providers or authorize generation capabilities."
+    },
+    {
+     "technique": "never-the-account-default",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/filesystem/scan-assets/route.ts:228 The inventory's scan endpoint collects existing files from Content/ without invoking a hosted generative service."
+    },
+    {
+     "technique": "pin-a-model-per-asset-class",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetPipelineDiagram.tsx:53 The diagram resolves import-workflow checklist stages; their inspected definitions configure existing meshes rather than select generative models."
+    },
+    {
+     "technique": "record-negative-benchmarks-in-place",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetInventory/AssetCard.tsx:112 Cards display filesystem modification dates; no evaluated or rejected model variants were found in this context."
+    },
+    {
+     "technique": "refuse-with-reason-not-greyed-out",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/models/AssetPipelineDiagram.tsx:270 The run action forwards a checklist task; it does not request an unregistered asset-provider capability."
+    }
+   ],
+   "absenceTerms": [
+    "provider",
+    "benchmark",
+    "model_version",
+    "modelId"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T00:15:56.757858+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-provider-auditing"
+   ],
+   "techniques": [
+    "arena-benchmark-protocol",
+    "capability-is-not-registry-membership",
+    "never-the-account-default",
+    "pin-a-model-per-asset-class",
+    "record-negative-benchmarks-in-place",
+    "refuse-with-reason-not-greyed-out"
+   ],
+   "deviations": 0,
+   "context": "models-asset-inventory",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

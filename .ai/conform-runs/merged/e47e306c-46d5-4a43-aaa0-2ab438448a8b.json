@@ -1,0 +1,148 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e47e306c-46d5-4a43-aaa0-2ab438448a8b",
+ "subject": "engine-host-contract",
+ "evaluatedAt": "2026-10-24T05:48:18.257250+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "core-engine-planning-shell",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/GenreModuleView.tsx:1 These files are React client components for planning views. A case-insensitive grep of src/components/modules/core-engine found no embedded-engine terms (isolated-vm, quickjs, importModuleDynamically, enqueueJob, HostHooks, eval(, new Function(), so this context has no engine and no host hooks to design.",
+   "techniques": [],
+   "absenceTerms": [
+    "isolated-vm",
+    "quickjs",
+    "importModuleDynamically",
+    "enqueueJob",
+    "HostHooks"
+   ]
+  },
+  {
+   "context": "core-engine-genre-tabs",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:1 This is the React tab registry and the shared chart and navigation primitives. A grep of the whole core-engine tree found no embedded-engine, job-queue or module-loader terms, so the engine-host contract does not apply.",
+   "techniques": [],
+   "absenceTerms": [
+    "isolated-vm",
+    "quickjs",
+    "importModuleDynamically",
+    "enqueueJob",
+    "HostHooks"
+   ]
+  },
+  {
+   "context": "blender-mcp-bridge",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/blender-mcp/service.ts:1 The bridge is a TCP client that sends commands, including 'execute_code' Python strings (service.ts:424), to a separate Blender process. It embeds no engine and runs no job loop or import hook in-process, and a grep of src/lib/blender-mcp found none of the engine-host terms.",
+   "techniques": [],
+   "absenceTerms": [
+    "isolated-vm",
+    "quickjs",
+    "importModuleDynamically",
+    "enqueueJob",
+    "HostHooks"
+   ]
+  },
+  {
+   "context": "loot-affix-core",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_loot/index.tsx:1 These are React loot editors and pure TypeScript loot math and codegen. A grep of the core-engine tree found no embedded language engine, executor or loader terms, so the subject's precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "isolated-vm",
+    "quickjs",
+    "importModuleDynamically",
+    "enqueueJob",
+    "HostHooks"
+   ]
+  },
+  {
+   "context": "ability-blueprint",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_ability/blueprint/SimulationSandbox/simulation.ts:22 The 'simulation sandbox' is a plain TypeScript fixed-step attribute and effect simulator, not an embedded language engine. A grep of the core-engine tree found no eval, new Function, vm, quickjs, job-queue or import-hook terms.",
+   "techniques": [],
+   "absenceTerms": [
+    "isolated-vm",
+    "quickjs",
+    "importModuleDynamically",
+    "enqueueJob",
+    "HostHooks"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T05:48:18.257250+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "core-engine-planning-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:48:18.257250+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "core-engine-genre-tabs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:48:18.257250+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "blender-mcp-bridge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:48:18.257250+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "loot-affix-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:48:18.257250+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ability-blueprint",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

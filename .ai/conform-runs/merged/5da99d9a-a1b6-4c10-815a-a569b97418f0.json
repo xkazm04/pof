@@ -1,0 +1,120 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5da99d9a-a1b6-4c10-815a-a569b97418f0",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-10-24T01:35:44.925358+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "cli-terminal-shell",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/cli/useTaskQueue.ts:886 A user abort kills the server-side Claude process and then ends the run as a plain failure with no outcomeUnknown flag, even though the server keeps a distinct 'aborted' status; the client also recovers the lost-run case by comparing the error string 'Execution not found' (line 596), so the indeterminate verdict lives in prose instead of a first-class status.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/useTaskQueue.ts:596 This is the tell the technique names: the unknown outcome is recovered by matching an error message. endLostRun (line 458) does pass outcomeUnknown, but abort (886) and conflict recovery (741, registerTaskComplete(..., false)) both write failure."
+    },
+    {
+     "technique": "additive-input-at-the-call-boundary",
+     "verdict": "conformant",
+     "evidence": "src/components/cli/TerminalInput.tsx:47 The loop here is a one-shot CLI process with no injection point, so mid-unit typed input is refused visibly at the surface ('Working \u2014 press Esc to stop\u2026'), which is what the technique's 'when not to reach for this' asks for. Caveat: a programmatic pof-cli-prompt dispatch that arrives while streaming is dropped silently (CompactTerminal.tsx:110)."
+    }
+   ]
+  },
+  {
+   "context": "ai-developer-tools-api",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/claude-terminal/stream/route.ts:134 When a finished execution is replayed, every non-completed status, including the server's own 'aborted', goes out as an SSE error frame (with no error field), so the client closes an aborted run as a failure; separately, the unknown-outcome case is sent as the error string 'Execution not found' (stream line 106, query line 130), which consumers must string-match.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/app/api/claude-terminal/query/route.ts:130 The lost-execution case, whose outcome is unknown, reaches clients only as an error message string and not as a first-class status. The stream route does the same at line 106."
+    },
+    {
+     "technique": "additive-input-at-the-call-boundary",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/claude-terminal/query/route.ts:64 Each prompt spawns a fresh CLI execution. The route has no running loop that takes injected input, so the call-boundary injection precondition does not hold."
+    }
+   ]
+  },
+  {
+   "context": "platform-services-api",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/cli-task-registry/route.ts:74 When a new start arrives, a running task whose heartbeat went stale is force-closed as 'failed'. That is a definite verdict about a run nobody observed ending, and the registry vocabulary (running|completed|failed) has no unknown status to write instead.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/app/api/cli-task-registry/route.ts:88 Completion is binary: anything not reported as failed is stored as completed, and a stale run is stored as failed (line 74). No status means 'outcome unknown, not retried'."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "project-ops-api",
+   "reason": "evidence leans on store/sessionRun.ts, which is not a tracked file"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "visual-gen-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T01:35:44.925358+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "additive-input-at-the-call-boundary",
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "cli-terminal-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:35:44.925358+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "additive-input-at-the-call-boundary",
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "ai-developer-tools-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:35:44.925358+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "platform-services-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

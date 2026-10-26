@@ -1,0 +1,179 @@
+{
+  "schema": "conform-run/1",
+  "worker": "f4105de4-d386-45e6-89e0-32f72ebb52ce",
+  "subject": "asset-class-poly-budgeting",
+  "evaluatedAt": "2026-10-24T22:37:20.460969+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/mesh-finish.ts:473 The triangle budget in targetFaces goes straight to QuadriFlow, whose target_faces counts quads (scripts/visual-gen/pof_mesh_finish.py:307 passes int(target_faces) unchanged). Nothing calls providerFaceLimit({topology:'quads'}), so a quadriflow finish triangulates on GLB export at about 2x the authored budget, which is the exact quad trap face-budget.ts was written to prevent.",
+      "techniques": [
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:29 face-budget.ts:29 declares FACE_BUDGET_UNIT='triangles', but the authoritative preset field is still the un-united faceLimit, and face-budget.ts:7 itself says presets author 'with no unit stated'. generationPlanFor and planPartBudget rationales say 'faces', and mesh-finish.ts:226 documents targetFaces as 'roughly this many faces'. The technique says to rename such a field, not leave it."
+        },
+        {
+          "technique": "provider-face-limit-conversion",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:473 The named floor-not-round function exists (face-budget.ts:76-80, undefined for junk input). The quad-counting remesher edge in this context skips it and hands the triangle budget over as a quad target."
+        },
+        {
+          "technique": "quad-trap-detection",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/face-budget.ts:121 The ratio, the 1.1 tolerance and the named 1.8-2.2 band are all realized. But the attribution never checks request.topology, so a triangle-topology request (what every in-repo caller sends) at 2x is told 'a quad-topology request must be halved'. That is the misattribution the technique's decision rule forbids. A delivery far under budget is also silently 'honored'."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:148 The header comment (lines 13-17) states the shaping rule, but generationPlanFor gives every budgeted asset its class number as the generation request. RunnerStartInput has no per-asset budget field, which is the one-number-per-class policy the technique replaces."
+        },
+        {
+          "technique": "part-split-budget-division",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:186 planPartBudget divides only when naive*parts overruns the whole, floors, returns a constrained flag plus a rationale, and refuses an unknown class or parts<1. It has no production caller, and no assembled-whole measurement is wired."
+        },
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/polycount-presets.ts:261 Budget-blind generators get the class ceiling and a declared stage with no fabricated request. gradeFaceBudget returns unmeasured with a reason when a request or measurement is missing, resolveAssetClass reports class-blind degradation, and warnAbove is 1.5x faceLimit."
+        }
+      ]
+    },
+    {
+      "context": "blender-pipeline",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:54 The LOD tab commissions triangle targets from a measured source and an optional stated class. It then grades each delivered level against the target it was commissioned at, and leaves LOD0 ungraded when no class is chosen.",
+      "techniques": [
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:64 Targets travel as targetTris from planLodChain into generateLodsScript."
+        },
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:54 Delivered is graded against the commissioned levels, and the grade is cleared on any edit. The class select offers 'No class (LOD0 ungraded)' (line 135) instead of a default class."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:95 The budget is applied by post-process decimation, not a generator, which the technique exempts."
+        }
+      ]
+    },
+    {
+      "context": "asset-viewer-and-browser",
+      "subject": "asset-class-poly-budgeting",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:176 The viewer builds a BudgetRequest from the class ceiling so the delivered-versus-requested grader can run. The visible budgetLine says 'ceiling', but the returned grade.budget carries requestedTriangles=ceiling and, past 1.1x, gradeFaceBudget's reason that 'the provider did not honour the requested budget' (or the quad-trap text) about a budget nobody sent. Example: chair.glb at 83,728 tris as a prop.",
+      "techniques": [
+        {
+          "technique": "class-ceiling-vs-requested-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:176 This synthesises a request from the preset, the move the technique forbids. CEILING_NOTE (lines 48-49) fixes the rendered sentence, but not the BudgetGrade data. Unclassified meshes are handled honestly as unmeasured (line 199)."
+        },
+        {
+          "technique": "triangles-as-the-authored-unit",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:65 Fields and sentences name triangles. The rival UE5_PRESETS table was removed from assetStats.ts."
+        },
+        {
+          "technique": "budget-shapes-output-not-just-caps",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:43 The viewer inspects loaded files and commissions nothing."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "blender-mcp-bridge",
+      "reason": "conformant with fewer than two techniques shown realized"
+    },
+    {
+      "subject": "asset-class-poly-budgeting",
+      "context": "visual-gen-mesh",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation rests on the bare `targetFaces` field name, but the route's own header (route.ts:19-20) says the number is in triangles. The route can only reach collapse decimation, because its body has no `retopo` option and `mesh-finish.ts:473` is the only place `--retopo quadriflow` is emitted. Th"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T22:37:20.460969+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "asset-class-poly-budgeting"
+      ],
+      "techniques": [
+        "budget-shapes-output-not-just-caps",
+        "class-ceiling-vs-requested-budget",
+        "part-split-budget-division",
+        "provider-face-limit-conversion",
+        "quad-trap-detection",
+        "triangles-as-the-authored-unit"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:37:20.460969+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "asset-class-poly-budgeting"
+      ],
+      "techniques": [
+        "budget-shapes-output-not-just-caps",
+        "class-ceiling-vs-requested-budget",
+        "part-split-budget-division",
+        "triangles-as-the-authored-unit"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:37:20.460969+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "asset-class-poly-budgeting"
+      ],
+      "techniques": [
+        "budget-shapes-output-not-just-caps",
+        "class-ceiling-vs-requested-budget",
+        "triangles-as-the-authored-unit"
+      ],
+      "deviations": 0,
+      "context": "blender-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:37:20.460969+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "asset-class-poly-budgeting"
+      ],
+      "techniques": [
+        "budget-shapes-output-not-just-caps",
+        "class-ceiling-vs-requested-budget",
+        "triangles-as-the-authored-unit"
+      ],
+      "deviations": 1,
+      "context": "asset-viewer-and-browser",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

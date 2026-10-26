@@ -1,0 +1,154 @@
+{
+  "schema": "conform-run/1",
+  "worker": "18275cdf-318f-4434-8323-516f5d99d6c5",
+  "subject": "codebase-scanning",
+  "evaluatedAt": "2026-10-24T21:52:12.774767+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "gdd-compliance",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/BacklogTab.tsx:25 The Codebase Archeologist reports an empty backlog as a clean codebase, but its scanner returns [] when readdir fails and empty churn when git is unavailable, so a scan that could not run looks the same as a healthy result, which the golden path forbids.",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 Silent cap at 100 rows. The counter on line 52 prints hits.length, not 'top 100 of N', so the truncation is not disclosed. No skipped-sensor record exists in ArcheologistAnalysis either."
+        },
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/lib/codebase-archeologist.ts:75 Each finding's identity is a run-local counter rather than rule + normalized location + content digest, so findings cannot be deduplicated across sweeps and keep no history. The hit type also has no quoted matched content (the row shows only file:line)."
+        },
+        {
+          "technique": "causes-beside-the-finding-count",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/OverviewTab.tsx:8 The health score subtracts per emitted instance, which counts emissions as work. No independent-cause count or stated relation is published beside the issue total."
+        },
+        {
+          "technique": "the-tree-is-not-the-population",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:91 Only the post-filter file count is shown. The traversal drops files by extension filter, maxDepth 8, and silently swallowed readdir failures, and none of those exclusions is counted or disclosed."
+        },
+        {
+          "technique": "incremental-scanning",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:25 The GDD compliance evidence shows its age against a named staleness threshold instead of presenting old review evidence as current."
+        },
+        {
+          "technique": "dead-code-detection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/constants.ts:23 The rule roster (GENERATED_BODY, circular include, asset path, NewObject, deprecated API, god class) has no unused-code or reachability family."
+        },
+        {
+          "technique": "ingestion-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:48 The scanner reads the user's own local project path, not a foreign tree over a metered interface."
+        }
+      ]
+    },
+    {
+      "context": "material-configurator",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/materials/MaterialsView.tsx:28 This context is a set of authoring tabs (configure, patterns, post-process, style, hierarchy, ask) and has no detector, finding, or code-tree sweep. A case-insensitive search of the materials directory for findings/detector/dedup/codebase/dead code found nothing; the only 'scan' hits are a scanlines shader pattern.",
+      "techniques": [],
+      "absenceTerms": [
+        "findings",
+        "detector",
+        "dedup",
+        "codebase"
+      ]
+    },
+    {
+      "context": "project-setup-core",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/project-setup/useProjectScan.ts:149 When the project directory listing throws, the error is swallowed ('Non-critical') and reported as 'No .uproject found', so hasProject becomes false and the derived next step offers Create project, a remediation for something the scan never actually checked.",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/useProjectScan.ts:98 Each sensor is isolated in its own try/catch (good), but the skip is not recorded. A failed engine-detection call shows as 'Not found' and is counted by missingRequirements toward 'Fix N Missing', so a failed read is scored as a missing tool."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "codebase-scanning",
+      "context": "build-quality-monitoring",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "codebase-scanning",
+      "context": "audio-generation-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (AudioCodeGenPanel.tsx:14) is only a type import and does not show that the precondition is absent. The directory also calls /api/audio-gen and /api/audio-codegen, whose server code I did not open, so I could not confirm 'deterministic' or that no model-generated artifact is consumed as t"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T21:52:12.774767+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [
+        "causes-beside-the-finding-count",
+        "dead-code-detection",
+        "finding-lifecycle",
+        "incremental-scanning",
+        "ingestion-budget",
+        "sensor-pipeline",
+        "the-tree-is-not-the-population"
+      ],
+      "deviations": 1,
+      "context": "gdd-compliance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T21:52:12.774767+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "material-configurator",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T21:52:12.774767+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [
+        "sensor-pipeline"
+      ],
+      "deviations": 1,
+      "context": "project-setup-core",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T21:52:12.774767+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "audio-generation-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

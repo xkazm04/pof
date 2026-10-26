@@ -1,0 +1,64 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f4709812-cafc-4773-8d88-7b4c260d084b",
+ "subject": "llm-extracted-entity-graph",
+ "evaluatedAt": "2026-10-22T03:02:42.289115+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "module-topology-graph",
+   "subject": "llm-extracted-entity-graph",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/topology/moduleGraph.ts:170 Searches for passage, embedding, and recall found no hits in the context directories; these views project registered feature dependencies rather than extract entities and relations from prose.",
+   "techniques": [
+    {
+     "technique": "accumulate-then-threshold-merge",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/constellation/layout.ts:156 Node descriptions come directly from feature definitions, without accumulating passage contributions."
+    },
+    {
+     "technique": "recall-passes-with-a-declared-cap",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Topology is computed from feature statuses and declared dependencies, without model extraction passes."
+    },
+    {
+     "technique": "recoverable-fan-out-write",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/topology/moduleGraph.ts:216 The topology builder returns an in-memory projection; it does not persist extracted facts across graph and vector stores."
+    },
+    {
+     "technique": "surface-form-identity-and-its-risk",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:136 Rendered nodes retain registered module identifiers instead of deriving identity from model-produced names."
+    }
+   ],
+   "absenceTerms": [
+    "passage",
+    "embedding",
+    "recall"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T03:02:42.289115+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "llm-extracted-entity-graph"
+   ],
+   "techniques": [
+    "accumulate-then-threshold-merge",
+    "recall-passes-with-a-declared-cap",
+    "recoverable-fan-out-write",
+    "surface-form-identity-and-its-risk"
+   ],
+   "deviations": 0,
+   "context": "module-topology-graph",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

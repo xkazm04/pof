@@ -1,0 +1,147 @@
+{
+ "schema": "conform-run/1",
+ "worker": "93f78a86-616c-4b5e-82d8-73f1bc7bdfe5",
+ "subject": "data-access",
+ "evaluatedAt": "2026-10-25T01:59:33.640267+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "database-layer",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/catalog-db.ts:153 When a catalog_entities row's data blob is corrupt, rowToEntity makes up a plausible 'planned' entity, and getEntity (a single-record read) returns it as a normal record instead of failing loud, so the corrupt row looks like real data to callers.",
+   "techniques": [
+    {
+     "technique": "row-mapping",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog-db.ts:153 Single-record reads should fail loud, but this one returns a made-up record that is only logged. Closed vocabularies are also passed through unchecked, e.g. pipeline-db.ts:33 `state: row.state as TrackState` with no CHECK constraint behind it."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "deviation",
+     "evidence": "src/lib/db.ts:30 The raw better-sqlite3 handle is exported past the layer, and route handlers use it to run their own SQL (e.g. src/app/api/checklist-metadata/route.ts:30 `const rows = db.prepare(`; 15 getDb() calls under src/app). The query language is not confined to one module tree."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "deviation",
+     "evidence": "src/lib/feature-matrix-db.ts:19 Status values are interpolated into SQL text, justified in a comment as 'hardcoded constants'. The technique bans exactly this exception. Elsewhere the code is good: buildUpdateQuery (db-utils.ts:33) appends each column and its value together, and cli-spend-db.ts:255 limits the GROUP BY column with a typed union."
+    },
+    {
+     "technique": "existence-authority-written-last",
+     "verdict": "deviation",
+     "evidence": "src/app/api/audio-gen/route.ts:202 Create order is right: the file is written, then the audio_assets row. Delete order is wrong: the file is removed before the row, which is the existence authority, so a failure between the two steps leaves a row pointing at a missing clip. This is the composition site for audio-asset-db's two stores."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "src/lib/feature-matrix-db.ts:392 The multi-row upsert and legacy-adopt invariant is owned by the repository function inside a better-sqlite3 transaction (which nests via savepoints). The bootstrap also publishes the connection only after every statement succeeds."
+    },
+    {
+     "technique": "batching-and-n-plus-one",
+     "verdict": "conformant",
+     "evidence": "src/lib/audio-asset-db.ts:153 A set-shaped read was added specifically to replace the per-set N+1 loop."
+    },
+    {
+     "technique": "read-models-and-projections",
+     "verdict": "conformant",
+     "evidence": "src/lib/feature-matrix-db.ts:860 The dashboard read returns a narrow three-column projection, and getAllModuleAggregates does a grouped aggregate, instead of loading whole FeatureRows."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "src/lib/db.ts:8 Tests run against the real engine with the production bootstrap schema. Isolation is per worker file (vitest.worker-env.ts), not per test, which is weaker than the fresh-instance-per-test default."
+    },
+    {
+     "technique": "cross-driver-invariant-parity",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/db.ts:44 Only one engine (better-sqlite3) sits behind the layer; there is no second driver."
+    }
+   ]
+  },
+  {
+   "context": "module-evaluator",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/evaluator/evaluator-results-db.ts:126 A corrupt or wrong-shaped findings blob in evaluator_results silently decodes as zero findings, with no log, count or row identity, so a damaged regression baseline reads as 'everything resolved'.",
+   "techniques": [
+    {
+     "technique": "row-mapping",
+     "verdict": "deviation",
+     "evidence": "src/lib/evaluator/evaluator-results-db.ts:126 Corrupt data is skipped silently: safeParseFindings, safeParseArray and safeParseCounts all swallow parse failures without logging. This is the banned third option."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "conformant",
+     "evidence": "src/lib/evaluator/evaluator-results-db.ts:147 Every value in the upsert and the history reads is a bound parameter."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "src/lib/evaluator/scan-findings-db.ts:65 The eval_findings rebuild (copy, row-count check, drop, rename) runs as one repository-owned transaction and aborts on row loss."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "conformant",
+     "evidence": "src/lib/evaluator/evaluator-results-db.ts:12 The rule is written down: clients reach persistence through /api/evaluator/results. The client stores (evaluatorStore, deepEvalStore) only touch localStorage."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/evaluator-results-route.test.ts:5 Tests use a real in-memory engine, and the schema comes from the production ensureEvaluatorResultsTable rather than a mock."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "data-access",
+   "context": "state-management",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:59:33.640267+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "batching-and-n-plus-one",
+    "cross-driver-invariant-parity",
+    "existence-authority-written-last",
+    "layering-rules",
+    "query-construction",
+    "read-models-and-projections",
+    "repo-testing",
+    "row-mapping",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "database-layer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:59:33.640267+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "layering-rules",
+    "query-construction",
+    "repo-testing",
+    "row-mapping",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "module-evaluator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

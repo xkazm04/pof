@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b28de5f2-31b1-4100-8987-36533bd46131",
+ "subject": "design-doc-compliance-scoring",
+ "evaluatedAt": "2026-10-25T02:52:26.696135+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "gdd-compliance",
+   "subject": "design-doc-compliance-scoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/GDDComplianceView/SuggestionsPanel.tsx:45 The view shows reconciliation suggestions as one ranked column (#1, #2, \u2026) in the engine's order, so each module's trivial 'Update GDD' bookkeeping item is ranked above its 'Fix critical gaps' item: the tick-the-box-first triage the standard warns against.",
+   "techniques": [
+    {
+     "technique": "bidirectional-gap-detection",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/SuggestionsPanel.tsx:45 Each gap row carries a direction indicator, and unmeasured gaps get no lean (GapIndicators.tsx:22). But the suggestions panel ranks code-ahead doc edits and design-ahead build work in one priority column, with the doc edits first in each module."
+    },
+    {
+     "technique": "coverage-vs-conformance-split",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:10 Coverage is shown next to the score with its basis ('X of Y'), plus a named confidence band label rather than a tint."
+    },
+    {
+     "technique": "declared-mapping-is-terminal",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/MappingStrip.tsx:60 Items related only by a guess are listed as unmapped and labelled as guesses. The strip reports mapped, un-evidenceable, heuristic, unmapped and dangling counts separately."
+    },
+    {
+     "technique": "evidence-age-envelope",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:25 Shows the newest and oldest review ages, the undated count, and the stale threshold. Age is measured against the report's own generatedAt. 'Audit ran' is printed as a separate fact (index.tsx:202)."
+    },
+    {
+     "technique": "no-neutral-constant-for-unmeasured",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/ModuleCard.tsx:35 An unmeasured module shows the word UNMEASURED and a dashed empty bar, never a number. The header ScoreRing receives measured={report.evidence.measured} and shows '\u2014' when it is false."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:52:26.696135+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "design-doc-compliance-scoring"
+   ],
+   "techniques": [
+    "bidirectional-gap-detection",
+    "coverage-vs-conformance-split",
+    "declared-mapping-is-terminal",
+    "evidence-age-envelope",
+    "no-neutral-constant-for-unmeasured"
+   ],
+   "deviations": 1,
+   "context": "gdd-compliance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

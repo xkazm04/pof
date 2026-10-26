@@ -1,0 +1,198 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9aacfd01-f595-4bc0-8134-3246c32939b7",
+ "subject": "combat-pacing-and-dramatic-arc",
+ "evaluatedAt": "2026-10-24T05:26:00.385846+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "hud-damage-and-navigation",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/types.ts:2 This context only mirrors HUD widget presentation (floating damage text physics, menu flow graph, low-health pulse), and a case-insensitive search of all of src/components/modules/content/ui-hud found no tension, climax, comeback, breather, survival or timeToKill construct, so it has no encounter-pacing instrument to judge.",
+   "techniques": [
+    {
+     "technique": "intensity-and-threat-tension-curve",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/constants.ts:3 A low-health threshold that drives a HUD pulse effect. It is not a threat term in a pacing curve."
+    }
+   ],
+   "absenceTerms": [
+    "climax",
+    "comeback",
+    "breather",
+    "timeToKill",
+    "survival"
+   ]
+  },
+  {
+   "context": "combat-metrics",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel.tsx:144 The weapon matchup grades time-to-kill into a fight-length band (instant/healthy/long/stall) but prints only the band name and colour, never the bound it was compared against or which side of it the value sits. The cuts are also one global table (instant <1s, stall >45s) rather than an envelope per encounter class, so the envelope technique is only partly realized.",
+   "techniques": [
+    {
+     "technique": "encounter-duration-envelopes",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel.tsx:132 The stall ceiling shows up only as bar length and the band only as a label (line 144). The measured value, the bound and the side are not given on one line. The floor is a global 1s, not about 3s per class, and there is no effective-health-ratio check."
+    },
+    {
+     "technique": "plain-language-fight-report",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:307 KPI cards (rendered in MetricsTab) show hardcoded literals as if they were measurements. The 'context' basis string is never rendered, and no card carries a design judgment. The standard says an unmeasured value must never be shown as a neutral one."
+    },
+    {
+     "technique": "proxy-driver-limit-declaration",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/MetricsTab.tsx:29 These are closed-form DPS figures. No scripted or AI stand-in plays anything here, so there is no proxy to declare."
+    }
+   ]
+  },
+  {
+   "context": "combat-damage-pipeline",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/index.tsx:27 This context visualizes the per-hit damage formula, combo cooldown scheduling and hit-feel export. Those are attack semantics upstream of the tension curve, which the golden path lists as a neighbouring subject. A search of combos/, damage-pipeline/, hits/ and polish/ found no climax, comeback, breather, survival or timeToKill construct.",
+   "techniques": [
+    {
+     "technique": "encounter-duration-envelopes",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/combos/index.tsx:143 This is the length of one combo chain, not an encounter's engaged time, so the encounter envelope does not apply."
+    }
+   ],
+   "absenceTerms": [
+    "climax",
+    "comeback",
+    "breather",
+    "timeToKill",
+    "survival"
+   ]
+  },
+  {
+   "context": "bestiary-encounters-metrics",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The encounter difficulty readout bands a unitless 0-100 'difficulty' value into DANGER/SWEET SPOT/TRIVIAL using cuts (70/40) that appear only inline and as coloured rects, never as numbers in the output. It restates its own cuts instead of reading the shared survival band law. Lifespans and death causes are shown with no envelope and no dominant-cause naming, so the designer gets a decorative chart rather than an actionable verdict.",
+   "techniques": [
+    {
+     "technique": "difficulty-band-classification",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/DifficultyChart.tsx:61 The tooltip shows value + zone label but not the boundary. The measure has no stated unit or basis, there is no sample size, and there is no near-boundary note. The cuts are a second authority beside src/lib/balance/encounter-bands.ts."
+    },
+    {
+     "technique": "encounter-duration-envelopes",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:55 Average lifespan (e.g. Stone Brute 42.1s, data.ts:600) is a bare string with no floor or ceiling per encounter class. A near-spongy archetype is not flagged."
+    },
+    {
+     "technique": "plain-language-fight-report",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:115 Death causes are shown only as a distribution. 'Sword' holds 45% (data.ts), above the ~30% dominant-cause threshold, and is never named as the thing to change. The figures are hardcoded literals presented as telemetry, with no basis."
+    }
+   ]
+  },
+  {
+   "context": "combat-dodge-timeline",
+   "subject": "combat-pacing-and-dramatic-arc",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/types.ts:19 The tooling rates dodge frame data (i-frame forgiveness, cancel-window responsiveness, stamina efficiency). That is attack escapability and cancel-rule semantics, which the golden path places upstream as a neighbouring subject. A search of dodge-chain/ and dodge-timeline/ found no climax, comeback, breather, survival or timeToKill construct, so there is no encounter-pacing instrument here.",
+   "techniques": [
+    {
+     "technique": "difficulty-band-classification",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/types.ts:11 These are action-named ratings over frame-data ratios, not a survival or win-rate outcome measure. Note, though, that their cuts (50/30, 40/20, 4/3) are not printed beside the badge in FrameDataTable."
+    }
+   ],
+   "absenceTerms": [
+    "climax",
+    "comeback",
+    "breather",
+    "timeToKill",
+    "survival"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T05:26:00.385846+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "intensity-and-threat-tension-curve"
+   ],
+   "deviations": 0,
+   "context": "hud-damage-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:26:00.385846+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "encounter-duration-envelopes",
+    "plain-language-fight-report",
+    "proxy-driver-limit-declaration"
+   ],
+   "deviations": 1,
+   "context": "combat-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:26:00.385846+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "encounter-duration-envelopes"
+   ],
+   "deviations": 0,
+   "context": "combat-damage-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:26:00.385846+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "difficulty-band-classification",
+    "encounter-duration-envelopes",
+    "plain-language-fight-report"
+   ],
+   "deviations": 1,
+   "context": "bestiary-encounters-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:26:00.385846+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "combat-pacing-and-dramatic-arc"
+   ],
+   "techniques": [
+    "difficulty-band-classification"
+   ],
+   "deviations": 0,
+   "context": "combat-dodge-timeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

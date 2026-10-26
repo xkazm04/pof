@@ -1,0 +1,198 @@
+{
+ "schema": "conform-run/1",
+ "worker": "24c20eda-bf5f-43b8-b53b-8c2b75a51919",
+ "subject": "motion",
+ "evaluatedAt": "2026-10-24T23:11:31.219168+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "progression-curves-builds",
+   "subject": "motion",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx:113 pathLength is outside the property set the app's MotionConfig reducedMotion=\"user\" reaches, and this draw-in has no motionSafe guard, so reduced-motion users still watch the curve trace for a second (same in PowerCurveDangerZones and MultiCurveOverlay).",
+   "techniques": [
+    {
+     "technique": "reduced-motion-mechanics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx:113 The engine-scoped reduce switch covers only positional keys. This non-positional draw-in has no fallback of its own; XpCurveChart guards the same gesture and its siblings do not."
+    },
+    {
+     "technique": "preset-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/analysis/PowerCurveDangerZones.tsx:82 The same curve draw-in gesture is retyped per file with different inline durations (1, 1.2, 1.5) and no named preset."
+    },
+    {
+     "technique": "taste-budgets",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/curves/XpCurveChart.tsx:131 Point entrances start only after 1s and stagger uncapped per level, so the entrance far exceeds the roughly-1s total cap."
+    },
+    {
+     "technique": "performance-discipline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:36 Bar fills animate width (layout) instead of a scaleX transform."
+    },
+    {
+     "technique": "continuity-across-change",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_progression/curves/XpCurveChart.tsx:110 When parameters change, the same path element morphs its d geometry instead of being remounted."
+    },
+    {
+     "technique": "content-bearing-degradation",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:45 The figure is rendered as static text (with a static-width bar at line 42), so the payload does not depend on the fill playing."
+    }
+   ]
+  },
+  {
+   "context": "shared-utility-hooks",
+   "subject": "motion",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/hooks/useSuspend.ts:12 The hooks provide lifecycle, suspend, fetch and viewport primitives. A case-insensitive grep of src/hooks for motion, keyframes and prefers-reduced found no file, and the suspend plane pauses timers and polling rather than owning any animated gesture, so this context has no motion vocabulary to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "keyframes",
+    "prefers-reduced"
+   ]
+  },
+  {
+   "context": "visual-gen-quality-and-animation",
+   "subject": "motion",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "scripts/visual-gen/pof_anim_filmstrip.py:3 These are headless Blender/Python tools for game-animation data (NPZ/BVH/filmstrip) and mesh critique. A recursive grep of scripts/visual-gen for prefers-reduced, framer-motion, useReducedMotion, requestAnimationFrame and MotionConfig found no hit, so there is no UI motion surface here.",
+   "techniques": [],
+   "absenceTerms": [
+    "prefers-reduced",
+    "framer-motion",
+    "useReducedMotion",
+    "requestAnimationFrame",
+    "MotionConfig"
+   ]
+  },
+  {
+   "context": "core-engine-genre-tabs",
+   "subject": "motion",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:120 The ComingSoon placeholder runs a spinner-shaped infinite rotation with no visible stop, on a surface where no work is happening, so the unprompted loop never ends and reads as progress.",
+   "techniques": [
+    {
+     "technique": "unprompted-motion-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/unique-tabs/index.tsx:120 Self-starting infinite loop past 5s with no operable stop and no named stopper."
+    },
+    {
+     "technique": "taste-budgets",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_shared/headers.tsx:28 Every implemented StatusDot pulses forever, so a feature grid carries far more concurrent ambient instances than 'countable on one hand'."
+    },
+    {
+     "technique": "reduced-motion-mechanics",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_shared/headers.tsx:29 The loop correctly reduces to stillness, but every component reads useReducedMotion and branches at the call site, collapsing to exact 0, rather than a vocabulary-level switch."
+    },
+    {
+     "technique": "loop-pause-governance",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_shared/headers.tsx:136 Each loop picks its own deciders: the cursor blink uses suspend plus reduced, StatusDot uses reduced only, ComingSoon uses none. There is no merged pause signal."
+    },
+    {
+     "technique": "preset-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_design.tsx:74 Spreads a deprecated preset and nudges its duration inline, which is the 'copy of a preset with numbers nudged' failure."
+    },
+    {
+     "technique": "performance-discipline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport.tsx:86 The panel reveal animates height. The scaleX bar in _design.tsx:72 shows the compositor form is known but not used consistently."
+    },
+    {
+     "technique": "continuity-across-change",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_shared/navigation.tsx:147 The active segment background is one animation identity held by one element at a time, tweened between options."
+    },
+    {
+     "technique": "content-bearing-degradation",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_design.tsx:160 Under reduced motion the bar starts at its resolved value, so it never shows a confident zero."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "motion",
+   "context": "animation-combo-workflow",
+   "reason": "evidence leans on lib/motion.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:11:31.219168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "motion"
+   ],
+   "techniques": [
+    "content-bearing-degradation",
+    "continuity-across-change",
+    "performance-discipline",
+    "preset-vocabulary",
+    "reduced-motion-mechanics",
+    "taste-budgets"
+   ],
+   "deviations": 1,
+   "context": "progression-curves-builds",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:11:31.219168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "motion"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "shared-utility-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:11:31.219168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "motion"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "visual-gen-quality-and-animation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:11:31.219168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "motion"
+   ],
+   "techniques": [
+    "content-bearing-degradation",
+    "continuity-across-change",
+    "loop-pause-governance",
+    "performance-discipline",
+    "preset-vocabulary",
+    "reduced-motion-mechanics",
+    "taste-budgets",
+    "unprompted-motion-lifecycle"
+   ],
+   "deviations": 1,
+   "context": "core-engine-genre-tabs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

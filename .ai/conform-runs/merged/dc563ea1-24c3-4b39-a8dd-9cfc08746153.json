@@ -1,0 +1,134 @@
+{
+  "schema": "conform-run/1",
+  "worker": "dc563ea1-24c3-4b39-a8dd-9cfc08746153",
+  "subject": "agent-memory",
+  "evaluatedAt": "2026-10-24T01:53:10.267006+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "project-ops-api",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/error-memory/route.ts:47 The error-memory route recalls build-error memories by module only: there is no project owner, nothing in the tree feeds the result into the prompt header, and nothing ever forgets an entry, so the memory is either never recalled or recalled out of scope.",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-context.ts:374 The header's errorMemory option defaults to empty, and a repo grep finds no caller that passes it or calls get-relevant-errors, so the 'for prompt injection' recall never reaches context, and nothing marks that as a failure."
+        },
+        {
+          "technique": "owner-and-counterpart-scope",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:191 The table has no project column (build-error-recurrence.ts:14 says so), so the owner cannot be derived from a row's address, yet prompt-context labels the entries 'occurred previously in this project'; cross-module rows with 3+ occurrences also join in."
+        },
+        {
+          "technique": "memory-value-model",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:192 The candidate window is chosen by usage count alone before the blended score runs, so 'popular once stays popular forever' decides what can be scored at all; there is also no trust axis."
+        },
+        {
+          "technique": "loss-site-inventory",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:193 Three read paths each take their own number (30 then top 5, module list 20, stats 5), and the formatted prompt section gives no notice of what was left out."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:213 A resolved error is demoted by only 5 points and stays a recall candidate forever; the module has no retirement, decay or tombstone path, so the store only grows."
+        },
+        {
+          "technique": "coverage-instrumentation",
+          "verdict": "deviation",
+          "evidence": "src/lib/error-memory-db.ts:280 get-stats reports raw row counts with no population denominator (modules or projects), so a store that build-error-recurrence.ts:15 says no build writes still reads as a health figure."
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "conformant",
+          "evidence": "src/lib/error-memory-db.ts:112 Each error fingerprint is one item, upserted atomically inside a transaction: a recurrence increments the count rather than adding a duplicate row, so concurrent writers cannot claim the same item twice."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-memory",
+      "context": "cli-terminal-shell",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "agent-memory",
+      "context": "status-health-dashboard",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor EntitySearch.tsx:7 is a comment about an in-memory entity filter, so it doesn't show that agent memory is absent. EntitySearch.tsx also isn't in this context's file list."
+    },
+    {
+      "subject": "agent-memory",
+      "context": "pipeline-step-components",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor steps/index.ts:33 is the STEP_REGISTRY declaration, which doesn't show absence of agent memory. The genHistory and buildPrompt claims aren't traced to that line."
+    },
+    {
+      "subject": "agent-memory",
+      "context": "inventory-genome-economy",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor dna-genome/data.ts:37 is the SUB_TABS constant, which doesn't itself show that agent memory is absent. The economy directory also isn't covered by the anchor."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T01:53:10.267006+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "status-health-dashboard",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T01:53:10.267006+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "pipeline-step-components",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T01:53:10.267006+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "inventory-genome-economy",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T01:53:10.267006+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "coverage-instrumentation",
+        "decay-and-forgetting",
+        "episodic-capture",
+        "loss-site-inventory",
+        "memory-value-model",
+        "owner-and-counterpart-scope",
+        "recall-injection"
+      ],
+      "deviations": 1,
+      "context": "project-ops-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

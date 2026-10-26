@@ -1,0 +1,58 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4865c0a7-cfdf-4378-8013-f44c47002cb7",
+ "subject": "concurrency-guards",
+ "evaluatedAt": "2026-10-25T01:49:34.367772+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "cross-module-features",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:150 Build dispatches a feature-fix CLI run with no in-flight check of its own. The only guard is the Build button's `disabled={isBuilding}`, and `isBuilding` comes from the CLI store's isRunning, which only flips once the terminal picks up the prompt (dispatchPromptWhenReady can wait for terminal-ready). Two Build clicks in that window both dispatch, and the shared door's scalar `inFlight.current = item` (src/hooks/usePlanDispatch.ts:81) is overwritten, so the first run's outcome is credited to the second feature.",
+   "techniques": [
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:150 No try-begin and no second-caller policy. A second dispatch neither refuses, joins nor queues; it just overwrites the shared door's scalar inFlight ref (the 'boolean flag trampled by a second key' failure)."
+    },
+    {
+     "technique": "attempt-attribution",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:70 The error-memory stats fetch captures a per-effect cancelled flag and drops a late response after cleanup, so a superseded attempt cannot write state."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "concurrency-guards",
+   "context": "coach-and-guidance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "concurrency-guards",
+   "context": "ui-primitives",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:49:34.367772+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "attempt-attribution",
+    "single-flight-primitives"
+   ],
+   "deviations": 1,
+   "context": "cross-module-features",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

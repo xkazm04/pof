@@ -1,0 +1,108 @@
+{
+  "schema": "conform-run/1",
+  "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+  "subject": "repository-landing-document",
+  "evaluatedAt": "2026-10-25T00:34:10.829344+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "app-navigation",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/layout.tsx:19 The only descriptive metadata in this context is the app's own HTML title and description, which the application renders itself (public-claim-provenance territory by the golden path's own seam), not the repository host's front page or About-box fields; searching src/app, src/hooks and src/stores for shields.io, img.shields, badge.svg, 'landing document' and 'front page' found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "shields.io",
+        "img.shields",
+        "badge.svg",
+        "front page"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "repository-landing-document",
+      "context": "image-generation",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+    },
+    {
+      "subject": "repository-landing-document",
+      "context": "visual-gen-library",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+    },
+    {
+      "subject": "repository-landing-document",
+      "context": "asset-forge",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+    },
+    {
+      "subject": "repository-landing-document",
+      "context": "visual-gen-style-asset-library",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T00:34:10.829344+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "image-generation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:34:10.829344+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "visual-gen-library",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:34:10.829344+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "asset-forge",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:34:10.829344+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "visual-gen-style-asset-library",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:34:10.829344+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "app-navigation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

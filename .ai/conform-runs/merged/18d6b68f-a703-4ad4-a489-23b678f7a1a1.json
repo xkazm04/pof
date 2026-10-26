@@ -1,0 +1,88 @@
+{
+ "schema": "conform-run/1",
+ "worker": "18d6b68f-a703-4ad4-a489-23b678f7a1a1",
+ "subject": "pipeline-dag",
+ "evaluatedAt": "2026-10-22T04:22:11.308343+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "module-topology-graph",
+   "subject": "pipeline-dag",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Context and repository searches found feature-topology projections and individual task dispatches, with no pipeline, executor, or paused terms in the context directories, so this context does not execute a pipeline graph.",
+   "techniques": [
+    {
+     "technique": "composite-condition-verdicts",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:58 This guards availability of feature-status data for display; it does not compose executable branch conditions."
+    },
+    {
+     "technique": "conditional-edges",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:98 Edge states determine visual styling, without routing execution through predicates."
+    },
+    {
+     "technique": "deterministic-vs-model-nodes",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:101 The Build action dispatches one selected feature task, rather than executing registered classes of pipeline nodes."
+    },
+    {
+     "technique": "external-adapter-nodes",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:40 The overlap view reads a fixed internal analysis endpoint; it does not configure an external adapter node."
+    },
+    {
+     "technique": "graph-validation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:34 Nexus derives a visualization from feature definitions and statuses, rather than accepting an executable graph document."
+    },
+    {
+     "technique": "node-execution-model",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/FeatureConstellation/constants.ts:12 Node labels describe feature implementation progress, rather than node executions within a graph run."
+    },
+    {
+     "technique": "pause-and-gate-nodes",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/implementation-planner/plan-dispatch.ts:71 The traced Build gate refuses an individual task with unmet prerequisites; it does not suspend a graph run for approval."
+    },
+    {
+     "technique": "valid-but-degraded-plans",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:99 The generated plan supplies one explicitly selected feature task, not a generated graph submitted for execution."
+    }
+   ],
+   "absenceTerms": [
+    "pipeline",
+    "executor",
+    "paused"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T04:22:11.308343+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "pipeline-dag"
+   ],
+   "techniques": [
+    "composite-condition-verdicts",
+    "conditional-edges",
+    "deterministic-vs-model-nodes",
+    "external-adapter-nodes",
+    "graph-validation",
+    "node-execution-model",
+    "pause-and-gate-nodes",
+    "valid-but-degraded-plans"
+   ],
+   "deviations": 0,
+   "context": "module-topology-graph",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

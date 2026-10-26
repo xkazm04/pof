@@ -1,0 +1,135 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5afd11fc-ca4e-49de-b767-c941ad6039cf",
+ "subject": "tiling-texture-acceptance",
+ "evaluatedAt": "2026-10-25T00:51:09.317380+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "material-configurator",
+   "subject": "tiling-texture-acceptance",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/constants.ts:34 The configurator sets scalar UE5 material parameters (Roughness, Metallic, IOR and the like) and never generates, accepts, derives or tiles texture images; a case-insensitive search of src/components/modules/content/materials for seam, texel, tileable and detectSeams found nothing, and the only texture mentions are shader-recipe prose in the pattern catalog and the ORM glossary entry.",
+   "techniques": [],
+   "absenceTerms": [
+    "seam",
+    "texel",
+    "tileable",
+    "detectSeams"
+   ]
+  },
+  {
+   "context": "image-generation",
+   "subject": "tiling-texture-acceptance",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/seam-check.ts:82 The wrap-around check reduces each axis to a mean absolute difference only, with no maximum, so a short hard break across the edge (a shifted feature) is averaged away over the whole edge and passes, which is the case the technique says must fail.",
+   "techniques": [
+    {
+     "technique": "wrap-around-edge-diff",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/seam-check.ts:82 One-pixel bands, per-axis scores, the worst edge named, and a non-throwing safe variant that returns null are all present; but only the mean is kept (no max), so 'mean clean, max high \u2192 fail' cannot happen."
+    },
+    {
+     "technique": "seam-threshold-calibration",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/seam-check.ts:63 Any caller can pass its own cutoff per call, which the technique forbids. The 0.08 (~20/255) default is called 'conservative' but has no corpus, no catch/false-flag rates, no date and no provisional label."
+    }
+   ]
+  },
+  {
+   "context": "visual-gen-style-asset-library",
+   "subject": "tiling-texture-acceptance",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/biome-textures.ts:26 The biome table has a closed class list and material-noun vocabularies, but the tiling and quality suffix is pasted into all six entries instead of living in one place, the tiling request is textual only, and a repo-wide search found no production consumer of leonardoPrompt (only biome-textures.test.ts), so the themed prompt never reaches a generator and no texture records which class produced it.",
+   "techniques": [
+    {
+     "technique": "biome-themed-tile-prompting",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/biome-textures.ts:26 Steps 1\u20132 are realized (closed Biome union, noun + condition words). Step 6 fails: the suffix is repeated in every entry. Step 7 fails: no class is recorded. The vocabulary is never composed into a live generation path."
+    }
+   ]
+  },
+  {
+   "context": "material-style-tools",
+   "subject": "tiling-texture-acceptance",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx:122 The style-transfer UI shows an inferred Metallic value next to Roughness with the same bar and no provenance label; the server defaults it to 0.2 when no keyword matches. That is the 'plausible grey metalness' the technique says must be refused or labelled, and it flows onward through effectiveAnalysis into generation.",
+   "techniques": [
+    {
+     "technique": "derive-only-what-the-source-encodes",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx:122 Metalness is shown at the same confidence as the other properties, with no heuristic or refused label per channel. Only surface type carries a confidence number."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "tiling-texture-acceptance",
+   "context": "visual-gen-library",
+   "reason": "evidence leans on style-transfer/route.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T00:51:09.317380+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "tiling-texture-acceptance"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "material-configurator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T00:51:09.317380+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "tiling-texture-acceptance"
+   ],
+   "techniques": [
+    "seam-threshold-calibration",
+    "wrap-around-edge-diff"
+   ],
+   "deviations": 1,
+   "context": "image-generation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T00:51:09.317380+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "tiling-texture-acceptance"
+   ],
+   "techniques": [
+    "biome-themed-tile-prompting"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-style-asset-library",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T00:51:09.317380+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "tiling-texture-acceptance"
+   ],
+   "techniques": [
+    "derive-only-what-the-source-encodes"
+   ],
+   "deviations": 1,
+   "context": "material-style-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -1,0 +1,195 @@
+{
+ "schema": "conform-run/1",
+ "worker": "318f0018-6465-490f-adbb-5e3e89691658",
+ "subject": "mcp-tools",
+ "evaluatedAt": "2026-10-24T00:10:16.467304+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "blender-mcp-bridge",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/blender-mcp/scripts/create-material.ts:156 The material script applies its result to whatever object the Blender operator has active at execution time and reports only the material name, so a byte-identical call addresses a different object depending on ambient selection and the transcript never shows which object was changed.",
+   "techniques": [
+    {
+     "technique": "ambient-selection-is-not-an-argument",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/scripts/create-material.ts:156 Resolves 'the active object' inside the mutating call instead of resolving once and naming the identity; an empty selection silently skips assignment rather than giving a typed refusal."
+    },
+    {
+     "technique": "ambient-selection-is-not-an-argument",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/scripts/create-material.ts:163 Result names the material, never the object it was applied to (obligation 1: return what was resolved)."
+    },
+    {
+     "technique": "transport-selection",
+     "verdict": "deviation",
+     "evidence": "src/lib/blender-mcp/service.ts:105 The bridge drives arbitrary-Python execution through an unauthenticated localhost TCP listener (the addon's, not PoF's), which is the local-port trap the decision table rules out for local-machine tools. Host is loopback-restricted at the route, but no identity is carried."
+    }
+   ],
+   "registryProposal": "ambient-selection-is-not-an-argument could say outright that it covers a client that authors the script run inside a single-seat application (here PoF writes the bpy code and the addon only executes it), not just the tool server."
+  },
+  {
+   "context": "save-system",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_save/index.tsx:31 A case-insensitive grep of sub_save/ for mcp, callTool, inputSchema, tools/call and functionDeclarations found nothing; the context is a client React module for save-schema design with no tool-protocol host, client or server.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "callTool",
+    "inputSchema",
+    "tools/call"
+   ]
+  },
+  {
+   "context": "ue5-state-sync",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/index.tsx:7 A case-insensitive grep of both panel directories for mcp, callTool, inputSchema, tools/call and functionDeclarations found nothing; the panels are human-operated views over the UE5 plugin's WebSocket (selection is shown to a person, not passed as a model tool argument).",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "callTool",
+    "inputSchema",
+    "tools/call"
+   ]
+  },
+  {
+   "context": "ai-developer-tools-api",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/one-shot/step/route.ts:276 The one-shot step route spawns an autonomous Claude CLI with the configured MCP servers (pof-mcp plus unreal-official) loaded, and every spawn carries --dangerously-skip-permissions, so no tool call, however destructive, ever stops for a human.",
+   "techniques": [
+    {
+     "technique": "client-integration",
+     "verdict": "deviation",
+     "evidence": "src/app/api/one-shot/step/route.ts:276 The consent seat is removed entirely: there is no tiering by declared blast radius between read-only and mutating MCP tools."
+    },
+    {
+     "technique": "client-integration",
+     "verdict": "deviation",
+     "evidence": "src/lib/claude-terminal/cli-service.ts:247 This base arg list (in a shared lib file, cited as the mechanism behind the route) unconditionally auto-approves every tool call."
+    },
+    {
+     "technique": "tool-schema-design",
+     "verdict": "deviation",
+     "evidence": "src/app/api/agents/live-token/route.ts:42 The panels argument is a STRING holding JSON, and its structure plus the enum of panel types live only in description prose, even though the transport can carry an ARRAY with enums (the highest-rung rule)."
+    },
+    {
+     "technique": "authentication-and-scoping",
+     "verdict": "conformant",
+     "evidence": "src/app/api/agents/live-token/route.ts:133 The Gemini Live tool session gets a short-lived, use-capped ephemeral token; the real API key stays server-side."
+    }
+   ]
+  },
+  {
+   "context": "ue5-filesystem",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/blender-mcp/generate/route.ts:8 Only execute and connect/disconnect call requireOperator; the paid provider generation route and the scene-mutating import route dispatch with no guard, so authorization is a per-handler convention rather than one check before dispatch.",
+   "techniques": [
+    {
+     "technique": "authentication-and-scoping",
+     "verdict": "deviation",
+     "evidence": "src/app/api/blender-mcp/generate/route.ts:8 A billed provider job is dispatched with no operator check, while its sibling execute route is guarded."
+    },
+    {
+     "technique": "authentication-and-scoping",
+     "verdict": "deviation",
+     "evidence": "src/app/api/blender-mcp/generate/import/route.ts:19 The import mutates the live Blender scene with no guard."
+    },
+    {
+     "technique": "command-audit-by-position",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/blender-mcp/execute/route.ts:7 No allow-list or classifier audits the code string: arbitrary Python is the deliberate operator capability, gated by requireOperator (line 9)."
+    },
+    {
+     "technique": "ambient-selection-is-not-an-argument",
+     "verdict": "conformant",
+     "evidence": "src/app/api/blender-mcp/object/route.ts:7 Object info takes an explicit object name and refuses when it is missing, rather than reading the current selection."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T00:10:16.467304+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "ambient-selection-is-not-an-argument",
+    "transport-selection"
+   ],
+   "deviations": 1,
+   "context": "blender-mcp-bridge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:10:16.467304+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "save-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:10:16.467304+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ue5-state-sync",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:10:16.467304+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "authentication-and-scoping",
+    "client-integration",
+    "tool-schema-design"
+   ],
+   "deviations": 1,
+   "context": "ai-developer-tools-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:10:16.467304+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "ambient-selection-is-not-an-argument",
+    "authentication-and-scoping",
+    "command-audit-by-position"
+   ],
+   "deviations": 1,
+   "context": "ue5-filesystem",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

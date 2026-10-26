@@ -1,0 +1,166 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c1010a28-8f32-48b6-ace3-783954e7e9c8",
+  "subject": "encounter-balance-simulation",
+  "evaluatedAt": "2026-10-24T22:58:36.196351+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "character-simulator",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_character/simulator/feedback/FeedbackBalanceSimulator.tsx:69 The feedback simulator seeds every comparison from the wall clock, so the same question re-rolls on every click, and the predictive panel shows a bare 'Avg EHP' with no reference hit.",
+      "techniques": [
+        {
+          "technique": "per-cell-seed-derivation-for-order-independence",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/feedback/FeedbackBalanceSimulator.tsx:69 A time-derived seed instead of one derived from scenario identity, so results are not reproducible by default."
+        },
+        {
+          "technique": "one-shot-rate-and-ehp-floor-checks",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/ResultsPanel.tsx:77 EHP is shown without the hit it was computed against; the CanonChecksPanel does correctly render not-evaluated checks as 'Could not run' (line 49)."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/feedback/types.ts:32 Scenario presets exist but carry no iteration count and no cast version; iterations are typed in at the keyboard (default 500)."
+        }
+      ]
+    },
+    {
+      "context": "combat-simulator",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/CombatSimulatorView/ThreatBreakdownPanel.tsx:19 The Death Recap headline names the top source as the cause whenever it has any kill share at all, with no dominance threshold and no 'danger is spread out' state, which sends designers to nerf noise.",
+      "techniques": [
+        {
+          "technique": "kill-share-and-damage-share-attribution",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/ThreatBreakdownPanel.tsx:19 Argmax presented as the culprit; bySource is sorted by damageShare, so the kill-share headline may not even name the top killer. fight-report.ts uses DOMINANT_KILLER_SHARE=0.3 correctly, but this panel does not."
+        },
+        {
+          "technique": "one-shot-rate-and-ehp-floor-checks",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/AdvancedResults.tsx:38 The alert threshold is a literal typed into the view rather than read from a single source, and no EHP-versus-reference-hit check appears."
+        },
+        {
+          "technique": "per-cell-seed-derivation-for-order-independence",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/index.tsx:135 A random seed on every unpinned run; common random numbers are applied only when a baseline is pinned. The seed is displayed (AdvancedResults.tsx:51)."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/ScenarioBuilder.tsx:82 Scenarios are composed ad hoc and the iteration count is chosen at the keyboard; there is no checked-in, versioned cast."
+        }
+      ]
+    },
+    {
+      "context": "simulation-tools",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/app/api/combat-simulator/route.ts:49 The combat route falls back to a random seed and the CombatSimConfig type makes iterations a free per-run field, so reproducibility and comparability depend on each caller, even though the result types carry correctly denominated kill and damage shares per (enemy, ability).",
+      "techniques": [
+        {
+          "technique": "per-cell-seed-derivation-for-order-independence",
+          "verdict": "deviation",
+          "evidence": "src/app/api/combat-simulator/route.ts:49 The default is a random seed, not one derived from identity."
+        },
+        {
+          "technique": "kill-share-and-damage-share-attribution",
+          "verdict": "conformant",
+          "evidence": "src/types/combat-simulator.ts:180 ThreatEntry is keyed by (enemy, ability) and documents the denominator for each share; the shares are never blended."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "deviation",
+          "evidence": "src/types/combat-simulator.ts:221 The iteration count lives on the per-run config, not on a versioned scenario preset."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "encounter-balance-simulation",
+      "context": "catalog-seed-data",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "encounter-balance-simulation",
+      "context": "game-design-studio-api",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors (combat-simulator/route.ts:48-49 and economy-simulator/goal-seek/route.ts:11) say what is claimed, but neither file is in this context. Its files are only the ability-spec and feature-matrix routes, so the verdict is about the simulation-tools context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T22:58:36.196351+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "encounter-balance-simulation"
+      ],
+      "techniques": [
+        "goal-seek-on-a-seeded-monotonic-lever",
+        "monte-carlo-scenario-presets",
+        "per-cell-seed-derivation-for-order-independence"
+      ],
+      "deviations": 1,
+      "context": "game-design-studio-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:58:36.196351+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "encounter-balance-simulation"
+      ],
+      "techniques": [
+        "monte-carlo-scenario-presets",
+        "one-shot-rate-and-ehp-floor-checks",
+        "per-cell-seed-derivation-for-order-independence"
+      ],
+      "deviations": 1,
+      "context": "character-simulator",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:58:36.196351+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "encounter-balance-simulation"
+      ],
+      "techniques": [
+        "kill-share-and-damage-share-attribution",
+        "monte-carlo-scenario-presets",
+        "one-shot-rate-and-ehp-floor-checks",
+        "per-cell-seed-derivation-for-order-independence"
+      ],
+      "deviations": 1,
+      "context": "combat-simulator",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T22:58:36.196351+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "encounter-balance-simulation"
+      ],
+      "techniques": [
+        "kill-share-and-damage-share-attribution",
+        "monte-carlo-scenario-presets",
+        "per-cell-seed-derivation-for-order-independence"
+      ],
+      "deviations": 1,
+      "context": "simulation-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

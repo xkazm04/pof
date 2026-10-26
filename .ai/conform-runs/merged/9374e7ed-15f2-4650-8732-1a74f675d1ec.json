@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9374e7ed-15f2-4650-8732-1a74f675d1ec",
+ "subject": "reversible-transform-pipelines",
+ "evaluatedAt": "2026-10-22T22:14:41.275404+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "reversible-transform-pipelines",
+   "context": "catalog-pipelines",
+   "reason": "Precondition does not hold: reversible-transform-pipelines governs data transform chains that perform geometric coordinate preprocessing on data (such as resample, crop, flip, rotate) and retrace them backwards via an operation journal on the payload (e.g. mapping model outputs back to input frame). In contrast, catalog-pipelines defines forward-only game-content authoring and acceptance pipelines (declarative View/Produce/Acceptance steps with human review gates), which the standard explicitly identifies in 'Where this subject ends' as belonging to pipeline-dag rather than reversible transforms ('A user-authored graph of dependent steps with human gates (the pipeline-dag subject in the work-execution category) executes a topology forward and owns node status, branching and durable pauses. Nothing in it runs backwards; a failed node is retried or skipped, never inverted. The discriminator is whether the steps describe a coordinate change on data that a later consumer must undo, or work whose effects stand once done'). As not-applicable is not accepted from this seat and no deviation or conformant reversible transform realization exists here, the pair is declined."
+  }
+ ],
+ "consults": []
+}

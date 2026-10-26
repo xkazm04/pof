@@ -1,0 +1,105 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d9ef4810-e562-4596-8edc-e0e52b70f9ff",
+  "subject": "retrieval",
+  "evaluatedAt": "2026-10-25T00:43:20.401560+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "inventory-catalog",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:92 The gear browser applies a boolean substring filter to a small in-memory catalog and orders it by a sort key the user picks (name/type/rarity/power), with every match paginated rather than a relevance-ranked slice; a search of sub_inventory/catalog for rerank/bm25/cosine/vec0 found no retrieval engine, so this belongs to the search UI subject, not retrieval.",
+      "techniques": [],
+      "absenceTerms": [
+        "rerank",
+        "bm25",
+        "cosine",
+        "vec0"
+      ]
+    },
+    {
+      "context": "ue5-bridge-client",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/ue5-bridge/query/route.ts:110 The only search-shaped action passes the query straight to UE's own asset search over Remote Control, so no corpus is cut, indexed, fused or floored on this side; a search of the bridge stores, types, hooks and routes for rerank/bm25/cosine/vec0 found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "rerank",
+        "bm25",
+        "cosine",
+        "vec0"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "retrieval",
+      "context": "state-management",
+      "reason": "absence contradicted: src/lib/prompts/material-configurator.ts:90 contains 'cosine' (2 hit(s) in the context's directories)"
+    },
+    {
+      "subject": "retrieval",
+      "context": "item-catalog-pipeline",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (ItemArt.tsx:59) is one step's buildPrompt template, and it doesn't speak for the pipeline's real prompt path: src/lib/catalog/headless.ts:415-430 builds produce prompts through buildStepProducePrompt with 'canon scoping' and canonCategoriesForStep(spec), which selects a category-filtered"
+    },
+    {
+      "subject": "retrieval",
+      "context": "database-layer",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (db.ts:66) is the bootstrap() signature and sits next to a WAL pragma, so it doesn't show that vector, FTS or ranked recall is absent; my own grep over those files found no hit, but the cited line isn't what shows it, so the anchor is incidental."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T00:43:20.401560+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "retrieval"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "item-catalog-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:43:20.401560+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "retrieval"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "inventory-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:43:20.401560+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "retrieval"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-bridge-client",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T00:43:20.401560+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "retrieval"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "database-layer",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

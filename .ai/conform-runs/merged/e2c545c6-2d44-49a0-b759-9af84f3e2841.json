@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e2c545c6-2d44-49a0-b759-9af84f3e2841",
+ "subject": "game-dialogue-voice-pipeline",
+ "evaluatedAt": "2026-10-21T23:57:50.071478+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "blueprint-transpiler-game-systems",
+   "subject": "game-dialogue-voice-pipeline",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/DialogueView/QuestGeneratorPanel.tsx:140 Searches found no speech, voice, tts, consent, or voice_asset hits in the context directory; repository hits concern other modules, while this context generates dialogue text and JSON rather than synthesized spoken lines.",
+   "techniques": [
+    {
+     "technique": "bake-versus-runtime-speech",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/DialogueView/QuestGeneratorPanel.tsx:98 The generated artifact is quest JSON; no spoken-line rendering or runtime synthesis path was found."
+    },
+    {
+     "technique": "cast-ledger-with-consent",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/DialogueView/QuestCard.tsx:180 The speaker is displayed as text; this context neither creates nor imports synthesized or cloned voices."
+    },
+    {
+     "technique": "line-id-catalog-and-revision-diff",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/DialogueView/QuestCard.tsx:50 This serializes quest data and dialogue trees, with no recordings or voiced-unit catalog to revise."
+    },
+    {
+     "technique": "localized-voice-timing-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/DialogueView/QuestCard.tsx:182 Dialogue is previewed as text; no spoken take attached to an animation, cutscene, or timed subtitle window was found."
+    },
+    {
+     "technique": "re-cast-gate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/TranspilePane.tsx:116 The transpiler generates C++, and the dialogue generator produces quest data; neither manages a speech model or an accepted voice cast."
+    }
+   ],
+   "absenceTerms": [
+    "speech",
+    "voice",
+    "tts",
+    "consent",
+    "voice_asset"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-21T23:57:50.071478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "game-dialogue-voice-pipeline"
+   ],
+   "techniques": [
+    "bake-versus-runtime-speech",
+    "cast-ledger-with-consent",
+    "line-id-catalog-and-revision-diff",
+    "localized-voice-timing-budget",
+    "re-cast-gate"
+   ],
+   "deviations": 0,
+   "context": "blueprint-transpiler-game-systems",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

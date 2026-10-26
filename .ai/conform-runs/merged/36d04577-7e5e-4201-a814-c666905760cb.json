@@ -1,0 +1,36 @@
+{
+  "schema": "conform-run/1",
+  "worker": "36d04577-7e5e-4201-a814-c666905760cb",
+  "subject": "guest-language-introspection",
+  "evaluatedAt": "2026-10-22T00:55:58.867317+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "guest-language-introspection",
+      "context": "debug-performance",
+      "reason": "withdrawn after review: reviewer (sonnet): The primary anchor, index.tsx:37, is only a comment saying the perf panels project one ProfilingSession. It doesn't show that Remote Control dispatch is present or that a guest language is absent, so the anchor is incidental. The technique anchors (ConsoleSection:76 calls executeConsoleCommand, data"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-22T00:55:58.867317+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "guest-language-introspection"
+      ],
+      "techniques": [
+        "flag-gated-debug-global",
+        "guest-settable-limits-and-switches",
+        "per-function-trace-flag",
+        "realm-factory-for-cross-realm-tests",
+        "representation-probes"
+      ],
+      "deviations": 0,
+      "context": "debug-performance",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

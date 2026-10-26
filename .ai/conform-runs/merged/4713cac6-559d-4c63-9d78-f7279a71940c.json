@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4713cac6-559d-4c63-9d78-f7279a71940c",
+ "subject": "rate-limiting",
+ "evaluatedAt": "2026-10-22T21:27:07.429946+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "rate-limiting",
+   "context": "ue5-state-sync",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}

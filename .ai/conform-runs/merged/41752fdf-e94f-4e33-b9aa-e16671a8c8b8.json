@@ -1,0 +1,138 @@
+{
+  "schema": "conform-run/1",
+  "worker": "41752fdf-e94f-4e33-b9aa-e16671a8c8b8",
+  "subject": "motion-quality-gating",
+  "evaluatedAt": "2026-10-24T23:24:27.668261+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "animation-combo-workflow",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/content/animations/AnimationsView.tsx:78 The \"Import into UE5 & Assign to Generated Assets\" step references BS1D_Locomotion, AM_MeleeCombo and AM_Dodge_* by name, but the only way to finish it is a manual \"Verify Complete\" button that writes true unconditionally. Nothing checks that the referenced clips exist, and nothing checks whether they hold real data or are hollow shells, so the checklist records an existence claim nobody tested.",
+      "techniques": [
+        {
+          "technique": "asset-reality-ledger",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/AnimationsView.tsx:78 The completion handler is a bare manual toggle. It never compares referenced assets with what exists or is valid on disk, so missing or hollow imported clips still count as done."
+        },
+        {
+          "technique": "montage-budget-and-root-motion-lint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/helpers.ts:171 The choreographer writes a design struct (FComboSectionDef) built from template values plus seeded jitter. It does not compose a real montage asset with memory or blend-in data, so the lint's precondition does not hold in this context."
+        }
+      ]
+    },
+    {
+      "context": "character-movement-playground",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:23 The Dodge Trajectories panel shows hardcoded \"Avg Distance 250cm\", \"Avg Duration 0.3s\" and \"I-Frames 0.15s\" as confident averages. Nothing states where they came from, and there is no label saying they are illustrative and not read from the project. This is the derived figure with no basis that the subject says must never be produced.",
+      "techniques": [
+        {
+          "technique": "genre-response-latency-norms",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/movement/DodgeTrajectorySection.tsx:23 The technique's own rule is that every derived number states what it was derived from. Here a dodge-timing average is a literal constant that reads as a measurement, with no basis string and no 'not your project' label."
+        }
+      ]
+    },
+    {
+      "context": "animation-combos-metrics",
+      "subject": "motion-quality-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/FrameScrubberPanel.tsx:143 The montage panel shows root motion only as a cosmetic badge. It never runs the category-required root-motion, same-category memory-median or blend-in checks, even though montage entries carry memorySizeMB, hasRootMotion and blendInTime. The matching lintMontage in src/lib/animation/montage-analysis.ts is used only by its own test, so designers auditing montages here never see a structural finding.",
+      "techniques": [
+        {
+          "technique": "montage-budget-and-root-motion-lint",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/FrameScrubberPanel.tsx:143 The panel displays root motion but never lints it. An attack or dodge montage without root motion, a memory outlier or a long blend-in produces no warning, and there is no affirmative 'clean' state either."
+        },
+        {
+          "technique": "genre-response-latency-norms",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_animation/metrics/index.tsx:44 Each metric tile separates a measured value read from the bridge manifest, a declared target, and 'unread' with its reason. It never shows a fixture count, which matches the basis-labelling and omit-don't-estimate rules."
+        },
+        {
+          "technique": "absolute-not-curved-judgment",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboChainPanel.tsx:63 This context has no perceptual critic that grades craft. The combo chain view labels template data honestly but makes no craft judgment."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "motion-quality-gating",
+      "context": "ue5-experiment-runner",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "motion-quality-gating",
+      "context": "holistic-quality-overview",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, UnifiedSummaryView/types.ts:3, only declares TabId and ViewMode. It doesn't show that motion is absent. It also sits in UnifiedSummaryView, not in the context's own HolisticHealthView files. I only ran an evaluator-wide grep, not the claimed grep of HolisticHealthView, and the term list "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T23:24:27.668261+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "motion-quality-gating"
+      ],
+      "techniques": [
+        "asset-reality-ledger",
+        "montage-budget-and-root-motion-lint"
+      ],
+      "deviations": 1,
+      "context": "animation-combo-workflow",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T23:24:27.668261+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "motion-quality-gating"
+      ],
+      "techniques": [
+        "genre-response-latency-norms"
+      ],
+      "deviations": 1,
+      "context": "character-movement-playground",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T23:24:27.668261+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "motion-quality-gating"
+      ],
+      "techniques": [
+        "absolute-not-curved-judgment",
+        "genre-response-latency-norms",
+        "montage-budget-and-root-motion-lint"
+      ],
+      "deviations": 1,
+      "context": "animation-combos-metrics",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T23:24:27.668261+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "motion-quality-gating"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "holistic-quality-overview",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

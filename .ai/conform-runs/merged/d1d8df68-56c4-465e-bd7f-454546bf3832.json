@@ -1,0 +1,37 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d1d8df68-56c4-465e-bd7f-454546bf3832",
+  "subject": "regeneration-vs-repair-economics",
+  "evaluatedAt": "2026-10-22T21:52:25.882978+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "regeneration-vs-repair-economics",
+      "context": "visual-gen-quality-and-animation",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor line pof_mesh_critique.py:67 does say a failed degeneracy measurement is reported as 0, but I could not confirm that any downstream scoring consumes it, and it has no bearing on regeneration-vs-repair economics. All four technique anchors are in src/lib/motion-gate/loopFixRun.ts and loopR"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-22T21:52:25.882978+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "regeneration-vs-repair-economics"
+      ],
+      "techniques": [
+        "best-of-n-parameter-sweep",
+        "bounded-refine-iteration",
+        "defect-class-to-remedy-map",
+        "refuse-the-fix-that-cannot-help",
+        "reroll-economics-per-credit",
+        "score-basis-must-be-stated"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-quality-and-animation",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

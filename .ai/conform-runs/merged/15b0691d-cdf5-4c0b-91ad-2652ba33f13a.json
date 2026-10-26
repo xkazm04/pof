@@ -1,0 +1,142 @@
+{
+ "schema": "conform-run/1",
+ "worker": "15b0691d-cdf5-4c0b-91ad-2652ba33f13a",
+ "subject": "accumulate-then-aggregate-metrics",
+ "evaluatedAt": "2026-10-25T01:40:31.766167+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "loot-metrics-designer",
+   "subject": "accumulate-then-aggregate-metrics",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:44 The designer gets the whole drop-simulation result from one memoized call into src/lib/loot-designer (outside this context) and the metric panels only render static or precomputed data, so there is no batched evaluation pass, accumulator, gather or reduction API here; a case-insensitive search of sub_loot/metrics and sub_loot/ai-designer for accumulator, allGather, detach, nanmean and buffer found no hits.",
+   "techniques": [
+    {
+     "technique": "per-iteration-buffering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/index.tsx:44 One call returns the whole result; there is no batch loop to append from or reset."
+    },
+    {
+     "technique": "nan-as-undefined-not-zero",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/CoOccurrencePanel.tsx:40 An affix that never rolled has an occurrence frequency of zero, which is a real count-based zero (the technique's 'additive counts' exemption), not an empty-denominator ratio."
+    }
+   ],
+   "absenceTerms": [
+    "accumulator",
+    "allGather",
+    "detach",
+    "nanmean",
+    "buffer"
+   ]
+  },
+  {
+   "context": "project-health-dashboards",
+   "subject": "accumulate-then-aggregate-metrics",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:112 The dashboards read per-module averages that the DB layer has already computed (feature-matrix-db) and combine them once on render; no evaluation set arrives in batches and there is no accumulator, rank gather or metric reduction API, so the subject's precondition does not hold; a case-insensitive search of both dashboard folders for accumulator, allGather, detach, nanmean and buffer found no hits.",
+   "techniques": [
+    {
+     "technique": "per-iteration-buffering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:112 Reads an aggregate computed upstream; nothing is appended per batch."
+    },
+    {
+     "technique": "nan-as-undefined-not-zero",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:152 Not a batched per-sample ratio, but it follows the same idea: an unscored module stays null and is left out of the mean, the result is null when nothing is defined, and the card shows 'N / M modules reviewed'."
+    },
+    {
+     "technique": "reduction-axis-vocabulary",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AggregateQualityDashboard/index.tsx:155 One hard-coded mean of per-module means, which weights every module equally; there is no metric object with a reduction parameter or boolean mean flag."
+    }
+   ],
+   "absenceTerms": [
+    "accumulator",
+    "allGather",
+    "detach",
+    "nanmean",
+    "buffer"
+   ]
+  },
+  {
+   "context": "bestiary-encounters-metrics",
+   "subject": "accumulate-then-aggregate-metrics",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:709 The only aggregation is a module-load, single-pass sum/count over the static ARCHETYPES table, plus render-time reductions over constant arrays; there is no batched evaluation, buffer, multi-process gather or reduction vocabulary; a case-insensitive search of sub_bestiary/_shared, encounters and metrics for accumulator, allGather, detach, nanmean and buffer found no hits.",
+   "techniques": [
+    {
+     "technique": "per-iteration-buffering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:709 A finite static set reduced in one call; the technique's own 'small enough to evaluate in one call' exemption applies."
+    },
+    {
+     "technique": "nan-as-undefined-not-zero",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:719 count is always at least 1 because an entry exists only after a stat is added, so no cell is ever undefined."
+    }
+   ],
+   "absenceTerms": [
+    "accumulator",
+    "allGather",
+    "detach",
+    "nanmean",
+    "buffer"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:40:31.766167+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accumulate-then-aggregate-metrics"
+   ],
+   "techniques": [
+    "nan-as-undefined-not-zero",
+    "per-iteration-buffering"
+   ],
+   "deviations": 0,
+   "context": "loot-metrics-designer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:40:31.766167+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accumulate-then-aggregate-metrics"
+   ],
+   "techniques": [
+    "nan-as-undefined-not-zero",
+    "per-iteration-buffering",
+    "reduction-axis-vocabulary"
+   ],
+   "deviations": 0,
+   "context": "project-health-dashboards",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:40:31.766167+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accumulate-then-aggregate-metrics"
+   ],
+   "techniques": [
+    "nan-as-undefined-not-zero",
+    "per-iteration-buffering"
+   ],
+   "deviations": 0,
+   "context": "bestiary-encounters-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
