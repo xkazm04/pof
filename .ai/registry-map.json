@@ -14723,7 +14723,11 @@
           "revision": 1,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/useDamageNumberPhysicsSimulator.ts:110 This context is in-browser HUD design tools: a requestAnimationFrame canvas sim for damage numbers, a menu-flow node editor and a low-health pulse preview. A search of src/components/modules/content/ui-hud for dumpsys, meminfo, firetv, logcat and soak found nothing, so no device is installed, driven or measured here.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:4e6008f98b11b159",
+          "evaluatedRevision": 2
         },
         {
           "subject": "fire-tv-device-realities",
@@ -21986,7 +21990,11 @@
           "revision": 1,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/experiment/run/route.ts:10 The context's harness and experiment routes launch a desktop UE 5.8 editor on the host and judge screenshots/LLM passes; a case-insensitive search of every directory in this context (and git grep over src/scripts/e2e) for dumpsys, meminfo, firetv, logcat and soak found zero hits, so there is no real low-memory device, debug bridge, phone controller or soak for the on-device harness disciplines to govern.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:4e6008f98b11b159",
+          "evaluatedRevision": 2
         },
         {
           "subject": "prompt-assembly",

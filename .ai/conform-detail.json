@@ -10225,37 +10225,36 @@
       "context": "quality-evaluation-api",
       "subject": "on-device-verification-harness",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T21:37:12.479Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T22:01:32.889Z",
+      "worker": "0c730c23-fed8-4225-b20f-d129ccc9c1dd",
       "techniques": [
         {
           "technique": "poll-ready-signal-not-fixed-delay",
-          "verdict": "deviation",
-          "evidence": "src/app/api/experiment/run/route.ts:33 Experiment run accepts a fixed settleMs delay to wait for editor rendering rather than polling a readiness signal."
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/experiment/run/route.ts:33 A settle ceiling is passed to a desktop editor spawn, not a launch on a real device; the subject's device precondition does not hold (a desktop analogue is noted in registryProposal)."
         },
         {
           "technique": "keep-the-failed-baseline",
           "verdict": "deviation",
-          "evidence": "src/app/api/harness/runs/[id]/route.ts:21 Harness run records can be permanently deleted via DELETE endpoint, erasing failed run baselines."
+          "evidence": "src/app/api/harness/runs/[id]/route.ts:21 Harness run records can be permanently deleted via DELETE endpoint, erasing failed run baselines.",
+          "carriedFrom": "2026-10-18"
         },
         {
           "technique": "separate-active-race-from-transition-windows",
           "verdict": "deviation",
-          "evidence": "src/app/api/performance-profiling/route.ts:116 Performance session comparison evaluates pooled whole-session summary metrics without separating active and transition populations."
+          "evidence": "src/app/api/performance-profiling/route.ts:116 Performance session comparison evaluates pooled whole-session summary metrics without separating active and transition populations.",
+          "carriedFrom": "2026-10-18"
         },
         {
           "technique": "fresh-state-per-check",
           "verdict": "deviation",
-          "evidence": "src/app/api/experiment/run/route.ts:34 Allows running experiment jobs against an already-running editor instance without ensuring a fresh process state."
+          "evidence": "src/app/api/experiment/run/route.ts:34 Allows running experiment jobs against an already-running editor instance without ensuring a fresh process state.",
+          "carriedFrom": "2026-10-18"
         }
       ],
-      "withdrawn": {
-        "worker": "286ad05e-a8f7-462e-a51d-27896f18575b",
-        "state": "deviation",
-        "at": "2026-10-18T21:37:42.301523+00:00",
-        "reason": "reviewer (sonnet): The anchors (experiment/run/route.ts, performance-profiling/route.ts) are not in this context's file list. Line 33 only passes body.settleMs through. runner.ts and editor-process.ts show settleMs is a ceiling (the editor can self-exit) with a poll-budget module, not a fixed delay in place of polling"
-      }
+      "registryProposal": "poll-ready-signal-not-fixed-delay generalises beyond low-memory devices: PoF's desktop UE experiment runner spawns an editor and lets it run a fixed settleMs (src/lib/ue-experiment/runner.ts:315, EXPERIMENT_SETTLE_MS in poll-budget.ts) or until it self-exits. A desktop-engine sibling technique, or a use_when that is not device-only, would let that pattern be judged."
     },
     "940bbe98-a8c3-4d5e-b4e5-c447578e2123/on-device-verification-harness": {
       "context": "ue5-bridge-monitoring",
@@ -17144,6 +17143,16 @@
           "evidence": "src/lib/catalog/stepSpec.ts:198 Names the owner of the field mapping in one clause (UE, where the mechanism lives) and checks it with a parity test. The world-neutral StepContractDecl (line 193) is likewise the only contract source, so another entity's stub values are never repeated."
         }
       ]
+    },
+    "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/on-device-verification-harness": {
+      "context": "hud-damage-and-navigation",
+      "subject": "on-device-verification-harness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T22:01:32.889Z",
+      "worker": "0c730c23-fed8-4225-b20f-d129ccc9c1dd",
+      "techniques": []
     }
   }
 }
