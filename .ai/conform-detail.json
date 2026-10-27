@@ -17296,6 +17296,26 @@
           "evidence": "src/hooks/useUE5Connection.ts:118 The only decoder is a cast of the app's own SSE payload, not a parser or validator under generated test. Its lack of validation is a runtime-robustness concern outside this subject."
         }
       ]
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/workflow-property-contracts": {
+      "context": "roadmap-workflow-management",
+      "subject": "workflow-property-contracts",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:14:58.455Z",
+      "worker": "faf40ef2-60c4-4802-9116-b52fe5a1e4cf",
+      "techniques": []
+    },
+    "973ff033-ee2b-4edd-bdc7-e04454f54c7b/workflow-property-contracts": {
+      "context": "audio-scene-designer",
+      "subject": "workflow-property-contracts",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:14:58.455Z",
+      "worker": "faf40ef2-60c4-4802-9116-b52fe5a1e4cf",
+      "techniques": []
     }
   }
 }

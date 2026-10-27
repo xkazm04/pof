@@ -5612,7 +5612,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:6 This context is a 2D canvas plus property panels that edit audio zones and emitters through a scene op buffer; it exposes no model workflow, property table, contract check or training-loop events, and a grep of AudioScenePainter/ and AudioPropertyPanel/ for trainer|epoch|optimizer|inferer|training|backward|checkProperties|requiredProperties found nothing (the only 'epoch' hits in the audio module are UI refresh counters in sibling directories outside this context).",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:38637ef07d82fb29",
+          "evaluatedRevision": 3
         },
         {
           "subject": "standalone-headset-frame-budgets",
@@ -22078,7 +22082,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:21 The 'workflow' here is a user-selected task DAG template run by taskDAGStore (DAGNode with dependsOn/retryPolicy/conditionalNext in src/types/task-dag.ts), which the golden path's Boundaries section assigns to pipeline-dag; there is no training/inference workflow driven by a host through a named property table, and a grep of CalendarRoadmapView/ and WorkflowOrchestratorView/ for trainer|epoch|optimizer|inferer|training|backward|checkProperties|requiredProperties found nothing.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:38637ef07d82fb29",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-memory",
