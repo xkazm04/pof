@@ -11284,37 +11284,47 @@
       "context": "app-navigation",
       "subject": "app-shell",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T00:38:54.687Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:46:58.578Z",
+      "worker": "4b7fe908-8b32-4685-ad7f-eaa0584de3ec",
       "techniques": [
         {
           "technique": "navigation-model",
           "verdict": "deviation",
-          "evidence": "src/stores/navigationStore.ts:58 The store maintains separate category and sub-module mutators alongside navigateToModule, bypassing the single navigate door and history synchronization."
+          "evidence": "src/hooks/useTabParam.ts:21 A consumer keeps its own copy of the sub-location instead of reading navigationStore.moduleTabs, which breaks prohibition 1 for sub-destinations. Writes also skip the door the store itself calls 'the one navigate door' (navigateToModule): useKeyboardShortcuts.ts:41 calls setActiveCategory directly, as do SidebarL1 and SidebarL2. History, deep links and redirect-replace are handled well in useShellRouteSync (arrival replaces, a move pushes)."
         },
         {
           "technique": "lazy-section-loading",
           "verdict": "deviation",
-          "evidence": "src/hooks/useSuspend.ts:17 Provides suspension hooks for keep-alive module caching, but the shell lacks a restoration path for module state when a pane is evicted from the bounded LRU."
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:271 Each module is its own React.lazy chunk, with a bounded LRU keep-alive (cap 5, SuspendContext) and an error boundary per pane. But the fallback shows at once with no warm-path delay and is a generic grid shape (ModuleSkeleton). PaneEntrance (index.tsx:269) and the crossfade veil replay entrance choreography on every warm return, and AppShell skeletons its own frame (ShellSkeleton) until hydration finishes."
         },
         {
           "technique": "nav-hierarchy",
           "verdict": "conformant",
-          "evidence": "src/hooks/useViewportWidth.ts:57 Computes threshold-based viewport measurements to support responsive drawer collapse without overriding the user's persisted expand/collapse posture."
+          "evidence": "src/stores/navigationStore.ts:20 Two levels, scoped: the L1 category rail, and an L2 list of the active category's sub-modules only. Deeper tabs belong to the page. The rail posture (l1Expanded, sidebarMode) is persisted through zustand persist. The narrow-viewport drawer is derived from width (AppShell drawerOpen = navOpen && !wideShell) and does not overwrite the user's preference. L1 entries reveal their names on focus as well as hover (SidebarL1 onFocus flyout)."
+        },
+        {
+          "technique": "badge-and-attention",
+          "verdict": "conformant",
+          "evidence": "src/components/layout/SidebarL2/helpers.ts:45 The badge is derived from CLI session state rather than hand-incremented, and ranked into one slot (failed beats running). StatusBadge carries an aria-label text equivalent. Caveat: the clearing rule for 'failed' is implicit (it clears when a new run resets lastTaskSuccess or the session is cleaned), not written down; there is no overflow marker."
         },
         {
           "technique": "shell-hosted-services",
-          "verdict": "deviation",
-          "evidence": "src/app/page.tsx:27 Toggling the shell preference between legacy and the lab unmounts AppShell, destroying its hosted session background workers and connections."
+          "verdict": "conformant",
+          "evidence": "src/app/page.tsx:17 Session services that must outlive the swap between the legacy shell and the lab shell are hoisted above that gate, and the page.tsx comment says why. The other residents are listed in one place at the top of AppShell (useActivityFeedBridge, useKeyboardShortcuts, useFileWatcher, useDynamicTitle, usePofBridge, useShellRouteSync). Readiness and start-order declarations were not checked in depth."
+        },
+        {
+          "technique": "entitlement-gating",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/navigationStore.ts:83 The navigate door resolves only the module vocabulary. No tier, role, flag or lock concept was found in the nav store, the sidebars or the module registry (searched: entitle, locked, upsell, featureFlag, permission)."
+        },
+        {
+          "technique": "screen-contributed-second-level",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 The second level comes from the shell's registry for the active category. Screens never contribute their own sidebar content through a slot, so this technique's precondition does not hold."
         }
-      ],
-      "withdrawn": {
-        "worker": "633f3e14-107e-4fc5-8c7e-0ca560470a9e",
-        "state": "deviation",
-        "at": "2026-10-19T00:39:25.105222+00:00",
-        "reason": "reviewer (sonnet): The claim that the direct setters bypass history synchronization is contradicted by src/hooks/useShellRouteSync.ts, which subscribes to useNavigationStore and pushes a history entry on any change to the visible module, whichever setter caused it. The useSuspend.ts claim that the shell lacks a restor"
-      }
+      ]
     },
     "a00c79d7-bd10-495a-8546-81ab1bfd797e/client-state": {
       "context": "state-management",
