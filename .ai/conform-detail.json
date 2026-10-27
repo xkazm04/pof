@@ -17316,6 +17316,27 @@
       "evaluatedTs": "2026-10-27T22:14:58.455Z",
       "worker": "faf40ef2-60c4-4802-9116-b52fe5a1e4cf",
       "techniques": []
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/agent-cli-transport": {
+      "context": "game-design-studio-api",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:21:49.222Z",
+      "worker": "94c75589-5dee-4664-8d7d-650458632882",
+      "techniques": [
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 A read-only review is launched with no mode argument and no read-only factory, so nothing makes the scan unable to write. The shared spawn door adds --dangerously-skip-permissions to every run."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:81 A failed run is stored as a typed reason plus message from the settlement result, not as a bare exit code or an empty 'completed'. The envelope parsing itself happens in run-settle and cli-service, outside this context."
+        }
+      ]
     }
   }
 }

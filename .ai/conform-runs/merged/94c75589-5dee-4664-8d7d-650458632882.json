@@ -1,0 +1,68 @@
+{
+ "schema": "conform-run/1",
+ "worker": "94c75589-5dee-4664-8d7d-650458632882",
+ "subject": "agent-cli-transport",
+ "evaluatedAt": "2026-10-27T22:21:49.222259+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "game-design-studio-api",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 The batch feature review is an assessment task (cli-task.ts itself calls reviews 'read-only'), but the route spawns the agent CLI in the UE project's working directory through the generic startExecution door. It declares no readonly-scan mode, so the run inherits the transport's one stance (`--dangerously-skip-permissions`, cli-service.ts:247) and could write to the workspace it is only meant to assess.",
+   "techniques": [
+    {
+     "technique": "permission-stance-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 A read-only review is launched with no mode argument and no read-only factory, so nothing makes the scan unable to write. The shared spawn door adds --dangerously-skip-permissions to every run."
+    },
+    {
+     "technique": "output-normalization",
+     "verdict": "conformant",
+     "evidence": "src/app/api/feature-matrix/batch-review/route.ts:81 A failed run is stored as a typed reason plus message from the settlement result, not as a bare exit code or an empty 'completed'. The envelope parsing itself happens in run-settle and cli-service, outside this context."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-cli-transport",
+   "context": "ai-behavior-testing",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-cli-transport",
+   "context": "feature-design-state-hooks",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-cli-transport",
+   "context": "ue5-asset-generation-hooks",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-cli-transport",
+   "context": "database-layer",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-27T22:21:49.222259+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [
+    "output-normalization",
+    "permission-stance-enforcement"
+   ],
+   "deviations": 1,
+   "context": "game-design-studio-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

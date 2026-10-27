@@ -13488,8 +13488,12 @@
           "revision": 9,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "deviation",
+          "priorNotApplicable": 3,
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 The batch feature review is an assessment task (cli-task.ts itself calls reviews 'read-only'), but the route spawns the agent CLI in the UE project's working directory through the generic startExecution door. It declares no readonly-scan mode, so the run inherits the transport's one stance (`--dangerously-skip-permissions`, cli-service.ts:247) and could write to the workspace it is only meant to assess.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
