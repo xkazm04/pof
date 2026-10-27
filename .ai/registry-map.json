@@ -21994,7 +21994,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/craft-verdicts/route.ts:85 The craft-verdict write door enforces disqualifier caps, the medium ceiling and the server-derived lens version, but a stored finding has no location in the artifact (only criterion, free-text detail and class). So two framings that see the same defect cannot be merged or deduplicated except by matching their wording, and the lens version is an optional integer stamped when the verdict is written, not a snapshot of the instrument pinned when the run starts.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:30e56086d6ef6162",
+          "evaluatedRevision": 7
         },
         {
           "subject": "on-device-verification-harness",

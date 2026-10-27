@@ -17337,6 +17337,47 @@
           "evidence": "src/app/api/feature-matrix/batch-review/route.ts:81 A failed run is stored as a typed reason plus message from the settlement result, not as a bare exit code or an empty 'completed'. The envelope parsing itself happens in run-settle and cli-service, outside this context."
         }
       ]
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/aaa-craft-rubric-authoring": {
+      "context": "quality-evaluation-api",
+      "subject": "aaa-craft-rubric-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:25:44.754Z",
+      "worker": "0c8dc361-b899-4ea2-b924-a95c72371bdc",
+      "techniques": [
+        {
+          "technique": "deliberately-overlapping-criteria",
+          "verdict": "deviation",
+          "evidence": "src/app/api/craft-verdicts/route.ts:85 The finding schema has criterion/detail/class and nothing else, with no structured location. The decision rule says 'findings carry locations or the merge is guesswork'. The registry's own node application records the same gap."
+        },
+        {
+          "technique": "capped-disqualifiers",
+          "verdict": "conformant",
+          "evidence": "src/app/api/craft-verdicts/route.ts:89 A finding cites a disqualifier by id. The admission door (admitCraftGauge, src/lib/craft/admission.ts:84-94) refuses a level above the strictest cited cap and refuses an unknown id. This enforces the cap where the grade is stored, and the cited disqualifier stays with the stored finding."
+        },
+        {
+          "technique": "ceiling-as-a-market-assumption",
+          "verdict": "conformant",
+          "evidence": "src/app/api/craft-verdicts/route.ts:153 The ceiling is authored in one place (craft-ceilings.json, which records a class and a reason) and enforced at write (admission.ts:79-83). It is never inferred from the data."
+        },
+        {
+          "technique": "checkable-against-the-stored-artifact",
+          "verdict": "conformant",
+          "evidence": "src/app/api/craft-verdicts/route.ts:166 Each gauge is bound to the contentHash and updatedAt of the artifact on record. The __process__ row records the binding as unknown rather than making one up."
+        },
+        {
+          "technique": "criterion-set-coverage-audit",
+          "verdict": "conformant",
+          "evidence": "src/app/api/craft-verdicts/route.ts:112 Defects the auditor sees but no criterion covers have their own channel, rolled up per lens for the lens author (GET ?coverageGaps=1). They never change aLevel, and they name dimensions rather than reporting a ratio."
+        },
+        {
+          "technique": "lens-versioning-as-invalidation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/craft-verdicts/route.ts:124 The version is derived from LENS_VERSIONS when the verdict is written, and a mismatched assertion is refused. But the assertion is optional, so a gauge scored against the older lens text and posted after a version bump without lensVersion is stamped with the new version. There is also no digest of the lens text. This is the 'version label over live mutable text' failure the technique names."
+        }
+      ]
     }
   }
 }

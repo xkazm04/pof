@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0c8dc361-b899-4ea2-b924-a95c72371bdc",
+ "subject": "aaa-craft-rubric-authoring",
+ "evaluatedAt": "2026-10-27T22:25:44.754013+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "quality-evaluation-api",
+   "subject": "aaa-craft-rubric-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/craft-verdicts/route.ts:85 The craft-verdict write door enforces disqualifier caps, the medium ceiling and the server-derived lens version, but a stored finding has no location in the artifact (only criterion, free-text detail and class). So two framings that see the same defect cannot be merged or deduplicated except by matching their wording, and the lens version is an optional integer stamped when the verdict is written, not a snapshot of the instrument pinned when the run starts.",
+   "techniques": [
+    {
+     "technique": "deliberately-overlapping-criteria",
+     "verdict": "deviation",
+     "evidence": "src/app/api/craft-verdicts/route.ts:85 The finding schema has criterion/detail/class and nothing else, with no structured location. The decision rule says 'findings carry locations or the merge is guesswork'. The registry's own node application records the same gap."
+    },
+    {
+     "technique": "capped-disqualifiers",
+     "verdict": "conformant",
+     "evidence": "src/app/api/craft-verdicts/route.ts:89 A finding cites a disqualifier by id. The admission door (admitCraftGauge, src/lib/craft/admission.ts:84-94) refuses a level above the strictest cited cap and refuses an unknown id. This enforces the cap where the grade is stored, and the cited disqualifier stays with the stored finding."
+    },
+    {
+     "technique": "ceiling-as-a-market-assumption",
+     "verdict": "conformant",
+     "evidence": "src/app/api/craft-verdicts/route.ts:153 The ceiling is authored in one place (craft-ceilings.json, which records a class and a reason) and enforced at write (admission.ts:79-83). It is never inferred from the data."
+    },
+    {
+     "technique": "checkable-against-the-stored-artifact",
+     "verdict": "conformant",
+     "evidence": "src/app/api/craft-verdicts/route.ts:166 Each gauge is bound to the contentHash and updatedAt of the artifact on record. The __process__ row records the binding as unknown rather than making one up."
+    },
+    {
+     "technique": "criterion-set-coverage-audit",
+     "verdict": "conformant",
+     "evidence": "src/app/api/craft-verdicts/route.ts:112 Defects the auditor sees but no criterion covers have their own channel, rolled up per lens for the lens author (GET ?coverageGaps=1). They never change aLevel, and they name dimensions rather than reporting a ratio."
+    },
+    {
+     "technique": "lens-versioning-as-invalidation",
+     "verdict": "deviation",
+     "evidence": "src/app/api/craft-verdicts/route.ts:124 The version is derived from LENS_VERSIONS when the verdict is written, and a mismatched assertion is refused. But the assertion is optional, so a gauge scored against the older lens text and posted after a version bump without lensVersion is stamped with the new version. There is also no digest of the lens text. This is the 'version label over live mutable text' failure the technique names."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-27T22:25:44.754013+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "aaa-craft-rubric-authoring"
+   ],
+   "techniques": [
+    "capped-disqualifiers",
+    "ceiling-as-a-market-assumption",
+    "checkable-against-the-stored-artifact",
+    "criterion-set-coverage-audit",
+    "deliberately-overlapping-criteria",
+    "lens-versioning-as-invalidation"
+   ],
+   "deviations": 1,
+   "context": "quality-evaluation-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
