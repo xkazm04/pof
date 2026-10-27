@@ -10534,7 +10534,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:10 This context is evaluator UI plus one pure rollup helper, and its tests use hand-built example fixtures. A search of the four context directories and src/__tests__/components/evaluator found no fast-check, fc.property or fc.assert, and package.json has no property-based library, so there is no generator, seed or randomized suite for this subject to govern.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:d5ab12a92aba67c4",
+          "evaluatedRevision": 10
         },
         {
           "subject": "hitl-approval",
@@ -24018,7 +24022,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useDragAngle.ts:12 These hooks are client bridges and pointer/preview helpers, and their tests (for example useDragAngle.test.ts) drive them with hand-picked coordinates. A search of src/hooks and src/__tests__/hooks found no fast-check, fc.property or fc.assert, so there is no input generator, seed or fuzz target for the subject's techniques to judge.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:d5ab12a92aba67c4",
+          "evaluatedRevision": 10
         },
         {
           "subject": "eval-harness",

@@ -1,0 +1,97 @@
+{
+ "schema": "conform-run/1",
+ "worker": "81c7c5d8-16c3-4484-abe1-710e86cf7c45",
+ "subject": "test-input-generation",
+ "evaluatedAt": "2026-10-27T22:09:45.391116+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "code-quality-evaluation",
+   "subject": "test-input-generation",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:10 This context is evaluator UI plus one pure rollup helper, and its tests use hand-built example fixtures. A search of the four context directories and src/__tests__/components/evaluator found no fast-check, fc.property or fc.assert, and package.json has no property-based library, so there is no generator, seed or randomized suite for this subject to govern.",
+   "techniques": [
+    {
+     "technique": "exhaustive-when-bounded",
+     "verdict": "not-applicable",
+     "evidence": "src/__tests__/components/evaluator/JudgeVerdictsView.test.tsx:9 Inputs are hand-written partial fixtures, not a randomized sampler, so there is no reflexive sampling to swap for enumeration."
+    },
+    {
+     "technique": "model-based-oracle",
+     "verdict": "not-applicable",
+     "evidence": "src/__tests__/components/evaluator/JudgeVerdictsView.test.tsx:34 The oracle is a recorded expected value on one example. There is no randomized suite whose oracle could be lifted to a reference model."
+    },
+    {
+     "technique": "inside-out-invariants",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:68 A pure, stateless function with no interacting components holding related state, so there are no internal invariants to assert."
+    }
+   ],
+   "absenceTerms": [
+    "fast-check",
+    "fc.property",
+    "fc.assert"
+   ]
+  },
+  {
+   "context": "ue5-asset-generation-hooks",
+   "subject": "test-input-generation",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/hooks/useDragAngle.ts:12 These hooks are client bridges and pointer/preview helpers, and their tests (for example useDragAngle.test.ts) drive them with hand-picked coordinates. A search of src/hooks and src/__tests__/hooks found no fast-check, fc.property or fc.assert, so there is no input generator, seed or fuzz target for the subject's techniques to judge.",
+   "techniques": [
+    {
+     "technique": "exhaustive-when-bounded",
+     "verdict": "not-applicable",
+     "evidence": "src/__tests__/hooks/useDragAngle.test.ts:15 Test inputs are explicit hand-picked pointer coordinates, not a sampler."
+    },
+    {
+     "technique": "negative-space-generation",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useUE5Connection.ts:118 The only decoder is a cast of the app's own SSE payload, not a parser or validator under generated test. Its lack of validation is a runtime-robustness concern outside this subject."
+    }
+   ],
+   "absenceTerms": [
+    "fast-check",
+    "fc.property",
+    "fc.assert"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-27T22:09:45.391116+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-input-generation"
+   ],
+   "techniques": [
+    "exhaustive-when-bounded",
+    "inside-out-invariants",
+    "model-based-oracle"
+   ],
+   "deviations": 0,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-27T22:09:45.391116+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-input-generation"
+   ],
+   "techniques": [
+    "exhaustive-when-bounded",
+    "negative-space-generation"
+   ],
+   "deviations": 0,
+   "context": "ue5-asset-generation-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
