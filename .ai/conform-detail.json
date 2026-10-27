@@ -17228,6 +17228,27 @@
       "evaluatedTs": "2026-10-26T22:21:44.181Z",
       "worker": "65f026f7-e61c-4b70-9e18-26ed5e64d256",
       "techniques": []
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/subtext-and-voice-differentiation": {
+      "context": "character-movement-playground",
+      "subject": "subtext-and-voice-differentiation",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:02:06.664Z",
+      "techniques": [
+        {
+          "technique": "voice-bible-per-speaker",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/ai-feel/constants.ts:12 The AI-feel categories are Movement/Combat/Dodge/Camera/Stamina. 'Feel' here means motion parameters, not a speaker's voice, so there is no cast to write a voice bible for."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e501289e-8b9d-4118-83f4-f8ccb745fbcb",
+        "state": "not-applicable",
+        "at": "2026-10-27T22:02:31.472601+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor, MovementTab.tsx:15, is a closing `</div>` in a wrapper that renders MovementOverview and DodgeTrajectorySection, so it is incidental and does not show the absence of any character-line writing; I could not confirm the claim from the anchor, and the ai-feel/constants.ts tec"
+      }
     }
   }
 }
