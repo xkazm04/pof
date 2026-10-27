@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c3457640-7f0f-4e19-b6a1-443e23487e5c",
+ "subject": "accessibility",
+ "evaluatedAt": "2026-10-27T22:34:16.861657+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-primitives",
+   "subject": "accessibility",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "src/lib/status-token.ts:4 The context's token modules hold the accessibility contract at the shared layer: status is always color plus glyph plus dash/hatch plus an accessible label, contrast is measured on the blended color the eye actually sees, and the motion helper settles instantly instead of dropping the end state. Every consumer inherits that from one door rather than each screen re-implementing it.",
+   "techniques": [
+    {
+     "technique": "primitive-level-a11y",
+     "verdict": "conformant",
+     "evidence": "src/lib/status-token.ts:9 Chart strokes, budget bars, legends and recovery rows all read color, icon and shape from one token, so a fix in this one module reaches every consumer."
+    },
+    {
+     "technique": "name-and-description-wiring",
+     "verdict": "conformant",
+     "evidence": "src/lib/status-token.ts:57 Each status token carries an explicit accessible label ('Warning', 'Over limit'), and each label contains its visible word (WARN/OVER), so label-in-name holds. The labels are English literals; I did not check i18n."
+    },
+    {
+     "technique": "preference-respect",
+     "verdict": "conformant",
+     "evidence": "src/lib/motion.ts:86 Under reduced motion this swaps in a duration:0 transition, so the element still reaches its final state (replace, not remove). The signal comes from outside: callers pass in framer's useReducedMotion, and globals.css plus AppMotionProvider (outside this context) are the app-wide boundaries."
+    },
+    {
+     "technique": "a11y-verification",
+     "verdict": "conformant",
+     "evidence": "src/lib/contrast.ts:70 The contrast gate machinery measures the blended color the viewer sees, not the raw token (gate-sees-target). Unit tests use it on palette tokens such as TEXT_SUBTLE, the STATUS_* swatches and the combat fills."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-27T22:34:16.861657+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accessibility"
+   ],
+   "techniques": [
+    "a11y-verification",
+    "name-and-description-wiring",
+    "preference-respect",
+    "primitive-level-a11y"
+   ],
+   "deviations": 0,
+   "context": "ui-primitives",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

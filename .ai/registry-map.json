@@ -25103,7 +25103,11 @@
           "revision": 7,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/status-token.ts:4 The context's token modules hold the accessibility contract at the shared layer: status is always color plus glyph plus dash/hatch plus an accessible label, contrast is measured on the blended color the eye actually sees, and the motion helper settles instantly instead of dropping the end state. Every consumer inherits that from one door rather than each screen re-implementing it.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8
         },
         {
           "subject": "mcp-tools",

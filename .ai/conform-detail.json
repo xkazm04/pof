@@ -10953,52 +10953,50 @@
       "context": "ui-primitives",
       "subject": "accessibility",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T23:55:42.382Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:34:16.861Z",
+      "worker": "c3457640-7f0f-4e19-b6a1-443e23487e5c",
       "techniques": [
         {
+          "technique": "primitive-level-a11y",
+          "verdict": "conformant",
+          "evidence": "src/lib/status-token.ts:9 Chart strokes, budget bars, legends and recovery rows all read color, icon and shape from one token, so a fix in this one module reaches every consumer."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "conformant",
+          "evidence": "src/lib/status-token.ts:57 Each status token carries an explicit accessible label ('Warning', 'Over limit'), and each label contains its visible word (WARN/OVER), so label-in-name holds. The labels are English literals; I did not check i18n."
+        },
+        {
+          "technique": "preference-respect",
+          "verdict": "conformant",
+          "evidence": "src/lib/motion.ts:86 Under reduced motion this swaps in a duration:0 transition, so the element still reaches its final state (replace, not remove). The signal comes from outside: callers pass in framer's useReducedMotion, and globals.css plus AppMotionProvider (outside this context) are the app-wide boundaries."
+        },
+        {
           "technique": "a11y-verification",
-          "verdict": "deviation",
-          "evidence": "src/__tests__/components/ui/BridgeStatusIndicator.test.tsx:92 The screen-reader check asserts an attribute without exercising announcement timing, transitions, or repeated messages."
+          "verdict": "conformant",
+          "evidence": "src/lib/contrast.ts:70 The contrast gate machinery measures the blended color the viewer sees, not the raw token (gate-sees-target). Unit tests use it on palette tokens such as TEXT_SUBTLE, the STATUS_* swatches and the combat fills."
         },
         {
           "technique": "hidden-but-mounted-inertness",
           "verdict": "conformant",
-          "evidence": "src/components/ui/Tooltip.tsx:87 The tooltip body unmounts when closed, removing it from both visual and accessibility channels."
+          "evidence": "src/components/ui/Tooltip.tsx:87 The tooltip body unmounts when closed, removing it from both visual and accessibility channels.",
+          "carriedFrom": "2026-10-18"
         },
         {
           "technique": "keyboard-navigation-models",
           "verdict": "deviation",
-          "evidence": "src/components/ui/UnderlineTabs.tsx:78 Unlike TabBar, this tab primitive supplies neither roving tabindex nor arrow/Home/End handlers."
+          "evidence": "src/components/ui/UnderlineTabs.tsx:78 Unlike TabBar, this tab primitive supplies neither roving tabindex nor arrow/Home/End handlers.",
+          "carriedFrom": "2026-10-18"
         },
         {
           "technique": "live-region-architecture",
           "verdict": "deviation",
-          "evidence": "src/components/ui/CopyButton.tsx:61 Successful copying changes local feedback and the button name to Copied!, but the primitive supplies no announcement channel."
-        },
-        {
-          "technique": "name-and-description-wiring",
-          "verdict": "deviation",
-          "evidence": "src/components/ui/StyledSlider.tsx:39 The visible slider label is a span with no association to the range input, which also lacks an explicit accessible name."
-        },
-        {
-          "technique": "preference-respect",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/shared/InlineErrorRetry.tsx:52 Error text is configured to truncate rather than wrap when available width shrinks or text scales."
-        },
-        {
-          "technique": "primitive-level-a11y",
-          "verdict": "deviation",
-          "evidence": "src/components/ui/StyledSlider.tsx:12 The shared slider permits omission of its only label prop and exposes no id or ARIA naming passthrough."
+          "evidence": "src/components/ui/CopyButton.tsx:61 Successful copying changes local feedback and the button name to Copied!, but the primitive supplies no announcement channel.",
+          "carriedFrom": "2026-10-18"
         }
-      ],
-      "withdrawn": {
-        "worker": "a9849fd6-b30f-486c-888b-a557023a55fe",
-        "state": "deviation",
-        "at": "2026-10-18T23:56:10.820630+00:00",
-        "reason": "reviewer (sonnet): The code claims hold (UnderlineTabs.tsx has role=tab buttons with no roving tabindex or arrow keys; Tooltip unmounts when closed; CopyButton has no live region), but the context's file list holds only src/lib and src/types files. None of the anchored src/components/ui files or the test file is in it"
-      }
+      ]
     },
     "f9a4a5bc-b02a-4085-83f0-32492b13c805/adaptive-music-authoring": {
       "context": "audio-module",
