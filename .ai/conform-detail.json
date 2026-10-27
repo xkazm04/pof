@@ -17376,6 +17376,37 @@
           "evidence": "src/app/api/craft-verdicts/route.ts:124 The version is derived from LENS_VERSIONS when the verdict is written, and a mismatched assertion is refused. But the assertion is optional, so a gauge scored against the older lens text and posted after a version bump without lensVersion is stamped with the new version. There is also no digest of the lens text. This is the 'version label over live mutable text' failure the technique names."
         }
       ]
+    },
+    "c7fb4de3-6779-431b-9860-639fef9f98ea/agent-addressable-ui": {
+      "context": "progression-rewards-internals",
+      "subject": "agent-addressable-ui",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-27",
+      "evaluatedTs": "2026-10-27T22:41:18.044Z",
+      "worker": "98dc9b73-e782-4716-a04f-da9ba5737d0e",
+      "techniques": [
+        {
+          "technique": "opt-in-instrumentation-gate",
+          "verdict": "not-applicable",
+          "evidence": "next.config.ts:30 Gate lives in the build config, not in this context; context files contain no gate or flag."
+        },
+        {
+          "technique": "call-site-vs-implementation-resolution",
+          "verdict": "not-applicable",
+          "evidence": "src/app/_dev-inspector/devLocate.ts:24 Classification lives in the inspector; sub_progression/_internals is not a library segment, so these files resolve as product call sites, but the context implements no resolution."
+        },
+        {
+          "technique": "uninstrumented-degradation",
+          "verdict": "not-applicable",
+          "evidence": "src/app/_dev-inspector/DevInspector.tsx:234 The absence probe belongs to the overlay; this context has no overlay."
+        },
+        {
+          "technique": "framework-internals-independence",
+          "verdict": "not-applicable",
+          "evidence": "src/app/_dev-inspector/devLocate.ts:49 Resolver walks DOM attributes in the inspector; context files read no framework internals (no _debugSource/__reactFiber hits)."
+        }
+      ]
     }
   }
 }

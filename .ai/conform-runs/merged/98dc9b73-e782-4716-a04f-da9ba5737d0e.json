@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "98dc9b73-e782-4716-a04f-da9ba5737d0e",
+ "subject": "agent-addressable-ui",
+ "evaluatedAt": "2026-10-27T22:41:18.044044+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "progression-rewards-internals",
+   "subject": "agent-addressable-ui",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "next.config.ts:30 The addressability machinery (opt-in data-loc stamping loader, DevInspector overlay, call-site walk) is a repo-wide build/app-shell artifact registered in next.config.ts and implemented under scripts/dev-inspector/ and src/app/_dev-inspector/; a grep of the whole sub_progression tree (rewards/, _internals/ and siblings) for data-loc, DEV_INSPECT, clipboard, devLocate, DevInspector, _debugSource and __reactFiber found zero hits, so these progression components only receive stamps passively and decide nothing the six techniques govern.",
+   "techniques": [
+    {
+     "technique": "opt-in-instrumentation-gate",
+     "verdict": "not-applicable",
+     "evidence": "next.config.ts:30 Gate lives in the build config, not in this context; context files contain no gate or flag."
+    },
+    {
+     "technique": "call-site-vs-implementation-resolution",
+     "verdict": "not-applicable",
+     "evidence": "src/app/_dev-inspector/devLocate.ts:24 Classification lives in the inspector; sub_progression/_internals is not a library segment, so these files resolve as product call sites, but the context implements no resolution."
+    },
+    {
+     "technique": "uninstrumented-degradation",
+     "verdict": "not-applicable",
+     "evidence": "src/app/_dev-inspector/DevInspector.tsx:234 The absence probe belongs to the overlay; this context has no overlay."
+    },
+    {
+     "technique": "framework-internals-independence",
+     "verdict": "not-applicable",
+     "evidence": "src/app/_dev-inspector/devLocate.ts:49 Resolver walks DOM attributes in the inspector; context files read no framework internals (no _debugSource/__reactFiber hits)."
+    }
+   ],
+   "absenceTerms": [
+    "data-loc",
+    "DEV_INSPECT",
+    "clipboard",
+    "devLocate",
+    "_debugSource"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-27T22:41:18.044044+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-addressable-ui"
+   ],
+   "techniques": [
+    "call-site-vs-implementation-resolution",
+    "framework-internals-independence",
+    "opt-in-instrumentation-gate",
+    "uninstrumented-degradation"
+   ],
+   "deviations": 0,
+   "context": "progression-rewards-internals",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

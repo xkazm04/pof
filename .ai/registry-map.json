@@ -20613,7 +20613,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "next.config.ts:30 The addressability machinery (opt-in data-loc stamping loader, DevInspector overlay, call-site walk) is a repo-wide build/app-shell artifact registered in next.config.ts and implemented under scripts/dev-inspector/ and src/app/_dev-inspector/; a grep of the whole sub_progression tree (rewards/, _internals/ and siblings) for data-loc, DEV_INSPECT, clipboard, devLocate, DevInspector, _debugSource and __reactFiber found zero hits, so these progression components only receive stamps passively and decide nothing the six techniques govern.",
+          "evaluatedAt": "2026-10-27",
+          "evaluatedAgainst": "sha256-b2:fcac6e51b4916eeb",
+          "evaluatedRevision": 6
         },
         {
           "subject": "supply-chain",
