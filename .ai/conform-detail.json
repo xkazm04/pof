@@ -12574,47 +12574,51 @@
       "context": "roadmap-workflow-management",
       "subject": "ci-execution-trust",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T11:42:44.438Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-28",
+      "evaluatedTs": "2026-10-28T22:02:54.144Z",
+      "worker": "7d4142d1-cdd9-48bf-a76f-9dd20d344ca1",
       "techniques": [
         {
           "technique": "control-plane-execution-boundary",
           "verdict": "not-applicable",
-          "evidence": "src/stores/taskDAGStore.ts:123 The view creates an in-process task scheduler; inspection did not establish a delivery orchestrator and runner boundary."
-        },
-        {
-          "technique": "injected-code-scope-ladder",
-          "verdict": "not-applicable",
-          "evidence": "src/lib/workflow-templates.ts:237 Template hydration constructs task dependencies; no build lifecycle injection or pipeline extension loading was found in this path."
-        },
-        {
-          "technique": "job-instruction-signing",
-          "verdict": "not-applicable",
-          "evidence": "src/stores/taskDAGStore.ts:144 Scheduling dispatches a browser event; repository search found its producer but no consumer establishing external instructions to internal runners."
-        },
-        {
-          "technique": "measure-apply-split",
-          "verdict": "not-applicable",
-          "evidence": "src/lib/workflow-templates.ts:79 This is an editing task following a feature review; no contributor-code verification job with a write credential or proposal writeback was found."
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:10 Workflows come from a local browser store, not from a delivery orchestrator instructing remote machines."
         },
         {
           "technique": "secret-materialization-discipline",
           "verdict": "not-applicable",
-          "evidence": "src/lib/workflow-templates.ts:88 The build task requests compilation verification; the inspected context and scheduler contain no publishing credential acquisition or materialization."
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/constants.ts:32 The view's only inputs are module IDs and template IDs. No credential is read or passed."
+        },
+        {
+          "technique": "evidence-pipeline-provenance",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:56 History is a display of the store's own local runs, not pipeline artefacts that a gate reads as evidence for a change."
+        },
+        {
+          "technique": "injected-code-scope-ladder",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/workflow-templates.ts:237 Template hydration constructs task dependencies; no build lifecycle injection or pipeline extension loading was found in this path.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "job-instruction-signing",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:144 Scheduling dispatches a browser event; repository search found its producer but no consumer establishing external instructions to internal runners.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "measure-apply-split",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/workflow-templates.ts:79 This is an editing task following a feature review; no contributor-code verification job with a write credential or proposal writeback was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "untrusted-contribution-lanes",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 Runs originate from locally selected templates and modules; no outside-contribution trigger or trusted delivery lane was found."
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 Runs originate from locally selected templates and modules; no outside-contribution trigger or trusted delivery lane was found.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "eb76fb06-4ff9-4b64-82f7-4f4b1e79b688",
-        "state": "not-applicable",
-        "at": "2026-10-19T11:43:15.952928+00:00",
-        "reason": "reviewer (sonnet): The anchors don't show that the precondition is absent. src/lib/task-dag-orchestrator.ts:7 is a header comment saying the orchestrator emits events for the store layer to turn into CLI session dispatches, which is incidental. src/stores/taskDAGStore.ts:140-151 dispatches 'pof-dag-node-ready' to crea"
-      }
+      ]
     },
     "2fb73390-0315-4551-953a-09c67b495733/conformance-checking": {
       "context": "visual-gen-rigging-conformance",

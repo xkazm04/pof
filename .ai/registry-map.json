@@ -22221,7 +22221,11 @@
           "revision": 6,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 The context's only 'execution' is a client-side call into the in-app Zustand taskDAGStore, which builds a template DAG of local CLI tasks. A case-insensitive grep of both context directories for runner|secret|token|signature|signed|.github|ci.yml|credential|webhook|pull request|contributor|fork|pipeline|gate|evidence found nothing. So there is no orchestrator-to-runner boundary, no build definition, no credential and no contribution lane for the CI-trust techniques to govern.",
+          "evaluatedAt": "2026-10-28",
+          "evaluatedAgainst": "sha256-b2:47305180676ccbaa",
+          "evaluatedRevision": 7
         },
         {
           "subject": "session-continuation",
