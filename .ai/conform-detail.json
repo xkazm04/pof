@@ -17421,6 +17421,62 @@
           "evidence": "src/app/_dev-inspector/devLocate.ts:49 Resolver walks DOM attributes in the inspector; context files read no framework internals (no _debugSource/__reactFiber hits)."
         }
       ]
+    },
+    "30cdb5e6-8b36-4c5a-ba10-680374ae843a/client-state": {
+      "context": "module-topology-graph",
+      "subject": "client-state",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-28",
+      "evaluatedTs": "2026-10-28T22:10:33.728Z",
+      "techniques": [
+        {
+          "technique": "status-fsms",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:64 Any refresh blanks the held layout. CrossModuleOverlapPanel does the same thing in reanalyze (`setSource({ state: 'loading' })`, line 67), which drops the held report. On the conformant side, SourceState is an explicit loading/ready/failed union and failure keeps its error."
+        },
+        {
+          "technique": "async-race-guards",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusSignals.ts:30 In-flight dedup keyed by the full URL (all arguments, including the project), and results are stored per URL, so an out-of-order response cannot overwrite another question's answer. The overlap panel also uses a per-effect cancelled flag (line 62)."
+        },
+        {
+          "technique": "invalidation-strategy",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:77 Write-through on the client's own confirmed mutation: a landed review invalidates both feature-matrix caches. It only fires when the callback status is 'confirmed'."
+        },
+        {
+          "technique": "effect-identity-and-latched-callbacks",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:64 The load effect's identity is only the reload token. The review target is latched in a ref (`reviewing`) and onComplete is a stable useCallback([]), so no caller callback restarts the effect."
+        },
+        {
+          "technique": "store-slicing",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:42 Ephemeral view state (selection, hover, zoom, preview) stays in local useState and does not get a store slice. The one store read is a narrow selector (useNexusView.ts:28 `useModuleStore((s) => s.checklistProgress)`)."
+        },
+        {
+          "technique": "observed-read-subscription",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:28 Subscriptions are declared selectors. No inferred or proxy-tracked subscription mechanism is used in this context."
+        },
+        {
+          "technique": "persistence-and-migration",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:24 View state lives only in memory. A grep of the context files found no persist or localStorage; the one 'persisted' hit is a comment about DB scans."
+        },
+        {
+          "technique": "rehydration-narrowing",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:24 The layer filter mode is initialised from defaults each time and never rehydrated, so nothing restored can widen it."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e7f0e87c-6761-426a-8402-5de6cd1611fd",
+        "state": "deviation",
+        "at": "2026-10-28T22:15:04.736924+00:00",
+        "reason": "reviewer (sonnet): The deviation anchors in FeatureConstellation/index.tsx and CrossModuleOverlapPanel/index.tsx, and neither file is in module-topology-graph (registry-map.json lists only DependencyGraph/* and NexusView/* paths), so the verdict is about other contexts' code."
+      }
     }
   }
 }
