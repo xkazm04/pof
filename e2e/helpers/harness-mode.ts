@@ -72,6 +72,8 @@ export async function setupHarnessMode(page: Page): Promise<HarnessHandle> {
           pluginName: 'PillarsOfFortuneBridge',
           connected: true,
           projectName: 'PoF',
+          // Deliberate: a mock of what the bridge reports for the GAME project, which stays on
+          // 5.7 (docs/ue58-mcp-convergence-plan.md); no test asserts on it. Not the tooling engine.
           ueVersion: '5.7.3',
         }),
       });
@@ -174,7 +176,7 @@ export async function setupHarnessMode(page: Page): Promise<HarnessHandle> {
         `\nFull dispatch payloads at \`${jsonPath}\`.\n\n` +
         `## Findings for sub-project D2 (live-mode prerequisites)\n\n` +
         `- [ ] Claude Code CLI authenticated (\`claude --version\` should work in PoF's shell environment).\n` +
-        `- [ ] UE5 5.7 installed at expected engine path (verify via project-setup status checks).\n` +
+        `- [ ] UE 5.8 tooling engine installed at the resolved editor path (POF_UE_EDITOR_CMD / POF_UE_ENGINE, else UE_5.8; verify via project-setup status checks).\n` +
         `- [ ] Visual Studio 2022 + Windows SDK + .NET tools installed.\n` +
         `- [ ] UE5 project at \`C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF\` builds clean.\n` +
         `- [ ] \`~/.pof/pof.db\` initialised.\n\n` +

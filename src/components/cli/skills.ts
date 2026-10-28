@@ -11,6 +11,8 @@ import type { SubGenreId, GameplayPattern } from '@/types/telemetry';
 import { logger } from '@/lib/logger';
 
 // ── Skill definitions ──────────────────────────────────────────────────────
+// NOTE: '5.7+' / '(5.7+ Beta)' markers in the skill text below are availability
+// floors ("available since 5.7, still current on 5.8"), not a 5.7 version pin.
 
 export type SkillId =
   | 'souls-combat'

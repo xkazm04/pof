@@ -24,6 +24,7 @@ import type { IngestedEntity } from '../../src/lib/catalog/ingest/run';
 import type { IngestRunSummary } from '../../src/lib/catalog/reference/ingestSource';
 import { stepsForProfile } from '../../src/lib/catalog/stepScope';
 import { catalogHandlers } from './catalogs';
+import { resolveStalenessPool } from './catalogs/pool';
 
 const i = process.argv.indexOf('--source');
 const source = getReferenceSource(i >= 0 ? process.argv[i + 1] : 'diablo1');
@@ -44,13 +45,17 @@ const rows = catalogs.map((catalogId) => {
   // W16/W18: conversations and the XP curve are aggregates too — every reader applies the same aggregation promotion used.
   // W40: every other catalog compares against the pool its promotion handler builds (props add data.kind, unique items and
   // class aggregates, hero barks…) — the raw-wrapper comparison read 90+ promoted entities as stale that were not.
-  const handlerPool = catalogHandlers.get(catalogId)?.pool?.(db, source.id, allWrappers);
-  const pool = handlerPool ?? (catalogId === 'affixes' ? affixFamilies(wrappers)
+  // W108: a cold store cannot build the engine-derived pools (descentSim throws without the class
+  // aggregates) — the snapshot reports that instead of dying on it, and never calls it "no stale".
+  const resolved = resolveStalenessPool(catalogHandlers.get(catalogId), db, source.id, allWrappers, promoted.length);
+  const pool = resolved.pool ?? (catalogId === 'affixes' ? affixFamilies(wrappers)
     : catalogId === 'dialog-trees' ? dialogueTrees(allWrappers).wrappers
     : catalogId === 'progression-curves' ? experienceCurve(wrappers)
     : wrappers);
   const current = new Map(pool.map((w) => [w.entity.id, projectionHash(w.entity as unknown as IngestedEntity)]));
-  const stale = promoted.filter((e) => current.get(e.entityId) !== projectionHash(e.entity as unknown as IngestedEntity)).map((e) => e.entityId);
+  const stale = resolved.unavailable
+    ? []
+    : promoted.filter((e) => current.get(e.entityId) !== projectionHash(e.entity as unknown as IngestedEntity)).map((e) => e.entityId);
   // A promoted Diablo entity has the diablo1 steps (profile-scoped steps included, /diablo W05 D18).
   const pipeline = getCatalogPipeline(catalogId);
   const steps = pipeline ? stepsForProfile(pipeline, 'diablo1').length : 0;
@@ -70,6 +75,7 @@ const rows = catalogs.map((catalogId) => {
     wrapped: wrapped.filter((w) => w.catalogId === catalogId).reduce((n, w) => n + w.wrappers, 0),
     promoted: promoted.length,
     stalePromoted: stale,
+    staleUnknown: resolved.unavailable,
     pipelineSteps: steps,
     entitiesWithArtifacts,
     artifactSlots: promoted.length * steps,
@@ -99,6 +105,7 @@ for (const r of rows) {
   const s = r.artifactsByStatus;
   const arts = `${s.pass ?? 0}/${s.deferred ?? 0}/${s.fail ?? 0}/${s.pending ?? 0} of ${r.artifactSlots}`;
   console.log(`${r.catalogId.padEnd(14)} ${String(r.wrapped).padStart(7)}  ${String(r.promoted).padStart(8)}  ${String(r.pipelineSteps).padStart(5)}  ${String(r.entitiesWithArtifacts).padStart(11)}  ${arts.padEnd(38)} ${r.ueAssets}`);
+  if (r.staleUnknown) console.log(`   STALE promoted UNKNOWN — this catalog's comparison pool could not be built: ${r.staleUnknown}`);
   if (r.stalePromoted.length) console.log(`   STALE promoted (wrapper re-projected since promotion — re-promote): ${r.stalePromoted.join(', ')}`);
 }
 console.log('\ncoverage trend (newest first):');

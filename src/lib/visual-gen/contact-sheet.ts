@@ -36,6 +36,7 @@
  */
 import type { Result } from '@/types/result';
 import { ok, err } from '@/types/result';
+import { CATALOG_TO_FAMILY, ICON_FAMILIES, NEG_TAIL } from '@/lib/media-prompts/iconPrompts';
 
 /** Verified-live square size for Qwen-Image 3.0-pro (see `qwen-image-runner.ts`). */
 export const DEFAULT_SHEET_PX = 1328;
@@ -66,6 +67,8 @@ export interface ContactSheetSpec {
   background: string;
   /** Optional per-SET accent that makes one set read as a family (faction, tier, biome). */
   accent?: string;
+  /** The catalog the sheet is for; one the icon prompt pack maps adds its family clause + NEG_TAIL. */
+  catalogId?: string;
   /** Row-major, left to right. Length must be exactly `cols * rows`. */
   cast: SheetSubject[];
   /** Size to ASK the provider for. Slicing uses the delivered size, not this. */
@@ -151,6 +154,13 @@ function castLines(spec: ContactSheetSpec): string {
   return lines.join('\n');
 }
 
+/** The hardened icon-pack lines for a mapped catalog; none for an unmapped one (prompt unchanged). */
+function familyLines(catalogId: string | undefined): string[] {
+  const fam = catalogId ? CATALOG_TO_FAMILY[catalogId] : undefined;
+  if (!fam) return [];
+  return [`Per-cell craft (applies to every cell): ${ICON_FAMILIES[fam].clause} ${NEG_TAIL}`];
+}
+
 /**
  * The sheet prompt, or a refusal naming both numbers when the cast does not fill the
  * grid. A short cast is the one failure that must never reach a provider: the model
@@ -185,6 +195,7 @@ export function buildContactSheetPrompt(spec: ContactSheetSpec): Result<string, 
         `adornments to spill into a neighbor's cell. Each subject large and legible at small ` +
         `size, with a distinct silhouette — no repeated subjects.`,
       ...(spec.accent ? [`Set accent: ${spec.accent}, shared by every cell.`] : []),
+      ...familyLines(spec.catalogId),
       SHEET_TEXT_BAN,
       `Constraints: original artwork, no logos, no lettering, no numbers, no labels, no ` +
         `watermarks, no inset vignettes. Maintain exactly ${spec.cols} equal columns and ` +

@@ -69,7 +69,7 @@ describe('canonContextFor', () => {
   it('includes a seeded rule title and body in the output', () => {
     const result = canonContextFor(CANON_SEED);
     expect(result).toContain('Genre');
-    expect(result).toContain('PoF is a single-player Action RPG (ARPG) built in UE5.7.');
+    expect(result).toContain('PoF is a single-player Action RPG (ARPG) built in UE5.8.');
   });
 
   it('groups rules by category with uppercase category headers', () => {

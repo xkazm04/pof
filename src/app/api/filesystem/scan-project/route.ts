@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { checkLocalPath, checkModuleName } from '@/app/api/filesystem/_lib/pathGuard';
 import type { ProjectType } from '@/lib/prompt-context';
 
 // ── Types ──
@@ -531,11 +532,11 @@ async function scanWebAppProject(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { projectPath, moduleName } = body;
+    const { moduleName } = body;
 
-    if (!projectPath || typeof projectPath !== 'string') {
-      return apiError('projectPath is required', 400);
-    }
+    const checked = checkLocalPath(body.projectPath, 'projectPath');
+    if (!checked.ok) return apiError(checked.error, 400);
+    const projectPath = checked.data;
 
     if (!(await directoryExists(projectPath))) {
       return apiError('Project path does not exist', 404);
@@ -549,7 +550,10 @@ export async function POST(request: NextRequest) {
       if (!moduleName || typeof moduleName !== 'string') {
         return apiError('moduleName is required for UE5 projects', 400);
       }
-      const result = await scanUE5Project(projectPath, moduleName);
+      // Source/<moduleName> must stay one directory under Source/ ("../../.." walked the disk).
+      const checkedModule = checkModuleName(moduleName);
+      if (!checkedModule.ok) return apiError(checkedModule.error, 400);
+      const result = await scanUE5Project(projectPath, checkedModule.data);
       return apiSuccess(result);
     }
 

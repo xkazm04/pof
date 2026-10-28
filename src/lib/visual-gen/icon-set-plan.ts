@@ -59,6 +59,8 @@ export interface IconSetCastMember {
 }
 
 export interface PlannedSheet {
+  /** The catalog the sheet fills — lets the preview compose the same family clause the route does. */
+  catalogId?: string;
   cols: number;
   rows: number;
   /** Row-major, left to right — exactly `cols * rows` members. */
@@ -147,6 +149,7 @@ export function planIconSet(input: IconSetPlanInput): Result<IconSetPlan, string
     for (const size of sheetSizes(cast.length)) {
       const grid = SHEET_GRIDS.find((g) => g.cells === size)!;
       sheets.push({
+        catalogId,
         cols: grid.cols,
         rows: grid.rows,
         cast: cast.slice(at, at + size),
@@ -165,6 +168,7 @@ export function sheetSpec(sheet: PlannedSheet): ContactSheetSpec {
     cols: sheet.cols,
     rows: sheet.rows,
     ...SHEET_DEFAULTS,
+    ...(sheet.catalogId ? { catalogId: sheet.catalogId } : {}),
     cast: sheet.cast.map((c) => ({ id: c.entityId, brief: c.brief })),
     width: DEFAULT_SHEET_PX,
     height: DEFAULT_SHEET_PX,
