@@ -6933,7 +6933,11 @@
           "revision": 4,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:133 This context is a local dashboard that records and shows UE5 cooks (Win64/Linux/Mac/Android/IOS) through the app's own /api/packaging SQLite routes, so it never deploys anything to a hosting platform. I searched src/components/modules/game-systems for vercel, netlify, Cache-Control, immutable, deploy, hosting, rollback and promote and found nothing, and the repo tracks no vercel.json, netlify.toml, Dockerfile, fly.toml or .github/workflows.",
+          "evaluatedAt": "2026-10-29",
+          "evaluatedAgainst": "sha256-b2:dc1097a08c9022d9",
+          "evaluatedRevision": 5
         },
         {
           "subject": "optional-dependency-degradation",
