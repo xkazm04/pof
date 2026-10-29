@@ -12885,40 +12885,45 @@
       "subject": "design-canon-as-executable-law",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T12:33:48.224Z",
+      "evaluatedAt": "2026-10-29",
+      "evaluatedTs": "2026-10-29T22:08:17.181Z",
       "techniques": [
-        {
-          "technique": "archetype-aware-envelopes",
-          "verdict": "deviation",
-          "evidence": "src/lib/catalog/acceptance/invariants.ts:242 Declared kinds select distinct envelopes, but an unknown kind fails instead of returning not-measured as the technique requires."
-        },
         {
           "technique": "canon-as-single-source-of-thresholds",
           "verdict": "deviation",
-          "evidence": "src/lib/catalog/acceptance/invariants.ts:200 The geometric base is parsed, but its acceptance tolerance is a checker parameter absent from the governing canon rule."
+          "evidence": "src/lib/catalog/canon/canon-seed.ts:58 The ±15% faucet/sink band is restated here and also lives in proj-economy (line 22, 'balanced within ±15%'). The technique says a threshold appears exactly once. The tier-≈100 power budget is likewise restated in arpg-item-rarity (line 41) next to proj-balance (line 18). Done right: bodies hold numbers with units, and ProjectRule has no machine-readable threshold sidecar field."
+        },
+        {
+          "technique": "archetype-aware-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:242 Declared kinds select distinct envelopes, but an unknown kind fails instead of returning not-measured as the technique requires.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "parse-thresholds-from-prose",
           "verdict": "deviation",
-          "evidence": "src/lib/catalog/acceptance/invariants.ts:202 The progression pipeline grades only its declared exponent against the parsed base; it does not verify that the authored curve or sample values have geometric shape."
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:202 The progression pipeline grades only its declared exponent against the parsed base; it does not verify that the authored curve or sample values have geometric shape.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "self-declared-budget-enforcement",
           "verdict": "deviation",
-          "evidence": "src/lib/catalog/acceptance/invariants.ts:362 budgetWithinCap correctly compares the artifact's value and cap, but classifies this canon-independent self-consistency check as a content invariant rather than reporting it separately."
+          "evidence": "src/lib/catalog/acceptance/invariants.ts:362 budgetWithinCap correctly compares the artifact's value and cap, but classifies this canon-independent self-consistency check as a content invariant rather than reporting it separately.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "shape-check-vs-content-invariant",
           "verdict": "deviation",
-          "evidence": "src/lib/catalog/acceptance/contentInvariant.ts:15 The classification explicitly promotes a composition of shape and self-consistency checks into the content-invariant class, although neither establishes compliance with external design law."
+          "evidence": "src/lib/catalog/acceptance/contentInvariant.ts:15 The classification explicitly promotes a composition of shape and self-consistency checks into the content-invariant class, although neither establishes compliance with external design law.",
+          "carriedFrom": "2026-10-19"
         }
       ],
+      "registryProposal": "The standard does not say whether one number stated in two rule bodies of the same canon is drift or a sanctioned cross-reference. Suggested decision rule: restate by citing the rule id, never by copying the number.",
       "withdrawn": {
-        "worker": "3ab4cf23-df14-479f-b5d7-1b63a7da64ae",
+        "worker": "e34b86c2-f9ac-44f7-b7c2-90960413f163",
         "state": "deviation",
-        "at": "2026-10-19T12:34:08.291213+00:00",
-        "reason": "reviewer (sonnet): All the anchors (invariants.ts:200, 202, 242, 362) are in src/lib/catalog/acceptance/invariants.ts, which is not one of the context's seed*.ts files. The 10% tolerance sits beside a canon line that only says 'roughly geometrically (≈ base × 1.08^level)', so it is a checker design choice rather than "
+        "at": "2026-10-29T22:09:27.940009+00:00",
+        "reason": "reviewer (sonnet): The quoted lines are in canon/canon-seed.ts, which is not one of the context's files (the seed*.ts files), and none of those files import or call it, so the verdict is about the canon corpus, a different context."
       }
     },
     "a2f9922b-d729-43f1-8050-27103ff26664/docs-content-model": {
