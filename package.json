@@ -33,7 +33,7 @@
     "@google/genai": "^2.31.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
-    "better-sqlite3": "^12.10.0",
+    "better-sqlite3": "^13.0.3",
     "fast-json-patch": "^3.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.61.0",
