@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "aefc83c4-e610-47aa-b2a3-ef155008b7e3",
+ "subject": "engine-integration-safety",
+ "evaluatedAt": "2026-10-30T22:18:44.093317+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "engine-integration-safety",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/bridge-doctor/probes.ts:357 The bridge doctor files a DNS failure (wrong host) and a generic browser 'failed to fetch' (line 358) under 'editor-not-running' instead of 'unknown'. The remediation for that kind (remediation.ts:80) then tells the operator to open the Unreal Editor, so they are sent to fix something the probe never saw fail.",
+   "techniques": [
+    {
+     "technique": "transport-failure-taxonomy",
+     "verdict": "deviation",
+     "evidence": "src/lib/bridge-doctor/probes.ts:357 Classification happens at the boundary with a typed ProbeFailureKind (refused/timeout/auth/404/wrong-port/unknown), which is good. But ENOTFOUND and 'failed to fetch' get the guessed cause 'editor-not-running' when they should be 'unknown'. The rule is that a named cause must be one that was actually observed. Separately, bridgeDoctorStore.ts:145 `catch {` throws away a probe exception's kind during restore preview and returns null with no reason."
+    },
+    {
+     "technique": "editor-thread-timeout-budgeting",
+     "verdict": "conformant",
+     "evidence": "src/lib/bridge-doctor/probes.ts:149 Status pings get a deliberately short 3000ms bound (line 61, rationale at 56-57), which the technique's 'cheap side-effect-free reads' carve-out allows. When the bound fires it produces a distinct 'timeout' kind that states the budget, separate from 'editor-not-running'. The caller can override the bound via cfg.timeoutMs."
+    },
+    {
+     "technique": "refuse-dont-kill-a-live-editor",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/bridge-doctor/remediation.ts:80 Nothing blocks an automated run here. The doctor only reports and hands the action to the human; it never starts, closes or restarts the editor."
+    },
+    {
+     "technique": "pid-scoped-teardown",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/bridge-doctor/probes.ts:90 Probes are read-only GETs. Grep across the context's paths and src/lib/bridge-doctor found no spawn, kill or taskkill, so there is no spawned process to tear down."
+    },
+    {
+     "technique": "single-instance-lease-and-drain",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/bridgeDoctorStore.ts:128 The only exclusivity guard is a UI re-entry guard on the diagnostics run. Nothing here drives the non-reentrant editor in a way that needs a lease."
+    },
+    {
+     "technique": "judge-by-log-markers-not-exit-code",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/crash-analyzer/route.ts:52 Crash logs come in as operator-pasted text and are parsed for diagnosis. No headless run is launched, so there is no run outcome to judge from markers or an exit code."
+    },
+    {
+     "technique": "crash-truncated-batch-resume",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/crash-analyzer/route.ts:24 Analysis runs in-process over stored samples and history. No batch of checks shares a launch of the heavyweight application."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-30T22:18:44.093317+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "engine-integration-safety"
+   ],
+   "techniques": [
+    "crash-truncated-batch-resume",
+    "editor-thread-timeout-budgeting",
+    "judge-by-log-markers-not-exit-code",
+    "pid-scoped-teardown",
+    "refuse-dont-kill-a-live-editor",
+    "single-instance-lease-and-drain",
+    "transport-failure-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
