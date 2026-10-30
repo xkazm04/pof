@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a5f51a01-26ec-47b0-b46e-9f74a94c26f0",
+ "subject": "error-handling",
+ "evaluatedAt": "2026-10-30T22:22:51.493318+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "error-handling",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/stores/bridgeDoctorStore.ts:145 A Bridge Doctor restore probe that throws is caught, the restore state is quietly reset to idle with a null preview, and nothing reaches the user, a log or telemetry; the panel calls it as `void previewRestore(...)`, so the operator sees the button reset with no explanation.",
+   "techniques": [
+    {
+     "technique": "error-doors",
+     "verdict": "deviation",
+     "evidence": "src/stores/bridgeDoctorStore.ts:145 This failure is user-facing (the user clicked 'Test last good') but reaches no door. The catch has no binding, no logger call and no error field. It returns null, which is also what the busy guard on line 128 returns, so the caller cannot tell 'failed' from 'busy'. Returning a fallback is not a door."
+    },
+    {
+     "technique": "swallowed-error-prevention",
+     "verdict": "deviation",
+     "evidence": "src/stores/bridgeDoctorStore.ts:146 This catch body only resets local state. It is exactly the 'handled is not routed' case: the code responds, but no human ever learns. No declared-drop marker explains it."
+    },
+    {
+     "technique": "structured-propagation",
+     "verdict": "deviation",
+     "evidence": "src/app/api/crash-analyzer/route.ts:97 At the API boundary, any server failure (DB, parse, analysis) is flattened into a prose message plus a generic 500. No category or cause crosses. The store then reduces it again to `err.message` (crashAnalyzerStore.ts:92)."
+    },
+    {
+     "technique": "user-facing-mapping",
+     "verdict": "deviation",
+     "evidence": "src/app/api/crash-analyzer/route.ts:36 The text the user sees is the raw exception message with a prefix. There is no registry entry and no suggested next action, and the store passes it straight into the `error` field that the view renders word for word."
+    },
+    {
+     "technique": "consumer-decides-error-shape",
+     "verdict": "conformant",
+     "evidence": "src/stores/crashAnalyzerStore.ts:38 The only consumer of the store's failure is a UI door (the analyzer view and import panel) shipped in the same release, where nothing branches. A single opaque string is the right shape there."
+    },
+    {
+     "technique": "taxonomy-design",
+     "verdict": "conformant",
+     "evidence": "src/types/crash-analyzer.ts:38 The crash vocabulary is a closed set from one authority (CRASH_TAXONOMY), with an explicit 'unknown' catch-all. The type, zero counts and plain-English copy are all derived from it. Its message-marker matching is the allowed last-resort prose tier, kept in one registry, because UE logs carry no structure. This covers the domain crash vocabulary only; the route's own errors have no category (see structured-propagation)."
+    },
+    {
+     "technique": "parse-failure-keeps-identity",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/crash-analyzer/route.ts:53 Parsing handles one log per request, not a collection someone else writes. The persisted history the route reads (listCrashHistory) is written by this app through recordCrashSighting, so the 'you own the writers' exclusion applies."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-30T22:22:51.493318+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "error-handling"
+   ],
+   "techniques": [
+    "consumer-decides-error-shape",
+    "error-doors",
+    "parse-failure-keeps-identity",
+    "structured-propagation",
+    "swallowed-error-prevention",
+    "taxonomy-design",
+    "user-facing-mapping"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
