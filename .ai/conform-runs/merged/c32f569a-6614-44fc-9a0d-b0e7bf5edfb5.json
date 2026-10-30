@@ -1,0 +1,60 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c32f569a-6614-44fc-9a0d-b0e7bf5edfb5",
+ "subject": "execution-state-checkpointing",
+ "evaluatedAt": "2026-10-30T22:24:27.632114+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "core-engine-genre-tabs",
+   "subject": "execution-state-checkpointing",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:45 The only capture-and-reload construct in this context is the genome build-code import, which restores a design-data document whose meaning is intrinsic (versioning-snapshots territory per the golden path); a case-insensitive search of every file under src/components/modules/core-engine/unique-tabs for checkpoint/snapshot/restore/resume/rewind/capture found no hits, so no live execution environment is ever captured or resumed here.",
+   "techniques": [
+    {
+     "technique": "runtime-bound-checkpoint",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:70 Input is a pasted genome JSON or build code, not a captured runtime, so there is no host or runtime compatibility to check."
+    },
+    {
+     "technique": "restore-semantics-belong-to-the-format",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:83 The kind check refuses a code meant for another editor, but it is document-type routing. No execution-capture backend exists."
+    },
+    {
+     "technique": "resume-mints-a-duplicate",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:97 Importing sanitizes a data record into the editor's collection. No environment is resumed or forked that would need fresh identity."
+    }
+   ],
+   "absenceTerms": [
+    "checkpoint",
+    "snapshot",
+    "restore",
+    "resume",
+    "rewind"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-30T22:24:27.632114+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "execution-state-checkpointing"
+   ],
+   "techniques": [
+    "restore-semantics-belong-to-the-format",
+    "resume-mints-a-duplicate",
+    "runtime-bound-checkpoint"
+   ],
+   "deviations": 0,
+   "context": "core-engine-genre-tabs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

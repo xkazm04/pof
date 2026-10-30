@@ -17507,6 +17507,32 @@
           "evidence": "src/components/modules/core-engine/PlanView.tsx:14 Its unit-by-unit plan is feature work plus telemetry evolution, not story beats."
         }
       ]
+    },
+    "4c0281bd-ea7b-44ba-86a0-ccda978296a4/execution-state-checkpointing": {
+      "context": "core-engine-genre-tabs",
+      "subject": "execution-state-checkpointing",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-30",
+      "evaluatedTs": "2026-10-30T22:24:27.632Z",
+      "worker": "c32f569a-6614-44fc-9a0d-b0e7bf5edfb5",
+      "techniques": [
+        {
+          "technique": "runtime-bound-checkpoint",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:70 Input is a pasted genome JSON or build code, not a captured runtime, so there is no host or runtime compatibility to check."
+        },
+        {
+          "technique": "restore-semantics-belong-to-the-format",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:83 The kind check refuses a code meant for another editor, but it is document-type routing. No execution-capture backend exists."
+        },
+        {
+          "technique": "resume-mints-a-duplicate",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:97 Importing sanitizes a data record into the editor's collection. No environment is resumed or forked that would need fresh identity."
+        }
+      ]
     }
   }
 }

@@ -11498,7 +11498,11 @@
           "revision": 1,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:45 The only capture-and-reload construct in this context is the genome build-code import, which restores a design-data document whose meaning is intrinsic (versioning-snapshots territory per the golden path); a case-insensitive search of every file under src/components/modules/core-engine/unique-tabs for checkpoint/snapshot/restore/resume/rewind/capture found no hits, so no live execution environment is ever captured or resumed here.",
+          "evaluatedAt": "2026-10-30",
+          "evaluatedAgainst": "sha256-b2:8694be05cf9e9679",
+          "evaluatedRevision": 1
         },
         {
           "subject": "concurrent-vcs",
