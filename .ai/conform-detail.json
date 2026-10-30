@@ -17530,6 +17530,28 @@
           "evidence": "src/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel.tsx:97 Importing sanitizes a data record into the editor's collection. No environment is resumed or forked that would need fresh identity."
         }
       ]
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/native-document-format": {
+      "context": "save-system",
+      "subject": "native-document-format",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-30",
+      "evaluatedTs": "2026-10-30T22:29:12.532Z",
+      "worker": "8e7fcba0-f8b8-4275-a80a-67b1ab898045",
+      "techniques": [
+        {
+          "technique": "format-generations-are-declared",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:41 The good part: the stamp is in the document (SchemaVersion is the first UARPGSaveGame field, data.ts:37), and the generation list is derived from SAVE_SCHEMA_VERSION with a `breaking` flag (data.ts:85-88). The problem: COMPAT_MATRIX is a second compatibility authority, invented for generations that don't exist. It is dormant only because COMPAT_VERSIONS (data-panels.ts:47) currently holds just 'V1.0'. There is related residue too: VersionHistory.tsx:13 opens 'v2.0.0' by default, and IntegrityValidator's 'Version Compatible' check is a hard-coded status:'pass' (data-panels.ts:19) rather than a reader dispatching on a stamp."
+        },
+        {
+          "technique": "format-is-the-engines-input",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_save/_shared/data.ts:35 The designed save document is the engine's own USaveGame UPROPERTY serialization. There is no private format and no export/translation step between what the tool shows and what the engine reads."
+        }
+      ],
+      "registryProposal": "The subject assumes the application writes its own documents. This context is a design and inspection tool for a document that a different program writes (a game's engine save), and the techniques do not say how to judge a schema-designer surface whose 'generation list' and 'compatibility matrix' are claims about someone else's reader."
     }
   }
 }

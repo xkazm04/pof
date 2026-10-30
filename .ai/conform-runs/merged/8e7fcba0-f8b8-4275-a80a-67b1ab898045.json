@@ -1,0 +1,48 @@
+{
+ "schema": "conform-run/1",
+ "worker": "8e7fcba0-f8b8-4275-a80a-67b1ab898045",
+ "subject": "native-document-format",
+ "evaluatedAt": "2026-10-30T22:29:12.532985+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "save-system",
+   "subject": "native-document-format",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:41 The generation list (SCHEMA_VERSIONS) declares exactly one generation, v1, but a separate hand-typed COMPAT_MATRIX makes compatibility claims about generations V1.1, V1.2 and V2.0 that were never declared, so the compatibility of a real future V2.0 would be pre-asserted by a table nobody wrote against it rather than read from that generation's own `breaking` declaration.",
+   "techniques": [
+    {
+     "technique": "format-generations-are-declared",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:41 The good part: the stamp is in the document (SchemaVersion is the first UARPGSaveGame field, data.ts:37), and the generation list is derived from SAVE_SCHEMA_VERSION with a `breaking` flag (data.ts:85-88). The problem: COMPAT_MATRIX is a second compatibility authority, invented for generations that don't exist. It is dormant only because COMPAT_VERSIONS (data-panels.ts:47) currently holds just 'V1.0'. There is related residue too: VersionHistory.tsx:13 opens 'v2.0.0' by default, and IntegrityValidator's 'Version Compatible' check is a hard-coded status:'pass' (data-panels.ts:19) rather than a reader dispatching on a stamp."
+    },
+    {
+     "technique": "format-is-the-engines-input",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_save/_shared/data.ts:35 The designed save document is the engine's own USaveGame UPROPERTY serialization. There is no private format and no export/translation step between what the tool shows and what the engine reads."
+    }
+   ],
+   "registryProposal": "The subject assumes the application writes its own documents. This context is a design and inspection tool for a document that a different program writes (a game's engine save), and the techniques do not say how to judge a schema-designer surface whose 'generation list' and 'compatibility matrix' are claims about someone else's reader."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-30T22:29:12.532985+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-document-format"
+   ],
+   "techniques": [
+    "format-generations-are-declared",
+    "format-is-the-engines-input"
+   ],
+   "deviations": 1,
+   "context": "save-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

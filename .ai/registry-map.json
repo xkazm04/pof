@@ -22464,7 +22464,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_save/_shared/data-panels.ts:41 The generation list (SCHEMA_VERSIONS) declares exactly one generation, v1, but a separate hand-typed COMPAT_MATRIX makes compatibility claims about generations V1.1, V1.2 and V2.0 that were never declared, so the compatibility of a real future V2.0 would be pre-asserted by a table nobody wrote against it rather than read from that generation's own `breaking` declaration.",
+          "evaluatedAt": "2026-10-30",
+          "evaluatedAgainst": "sha256-b2:1104f28404244275",
+          "evaluatedRevision": 3
         },
         {
           "subject": "migrations",
