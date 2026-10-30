@@ -11726,7 +11726,11 @@
           "revision": 3,
           "changedAt": "2026-10-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanView.tsx:16 This context plans engineering work (implementation items, genre templates, a roadmap checklist, a plan-matrix map of core-engine submodules), not a campaign's story. A search for the subject's vocabulary found no 'final card', 'betrayal', 'payoff' or 'beat-sheet' anywhere under src/components/modules/core-engine/, and the only 'ending'/'story' hits in the context's files are 'pending' and 'history', so the subject's precondition (planning a campaign or season narrative) does not hold.",
+          "evaluatedAt": "2026-10-30",
+          "evaluatedAgainst": "sha256-b2:abd85e9bfd25743f",
+          "evaluatedRevision": 3
         },
         {
           "subject": "eval-harness",

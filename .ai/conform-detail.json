@@ -17486,6 +17486,27 @@
         "at": "2026-10-28T22:15:04.736924+00:00",
         "reason": "reviewer (sonnet): The deviation anchors in FeatureConstellation/index.tsx and CrossModuleOverlapPanel/index.tsx, and neither file is in module-topology-graph (registry-map.json lists only DependencyGraph/* and NexusView/* paths), so the verdict is about other contexts' code."
       }
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/ending-first-narrative-structure": {
+      "context": "core-engine-planning-shell",
+      "subject": "ending-first-narrative-structure",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-30",
+      "evaluatedTs": "2026-10-30T22:14:40.972Z",
+      "worker": "339f3f03-d119-4cba-81a3-40f7af2d4059",
+      "techniques": [
+        {
+          "technique": "lock-the-final-card-first",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanView.tsx:27 The plan here is an engineering implementation plan. There is no campaign ending to lock."
+        },
+        {
+          "technique": "back-planned-beat-sheet",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanView.tsx:14 Its unit-by-unit plan is feature work plus telemetry evolution, not story beats."
+        }
+      ]
     }
   }
 }
