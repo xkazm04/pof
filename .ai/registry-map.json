@@ -12648,7 +12648,11 @@
           "revision": 2,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:44 This context is a React dashboard that forwards UE console command strings to an external engine over the /api/ue5-bridge HTTP bridge. It implements no language engine and has no guest-visible global, so the subject's precondition does not hold. A search of sub_debug found 0 hits for $debug, createRealm, hiddenClass, setStackLimit, newGlobal, bytecode and disassemble. A search of all of src/ found no isolated-vm, quickjs, vm.createContext, new Function( or ShadowRealm.",
+          "evaluatedAt": "2026-10-30",
+          "evaluatedAgainst": "sha256-b2:d9a0bca3698f0a65",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",
