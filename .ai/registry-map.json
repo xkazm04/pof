@@ -2545,7 +2545,11 @@
           "revision": 6,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearch.tsx:35 The Ctrl+K spellbook palette ranks nothing. It keeps every entry where all terms are substrings, in the order the index was built, and cuts at 20 with no marker that more exist, so blind-enter lands on the first-indexed item instead of the best match.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:395e660a5e607abe",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"

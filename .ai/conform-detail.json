@@ -17638,6 +17638,52 @@
         }
       ],
       "registryProposal": "The map's token matcher pairs schema-driven-ui with any context whose code says 'spec'. Here it matched a domain-data 'spec' (a GAS ability spec). Matching could require a co-occurring renderer or registry term (render, kind, component registry) before proposing this subject."
+    },
+    "4a2ff90c-3fc1-4692-929c-98b8ecb796ac/search": {
+      "context": "ability-spellbook-core",
+      "subject": "search",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T22:30:11.258Z",
+      "worker": "3cc3e2e5-240f-4198-85e0-a521eeccb83f",
+      "techniques": [
+        {
+          "technique": "command-surface",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearch.tsx:13 The palette debounces a synchronous in-memory scan (the standard says one that debounces has already failed its intent). It also has no weighted fuzzy or boundary scoring, no score floor, no recency/frequency prior, and an empty query shows the first 20 index rows rather than a personal list."
+        },
+        {
+          "technique": "query-parsing",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearch.tsx:32 The matching policy is written inline at the call site: lowercase only, no diacritic folding, no minimum token length or term cap. A repo grep found no shared named matcher (no fuzzyScore/fuzzyMatch/NFD fold in src/lib, hooks or components)."
+        },
+        {
+          "technique": "ranking-and-excerpts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearchPalette.tsx:151 Each result renders its plain label with no match marks, and a hit on a category name (e.g. typing 'effect') has no marked reason. Order is deterministic only because it is the index's insertion order; no relevance signal is involved."
+        },
+        {
+          "technique": "full-text-indexing",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/spellbook-search-index.ts:135 A scan is the right choice for this small, in-memory corpus. The derived list (with labelLower precomputed) is rebuilt from source by a pure builder, memoised on exactly the source arrays it indexes, so its recomputation is named and deterministic."
+        },
+        {
+          "technique": "saved-views",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearch.tsx:51 This is a navigate palette whose query is deliberately reset on every open. There is no filter or sort bundle worth naming and persisting."
+        },
+        {
+          "technique": "faceting-and-filters",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/spellbook-search-index.ts:12 Category is shown as a badge and matched as text, but no facet panel or selectable filter dimension is offered, so the filter intent does not exist on this surface."
+        },
+        {
+          "technique": "typed-filter-language",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearch.tsx:33 Input is only split into whitespace terms. There are no user-authored operators, identifiers or saved rules to type-check."
+        }
+      ]
     }
   }
 }
