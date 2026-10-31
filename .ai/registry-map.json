@@ -8816,7 +8816,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/catalog/pipelines/save-points.ts:37 Each file in this context registers a declarative list of View/Produce/Acceptance step definitions (prompts plus checker wiring); none of them is a geometric preprocessing chain whose output must be mapped back into an input's original frame. A case-insensitive grep of src/lib/catalog/pipelines/ found 0 hits for inverse, decollate, collate, reversible and undo. The only nearby words are prose: a stat conversion comment in items.ts:538, a quest 'Journal / Lore' field in quests.ts, and save/load comments in save-points.ts:28. So the subject's precondition (transforms that must be undone per datum on a model output) does not hold here.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:3cbfeee628029a5d",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",

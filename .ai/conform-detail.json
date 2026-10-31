@@ -17579,6 +17579,16 @@
           "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:94 PIE control goes straight from one local operator to their own editor. There is no population of actors competing for a resource, so there is nothing to key on."
         }
       ]
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/reversible-transform-pipelines": {
+      "context": "catalog-pipelines",
+      "subject": "reversible-transform-pipelines",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T22:16:03.875Z",
+      "worker": "02b2785f-1243-4bb0-a5c2-ab4e47eafc6e",
+      "techniques": []
     }
   }
 }
