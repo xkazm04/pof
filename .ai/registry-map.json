@@ -25266,7 +25266,11 @@
           "revision": 2,
           "changedAt": "2026-08-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/visual-gen/triposr-runner.ts:13 The files in this context called \"runners\" are wrappers that start a local Python inference subprocess or call a 3D-generation vendor API, plus in-memory job stores (trellis-job-store.ts says it is \"Ephemeral — the durable artifact is the .glb\"). None of them is a fleet of CI/delivery machines. Searching src/lib/visual-gen and the repo for \"runs-on\", \"self-hosted\", \"runner pool\", \"autoscal\" and \"concurrency group\" returned 0 hits, and the repo has no .github/ directory and no tracked CI pipeline config, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:8119510164547576",
+          "evaluatedRevision": 3
         },
         {
           "subject": "eval-harness",
