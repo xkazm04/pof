@@ -30,6 +30,17 @@
  *    `assembled-character-is-multi-shell`) — and the count and face total of what was
  *    discarded are reported, so "3 props out of 5 components" is never mistaken for
  *    "the mesh had 3 components".
+ *
+ * ── The group's frame travels with every part (decollate before invert) ─────────────
+ *
+ * The generator normalised the WHOLE group to a ~1 m box, so a separated part is in
+ * group units: a barrel from a four-prop group measures ~0.22 m and reads as neither
+ * "generator-normalised" nor real-world. Every part shares that one scale, so the
+ * script reports the group's extents and each part's extents and centre in the group
+ * frame, read before the re-centre. {@link rescaleSplitGroup} turns ONE known prop size
+ * into every part's size; the centres say where each part sat in the reference image.
+ * A part's `_NN` is its face-count rank, not its identity - two barrels swap ranks on
+ * a re-generation, and after the re-centre both sit at the origin.
  */
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -88,12 +99,18 @@ export interface MeshSplitSpec {
   timeoutMs?: number;
 }
 
+export type Xyz = [number, number, number];
+
 export interface SplitPart {
   name: string;
   path: string;
   faces: number;
   /** This part's share of the input's faces, 0..1. */
   share: number;
+  /** Bounding-box extents in the GROUP's units (glTF metres of the normalised delivery). */
+  extents?: Xyz;
+  /** Bounding-box centre in the group frame, read before the re-centre. */
+  origin?: Xyz;
 }
 
 export interface ParsedMeshSplit {
@@ -108,6 +125,8 @@ export interface ParsedMeshSplit {
   capped?: number;
   /** Share of the input's faces the written parts account for, 0..1. */
   coverage?: number;
+  /** The whole group's extents before the split - ~1 m on its longest axis for raw generator output. */
+  groupExtents?: Xyz;
   /** Any marker the declaration does not know, verbatim (`script-markers.ts`). */
   diagnostics?: Record<string, string>;
   error?: string;
@@ -145,10 +164,16 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
 
   const parts: SplitPart[] = [];
   for (const value of block.all('PART')) {
-    const [name, faces, share, path] = value.split('|');
+    const [name, faces, share, path, extents, origin] = value.split('|');
     if (!name || !path) continue;
-    parts.push({ name: name.trim(), path: path.trim(), faces: Number(faces), share: Number(share) });
+    const box = parseXyz(extents);
+    const at = parseXyz(origin);
+    parts.push({
+      name: name.trim(), path: path.trim(), faces: Number(faces), share: Number(share),
+      ...(box ? { extents: box } : {}), ...(at ? { origin: at } : {}),
+    });
   }
+  const groupExtents = parseXyz(get('GROUP_EXTENTS'));
 
   // DONE with no part is not a success: the caller asked for assets and got none, and
   // "the script finished" is not the thing being reported.
@@ -163,6 +188,7 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
     discardedFaces: num('DISCARDED_FACES'),
     capped: num('CAPPED'),
     coverage: num('COVERAGE'),
+    ...(groupExtents ? { groupExtents } : {}),
     diagnostics: block.diagnostics,
     // The speck reason is true only of a run that FINISHED; a run that never printed
     // DONE (killed, crashed, never started) gets its process reason from runMeshSplit.
@@ -170,6 +196,45 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
       ? undefined
       : done ? 'split produced no part above the speck threshold' : 'no POF_MESHSPLIT_DONE marker — the split did not finish',
   };
+}
+
+/** `x,y,z` -> a finite triple, or undefined (an older script, or a malformed field). Pure. */
+function parseXyz(v: string | undefined): Xyz | undefined {
+  if (!v) return undefined;
+  const n = v.split(',').map((c) => Number(c.trim()));
+  return n.length === 3 && n.every(Number.isFinite) ? (n as Xyz) : undefined;
+}
+
+export interface RescaledPart {
+  name: string;
+  /** The part's longest extent in group units, as delivered. */
+  measuredExtentM: number;
+  /** Its longest extent once the group's one shared scale is applied. */
+  worldExtentM: number;
+  /** `worldExtentM / measuredExtentM` - the same for every part of one group. */
+  importUniformScale: number;
+}
+
+/**
+ * Every part's real size from ONE known one. Pure.
+ *
+ * A group was normalised as a whole, so its parts share one scale factor: if the
+ * operator knows the well is 1.2 m, the barrels and the lamp post beside it follow.
+ * Graded alone, each part would need its own target, and the operator would have to
+ * know which `_NN` is which. Undefined when the known part is absent or either side
+ * of the ratio is unmeasured - never a guessed scale.
+ */
+export function rescaleSplitGroup(
+  parts: readonly SplitPart[],
+  known: { name: string; targetExtentM: number },
+): RescaledPart[] | undefined {
+  const longest = (p: SplitPart) => (p.extents ? Math.max(...p.extents) : 0);
+  const anchor = parts.find((p) => p.name === known.name);
+  const measured = anchor ? longest(anchor) : 0;
+  if (!(measured > 0) || !(known.targetExtentM > 0) || !Number.isFinite(known.targetExtentM)) return undefined;
+  if (parts.some((p) => !(longest(p) > 0))) return undefined;
+  const k = known.targetExtentM / measured;
+  return parts.map((p) => ({ name: p.name, measuredExtentM: longest(p), worldExtentM: longest(p) * k, importUniformScale: k }));
 }
 
 type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;

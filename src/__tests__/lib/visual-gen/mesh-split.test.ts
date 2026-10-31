@@ -3,6 +3,7 @@ import {
   buildMeshSplitArgs,
   parseMeshSplitOutput,
   runMeshSplit,
+  rescaleSplitGroup,
   DEFAULT_MIN_FACE_SHARE,
   DEFAULT_MAX_PARTS,
   DEFAULT_MIN_COVERAGE,
@@ -135,5 +136,64 @@ describe('runMeshSplit', () => {
     const r = await runMeshSplit(spec(), deps(OUT, (p) => p !== '/g/props.glb'));
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/input mesh not found/);
+  });
+});
+
+/**
+ * Recorded from a real run of pof_mesh_split.py (Blender 4.2) over a four-prop group
+ * built at known sizes - a 1.2 m well, a 3.0 m lamp post, two 0.9 m barrels, left to
+ * right in that order - and normalised as a whole to a 1 m longest extent, the way a
+ * generator delivers it. Face-count order is well, barrel B, barrel A, lamp post.
+ */
+const GROUP_OUT = [
+  'POF_MESHSPLIT_FACES_IN=448',
+  'POF_MESHSPLIT_GROUP_EXTENTS=1.000000,0.295567,0.738916',
+  'POF_MESHSPLIT_COMPONENTS=4',
+  'POF_MESHSPLIT_COVERAGE=1.0000',
+  'POF_MESHSPLIT_PART=g_01.glb|188|0.4196|/g/mesh-split/g_01.glb|0.295567,0.295567,0.295567|0.600000,0.000000,0.600000',
+  'POF_MESHSPLIT_PART=g_02.glb|124|0.2768|/g/mesh-split/g_02.glb|0.147783,0.147783,0.221675|1.378325,0.000000,0.563054',
+  'POF_MESHSPLIT_PART=g_03.glb|92|0.2054|/g/mesh-split/g_03.glb|0.147783,0.147783,0.221675|1.107389,0.000000,0.563054',
+  'POF_MESHSPLIT_PART=g_04.glb|44|0.0982|/g/mesh-split/g_04.glb|0.039409,0.039409,0.738916|0.890640,0.000000,0.821675',
+  'POF_MESHSPLIT_DISCARDED=0',
+  'POF_MESHSPLIT_DISCARDED_FACES=0',
+  'POF_MESHSPLIT_CAPPED=0',
+  'POF_MESHSPLIT_DONE=1',
+].join('\n');
+
+describe('the group frame travels with every part (decollate before invert)', () => {
+  it('reads the group extents and each part\'s extents and pre-recentre origin', () => {
+    const p = parseMeshSplitOutput(GROUP_OUT);
+    expect(p.groupExtents).toEqual([1, 0.295567, 0.738916]);
+    expect(p.parts[3]).toMatchObject({ extents: [0.039409, 0.039409, 0.738916], origin: [0.89064, 0, 0.821675] });
+  });
+
+  it('still parses a four-field PART from an older script, without inventing a frame', () => {
+    const p = parseMeshSplitOutput(OUT);
+    expect(p.groupExtents).toBeUndefined();
+    expect(p.parts[0].extents).toBeUndefined();
+    expect(p.parts[0].origin).toBeUndefined();
+  });
+
+  it('resolves every prop from ONE known size, because the group shares one scale', () => {
+    const truth: Record<string, number> = { 'g_01.glb': 1.2, 'g_02.glb': 0.9, 'g_03.glb': 0.9, 'g_04.glb': 3.0 };
+    const r = rescaleSplitGroup(parseMeshSplitOutput(GROUP_OUT).parts, { name: 'g_01.glb', targetExtentM: 1.2 });
+    expect(r).toBeDefined();
+    for (const part of r!) expect(Math.abs(part.worldExtentM / truth[part.name] - 1)).toBeLessThan(0.01);
+    expect(new Set(r!.map((x) => x.importUniformScale)).size).toBe(1);
+  });
+
+  it('recovers the reference image\'s left-to-right order where the face-count rank cannot', () => {
+    const parts = parseMeshSplitOutput(GROUP_OUT).parts;
+    const leftToRight = [...parts].sort((a, b) => a.origin![0] - b.origin![0]).map((x) => x.name);
+    // well, lamp post, barrel A, barrel B - the two barrels have identical extents, so
+    // only the origin tells them apart once both are re-centred.
+    expect(leftToRight).toEqual(['g_01.glb', 'g_04.glb', 'g_03.glb', 'g_02.glb']);
+  });
+
+  it('refuses to guess a scale when the known part or a measurement is missing', () => {
+    const parts = parseMeshSplitOutput(GROUP_OUT).parts;
+    expect(rescaleSplitGroup(parts, { name: 'nope.glb', targetExtentM: 1.2 })).toBeUndefined();
+    expect(rescaleSplitGroup(parts, { name: 'g_01.glb', targetExtentM: 0 })).toBeUndefined();
+    expect(rescaleSplitGroup(parseMeshSplitOutput(OUT).parts, { name: 'props_01.glb', targetExtentM: 1 })).toBeUndefined();
   });
 });

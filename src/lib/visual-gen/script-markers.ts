@@ -87,7 +87,7 @@ export const SCRIPT_MARKERS = {
     keys: {
       DONE: 'result', ERROR: 'error', FACES_IN: 'metric', COMPONENTS: 'metric',
       COVERAGE: 'metric', PART: 'repeat', DISCARDED: 'metric', DISCARDED_FACES: 'metric',
-      CAPPED: 'metric',
+      CAPPED: 'metric', GROUP_EXTENTS: 'metric',
     },
   },
   meshViews: {

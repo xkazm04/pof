@@ -21,6 +21,15 @@ Two rules this script exists to keep:
     component; on a fragmented textured mesh it reached 211 GB and crashed the
     host (2026-08-18).
 
+  * Every part keeps the group's frame as data (decollate before invert). The
+    generator normalised the WHOLE group to a ~1 m box, so a separated part is
+    in group units, not real-world units, and every part shares one scale. The
+    group's extents (GROUP_EXTENTS) and each part's own extents and centre in the
+    group frame (the 5th and 6th PART fields, read BEFORE --center moves it) are
+    what let one known prop size rescale every other prop, and let a part be
+    matched back to its place in the reference image. Re-centring without them
+    throws both away; position in the face-count order is not a part's identity.
+
   * Nothing is dropped silently. Generated meshes carry speck debris (measured:
     314 of 375 components on one real character were specks holding 36% of the
     faces). Specks must not become "assets", so components below --min-face-share
@@ -102,6 +111,19 @@ def recenter(obj):
     obj.location = (0.0, 0.0, 0.0)
 
 
+def world_box(obj):
+    """World-space (extents, centre) of an object's bounding box, as two xyz lists."""
+    from mathutils import Vector
+    corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+    lo = [min(c[i] for c in corners) for i in range(3)]
+    hi = [max(c[i] for c in corners) for i in range(3)]
+    return [hi[i] - lo[i] for i in range(3)], [(hi[i] + lo[i]) / 2.0 for i in range(3)]
+
+
+def xyz(v):
+    return ",".join("%.6f" % c for c in v)
+
+
 def export_one(obj, path):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
@@ -126,6 +148,8 @@ def main():
     marker("FACES_IN", faces_in)
     if faces_in == 0:
         fail("input mesh has no faces")
+    group_extents, _ = world_box(obj)
+    marker("GROUP_EXTENTS", xyz(group_extents))
 
     # LOOSE separate: Blender walks its own BMesh adjacency and hands back one object
     # per connected component. Everything the caller cares about is measured after.
@@ -182,6 +206,9 @@ def main():
         )
 
     for index, (o, faces, share) in enumerate(kept, start=1):
+        # The journal is read BEFORE the re-centre: afterwards every part sits at the
+        # origin and two identical props cannot be told apart.
+        extents, origin = world_box(o)
         if args.center:
             recenter(o)
         name = "%s_%02d.glb" % (args.prefix, index)
@@ -189,7 +216,7 @@ def main():
         export_one(o, path)
         if not os.path.isfile(path):
             fail("export wrote no file for %s" % name)
-        marker("PART", "%s|%d|%.4f|%s" % (name, faces, share, path))
+        marker("PART", "%s|%d|%.4f|%s|%s|%s" % (name, faces, share, path, xyz(extents), xyz(origin)))
 
     marker("DISCARDED", discarded)
     marker("DISCARDED_FACES", discarded_faces)
