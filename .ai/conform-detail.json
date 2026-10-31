@@ -17552,6 +17552,37 @@
         }
       ],
       "registryProposal": "The subject assumes the application writes its own documents. This context is a design and inspection tool for a document that a different program writes (a game's engine save), and the techniques do not say how to judge a schema-designer surface whose 'generation list' and 'compatibility matrix' are claims about someone else's reader."
+    },
+    "0b31785f-a922-4da7-ac3f-bcf06c56f97f/rate-limiting": {
+      "context": "ue5-state-sync",
+      "subject": "rate-limiting",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T22:01:33.628Z",
+      "worker": "9243bb01-1ac7-4ebc-af89-c8cfa2d1b3a3",
+      "techniques": [
+        {
+          "technique": "algorithm-selection",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/LiveStateSyncPanel/PropertyWatchForm.tsx:48 This is the only timing number in the context. It is a watch sampling interval sent to UE, not a per-key admission window, so no limiter algorithm is being chosen here."
+        },
+        {
+          "technique": "refusal-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:52 The only negative outcome is a frame dropped because the socket is closed. That is a transport failure, not a limiter refusal, and it is labelled as a drop. No rate-limit refusal is ever issued."
+        },
+        {
+          "technique": "storm-hygiene",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/constants.ts:4 The display log has a cap, but there is no refusal branch whose log volume needs managing."
+        },
+        {
+          "technique": "key-design",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:94 PIE control goes straight from one local operator to their own editor. There is no population of actors competing for a resource, so there is nothing to key on."
+        }
+      ]
     }
   }
 }

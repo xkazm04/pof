@@ -25043,7 +25043,11 @@
           "revision": 8,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:78 This context is a browser-side panel. Each write is one operator click sent to the operator's own UE editor over the bridge WebSocket. It exposes no door that outside actors can drive and paces no third-party quota, so the precondition for a rate limit (bounding how much work a key may cause per unit of time) does not hold. A case-insensitive search of both panel directories for ratelimit, rate-limit, throttle, retry-after, 429 and tokenbucket found no hits.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:c1ab95c98c885951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "eval-harness",
