@@ -10,6 +10,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Button } from '@/components/ui/Button';
 import { useNewProjectPlan } from '@/components/modules/project-setup/useNewProjectPlan';
 import type { PlanIssue } from '@/lib/project-setup/newProjectPlan';
+import { engineFit, engineFitNote, orderByEngineFit } from '@/lib/project-setup/engineFloor';
 
 const UE_VERSIONS = [
   { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
@@ -72,19 +73,16 @@ export function SetupWizard() {
     return () => { cancelled = true; };
   }, []);
 
-  // Derived: filter projects by selected UE major.minor
+  // Derived: the recorded engine is a floor, not a pin. Every project is listed; matches
+  // first, a project built on a NEWER engine than the selected one carries a warning.
   const selectedMajorMinor = ueVersion.split('.').slice(0, 2).join('.');
-  const filteredProjects = projects.filter((p) => {
-    if (!p.engineVersion) return false;
-    return p.engineVersion.startsWith(selectedMajorMinor);
-  });
+  const orderedProjects = orderByEngineFit(projects, ueVersion);
+  const matchCount = orderedProjects.filter((p) => p.fit.kind === 'match').length;
 
   // Open an existing project — one click
   const handleOpenExisting = (project: DetectedProject) => {
     const matchedVersion = project.engineVersion
-      ? UE_VERSIONS.find((v) =>
-          project.engineVersion!.startsWith(v.value.split('.').slice(0, 2).join('.')),
-        )?.value ?? ueVersion
+      ? UE_VERSIONS.find((v) => engineFit(project.engineVersion, v.value).kind === 'match')?.value ?? ueVersion
       : ueVersion;
 
     setProject({
@@ -201,9 +199,11 @@ export function SetupWizard() {
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-sm">Scanning for UE projects…</span>
               </div>
-            ) : filteredProjects.length > 0 ? (
+            ) : orderedProjects.length > 0 ? (
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
-                {filteredProjects.map((project) => (
+                {orderedProjects.map((project) => {
+                  const note = engineFitNote(project.fit, project.engineVersion, ueVersion);
+                  return (
                   <button
                     key={project.path}
                     type="button"
@@ -221,28 +221,19 @@ export function SetupWizard() {
                         {project.engineVersion}
                       </span>
                     )}
+                    {note && <StatusDot state="warn" size="md" title={note} label={note} />}
                     {!project.validated && (
                       <StatusDot state="warn" size="md" title="Missing Config — may be incomplete" label="Unverified project" />
                     )}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
                 <FolderOpen className="w-8 h-8 text-text-subtle mx-auto mb-3" />
-                <p className="text-sm text-text-muted">No UE {selectedMajorMinor} projects found</p>
+                <p className="text-sm text-text-muted">No UE projects found</p>
                 <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
-                  {UE_VERSIONS.filter((v) => v.value !== ueVersion).map((v) => (
-                    <button
-                      key={v.value}
-                      type="button"
-                      onClick={() => setProject({ ueVersion: v.value })}
-                      className={LINK_CLASSES}
-                    >
-                      Switch to {v.label}
-                    </button>
-                  ))}
-                  <span className="text-text-subtle">|</span>
                   <button type="button" onClick={() => setMode('fresh')} className={LINK_CLASSES}>
                     Start fresh project
                   </button>
@@ -252,7 +243,7 @@ export function SetupWizard() {
 
             {!loading && projects.length > 0 && (
               <p className="text-xs text-text-muted text-center mt-3">
-                {filteredProjects.length} of {projects.length} projects match UE {selectedMajorMinor}
+                {matchCount} of {projects.length} projects built on UE {selectedMajorMinor}
               </p>
             )}
           </div>

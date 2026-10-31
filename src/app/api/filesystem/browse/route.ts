@@ -11,6 +11,7 @@ import {
   type DetectedEngine,
   type DetectedTool,
 } from '@/lib/project-setup/toolchain';
+import { compareReleases } from '@/lib/project-setup/engineFloor';
 
 interface ListResponse {
   path: string;
@@ -261,7 +262,8 @@ async function scanForEngines(): Promise<DetectedEngine[]> {
     // Epic Games directory doesn't exist — no engines found
   }
 
-  return engines.sort((a, b) => b.version.localeCompare(a.version));
+  // Newest first by parsed release: as text, "5.10.0" sorts below "5.9.0".
+  return engines.sort((a, b) => compareReleases(b.version, a.version));
 }
 
 async function scanForTooling(): Promise<DetectedTool[]> {
