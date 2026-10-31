@@ -14126,47 +14126,43 @@
       "context": "visual-gen-quality-and-animation",
       "subject": "regeneration-vs-repair-economics",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T21:52:25.882Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T22:07:02.408Z",
+      "worker": "6fff8f34-3b18-4820-90ac-88204d6f8d6e",
       "techniques": [
         {
-          "technique": "best-of-n-parameter-sweep",
-          "verdict": "deviation",
-          "evidence": "src/lib/motion-gate/loopFixRun.ts:127 ARDY attempts reuse the same seed, prompt and constraints; only destinations change, providing no controlled parameter variation before selecting the best."
+          "technique": "refuse-the-fix-that-cannot-help",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:38 Refusal two is done in code, not just a comment: the operation measured to blow up (split() materializing a textured Trimesh per component, about 211 GB, host crash) has no caller here. Components are grouped from face_adjacency at line 48 instead, with no threshold to tune."
         },
         {
-          "technique": "bounded-refine-iteration",
-          "verdict": "deviation",
-          "evidence": "src/lib/motion-gate/loopFixRun.ts:157 Attempts are capped and generation has a timeout, but every attempt rebuilds constraints from the original clip and unchanged plan rather than the preceding critique."
+          "technique": "score-basis-must-be-stated",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_vlm_batch.py:65 When no score was measured it is dropped (None), never defaulted to 0 or a midpoint. An unreadable image also gets score None plus an error (line 39), so 'critic could not run' and 'score unparseable' stay distinguishable. No blending happens here (one component per script), so a basis label is not needed inside this context."
         },
         {
           "technique": "defect-class-to-remedy-map",
-          "verdict": "deviation",
-          "evidence": "src/lib/motion-gate/loopRemedy.ts:99 The remedy selector consumes these above-pass axes, so a warning-only pose gap can authorize repair despite the rule requiring a failing class."
-        },
-        {
-          "technique": "refuse-the-fix-that-cannot-help",
-          "verdict": "deviation",
-          "evidence": "src/lib/motion-gate/loopFixRun.ts:128 Although ineffective remedies receive typed refusals, output paths derive directly from the supplied NPZ path without resolving input and output inside an allow-listed location."
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_vlm_batch.py:44 These scripts produce critique output (VLM defects are free-form prose, mesh critique emits raw structural markers). They hold no remedy map and no routing. Per the technique's own 'wait for codes' rule, no map should be keyed on this prose. The class vocabulary belongs to the acceptance subject."
         },
         {
           "technique": "reroll-economics-per-credit",
           "verdict": "not-applicable",
-          "evidence": "scripts/visual-gen/ardy/pof_loop_fix.ts:83 This context performs local critique, conversion and ARDY correction; its correction runner does not purchase paid generation attempts."
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:4 No paid generation is bought or decided on in this context. The critics are local and free, so there is no per-credit purchase decision to make."
         },
         {
-          "technique": "score-basis-must-be-stated",
-          "verdict": "deviation",
-          "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 The exception handler substitutes a clean measurement; mesh-score.ts consumes that value when deriving findings and score, without identifying the missing measurement."
+          "technique": "best-of-n-parameter-sweep",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_vlm_batch.py:66 The batch critic grades every item and prints each card, but never ranks or picks one. Candidate selection lives in src/lib/visual-gen/best-of-n.ts, outside this context."
+        },
+        {
+          "technique": "bounded-refine-iteration",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_vlm_critique.py:67 One deterministic critique pass with no generate-critique-refine loop to bound. The critic is a separate model from the generator, which matches the technique's critic rule, but no loop exists here."
         }
       ],
-      "withdrawn": {
-        "worker": "d1d8df68-56c4-465e-bd7f-454546bf3832",
-        "state": "deviation",
-        "at": "2026-10-22T21:52:47.196687+00:00",
-        "reason": "reviewer (sonnet): The anchor line pof_mesh_critique.py:67 does say a failed degeneracy measurement is reported as 0, but I could not confirm that any downstream scoring consumes it, and it has no bearing on regeneration-vs-repair economics. All four technique anchors are in src/lib/motion-gate/loopFixRun.ts and loopR"
-      }
+      "registryProposal": "The subject's routing assumes the grader emits stable defect codes. VLM critics like these emit free-form defect prose, so the standard could state what the remedy map does with a critic that has no code vocabulary: treat its output as content-defect evidence that routes to the input, never into the map. As written, this is only implied by 'wait for codes'."
     },
     "2991dc7e-92df-4e72-a7fe-ea3d15646718/regional-culture-worldbuilding": {
       "context": "world-module",
