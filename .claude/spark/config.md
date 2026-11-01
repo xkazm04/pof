@@ -143,3 +143,4 @@ when the dialog is done. Waves are uncapped.
   500 in dev since 2026-10-19 (a client-bundle leak); only the post-merge smoke test found it. Promoted to
   `## Gates` (main-checkout dev boot as the seam gate), together with the disk check. The contest-vault lesson
   recurred and moved to `.claude/contest/config.md ## Engines`.
+- 2026-11-01 story-decision-graph resume: the idea note's frontmatter said `status: scouted` while its Build record showed 7 shipped commits - on `resume`, derive the phase from the Build record + `git log` over the brief's paths, never from the frontmatter alone, and rewrite the frontmatter when you wrap.
