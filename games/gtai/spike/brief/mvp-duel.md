@@ -101,3 +101,90 @@ The pre-check showed every engine reaching a runnable duel within an hour. The d
 - street, sidewalk and block tiles.
 
 Publish each as a new pack version. The engine lanes greybox these items until the pack has them.
+
+## Night push: combat, weapons, animation and graphics (owner, 2026-11-01 21:50)
+
+The owner wants a **clear winner in the morning**, judged on how far each engine gets with what makes a GTA-like fun to
+play and to look at. **This list now outranks the remaining night-stretch items.** Finish the stretch item you are in
+the middle of, then work this list in order. `soul_swap` is a combat move, so it lives here as P2; `crowd` and
+`gamepad` move after P6.
+
+**There is no "done" tonight.** When an item is evidenced, start the next one. When the list is finished, go back and
+raise the quality of the weakest item, because the owner compares the builds side by side. Never end a session early
+because you think you have finished: the runner pays for idle sessions.
+
+Each item needs the same evidence as the MVP: a frame, a log or a JSON from a real run. Record each item in the
+scorecard's `push` block as an evidence path, or `null`.
+
+1. **`weapons`: a GTA 2 arsenal.** The pitch says Rivet starts bare-handed, with electroshock melee, until the first weapon.
+   - Weapons: **electroshock melee** (the bare-hand baseline), **pistol**, **SMG** (automatic, with spread that grows),
+     **shotgun** (a cone of 6 pellets with knockback), **welding-torch flamethrower** (a short cone, burning damage over
+     time, sets the floor alight for a moment) and **rocket launcher** (a slow projectile, splash damage, knockback, a
+     scorch decal and screen shake).
+   - Weapons are GTA 2-style **pickups** on the ground, which respawn.
+   - Cycle with Q and E or the mouse wheel. Keys 1 to 4 stay reserved for souls.
+   - Each weapon has its own ammo. The HUD ammo ticket names the weapon.
+   - Each weapon must *feel* different: fire rate, recoil kick, muzzle flash, impact, sound if you have audio.
+   - Evidence: `--weapontest` fires every weapon at a row of target dummies and writes `evidence/weapons.json`:
+     `{ "<weapon>": { "shots", "hits", "kills", "avgFps" } }`. Add one labelled frame per weapon, mid-fire.
+2. **`combat_moves`: melee and moves with weight.**
+   - A **3-hit electroshock combo**: the third hit stuns.
+   - A **stamp-splat finisher** on a stunned enemy: the Trivet kill stamp.
+   - A **shove or kick** that throws an enemy into a wall or another enemy.
+   - The **roll** with i-frames, which exists.
+   - A thrown **coolant bomb** (grenade) with an arc and a fuse.
+   - The **Hauler soul ram** (from `soul_swap`: keys 1 to 4 transform Rivet; Hauler rams cover and cars aside and takes
+     half damage).
+   - Hitstop, knockback and screen shake tuned per move.
+   - Evidence: `--movetest` performs every move on dummies, logs each connect, and writes `evidence/moves.json`. Add a
+     labelled frame per move.
+3. **`anim_set`: animation that sells it.** Use the art lane's pack clips where they exist.
+   - **Per-weapon hold and aim poses**: one hand for the pistol; two hands for the SMG, shotgun and torch; the launcher
+     on the shoulder.
+   - **A reload per weapon class.**
+   - **Directional hit reactions**: from the front and from behind.
+   - **At least 3 death variants**: shot down; blown apart with parts flying; burned.
+   - **Run versus walk**, with feet that do not slide.
+   - **Melee swing clips** for the combo.
+   - Blend between states instead of popping.
+   - Evidence: a labelled item sheet with one frame per clip, plus a short note on how the clips blend.
+4. **`fx`: graphics that hit.** All in the Trivet palette: vermilion fire and blood-oil, violet-black ink smoke.
+   - Muzzle flash per weapon, tracers and shell casings.
+   - Sparks where bullets hit walls.
+   - **Persistent decals**: bullet holes, scorch marks, oil and stamp splats.
+   - An **explosion** with smoke and a shockwave, and **fire**.
+   - Riso fidelity against ref-1.
+   - Evidence: frames, plus `--fxstress` (10 explosions and 4 flamethrowers at once), which writes
+     `evidence/fxstress.json` `{ avgFps, p1LowFps }`.
+5. **`enemy_variety`: enemies that use the arsenal.**
+   - The cop-bot with a pistol.
+   - A **SWAT-bot** with a shotgun and a riot shield, which must be flanked or blown up.
+   - A **drone** that strafes.
+   - AI that takes cover, flanks and throws bombs.
+   - Evidence: an autoplay wave log of Rivet against a mixed squad, plus frames.
+6. **`mission_slice`: the GTA use case, from end to end, in 2 to 3 minutes.**
+   1. A payphone rings, and a boss text box gives the job: profane, a joke, in the pitch's voice.
+   2. Rivet crosses the street and kills the target.
+   3. The **WANTED stamps rise to 2**: cops spawn and chase in cruisers.
+   4. Rivet escapes by car to a garage.
+   5. A **MISSION PASSED** stamp appears, with cash.
+   - Evidence: a `--missiontest` scripted run that writes `evidence/mission.json`
+     (`{ passed, seconds, wantedPeak, avgFps }`), plus `evidence/mission.mp4`.
+
+**The showcase video (required at REPORT).** Record `evidence/showcase.mp4`, 60 to 90 s, from the real build, with no
+edits that fake anything. It cuts between the arsenal, the moves, the effects, the car and the mission. **It is the
+first thing the owner watches in the morning, side by side with the other engines**, so make it the best minute your
+engine can honestly show.
+
+**The art lane's push, in this order** (Sonnet). Each item gets a new pack version and a `CHANGELOG.md` line naming
+what landed, so the engine lanes see it:
+1. **First, fix the shared rest skeleton** between Rivet and the cop-bot. Unreal cannot share clips until it is fixed.
+   Every new clip below goes on that one skeleton.
+2. Weapon models (SMG, shotgun, welding torch, rocket launcher, coolant bomb): top-down sprites, plus GLB/FBX with a
+   hand socket, plus pickup icons.
+3. Per-weapon hold, aim, fire and reload clips for Rivet and the cop-bot.
+4. Melee clips: 3 combo swings, a kick, a stun reaction, the finisher; directional hit reactions; 3 death variants.
+5. Effects sprite strips: muzzle flash per weapon, tracer, sparks, an explosion (8 to 12 frames), smoke, a fire loop,
+   shell casings, and scorch, splat and bullet-hole decals.
+6. The SWAT-bot with a shield, and a drone.
+7. Then the remaining night-stretch art: vehicles, a pedestrian, Hauler, ghosts, tiles (any item not yet published).

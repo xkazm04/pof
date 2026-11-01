@@ -96,33 +96,73 @@ function apiKeyFromEnvFile() {
   return m ? m[1].trim() : null;
 }
 const BILLING_FILE = () => path.join(ROOT, 'billing.json');
+// Never stop for billing (owner, 2026-11-01 21:50): a path that is drained or limited is BLOCKED until a time, and
+// every iteration picks the first unblocked path in preference order (API key, then subscription). A drained key is
+// re-probed every API_REPROBE_MIN, because the owner may raise its spend limit mid-night (it happened at 21:36).
+// billing.json is re-read before every pick, so `spike.mjs billing --reset api` unblocks a path in a running night.
+const API_REPROBE_MIN = 45;
 const billing = {
-  mode: 'subscription', // 'api' | 'subscription'
+  mode: 'subscription', // the path of the last pick: 'api' | 'subscription'
   key: null,
+  want: 'api-first', // api-first | api | subscription
+  blocked: { api: 0, subscription: 0 }, // epoch ms until which a path is known to be drained or limited
+  reasons: {},
   load() {
-    const want = String(opts.billing ?? 'api-first'); // api-first | api | subscription
+    this.want = String(opts.billing ?? 'api-first');
     this.key = apiKeyFromEnvFile();
-    const saved = fs.existsSync(BILLING_FILE()) ? JSON.parse(fs.readFileSync(BILLING_FILE(), 'utf8')) : null;
-    if (want === 'subscription' || !this.key) this.mode = 'subscription';
-    else if (saved?.exhausted && want === 'api-first') this.mode = 'subscription'; // drained on an earlier run
-    else this.mode = 'api';
-    if (want !== 'subscription' && !this.key) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY in .env - using the subscription');
+    this.sync();
+    if (this.want !== 'subscription' && !this.key) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY in .env - using the subscription');
+    this.pick();
   },
-  env(base) {
+  sync() {
+    const saved = fs.existsSync(BILLING_FILE()) ? JSON.parse(readIf(BILLING_FILE()) || '{}') : {};
+    if (saved.blocked) { this.blocked = { api: 0, subscription: 0, ...saved.blocked }; this.reasons = saved.reasons ?? {}; }
+    else if (saved.exhausted) this.blocked.api = Date.parse(saved.at) + API_REPROBE_MIN * 60_000; // the pre-2026-11-01 file shape
+  },
+  save() {
+    const iso = (ms) => (ms ? new Date(ms).toISOString() : null);
+    fs.writeFileSync(BILLING_FILE(), JSON.stringify({ blocked: this.blocked, until: { api: iso(this.blocked.api), subscription: iso(this.blocked.subscription) }, reasons: this.reasons, updated: new Date().toISOString() }, null, 2));
+  },
+  order() { return this.want === 'subscription' ? ['subscription'] : this.want === 'api' ? ['api'] : ['api', 'subscription']; },
+  usable(m) { return m === 'subscription' || !!this.key; },
+  pick() {
+    this.sync();
+    const now = Date.now();
+    const m = this.order().find((x) => this.usable(x) && this.blocked[x] <= now) ?? null;
+    if (m) this.mode = m;
+    return m;
+  },
+  nextFree() { return Math.min(...this.order().filter((x) => this.usable(x)).map((x) => this.blocked[x])); },
+  block(m, untilMs, reason) {
+    this.sync();
+    this.blocked[m] = Math.max(this.blocked[m] ?? 0, untilMs);
+    this.reasons[m] = `${new Date().toISOString()} ${reason.slice(0, 240).replace(/\s+/g, ' ')}`;
+    this.save();
+    const next = this.order().find((x) => x !== m && this.usable(x) && this.blocked[x] <= Date.now());
+    log(`billing: ${m} blocked until ${ts(new Date(this.blocked[m]))} (${reason.slice(0, 100).replace(/\s+/g, ' ')}) - ${next ? `lanes continue on ${next}` : 'no path free: lanes wait'}`);
+  },
+  env(base, m = this.mode) {
     const e = { ...base };
     delete e.ANTHROPIC_API_KEY; delete e.ANTHROPIC_AUTH_TOKEN; // never inherit a stray key from the shell
-    if (this.mode === 'api') e.ANTHROPIC_API_KEY = this.key;
+    if (m === 'api') e.ANTHROPIC_API_KEY = this.key;
     return e;
   },
-  exhaust(reason) {
-    if (this.mode !== 'api') return;
-    this.mode = 'subscription';
-    fs.writeFileSync(BILLING_FILE(), JSON.stringify({ exhausted: true, at: new Date().toISOString(), reason: reason.slice(0, 300) }, null, 2));
-    log(`billing: API key drained or refused (${reason.slice(0, 120).replace(/\s+/g, ' ')}) - switching ALL lanes to the subscription`);
-  },
 };
-// An API-billing failure, as distinct from a subscription usage limit.
-const API_DRAINED = /credit balance is too low|insufficient[_ ]credit|billing|payment required|\b402\b|invalid x-api-key|invalid api key|authentication_error|permission_error/i;
+// An API-billing failure (drained credit, a workspace spend limit, a refused key), as distinct from a subscription
+// usage limit. The spend limit reads "You have reached your specified API usage limits" (night of 2026-11-01).
+const API_DRAINED = /credit balance is too low|insufficient[_ ]credit|specified API usage limits|API usage limits|billing|payment required|\b402\b|invalid x-api-key|invalid api key|authentication_error|permission_error/i;
+const LIMITED = /usage limit|limit reached|hit your limit|rate.?limit|\b429\b|overloaded|quota/i;
+// When a limit names its reset, wait exactly that long (+1 min); otherwise 15 min.
+function resetAt(text) {
+  const epoch = text.match(/limit reached\|(\d{10})/);
+  if (epoch) return Number(epoch[1]) * 1000 + 60_000;
+  const clock = text.match(/resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+  if (clock) {
+    let h = Number(clock[1]) % 12; if (/pm/i.test(clock[3])) h += 12;
+    return nextAt(`${h}:${clock[2] ?? '00'}`).getTime() + 60_000;
+  }
+  return Date.now() + 15 * 60_000;
+}
 
 // ---------------------------------------------------------------- preflight
 function run1(file, args, timeoutMs = 60_000) {
@@ -182,7 +222,7 @@ async function preflight() {
   const cl = run1('claude', ['--version']);
   check('claude CLI', cl.code === 0, cl.out.trim().split('\n')[0] ?? '', 'install Claude Code');
   billing.load();
-  check('billing', true, billing.mode === 'api' ? 'API key from .env first, then the subscription' : 'subscription only');
+  check('billing', true, billing.order().filter((m) => billing.usable(m)).join(' -> ') + ' (a drained or limited path is skipped, never waited on while another is free)');
   if (opts.smoke) {
     // One tiny Opus turn per billing path: the API key (if any) and the subscription.
     const modes = billing.key ? ['api', 'subscription'] : ['subscription'];
@@ -490,11 +530,11 @@ Log MILESTONE / FRICTION / BLOCKED / LOOP entries as you work. Before you stop, 
   if (phase === 'REPORT') {
     return `${head}
 REPORT phase: build no new features. Read JOURNAL.md, git log and evidence/. If autoplay evidence is missing or stale, run --autoplay once (budget 15 minutes).
-Then write REPORT.md and scorecard.json exactly as CLAUDE.md specifies. Check that every evidence path you cite exists. Commit. Finish before ${ts(t.until)}.`;
+${lane === 'art' ? '' : 'If evidence/showcase.mp4 is missing, record it from the real build first (60 to 90 s; budget 15 minutes). '}Then write REPORT.md and scorecard.json exactly as CLAUDE.md specifies, including the "push" block. Check that every evidence path you cite exists. Commit. Finish before ${ts(t.until)}.`;
   }
   return `${head}
 Start by reading JOURNAL.md (create it on iteration 1) and \`git log --oneline -30\`.${lane === 'art' ? '' : ' Check ../../shared/assets/LATEST and integrate a newer pack when one appears.'}
-${phase === 'STABILIZE' ? 'It is past freeze: fix bugs, keep the build runnable, refresh the autoplay/stress evidence and the video. No new features.' : 'Continue toward the MVP, highest value first. Commit as you go.'}
+${phase === 'STABILIZE' ? `It is past freeze: fix bugs, keep the build runnable, refresh the autoplay/stress/weapon/mission evidence${lane === 'art' ? '' : ', and record evidence/showcase.mp4 (60 to 90 s, the best honest minute of your build: see "Night push" in MVP.md)'}. No new features.` : `Work order: any unevidenced MVP item first, then the "Night push" list in MVP.md (it outranks the remaining night-stretch items), in order. There is no "done" tonight: when an item is evidenced, start the next one; when the list is finished, raise the quality of the weakest item. Do not end the session early. Commit as you go.`}
 Log MILESTONE / FRICTION / BLOCKED / LOOP entries as you work. Before you stop, append a NEXT: entry to JOURNAL.md.`;
 }
 
@@ -505,7 +545,7 @@ function killTree(p) {
   else p.kill('SIGKILL');
 }
 
-function runClaude(lane, text, timeoutMs, n, cfg) {
+function runClaude(lane, text, timeoutMs, n, cfg, mode = billing.mode) {
   return new Promise((resolve) => {
     const dir = laneDir(lane);
     const tag = String(n).padStart(3, '0');
@@ -517,8 +557,7 @@ function runClaude(lane, text, timeoutMs, n, cfg) {
       '--permission-mode', 'bypassPermissions', '--setting-sources', 'project,local', '--strict-mcp-config',
       '--add-dir', path.join(ROOT, 'shared'), '--add-dir', path.join(ROOT, 'tools')];
     const started = Date.now();
-    const mode = billing.mode;
-    const p = spawn('claude', args, { cwd: dir, windowsHide: true, env: billing.env({ ...process.env, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' }) });
+    const p = spawn('claude', args, { cwd: dir, windowsHide: true, env: billing.env({ ...process.env, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' }, mode) });
     children.add(p);
     let tail = '';
     let head = '';
@@ -545,11 +584,12 @@ function runClaude(lane, text, timeoutMs, n, cfg) {
       // the game has a boss called "Triage & Billing".
       const errSurface = `${result?.is_error ? result?.result ?? '' : ''}\n${errText}\n${tail.split('\n').filter((l) => /API Error|"type":"error"|"error":\{/.test(l)).join('\n').slice(-4000)}`;
       const drained = mode === 'api' && !timedOut && API_DRAINED.test(errSurface);
+      const limited = !drained && !timedOut && LIMITED.test(errSurface);
       resolve({
         n, code, timedOut, wallS: Math.round((Date.now() - started) / 1000), billing: mode, keySource, drained,
         drainReason: drained ? `${errSurface.match(API_DRAINED)?.[0] ?? ''} ${errSurface.trim().slice(0, 200)}` : null,
         costUsd: result?.total_cost_usd ?? null, turns: result?.num_turns ?? null, isError: result?.is_error ?? (code !== 0 && !timedOut),
-        limited: !drained && /usage limit|limit reached|rate.?limit|429|overloaded|quota/i.test(blob) && !timedOut,
+        limited, limitReason: limited ? errSurface.trim().slice(0, 300) : null, resetAt: limited ? resetAt(errSurface) : null,
       });
     });
   });
@@ -571,16 +611,26 @@ async function laneLoop(lane, t, cfg) {
     const capAt = new Date(Math.min(now + cfg.iterMin * 60_000, boundary));
     // Too little time left before the boundary to do useful work: wait for the next phase instead.
     if (boundary - now < 4 * 60_000 && phase !== 'REPORT') { await sleep(boundary - now); continue; }
+    // Every billing path drained or limited: wait for the first to free up (re-checked at least every 15 min).
+    const mode = billing.pick();
+    if (!mode) {
+      const w = Math.max(60_000, Math.min(15 * 60_000, billing.nextFree() - now));
+      log(`${lane}: every billing path is blocked - waiting ${Math.round(w / 60_000)} min`);
+      await sleep(w); continue;
+    }
     n += 1;
-    log(`${lane}: iteration ${n} ${phase} until ${ts(capAt)}`);
-    const r = await runClaude(lane, prompt(lane, n, phase, t, capAt), capAt.getTime() - now, n, cfg);
+    log(`${lane}: iteration ${n} ${phase} until ${ts(capAt)} [${mode}]`);
+    let r;
+    try { r = await runClaude(lane, prompt(lane, n, phase, t, capAt), capAt.getTime() - now, n, cfg, mode); }
+    catch (e) { log(`${lane}: iteration ${n} could not start (${String(e?.message ?? e).slice(0, 160)}) - retrying in 2 min`); await sleep(2 * 60_000); continue; }
     state.iterations.push({ ...r, phase, start: new Date(now).toISOString() });
     fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
     log(`${lane}: iteration ${n} [${r.billing}${r.keySource ? `/${r.keySource}` : ''}] ${r.timedOut ? 'stopped at cap' : `exit ${r.code}`} ${r.wallS}s${r.costUsd != null ? ` $${r.costUsd.toFixed(2)}` : ''}${r.limited ? ' USAGE-LIMIT' : ''}`);
-    // Drained mid-iteration: switch every lane to the subscription and continue at once (the journal carries the work).
-    if (r.drained) { billing.exhaust(r.drainReason ?? 'api error'); if (phase !== 'REPORT') continue; }
+    // Drained or limited mid-iteration: block that path and go straight on with the next free one (the journal and
+    // git carry the work). In REPORT the report is retried, because it was not written.
+    if (r.drained) { billing.block('api', Date.now() + API_REPROBE_MIN * 60_000, r.drainReason ?? 'api error'); continue; }
+    if (r.limited) { billing.block(r.billing, r.billing === 'api' ? Math.min(r.resetAt, Date.now() + API_REPROBE_MIN * 60_000) : r.resetAt, r.limitReason ?? 'usage limit'); continue; }
     if (phase === 'REPORT') { reported = true; break; }
-    if (r.limited) { log(`${lane}: usage limit - waiting 15 min`); await sleep(15 * 60_000); continue; }
     fails = r.isError && r.wallS < 120 ? fails + 1 : 0;
     if (fails >= 5) { log(`${lane}: 5 fast failures in a row - cooling down 10 min (read logs/iter-*.err)`); await sleep(10 * 60_000); fails = 0; }
     // A lane that believes it is finished ends each session in under 3 min; restarting it every 20 s spends money for
@@ -603,12 +653,21 @@ async function runAll() {
   billing.load();
   const cfg = { model: String(opts.model ?? 'claude-opus-5-5'), effort: String(opts.effort ?? 'high'), iterMin: Number(opts['iter-min'] ?? 100) };
   const t = { until, freeze, report };
-  log(`run: billing ${billing.mode}${billing.mode === 'api' ? ' (drain the .env API key first, then the subscription)' : ''} | lanes ${lanes.join(',')} | model ${cfg.model}@${cfg.effort} | freeze ${freeze.toLocaleString()} | report ${report.toLocaleString()} | deadline ${until.toLocaleString()}${opts.precheck ? " | PRE-CHECK" : ""}`);
+  log(`run: billing ${billing.order().filter((m) => billing.usable(m)).join(' -> ')} (now ${billing.pick() ?? 'all blocked'}) | lanes ${lanes.join(',')} | model ${cfg.model}@${cfg.effort} | freeze ${freeze.toLocaleString()} | report ${report.toLocaleString()} | deadline ${until.toLocaleString()}${opts.precheck ? " | PRE-CHECK" : ""}`);
   const stop = () => { log('interrupted - stopping own child sessions'); for (const c of children) killTree(c); process.exit(130); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
+  // A lane must never take the night down with it: log and keep the other lanes running.
+  process.on('uncaughtException', (e) => log(`runner: uncaught ${String(e?.stack ?? e).slice(0, 300)}`));
+  process.on('unhandledRejection', (e) => log(`runner: unhandled ${String(e?.stack ?? e).slice(0, 300)}`));
   // Stagger the starts so four cold sessions do not hit the CLI and the disk in the same second.
-  await Promise.all(lanes.map(async (l, i) => { await sleep(i * 45_000); return laneLoop(l, t, cfg); }));
+  await Promise.all(lanes.map(async (l, i) => {
+    await sleep(i * 45_000);
+    // laneLoop is re-entered after an unexpected throw until the deadline; its state lives in runner-state.json.
+    while (Date.now() < t.until.getTime() - 3 * 60_000) {
+      try { await laneLoop(l, t, cfg); return; } catch (e) { log(`${l}: lane loop threw (${String(e?.message ?? e).slice(0, 160)}) - restarting it in 1 min`); await sleep(60_000); }
+    }
+  }));
   log('run: all lanes finished - next: node games/gtai/spike/spike.mjs report');
 }
 
@@ -629,8 +688,7 @@ function laneSummary(l) {
 
 function status() {
   const latest = readIf(path.join(ROOT, 'shared', 'assets', 'LATEST')).trim() || 'none yet';
-  const bill = fs.existsSync(BILLING_FILE()) ? JSON.parse(fs.readFileSync(BILLING_FILE(), 'utf8')) : null;
-  process.stdout.write(`spike ${ROOT} | shared pack: ${latest} | billing: ${bill?.exhausted ? `API key drained at ${bill.at}, now subscription` : 'API key first (not drained)'}\n`);
+  process.stdout.write(`spike ${ROOT} | shared pack: ${latest} | billing: ${billingLine()}\n`);
   for (const l of ALL_LANES) {
     if (!fs.existsSync(laneDir(l))) continue;
     const s = laneSummary(l);
@@ -654,6 +712,8 @@ function report() {
   row('checklist done', (s) => (s.score ? `${keys.filter((k) => s.score.checklist?.[k]).length}/${keys.length}` : 'no scorecard'));
   const sk = ['readability', 'car', 'crowd', 'soul_swap', 'gamepad'];
   row('night stretch done', (s) => (s.score?.stretch ? `${sk.filter((k) => s.score.stretch[k]).length}/${sk.length} (${sk.filter((k) => s.score.stretch[k]).join(', ') || 'none'})` : 'unmeasured'));
+  const pk = ['weapons', 'combat_moves', 'anim_set', 'fx', 'enemy_variety', 'mission_slice', 'showcase'];
+  row('night push done', (s) => (s.score?.push ? `${pk.filter((k) => s.score.push[k]).length}/${pk.length} (${pk.filter((k) => s.score.push[k]).join(', ') || 'none'})` : 'unmeasured'));
   row('edit->see loop (s)', (s) => (s.loops.length ? s.loops.join(', ') : 'unmeasured'));
   row('build s / size MB', (s) => `${v(s.score?.buildSeconds)} / ${v(s.score?.buildSizeMB)}`);
   row('autoplay fps avg/min', (s) => `${v(s.score?.autoplay?.avgFps)} / ${v(s.score?.autoplay?.minFps)}`);
@@ -680,9 +740,10 @@ function report() {
   const url = (p) => `file:///${p.replace(/\\/g, '/')}`;
   const cards = lanes.map((s) => {
     const imgs = s.l === 'art' ? (preview && fs.existsSync(preview) ? [preview] : []) : frames(s);
-    const vid = path.join(s.dir, 'evidence', 'duel.mp4');
+    const show = path.join(s.dir, 'evidence', 'showcase.mp4');
+    const vid = fs.existsSync(show) ? show : path.join(s.dir, 'evidence', 'duel.mp4');
     return `<section><h2>${s.l}</h2><p>${s.score ? `${s.score.engine ?? ''} ${s.score.engineVersion ?? ''} - ${s.score.approach ?? ''}` : 'no scorecard'}</p>
-${fs.existsSync(vid) ? `<video src="${url(vid)}" controls muted loop></video>` : '<p class="miss">no duel.mp4</p>'}
+${fs.existsSync(vid) ? `<video src="${url(vid)}" controls muted loop></video>` : '<p class="miss">no showcase.mp4 or duel.mp4</p>'}
 <div class="g">${imgs.map((i) => `<img src="${url(i)}" alt="${s.l} frame">`).join('') || '<p class="miss">no frames</p>'}</div></section>`;
   }).join('\n');
   fs.writeFileSync(path.join(ROOT, 'compare.html'), `<!doctype html><meta charset="utf-8"><title>GTAI engine spike</title>
@@ -692,7 +753,24 @@ img{width:100%}.miss{color:var(--mut)}</style><h1>GTAI engine spike</h1><p>See S
   process.stdout.write(`wrote ${path.join(ROOT, 'SCOREBOARD.md')}\n      ${path.join(ROOT, 'compare.html')}\n`);
 }
 
+function billingLine() {
+  billing.load();
+  const bl = (m) => (billing.blocked[m] > Date.now() ? `blocked until ${ts(new Date(billing.blocked[m]))}` : 'free');
+  return `API key ${billing.key ? bl('api') : 'absent'}, subscription ${bl('subscription')} -> next iteration uses ${billing.pick() ?? 'nothing (waiting)'}`;
+}
+// `billing [--reset api|subscription|all]`: show the paths; --reset unblocks one in a running night (re-read per pick).
+function billingCmd() {
+  const r = opts.reset === true ? 'all' : opts.reset;
+  if (r) {
+    billing.load();
+    for (const m of r === 'all' ? ['api', 'subscription'] : [String(r)]) { billing.blocked[m] = 0; delete billing.reasons[m]; }
+    billing.save();
+  }
+  process.stdout.write(`billing: ${billingLine()}\n`);
+  for (const [m, why] of Object.entries(billing.reasons)) process.stdout.write(`  last block on ${m}: ${why}\n`);
+}
+
 // ---------------------------------------------------------------- main
-const cmds = { init, prep, preflight, run: runAll, status, report };
+const cmds = { init, prep, preflight, run: runAll, status, report, billing: billingCmd };
 if (!cmds[cmd]) die('usage: spike.mjs init|preflight|run|status|report [options] (see the header)');
 await cmds[cmd]();

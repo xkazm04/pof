@@ -26,6 +26,7 @@ So:
 - After freeze: only fix bugs, run the automation, and record evidence.
 - At report time the runner starts a final session that writes `REPORT.md` and `scorecard.json`.
 - You work in **iterations**. Each runner prompt is a fresh session with no memory except your files. `JOURNAL.md` is your memory.
+- A session can be cut off mid-work (a billing switch or a runner restart). If `git status` shows uncommitted changes at the start of an iteration, they are your previous session's: review them, then keep and commit them, or revert them deliberately. Log which.
 
 ## JOURNAL.md: append-only, the most important file you write
 - At the **start** of every iteration, read `JOURNAL.md` (create it if missing) and the last 30 lines of `git log --oneline`.
@@ -69,6 +70,8 @@ So:
   "evidence": { "<checklist key>": "relative path to the proof" },
   "stretch": { "readability": null, "car": null, "crowd": null, "soul_swap": null, "gamepad": null },
   "stretchNote": "per item: an evidence path when done, null when not reached; one line on what was hardest",
+  "push": { "weapons": null, "combat_moves": null, "anim_set": null, "fx": null, "enemy_variety": null, "mission_slice": null, "showcase": null },
+  "pushNote": "per item: an evidence path when done, null when not reached; for weapons, which ones work; one line on what was hardest",
   "loopSeconds": [0, 0, 0],
   "buildSeconds": null, "buildSizeMB": null, "coldStartSeconds": null,
   "autoplay": { "avgFps": null, "minFps": null },
