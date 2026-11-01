@@ -253,6 +253,8 @@ export const STORY_FINDING_CODES = [
   'PARENT_CONTAINS_MISMATCH',
   'STRING_VAR_NO_VALUES',
   'PRECEDENCE_NOT_TOTAL',
+  /** A declared `influences` edge the data does not support: the source writes nothing the target's guard reads (section 5). */
+  'INFLUENCES_UNSUPPORTED',
   'SOFTLOCK_LEAD',
   'GUARD_UNSATISFIABLE',
   'OPTION_NEVER_OFFERED',
