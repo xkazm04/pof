@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a35b42bf-5180-4fe6-a296-04e003fbe3e0",
+ "subject": "serving-process-topology",
+ "evaluatedAt": "2026-11-01T22:02:43.540115+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "asset-visual-studio",
+   "subject": "serving-process-topology",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:1 These are browser-side React views: AssetScoutView and PostProcessStudioView read Zustand stores and pass CLI work to useModuleCLI. A case-insensitive grep of both directories for spawn, child_process, fork, worker, replica, cluster, process., load balancing, startMethod, inference, serving and subprocess found nothing, so the subject's precondition (a latency-critical serving loop decomposed into processes) does not hold here.",
+   "techniques": [
+    {
+     "technique": "hot-loop-isolation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:7 The studio has no inner loop with a latency budget. Long work goes to the shared CLI hook, so there is no iteration in this context to isolate."
+    },
+    {
+     "technique": "cache-residency-sets-the-balancing-unit",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:10 State lives in one in-browser client store. There are no replicas and no balancer for cache residency to constrain."
+    },
+    {
+     "technique": "one-config-object-as-engine-state",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:6 Each view reads its own Zustand store. No engine/executor/worker hierarchy threads configuration through constructors."
+    },
+    {
+     "technique": "probe-the-runtime-not-the-config",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:14 No process is created in this context, so no process-creation strategy is chosen here. Spawning happens outside it, behind the CLI hook and service."
+    }
+   ],
+   "absenceTerms": [
+    "child_process",
+    "spawn",
+    "replica",
+    "worker",
+    "fork"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-01T22:02:43.540115+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "serving-process-topology"
+   ],
+   "techniques": [
+    "cache-residency-sets-the-balancing-unit",
+    "hot-loop-isolation",
+    "one-config-object-as-engine-state",
+    "probe-the-runtime-not-the-config"
+   ],
+   "deviations": 0,
+   "context": "asset-visual-studio",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -17684,6 +17684,37 @@
           "evidence": "src/components/modules/core-engine/sub_ability/SpellbookSearch.tsx:33 Input is only split into whitespace terms. There are no user-authored operators, identifiers or saved rules to type-check."
         }
       ]
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/serving-process-topology": {
+      "context": "asset-visual-studio",
+      "subject": "serving-process-topology",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-01",
+      "evaluatedTs": "2026-11-01T22:02:43.540Z",
+      "worker": "a35b42bf-5180-4fe6-a296-04e003fbe3e0",
+      "techniques": [
+        {
+          "technique": "hot-loop-isolation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:7 The studio has no inner loop with a latency budget. Long work goes to the shared CLI hook, so there is no iteration in this context to isolate."
+        },
+        {
+          "technique": "cache-residency-sets-the-balancing-unit",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:10 State lives in one in-browser client store. There are no replicas and no balancer for cache residency to constrain."
+        },
+        {
+          "technique": "one-config-object-as-engine-state",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:6 Each view reads its own Zustand store. No engine/executor/worker hierarchy threads configuration through constructors."
+        },
+        {
+          "technique": "probe-the-runtime-not-the-config",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:14 No process is created in this context, so no process-creation strategy is chosen here. Spawning happens outside it, behind the CLI hook and service."
+        }
+      ]
     }
   }
 }

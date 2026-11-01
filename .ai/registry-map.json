@@ -5073,7 +5073,11 @@
           "revision": 3,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:1 These are browser-side React views: AssetScoutView and PostProcessStudioView read Zustand stores and pass CLI work to useModuleCLI. A case-insensitive grep of both directories for spawn, child_process, fork, worker, replica, cluster, process., load balancing, startMethod, inference, serving and subprocess found nothing, so the subject's precondition (a latency-critical serving loop decomposed into processes) does not hold here.",
+          "evaluatedAt": "2026-11-01",
+          "evaluatedAgainst": "sha256-b2:59db333b735852a8",
+          "evaluatedRevision": 4
         },
         {
           "subject": "standalone-headset-frame-budgets",
