@@ -111,7 +111,7 @@ export function withQuestCausality<T extends StoredCatalogEntity>(entity: T): T 
 
 function sourceStamp(entity: StoredCatalogEntity, ledger: QuestCausalityLedger): SourcedStamp {
   return {
-    sourceGame: entity.provenance?.sourceGame ?? 'Diablo I (1996)',
+    sourceGame: (entity.provenance?.kind === 'ingest' ? entity.provenance.sourceGame : undefined) ?? 'Diablo I (1996)',
     sourceFile: ledger.refs.join(', '),
     sourceRow: entity.id,
     columns: ['causality.transitions[].trigger', 'causality.transitions[].guard', 'causality.transitions[].effect', 'causality.dependencies'],

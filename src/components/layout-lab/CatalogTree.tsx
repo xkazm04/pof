@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
-import type { EntityProvenance, LifecycleState } from '@/lib/catalog/types';
+import type { IngestProvenance, LifecycleState } from '@/lib/catalog/types';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -101,7 +101,7 @@ const BROWSER_ONLY_TITLE =
  * Say where — game, file, source row — and carry the licence note, so a reference entity can
  * never pass for a designed one in the tree.
  */
-function ingestTitle(p: EntityProvenance): string {
+function ingestTitle(p: IngestProvenance): string {
   return `Ingested from ${p.sourceGame} — ${p.sourceFile} (${p.sourceRow}). ${p.licenceNote}`;
 }
 

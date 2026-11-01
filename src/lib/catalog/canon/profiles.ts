@@ -51,6 +51,9 @@ export const CANON_PROFILES: Readonly<Record<string, CanonProfile>> = {
     styleDna: DIABLO1_STYLE_DNA,
     styleDnaByClass: { creature: DIABLO1_CREATURE_STYLE_DNA },
   },
+  // GTAI: Uprising (games/gtai). Seed empty: its canon arrives through the pitch intake and lives
+  // versioned in games/gtai/canon.json. WP1 fills `inheritsPof` with engineering-convention ids.
+  gtai: { id: 'gtai', title: 'GTAI: Uprising', inheritsPof: [], seed: [] },
 };
 
 export const profileOfRule = (r: Pick<ProjectRule, 'profile'>): string => r.profile ?? DEFAULT_CANON_PROFILE;

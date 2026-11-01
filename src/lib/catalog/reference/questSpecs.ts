@@ -45,7 +45,7 @@ const questLaw = (id: string) => {
 
 function stamp(entity: StoredCatalogEntity, spec: QuestSpec, columns: string[]): SourcedStamp {
   return {
-    sourceGame: entity.provenance?.sourceGame ?? 'Diablo I (1996)',
+    sourceGame: (entity.provenance?.kind === 'ingest' ? entity.provenance.sourceGame : undefined) ?? 'Diablo I (1996)',
     sourceFile: spec.refs.join(', '),
     sourceRow: entity.id,
     columns,

@@ -15,7 +15,7 @@
 import { auditColumns, type ColumnAudit, type FieldMap } from './fieldMap';
 import { parseTsv, type MalformedRow, type TsvRefusal, type TsvTable } from './tsv';
 import { applyDecode, type DecodedValue, type StringDecodeStep } from './decode';
-import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types';
+import type { CatalogEntityBase, CatalogLink, IngestProvenance } from '../types';
 
 /**
  * An entity produced by ingest. `data` is an open bag rather than one of the strict
@@ -25,7 +25,7 @@ import type { CatalogEntityBase, CatalogLink, EntityProvenance } from '../types'
  */
 export interface IngestedEntity extends CatalogEntityBase {
   data: Record<string, unknown>;
-  provenance: EntityProvenance;
+  provenance: IngestProvenance;
 }
 
 export interface TableIngestResult {
@@ -151,7 +151,7 @@ export interface IngestTableOptions {
    */
   keyColumn?: string;
   map: FieldMap;
-  provenanceFor: (sourceFile: string, sourceRow: string) => EntityProvenance;
+  provenanceFor: (sourceFile: string, sourceRow: string) => IngestProvenance;
   /** Prefix for generated entity ids, so ingested ids cannot collide with code seeds. */
   idPrefix: string;
   /**

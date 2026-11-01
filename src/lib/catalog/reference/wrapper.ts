@@ -16,7 +16,7 @@ import { ingestRecords, type IngestedEntity } from '@/lib/catalog/ingest/run';
 import { applyDecode } from '@/lib/catalog/ingest/decode';
 import type { ColumnAudit, FieldMap } from '@/lib/catalog/ingest/fieldMap';
 import type { MalformedRow, TsvRefusal } from '@/lib/catalog/ingest/tsv';
-import type { EntityProvenance } from '@/lib/catalog/types';
+import type { IngestProvenance } from '@/lib/catalog/types';
 import { censusTable, type ColumnCensus } from './census';
 import { contentHash } from './hash';
 import { getTechnique, techniqueLabel } from './techniques';
@@ -79,7 +79,7 @@ export function wrapTable(source: ReferenceSource, spec: ReferenceTableSpec, tex
   // row it rewrites carries a stamp it did not carry before (vault Decisions Z-D97 (e)).
   const passVersions = (source.linkPasses ?? []).filter((p) => p.technique === spec.technique).map((p) => p.version);
   const version = [spec.derive ? `${baseVersion}+${spec.derive.version()}` : baseVersion, ...passVersions].join('+');
-  const provenanceFor = (sourceFile: string, sourceRow: string): EntityProvenance => ({
+  const provenanceFor = (sourceFile: string, sourceRow: string): IngestProvenance => ({
     kind: 'ingest', sourceGame: source.game, sourceProject: source.project,
     sourceFile, sourceRow, licenceNote: source.licenceNote, ingestedAt: now,
     canonProfile: source.canonProfile,
