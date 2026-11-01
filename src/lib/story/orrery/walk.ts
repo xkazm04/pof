@@ -79,7 +79,7 @@ export function cohortStatuses(merged: MergedEvidence): CohortStatus[] {
 /** Build the Orrery model over merged evidence, badged by the worst displayed cell. Pure. */
 export function buildMergedModel(graph: StoryGraph, key: string, merged: MergedEvidence): OrreryModel {
   const real = toStoryEvidence(merged);
-  const built = buildOrreryModel({ ...graph, evidence: real }, key);
+  const built = buildOrreryModel({ ...graph, evidence: real }, key, { merged });
   const verified = worstCellStatus(merged) === 'verified' && merged.graphHash.length > 0;
   return { ...built, prov: { ...built.prov, unverified: !verified } };
 }

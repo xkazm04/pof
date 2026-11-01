@@ -28,6 +28,7 @@
 
 import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { NodeIx, OrreryModel, OrreryNode } from '@/lib/story/orrery';
+import { lensReachPhrase } from '@/components/story/orrery/render/describe';
 
 export interface OrreryChromeProps {
   model: OrreryModel;
@@ -173,7 +174,7 @@ export function OrreryChrome(props: OrreryChromeProps) {
       </header>
 
       {props.overlays === false ? null : <OrreryStageChrome {...props} mount="root" />}
-      <LiveRegion model={model} i={props.selected != null && props.selected >= 0 ? props.selected : props.focus} />
+      <LiveRegion model={model} lens={lens} i={props.selected != null && props.selected >= 0 ? props.selected : props.focus} />
     </>
   );
 }
@@ -368,7 +369,7 @@ function SearchBox({ model, onSelect }: { model: OrreryModel; onSelect: (i: Node
 const plural = (n: number, word: string) => `${n} ${n > 1 && !word.endsWith('s') ? `${word}s` : word}`;
 
 /** The winner's `describe()`: one sentence a screen reader can follow without the canvas. */
-function describe(model: OrreryModel, i: NodeIx): string {
+function describe(model: OrreryModel, i: NodeIx, lens: string | null): string {
   const R = model.R;
   const n: OrreryNode | undefined = R[i];
   if (!n) return '';
@@ -391,17 +392,21 @@ function describe(model: OrreryModel, i: NodeIx): string {
   const ins = model.inn[i].slice(0, 3).map((e) => R[e.from].title);
   if (outs.length) parts.push(`connects to ${outs.join(', ')}`);
   if (ins.length) parts.push(`reached from ${ins.join(', ')}`);
-  if (n.reach) parts.push(`reach measured${model.prov.unverified ? ', unverified' : ''}${model.prov.provisional ? ', provisional' : ''}`);
+  // With a lens on, the figure, its source and its evidence status are spoken (the wheel's dashed /
+  // dotted outline, in words). Without one, the lens-free honesty sentence below.
+  const phrase = lensReachPhrase(model, n, lens);
+  if (phrase) parts.push(phrase);
+  else if (n.reach) parts.push(`reach measured${model.prov.unverified ? ', unverified' : ''}${model.prov.provisional ? ', provisional' : ''}`);
   else if (n.reachMean) parts.push('no reach row of its own; derived from measured descendants');
   else if (model.cohorts.length) parts.push('no reach row, unmeasured, which is not zero');
   if (n.flags) parts.push(`audit: ${[...new Set(n.flags)].join(', ')}`);
   return parts.join('. ');
 }
 
-function LiveRegion({ model, i }: { model: OrreryModel; i: NodeIx }) {
+function LiveRegion({ model, i, lens }: { model: OrreryModel; i: NodeIx; lens: string | null }) {
   return (
     <div data-role="orrery-sr" aria-live="polite" aria-atomic="true">
-      {describe(model, i)}
+      {describe(model, i, lens)}
     </div>
   );
 }
@@ -597,6 +602,18 @@ function Legend({ model, lens }: OrreryStageChromeProps) {
                 <span>
                   hatched = no reach row: never measured, <b>not</b> zero
                 </span>
+                <span
+                  data-role="orrery-legend-swatch"
+                  data-status="stale"
+                  style={{ background: 'none', border: '1.5px dashed var(--or-chip-warn-ink)' }}
+                />
+                <span>dashed outline = stale: the run is pinned to another revision of this graph</span>
+                <span
+                  data-role="orrery-legend-swatch"
+                  data-status="unverified"
+                  style={{ background: 'none', border: '2px dotted var(--or-chip-warn-ink)' }}
+                />
+                <span>dotted outline = unverified: the run is not pinned to any graph version</span>
               </>
             ) : (
               <span data-role="orrery-legend-full">

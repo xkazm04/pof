@@ -24,6 +24,7 @@
 import type { StoryGraph, StoryNode, StoryVariable } from '@/lib/story/types';
 import { buildAudit, condReadVars } from '@/lib/story/orrery/audit';
 import { layoutDocks, layoutFlat, layoutHierarchy, trackLanes } from '@/lib/story/orrery/layout';
+import { buildOrreryStatus, type OrreryBuildOptions } from '@/lib/story/orrery/status';
 import type {
   ChoiceClass,
   ChoiceFacts,
@@ -49,7 +50,7 @@ const SPREAD_REFERENCE_PERCENTILE = 0.98;
 /** Id of the synthesised root used when the document has several top-level nodes. */
 const DATASET_ROOT_ID = '__dataset__';
 
-export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
+export function buildOrreryModel(raw: StoryGraph, key: string, opts: OrreryBuildOptions = {}): OrreryModel {
   const nodes = raw.nodes;
   const N = nodes.length;
   const profile = raw.profile ?? {};
@@ -313,6 +314,10 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
     }
   }
 
+  // The per-cell status channel, carried by the SAME rule as the derived mean above (and before the
+  // flat dial re-docks endings, exactly as the mean was): `@/lib/story/orrery/status`.
+  const status = buildOrreryStatus(raw, R, order, N, opts);
+
   // The impact rim normalises against the 98th percentile, not the maximum: one outlier
   // decision otherwise flattens every other spike into the baseline.
   const spreads: number[] = [];
@@ -375,6 +380,7 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
     out,
     inn,
     cohorts,
+    status,
     prov: {
       // Honesty flags are read off the document; none of the three is ever assumed. Doubt never
       // passes: ONE unpinned run (or no run at all) badges the lens unverified, and ONE provisional

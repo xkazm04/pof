@@ -124,7 +124,7 @@ export function OrreryView({
     if (!dataset) return null;
     const base = evidence
       ? buildMergedModel(dataset.graph, dataset.key, evidence)
-      : buildOrreryModel(dataset.graph, dataset.key);
+      : buildOrreryModel(dataset.graph, dataset.key, { currentHash: dataset.hash });
     return leads ? withLeads(base, leads) : base;
   }, [dataset, evidence, leads]);
 

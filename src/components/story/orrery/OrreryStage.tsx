@@ -158,10 +158,10 @@ export function OrreryStage({
         detail:
           hit.zone === 'hub'
             ? describeHub(model, safeFocus, root)
-            : describeShort(model, n) + (hit.zone === 'rim' ? ' · impact rim' : ''),
+            : describeShort(model, n, lens) + (hit.zone === 'rim' ? ' · impact rim' : ''),
       });
     },
-    [model, safeFocus, root],
+    [model, safeFocus, root, lens],
   );
 
   const { stageRef, mainRef, overlayRef, engine } = useOrreryCamera({

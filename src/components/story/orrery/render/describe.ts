@@ -9,6 +9,9 @@
  */
 
 import type { ChoiceClass, OrreryModel, OrreryNode, NodeIx } from '@/lib/story/orrery';
+import { cellSource } from '@/lib/story/orrery/status';
+import { lensModeOf, lensValue } from '@/components/story/orrery/render/lod';
+import { lensStatus } from '@/components/story/orrery/render/statusMark';
 
 /** How each choice class reads out loud. The port's own class names, not the prototype's. */
 const CHOICE_SPOKEN: Record<ChoiceClass, string> = {
@@ -39,8 +42,30 @@ export function classLabel(model: OrreryModel, n: OrreryNode): string {
   return declared && n.cls !== 'beat' ? declared.label.toLowerCase() : n.kind;
 }
 
+/**
+ * What the ACTIVE lens says about a node, as words: its figure, where the figure came from, and its
+ * evidence status — the same status the wheel draws as a dashed (stale) or dotted (unverified)
+ * outline, so a screen reader hears what a sighted user sees. `null` when the lens shows no figure
+ * (kind lens, unmeasured node): the caller keeps its own "never measured" sentence for that.
+ *
+ *   measured:  "reach 40% - sampled, stale"
+ *   derived:   "reach 40%, derived from 3 measured descendants - unverified"
+ */
+export function lensReachPhrase(model: OrreryModel, n: OrreryNode, lens: string | null): string | null {
+  const mode = lensModeOf(model, lens);
+  if (mode.mode === 'kind') return null;
+  const v = lensValue(model, n, mode);
+  if (v.state !== 'measured' && v.state !== 'derived') return null;
+  const figure = mode.mode === 'diverge' ? `cohort spread ${Math.round(v.value)} points` : `reach ${Math.round(v.value)}%`;
+  const status = lensStatus(model, n, mode);
+  const source = v.state === 'measured' && mode.mode === 'cohort' ? cellSource(model.status, n.i, mode.cohort) : null;
+  const tail = [source, status].filter(Boolean).join(', ');
+  const derived = v.state === 'derived' ? `, derived from ${plural(n.reachMeasured, 'measured descendant')}` : '';
+  return `${figure}${derived}${tail ? ` - ${tail}` : ''}${model.prov.provisional ? ', provisional' : ''}`;
+}
+
 /** One sentence per fact, joined — what the live region says when the selection moves. */
-export function describeNode(model: OrreryModel, i: NodeIx): string {
+export function describeNode(model: OrreryModel, i: NodeIx, lens: string | null = null): string {
   const R = model.R;
   const n = R[i];
   if (!n) return '';
@@ -78,7 +103,10 @@ export function describeNode(model: OrreryModel, i: NodeIx): string {
 
   // The honesty rule, spoken: unmeasured is never read out as a figure, and a derived figure says
   // so. `reachMeasured` is the model's own authority for "something below this was measured".
-  if (model.cohorts.length > 0) {
+  const phrase = lensReachPhrase(model, n, lens);
+  if (phrase) {
+    parts.push(phrase);
+  } else if (model.cohorts.length > 0) {
     if (n.reach) {
       parts.push(
         'reach measured' +
@@ -107,11 +135,13 @@ export function describeWhole(model: OrreryModel, rootIx: NodeIx): string {
 }
 
 /** The tooltip's second line: what this thing is, in as few words as stay honest. */
-export function describeShort(model: OrreryModel, n: OrreryNode): string {
+export function describeShort(model: OrreryModel, n: OrreryNode, lens: string | null = null): string {
   let s = n.kind + (n.cls && n.cls !== 'beat' && n.cls !== n.kind ? ' · ' + n.cls : '');
   if (n.kids.length > 0) s += ` · ${count(n.w - 1)} inside`;
   if (n.ch) s += ' · ' + CHOICE_SHORT[n.ch.cls];
   if (n.flags) s += ' · flagged';
+  const phrase = lensReachPhrase(model, n, lens);
+  if (phrase) s += ' · ' + phrase;
   return s;
 }
 
