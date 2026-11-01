@@ -36,6 +36,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - The owner tested the camera-90 prompt in gpt-image-2.5.
   - The target frame is `art-direction/trivet/ref-1-camera-90-TARGET.jpg`, and it is staged as the spike style.
 - 2026-11-01. **The spike gets a 1-hour pre-check before the night** (owner): find each engine's blockers early, so the night can be aimed better. The night continues from the pre-check's lane state.
+- 2026-11-01. **The night never stops for billing, and pushes combat** (owner, 21:50). A drained or limited path is skipped: API key first, then the subscription, and the key is re-probed every 45 min. A "Night push" outranks the remaining stretch items: weapons, combat moves, animation, effects, enemy variety, a mission slice, and a required `showcase.mp4` for the morning side-by-side.
 - 2026-11-01. The owner's play feel outranks every spike metric. Proposed weights are in `spike/PLAN.md`.
 
 ## PoF gaps found by the game
@@ -104,3 +105,4 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - The night stretch was added to the MVP, the scorecard (`stretch`) and the scoreboard, because the duel alone no longer separates the engines.
 - **The night was launched at 20:06** with the stretch. The art lane runs on Sonnet 5.5 (the owner's pick, to save usage); the engine lanes run on Opus 5.5. The first iteration of every lane confirmed `apiKeySource: ANTHROPIC_API_KEY`.
 - **21:06 to 21:36: every lane stalled on the API key's monthly spend limit** ("API Error: 400 You have reached your specified API usage limits"). The runner classed it as a usage limit, not a drained key, so it stayed on the key and retried every 15 min. The owner raised the limit, and all four lanes resumed on the key at 21:36. Spend by then: about $52 (UE $13.18, Godot $14.47, Unity $13.22, art $10.81). Morning read: 30 min of night lost; the spend limit is now a known preflight item.
+- **21:49: the runner was restarted with failover billing and the Night push** (`49cb474e`). The supervisor loop restarts it if it exits before 08:00. Lane iterations that were cut off left their files on disk; the brief tells the next session to review and commit them. In the morning, read `push` in each scorecard and watch `evidence/showcase.mp4` first.
