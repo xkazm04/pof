@@ -3,6 +3,8 @@ import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { jsonUnsafeKeys } from '@/lib/catalog/entityPayload';
 import type { LifecycleRecord, LifecycleState, StoredCatalogEntity, TestResult } from '@/lib/catalog/types';
+import { GAME_IDS, type GameId } from '@/lib/games/types';
+import { readGameEntities } from '@/lib/games/intake/files';
 
 // The DB connection is a process-level singleton (see getDb), so the DDL only
 // needs to run once per connection instance. Keyed on the live Database handle
@@ -120,6 +122,36 @@ function ensureEntityTable() {
     )
   `);
   entityTableEnsuredDb = db;
+  // A game's versioned entities (`games/<id>/entities.json`) are re-inserted where this connection's
+  // DB lacks them, so a deleted DB gets them back on the first entity read.
+  for (const gameId of GAME_IDS) insertGameEntitiesFromFile(gameId);
+}
+
+/**
+ * Insert each entity of `games/<id>/entities.json` whose `(catalogId, id)` the table lacks
+ * (INSERT OR IGNORE — an existing row is never overwritten). Assumes the table exists.
+ */
+function insertGameEntitiesFromFile(gameId: GameId): number {
+  const file = readGameEntities(gameId);
+  if (!file.ok) { logger.error(`catalog_entities: games/${gameId}/entities.json not synced: ${file.error}`); return 0; }
+  const db = getDb();
+  const stmt = db.prepare(`INSERT OR IGNORE INTO catalog_entities (catalog_id, entity_id, data, source, created_at, updated_at)
+    VALUES (?, ?, ?, 'user', datetime('now'), datetime('now'))`);
+  let inserted = 0;
+  db.transaction(() => {
+    for (const e of file.data) {
+      if (!e?.catalogId || !e.id) continue; // a hand-broken row is skipped, not half-written
+      inserted += stmt.run(e.catalogId, e.id, JSON.stringify(e)).changes;
+    }
+  })();
+  if (inserted) logger.info(`catalog_entities: restored ${inserted} entit(ies) from games/${gameId}/entities.json`);
+  return inserted;
+}
+
+/** The explicit file→DB sync for one game's entities (`syncGameDesign`). Returns rows inserted. */
+export function syncGameEntities(gameId: GameId): number {
+  ensureEntityTable();
+  return insertGameEntitiesFromFile(gameId);
 }
 
 /** Who created the entity. `'one-shot'` = the autonomous flow; `'user'` = a direct create. */

@@ -9,6 +9,9 @@ import { useCanonStore } from './canonStore';
 import { CanonDriftPanel, driftCount } from './CanonDriftPanel';
 import { LabButton } from './steps/controls';
 import { CANON_CATEGORIES as CATEGORIES, CanonRuleEditor } from './CanonRuleEditor';
+import { CanonIntakePanel } from './canon/canonIntakePanel';
+import { useActiveGameStore } from '@/stores/activeGameStore';
+import { GAMES, authoringProfileOf } from '@/lib/games/registry';
 const PROFILE_TABS = Object.values(CANON_PROFILES).map((profile) => ({ id: profile.id, label: profile.title }));
 
 function CanonRuleCard({ t, rule, onEdit, onDelete }: {
@@ -38,7 +41,12 @@ export function CanonView({ t }: { t: LabTheme }) {
   const loadDrift = useCanonStore((s) => s.loadDrift);
   const [reviewOpen, setReviewOpen] = useState(false);
   useEffect(() => { void loadDrift(); }, [loadDrift]);
-  const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_CANON_PROFILE);
+  // The active game decides the profile the view opens on (its authoring profile; PoF → `pof`, as
+  // before). A tab pick is remembered per game, so switching games re-derives without an effect.
+  const activeGame = useActiveGameStore((s) => s.gameId);
+  const [picked, setPicked] = useState<{ game: string; profile: string } | null>(null);
+  const selectedProfileId = picked?.game === activeGame ? picked.profile : (activeGame ? authoringProfileOf(activeGame) : DEFAULT_CANON_PROFILE);
+  const setSelectedProfileId = (profile: string) => setPicked({ game: activeGame, profile });
   const [editingId, setEditingId] = useState<string | null>(null);
   // '+ Add rule' opens a LOCAL draft: nothing is POSTed (or enters a prompt) until Save succeeds.
   const [draft, setDraft] = useState<ProjectRule | null>(null);
@@ -89,6 +97,8 @@ export function CanonView({ t }: { t: LabTheme }) {
           ariaLabel="Canon profile"
           className="mb-7"
         />
+
+        {GAMES[activeGame]?.designDir && <CanonIntakePanel key={activeGame} t={t} gameId={activeGame} />}
 
         {(drifted > 0 || undoable > 0) && (
           <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: `1px solid ${t.warn}`, borderRadius: t.glass ? 10 : 0, padding: '10px 14px', marginBottom: 16 }}>

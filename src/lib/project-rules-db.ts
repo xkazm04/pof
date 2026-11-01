@@ -21,6 +21,8 @@ import type { ProjectRule } from '@/lib/catalog/canon/types';
 import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 import { CANON_PROFILES, DEFAULT_CANON_PROFILE, allShippedRules } from '@/lib/catalog/canon/profiles';
 import { canonTextHash, planCanonSync, toCanonDrift, type CanonDrift, type CanonRow, type CanonSyncPlan } from '@/lib/catalog/canon/canonSync';
+import { GAME_IDS, type GameId } from '@/lib/games/types';
+import { readGameCanon } from '@/lib/games/intake/files';
 
 /** Records that this DB has had its one seeding. Presence is the whole contract. */
 const SEED_MARKER = 'project-rules.canon-seeded';
@@ -98,6 +100,10 @@ function ensureTable() {
     syncProfileSeed(profile.id, profile.seed);
   }
 
+  // A game's versioned canon (`games/<id>/canon.json`) is re-inserted where the DB lacks it — NOT
+  // under the seed marker: the file is truth, so a fresh DB must get it back on the first read.
+  for (const gameId of GAME_IDS) insertGameRulesFromFile(gameId);
+
   followShippedCanon();
   tableEnsured = true;
 }
@@ -145,6 +151,34 @@ function syncProfileSeed(profileId: string, seed: readonly ProjectRule[]): void 
   for (const rule of fresh) { writeShipped(rule); offered.add(rule.id); }
   setSetting(idsKey, JSON.stringify([...offered].sort()));
   if (fresh.length) logger.info(`[project-rules] canon profile "${profileId}": offered ${fresh.length} newly shipped rule(s).`);
+}
+
+/**
+ * Insert each rule of `games/<id>/canon.json` whose id the table lacks (INSERT OR IGNORE: an
+ * existing row — including an operator's edit — is never overwritten). `shipped_hash` stays NULL,
+ * so the drift review reads these as authored rules, not orphaned seeds. Assumes the table exists.
+ */
+function insertGameRulesFromFile(gameId: GameId): number {
+  const file = readGameCanon(gameId);
+  if (!file.ok) { logger.error(`[project-rules] games/${gameId}/canon.json not synced: ${file.error}`); return 0; }
+  const stmt = getDb().prepare(`INSERT OR IGNORE INTO project_rules (id, category, scope, title, body, refs, profile, updated_at)
+    VALUES (@id, @category, @scope, @title, @body, @refs, @profile, datetime('now'))`);
+  let inserted = 0;
+  getDb().transaction(() => {
+    for (const r of file.data) {
+      if (!r?.id || !r.category || !r.title || !r.body) continue; // a hand-broken row is skipped, not half-written
+      inserted += stmt.run({ id: r.id, category: r.category, scope: r.scope || 'global', title: r.title, body: r.body,
+        refs: JSON.stringify(r.refs ?? []), profile: r.profile ?? DEFAULT_CANON_PROFILE }).changes;
+    }
+  })();
+  if (inserted) logger.info(`[project-rules] restored ${inserted} rule(s) from games/${gameId}/canon.json.`);
+  return inserted;
+}
+
+/** The explicit file→DB sync for one game's canon (`syncGameDesign`). Returns rows inserted. */
+export function syncGameRules(gameId: GameId): number {
+  ensureTable();
+  return insertGameRulesFromFile(gameId);
 }
 
 /** Column row → ProjectRule. Pure (exported for unit test). */
