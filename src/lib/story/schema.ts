@@ -159,6 +159,7 @@ export const storyEdgeSchema = z.looseObject({
   when: condSchema.optional(),
   writes: z.array(writeSchema).optional(),
   chance: finite.min(0).max(1).optional(),
+  mode: z.enum(['any', 'all']).optional(),
 });
 
 export const storyEndingSchema = z.looseObject({
@@ -167,6 +168,7 @@ export const storyEndingSchema = z.looseObject({
   label: z.string().optional(),
   when: condSchema.optional(),
   witness: ids.optional(),
+  floor: z.union([finite.min(0).max(100), z.record(z.string(), finite.min(0).max(100))]).optional(),
 });
 
 /* --------------------------------------------------- profile, budgets, evidence */

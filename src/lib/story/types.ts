@@ -108,6 +108,13 @@ export interface StoryNode {
   source?: string;
 }
 
+/**
+ * How several `then` edges out of ONE non-choice node combine (§5, wave 4 decision 2026-11-02).
+ * `any` (the default — omit the key): the traversal takes ONE of them (a hub: "pick a quest").
+ * `all`: every such edge is a parallel thread that is live at once (a season: "three threads run").
+ */
+export type StoryEdgeMode = 'any' | 'all';
+
 export interface StoryEdge {
   id: string;
   from: string;
@@ -118,6 +125,8 @@ export interface StoryEdge {
   when?: Cond;
   writes?: readonly StoryWrite[];
   chance?: number;
+  /** Omit for `any`. Only meaningful on `then` edges that share a non-choice source. */
+  mode?: StoryEdgeMode;
 }
 
 export interface StoryEnding {
@@ -126,6 +135,11 @@ export interface StoryEnding {
   label?: string;
   when?: Cond;
   witness?: readonly string[];
+  /**
+   * Reach floor in PERCENT of a cohort's walks (state altitude, ENDING_BELOW_FLOOR). A number applies
+   * to every cohort; a record names cohorts (`{ completionist: 5 }`) and a cohort it omits has no floor.
+   */
+  floor?: number | Readonly<Record<string, number>>;
 }
 
 export interface StoryProfileAxis {
@@ -177,7 +191,11 @@ export interface StoryRun {
 
 export interface StoryEvidence {
   runs: readonly StoryRun[];
-  /** nodeId -> cohort -> percent. A node absent here is UNMEASURED, not zero. */
+  /**
+   * nodeId -> cohort -> percent. Two different silences (wave 4, 2026-11-02):
+   * an explicit `0` is a MEASURED zero — the run covered the node and none of its `n` walks reached it;
+   * a node/cohort ABSENT here is UNMEASURED — the run did not cover it (orphan, unwalkable). Never coerce one into the other.
+   */
   reach: Readonly<Record<string, Readonly<Record<string, number>>>>;
   unit?: string;
 }
@@ -228,11 +246,20 @@ export const STORY_FINDING_CODES = [
   'FALSE_CHOICE',
   'TEXT_BUDGET_EXCEEDED',
   'UNTYPED_CONDITION',
+  // Structural codes for the section-5/3/4/6 MUSTs that had none (wave 4, 2026-11-02):
+  'CHOICE_TOO_FEW_OPTIONS',
+  'GATE_WITHOUT_CONDITION',
+  'UNKNOWN_KIND',
+  'PARENT_CONTAINS_MISMATCH',
+  'STRING_VAR_NO_VALUES',
+  'PRECEDENCE_NOT_TOTAL',
   'SOFTLOCK_LEAD',
   'GUARD_UNSATISFIABLE',
   'OPTION_NEVER_OFFERED',
   'NODE_NEVER_REACHED',
   'ENDING_BELOW_FLOOR',
+  /** State altitude: from a reached (node, state) no ending can be reached, yet a way on exists. */
+  'LIVELOCK_LEAD',
 ] as const;
 
 export type StoryFindingCode = (typeof STORY_FINDING_CODES)[number];
