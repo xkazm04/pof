@@ -9,7 +9,7 @@
  *   node games/gtai/spike/spike.mjs preflight [--root R] [--fetch-godot] [--smoke] [--billing api-first|api|subscription]
  *   node games/gtai/spike/spike.mjs run       [--root R] [--until 08:00] [--lanes ue,godot,unity,art]
  *                                             [--model claude-opus-5-5] [--effort high] [--iter-min 100]
- *                                             [--freeze HH:MM] [--report-at HH:MM] [--model-<lane> <id>]
+ *                                             [--freeze HH:MM] [--report-at HH:MM] [--model-<lane> <id>] [--precheck]
  *                                             [--billing api-first (default: .env key until drained, then subscription)]
  *   node games/gtai/spike/spike.mjs status    [--root R]
  *   node games/gtai/spike/spike.mjs report    [--root R]
@@ -469,6 +469,24 @@ function prompt(lane, n, phase, t, capAt) {
   const head = `GTAI engine spike - lane "${lane}", iteration ${n}, phase ${phase}.
 Now ${ts()}. Freeze ${ts(t.freeze)}. Report ${ts(t.report)}. Deadline ${ts(t.until)}. This session is stopped at ${ts(capAt)} at the latest.
 Your brief is CLAUDE.md (loaded) plus MVP.md. Shared material is read-only at ../../shared/ (style/ and assets/; assets/LATEST names the newest pack).`;
+  // --precheck: a short run (about an hour) before the night, to surface blockers early. Same lanes, same repos;
+  // the night continues from where it stops. Its report is PRECHECK.md, not the morning's REPORT.md and scorecard.
+  if (opts.precheck) {
+    const pre = `${head}
+This is a SHORT PRE-CHECK run before the night run. Its purpose is to find blockers early. The night run continues from your JOURNAL.md and git, so nothing you do now is wasted.`;
+    if (phase === 'REPORT') {
+      return `${pre}
+PRE-CHECK REPORT phase: build no new features. Write PRECHECK.md (under 60 lines):
+1. what works now, each item with an evidence path or command;
+2. every BLOCKED or FRICTION item you hit, with the minutes it cost and whether it is solved;
+3. **what the host or owner must fix before the night** (missing tool, licence, permission, asset, unclear brief), or "nothing";
+4. your plan for the night in 5 bullets, and your confidence 1-5 that you will reach a runnable Windows build of the MVP by morning.
+Append a NEXT: entry to JOURNAL.md. Commit. Finish before ${ts(t.until)}.`;
+    }
+    return `${pre}
+Start by reading JOURNAL.md (create it on iteration 1) and \`git log --oneline -30\`. Go straight for the riskiest part of your engine's path: get something on screen, controllable, in the engine you were given, and prove you can build and capture it headlessly.${lane === 'art' ? ' For the art lane: get one rigged robot through the full path (model, a clip, the top-down sprite render, the GLB and FBX export) before polishing.' : ''}
+Log MILESTONE / FRICTION / BLOCKED / LOOP entries as you work. Before you stop, append a NEXT: entry to JOURNAL.md.`;
+  }
   if (phase === 'REPORT') {
     return `${head}
 REPORT phase: build no new features. Read JOURNAL.md, git log and evidence/. If autoplay evidence is missing or stale, run --autoplay once (budget 15 minutes).
@@ -580,7 +598,7 @@ async function runAll() {
   billing.load();
   const cfg = { model: String(opts.model ?? 'claude-opus-5-5'), effort: String(opts.effort ?? 'high'), iterMin: Number(opts['iter-min'] ?? 100) };
   const t = { until, freeze, report };
-  log(`run: billing ${billing.mode}${billing.mode === 'api' ? ' (drain the .env API key first, then the subscription)' : ''} | lanes ${lanes.join(',')} | model ${cfg.model}@${cfg.effort} | freeze ${freeze.toLocaleString()} | report ${report.toLocaleString()} | deadline ${until.toLocaleString()}`);
+  log(`run: billing ${billing.mode}${billing.mode === 'api' ? ' (drain the .env API key first, then the subscription)' : ''} | lanes ${lanes.join(',')} | model ${cfg.model}@${cfg.effort} | freeze ${freeze.toLocaleString()} | report ${report.toLocaleString()} | deadline ${until.toLocaleString()}${opts.precheck ? " | PRE-CHECK" : ""}`);
   const stop = () => { log('interrupted - stopping own child sessions'); for (const c of children) killTree(c); process.exit(130); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);

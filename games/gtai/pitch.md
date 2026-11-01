@@ -150,7 +150,12 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
 - **[proposal] Heat.** GTA 2-style wanted levels, from cops to SWAT to the feds, and at the top **Krump's army** (tanks, helicopters). The top heat level foreshadows the twist: the military shows up for a "robot problem" far too fast.
 - **[proposal] Roll / dodge** is core from minute one. Every engine spike tests it (see `spike/`).
 
-## 8. Look **[owner]** and the next art round **[open]**
+## 8. Look **[owner]** and the next art round **[owner, 2026-11-01]**
+
+- **[owner, 2026-11-01] Locked as "Trivet":**
+  - the look is **V1 DEAD INK**, the two-ink riso print (cream, vermilion, teal for the dead, violet-black ink);
+  - the camera is **straight down at 90 degrees, orthographic**, as in GTA 2.
+  - The target frame and the locks are in `games/gtai/art-direction/trivet/` (`DESIGN.md`, `ref-1-camera-90-TARGET.jpg`). This is what the engine spike builds against.
 
 - **Owner:** *"The Rivet main character and game artstyle did best impression from all."* That is A/2's *risograph noir*: two inks on cream paper, with the dead printed in teal.
 - **Owner's caution:** a past project locked its art style through image recognition, instead of holding it as a high-level idea perfected in its own way. Hold the look as an idea and perfect it in its own way.
@@ -179,8 +184,8 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
 
 | Open item | Resolved by |
 |---|---|
-| Art style (2D / 2.5D direction) | Owner picks from the 9 images in `games/gtai/art-direction/` |
-| **Camera pitch** (near-vertical as in GTA 2, or ~45° isometric as all 9 concept images drew it) | Owner. Near-vertical lets one sprite rotate freely; at ~45° each character needs 8 directional sprite sets, or 3D. The spike brief assumes 60-90° |
+| ~~Art style~~ | **Resolved 2026-11-01 [owner]: V1 DEAD INK, "Trivet"** (`art-direction/trivet/`) |
+| ~~Camera pitch~~ | **Resolved 2026-11-01 [owner]: 90 degrees straight down, orthographic** (GTA 2). One sprite per character rotates freely |
 | Engine | Overnight spike (`games/gtai/spike/`), morning scorecard |
 | Fourth soul | Owner, from §4 |
 | Act antagonist order and allegiance | Owner, then the story-decision-graph mission pass |

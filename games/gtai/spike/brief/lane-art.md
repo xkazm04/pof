@@ -21,7 +21,7 @@ Publish to `../../shared/assets/pack-vN/`, then write `N` to `../../shared/asset
   - Rivet is about 1.9 m tall; the cop-bot about 1.8 m.
   - Also ship `.fbx` copies for UE and Unity.
 - `sprites/<robot>/<clip>/frame_000.png...`: **pre-rendered top-down sprite frames** of every clip.
-  - Render from directly above (or at the style's pitch) with an orthographic camera and a transparent background, at two sizes: 128 px and 256 px.
+  - Render from **directly above (90 degrees, the owner's camera lock)** with an orthographic camera and a transparent background, at two sizes: 128 px and 256 px. The silhouette from above must tell Rivet from the cop-bot (see `../../shared/style/DESIGN.md`).
   - Also ship an atlas, `sprites/<robot>.png`, with `sprites/<robot>.json` (`{frameW, frameH, clips: {name: {start, count, fps, loop}}}`).
   - Top-down sprites rotate freely in engine, so **one facing direction is enough.** Face +X (right) in every frame.
 - `env/`: crate, concrete block, wall segment, forklift (static), floor texture (tileable, 1024 px), all as GLB + FBX, plus top-down sprite renders of each.

@@ -5,7 +5,7 @@ and how it feels to play it, not how much you can add.
 
 ## The scene
 - **Arena:** a factory loading yard about 40 x 25 m (or the tile equivalent). It is bounded by walls and holds 5 to 8 pieces of cover: crates, a parked forklift, a concrete block. A slightly larger yard is fine. It must read as a place, not a test grid.
-- **Camera:** top-down in the GTA 2 lineage, at a 60 to 90 degree pitch, near-orthographic or with a slight perspective on the blocks.
+- **Camera (owner lock, 2026-11-01):** **straight down at 90 degrees, orthographic**, exactly like GTA 2. We see the tops of the robots; a robot is about 1/20 of screen height. The target frame is `../../shared/style/ref-1-camera-90-TARGET.jpg`.
   - It follows the player with a look-ahead of about 25% of the way toward the aim point.
   - It shakes a little on hits and kicks back on each shot.
 - **Two robots:** **Rivet**, the player, and a **cop-bot**, the opponent. Their silhouettes must be clearly different.

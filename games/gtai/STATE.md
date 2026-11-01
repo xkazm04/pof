@@ -6,15 +6,15 @@ Design truth is in `pitch.md`; this file is *where we are*.
 ## Now
 
 - **Phase 1: Look and engine.**
-  - **Exit criterion:** an art direction and a camera pitch chosen, and the engine locked in `src/lib/games/gtai.ts` from the overnight spike's scoreboard plus the owner's play-test.
+  - **Exit criterion:** the engine locked in `src/lib/games/gtai.ts`, based on the overnight spike's scoreboard plus the owner's play-test.
+  - Look and camera are locked: **Trivet** (V1 DEAD INK, 90 degrees overhead), 2026-11-01.
+- **Running now:** a **1-hour spike pre-check**, started at 19:06 and ending at 20:15. It runs 4 lanes (`--precheck`).
+  - Each lane writes `PRECHECK.md`: what works, blockers, and what the host or owner must fix before the night.
 - **Next steps**
-  1. Owner: test the prompts in `art-direction/LEONARDO-PROMPTS.md` in Leonardo, including the 3 camera-90 prompts. Pick a variant and a camera pitch.
-  2. Stage the pick and launch the spike:
-     - `node games/gtai/spike/spike.mjs init --style games/gtai/art-direction/variant-N`
-     - `node games/gtai/spike/spike.mjs preflight --smoke` (must be GO)
-     - `node games/gtai/spike/spike.mjs run --until 08:00`
+  1. After 20:15, read every lane's `PRECHECK.md` and `JOURNAL.md` (`spike.mjs status`). Fix any blocker the host or owner can fix. Adjust the lane briefs if needed (`spike.mjs init`, which re-runs without the style).
+  2. Launch the night, which continues from the pre-check state: `node games/gtai/spike/spike.mjs run --until 08:00` (Unity Hub open).
   3. Morning (`/gta morning`): run the report, review the evidence, have the owner play-test, lock the engine. Then do Phase 2 planning.
-- **Waiting on the owner:** art variant; camera pitch; fourth soul; betrayer; act antagonist order. The last three can wait for Phase 2.
+- **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2.
 
 ## Roadmap (provisional: Phase 2 rewrites it once the engine is known)
 
@@ -34,6 +34,10 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - 2026-11-01. **The engine is not decided by the field's UE-3D consensus.** It goes to an overnight 2D/2.5D spike: UE 5.8 vs Godot 4.7.2 vs Unity 6000.6.4f1, plus a shared Blender art lane.
 - 2026-11-01. **Media policy:** image generation for concept art only. Production assets are Blender + code.
 - 2026-11-01. **Overnight billing:** drain the `.env` Anthropic API key first, then the subscription (`spike.mjs --billing api-first`, the default).
+- 2026-11-01. **Look and camera locked: "Trivet"**, V1 DEAD INK riso seen from 90 degrees straight down, as in GTA 2.
+  - The owner tested the camera-90 prompt in gpt-image-2.5.
+  - The target frame is `art-direction/trivet/ref-1-camera-90-TARGET.jpg`, and it is staged as the spike style.
+- 2026-11-01. **The spike gets a 1-hour pre-check before the night** (owner): find each engine's blockers early, so the night can be aimed better. The night continues from the pre-check's lane state.
 - 2026-11-01. The owner's play feel outranks every spike metric. Proposed weights are in `spike/PLAN.md`.
 
 ## PoF gaps found by the game
@@ -74,3 +78,9 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Unity batchmode needs Unity Hub running: exit 198 without it, 0 with it.
 - Created the `/gta` skill (`.claude/skills/gta/SKILL.md`) and this file.
 - **Open at the end:** the owner's art and camera pick, then the spike launch.
+
+### 2026-11-01: evening. Look locked, pre-check launched
+- The owner picked **Trivet**: V1 DEAD INK at a 90-degree camera. Images are in `art-direction/trivet/`, with the locks in `DESIGN.md`.
+- The camera lock went into the spike briefs (`mvp-duel.md`, `lane-art.md`). `spike.mjs` gained `--precheck` (a short run whose report is `PRECHECK.md`).
+- Preflight was GO on every check. Disk is down to 319 GB free (it was 381 GB earlier today; the space went outside the spike).
+- Launched: `spike.mjs run --precheck --until 20:15 --freeze 19:58 --report-at 19:58`, on Opus 5.5 at high effort, billed to the API key first.
