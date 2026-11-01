@@ -44,6 +44,7 @@ So:
 ## The machine is shared tonight. Hard rules:
 - **Never kill a process by name** (`taskkill /IM`, `Stop-Process -Name`, `pkill`). Another lane runs the same engine executables. Kill only a PID **you** started: record the PID when you start something.
 - Do not change system settings, drivers, the global PATH, or other lanes' folders. Read `../../shared/` only. The art lane alone writes `../../shared/assets/`.
+- **Every file you write goes inside your lane folder**, scratch and debug output included. Use `scratch/` for throwaway output; never write to `C:\out`, `%TEMP%` paths you cannot clean, or a drive root. Pass absolute lane paths to Blender and engine tools, because a relative `//out` or `/out` resolves outside the lane. (Pre-check, 2026-11-01: a Blender render landed in `C:\out\`.)
 - Close the editors and game processes you start when you are done with them. Leave nothing running at the end of an iteration except what you have deliberately backgrounded and logged.
 - Disk: keep your lane under about 40 GB. Delete your own build intermediates if you approach that.
 - Network: allowed for docs, engine packages and downloads you need. Log each download in the JOURNAL.
@@ -66,6 +67,8 @@ So:
                  "round_flow": false, "kill_bark": false, "style_applied": false, "shared_assets_used": false,
                  "autoplay": false, "stress": false, "video": false, "windows_build": false, "melee_stretch": false },
   "evidence": { "<checklist key>": "relative path to the proof" },
+  "stretch": { "readability": null, "car": null, "crowd": null, "soul_swap": null, "gamepad": null },
+  "stretchNote": "per item: an evidence path when done, null when not reached; one line on what was hardest",
   "loopSeconds": [0, 0, 0],
   "buildSeconds": null, "buildSizeMB": null, "coldStartSeconds": null,
   "autoplay": { "avgFps": null, "minFps": null },

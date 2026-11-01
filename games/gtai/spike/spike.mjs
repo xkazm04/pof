@@ -563,6 +563,7 @@ async function laneLoop(lane, t, cfg) {
   let n = state.iterations.length;
   let reported = false;
   let fails = 0;
+  let quick = 0;
   while (Date.now() < t.until.getTime() - 3 * 60_000 && !reported) {
     const now = Date.now();
     const phase = now < t.freeze.getTime() ? 'BUILD' : now < t.report.getTime() ? 'STABILIZE' : 'REPORT';
@@ -582,6 +583,10 @@ async function laneLoop(lane, t, cfg) {
     if (r.limited) { log(`${lane}: usage limit - waiting 15 min`); await sleep(15 * 60_000); continue; }
     fails = r.isError && r.wallS < 120 ? fails + 1 : 0;
     if (fails >= 5) { log(`${lane}: 5 fast failures in a row - cooling down 10 min (read logs/iter-*.err)`); await sleep(10 * 60_000); fails = 0; }
+    // A lane that believes it is finished ends each session in under 3 min; restarting it every 20 s spends money for
+    // nothing (pre-check 2026-11-01: art iterations of 246 s, then 54 s). Back off, longer each time, capped at 30 min.
+    quick = !r.isError && r.wallS < 180 ? quick + 1 : 0;
+    if (quick >= 2) { const m = Math.min(30, 5 * (quick - 1)); log(`${lane}: ${quick} short sessions in a row - waiting ${m} min`); await sleep(Math.min(m * 60_000, t.report.getTime() - Date.now())); continue; }
     await sleep(fails ? 2 * 60_000 : 20_000);
   }
   log(`${lane}: done (${n} iterations)`);
@@ -647,6 +652,8 @@ function report() {
   row('min to first playable', (s) => v(s.score?.minutesToFirstPlayable));
   row('min to MVP complete', (s) => v(s.score?.minutesToMvpComplete));
   row('checklist done', (s) => (s.score ? `${keys.filter((k) => s.score.checklist?.[k]).length}/${keys.length}` : 'no scorecard'));
+  const sk = ['readability', 'car', 'crowd', 'soul_swap', 'gamepad'];
+  row('night stretch done', (s) => (s.score?.stretch ? `${sk.filter((k) => s.score.stretch[k]).length}/${sk.length} (${sk.filter((k) => s.score.stretch[k]).join(', ') || 'none'})` : 'unmeasured'));
   row('edit->see loop (s)', (s) => (s.loops.length ? s.loops.join(', ') : 'unmeasured'));
   row('build s / size MB', (s) => `${v(s.score?.buildSeconds)} / ${v(s.score?.buildSizeMB)}`);
   row('autoplay fps avg/min', (s) => `${v(s.score?.autoplay?.avgFps)} / ${v(s.score?.autoplay?.minFps)}`);

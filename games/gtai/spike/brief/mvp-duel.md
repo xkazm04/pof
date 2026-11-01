@@ -68,3 +68,36 @@ The morning review must be able to verify your build without a human.
   - Then it quits with exit code 0.
 - `--stress`: a bigger yard with **60 robots** fighting in teams for 30 s. It writes `evidence/stress.json` (`{robots, projectilesPeak, avgFps, p1LowFps, resolution}`) and quits.
 - Make a short video, `evidence/duel.mp4`, from the autoplay frames: `ffmpeg -framerate 2 -i ...` or the engine's movie writer.
+
+## Night stretch: after the MVP is evidenced (added after the 1-hour pre-check, 2026-11-01)
+
+The pre-check showed every engine reaching a runnable duel within an hour. The duel alone therefore cannot separate the engines. **Once every MVP checklist item has evidence, work down this list in order.** Each item tests something a 5-hour GTA-like game depends on. Each needs the same kind of evidence as the MVP: frames or a log from a real run. Record each in the scorecard's `stretch` block.
+
+1. **`readability`: match the Trivet target frame** (`../../shared/style/ref-1-camera-90-TARGET.jpg`).
+   - At gameplay zoom, Rivet and the cop-bot read at a glance through the riso pass, at about 1/20 of screen height.
+   - The HUD is the office forms: punch-card CASH, five WANTED stamps, the STATIC form, and an ammo ticket. It prints above the world.
+   - Four teal soul-ghosts trail Rivet. Teal is used for nothing else.
+   - Evidence: a 1280x720 frame next to ref-1, plus one sentence on what still differs.
+2. **`car`: one drivable car, the core GTA verb.**
+   - F enters and exits a parked sedan. Drive it with arcade top-down handling: W/S throttle and brake, A/D steer, a handbrake slide on Space.
+   - The car collides with walls and cover. Running over the cop-bot wrecks it.
+   - The camera pulls back with speed.
+   - Evidence: an `--autodrive` hook that drives a scripted lap, saves frames, and writes `evidence/drive.json` (`{lapS, maxSpeed, collisions, avgFps}`).
+3. **`crowd`: a street beyond the yard.**
+   - Extend the arena with a street and one city block. Add 30 pedestrians that wander and flee from gunfire, and 5 traffic cars that follow the lanes.
+   - Evidence: frames, plus `--stress200`, which writes `evidence/stress200.json` (200 actors: pedestrians, cars and robots), in the same shape as `stress.json`.
+4. **`soul_swap`: the game's unique mechanic.**
+   - Keys 1 to 4 transform Rivet into a soul form: a different model or sprite, a teal flash, and one ability.
+   - Build one ability properly: **Hauler**, a heavy tank form that rams cover and cars aside, moves slower and takes half damage.
+   - The other three forms may be swap-only placeholders.
+   - Evidence: frames of each form, plus a log of a ram.
+5. **`gamepad`: twin-stick play on a gamepad,** if one can be driven by virtual devices. Otherwise write `null` and the reason.
+
+**The art lane's night stretch, in this order:**
+- a sedan and a police cruiser (with sprites, plus GLB/FBX);
+- a human pedestrian with walk and flee clips;
+- the Hauler tank-form robot;
+- the four teal soul-ghost sprites;
+- street, sidewalk and block tiles.
+
+Publish each as a new pack version. The engine lanes greybox these items until the pack has them.
