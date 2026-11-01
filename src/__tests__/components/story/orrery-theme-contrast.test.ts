@@ -9,7 +9,7 @@ import {
 } from '@/lib/contrast';
 
 /**
- * The two Orrery themes, held to WCAG AA and to the 12px legibility floor.
+ * The two Orrery themes, held to WCAG AA and to the owner's 14px legibility floor.
  *
  * `src/lib/contrast.ts` existed in this repo but was imported by tests only — a
  * util that proves nothing about any surface. This file wires it to the surface
@@ -437,42 +437,95 @@ describe('Orrery themes — the house theme does not make contrast worse', () =>
 /* ------------------------------------------------- the owner's 12px floor */
 
 describe('Orrery themes — the type floor the owner asked for', () => {
+  /** The owner's floor, after the +2px round. Raise this and the whole suite follows. */
+  const FLOOR_PX = 14;
   const FILES = { orrery: ORRERY_CSS, blueprint: BLUEPRINT_CSS };
 
-  it.each(Object.entries(FILES))('%s declares nothing below 12px', (_name, file) => {
+  it.each(Object.entries(FILES))('%s declares nothing below the floor', (_name, file) => {
     const css = fs.readFileSync(file, 'utf-8');
     const tooSmall: string[] = [];
     for (const m of css.matchAll(/font-size\s*:\s*([^;]+);/g)) {
       const v = m[1].trim();
       const px = v.match(/^([\d.]+)px$/);
-      if (px && parseFloat(px[1]) < 12) tooSmall.push(v);
+      if (px && parseFloat(px[1]) < FLOOR_PX) tooSmall.push(v);
       const tok = v.match(/^var\(\s*(--or-fs-[\w-]+)\s*\)$/);
       if (tok) {
         const decl = allDeclarations(fs.readFileSync(ORRERY_CSS, 'utf-8')).get(tok[1]);
         const n = decl?.match(/^([\d.]+)px$/);
         if (!n) tooSmall.push(`${tok[1]} (unresolved)`);
-        else if (parseFloat(n[1]) < 12) tooSmall.push(`${tok[1]} = ${decl}`);
+        else if (parseFloat(n[1]) < FLOOR_PX) tooSmall.push(`${tok[1]} = ${decl}`);
       }
     }
     expect(tooSmall).toEqual([]);
   });
 
-  it('every size token in the scale is at or above the 12px floor', () => {
+  it('every size token in the scale is at or above the 14px floor', () => {
     const decls = allDeclarations(fs.readFileSync(ORRERY_CSS, 'utf-8'));
     const sizes = [...decls].filter(([k]) => k.startsWith('--or-fs-'));
     expect(sizes.length).toBeGreaterThan(5);
     for (const [k, v] of sizes) {
       const n = v.match(/^([\d.]+)px$/);
       expect(n, `${k} is not a px literal: ${v}`).toBeTruthy();
-      expect(parseFloat(n![1]), k).toBeGreaterThanOrEqual(12);
+      expect(parseFloat(n![1]), k).toBeGreaterThanOrEqual(FLOOR_PX);
     }
-    expect(decls.get('--or-fs-min')).toBe('12px');
+    expect(decls.get('--or-fs-min')).toBe(`${FLOOR_PX}px`);
   });
 
-  it('keeps the two sizes the owner did not ask to change', () => {
+  /**
+   * The owner's SECOND type instruction supersedes the first.
+   *
+   * Round one lifted an 11/11.5px floor to 12px and left the title and reading prose alone.
+   * The owner then read the ported surface and called it "mostly impossible to read", asking to
+   * "globally increase all fonts and classes +2px". So the rule this suite enforces is no longer
+   * "the floor moved and nothing else did" - it is "every tier sits exactly +2px (or more) above
+   * the contest winner's own size, and the floor is 14px".
+   *
+   * Keeping the winner's baseline in the test is what makes the next adjustment legible: when the
+   * owner points at a tier that is still off, the diff shows what it was and what the winner had.
+   */
+  const WINNER_PX: Record<string, number> = {
+    '--or-fs-title': 19,
+    '--or-fs-read': 15,
+    '--or-fs-tool': 15,
+    '--or-fs-brand': 15,
+    '--or-fs-body': 14,
+    '--or-fs-row': 13.5,
+    '--or-fs-sub': 13,
+    '--or-fs-note': 12.5,
+    '--or-fs-min': 11,
+  };
+
+  it('lifts every tier at least +2px above the contest winner', () => {
     const decls = allDeclarations(fs.readFileSync(ORRERY_CSS, 'utf-8'));
-    expect(decls.get('--or-fs-title')).toBe('19px'); // panel title
-    expect(decls.get('--or-fs-read')).toBe('15px'); // reading prose
+    const short: string[] = [];
+    for (const [token, winner] of Object.entries(WINNER_PX)) {
+      const decl = decls.get(token);
+      const n = decl?.match(/^([\d.]+)px$/);
+      if (!n) {
+        short.push(`${token} missing or not a px literal (${decl})`);
+        continue;
+      }
+      const got = parseFloat(n[1]);
+      if (got < winner + 2) short.push(`${token} = ${got}px, winner ${winner}px, needs >= ${winner + 2}px`);
+    }
+    expect(short).toEqual([]);
+  });
+
+  it('every line-height scales with its size rather than staying pinned to the winner box', () => {
+    // The pin protected the winner's compactness; at +2px it would crowd every row instead.
+    const decls = allDeclarations(fs.readFileSync(ORRERY_CSS, 'utf-8'));
+    const px = (k: string) => parseFloat((decls.get(k) ?? '0').replace('px', ''));
+    const pairs: [string, string][] = [
+      ['--or-lh-body', '--or-fs-body'],
+      ['--or-lh-row', '--or-fs-row'],
+      ['--or-lh-sub', '--or-fs-sub'],
+      ['--or-lh-min', '--or-fs-min'],
+      ['--or-lh-chipw', '--or-fs-min'],
+      ['--or-lh-head', '--or-fs-min'],
+    ];
+    for (const [lh, fsTok] of pairs) {
+      expect(px(lh), `${lh} vs ${fsTok}`).toBeCloseTo(px(fsTok) * 1.45, 2);
+    }
   });
 });
 

@@ -59,27 +59,34 @@
   --or-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --or-mono: ui-monospace, 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace;
 
-  /* The type scale, after the owner's floor lift. `--or-fs-min` IS the floor:
-     nothing in this sheet may be smaller. */
-  --or-fs-title: 19px;   /* panel title        — winner 19,   unchanged      */
-  --or-fs-read: 15px;    /* reading prose      — winner 15,   unchanged      */
-  --or-fs-tool: 15px;    /* stage tool buttons — winner 15,   unchanged      */
-  --or-fs-brand: 15px;   /* brand wordmark     — winner 15,   unchanged      */
-  --or-fs-body: 14px;    /* body / chrome      — winner 14,   unchanged      */
-  --or-fs-row: 14px;     /* relation rows      — winner 13.5, lifted        */
-  --or-fs-sub: 13.5px;   /* kv, crumbs, items  — winner 13,   lifted        */
-  --or-fs-note: 12.5px;  /* notes, tips        — winner 12.5, unchanged      */
-  --or-fs-min: 12px;     /* FLOOR              — winner 11 / 11.5, lifted   */
+  /* The type scale. BASELINE = the contest winner's sizes; every one is now +2px on the
+     owner's instruction ("globally increase all fonts and classes +2px"), after they judged
+     the ported surface "mostly impossible to read". The line-heights below are no longer
+     pinned to the winner's boxes - they scale at x1.45 with the glyph, so rows grow rather
+     than crowd. The winner's own number is in each comment, so the next adjustment is a
+     readable diff. `--or-fs-min` IS the floor: nothing may be smaller.
+  */
+  --or-fs-title: 21px;   /* panel title        — winner 19   + 2 */
+  --or-fs-read: 17px;    /* reading prose      — winner 15   + 2 */
+  --or-fs-tool: 17px;    /* stage tool buttons — winner 15   + 2 */
+  --or-fs-brand: 17px;   /* brand wordmark     — winner 15   + 2 */
+  --or-fs-body: 16px;    /* body / chrome      — winner 14   + 2 */
+  --or-fs-row: 16px;     /* relation rows      — winner 13.5 + 2.5 */
+  --or-fs-sub: 15.5px;   /* kv, crumbs, items  — winner 13   + 2.5 */
+  --or-fs-note: 14.5px;  /* notes, tips        — winner 12.5 + 2 */
+  --or-fs-min: 14px;     /* FLOOR              — winner 11/11.5, now 14 */
 
-  /* Line-heights pinned to the winner's measured pixels for every lifted
-     tier, so the glyph grows and the box does not. */
+  /* Line-heights now DERIVE from the sizes above at x1.45 rather than being pinned to the
+     winner's measured boxes. The pin existed to protect the compactness the owner chose the
+     variant for; at +2px it would have crowded every row instead, so readability wins and the
+     boxes grow with the glyphs. */
   --or-lh: 1.45;
-  --or-lh-body: 20.3px;  /* 14   x 1.45 */
-  --or-lh-row: 19.575px; /* 13.5 x 1.45 — winner's relRow box */
-  --or-lh-sub: 18.85px;  /* 13   x 1.45 — winner's crumb / kv box */
-  --or-lh-min: 17.4px;   /* 12   x 1.45 */
-  --or-lh-chipw: 16.675px; /* 11.5 x 1.45 — winner's chipw box */
-  --or-lh-head: 15.95px; /* 11   x 1.45 — winner's section-head box */
+  --or-lh-body: 23.2px;    /* 16   x 1.45 */
+  --or-lh-row: 23.2px;     /* 16   x 1.45 */
+  --or-lh-sub: 22.475px;   /* 15.5 x 1.45 */
+  --or-lh-min: 20.3px;     /* 14   x 1.45 */
+  --or-lh-chipw: 20.3px;   /* 14   x 1.45 — pairs with --or-fs-min */
+  --or-lh-head: 20.3px;    /* 14   x 1.45 — pairs with --or-fs-min */
 
   /* Geometry. Blueprint may not change any of these. */
   --or-r-sm: 4px;
@@ -277,7 +284,7 @@
   white-space: nowrap;
   min-height: 26px;
   font-size: var(--or-fs-sub);      /* winner 13px — lifted */
-  line-height: var(--or-lh-sub);    /* pinned to the winner's box */
+  line-height: var(--or-lh-sub);    /* scales with the glyph; the pin is released */
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -382,7 +389,7 @@
   grid-column: 1 / -1;
   margin: 5px 0 1px;
   font-size: var(--or-fs-min);      /* winner 11px — lifted to the floor */
-  line-height: var(--or-lh-head);   /* pinned: the glyph grows, the box does not */
+  line-height: var(--or-lh-head);   /* scales with the glyph; the pin is released */
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--or-brass);
@@ -583,7 +590,7 @@
   display: inline-block;
   font-family: var(--or-mono);
   font-size: var(--or-fs-min);      /* winner 11.5px — lifted to the floor */
-  line-height: var(--or-lh-chipw);  /* pinned to the winner's box */
+  line-height: var(--or-lh-chipw);  /* scales with the glyph; the pin is released */
   background: var(--or-chipw-bg);
   border-radius: var(--or-r-sm);
   padding: 0 5px;
@@ -596,7 +603,7 @@
 [data-orrery-theme] [data-role='orrery-kv'] {
   display: grid; grid-template-columns: auto 1fr; gap: 3px 12px;
   font-size: var(--or-fs-sub);      /* winner 13px — lifted */
-  line-height: var(--or-lh-sub);    /* pinned to the winner's box */
+  line-height: var(--or-lh-sub);    /* scales with the glyph; the pin is released */
 }
 [data-orrery-theme] [data-role='orrery-kv'] dt { color: var(--or-dim-text); }
 [data-orrery-theme] [data-role='orrery-kv'] dd { margin: 0; }
@@ -713,7 +720,7 @@
 [data-orrery-theme] [data-role='orrery-wcard-close'] {
   position: absolute; right: 6px; top: 4px;
   background: none; border: 0; color: var(--or-mut);
-  font-size: 19px; line-height: 1; padding: 2px 7px;
+  font-size: 21px; line-height: 1; padding: 2px 7px;
 }
 [data-orrery-theme] [data-role='orrery-wcard-go'] {
   margin-top: 8px;

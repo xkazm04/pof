@@ -9,9 +9,13 @@
  * of geometry lives behind the stage's camera, and every derived fact lives in the model.
  *
  * Ported from the winning prototype of the `storymap` design contest (variant A/3, "Orrery"),
- * chosen by the owner for its compactness and the smoothness of its navigation. Two themes ship:
- * `orrery` is a faithful translation of the winner, `blueprint` re-themes it into PoF's house
- * surface. They differ in hue and surface only — every structural value is shared.
+ * chosen by the owner for its compactness and the smoothness of its navigation.
+ *
+ * **`blueprint` is the product theme.** The owner reviewed both against the real fixtures and kept
+ * the house surface. The `orrery` palette is retained only as the REGRESSION REFERENCE the style
+ * contract measures against (`scripts/orrery-contract.mjs`): it is the one rendering whose computed
+ * styles can still be compared to the contest winner's, which is how we know a later edit has not
+ * quietly undone the design. It is not offered as a product choice.
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -60,7 +64,7 @@ export function OrreryView({
   datasets,
   activeKey,
   onActiveKeyChange,
-  theme = 'orrery',
+  theme = 'blueprint',
   className,
 }: OrreryViewProps) {
   const [ownKey, setOwnKey] = useState(() => datasets[0]?.key ?? '');
