@@ -49,10 +49,12 @@ describe('ruleReach', () => {
     expect([...reach.steps].sort()).toEqual([...prompted].sort());
   });
 
-  it('moving a global law from game to art shrinks its reach from 253 to 77 prompts', () => {
+  it('moving a global law from game to art shrinks its reach from 255 to 78 prompts', () => {
     const genre = shipped('game-genre');
-    expect(ruleReach({ ...genre, category: 'game' }, pipelines).stepCount).toBe(253);
-    expect(ruleReach({ ...genre, category: 'art' }, pipelines).stepCount).toBe(77);
+    expect(ruleReach({ ...genre, category: 'game' }, pipelines).stepCount).toBe(255);
+    expect(ruleReach({ ...genre, category: 'art' }, pipelines).stepCount).toBe(78);
+    // 78 not 77: story-arcs/Story Graph's checkers are content-invariant, and a content-invariant
+    // step is reached by every canon category (canonCategoriesForStep returns undefined), art included.
   });
 
   it('a mistyped scope is unknown, reaches nothing, and the draft validator names it', () => {

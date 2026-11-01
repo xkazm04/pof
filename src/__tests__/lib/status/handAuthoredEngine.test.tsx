@@ -171,7 +171,13 @@ describe('fleet: the trusted `code` class is claimed only by code that computes'
    * than transcribed. That is the whole guard: `Code` must never again be a name a step can
    * pick up credibility from by default.
    */
-  const NON_PACKAGING_COMPUTING_STEPS: { catalogId: string; label: string; why: string }[] = [];
+  const NON_PACKAGING_COMPUTING_STEPS: { catalogId: string; label: string; why: string }[] = [
+    {
+      catalogId: 'story-arcs',
+      label: 'Impact Walk',
+      why: 'produce runs pof-walker@1 and hashes the graph it walked; the verdict compares that hash to the stored Story Graph sibling and, when it differs, walks the current graph itself',
+    },
+  ];
 
   it('every step resolving to the trusted `code` class is a packaging step (or a listed exception)', () => {
     const listed = new Set(NON_PACKAGING_COMPUTING_STEPS.map((s) => `${s.catalogId}/${s.label}`));

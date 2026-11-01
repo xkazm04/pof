@@ -53,14 +53,15 @@ describe('packaging coverage', () => {
     expect(thin).toEqual([]);
   });
 
-  it('the exempt pipelines are exactly the two that end on a gate rather than packaging', () => {
+  it('the exempt pipelines are exactly the three that end on a gate or a data document rather than packaging', () => {
     const exempt = pipelines
       .filter((p) => packagingCoverage(p).kind === 'exempt')
       .map((p) => p.catalogId)
       .sort();
     // A ratchet, not a target: changing this list means a pipeline changed its packaging
     // posture, which is a decision worth reading in a diff.
-    expect(exempt).toEqual(['character-pipeline', 'player-movement']);
+    // story-arcs: a pof.storygraph/1 data document imported into PoF's story store, not a UE package.
+    expect(exempt).toEqual(['character-pipeline', 'player-movement', 'story-arcs']);
   });
 
   it('packagingCoverage prefers a real packaging step over any declaration', () => {

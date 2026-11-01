@@ -3121,6 +3121,36 @@
       "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job."
     },
     {
+      "catalogId": "story-arcs",
+      "step": "Concept Brief",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "minLength(300) counts characters only. The stub body is fixed prose with the entity name and the operator direction appended; the live CLI produce (brief is CLI-eligible) authors it."
+    },
+    {
+      "catalogId": "story-arcs",
+      "step": "Story Graph",
+      "trueEngine": "Claude",
+      "deliverable": "graph-data",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "storyGraphAcceptance (six L0 checkers over validateStoryGraph, storygraph-standard §8): the importer parses the document, then dangling edges, duplicate ids, containment cycles, orphans, unreachable endings, undeclared terminals, the variable contract, false choices and text budgets are graded. Structural only — never a playability or writing-quality claim. The stub writes a deterministic generateStoryGraph starter seeded from the entity id (prose is filler); the live CLI authors the arc. No judge grades the graph."
+    },
+    {
+      "catalogId": "story-arcs",
+      "step": "Impact Walk",
+      "trueEngine": "Code",
+      "deliverable": "graph-data",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": true,
+      "note": "Produce RUNS pof-walker@1 (sampleGraph, 64 walks) and stores {engine, seed, samples, graphHash, gradeable, leadCounts}. Acceptance binds the summary to the CURRENT Story Graph sibling by content hash (a stale walk fails); walker findings are counted as LEADS and never fail the step. Without sibling context (a rollup) only the shape is graded and the detail says freshness was not checked. Known gap: produce cannot read siblings, so it walks the regenerated starter graph — a CLI-authored graph leaves the walk stale."
+    },
+    {
       "catalogId": "tutorial-beats",
       "step": "Concept Brief",
       "trueEngine": "Claude",

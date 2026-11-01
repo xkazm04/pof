@@ -43,6 +43,8 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [{ id: 'codex-sundering', name: 'The Sundering', categoryPath: ['Lore'], tags: ['history'], description: "A foundational lore entry on the world's cataclysm." }] },
   { catalogId: 'factions', label: 'Factions', category: 'Quests & Narrative', description: 'Group affiliations with standings, rewards, and consequences.', module: 'dialogue-quests', tracks: ['logic', 'art-2d', 'audio', 'test'],
     starters: [{ id: 'faction-ashen-order', name: 'The Ashen Order', categoryPath: ['Faction'], tags: [], description: 'A militant order with a reputation ladder.' }] },
+  { catalogId: 'story-arcs', label: 'Story Arcs', category: 'Quests & Narrative', description: 'Branching storylines as pof.storygraph/1 documents: decisions, consequences and the state they gate, proven structurally and sampled by the walker.', module: 'dialogue-quests', tracks: ['logic', 'test'],
+    starters: [{ id: 'arc-ember-pact', name: 'The Ember Pact Arc', categoryPath: ['Main'], tags: ['intro', 'branching'], description: 'The branching storyline behind The Ember Pact quest: its decisions, the trust they build, and the endings that trust gates.' }] },
   // ── Game Assets ──
   { catalogId: 'characters', label: 'Characters', category: 'Game Assets', description: 'Playable or named NPCs with full presentation and behavior.', module: 'arpg-character', tracks: ['logic', 'art-3d', 'animation', 'audio', 'vfx', 'test'],
     starters: [{ id: 'char-captain-vael', name: 'Captain Vael', categoryPath: ['NPC'], tags: ['named'], description: 'A named quest-giver NPC.' }] },
