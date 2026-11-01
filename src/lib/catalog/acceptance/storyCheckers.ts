@@ -5,10 +5,12 @@
  * structural codes — every structural code belongs to exactly one checker:
  *
  *   storyGraphParses        — the document passes the importer (schema + loud variables block)
- *   storyStructurallySound  — DANGLING_EDGE, DUPLICATE_ID, CONTAINMENT_CYCLE, ORPHAN_NODE
- *   storyEndingsAttainable  — ENDING_UNREACHABLE, NO_ENDING_REACHABLE, UNDECLARED_TERMINAL
- *   storyVariablesDeclared  — VAR_* and UNTYPED_CONDITION
- *   storyChoicesReal        — FALSE_CHOICE
+ *   storyStructurallySound  — DANGLING_EDGE, DUPLICATE_ID, CONTAINMENT_CYCLE, ORPHAN_NODE,
+ *                             GATE_WITHOUT_CONDITION, PARENT_CONTAINS_MISMATCH, UNKNOWN_KIND (info)
+ *   storyEndingsAttainable  — ENDING_UNREACHABLE, NO_ENDING_REACHABLE, UNDECLARED_TERMINAL,
+ *                             PRECEDENCE_NOT_TOTAL
+ *   storyVariablesDeclared  — VAR_*, UNTYPED_CONDITION, STRING_VAR_NO_VALUES (info)
+ *   storyChoicesReal        — FALSE_CHOICE, CHOICE_TOO_FEW_OPTIONS
  *   storyBudgetsHeld        — TEXT_BUDGET_EXCEEDED
  *
  * `storyGraphAcceptance` composes all six with `allOf` (first non-pass speaks). A finding of
@@ -79,25 +81,29 @@ function slice(field: string, label: string, codes: readonly StoryFindingCode[],
   }, { field, shape: SHAPE }));
 }
 
+/** Which structural codes each slice owns. Every structural code appears in exactly one row. */
+export const STORY_SLICE_CODES = {
+  structure: ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE', 'GATE_WITHOUT_CONDITION', 'PARENT_CONTAINS_MISMATCH', 'UNKNOWN_KIND'],
+  endings: ['ENDING_UNREACHABLE', 'NO_ENDING_REACHABLE', 'UNDECLARED_TERMINAL', 'PRECEDENCE_NOT_TOTAL'],
+  variables: ['VAR_UNDECLARED', 'VAR_NO_REACHING_WRITE', 'VAR_DOMAIN_VIOLATION', 'VAR_WRITER_NOT_OWNER', 'VAR_SINGLETON', 'UNTYPED_CONDITION', 'STRING_VAR_NO_VALUES'],
+  choices: ['FALSE_CHOICE', 'CHOICE_TOO_FEW_OPTIONS'],
+  budgets: ['TEXT_BUDGET_EXCEEDED'],
+} as const satisfies Record<string, readonly StoryFindingCode[]>;
+
 export const storyStructurallySound = (field = STORY_GRAPH_FIELD, label = 'Story graph structurally sound') =>
-  slice(field, label, ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE'], 'graph integrity and forward reachability');
+  slice(field, label, STORY_SLICE_CODES.structure, 'graph integrity and forward reachability');
 
 export const storyEndingsAttainable = (field = STORY_GRAPH_FIELD, label = 'Story endings attainable') =>
-  slice(field, label, ['ENDING_UNREACHABLE', 'NO_ENDING_REACHABLE', 'UNDECLARED_TERMINAL'], 'endings and co-reachability');
+  slice(field, label, STORY_SLICE_CODES.endings, 'endings and co-reachability');
 
 export const storyVariablesDeclared = (field = STORY_GRAPH_FIELD, label = 'Story variables declared') =>
-  slice(
-    field,
-    label,
-    ['VAR_UNDECLARED', 'VAR_NO_REACHING_WRITE', 'VAR_DOMAIN_VIOLATION', 'VAR_WRITER_NOT_OWNER', 'VAR_SINGLETON', 'UNTYPED_CONDITION'],
-    'the variable contract',
-  );
+  slice(field, label, STORY_SLICE_CODES.variables, 'the variable contract');
 
 export const storyChoicesReal = (field = STORY_GRAPH_FIELD, label = 'Story choices real') =>
-  slice(field, label, ['FALSE_CHOICE'], 'choices');
+  slice(field, label, STORY_SLICE_CODES.choices, 'choices');
 
 export const storyBudgetsHeld = (field = STORY_GRAPH_FIELD, label = 'Story text budgets held') =>
-  slice(field, label, ['TEXT_BUDGET_EXCEEDED'], 'text budgets');
+  slice(field, label, STORY_SLICE_CODES.budgets, 'text budgets');
 
 /** All six, parse first — the step-level verdict a `story-arcs` row will use. */
 export function storyGraphAcceptance(field = STORY_GRAPH_FIELD): Checker {

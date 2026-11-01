@@ -1,6 +1,7 @@
 /**
  * The variable half of the structural pass (§3, §6, §8): `VAR_UNDECLARED`, `VAR_SINGLETON`,
- * `VAR_DOMAIN_VIOLATION`, `VAR_WRITER_NOT_OWNER`, `VAR_NO_REACHING_WRITE`, `UNTYPED_CONDITION`.
+ * `VAR_DOMAIN_VIOLATION`, `VAR_WRITER_NOT_OWNER`, `VAR_NO_REACHING_WRITE`, `UNTYPED_CONDITION`,
+ * `STRING_VAR_NO_VALUES` (§3: a free-form string is reported as `info`, never silently accepted).
  *
  * Occurrences are TEXTUAL: a guard's `ref` is counted where the definition is written, not once per
  * use, so a name used once in a shared definition is still one occurrence. The reaching-write walk
@@ -101,6 +102,12 @@ export function variableFindings(graph: StoryGraph, topo: StoryTopology): StoryF
   const declared = new Map<string, StoryVariable>();
   for (const v of graph.variables) if (!declared.has(v.name)) declared.set(v.name, v);
   const occ = occurrences(graph);
+
+  // STRING_VAR_NO_VALUES — one per declared name (the first declaration; a repeat is DUPLICATE_ID).
+  for (const v of declared.values()) {
+    if (v.type !== 'string' || (v.domain?.values?.length ?? 0) > 0) continue;
+    out.push(structural('STRING_VAR_NO_VALUES', [], `string variable "${v.name}" declares no domain.values: unconstrained free-form state`, { variables: [v.name] }));
+  }
 
   // VAR_UNDECLARED — one finding per name, attached to every node that uses it.
   const undeclared = new Map<string, Set<string>>();

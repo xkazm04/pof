@@ -10,7 +10,11 @@
 import type { StoryFinding, StoryFindingCode, StoryGraph } from '@/lib/story/types';
 import { isCoReached, isReached, type StoryTopology } from '@/lib/story/reachability';
 
-/** One severity per code, so a code never means two things. */
+/**
+ * One severity per code, so a code never means two things — with ONE documented exception:
+ * PRECEDENCE_NOT_TOTAL is `error` for a tie and `warn` for a partial declaration (the standard's
+ * two cases of "not a total order" differ in harm; the entry here is the stronger one).
+ */
 export const STRUCTURAL_SEVERITY: Readonly<Partial<Record<StoryFindingCode, StoryFinding['severity']>>> = {
   DANGLING_EDGE: 'error',
   DUPLICATE_ID: 'error',
@@ -27,6 +31,13 @@ export const STRUCTURAL_SEVERITY: Readonly<Partial<Record<StoryFindingCode, Stor
   FALSE_CHOICE: 'warn',
   TEXT_BUDGET_EXCEEDED: 'warn',
   UNTYPED_CONDITION: 'warn',
+  CHOICE_TOO_FEW_OPTIONS: 'error',
+  GATE_WITHOUT_CONDITION: 'error',
+  UNKNOWN_KIND: 'info',
+  PARENT_CONTAINS_MISMATCH: 'error',
+  STRING_VAR_NO_VALUES: 'info',
+  /** A tie is `error`; a partial declaration (some endings declare it, some do not) is `warn`. */
+  PRECEDENCE_NOT_TOTAL: 'error',
 };
 
 /** Every structural finding is built here: altitude fixed, never a `lead`. */
@@ -34,9 +45,10 @@ export function structural(
   code: StoryFindingCode,
   nodes: readonly string[],
   detail: string,
-  extra: { variables?: readonly string[]; path?: readonly string[] } = {},
+  extra: { variables?: readonly string[]; path?: readonly string[]; severity?: StoryFinding['severity'] } = {},
 ): StoryFinding {
-  const f: StoryFinding = { code, altitude: 'structural', severity: STRUCTURAL_SEVERITY[code] ?? 'warn', nodes, detail };
+  const severity = extra.severity ?? STRUCTURAL_SEVERITY[code] ?? 'warn';
+  const f: StoryFinding = { code, altitude: 'structural', severity, nodes, detail };
   if (extra.variables) f.variables = extra.variables;
   if (extra.path) f.path = extra.path;
   return f;

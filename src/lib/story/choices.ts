@@ -6,6 +6,11 @@
  * An option is identified by its `optionId` (an edge without one stands as its own option); an
  * option wired by several edges is compared as the sorted set of its edges' pairs. Guards are not
  * part of the pair: the standard compares what an option DOES, not when it is offered.
+ *
+ * `CHOICE_TOO_FEW_OPTIONS` (§4, "Needs >=2 options"): a `choice` node whose DISTINCT options —
+ * the `optionId`s of its outgoing `option` edges (an edge without one stands as its own option)
+ * united with the ids of its declared `options` list — number fewer than two. Only `option` edges
+ * count: a `then` or `gate` edge out of a choice is not something the player picks.
  * Pure: no clock, no I/O.
  */
 
@@ -29,6 +34,21 @@ export function optionPair(e: StoryEdge): string {
   return `${writes.join('|')}=>${e.to}`;
 }
 
+function tooFewOptions(graph: StoryGraph, byChoice: ReadonlyMap<string, ReadonlyMap<string, StoryEdge[]>>): StoryFinding[] {
+  const out: StoryFinding[] = [];
+  const seen = new Set<string>();
+  for (const n of graph.nodes) {
+    if (n.kind !== 'choice' || seen.has(n.id)) continue;
+    seen.add(n.id);
+    const ids = new Set<string>(byChoice.get(n.id)?.keys() ?? []);
+    for (const o of n.options ?? []) if (typeof o?.id === 'string') ids.add(o.id);
+    if (ids.size >= 2) continue;
+    const what = ids.size === 0 ? 'no options' : `one option (${[...ids][0]})`;
+    out.push(structural('CHOICE_TOO_FEW_OPTIONS', [n.id], `choice ${n.id} has ${what}: a choice needs at least two`));
+  }
+  return out;
+}
+
 export function choiceFindings(graph: StoryGraph): StoryFinding[] {
   const byChoice = new Map<string, Map<string, StoryEdge[]>>();
   for (const e of graph.edges) {
@@ -39,7 +59,7 @@ export function choiceFindings(graph: StoryGraph): StoryFinding[] {
     byChoice.set(e.from, options);
   }
 
-  const out: StoryFinding[] = [];
+  const out: StoryFinding[] = tooFewOptions(graph, byChoice);
   for (const [choice, options] of byChoice) {
     if (options.size < 2) continue;
     const bySignature = new Map<string, string[]>();

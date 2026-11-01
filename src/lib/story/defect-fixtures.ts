@@ -10,7 +10,7 @@
  * `fixtures.ts` (kept under the file-size rule); that file is unchanged. Pure and deterministic.
  */
 
-import type { StoryEdge, StoryFindingCode, StoryGraph, StoryNode, StoryVariable } from '@/lib/story/types';
+import type { FindingSeverity, StoryEdge, StoryEnding, StoryFindingCode, StoryGraph, StoryNode, StoryVariable } from '@/lib/story/types';
 import { mulberry32 } from '@/lib/story/fixtures';
 
 export interface SeededDefect {
@@ -19,6 +19,8 @@ export interface SeededDefect {
   variables?: string[];
   /** For VAR_NO_REACHING_WRITE: the witness path the finding must report. */
   path?: string[];
+  /** Only where one code carries two severities (PRECEDENCE_NOT_TOTAL). */
+  severity?: FindingSeverity;
 }
 
 export interface SeededGraph {
@@ -29,7 +31,7 @@ export interface SeededGraph {
 const PROSE = ['ash', 'road', 'oath', 'iron', 'water', 'bread', 'stone', 'watch'];
 
 export function seedStructuralDefects(clean: StoryGraph, seed = 1): SeededGraph {
-  const g = structuredClone(clean) as StoryGraph & { nodes: StoryNode[]; edges: StoryEdge[]; variables: StoryVariable[]; endings: { node: string }[] };
+  const g = structuredClone(clean) as StoryGraph & { nodes: StoryNode[]; edges: StoryEdge[]; variables: StoryVariable[]; endings: StoryEnding[] };
   const entry = g.entries[0];
   const sink = g.endings[0]?.node;
   const trust = g.variables.find((v) => v.name === 'trust.0');
@@ -129,6 +131,39 @@ export function seedStructuralDefects(clean: StoryGraph, seed = 1): SeededGraph 
   hang('X.expr', 'gate');
   edge('X.expr', sink, 'gate', { when: { expr: 'the player seems ready' } });
   defects.push({ code: 'UNTYPED_CONDITION', nodes: ['X.expr'] });
+
+  // Wave 4 (§12 amendments): the six MUSTs that had no code. Appended AFTER every earlier defect so
+  // the PRNG draws above — and therefore everything earlier in the manifest — are unchanged.
+  hang('X.lone', 'choice', { options: [{ id: 'only' }] });
+  edge('X.lone', sink, 'option', { optionId: 'only' });
+  defects.push({ code: 'CHOICE_TOO_FEW_OPTIONS', nodes: ['X.lone'] });
+
+  hang('X.bare', 'gate');
+  edge('X.bare', sink, 'gate');
+  defects.push({ code: 'GATE_WITHOUT_CONDITION', nodes: ['X.bare'] });
+
+  // An unknown node kind (walked as ordinary) and an unknown edge kind beside a real edge (not walked).
+  hang('X.odd', 'event', { kind: 'vignette' as StoryNode['kind'] });
+  edge('X.odd', sink);
+  edge('X.odd', sink, 'echoes' as StoryEdge['kind']);
+  defects.push({ code: 'UNKNOWN_KIND', nodes: ['X.odd'] }, { code: 'UNKNOWN_KIND', nodes: ['X.odd', sink] });
+
+  // X.kid says X.box.a; a contains edge says X.box.b. Both boxes continue to the ending.
+  hang('X.box.a', 'container');
+  edge('X.box.a', sink);
+  hang('X.box.b', 'container');
+  edge('X.box.b', sink);
+  node('X.kid', 'event', { parent: 'X.box.a' });
+  edge('X.box.b', 'X.kid', 'contains');
+  defects.push({ code: 'PARENT_CONTAINS_MISMATCH', nodes: ['X.kid', 'X.box.a', 'X.box.b'] });
+
+  g.variables.push({ name: 'x.callsign', type: 'string', domain: {}, initial: '', writers: [], scope: 'playthrough', external: false });
+  defects.push({ code: 'STRING_VAR_NO_VALUES', nodes: [], variables: ['x.callsign'] });
+
+  // The two generated endings tie at precedence 1 (error); X.lost declares none (warn).
+  for (const e of g.endings) if (e.node !== 'X.lost') e.precedence = 1;
+  const tied = g.endings.filter((e) => e.node !== 'X.lost').map((e) => e.node).sort();
+  defects.push({ code: 'PRECEDENCE_NOT_TOTAL', nodes: tied, severity: 'error' }, { code: 'PRECEDENCE_NOT_TOTAL', nodes: ['X.lost'], severity: 'warn' });
 
   // Drop the `text: undefined` keys the helper left, so the document round-trips through JSON.
   for (const n of g.nodes) if (n.text === undefined) delete n.text;

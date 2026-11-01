@@ -12,7 +12,9 @@ import {
   storyGraphParses,
   storyStructurallySound,
   storyVariablesDeclared,
+  STORY_SLICE_CODES,
 } from '@/lib/catalog/acceptance/storyCheckers';
+import { STRUCTURAL_CODES, validateStoryGraph } from '@/lib/story/validate';
 import { allOfMembers } from '@/lib/catalog/acceptance/combinators';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
 
@@ -46,10 +48,11 @@ describe('story checkers', () => {
 
   it('each slice fails on the seeded graph and names its own codes only', () => {
     const own: Record<string, string[]> = {
-      'Story graph structurally sound': ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE'],
-      'Story endings attainable': ['ENDING_UNREACHABLE', 'NO_ENDING_REACHABLE', 'UNDECLARED_TERMINAL'],
+      // Blocking codes only: UNKNOWN_KIND and STRING_VAR_NO_VALUES are `info` and never fail a slice.
+      'Story graph structurally sound': ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE', 'GATE_WITHOUT_CONDITION', 'PARENT_CONTAINS_MISMATCH'],
+      'Story endings attainable': ['ENDING_UNREACHABLE', 'NO_ENDING_REACHABLE', 'UNDECLARED_TERMINAL', 'PRECEDENCE_NOT_TOTAL'],
       'Story variables declared': ['VAR_UNDECLARED', 'VAR_NO_REACHING_WRITE', 'VAR_DOMAIN_VIOLATION', 'VAR_WRITER_NOT_OWNER', 'VAR_SINGLETON', 'UNTYPED_CONDITION'],
-      'Story choices real': ['FALSE_CHOICE'],
+      'Story choices real': ['FALSE_CHOICE', 'CHOICE_TOO_FEW_OPTIONS'],
       'Story text budgets held': ['TEXT_BUDGET_EXCEEDED'],
     };
     for (const s of slices) {
@@ -58,6 +61,24 @@ describe('story checkers', () => {
       const codes = [...r.detail.matchAll(/([A-Z_]{5,}) ×\d+/g)].map((m) => m[1]).sort();
       expect(codes).toEqual([...own[r.label]].sort());
     }
+  });
+
+  it('every structural code is owned by EXACTLY one slice (the six wave-4 codes included)', () => {
+    const owned = Object.values(STORY_SLICE_CODES).flat();
+    expect(new Set(owned).size).toBe(owned.length);
+    expect([...owned].sort()).toEqual([...STRUCTURAL_CODES].sort());
+    for (const c of ['CHOICE_TOO_FEW_OPTIONS', 'GATE_WITHOUT_CONDITION', 'UNKNOWN_KIND', 'PARENT_CONTAINS_MISMATCH', 'STRING_VAR_NO_VALUES', 'PRECEDENCE_NOT_TOTAL']) {
+      expect(owned).toContain(c);
+    }
+  });
+
+  it('info findings pass their slice and are counted in the detail', () => {
+    const g = structuredClone(clean) as typeof clean & { variables: (typeof clean.variables)[number][] };
+    g.variables.push({ name: 'callsign', type: 'string', domain: {}, initial: '', writers: [], scope: 'playthrough', external: false });
+    expect(validateStoryGraph(g).map((f) => f.code)).toEqual(['STRING_VAR_NO_VALUES']);
+    const r = storyVariablesDeclared()({ storyGraph: g });
+    expect(r.status).toBe('pass');
+    expect(r.detail).toContain('(1 info)');
   });
 
   it('the composition is allOf over all six, reports the first non-pass, and is a content invariant', () => {

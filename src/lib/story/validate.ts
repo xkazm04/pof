@@ -9,7 +9,7 @@
  *
  * A structural pass is necessary and never sufficient: zero findings here does not make a graph
  * playable (§8). A node or edge of an unknown kind is walked as a generic node / left out as a
- * non-traversal edge — nothing here throws on one.
+ * non-traversal edge — nothing here throws on one — and reported as UNKNOWN_KIND (`info`, §4).
  */
 
 import type { StoryFinding, StoryFindingCode, StoryGraph } from '@/lib/story/types';
@@ -19,6 +19,7 @@ import { integrityFindings, reachFindings, resolveContainment, STRUCTURAL_SEVERI
 import { variableFindings } from '@/lib/story/variables';
 import { choiceFindings } from '@/lib/story/choices';
 import { budgetFindings } from '@/lib/story/budgets';
+import { containsFindings, gateFindings, precedenceFindings, unknownKindFindings } from '@/lib/story/integrity';
 
 /** The codes this pass can emit, in the standard's order. */
 export const STRUCTURAL_CODES: readonly StoryFindingCode[] = STORY_FINDING_CODES.filter((c) => c in STRUCTURAL_SEVERITY);
@@ -32,6 +33,10 @@ export function validateStoryGraph(graph: StoryGraph): StoryFinding[] {
   const topo = buildStoryTopology(graph, containment.parentOf);
   const findings = [
     ...integrityFindings(graph, ids, containment),
+    ...unknownKindFindings(graph, ids),
+    ...gateFindings(graph, topo.nodeById),
+    ...containsFindings(graph, topo.nodeById),
+    ...precedenceFindings(graph),
     ...reachFindings(graph, topo),
     ...variableFindings(graph, topo),
     ...choiceFindings(graph),

@@ -81,9 +81,21 @@ describe.skipIf(!GRAPH || !ANSWERS)('synthetic-scale: the seeded defects', () =>
     expect(owners).toHaveLength(16);
     for (const name of expected.keys()) expect(graph.variables.find((v) => v.name === name)!.writers).toHaveLength(40);
 
+    // (3) GATE_WITHOUT_CONDITION, one per act (wave 4, §4 "its outgoing edges must carry `when`"):
+    // each ACTn.gate is kind `gate` whose ONLY way on is an unguarded `then` to the next act's hub.
+    // A gate that branches on nothing is mis-kinded (an `event`) or missing its guard; the standard
+    // allows no unguarded fall-through, so this is true per the standard and the producer's defect.
+    const gates = extras.filter((f) => f.code === 'GATE_WITHOUT_CONDITION');
+    expect(gates.map((f) => f.nodes[0])).toEqual(['ACT1.gate', 'ACT2.gate', 'ACT3.gate', 'ACT4.gate', 'ACT5.gate', 'ACT6.gate', 'ACT7.gate']);
+    for (const f of gates) {
+      const out = graph.edges.filter((e) => e.from === f.nodes[0]);
+      expect(out.map((e) => [e.kind, e.when ?? null])).toEqual([['then', null]]);
+      expect(f.severity).toBe('error');
+    }
+
     // Nothing else.
-    expect(extras.filter((f) => f.code !== 'ENDING_UNREACHABLE' && f.code !== 'VAR_WRITER_NOT_OWNER')).toEqual([]);
-    expect(extras).toHaveLength(17);
+    expect(extras.filter((f) => !['ENDING_UNREACHABLE', 'VAR_WRITER_NOT_OWNER', 'GATE_WITHOUT_CONDITION'].includes(f.code))).toEqual([]);
+    expect(extras).toHaveLength(24);
   });
 
   it('runs the full suite in under 250 ms (median of 5 after warm-up)', () => {
@@ -99,5 +111,38 @@ describe.skipIf(!GRAPH || !ANSWERS)('synthetic-scale: the seeded defects', () =>
     const median = [...runs].sort((a, b) => a - b)[2];
     console.error(`[storygraph-validate] synthetic-scale (10,739 nodes) runs ms: ${runs.map((r) => r.toFixed(1)).join(', ')}; median ${median.toFixed(1)}`);
     expect(median).toBeLessThan(250);
+  });
+});
+
+/**
+ * Wave 4: the six new structural codes on the two hand-transcribed staged documents, asserted
+ * exactly. Only the new codes are pinned here (the older codes on these two are the Orrery's).
+ */
+const WAVE4 = new Set(['CHOICE_TOO_FEW_OPTIONS', 'GATE_WITHOUT_CONDITION', 'UNKNOWN_KIND', 'PARENT_CONTAINS_MISMATCH', 'STRING_VAR_NO_VALUES', 'PRECEDENCE_NOT_TOTAL']);
+const MAGE = find('mage-arena-season.json');
+const EXEMPLARS = find('pof-exemplars.json');
+
+describe.skipIf(!MAGE || !EXEMPLARS)('the hand-transcribed staged documents: wave-4 codes', () => {
+  const wave4 = (file: string) => {
+    const r = parseStoryGraph(fs.readFileSync(file, 'utf8'));
+    if (!r.ok) throw new Error(r.error);
+    return { graph: r.data, findings: validateStoryGraph(r.data).filter((f) => WAVE4.has(f.code)) };
+  };
+
+  it('mage-arena-season: nine unguarded `then` edges out of gate nodes G1-G5, all true', () => {
+    const { graph, findings } = wave4(MAGE!);
+    // Each G* is a `gate` that mixes guarded `gate` edges with unguarded `then` edges (G2 has only
+    // unguarded ones). Whether those `then` edges are meant as one-of or as parallel threads, a
+    // gate cannot carry them unguarded: §4 requires every edge out of a gate to carry `when`. True
+    // per the standard; the transcription should guard them or give them a non-gate source (with
+    // `mode: 'all'` if they are parallel).
+    const unguarded = graph.edges.filter((e) => graph.nodes.find((n) => n.id === e.from)?.kind === 'gate' && e.when === undefined);
+    expect(findings.map((f) => f.code)).toEqual(Array(9).fill('GATE_WITHOUT_CONDITION'));
+    expect(findings.map((f) => f.detail.match(/edge (\S+)/)![1]).sort()).toEqual(unguarded.map((e) => e.id).sort());
+    expect(findings.map((f) => f.nodes[0])).toEqual(['G1', 'G1', 'G2', 'G2', 'G2', 'G3', 'G3', 'G4', 'G5']);
+  });
+
+  it('pof-exemplars: none of the six fire', () => {
+    expect(wave4(EXEMPLARS!).findings).toEqual([]);
   });
 });

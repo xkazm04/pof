@@ -176,7 +176,8 @@ describe('robustness and the non-traversal rule', () => {
       [{ id: 'Q', kind: 'mystery' as StoryNode['kind'] }],
       [{ from: 'START', to: 'END', kind: 'then' }, { from: 'START', to: 'Q', kind: 'teleport' as StoryEdge['kind'] }, { from: 'Q', to: 'END', kind: 'then' }],
     );
-    expect(validateStoryGraph(g).map((f) => `${f.code}:${f.nodes.join(',')}`)).toEqual(['ORPHAN_NODE:Q']);
+    // ...and both unknown kinds are REPORTED (§4), as info, the edge one saying it is not walked.
+    expect(validateStoryGraph(g).map((f) => `${f.code}:${f.nodes.join(',')}`)).toEqual(['ORPHAN_NODE:Q', 'UNKNOWN_KIND:Q', 'UNKNOWN_KIND:START,Q']);
   });
 
   it('templates are excluded from forward reachability', () => {
