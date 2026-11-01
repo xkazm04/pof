@@ -26,7 +26,7 @@
  * overlays are mounted in their real parent.
  */
 
-import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { NodeIx, OrreryModel, OrreryNode } from '@/lib/story/orrery';
 
 export interface OrreryChromeProps {
@@ -54,6 +54,8 @@ export interface OrreryChromeProps {
   onFit?: () => void;
   /** `false` when `OrreryStageChrome` is mounted inside the stage instead. */
   overlays?: boolean;
+  /** An extra overlay control (the Walk control), floated top-right over the wheel. */
+  extra?: ReactNode;
 }
 
 /** The lens value that means "show where the cohorts disagree" rather than one cohort. */
@@ -419,6 +421,11 @@ export function OrreryStageChrome(props: OrreryStageChromeProps) {
       <Badges {...props} />
       <Legend {...props} />
       <Tools {...props} />
+      {props.extra ? (
+        <div data-role="orrery-extra" style={{ pointerEvents: 'auto' }}>
+          {props.extra}
+        </div>
+      ) : null}
     </>
   );
   if (mount === 'stage') return inner;

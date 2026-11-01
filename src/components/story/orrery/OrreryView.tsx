@@ -18,7 +18,7 @@
  * quietly undone the design. It is not offered as a product choice.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { OrreryChrome } from './OrreryChrome';
 import { OrreryPanel } from './OrreryPanel';
@@ -26,8 +26,10 @@ import { OrreryStage, type OrreryStageControls } from './OrreryStage';
 import './themes/orrery.css';
 import './themes/blueprint.css';
 
-import { buildOrreryModel, type LineDetail, type NodeIx } from '@/lib/story/orrery';
-import type { StoryGraph } from '@/lib/story/types';
+import { buildOrreryModel, type LineDetail, type NodeIx, type OrreryModel } from '@/lib/story/orrery';
+import { buildMergedModel, withLeads } from '@/lib/story/orrery/walk';
+import type { MergedEvidence } from '@/lib/story/evidence';
+import type { StoryFinding, StoryGraph } from '@/lib/story/types';
 
 export type OrreryTheme = 'orrery' | 'blueprint';
 
@@ -42,6 +44,20 @@ export interface OrreryDataset {
   key: string;
   label: string;
   graph: StoryGraph;
+  /** Where the graph is stored, when it is (`/api/story/graphs`): what the Walk control needs. */
+  project?: string;
+  graphId?: string;
+  /** The stored canonical hash: the `currentHash` merged evidence is read against. */
+  hash?: string;
+}
+
+/** What an `extra` overlay (the Walk control) is told about the surface it floats over. */
+export interface OrreryExtraContext {
+  model: OrreryModel;
+  datasetKey: string;
+  selected: NodeIx;
+  lens: string | null;
+  onLens: (lens: string | null) => void;
 }
 
 export interface OrreryViewProps {
@@ -51,6 +67,15 @@ export interface OrreryViewProps {
   onActiveKeyChange?: (key: string) => void;
   theme?: OrreryTheme;
   className?: string;
+  /**
+   * Evidence override for the ACTIVE dataset: imported + sampled, merged (`mergeEvidence`). When
+   * given, the lens reads it instead of the document's own `evidence`.
+   */
+  evidence?: MergedEvidence | null;
+  /** Walker LEADS for the active dataset: an Audit group of their own, never in the total. */
+  leads?: readonly StoryFinding[] | null;
+  /** An overlay control floated over the wheel (the Walk control). */
+  renderExtra?: (ctx: OrreryExtraContext) => ReactNode;
 }
 
 const DEFAULT_LAYERS: OrreryLayerToggles = {
@@ -66,6 +91,9 @@ export function OrreryView({
   onActiveKeyChange,
   theme = 'blueprint',
   className,
+  evidence,
+  leads,
+  renderExtra,
 }: OrreryViewProps) {
   const [ownKey, setOwnKey] = useState(() => datasets[0]?.key ?? '');
   const key = activeKey ?? ownKey;
@@ -90,10 +118,15 @@ export function OrreryView({
 
   // The model is a pure function of the document, so it is memoised on the document alone. It is
   // the single authority for every derived fact on this surface; nothing below recomputes one.
-  const model = useMemo(
-    () => (dataset ? buildOrreryModel(dataset.graph, dataset.key) : null),
-    [dataset],
-  );
+  // An evidence override (a finished walk) rebuilds it over the merged evidence; leads add one
+  // Audit group of their own.
+  const model = useMemo(() => {
+    if (!dataset) return null;
+    const base = evidence
+      ? buildMergedModel(dataset.graph, dataset.key, evidence)
+      : buildOrreryModel(dataset.graph, dataset.key);
+    return leads ? withLeads(base, leads) : base;
+  }, [dataset, evidence, leads]);
 
   const chooseDataset = useCallback(
     (next: string) => {
@@ -181,6 +214,7 @@ export function OrreryView({
         onHelp={setHelp}
         onZoom={handleZoom}
         onFit={handleFit}
+        extra={renderExtra?.({ model, datasetKey: dataset.key, selected, lens, onLens: setLens })}
       />
       <div data-role="orrery-main">
         <OrreryStage

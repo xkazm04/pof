@@ -93,6 +93,10 @@ export const UI_TIMEOUTS = {
   moduleAggregateTtl: 5000,
   /** Interval the lab runner chip polls the drain lease status (suspend-gated). */
   runnerLeasePoll: 5000,
+  /** Interval the /story Orrery polls a background walker job (`GET /api/story/walk/:jobId`,
+   *  suspend-gated). A 10k-node walk finishes in seconds, so the progress bar needs sub-second
+   *  ticks to read as progress rather than a jump. */
+  storyWalkPoll: 750,
   /** Short settle time for DB writes before UI refresh. */
   dbSettle: 300,
   /** Debounce before persisting an edited ability spec to /api/ability-spec. */

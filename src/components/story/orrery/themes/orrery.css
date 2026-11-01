@@ -346,6 +346,59 @@
 [data-orrery-theme] [data-role='orrery-tool']:hover { border-color: var(--or-line-hot); }
 [data-orrery-theme] [data-role='orrery-tool'] span { font-size: var(--or-fs-min); }
 
+/* ---- the Walk control (WP4 addition, not part of the contest winner) --
+   Floats top-right over the wheel. Tokens only; no new colour, and every text size is at or
+   above --or-fs-min. Status is carried by text + glyph + data-status, never by hue alone. */
+
+[data-orrery-theme] [data-role='orrery-extra'] {
+  position: absolute; right: 12px; top: 44px; z-index: 6;
+  width: min(340px, 45%);
+}
+[data-orrery-theme] [data-role='orrery-walk'] {
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--or-float-bg-solid);
+  border: 1px solid var(--or-line2);
+  border-radius: var(--or-r-panel);
+  padding: 8px 10px;
+  font-size: var(--or-fs-min);
+  line-height: var(--or-lh-min);
+  color: var(--or-mut);
+}
+[data-orrery-theme] [data-role='orrery-walk-head'] { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+[data-orrery-theme] [data-role='orrery-walk-btn'],
+[data-orrery-theme] [data-role='orrery-walk-lens'] {
+  border: 1px solid var(--or-line-hot);
+  border-radius: var(--or-r-ctl);
+  background: var(--or-pressed-bg);
+  color: var(--or-ink-hi);
+  padding: 2px 12px;
+  font-size: var(--or-fs-body);
+}
+[data-orrery-theme] [data-role='orrery-walk-lens'] { font-size: var(--or-fs-min); padding: 0 8px; margin-left: 6px; }
+[data-orrery-theme] [data-role='orrery-walk-btn']:disabled { opacity: 0.55; cursor: progress; }
+[data-orrery-theme] [data-role='orrery-walk-status'] { display: flex; flex-direction: column; gap: 4px; }
+[data-orrery-theme] [data-role='orrery-walk-status'] [data-role='orrery-chip'] { white-space: normal; }
+[data-orrery-theme] [data-role='orrery-walk-progress'] { width: 100%; height: 8px; accent-color: var(--or-amber); }
+[data-orrery-theme] [data-role='orrery-walk-note'] { color: var(--or-chip-warn-ink); font-size: var(--or-fs-min); }
+[data-orrery-theme] [data-role='orrery-walk-cohorts'] { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+[data-orrery-theme] [data-role='orrery-walk-cohorts'] [data-role='orrery-chip'] { white-space: normal; }
+[data-orrery-theme] [data-role='orrery-walk-cells'] {
+  border-top: 1px solid var(--or-line);
+  padding-top: 6px; display: grid; gap: 3px;
+}
+[data-orrery-theme] [data-role='orrery-walk-cell'] {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px;
+  border-left: 3px solid var(--or-chip-ok-line); padding-left: 6px;
+}
+[data-orrery-theme] [data-role='orrery-walk-cell'] > span:last-child { grid-column: 1 / -1; }
+[data-orrery-theme] [data-role='orrery-walk-cell'] b { color: var(--or-ink-hi); }
+/* Not verified: a dashed rule and the warn ink, on top of the glyph and the words. */
+[data-orrery-theme] [data-role='orrery-walk-cell'][data-status='unverified'],
+[data-orrery-theme] [data-role='orrery-walk-cell'][data-status='stale'] {
+  border-left: 3px dashed var(--or-chip-warn-line);
+  color: var(--or-chip-warn-ink);
+}
+
 /* ---- legend ---------------------------------------------------------- */
 
 [data-orrery-theme] [data-role='orrery-legend'] {

@@ -1,12 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GitBranch } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { LoadingRow } from '@/components/ui/LoadingRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
-import { OrreryView, type OrreryDataset } from '@/components/story/orrery/OrreryView';
+import { OrreryView, type OrreryDataset, type OrreryExtraContext } from '@/components/story/orrery/OrreryView';
+import { WalkControl } from '@/components/story/WalkControl';
+import type { WalkResult } from '@/components/story/useStoryWalk';
+import { mergeWalkEvidence } from '@/lib/story/orrery/walk';
 import type { StoredStoryGraph, StoryGraphSummary } from '@/lib/story/story-db-conn';
 
 type LoadState =
@@ -32,6 +35,9 @@ async function fetchStoryDatasets(): Promise<LoadState> {
       key: b.data.id,
       label: `${b.data.name} · ${b.data.nodeCount.toLocaleString()} nodes`,
       graph: b.data.graph,
+      project: b.data.project,
+      graphId: b.data.graphId,
+      hash: b.data.hash,
     });
   }
   return { kind: 'ready', datasets };
@@ -42,7 +48,10 @@ async function fetchStoryDatasets(): Promise<LoadState> {
  * `story_graphs` table (via `/api/story/graphs`) and renders them in the Orrery.
  *
  * PoF is a READER of the standard: graphs arrive through `POST /api/story/graphs`
- * (the importer validates them); this surface never authors or edits one.
+ * (the importer validates them); this surface never authors or edits one. The Walk control runs
+ * the bounded walker over a stored graph (`POST /api/story/walk`, in memory, writes nothing); its
+ * SAMPLED evidence is merged under the document's imported evidence for the lens, and its findings
+ * show as leads.
  */
 export function StoryMap() {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
@@ -79,5 +88,58 @@ export function StoryMap() {
       />
     );
   }
-  return <OrreryView datasets={state.datasets} className="h-full" />;
+  return <StoryOrrery datasets={state.datasets} />;
+}
+
+/** The Orrery plus the per-dataset walk results it reads. */
+function StoryOrrery({ datasets }: { datasets: OrreryDataset[] }) {
+  const [activeKey, setActiveKey] = useState(() => datasets[0].key);
+  const [walks, setWalks] = useState<Record<string, WalkResult>>({});
+  const dataset = datasets.find((d) => d.key === activeKey) ?? datasets[0];
+  const walk = walks[dataset.key] ?? null;
+
+  // Read against the STORED hash: the walker pinned its run to exactly that, so its cells verify.
+  const merged = useMemo(
+    () => (walk ? mergeWalkEvidence(dataset.graph, dataset.hash ?? '', walk.report) : null),
+    [walk, dataset],
+  );
+
+  const target = useMemo(
+    () => (dataset.project && dataset.graphId ? { project: dataset.project, graphId: dataset.graphId } : null),
+    [dataset],
+  );
+
+  const handleDone = useCallback(
+    (key: string) => (result: WalkResult) => setWalks((prev) => ({ ...prev, [key]: result })),
+    [],
+  );
+
+  const renderExtra = useCallback(
+    (ctx: OrreryExtraContext) => (
+      <WalkControl
+        key={ctx.datasetKey}
+        target={target}
+        last={walk}
+        merged={merged}
+        model={ctx.model}
+        selected={ctx.selected}
+        lens={ctx.lens}
+        onLens={ctx.onLens}
+        onDone={handleDone(ctx.datasetKey)}
+      />
+    ),
+    [target, walk, merged, handleDone],
+  );
+
+  return (
+    <OrreryView
+      datasets={datasets}
+      activeKey={dataset.key}
+      onActiveKeyChange={setActiveKey}
+      evidence={merged}
+      leads={walk?.report.findings ?? null}
+      renderExtra={renderExtra}
+      className="h-full"
+    />
+  );
 }
