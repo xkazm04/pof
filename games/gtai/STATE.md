@@ -8,12 +8,10 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - **Phase 1: Look and engine.**
   - **Exit criterion:** the engine locked in `src/lib/games/gtai.ts`, based on the overnight spike's scoreboard plus the owner's play-test.
   - Look and camera are locked: **Trivet** (V1 DEAD INK, 90 degrees overhead), 2026-11-01.
-- **Running now:** a **1-hour spike pre-check**, started at 19:06 and ending at 20:15. It runs 4 lanes (`--precheck`).
-  - Each lane writes `PRECHECK.md`: what works, blockers, and what the host or owner must fix before the night.
+- **Pre-check done** (19:05 to 19:58, $22.06, all billed to the API key). **No blockers on any engine.** Each engine lane rated its confidence of a runnable Windows build by morning at 5/5; one already exists in each. Reports: `C:\Users\kazda\kiro\gtai-spike\lanes\*\PRECHECK.md`.
 - **Next steps**
-  1. After 20:15, read every lane's `PRECHECK.md` and `JOURNAL.md` (`spike.mjs status`). Fix any blocker the host or owner can fix. Adjust the lane briefs if needed (`spike.mjs init`, which re-runs without the style).
-  2. Launch the night, which continues from the pre-check state: `node games/gtai/spike/spike.mjs run --until 08:00` (Unity Hub open).
-  3. Morning (`/gta morning`): run the report, review the evidence, have the owner play-test, lock the engine. Then do Phase 2 planning.
+  1. Launch the night, which continues from the pre-check state and now carries a **night stretch** (readability, car, crowd, soul swap, gamepad): `node games/gtai/spike/spike.mjs run --until 08:00`. Keep Unity Hub open.
+  2. Morning (`/gta morning`): run the report, review the evidence, have the owner play-test, lock the engine. Then do Phase 2 planning.
 - **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2.
 
 ## Roadmap (provisional: Phase 2 rewrites it once the engine is known)
@@ -84,3 +82,23 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - The camera lock went into the spike briefs (`mvp-duel.md`, `lane-art.md`). `spike.mjs` gained `--precheck` (a short run whose report is `PRECHECK.md`).
 - Preflight was GO on every check. Disk is down to 319 GB free (it was 381 GB earlier today; the space went outside the spike).
 - Launched: `spike.mjs run --precheck --until 20:15 --freeze 19:58 --report-at 19:58`, on Opus 5.5 at high effort, billed to the API key first.
+- **Pre-check results** (1 hour, Opus 5.5 at high effort, all billed to the API key):
+
+  | | UE 5.8 | Godot 4.7.2 | Unity 6.6 |
+  |---|---|---|---|
+  | Approach | 3D pack robots, ortho camera, riso post-process material + stencil | Pure 2D: pack sprite atlases, `canvas_item` riso shader | 2.5D: URP ortho camera, pack GLB robots, riso full-screen pass |
+  | Edit-to-visible loop | 48 to 117 s | **2.9 to 10 s** | 32 to 69 s |
+  | Windows build | Shipping 2m10s, 565 MB | export 5 to 10 s, 110 MB | 21 to 82 s, 102 MB |
+  | Cold start | ~9 s | **1 to 1.5 s** | unmeasured |
+  | 60-robot stress, avg / 1% low fps | 412 / 31 (greybox, not skinned) | 127 / 47 headless; 78 / 36 windowed | 159 to 226 / 31 to 55 (skinned) |
+  | Friction | 17 min | 16 min | **2 min** |
+  | Cost | $5.31 | $5.33 | $5.38 |
+
+  - Art lane ($6.04): pack v8, consumed by all three engines.
+  - Open art defects:
+    - Rivet and the cop-bot do not share a rest skeleton, so UE cannot share clips between them.
+    - Rivet reads muddy on cream paper under the riso pass. All three engines flagged this.
+- **Host fixes made during the pre-check:**
+  - A lane wrote outside its folder (`C:\out`). I deleted it and added a brief rule that everything a lane writes stays inside it.
+  - Runner back-off for idle lanes: a lane that believes it is done ended its sessions in 30 s at about $0.15 each.
+  - The night stretch was added to the MVP, the scorecard (`stretch`) and the scoreboard, because the duel alone no longer separates the engines.
