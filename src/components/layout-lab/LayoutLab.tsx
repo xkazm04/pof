@@ -102,14 +102,16 @@ export function LayoutLab() {
       {/* ── Title-block (Blueprint) / glass command bar (Studio) chrome ── */}
       <header
         style={{
-          flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)',
+          flex: '0 0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--lab-s2)',
           padding: 'var(--lab-s2) var(--lab-s4)', background: 'var(--lab-panel)',
           borderBottom: '1px solid var(--lab-line)', boxShadow: 'var(--lab-elev-1)',
           ...(theme.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
         }}
       >
-        {/* Left zone: brand. flex:1 balances the right zone so the center group is truly centered. */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+        {/* Left zone: game selector + brand. flex:1 balances the right zone so the center group is truly
+            centered; the zones never shrink below their content — the header WRAPS to a second row
+            instead of painting one zone under another (the game selector made the left zone collide). */}
+        <div style={{ flex: '1 0 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
           <GameSelector />
           <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             PoF·LAB <span style={{ color: 'var(--lab-ink)' }}>sheet · {detail?.catalog.catalogId ?? '—'}</span>
@@ -136,7 +138,7 @@ export function LayoutLab() {
           <Button onClick={switchToLegacy}>Legacy shell</Button>
         </div>
         {/* Right zone: status + theme toggle in the corner */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--lab-s2)' }}>
+        <div style={{ flex: '1 0 auto', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--lab-s2)' }}>
           {/* ONE affordance for "what is running right now" — the UE drain lease, the
               one-shot orchestrator and the forge's background polls in one vocabulary.
               (Replaces the old RunnerChip + LabJobsChip pair, which shared nothing.) */}
