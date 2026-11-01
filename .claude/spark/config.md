@@ -98,6 +98,10 @@ source of truth.
   red, fix the tree. Stage per file; `git add <file>` can still sweep foreign WIP, so prefer
   authoring new files or `git add -p`.
 - Out-of-scope walls: none beyond CLAUDE.md.
+- **Numbers in a brief are labelled.** A figure copied into a builder brief from an earlier report is written as 
+  `measured <date> at <seed/commit>` or `illustrative`, and re-measured when the brief depends on it (2026-11-02: a brief quoted ashfall's
+  10,232 reach rows; it measures 10,712 at seed 1). Second occurrence after the 2026-11-01 builder-count slip, so it lives here, not in the log.
+
 
 ## Wave defaults
 
