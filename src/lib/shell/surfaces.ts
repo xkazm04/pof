@@ -118,6 +118,19 @@ export const SHELL_SURFACES: readonly ShellSurface[] = [
     },
   },
   {
+    route: '/story',
+    name: 'Story Map',
+    detail: 'imported story graphs - decisions, events and their impact - drawn as an orrery',
+    isLab: false,
+    navigable: true,
+    crash: {
+      headline: 'The story map crashed',
+      body:
+        'Something in the story map threw while rendering - the orrery wheel, the inspector, or the line detail.',
+      stateClaim: 'Nothing was written or deleted: the story map only reads graphs already imported.',
+    },
+  },
+  {
     route: '/harness',
     name: 'Harness',
     detail: 'operator run controls, gate drain, visual gallery and run history',

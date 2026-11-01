@@ -51,6 +51,10 @@ may carry its own keys through for round-tripping.
 `revision` is **ordering**; `contentHash` is **identity**. A stored measurement pinned to a hash
 that no longer matches the current graph is **stale**, and stale never renders as a pass.
 
+**The canonical form is RFC 8785 (JCS):** object keys sorted, no insignificant whitespace, array
+order preserved. `contentHash` is `sha256:` over that form with the `contentHash` key itself
+removed. Reference implementation: `src/lib/story/canonical.ts` (`canonicalize`, `storyContentHash`).
+
 ---
 
 ## 2. `profile` — where project specifics live
@@ -427,3 +431,11 @@ presents a state-altitude finding as proven.
 PoF stores the result in project-scoped `story_*` tables and grades it through the `story-arcs`
 catalog pipeline; the graph's nodes link out to the `quests`, `dialog-trees`, `cutscenes`, `codex`
 and `factions` rows that realise them via `realises`.
+
+**What is live today (2026-11-01).** Import: `POST /api/story/graphs` (zod `storyGraphSchema`,
+operator-guarded; an unreadable `variables` block refuses the whole document; unknown kinds are kept
+and listed in `unknownKinds`; a declared `contentHash` that does not match is refused; `revision` is
+monotonic per `(project, graphId)`). Storage: one `story_graphs` table (`src/lib/story/story-db-conn.ts`),
+the full document as JSON. Read: `GET /api/story/graphs[/:graphId]`, drawn by the Orrery at `/story`.
+Not yet built (the Orrery's display-side audit in `src/lib/story/orrery/audit.ts` is not it): the structural validator suite (§8 structural altitude), the sampler (§8 state
+altitude, §9), the per-node `story_*` tables and the `story-arcs` catalog row.
