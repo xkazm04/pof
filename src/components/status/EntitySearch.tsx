@@ -12,7 +12,7 @@
  * search surfaces cannot drift apart. This file supplies only the entity domain.
  */
 import { useCallback, useMemo } from 'react';
-import { useCatalogStore } from '@/stores/catalogStore';
+import { useStatusEntities } from './statusArtifactSource';
 import { SearchCombobox, type SearchHit } from '@/components/layout-lab/ui/SearchCombobox';
 
 interface Hit {
@@ -23,7 +23,8 @@ interface Hit {
 export function EntitySearch({ onFocus }: { onFocus: (catalogId: string, entityId: string) => void }) {
   // Select the stable store slice, then flatten into a search index in a memo. (Selecting
   // a freshly-built array here would defeat useSyncExternalStore's snapshot caching.)
-  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  // The ACTIVE game's entities only (PoF: the seed map it always indexed).
+  const entitiesByCatalog = useStatusEntities();
   const all = useMemo(() => {
     const out: { hay: string; hit: SearchHit<Hit> }[] = [];
     for (const [catalogId, byId] of Object.entries(entitiesByCatalog)) {

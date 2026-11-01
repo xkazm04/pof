@@ -164,7 +164,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
             style={{ fontSize: 15, padding: '6px 10px', background: t.panel, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, cursor: 'pointer' }}>
             {groups.map((g) => (
               <optgroup key={g.category} label={g.category}>
-                {g.catalogs.map((c) => <option key={c.catalogId} value={c.catalogId}>{c.label} ({c.total})</option>)}
+                {g.catalogs.map((c) => <option key={c.catalogId} value={c.catalogId}>{c.label} ({c.total}){c.notInGame ? ` — not in ${c.notInGame}` : ''}</option>)}
               </optgroup>
             ))}
           </select>

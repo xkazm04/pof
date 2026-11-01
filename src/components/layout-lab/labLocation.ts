@@ -96,3 +96,18 @@ export function adoptPrefs(loc: LabLocation, prefs: LabPrefs): LabLocation {
     && next.stepIdx === loc.stepIdx && next.view === loc.view;
   return same ? loc : next;
 }
+
+/**
+ * The catalog the canvas shows under the ACTIVE game, DERIVED in render like `resolveLocation`
+ * (never written back): a catalog the lab knows (`known`) that the game does not show
+ * (`visible`) resolves to the game's first visible catalog — the way a phantom entity resolves
+ * to the first entity. Entity and step are kept: the next derivation (`resolveLocation`) turns
+ * an entity the catalog does not hold into its first one and clamps the step, and an entity /
+ * step move dispatched while resolved lands on the catalog on screen. An unknown catalog (a
+ * stale pref) and an empty game are left as they are; PoF shows every known catalog, so for
+ * PoF this always returns `loc` itself.
+ */
+export function resolveCatalogForGame(loc: LabLocation, visible: readonly string[], known: readonly string[]): LabLocation {
+  if (visible.length === 0 || visible.includes(loc.catalogId) || !known.includes(loc.catalogId)) return loc;
+  return { ...loc, catalogId: visible[0] };
+}

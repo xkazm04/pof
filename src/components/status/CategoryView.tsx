@@ -16,14 +16,11 @@
  * checker status only.
  */
 import { useMemo, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import '@/lib/catalog/pipelines/registry.generated';
-import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
-import { useCatalogStore } from '@/stores/catalogStore';
 import { buildCategoryNodes } from '@/lib/status/itemFocusModel';
 import { swimlaneCtxFromReads, readNotices } from '@/lib/status/statusReads';
-import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusArtifacts, useStatusCatalogIds, useStatusEntities } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
 import { MiniSwimlane, ReadNotices } from './MiniSwimlane';
 
@@ -36,10 +33,12 @@ function catalogLabel(catalogId: string): string {
 
 /** Picker shown when the Category tab has no catalog selected. */
 function CatalogPicker({ onPick }: { onPick: (catalogId: string) => void }) {
-  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  // The ACTIVE game's pipelines and entities only (PoF: every pipeline, every seed — unchanged).
+  const entitiesByCatalog = useStatusEntities();
+  const gameCatalogIds = useStatusCatalogIds();
   const catalogs = useMemo(
-    () => allCatalogPipelines().map((p) => p.catalogId).sort((a, b) => catalogLabel(a).localeCompare(catalogLabel(b))),
-    [],
+    () => [...gameCatalogIds].sort((a, b) => catalogLabel(a).localeCompare(catalogLabel(b))),
+    [gameCatalogIds],
   );
   return (
     <section aria-labelledby="category-picker-heading">
@@ -108,7 +107,7 @@ export function CategoryView({
   onFocusEntity: (catalogId: string, entityId: string) => void;
   onPickCatalog: (catalogId: string) => void;
 }) {
-  const entitiesByCatalog = useCatalogStore(useShallow((s) => s.entitiesByCatalog));
+  const entitiesByCatalog = useStatusEntities();
   const scope = useMemo(() => (catalogId ? [catalogId] : []), [catalogId]);
   const { catalogs, retryCatalog } = useStatusArtifacts(scope);
   const { verdicts, reload: reloadVerdicts } = useStatusVerdicts();

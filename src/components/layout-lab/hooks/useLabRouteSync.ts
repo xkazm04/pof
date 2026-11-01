@@ -39,14 +39,18 @@ function write(kind: 'push' | 'replace', route: LabRoute): void {
  *   step clamp) and an entity reconcile (the entity changed in the same commit as `universe`,
  *   the entity list it resolves against) REPLACE, so the URL bar is always a link to what is
  *   on screen and only user moves become history.
+ * - A move made in the same commit as a `scope` change (the active GAME switched, and the
+ *   location resolved away from a catalog the new game does not show) REPLACES: a game switch
+ *   is not a history step (`activeGameStore` rewrites `g` in place for the same reason).
  * - popstate applies the entry's location and pushes nothing (Back/Forward never grow history).
  * - The lab's params leave with the lab: when it unmounts (shell switch), they are stripped
  *   from the entry it leaves behind. Deferred a microtask, so a StrictMode (or any immediate)
  *   remount keeps them.
  */
-export function useLabRouteSync(location: LabRoute | null, apply: (route: LabRoute) => void, universe?: unknown): void {
+export function useLabRouteSync(location: LabRoute | null, apply: (route: LabRoute) => void, universe?: unknown, scope?: string): void {
   const prev = useRef<LabRoute | null>(null);
   const prevUniverse = useRef(universe);
+  const prevScope = useRef(scope);
   const latest = useRef<LabRoute | null>(location);
   // The next location change came from the address (arrival / popstate): replace, never push.
   const fromAddress = useRef(false);
@@ -58,6 +62,8 @@ export function useLabRouteSync(location: LabRoute | null, apply: (route: LabRou
     // landing, an entity removed) is the render-time RECONCILE, not a user move.
     const reconciled = universe !== prevUniverse.current;
     prevUniverse.current = universe;
+    const rescoped = scope !== prevScope.current;
+    prevScope.current = scope;
     // `last === location`: a StrictMode effect re-run on the same commit — nothing moved.
     if (!location || prev.current === location) return;
     const last = prev.current;
@@ -79,8 +85,8 @@ export function useLabRouteSync(location: LabRoute | null, apply: (route: LabRou
     if (labRouteKey(last) === labRouteKey(location) && !wasAddress) return;
     const moved = last.catalogId !== location.catalogId || last.view !== location.view;
     const section = moved || (last.entityId !== location.entityId && !reconciled);
-    write(section && !wasAddress ? 'push' : 'replace', location);
-  }, [location, universe]);
+    write(section && !wasAddress && !rescoped ? 'push' : 'replace', location);
+  }, [location, universe, scope]);
 
   useEffect(() => {
     mountedLabs += 1;
@@ -108,7 +114,7 @@ export function useLabRouteSync(location: LabRoute | null, apply: (route: LabRou
  * LayoutLab's binding: derives the on-screen address from the resolved location (step index →
  * the entity's own step LABEL) and applies an address through `nav` — the one navigate door.
  */
-export function useLabAddress(loc: LabLocation, detail: LabDetail | null, nav: LabNav): void {
+export function useLabAddress(loc: LabLocation, detail: LabDetail | null, nav: LabNav, scope?: string): void {
   const { hydrated } = useLabPrefs();
   const route = useMemo<LabRoute | null>(() => {
     if (!hydrated) return null;
@@ -132,5 +138,5 @@ export function useLabAddress(loc: LabLocation, detail: LabDetail | null, nav: L
     if (r.view && r.view !== 'catalogs') nav.view(r.view);
   }, [nav]);
 
-  useLabRouteSync(route, apply, detail?.entities);
+  useLabRouteSync(route, apply, detail?.entities, scope);
 }

@@ -53,6 +53,10 @@ import {
 } from '@/components/layout-lab/labArtifactCache';
 import { summaryToVerdictRow } from '@/components/layout-lab/stepSummary';
 import type { ArtifactVerdictRow } from '@/lib/pipeline-artifacts-db';
+import { useCatalogStore } from '@/stores/catalogStore';
+import { useActiveGame } from '@/stores/activeGameStore';
+import { rowsInGame, scopeCatalogIds, statusEntitiesForGame } from '@/lib/games/scope';
+import type { CatalogEntityBase } from '@/lib/catalog/types';
 
 /** One catalog's outcome. `error` non-null means UNKNOWN — never "nothing produced". */
 export interface CatalogArtifacts {
@@ -104,14 +108,22 @@ function retry(catalogId: string): void {
  */
 export function useStatusArtifacts(scope?: readonly string[]): StatusArtifactSource {
   const version = useArtifactCacheVersion();
+  // ACTIVE game: the unscoped (whole-project) read covers only the game's pipelines, and every
+  // read keeps only rows whose entity belongs to the game (an artifact inherits its entity's
+  // game; an entity the client does not know reads as PoF's, so PoF's rows are today's rows).
+  const { gameId, showAllPipelines } = useActiveGame();
+  const seeds = useCatalogStore((s) => s.entitiesByCatalog);
+  const drafts = useCatalogStore((s) => s.draftEntitiesByCatalog);
   // The registry is populated by the side-effect import above, so the list is stable for the
   // life of the page — memoized so the derivation below can key on the cache version alone.
   // A scope is keyed by its contents, so a caller passing a fresh-but-equal array each render
   // does not re-derive.
   const scopeKey = scope ? scope.join('|') : null;
   const catalogIds = useMemo(
-    () => (scopeKey === null ? allCatalogPipelines().map((p) => p.catalogId) : scopeKey ? scopeKey.split('|') : []),
-    [scopeKey],
+    () => (scopeKey === null
+      ? scopeCatalogIds(gameId, allCatalogPipelines().map((p) => p.catalogId), showAllPipelines).visible
+      : scopeKey ? scopeKey.split('|') : []),
+    [scopeKey, gameId, showAllPipelines],
   );
 
   // `ensureSummary` is a no-op while a key is loading, loaded OR errored, so re-running
@@ -126,15 +138,19 @@ export function useStatusArtifacts(scope?: readonly string[]): StatusArtifactSou
     void version;
     const entries = catalogIds.map((catalogId) => ({ catalogId, entry: getCachedSummary(catalogId) }));
     if (entries.some(({ entry }) => !entry.loaded && !entry.error)) return null; // still settling
+    const lookupIn = (catalogId: string) => (entityId: string) =>
+      drafts[catalogId]?.[entityId] ?? seeds[catalogId]?.[entityId];
     return entries.map(({ catalogId, entry }) => ({
       catalogId,
       // An errored entry's `rows` is `[]` meaning UNKNOWN — never handed on as data.
       // `catalogId` is re-attached here because the wire shape omits it (see summaryToVerdictRow).
-      rows: entry.loaded ? entry.rows.map((r) => summaryToVerdictRow(catalogId, r)) : NO_ROWS,
+      rows: entry.loaded
+        ? rowsInGame(entry.rows.map((r) => summaryToVerdictRow(catalogId, r)), gameId, lookupIn(catalogId))
+        : NO_ROWS,
       loaded: entry.loaded,
       error: entry.error,
     }));
-  }, [catalogIds, version]);
+  }, [catalogIds, version, gameId, seeds, drafts]);
 
   return useMemo(
     () => ({
@@ -146,4 +162,24 @@ export function useStatusArtifacts(scope?: readonly string[]): StatusArtifactSou
     }),
     [catalogs, catalogIds],
   );
+}
+
+/** Every registered pipeline the ACTIVE game shows on /status (in-manifest, plus off-manifest under showAll). */
+export function useStatusCatalogIds(): string[] {
+  const { gameId, showAllPipelines } = useActiveGame();
+  return useMemo(
+    () => scopeCatalogIds(gameId, allCatalogPipelines().map((p) => p.catalogId), showAllPipelines).visible,
+    [gameId, showAllPipelines],
+  );
+}
+
+/**
+ * The entity set /status grades for the ACTIVE game (`statusEntitiesForGame`): for PoF exactly
+ * the code-seed map it always read; for another game that game's seeds + persisted rows.
+ */
+export function useStatusEntities(): Readonly<Record<string, Readonly<Record<string, CatalogEntityBase>>>> {
+  const { gameId } = useActiveGame();
+  const seeds = useCatalogStore((s) => s.entitiesByCatalog);
+  const drafts = useCatalogStore((s) => s.draftEntitiesByCatalog);
+  return useMemo(() => statusEntitiesForGame<CatalogEntityBase>(gameId, seeds, drafts), [gameId, seeds, drafts]);
 }

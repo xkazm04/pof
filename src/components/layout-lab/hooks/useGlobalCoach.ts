@@ -20,6 +20,8 @@ import {
   type CoachCandidate,
 } from '../globalCoachModel';
 import { useLabPipelineStore } from '../labPipelineStore';
+import { useGameCatalogScope } from '../useLabCatalogData';
+import { entitiesInGame } from '@/lib/games/scope';
 import { useAllJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
@@ -99,7 +101,14 @@ function sameDeps(a: unknown[] | undefined, b: unknown[]): boolean {
 }
 
 export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResult {
-  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  const allEntitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  // The ACTIVE game only: its catalogs and its entities (PoF: every catalog, every seed — unchanged).
+  const { gameId, scope } = useGameCatalogScope();
+  const entitiesByCatalog = useMemo(() => {
+    const visible = new Set(scope.visible);
+    const inGame = entitiesInGame(allEntitiesByCatalog, gameId);
+    return Object.fromEntries(Object.entries(inGame).filter(([c]) => visible.has(c)));
+  }, [allEntitiesByCatalog, gameId, scope]);
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
   const version = useArtifactCacheVersion();
   // Cross-catalog judge verdicts (ONE unscoped cached read) so a coach candidate speaks the

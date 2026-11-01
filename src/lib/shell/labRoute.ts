@@ -30,7 +30,7 @@ export interface LabRoute {
 }
 
 const CATALOG_IDS: ReadonlySet<string> = new Set(CATALOG_SECTIONS.map((s) => s.catalogId));
-const VIEWS: ReadonlySet<string> = new Set<LabView>(['catalogs', 'canon', 'matrix']);
+const VIEWS: ReadonlySet<string> = new Set<LabView>(['catalogs', 'canon', 'matrix', 'game']);
 /** The params a lab address owns (everything else on the URL is left alone). */
 const LAB_PARAMS = ['c', 'e', 's', 'v'] as const;
 

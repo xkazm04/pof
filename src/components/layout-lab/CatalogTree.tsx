@@ -160,11 +160,20 @@ function CatalogRow({
           color: isSelected ? t.inkDeep : t.text,
           fontWeight: isSelected ? 600 : 400,
           fontSize: 14,
+          // An off-manifest catalog shown under "show all pipelines" is greyed and says so in words.
+          ...(catalog.notInGame ? { opacity: 0.6 } : {}),
           transition: 'background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out',
         }}
+        {...(catalog.notInGame ? { 'data-not-in-game': '' } : {})}
       >
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {catalog.label}
+          {catalog.notInGame && (
+            <span data-testid={`catalog-not-in-game-${catalog.catalogId}`} className={t.fontMono}
+              style={{ marginLeft: 8, fontSize: 12, color: t.muted, fontStyle: 'italic' }}>
+              not in {catalog.notInGame}
+            </span>
+          )}
         </span>
         <span
           className={t.fontMono}

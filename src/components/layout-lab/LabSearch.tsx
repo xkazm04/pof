@@ -35,6 +35,8 @@ import { MODULE_DESTINATIONS } from '@/lib/shell/shellRoute';
 import { resolveCatalogSteps } from './catalogManifest';
 import { resolveStepJump, toLabEntity } from './entityPipeline';
 import { SearchCombobox, type SearchHit } from './ui/SearchCombobox';
+import { useGameCatalogScope } from './useLabCatalogData';
+import { entityInGame } from '@/lib/games/scope';
 
 /** What selecting a hit does. */
 export type LabSearchTarget =
@@ -65,6 +67,8 @@ const NO_ROWS: IndexRow[] = [];
 
 export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onNavigate }: LabSearchProps) {
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  // Only the ACTIVE game's catalogs (off-manifest ones too under "show all pipelines") and entities.
+  const { gameId, scope } = useGameCatalogScope();
 
   // The search UI is mounted for the whole session but open for seconds of it, and its index
   // spans every catalog, every seeded entity and every step of every registered pipeline —
@@ -91,13 +95,16 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
         },
       });
     }
+    const visible = new Set(scope.visible);
     for (const section of CATALOG_SECTIONS) {
+      if (!visible.has(section.catalogId)) continue;
       const { catalogId, label } = section;
       rows.push({
         hay: `${label} ${catalogId}`.toLowerCase(),
         hit: { key: `c:${catalogId}`, label, detail: catalogId, badge: 'catalog', payload: { kind: 'catalog', catalogId } },
       });
       for (const e of Object.values(entitiesByCatalog[catalogId] ?? {})) {
+        if (!entityInGame(e, gameId)) continue;
         rows.push({
           hay: `${e.name} ${e.id}`.toLowerCase(),
           hit: {
@@ -123,7 +130,7 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
       });
     }
     return rows;
-  }, [entitiesByCatalog, everOpened]);
+  }, [entitiesByCatalog, everOpened, gameId, scope]);
 
   const search = useCallback(
     (needle: string) => index.filter((r) => r.hay.includes(needle)).map((r) => r.hit),
@@ -146,14 +153,14 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
     } else if (t.kind === 'entity') {
       onNavigate(t.catalogId, t.entityId, 0);
     } else {
-      const entities = Object.values(entitiesByCatalog[t.catalogId] ?? {}).map(toLabEntity);
+      const entities = Object.values(entitiesByCatalog[t.catalogId] ?? {}).filter((e) => entityInGame(e, gameId)).map(toLabEntity);
       const jump = resolveStepJump(t.catalogId, t.step, entities, currentEntityId);
       // No entity whose own pipeline has the step → nothing to open it ON; land on the catalog.
       if (jump) onNavigate(t.catalogId, jump.entityId, jump.stepIndex);
       else onSelectCatalog(t.catalogId);
     }
     onClose();
-  }, [entitiesByCatalog, currentEntityId, onSelectCatalog, onNavigate, onClose]);
+  }, [entitiesByCatalog, currentEntityId, onSelectCatalog, onNavigate, onClose, gameId]);
 
   return (
     <Modal open={open} onClose={onClose} title="Search the lab" className="max-w-xl" initialFocusRef={inputRef}>

@@ -26,6 +26,9 @@ import { useLabLocation } from './hooks/useLabLocation';
 import { useLabAddress } from './hooks/useLabRouteSync';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
+import { GameSelector } from './GameSelector';
+import { GameHome } from './game/gameHome';
+import { useActiveGame, useActiveGameUrlSync } from '@/stores/activeGameStore';
 
 /**
  * UI identity lab (/layout). Consolidated to a single Blueprint baseline with a
@@ -36,6 +39,9 @@ import { IconButton } from './ui/IconButton';
 export function LayoutLab() {
   const reduce = useReducedMotion();
   const groups = useLabCatalogData();
+  // The ACTIVE game (URL `g` wins on arrival, the store remembers): every view below shows only it.
+  useActiveGameUrlSync();
+  const { gameId, game } = useActiveGame();
   // Persisted entities (other sessions' one-shots, /diablo ingests) join the tree.
   usePersistedEntityHydration();
   const { prefs, setPrefs } = useLabPrefs();
@@ -51,7 +57,7 @@ export function LayoutLab() {
   const { catalogId, entityId, stepIdx, view } = loc;
   // The location's ADDRESS (`/?legacy=0&c=&e=&s=<step label>&v=`): arrival opens it, section moves push,
   // step moves replace, Back/Forward re-apply through the same `nav` door (useLabRouteSync).
-  useLabAddress(loc, detail, nav);
+  useLabAddress(loc, detail, nav, gameId);
   // Lab-wide search (⌘/Ctrl+K or "/"), driving the SAME navigate door (`nav`).
   const [searchOpen, setSearchOpen] = useLabSearchShortcut();
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
@@ -104,6 +110,7 @@ export function LayoutLab() {
       >
         {/* Left zone: brand. flex:1 balances the right zone so the center group is truly centered. */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+          <GameSelector />
           <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             PoF·LAB <span style={{ color: 'var(--lab-ink)' }}>sheet · {detail?.catalog.catalogId ?? '—'}</span>
           </span>
@@ -121,6 +128,7 @@ export function LayoutLab() {
           <Button active={view === 'catalogs'} onClick={() => nav.view('catalogs')}>Catalogs</Button>
           <Button active={view === 'matrix'} onClick={() => nav.view('matrix')}>Matrix</Button>
           <Button active={view === 'canon'} onClick={() => nav.view('canon')}>Canon</Button>
+          <Button active={view === 'game'} onClick={() => nav.view('game')} data-testid="lab-view-game">Game</Button>
           <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
           {/* Full-page jumps to the app's other surfaces — derived from NAVIGABLE_SURFACES
               and drawn distinctly from the in-place view toggles above. */}
@@ -140,7 +148,7 @@ export function LayoutLab() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Lab-level cross-catalog coach — only over the composition (Baseline) view;
             the Matrix and Canon carry their own catalog-wide summaries. */}
-        {view === 'catalogs' && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
+        {view === 'catalogs' && groups.length > 0 && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={view}
             initial={reduce ? false : { opacity: 0, y: 6 }}
@@ -149,6 +157,10 @@ export function LayoutLab() {
             transition={{ duration: reduce ? 0 : 0.18, ease: 'easeOut' }}
             style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {view === 'canon' ? <CanonView t={theme} />
+              : view === 'game' ? <GameHome t={theme} />
+              // A game whose manifest names no registered pipeline yet: an honest, named empty
+              // board — never a blank panel and never PoF's catalogs.
+              : groups.length === 0 ? <EmptyGameBoard title={game.title} onOpenGame={() => nav.view('game')} />
               : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onSelectCatalog={nav.catalog} onOpenStep={nav.open} onOpenQueue={workQueue.open} />
               : <Baseline theme={theme} groups={groups} detail={detail}
                   onSelectCatalog={nav.catalog}
@@ -168,6 +180,20 @@ export function LayoutLab() {
         onNavigate={nav.open}
       />
       <OneShotPanel t={theme} />
+    </div>
+  );
+}
+
+/** The Catalogs/Matrix surface for a game with no pipelines in its manifest yet. */
+function EmptyGameBoard({ title, onOpenGame }: { title: string; onOpenGame: () => void }) {
+  return (
+    <div data-testid="game-empty-board" role="status"
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s3)', padding: 'var(--lab-s6)', color: 'var(--lab-muted)' }}>
+      <p style={{ fontSize: 'var(--lab-fs-md)', color: 'var(--lab-ink-deep)' }}>No pipelines in {title}&apos;s manifest yet</p>
+      <p style={{ fontSize: 'var(--lab-fs-xs)', maxWidth: 520, textAlign: 'center' }}>
+        Its planned pipelines and engine binding are on the Game view. &ldquo;All pipelines&rdquo; in the header reveals the registered ones it does not use.
+      </p>
+      <Button onClick={onOpenGame}>Open the Game view</Button>
     </div>
   );
 }

@@ -14,16 +14,14 @@
  * read renders its nodes UNKNOWN (never R0 / 0%), and failed verdicts say PARTIAL.
  */
 import { useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import '@/lib/catalog/pipelines/registry.generated';
-import { useCatalogStore } from '@/stores/catalogStore';
 import {
   buildDependencyIndex,
   resolveItemFocus,
   entityKey,
   type ItemFocusCtx,
 } from '@/lib/status/itemFocusModel';
-import { useStatusArtifacts } from './statusArtifactSource';
+import { useStatusArtifacts, useStatusEntities } from './statusArtifactSource';
 import { useStatusVerdicts } from './statusVerdictSource';
 import { swimlaneCtxFromReads, readNotices } from '@/lib/status/statusReads';
 import { MiniSwimlane, ReadNotices } from './MiniSwimlane';
@@ -57,7 +55,8 @@ export function ItemFocusView({
   focus: { catalogId: string; entityId: string } | null;
   onFocus: (catalogId: string, entityId: string) => void;
 }) {
-  const entitiesByCatalog = useCatalogStore(useShallow((s) => s.entitiesByCatalog));
+  // The ACTIVE game's entities only (PoF: the seed map it always read).
+  const entitiesByCatalog = useStatusEntities();
   const index = useMemo(() => buildDependencyIndex(entitiesByCatalog), [entitiesByCatalog]);
 
   // The catalogs whose artifacts we must load: the focus catalog + every catalog a

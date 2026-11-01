@@ -1,11 +1,11 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLabDetail } from '@/components/layout-lab/useLabCatalogData';
+import { LAB_CATALOG_IDS, useGameCatalogScope, useLabDetail } from '@/components/layout-lab/useLabCatalogData';
 import { entityStepList } from '@/components/layout-lab/entityPipeline';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { setLabPrefs, useLabPrefs, type LabView } from '@/components/layout-lab/hooks/useLabPrefs';
 import {
-  DEFAULT_LOCATION, adoptPrefs, locationPatch, reduceLocation, resolveLocation,
+  DEFAULT_LOCATION, adoptPrefs, locationPatch, reduceLocation, resolveCatalogForGame, resolveLocation,
   type LabLocation, type LabNavAction,
 } from '@/components/layout-lab/labLocation';
 
@@ -30,7 +30,10 @@ export function useLabLocation() {
   // bail-out; StrictMode-safe, no ref mutation). The only render-phase write left in the shell.
   if (hydrated && !state.adopted) setState({ adopted: true, loc: adoptPrefs(state.loc, prefs) });
 
-  const raw = state.loc;
+  // A catalog the ACTIVE game does not show resolves away to the game's first one (derived,
+  // like the phantom entity below — never written back, so switching back restores it).
+  const { gameId, scope } = useGameCatalogScope();
+  const raw = useMemo(() => resolveCatalogForGame(state.loc, scope.visible, LAB_CATALOG_IDS), [state.loc, scope.visible]);
   const detail = useLabDetail(raw.catalogId);
   const loc = useMemo(
     () => resolveLocation(raw, detail?.entities, (e) => (detail ? entityStepList(raw.catalogId, e, detail.steps).length : 0)),
@@ -60,5 +63,5 @@ export function useLabLocation() {
     useOneShotLabStore.getState().setPendingNavigation(null);
   }), [nav]);
 
-  return { loc, detail, dispatch, nav };
+  return { loc, detail, dispatch, nav, gameId };
 }
