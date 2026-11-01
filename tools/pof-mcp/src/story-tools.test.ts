@@ -273,13 +273,20 @@ test('pof_story_walk labels every finding a LEAD and never calls it a defect', a
   assert.deepEqual(out.leadCounts.byCode, { SOFTLOCK_LEAD: 1, NODE_NEVER_REACHED: 1 });
 });
 
-test('pof_story_walk omits unmeasured nodes rather than printing 0', async () => {
+test('pof_story_walk omits uncovered nodes rather than printing 0, and passes an explicit measured 0 through untouched', async () => {
   const { pof } = mock({ 'POST /api/story/walk': { jobId: 'w1' }, 'GET /api/story/walk/': doneJob() });
   const out = await tool('pof_story_walk').handler({ graphId: 'arc', waitSeconds: 1 }, pof) as any;
   assert.deepEqual(Object.keys(out.evidence.reach).sort(), ['A', 'D']);
-  assert.equal('B' in out.evidence.reach, false, 'B was reached by no walk: it is UNMEASURED and absent, never 0');
+  assert.equal('B' in out.evidence.reach, false, 'B was not covered by the run: it is UNMEASURED and absent, never filled with 0');
   assert.equal(out.evidence.measuredNodes, 2);
-  assert.match(out.evidence.unmeasuredNote, /UNMEASURED, never 0/);
+  assert.match(out.evidence.unmeasuredNote, /UNMEASURED/);
+  assert.match(out.evidence.unmeasuredNote, /explicit 0 means covered and measured/);
+
+  // A walker run now emits an explicit 0 for a covered node no walk reached: it must survive the projection.
+  const withZero = doneJob({ evidence: { runs: [], reach: { A: { all: 40 }, Z: { all: 0 } }, unit: 'u' } });
+  const m2 = mock({ 'POST /api/story/walk': { jobId: 'w2' }, 'GET /api/story/walk/': withZero });
+  const out2 = await tool('pof_story_walk').handler({ graphId: 'arc', waitSeconds: 1 }, m2.pof) as any;
+  assert.deepEqual(out2.evidence.reach.Z, { all: 0 }, 'a measured zero is a claim and is passed through, not dropped');
 });
 
 test('pof_story_walk surfaces gradeable:false with the reason', async () => {

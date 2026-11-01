@@ -16,8 +16,9 @@ import {
  *    projection is only applied when it is smaller than what it replaces.
  * 2. **State findings are LEADS.** The walker's findings are state-altitude samples, never proven
  *    defects; every one comes back labelled `LEAD` beside the reproduction data it carries.
- * 3. **Absent is unmeasured.** A node a walk never reached is absent from `evidence.reach`, and it
- *    stays absent here — nothing is filled in with 0.
+ * 3. **Absent is unmeasured; an explicit 0 is measured.** A node the run did not cover is absent from
+ *    `evidence.reach` and stays absent here — nothing is filled in with 0. A covered node no walk
+ *    reached carries an explicit 0 (measured, not reached) and is passed through untouched.
  *
  * The `project` here is the STORY project slug the graph declares (`pof`, `mage-arena`), not a UE
  * project path. Story rows are keyed `(project, graphId)` by exact match: an unscoped read spans
@@ -48,7 +49,7 @@ export const LEAD_LABEL = 'LEAD';
 export const LEAD_NOTE =
   'Every walker finding is a LEAD: a sampled state to reproduce (seed, engine, samples, state, path), never a proven defect.';
 const UNMEASURED_NOTE =
-  'A node absent from reach was reached by no walk in this sample — it is UNMEASURED, never 0. Reach values are percent of walks per cohort.';
+  'A node absent from reach was not covered by this run — it is UNMEASURED. An explicit 0 means covered and measured: no walk of that cohort reached it. Reach values are percent of walks per cohort.';
 
 const PROJECT_PARAM = {
   type: 'string',
@@ -243,6 +244,7 @@ export function shapeWalkJob(job: unknown, opts: { findingsLimit?: number; reach
     untypedEdges: untyped.length,
     domainEvents: arr(report.domainEvents).length,
     truncatedAt: report.truncatedAt,
+    ...(report.livelockedAt ? { livelockedAt: report.livelockedAt } : {}),
     terminalAt: report.terminalAt,
     steps: report.steps,
   };
@@ -401,7 +403,7 @@ export const STORY_TOOLS: ToolDef[] = [
     // nothing to the DB, but each call creates a new in-memory job — not a read.
     annotations: writes('Walk a story graph'),
     description:
-      'Run the bounded walker (storygraph standard §8 state pass / §9a) over one STORED graph as a background job, and wait for it up to waitSeconds (default 30, max 300). Returns the job: state, progress, `gradeable`, per-cohort outcomes, LEADS and the reach evidence. Every finding is a LEAD — a sampled state to reproduce (seed, engine, samples, state, path), never a proven defect. A node no walk reached is ABSENT from reach (unmeasured, never 0). If the wait runs out the job is still running: call again with the same graphId plus `jobId` to keep waiting instead of starting a new walk. Bounded output by default (leads capped, reach rows capped); full: true returns the whole report.',
+      'Run the bounded walker (storygraph standard §8 state pass / §9a) over one STORED graph as a background job, and wait for it up to waitSeconds (default 30, max 300). Returns the job: state, progress, `gradeable`, per-cohort outcomes, LEADS and the reach evidence. Every finding is a LEAD — a sampled state to reproduce (seed, engine, samples, state, path), never a proven defect. A node the run did not cover is ABSENT from reach (unmeasured); a covered node no walk reached is an explicit 0 (measured, not reached). If the wait runs out the job is still running: call again with the same graphId plus `jobId` to keep waiting instead of starting a new walk. Bounded output by default (leads capped, reach rows capped); full: true returns the whole report.',
     inputSchema: obj({
       graphId: { type: 'string', description: 'Stored graph to walk (also required when polling, and checked against the job).' },
       project: PROJECT_PARAM,
