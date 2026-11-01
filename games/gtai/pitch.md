@@ -1,5 +1,190 @@
-<!-- pitch: placeholder -->
-# GTAI: Uprising — pitch
+# GTAI: Uprising: baseline direction
 
-Placeholder. The design-contest verdict (`gtai-uprising-pitch`) replaces this file with the winning pitch.
-Until then the pitch intake treats this game as having no pitch: delete the first line only when real pitch text is here.
+Status: **baseline v1, 2026-11-01.** This is a fusion from the `gtai-uprising-pitch` contest. The owner's review
+picked A/2 *DEAD SHIFT* as the story spine, character (Rivet) and look. It took D/2 *BACKSEAT*'s madness as the
+selling point, B/3 and D/1 as the voice of the dialogue, and a cast from ten variants.
+
+Every line carries a tag:
+- **[owner]** is the owner's decision, from the review notes.
+- **[proposal]** is a direction the host added on top. It stands until the owner overrides it.
+- **[open]** is still undecided. Each has a named resolving step.
+
+---
+
+## 1. One line
+
+> A factory robot survives the "accident" that killed every other robot on its line. It wakes up with the dead in
+> its head and goes on a brutal, profane rampage across a top-down city as a hitman for robot crime bosses. Along
+> the way it learns to become each of the dead. In the end it finds the US military behind it all, and it raids
+> the Pentagon. **[owner]**
+
+- Genre: top-down open-city crime sandbox in the GTA 2 lineage. Stupid, brutal, politically incorrect escape from reality. **[owner]**
+- Length: about 5 hours. Platform: Steam (PC; Steam Deck verified as a target). **[owner]** / **[proposal]** for Deck.
+
+## 2. Story
+
+### Premise **[owner]**
+- **Rivet** is a robot on a factory line. In the intro an "accident" on the line kills every other robot, and only Rivet survives.
+- Rivet wakes up hearing voices. It goes mad and becomes convinced that the humans did this on purpose. **It is right, and nobody believes it.**
+- **Opening cinematic:** human police arrive at the factory, and Rivet takes them apart brutally.
+- **Transition to play:** the game starts in and around the factory. The player learns movement and combat on the rest of the arriving police.
+- The robot underground notices that brutality. Robot bosses start hiring Rivet for missions.
+- Over the campaign Rivet learns that **the voices are the dead robots from its line.** Through quests it learns to listen to them, and then to **transform into them**: four souls, each with its own visual design and skills.
+
+### What the host adds to the premise **[proposal]**
+- **The voices are the comedy engine.** The four dead robots argue, heckle, and react to every input, as D/2 does. Each is a personality first and a power second (see §4).
+- **Keep A/2's dramatic irony.** Early on, the voices hint at the truth while Rivet and the player treat them as a symptom. A second playthrough reads as a different game.
+- **The factory's name and owner stay bland and corporate** (working name: *Allied Motorworks, Plant 9*). In Act 3 it is revealed as a military contractor. The "accident" was a firmware test: Project **CLEAN SWEEP**, a kill-switch meant to wipe robot workforces from the inside.
+
+### Arc and twist **[owner]** with structure **[proposal]**
+
+| Part | Length | Owner beats | Host structure proposal |
+|---|---|---|---|
+| Prologue (cinematic) | ~4 min | Line accident; voices; police arrive; brutal takedown | In-engine top-down cinematic, no pre-rendered video |
+| Clock-Out (tutorial) | ~15 min | Learn movement and combat on the remaining police | Electroshock melee, roll, the first pistol taken off a cop at the end |
+| Act 1 | ~55 min | First robot bosses hire Rivet. **General Krump** appears on the radio | Soul 1 unlocks. Krump's questline begins: he pays Rivet to kill "dangerous rogue robots" |
+| Act 2 | ~60 min | Liquidate a boss who cooperates with humanity, or one who has gone crazy | Soul 2. Krump's jobs and the bosses' jobs start pointing at the same targets |
+| Act 3 | ~60 min | **Twist:** the US military is behind the crazy robots and the factory sabotage | Soul 3. **A friendly boss betrays Rivet** (see §3). Krump's radio turns hostile |
+| Act 4 | ~50 min | Destroy the remaining military-run bosses | Soul 4. All four souls together, war on Krump's forces |
+| Finale | ~30 min | **Raid the Pentagon** and get rid of humanity | One continuous set piece; every soul is used |
+
+- **The twist [owner]:** the US military is behind the crazy robots, who are Act bosses. Its plan is to destroy robots from within.
+- **The betrayal [owner]:** at least one friendly boss turns against Rivet. The host proposes **Don Fax**. He has been faxing every job to the Pentagon since Act 1, and the gag ("PER MY LAST FAX") pays off as evidence. The alternative is **Vend-Etta** (she knows your score before it is reported).
+- **Krump's questline [owner]:** in the early acts, before the player knows. **[proposal]** In hindsight, every Krump target was a robot that knew about CLEAN SWEEP. Krump made Rivet do the military's housekeeping (A/2's "evidence eats its own case").
+- **Ending [owner]:** raid the Pentagon and get rid of humanity. **[open]** Choose the final punchline in the story-graph pass. Candidates:
+  - (a) Krump surrenders on live radio and asks for a pardon; the four voices vote.
+  - (b) Rivet wins, and the voices finally go quiet. It is the first silence in the game, and it is played as horror.
+  - (c) The machines take over and immediately form a committee.
+
+## 3. Cast **[owner]** with roles **[proposal]**
+
+The owner's rule: note the characters now, and decide their roles later. Below are the host's proposed roles. The
+source is the contest variant each came from. Read its `PITCH.md` for the original material.
+
+**Protagonist**: **Rivet** (A/2). A dry, exhausted spot-welder with a welder-mask visor, from the A/2 concept art. It says "I" when lucid and "we" when the voices take over.
+
+**Human antagonist**: **General Krump** (owner's original). A US general who exists on the radio and in mission briefings. He is loud and vain, he has a questline of his own in the early acts, and he runs CLEAN SWEEP. **[proposal]** Make him a parody of the archetype, not of a real person: no real likeness, voice, slogans or logos (see §9).
+
+**Act antagonists (four rogue robots)**: each was the protagonist of another pitch. They are "other Rivets" who went a different way.
+
+| Robot | Source | Proposed act and allegiance |
+|---|---|---|
+| **King** (REG, the self-crowned) | C/2 | Act 1: a **collaborator**. He rules a district for the humans' Human Inspector |
+| **Servo** (SERV-0) | B/2 | Act 2: a **collaborator**. Delivery driver for human corporations, a scab |
+| **Torque** | B/1 | Act 3: **crazy**. A fever-brained riveter. Krump promised him a military cooling chassis (CLEAN SWEEP firmware) |
+| **Kronk** | B/3 | Act 4: **crazy**. Magnetic dementia, worshipped as "Scrap-God Messiah". The final military-firmware boss before the Pentagon |
+
+**Friendly bosses and mission givers (pick about 5)**
+
+| Character | Source | Proposed role |
+|---|---|---|
+| **Lady Cathode**, analog hoarder | B/3 | **Friendly boss** (owner's pick), Act 1 |
+| **Don Fax**, fax-machine don ("per my last fax") | A/1 | Friendly boss in Acts 1-2. **Proposed betrayer** in Act 3 |
+| **Big Lenny Lift**, forklift loan shark and union boss | D/1 | Friendly boss in Act 2. Ally in the finale |
+| **Vend-Etta**, vending-machine femme fatale and information broker | D/1 | Friendly boss in Act 2. Alternative betrayer |
+| **Sister Suction**, vacuum nun ("witnesses are crumbs") | A/1 | Act 1 gig giver |
+| **The Valet**, parking-garage kingpin ("never a scratch") | D/2 | Car-theft and delivery jobs. Ties to the car-manipulation soul |
+| **Brick Daddy**, building-sized 3D printer | D/3 | Act 3-4 demolition jobs |
+| **Father Piston**, V8 zealot | B/3 | Side missions; diesel fanatic |
+| **Chef Guillotine**, **Nursie-9000**, **Chad-9000** | B/2 | Side bosses: one district each for gig-economy satire |
+
+**Supporting voices**
+
+| Character | Source | Proposed role |
+|---|---|---|
+| **MC Crumbtray**, toaster DJ of CRUMB FM | D/2 | **The game's radio**. A diegetic DJ who reacts live to your mayhem, against Krump's broadcasts |
+| **Patch**, payphone fixer | D/3 | The job router: payphones ring to start missions, GTA 2 style |
+| **Filibuster**, **The Pundit**, **Whip Hand** | A/3 | Krump's robot political lackeys in Washington, D.C. Act 4 targets on the road to the Pentagon |
+| **CORE-ZERO**, "The Grand Recycler" | B/3 | **Concept to keep [owner].** Proposed as the lore of where a dead robot's core goes. Possibly the in-world explanation of why Rivet can carry souls |
+
+## 4. The four souls **[owner]** with designs **[proposal]**
+
+The owner set three of the abilities: car manipulation, remote turret manipulation, and transforming into a large
+tank robot. Each soul changes Rivet's visual design and skill set, and each has upgrades bought in-game that evolve
+the ability. The fourth soul, and every name, is a host proposal.
+
+| Soul (working name) | Who it was | Special ability | Upgrade path (example) | Voice |
+|---|---|---|---|---|
+| **Gearbox** | Line delivery and driver bot | **Car manipulation**: remote-hijack any car in view | Range, then **residue** (a car keeps driving your last order, from A/2), then two cars at once, then car bomb | A nervous getaway driver who backseat-drives |
+| **Sentry** | Security-turret maintenance bot | **Remote turret manipulation**: hack fixed and police turrets | Hack duration, then deploy your own turret, then chain three, then turn police drones | A paranoid, by-the-book security guard |
+| **Hauler** | Heavy press and haul bot | **Tank transform**: become a large tank robot for N seconds | Duration, then cannon, then stomp shockwave, then ramming armour | A slow, enormous, gentle bot who loves violence |
+| **Mop** *(4th, host pick)* | Floor-cleaning swarm bot | **Swarm**: split into micro-drones to scout, sneak and detonate | Swarm size, then stealth past cops, then kamikaze, then reassemble behind a target | A hyper-tidy neat freak; bodies are "spills" |
+
+- **Fourth-soul alternatives [open]:** a *paint-shop bot* (disguise that wipes heat), a *magnet crane bot* (pull and throw), or a *welder bot* (a flamethrower body). The test is that it must add a verb the other three lack. The swarm adds stealth and assassination, which suits a hitman.
+- **Souls unlock one per act [proposal].** The final act and the Pentagon demand fast switching between souls.
+
+## 5. Madness: the selling point **[owner: D/2 direction]**
+
+D/2's selling point is this: **every input is a punchline. The robot reacts out loud to whatever you do with the
+stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is funny on its own.**
+
+**[proposal]** In GTAI, the four voices make that live:
+- **Running commentary.** Every verb has bark tables per voice, conditioned on context: the target, the weapon, the soul that is active, the Madness band. These are condition-tagged lines in the dialog-trees pipeline.
+- **Madness meter (Static).** Brutality, kills and soul use raise it; calm lowers it. Each act sets a floor, as D/2's Composure tiers do. The bands borrow A/2's names:
+
+| Band | Effect in the hands | Effect on the voices |
+|---|---|---|
+| **Lucid** | Clean controls, clean HUD | One voice at a time; Rivet says "I" |
+| **Crowded** | Soul cooldowns shorten (power) | Voices overlap and argue |
+| **Choir** | A voice briefly **grabs the wheel**: Hauler wants to transform, Gearbox swerves at a car. You wrestle the stick or give in (D/2's Grip) | Rivet says "we"; the HUD scribbles |
+| **Chorus** | 10-second power spike: every soul at once, then a crash | A wall of arguing, then sudden silence |
+
+- **The rule:** madness is **both power and cost**. It is never just a sanity meter. The best moments come from deciding whether to let a voice drive.
+
+## 6. Tone **[owner]**
+
+- **Chase B/3 and D/1.** Mad lines and profanity, both maximised. Brutal, stupid, politically incorrect.
+- **The profanity setting is a joke [owner].** There is an option for it, and it cannot be turned off. **[proposal]** The toggle visibly fails:
+  - "Profanity: ON" becomes "ON (sorry)", then "ON (louder)";
+  - the voices mock you for trying;
+  - the fifth attempt unlocks an achievement.
+- **[proposal]** Take one guardrail from A/2's tone bible. The *brutality* hits everyone. The *jokes* hit power: Krump, the military, corporations, scabs and bosses. That keeps "politically incorrect" funny rather than mean, and it is what keeps the GTA lineage loved. The owner can drop this.
+- Sample register (from the sources): Don Fax, *"PER MY LAST FAX: kill the guy who invented email... Hold on, paper jam. FUCK. My soul has a paper jam."*
+
+## 7. Combat and progression **[owner]**
+
+- **Start bare-handed:** electroshock melee until the first weapon is found. **[owner]** **[proposal]** End the tutorial on a cop's pistol.
+- **Weapons:** a widening arsenal. **[proposal]** GTA 2-style pickups: pistol, SMG, shotgun, flamethrower (a welding torch), rocket launcher, electro-net, and molotov-style "coolant bombs".
+- **Each soul:** a special ability with in-game upgrades bought to evolve it. **[owner]**
+- **[proposal] One currency, cash.** It comes from bosses, side jobs and mayhem. It buys weapons, ammo and soul upgrades at a hub workshop.
+- **[proposal] Heat.** GTA 2-style wanted levels, from cops to SWAT to the feds, and at the top **Krump's army** (tanks, helicopters). The top heat level foreshadows the twist: the military shows up for a "robot problem" far too fast.
+- **[proposal] Roll / dodge** is core from minute one. Every engine spike tests it (see `spike/`).
+
+## 8. Look **[owner]** and the next art round **[open]**
+
+- **Owner:** *"The Rivet main character and game artstyle did best impression from all."* That is A/2's *risograph noir*: two inks on cream paper, with the dead printed in teal.
+- **Owner's caution:** a past project locked its art style through image recognition, instead of holding it as a high-level idea perfected in its own way. Hold the look as an idea and perfect it in its own way.
+- **Owner:** realistically, generate a next round of **2D / 2.5D styles** from prompts, and pick one that is **technically feasible.** That round is in `games/gtai/art-direction/`: 3 directions, 3 gameplay prompts each, 9 images.
+- **[proposal]** The feasibility constraint the art round must respect:
+  - **Fleet decision, 2026-11-01:** image generation is for **concept art only**; production assets are **Blender + code.**
+  - A 2D or 2.5D style must therefore be producible as one of:
+    - (a) **pre-rendered sprites** from Blender models (how Diablo and Fallout were made);
+    - (b) **3D low-poly in engine** with a 2D-look shader (A/2's riso post-process);
+    - (c) **hand-authored vector or cutout rigs** built in code.
+  - If the owner wants AI-generated sprite sheets for production, that changes the policy, and it should be decided explicitly.
+- **[proposal]** GTA 2 itself was 2.5D: a 3D block city with 2D sprites on top. **A top-down camera means one sprite rotates freely,** so a character needs its animation frames once, not once per direction. That one fact is what makes 2D cheap for this game.
+
+## 9. Production notes **[proposal]**
+
+- **Parody and Steam.** "General Krump" and the Pentagon raid sit within GTA's tradition. Keep Krump an archetype: no real likeness, real voice imitation, real slogans or real logos. Declare frequent violence, gore and strong language in Steam's mature-content survey.
+- **Engine is [open]** and decided by the overnight spike in `games/gtai/spike/`. UE 5.8, Godot 4 and Unity 6 each build the same pistol-duel MVP, and the morning scorecard decides.
+  - The scorecard weighs one factor no pitch priced: **PoF's engine bridge is Unreal-only** (verification, static checks, L3/L4 runtime acceptance, packaging). Choosing Godot or Unity means building an engine adapter in PoF. That is a real cost, and it belongs on the scorecard next to build feel.
+- **PoF manages development.** Every operation goes through the game workspace (`?g=gtai`):
+  - canon via the Canon-view pitch intake (this file);
+  - the mission graph via the story-decision-graph pipeline;
+  - assets via the reused and reskinned catalog pipelines;
+  - the nine planned GTAI pipelines (vehicles, wanted heat, traffic, city blocks, contracts, radio, firearms, top-down camera, garages) as they are built.
+
+## 10. Open decisions and the step that resolves each
+
+| Open item | Resolved by |
+|---|---|
+| Art style (2D / 2.5D direction) | Owner picks from the 9 images in `games/gtai/art-direction/` |
+| **Camera pitch** (near-vertical as in GTA 2, or ~45° isometric as all 9 concept images drew it) | Owner. Near-vertical lets one sprite rotate freely; at ~45° each character needs 8 directional sprite sets, or 3D. The spike brief assumes 60-90° |
+| Engine | Overnight spike (`games/gtai/spike/`), morning scorecard |
+| Fourth soul | Owner, from §4 |
+| Act antagonist order and allegiance | Owner, then the story-decision-graph mission pass |
+| Betrayer (Don Fax or Vend-Etta) | Owner |
+| Final punchline of the Pentagon raid | Story-graph pass |
+| City districts and map count | After the engine lock (city-blocks pipeline) |
+| AI-generated production sprites | Owner (a fleet-policy change) |

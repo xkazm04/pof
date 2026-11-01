@@ -11,7 +11,9 @@ it is re-seeded from these files idempotently.
 
 | File | What it holds | Written by |
 |------|---------------|------------|
-| `pitch.md` | The winning or fused design pitch from the `gtai-uprising-pitch` contest | the contest verdict |
+| `pitch.md` | Baseline direction: the owner's fusion of the `gtai-uprising-pitch` contest (A/2 spine, D/2 madness, B/3 and D/1 voice) | the contest verdict + owner notes |
+| `art-direction/` | Three 2D/2.5D art directions with design stances, 9 gameplay concepts and 3 Rivet concepts (`index.html` compares them) | concept round, 2026-11-01 |
+| `spike/` | Overnight engine spike: UE 5.8 vs Godot 4 vs Unity 6 on one pistol-duel MVP (`PLAN.md`, `spike.mjs`) | engine decision |
 | `canon.json` | Accepted canon rules, profile `gtai` | the pitch intake, on operator accept |
 | `entities.json` | Accepted starter entities (ids prefixed `gtai-`, authored provenance) | the pitch intake, on operator accept |
 | campaign storygraph (later) | The mission and decision graph (`pof.storygraph/1`) | the story-decision-graph work stream |

@@ -1,0 +1,39 @@
+[
+  {
+    "file": "shot-1.jpg",
+    "prompt": "In-game screenshot of a top-down crime video game whose characters are pre-rendered 3D CGI sprites over a 3D block city, 16:9. Camera high above looking straight down at 85 degrees, wide view of a whole street block, so building rooftops lean slightly outward from the screen centre. Gameplay scale: every character is tiny, about one sixteenth of the screen height, seen from directly above (head and shoulders, no faces). Scene: night, a wet back street behind a diner, puddles reflecting sodium-orange street lamps, dumpsters, parked cars, pink neon glow spilling from a sign on the diner roof. Centre: RIVET, a tiny gunmetal robot seen from above (welder-mask head, broad shoulder plates) fires a pistol, a bright muzzle flash lights the asphalt; three tiny police officers return fire from behind a cruiser with red and blue lights; one officer lies in a dark red pool; scattered shell casings. Four faint green phosphor outlines of robots flicker around Rivet. Palette: asphalt 1E2028, wet blue-grey 3A4150, sodium orange FFA43A, neon magenta FF3E9A, police blue 3A7BFF, phosphor green 7CFFC4. HUD: top-left cash in chunky yellow digits '$0041250'; top-right six police-badge icons, three lit, and a pistol icon with '34'; bottom-left a round dial labelled VOICES with four tiny robot heads and a needle pointing at the word CROWDED; bottom-centre a pager box with the exact text 'SENTRY: TWO ON THE LEFT!'. No real logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image",
+    "width": 1664,
+    "height": 928,
+    "generationNote": "Attempt 1 rejected: Rivet filled about 1/4 of frame height (poster scale, not gameplay scale), the camera sat at about 60 degrees, and the pager read \"SENTERY\". Attempt 2 (camera tightened to 85 degrees, characters at 1/16 of screen height) kept: the scale is fixed, but the \"SENTERY\" typo survived (in-game text is engine-rendered, so this is concept-only).",
+    "rejectedAttemptPrompt": "In-game screenshot of a 1999 PC top-down crime game in the style of pre-rendered 3D sprites, 16:9. Camera looks almost straight down with perspective, so taller buildings lean outward from the screen centre. Characters are tiny pre-rendered CGI sprites seen from directly above, crisp dark edges, soft baked shading. Scene: night, a wet back street behind a diner, puddles reflecting sodium-orange street lamps, a dumpster, parked cars, pink neon sign glow on the asphalt. Centre: RIVET, a gunmetal welding robot seen from above (welder-mask head, broad shoulder plates, one torch arm), fires a pistol; bright muzzle flash lights the ground; three small police officers return fire from behind a cruiser with flashing red and blue lights; one officer lies in a dark red pool; spent shell casings. Faint green phosphor ghost outlines of four robots flicker around Rivet. Palette: asphalt 1E2028, wet blue-grey 3A4150, sodium orange FFA43A, neon magenta FF3E9A, police blue 3A7BFF, phosphor green 7CFFC4. Late-90s game HUD: top-left cash in chunky yellow digits '$0041250'; top-right a row of six police-badge icons, three lit; under it a pistol icon with '34'; bottom-left a round dial 'VOICES' with four tiny robot portraits and a needle on CROWDED; bottom pager box 'SENTRY: TWO ON THE LEFT! THE OTHER LEFT!'. No real logos, no watermark."
+  },
+  {
+    "file": "shot-2.jpg",
+    "prompt": "In-game screenshot of a 1999 PC top-down crime game made of pre-rendered 3D sprites over a 3D block city, 16:9. Camera almost straight down with perspective so buildings lean outward from the screen centre. Night, sodium-orange street lights, wet asphalt, neon. Centre: the player has transformed into HAULER, a huge pre-rendered tank robot seen from above, wide caterpillar tracks, a hydraulic press body, a stubby cannon arm, rivets and hazard stripes; it stomps through a police roadblock and a white shockwave ring spreads across the road; two police cruisers are flipped and crushed; a third is mid-air; small officers fly backwards; concrete barriers shatter into chunks; tiny sparks and debris sprites. A green phosphor outline of the small robot Rivet glows inside the tank silhouette. Palette: asphalt 1E2028, wet blue-grey 3A4150, sodium orange FFA43A, neon magenta FF3E9A, police blue 3A7BFF, phosphor green 7CFFC4. Late-90s game HUD: top-left cash '$0063900' in chunky yellow digits; top-right four of six police badges lit; top-centre a draining bar labelled 'HAULER 07s'; bottom-left round 'VOICES' dial with the needle in the CHOIR band and the HAULER portrait glowing; bottom pager box 'HAULER: I LOVE YOU, LITTLE CARS'. No real logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image",
+    "width": 1664,
+    "height": 928,
+    "generationNote": "Attempt 1 kept. Heat shows 5 blue badges rather than 4 of 6 gold."
+  },
+  {
+    "file": "shot-3.jpg",
+    "prompt": "In-game screenshot of a 1999 PC top-down open-city crime game: pre-rendered 3D sprites over a textured 3D block city, 16:9. Camera high above, looking almost straight down with perspective, so the rooftops of tall buildings lean outward from the centre: a downtown grid at night with roof vents, rooftop neon billboards, a raised train track, sodium-orange street lights, wet reflective roads. A small stolen red muscle car drifts round a corner leaving tyre marks; behind it a pack of police cruisers with red and blue light bars, a black SWAT van, and two olive army tanks rolling in from a cross street; a helicopter shadow and searchlight circle on the road; burning wrecks. Small pedestrians run. Palette: asphalt 1E2028, wet blue-grey 3A4150, sodium orange FFA43A, neon magenta FF3E9A, police blue 3A7BFF, phosphor green 7CFFC4. Late-90s game HUD: top-right six police-badge icons all lit and a seventh army star lit; top-left cash '$0127450' in chunky yellow digits; a big yellow arrow at the screen edge pointing to the objective; top-centre a radio banner 'CRUMB FM 94.1'; bottom pager box 'PATCH: PAYPHONE ON 9TH IS RINGING. ANSWER IT.'. No real logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image-3.0-pro",
+    "width": 1664,
+    "height": 928,
+    "generationNote": "Attempt 1 kept. The pager reads \"PAYHONE\" (model typo). The camera sits at about 55 degrees rather than near-vertical, so buildings lean less than GTA 2 and the spec intend."
+  },
+  {
+    "file": "rivet.jpg",
+    "prompt": "Character render of RIVET, an original video game robot protagonist, in the style of a late-1990s pre-rendered CGI game render from a PC game manual: smooth ray-traced plastic and metal, soft baked lighting, slightly soft focus, dark background with a blue-grey gradient. Full body, front three-quarter view. A tall narrow exhausted factory spot-welding robot: a welder-mask visor for a face with a glowing amber slit, gunmetal and scorched steel plates, orange and black hazard stripes on the shoulders, stencilled number L9-04, one forearm ends in a welding torch with a small blue flame, the other in a heavy three-finger clamp, an employee badge on a lanyard, slightly slouched. Four faint green phosphor wireframe ghosts of dead robots hang behind it: a driver bot, a turret bot, a huge tank bot, and a small paint-sprayer bot. At the bottom of the image, small, the same robot seen from directly above as a game sprite on a dark tile. Strong readable silhouette, portrait. No text, no logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image-3.0",
+    "width": 1104,
+    "height": 1472,
+    "generationNote": "Planned on Leonardo (portrait 1024x1536); Leonardo refused before generating (\"not enough api tokens\"), so it was rendered on qwen-image at 1104x1472 (3:4 portrait). Attempt 1 kept. The \"top-down sprite\" inset shows a back view, not a true overhead view."
+  }
+]
