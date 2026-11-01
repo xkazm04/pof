@@ -156,7 +156,7 @@ making a specific check possible.
 | `entry` | A declared start. Must appear in `entries`. | Forward reachability roots. |
 | `event` | Something happens; no player agency. | Must have an outgoing traversal edge unless declared an ending. |
 | `choice` | A player decision point, carrying `options`. | Needs ≥2 options; subject to the false-choice audit (§8). |
-| `gate` | A deterministic branch on state; no player input. | Its outgoing edges must carry `when`. |
+| `gate` | A deterministic branch on state; no player input. | Must branch: at least one outgoing edge carries `when`. An unguarded `then` beside a guarded edge is its default ("else") branch. |
 | `container` | A node that **contains a sub-graph** (a conversation, a quest, an act). | Children declare `parent`. Containment must be acyclic. A collapsed container is one node. |
 | `ending` | A declared terminal. Must appear in `endings`. | Backward-reachability target. |
 | `template` | An authored unit a runtime may *select* (a storylet). | Never an instance. Excluded from forward reachability; validated for its own internals. |
@@ -190,7 +190,7 @@ views, so an edge may cross a level — but a reader is never obliged to draw ev
 |---|---|---|
 | `then` | yes | Default continuation. |
 | `option` | yes | A player's choice from a `choice` node. Carries `optionId`. |
-| `gate` | yes | A conditional branch. MUST carry `when`. |
+| `gate` | yes | A conditional branch. MUST carry `when`. (A `then` out of a `gate` node is its default branch, §4.) |
 | `contains` | **no** | Parent→child containment. Mirrors `node.parent`; either form is accepted, both must agree. |
 | `influences` | **no** | "What this node writes is read by that node's guard." The *impact* edge. Derivable from `writes`/`when`, but a producer may declare it to assert intent; a reader MUST report a declared `influences` that the data does not support. |
 
@@ -311,11 +311,12 @@ reachable (node, state) pair from which no guard evaluates true.**
 | `TEXT_BUDGET_EXCEEDED` | A node over its class budget (§7). |
 | `UNTYPED_CONDITION` | An `expr` atom. |
 | `CHOICE_TOO_FEW_OPTIONS` | **error.** A `choice` with fewer than two **distinct** options (§4 "Needs ≥2 options"). Distinct options are the `optionId`s of its outgoing `option` edges (an `option` edge without an `optionId` counts as its own option), united with the ids in its declared `options` list. A `then` or `gate` edge out of a choice is not an option. |
-| `GATE_WITHOUT_CONDITION` | **error.** A `gate` edge with no `when`, or a traversal edge (`then` / `option` / `gate`) out of a `gate` node with no `when` (§4, §5). One finding per offending edge. There is no exception for a single unguarded fall-through: a gate that branches on nothing is either the wrong kind or missing its guard. `contains` / `influences` edges out of a gate are not branches and are not checked. |
-| `UNKNOWN_KIND` | **info.** A node or edge `kind` outside the closed core set (§4: a reader must render it as a labelled generic node **and report it**). An unknown node kind is walked as an ordinary node. An unknown edge kind is kept but **not** walked, and the detail says so, which is why a node reached only through one shows up as unreachable. (An unknown `profile.nodeClasses[].coreKind` is still reported only by the importer's `unknownKinds`.) |
+| `GATE_WITHOUT_CONDITION` | **error.** Two cases (§4, §5). **(a)** A `gate` **edge** with no `when`, wherever it starts. One finding per edge, naming the edge's source. **(b)** A `gate` **node** with at least one outgoing traversal edge (`then` / `option` / `gate`) where **none** of those edges carries a `when`. Such a node branches on nothing and is really an `event`. One finding per node, `nodes: [gate]`. The detail names the edges and says "make it an `event`, or guard at least one outgoing edge". An unguarded `then` edge out of a gate node **beside a guarded edge** is the gate's **default ("else") branch**. It is allowed, and several such edges combine by `mode` (one-of unless `all`). Case (b) does not fire when one of the node's unguarded edges is a `gate` edge, because (a) already reports that edge, and guarding it is the fix that turns the remaining `then` edges into the default branch. A gate node with no outgoing traversal edge is `UNDECLARED_TERMINAL`, not this. `contains` and `influences` edges out of a gate are not branches and are not counted. |
+| `UNKNOWN_KIND` | **info.** A node or edge `kind` outside the closed core set (§4: a reader must render it as a labelled generic node **and report it**). An unknown node kind is walked as an ordinary node. An unknown edge kind is kept but **not** walked, and the detail says so, which is why a node reached only through one shows up as unreachable. A `profile.nodeClasses[].coreKind` outside the seven node kinds is reported under the same code: one finding per class, with `nodes: []` (a class only labels nodes, and each node carries its own `kind`). The detail names the class and the bad value, and the class is rendered as a generic node class. |
 | `PARENT_CONTAINS_MISMATCH` | **error.** `contains` mirrors `node.parent`, and where both forms name a child's parent they must agree (§5). This fires when a child declares `parent: P` and a `contains` edge places it in some Q ≠ P, or when a child declares no parent and `contains` edges place it in two different parents. A child expressed by only one form is fine. A `parent` naming a missing node is `DANGLING_EDGE` and is not compared. The finding names the child first and then the parents. |
 | `STRING_VAR_NO_VALUES` | **info.** A `string` variable with no `domain.values` (§3). One finding per variable name, carrying `variables: [name]` and no nodes. |
 | `PRECEDENCE_NOT_TOTAL` | **error / warn.** Where endings declare `precedence`, it must be a total order (§6, lower number wins). Two or more endings tying at one value is **error** and names the tied endings. When some endings declare a precedence and others do not, that is **warn** and names the endings that declare none. A non-finite value is already a schema error. This is the one code with two severities, documented in `STRUCTURAL_SEVERITY`. |
+| `INFLUENCES_UNSUPPORTED` | **warn.** A declared `influences` edge X → Y that the data does not support (§5: "a reader MUST report a declared `influences` that the data does not support"). The edge is **supported** when some variable written by X is read by a guard that belongs to Y. *Written by X* means the `writes[].var` of every traversal edge whose `from` is X or a descendant of X (a container owns the writes made inside it). *Read by Y* means every variable referenced (with `ref` definitions resolved) in the `when` of any edge out of Y or a descendant of Y, and in the `when` of any `endings[]` entry whose node is Y or a descendant of Y. Option guards are the `when` of the option edges, so they are already counted. One finding per unsupported edge, `nodes: [X, Y]`, with no `variables`. The detail names X's written set and Y's read set (long sets are truncated after six names as `+n more`). An `influences` edge with a missing endpoint is `DANGLING_EDGE` and is not reported again here. `influences` stays non-traversal: this check reads it and never walks it. |
 
 **One code per dead node.** Every reachable non-container node from which no ending can be reached carries
 exactly one of two codes: `UNDECLARED_TERMINAL` when it has **no way on** (no outgoing traversal edge, no
@@ -431,6 +432,16 @@ independent way:
 A reader must not test reach values for truthiness: a check such as "if the value is set" or "value
 greater than zero" turns every measured zero into an unmeasured node, which is the defect this rule
 exists to prevent.
+
+**How the wheel marks a cell that is not verified.** With a reach lens on, every sector whose figure is not `verified` gets an outline in the theme's warn ink, drawn on top of its fill. The fill does not change. A **stale** cell (its run is pinned to a different `graphHash`) gets a **dashed** outline. An **unverified** cell (its run is not pinned, or the cohort has no run behind it) gets a **dotted** outline. The difference between dashed and dotted is the cue that does not depend on colour. The status is read from the same evidence the lens value comes from:
+- On a merged view, it is the `mergeEvidence` status of the displayed cell.
+- On a plain document, it is the run's `runStatus` against the graph's current hash. If no current hash is known, a pinned run is shown as unverified. It is never treated as a pass and never claimed to be stale.
+
+A container's derived figure takes the worst status of the measured descendants that fed its mean (stale, then unverified, then verified). Doubt never passes. The outline sits about 2px inside the sector edge, so a stale measured zero shows both its zero outline and the dashed marker. Sectors too small to hold their own outline share one outline per same-status run in a ring, so every drawn sector still sits inside its status outline. Endings docked at the hub get a ring around the dot. The status is also spoken in the live region and the tooltip ("reach 40% - sampled, stale"), and the Legend explains both outlines. **The wheel never marks:**
+- a verified cell;
+- an unmeasured sector, which shows the hatch only because there is no cell and so no status;
+- anything under the kind lens, which shows no figure;
+- a sector that LOD culled away.
 
 ---
 
@@ -676,9 +687,11 @@ partition (§8); `LIVELOCK_LEAD` (§8, §9a); an explicit `0` is a measured zero
 presentation and the cohort union (§9); container exit on the "last line" (§9a); one engine name, `pof-walker@1`.
 Reach paging is a transport concern, not a format rule: the API and MCP tools cap their payloads themselves.
 
-**Still open:** whether a gate may carry ONE unguarded `then` as its default ("else") branch (§4 as written says every
-outgoing edge of a gate must carry `when`, so `GATE_WITHOUT_CONDITION` fires on `synthetic-scale` ACT1-7 gates and
-`mage-arena` G1-G5 — true to the text, but the "else" idiom is common); a finding for a declared `influences` edge the
-data does not support (§5 says a reader MUST report it); a variable-style finding for an unknown
-`profile.nodeClasses[].coreKind`; per-cell stale/unverified marking on the wheel itself (the lens paint has no
-status channel); a produce path that can read sibling steps; per-node `story_*` tables.
+**Resolved since (2026-11-02, second pass):** a gate's unguarded `then` is its default ("else") branch and a gate must still
+branch (§4, §8); `INFLUENCES_UNSUPPORTED` (§8); an unknown `profile.nodeClasses[].coreKind` is reported under `UNKNOWN_KIND` (§8);
+the wheel marks stale (dashed) and unverified (dotted) cells (§9).
+
+**Still open:** the top-left "reach unverified · graphHash null" badge only checks whether runs are pinned, so it cannot say
+"stale" for a plain document; a produce path that can read sibling steps; per-node `story_*` tables; whether `synthetic-scale`'s
+96 decorative `influences` edges and `mage-arena` G2 (three unguarded `then`, nothing guarded) should be fixed in those documents
+(they are true findings; the fix belongs to the producers).
