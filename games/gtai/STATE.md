@@ -10,7 +10,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Look and camera are locked: **Trivet** (V1 DEAD INK, 90 degrees overhead), 2026-11-01.
 - **Pre-check done** (19:05 to 19:58, $22.06, all billed to the API key). **No blockers on any engine.** Each engine lane rated its confidence of a runnable Windows build by morning at 5/5; one already exists in each. Reports: `C:\Users\kazda\kiro\gtai-spike\lanes\*\PRECHECK.md`.
 - **Next steps**
-  1. Launch the night, which continues from the pre-check state and now carries a **night stretch** (readability, car, crowd, soul swap, gamepad): `node games/gtai/spike/spike.mjs run --until 08:00`. Keep Unity Hub open.
+  1. **The night is running** (launched 20:06; it freezes at 06:45, reports at 07:15 and ends at 08:00). Engine lanes run Opus 5.5 at high effort; the art lane runs Sonnet 5.5 (owner). All lanes bill the API key first. Check it anytime with `node games/gtai/spike/spike.mjs status`. Keep Unity Hub open.
   2. Morning (`/gta morning`): run the report, review the evidence, have the owner play-test, lock the engine. Then do Phase 2 planning.
 - **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2.
 
@@ -102,3 +102,4 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - A lane wrote outside its folder (`C:\out`). I deleted it and added a brief rule that everything a lane writes stays inside it.
   - Runner back-off for idle lanes: a lane that believes it is done ended its sessions in 30 s at about $0.15 each.
   - The night stretch was added to the MVP, the scorecard (`stretch`) and the scoreboard, because the duel alone no longer separates the engines.
+- **The night was launched at 20:06** with the stretch. The art lane runs on Sonnet 5.5 (the owner's pick, to save usage); the engine lanes run on Opus 5.5. The first iteration of every lane confirmed `apiKeySource: ANTHROPIC_API_KEY`.
