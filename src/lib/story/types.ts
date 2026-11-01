@@ -269,3 +269,80 @@ export interface StoryFinding {
 
 /** What a revision change invalidates. See the standard, section 10. */
 export type RevisionChangeClass = 'cosmetic' | 'topological' | 'contract';
+
+/* ---------------------------------------------------------------- the walker (WP3, state altitude) */
+
+/**
+ * A named sampling policy. `uniform` picks uniformly among the OFFERED options at a choice;
+ * `weighted` scales each offered option by `weights[optionId]` (default 1; when every offered
+ * option weighs 0 it falls back to uniform). Cohort ids key the report's reach exactly like
+ * `StoryEvidence.reach`.
+ */
+export interface WalkerCohort {
+  id: string;
+  policy: 'uniform' | 'weighted';
+  weights?: Readonly<Record<string, number>>;
+}
+
+export interface WalkerOptions {
+  seed: number;
+  /** Walks PER COHORT. Reach is a percent of the cohort's own walks. */
+  samples: number;
+  /** Default: one `uniform` cohort. */
+  cohorts?: readonly WalkerCohort[];
+  /** Step cap per walk. A walk that still has a way on at the cap is `truncated`, never a softlock. */
+  maxSteps?: number;
+  /** The `storyContentHash` of the graph walked; absent or null makes the sampled run unverified. */
+  graphHash?: string | null;
+  /** Ending reach floors in percent, by ending node id (beside any `endings[].floor`). */
+  floors?: Readonly<Record<string, number>>;
+}
+
+export interface WalkerCohortOutcome {
+  samples: number;
+  /** Walks that arrived at each ending. An ending no walk arrived at is absent. */
+  endings: Readonly<Record<string, number>>;
+  /** Walks that stopped at a reached (node, state) with outgoing guards, none satisfiable. */
+  stalled: number;
+  /** Walks that stopped at a node with no traversal edge at all (structurally an undeclared terminal). */
+  terminal: number;
+  /** Walks still progressing when the step cap hit. NOT softlocks. */
+  truncated: number;
+}
+
+/** A write the walker could not apply as written. It is never silently clamped. */
+export interface WalkerDomainEvent {
+  var: string;
+  edge: string;
+  kind: 'clamped' | 'rejected' | 'undeclared';
+  /** The first value the write tried to produce. */
+  attempted: unknown;
+  count: number;
+}
+
+export interface WalkerReport {
+  engine: string;
+  graphId: string;
+  project: string;
+  revision: number;
+  seed: number;
+  samples: number;
+  maxSteps: number;
+  cohorts: readonly WalkerCohort[];
+  /** What a reader such as the Orrery reads: reach per node per cohort, unmeasured nodes absent. */
+  evidence: StoryEvidence;
+  outcomes: Readonly<Record<string, WalkerCohortOutcome>>;
+  /** State-altitude LEADS only, each carrying a `lead`. Never proven defects. */
+  findings: readonly StoryFinding[];
+  domainEvents: readonly WalkerDomainEvent[];
+  /** Where truncated walks were when the cap hit: display node id -> walks. */
+  truncatedAt: Readonly<Record<string, number>>;
+  /** Where walks stopped with no traversal edge at all: display node id -> walks (WP2 reports these structurally). */
+  terminalAt: Readonly<Record<string, number>>;
+  /** False when a guard holds an `expr` atom (§6): such a graph is not gradeable at this altitude. */
+  gradeable: boolean;
+  /** Edges whose guard contains an untyped atom; the walker treats them optimistically. */
+  untypedEdges: readonly string[];
+  /** Total steps taken, all walks. */
+  steps: number;
+}

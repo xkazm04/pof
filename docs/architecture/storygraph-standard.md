@@ -358,6 +358,100 @@ is never a pass.
 
 ---
 
+## 9a. The walker (PoF's reference sampler)
+
+PoF's own state-altitude engine (§8 "State pass"). It walks the **runtime** graph — (node, state)
+pairs — not the authored one, and everything it reports is a **lead**, never a proven defect.
+
+**Engine id:** `pof-walker@1`. **Code:** `src/lib/story/walker.ts` (`sampleGraph`, `createWalker`),
+`walker-model.ts` (sites), `walker-resolve.ts` (which way on), `walker-state.ts` (domains and
+writes), `walker-findings.ts` (leads), `walker-replay.ts` (`replayLead`), `cond-eval.ts` /
+`satisfiability.ts` (guards), `evidence.ts` (merge), `walk-jobs.ts` + `/api/story/walk` (background job).
+
+### What a walk is
+
+- **Same graph as the structural pass.** Positions are the structural topology's walk ids (a node,
+  or a container's exit). `then` / `option` / `gate` edges are walked; `contains`, `influences` and
+  any unknown edge kind never are. Templates are never entered.
+- **Bounded by the declared domains only** (§3). A walk starts at every variable's `initial`; a
+  set (a variable some edge writes with `push`) starting `null` is the empty set; an `external`
+  variable is **sampled from its declared domain** (another system owns it). A write that would
+  leave the domain is **clamped** (numbers) or **rejected** (a value outside the value list) and
+  every such write is **recorded** in `domainEvents` — never silently absorbed. A write to an
+  undeclared name is recorded and ignored; the walker never invents a variable.
+- **Guards** are the edge's `when`, AND the landing ending's own `when` (an ending fires only when
+  its condition holds), AND the edge's `chance`. Evaluation is three-valued: an `expr` atom, an
+  undeclared variable or an unresolvable `ref` is **unknown**, and unknown counts as *holding* —
+  the walker never manufactures a lead from a guard nothing can read. A graph with any such guard
+  is reported `gradeable: false` (§6).
+- **Which way on.** A `choice` offers each option whose guard can hold; the cohort's policy picks
+  among the **offered** options (default `uniform`); inside one option a guarded edge that holds
+  outranks an unguarded one (the unguarded edge is the "else"). A `gate` is deterministic: lowest
+  ending `precedence` first, then document order. Any other node picks uniformly among the edges
+  that hold. A miss caused only by `chance` rolls is not a stall.
+- **Containers.** An edge into a container enters its entry children. A node with **no** authored
+  way on falls through to its container's exit. On a **last line** — a non-gate position whose
+  every authored edge leaves the container — the container's own continuation (when it has one)
+  is one more way on beside the line's own edges. Mid-container lines do not see it.
+- **Endings.** A walk ends at an ending with no way on (or none that holds). An ending *with* a
+  way on is a sub-graph outcome (a conversation that ends "turned away" and returns to its quest)
+  and the walk continues.
+- **The step cap.** A walk still progressing at the cap (default: twice the walkable positions,
+  at least 1,000) is `truncated` — long or looping is not stuck, and a truncation is never a
+  softlock. Where truncated walks were is reported in `truncatedAt`.
+
+### Reproducible
+
+Every walk draws from its own `mulberry32` stream keyed by `(seed, cohort, sample)`, so the same
+`(graph, seed, samples, cohorts)` yields **byte-identical** output (canonical form, §1) however the
+run is chunked. The walker has no clock; timing lives in the job wrapper.
+
+### What it reports
+
+- `evidence` — a valid `StoryEvidence` (§9): one run (`engine: pof-walker@1`, `n` = walks over all
+  cohorts, `graphHash` = the stored content hash it walked, or `null` = unverified), and
+  `reach[node][cohort]` = percent of that cohort's walks that reached the node. **A node no walk
+  reached is absent** — unmeasured is never 0.
+- `outcomes` per cohort: arrivals per ending, `stalled`, `terminal` (no traversal edge at all —
+  the structural pass's `UNDECLARED_TERMINAL`; recorded in `terminalAt`, not a lead), `truncated`.
+- `findings` — state-altitude leads, every one `altitude: 'state'` with
+  `lead: {seed, engine, samples, state, path}`:
+
+| Code | Fires when | `lead.state` / `lead.path` |
+|---|---|---|
+| `SOFTLOCK_LEAD` | a reached (node, state) has authored edges and none can hold (chance read as possible) | the stuck state / the walk that got there |
+| `GUARD_UNSATISFIABLE` | no state within the declared domains satisfies a guard (interval, value-list and subset reasoning over DNF; `unknown` past 512 terms or on an unreadable atom — never a guess) | `{}` (domain-wide) / a structural witness to the guard |
+| `OPTION_NEVER_OFFERED` | a choice the walks reached offered an option at none of its visits | the first visit where it was not offered |
+| `NODE_NEVER_REACHED` | samples > 0, the node is structurally reachable, and no walk of any cohort reached it (orphans and unreachable endings stay the structural pass's) | the declared start / a structural witness |
+| `ENDING_BELOW_FLOOR` | an ending's arrivals under its floor (`floors` option or a numeric `endings[].floor`) for a cohort | `{}` / a structural witness |
+
+**Falsifiable.** `replayLead(graph, lead)` re-executes `lead.path` from the declared start
+(externals from `lead.state`), searching every move the walker could have taken that matches the
+path, and reproduces the lead only when it arrives at the last node with exactly `lead.state` and
+that position is stalled there. A reproduced lead is still a lead: it shows the walk is real under
+the walker's reading of the graph, not that a shipped runtime reads it the same way.
+
+### Evidence merge
+
+`mergeEvidence({currentHash, imported, sampled})`: per (node, cohort), **imported outranks
+sampled** (the sampled value is kept as `shadowed`). A cell's status is its run's — `verified`
+(hash matches), `stale` (hash differs), `unverified` (`graphHash: null`, or no run declares the
+cohort); only `verified` passes. Unmeasured stays absent.
+
+### Running it
+
+`POST /api/story/walk` (operator-guarded) `{graphId, project?, seed? = 1, samples? = 2000 (max
+20,000 per cohort), cohorts?}` → **202** `{jobId}`; the walk runs in the background in chunks of 50
+walks, yielding to the event loop between chunks. `GET /api/story/walk/:jobId` →
+`{state: queued|running|done|failed, progress: {done, total}, report?, error?, durationMs?}`.
+Jobs are in memory (the oldest finished ones evicted past 50); nothing is written to the database.
+
+Measured (2026-11-01, one worker): 2,000 walks over the 10,739-node `synthetic-scale` document in
+~1.6 s; over a 10,000-node `generateStoryGraph` document (every walk crosses the whole chain,
+17.7 M steps) in ~4.3 s. Budget: 30 s.
+
+---
+
 ## 10. Revisions: classify a change by what it invalidates
 
 The first validation of a graph is the easy one. Every one after it happens against a graph
@@ -437,5 +531,14 @@ operator-guarded; an unreadable `variables` block refuses the whole document; un
 and listed in `unknownKinds`; a declared `contentHash` that does not match is refused; `revision` is
 monotonic per `(project, graphId)`). Storage: one `story_graphs` table (`src/lib/story/story-db-conn.ts`),
 the full document as JSON. Read: `GET /api/story/graphs[/:graphId]`, drawn by the Orrery at `/story`.
-Not yet built (the Orrery's display-side audit in `src/lib/story/orrery/audit.ts` is not it): the structural validator suite (§8 structural altitude), the sampler (§8 state
-altitude, §9), the per-node `story_*` tables and the `story-arcs` catalog row.
+Validate: `GET /api/story/findings` (every §8 structural code, `src/lib/story/validate.ts`). Walk:
+`POST /api/story/walk` -> 202 `{jobId}`, poll `GET /api/story/walk/:jobId` (§9a, background job). Not yet built:
+the per-node `story_*` tables, the `story-arcs` catalog row, the MCP tools, and the Orrery reading live walker evidence.
+
+**Open amendments (found while implementing, not yet ratified):** who "writes" an edge (source vs target); finding
+codes for MUSTs that have none (choice with < 2 options, gate edge without `when`, unknown kinds, parent/contains
+disagreement, string variable without values, non-total precedence); the NO_ENDING_REACHABLE / UNDECLARED_TERMINAL
+partition; container-continuation timing (the walker uses the last-line rule, §9a); multiple `then` edges = one-of vs
+all; precedence direction (implemented: lower number wins); `endings[].floor` for ENDING_BELOW_FLOOR; a `LIVELOCK_LEAD`
+code; whether a cohort's absent reach beside another cohort's measurement is a measured zero; one canonical engine name
+(`pof-walker@1` vs this doc's `pof-sampler/1` example).
