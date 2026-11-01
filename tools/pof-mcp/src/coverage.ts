@@ -35,6 +35,9 @@ export const EXAMPLE_SKIP: Record<string, string> = {
   pof_asset_view_gate: 'spawns Blender and spends one vision call per yaw — recorded by a bespoke case',
   pof_asset_icon: 'spawns Blender and writes into the icon library — recorded by a bespoke case',
   pof_package_preflight: 'spawns UBT/editor — recorded by the growth suite',
+  pof_story_findings: 'needs a graphId already in the story store — the store is empty on a fresh DB, so a static example would fail there; covered by story-tools.test.ts and the live smoke against an imported graph',
+  pof_story_walk: 'starts a background walk job that spends server CPU (operator-guarded route) — covered by story-tools.test.ts with a mocked client, never by the contract walker',
+  pof_story_import: 'write tool — imports into the story store; covered by story-tools.test.ts with a mocked client, never run live by the contract walker',
 };
 
 /**

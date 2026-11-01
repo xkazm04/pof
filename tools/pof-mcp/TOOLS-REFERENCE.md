@@ -1109,3 +1109,114 @@ AI/behavior-tree test suites + aggregated pass-rate summary (or a single suite b
   }
 }
 ```
+
+## Story decision graphs
+
+> Every walker (state-altitude) finding is returned labelled `LEAD`: a sampled state to reproduce (`lead: {seed, engine, samples, state, path}`), never a proven defect. A node absent from `evidence.reach` is UNMEASURED, never 0 — the tools omit it rather than print 0. Structural findings (`pof_story_findings`) are proofs, not leads. Large graphs and long lists come back as bounded projections that say what was cut and how to get the rest (`full: true`, offsets, limits).
+
+### `pof_story_graph`
+
+Read stored pof.storygraph/1 decision graphs. Without graphId: the stored graph summaries (project, graphId, revision, hash, node/edge counts — no bodies). With graphId: that graph — as a BOUNDED projection by default when it is large (header, counts, a window of nodes and edges, `truncated: true` and how to page), because a stored graph can be 10k nodes and several MB. Page with nodeOffset/edgeOffset, or pass full: true for the whole document. A small graph comes back whole with `truncated: false`.
+
+**Annotations:** read-only · idempotent
+
+**Arguments:**
+- `project`: string — Story project slug the graph belongs to (e.g. "pof", "mage-arena") — the `project` field of the storygraph document, NOT a UE project path. Exact match. Omit to search every project; a graphId held by several projects is then a 409 that names them.
+- `graphId`: string — Graph to read. Omit to list summaries.
+- `full`: boolean — true returns the whole stored document unprojected (can be MBs). Default false.
+- `nodeOffset`: number — First node index of the window (default 0).
+- `nodeLimit`: number — Nodes in the window (default 25, max 500).
+- `edgeOffset`: number — First edge index of the window (default 0).
+- `edgeLimit`: number — Edges in the window (default 25, max 500).
+
+**Example call:**
+```json
+{}
+```
+> Lists every stored graph summary across projects; an empty store answers with an empty list.
+
+**Example response:**
+```json
+{
+  "graphs": [
+    {
+      "id": "synthetic-ashfall::arc-the-long-ash",
+      "project": "synthetic-ashfall",
+      "graphId": "arc-the-long-ash",
+      "name": "synthetic-ashfall/arc-the-long-ash",
+      "revision": 3,
+      "hash": "sha256:c7f754afba82fc99539e16cda70f6147d7f236d814bafa0415a0946d0f23cc87",
+      "format": "pof.storygraph/1",
+      "nodeCount": 10739,
+      "edgeCount": 24202,
+      "unknownKinds": [],
+      "createdAt": "<redacted>",
+      "updatedAt": "<redacted>"
+    },
+    {
+      "id": "mage-arena::arc-mage-arena-s1",
+      "project": "mage-arena",
+      "graphId": "arc-mage-arena-s1",
+      "name": "mage-arena/arc-mage-arena-s1",
+      "revision": 1,
+      "hash": "sha256:a090a107e379c93dd220ecca6e09097d89960b4a8de2fde4fccd7cb86cabfa71",
+      "format": "pof.storygraph/1",
+      "nodeCount": 36,
+      "edgeCount": 70,
+      "unknownKinds": [],
+      "createdAt": "<redacted>",
+      "updatedAt": "<redacted>"
+    },
+    "…(+1 more)"
+  ],
+  "count": 3,
+  "scope": "every story project (no project given) — pass project to narrow"
+}
+```
+
+### `pof_story_findings`
+
+Run the structural pass (storygraph standard §8) over one STORED graph: dangling edges, orphans, unreachable endings, undeclared terminals, variable reaching-writes, false choices, text budgets. Returns counts by code and severity plus the findings (errors first, capped — the response says what was cut), pinned to the stored content hash. Filter with code / severity. These are structural PROOFS; the state-altitude LEADS come from pof_story_walk.
+
+**Annotations:** read-only · idempotent
+
+**Arguments:**
+- `graphId` **(required)**: string — Stored graph to check.
+- `project`: string — Story project slug the graph belongs to (e.g. "pof", "mage-arena") — the `project` field of the storygraph document, NOT a UE project path. Exact match. Omit to search every project; a graphId held by several projects is then a 409 that names them.
+- `code`: string — Only findings with this code (e.g. ORPHAN_NODE). Counts still cover every finding.
+- `severity`: string — Only findings of this severity. Counts still cover every finding.
+- `limit`: number — Findings to return (default 50, max 500).
+- `full`: boolean — true keeps every node id and path step on each finding (by default each list is cut to 10 with a nodesTotal/pathTotal count). The finding cap still applies.
+
+> No static example — needs a graphId already in the story store — the store is empty on a fresh DB, so a static example would fail there; covered by story-tools.test.ts and the live smoke against an imported graph
+
+### `pof_story_walk`
+
+Run the bounded walker (storygraph standard §8 state pass / §9a) over one STORED graph as a background job, and wait for it up to waitSeconds (default 30, max 300). Returns the job: state, progress, `gradeable`, per-cohort outcomes, LEADS and the reach evidence. Every finding is a LEAD — a sampled state to reproduce (seed, engine, samples, state, path), never a proven defect. A node no walk reached is ABSENT from reach (unmeasured, never 0). If the wait runs out the job is still running: call again with the same graphId plus `jobId` to keep waiting instead of starting a new walk. Bounded output by default (leads capped, reach rows capped); full: true returns the whole report.
+
+**Annotations:** write
+
+**Arguments:**
+- `graphId` **(required)**: string — Stored graph to walk (also required when polling, and checked against the job).
+- `project`: string — Story project slug the graph belongs to (e.g. "pof", "mage-arena") — the `project` field of the storygraph document, NOT a UE project path. Exact match. Omit to search every project; a graphId held by several projects is then a 409 that names them.
+- `jobId`: string — Poll this existing walk job instead of starting a new one.
+- `seed`: number — Integer seed (default 1). Same seed + samples + cohorts = same report.
+- `samples`: number — Walks per cohort (route default 2000, max 20000).
+- `cohorts`: array — 1-8 sampling cohorts: [{id, policy: "uniform"|"weighted", weights?: {optionId: weight}}]. Default: the walker's own cohort.
+- `waitSeconds`: number — Wait up to this many seconds (max 300, default 30) for the walk to finish. 0 returns the job at once.
+- `findingsLimit`: number — Leads to return (default 50, max 500); all are counted.
+- `reachLimit`: number — Measured reach rows to return (default 100).
+- `full`: boolean — true returns the whole walk report (every lead, every measured reach row, domain events) instead of the bounded view. Unmeasured nodes stay absent either way.
+
+> No static example — starts a background walk job that spends server CPU (operator-guarded route) — covered by story-tools.test.ts with a mocked client, never by the contract walker
+
+### `pof_story_import`
+
+Import one pof.storygraph/1 document into the story store (POST /api/story/graphs). `document` is the document object or its JSON string; its own `project` and `graphId` say where it lands. Returns `status` (created / replaced / unchanged), the stored summary and `unknownKinds` (node/edge kinds outside the standard, stored as written). Refusals come back verbatim: 400 for a document the schema rejects or a contentHash that does not match, 409 for an older revision or a re-used revision number with different content. Operator-guarded on the backend.
+
+**Annotations:** write · destructive · idempotent
+
+**Arguments:**
+- `document` **(required)**: object — The pof.storygraph/1 document (format, project, graphId, revision, profile, variables, entries, nodes, edges, endings, budgets, …). A JSON string of it is also accepted.
+
+> No static example — write tool — imports into the story store; covered by story-tools.test.ts with a mocked client, never run live by the contract walker
