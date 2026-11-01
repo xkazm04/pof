@@ -27,6 +27,11 @@ export interface EvalEnv {
   readonly axis?: number;
   readonly definitions?: Readonly<Record<string, Cond>>;
   readonly roll: (p: number) => boolean;
+  /**
+   * Read `flag` / `visited` as UNKNOWN instead of from the sets — for a search that abstracts the
+   * walk history away (the livelock closure, `walker-livelock.ts`), where either answer is possible.
+   */
+  readonly unknownHistory?: boolean;
 }
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -102,8 +107,8 @@ export function evalCond(cond: Cond | undefined, env: EvalEnv, seen: ReadonlySet
     if (!env.declared.has(cond.var)) return null;
     return compareOp(env.state[cond.var], cond.op, cond.value);
   }
-  if ('flag' in cond) return env.fired.has(cond.flag);
-  if ('visited' in cond) return env.visited.has(cond.visited);
+  if ('flag' in cond) return env.unknownHistory ? null : env.fired.has(cond.flag);
+  if ('visited' in cond) return env.unknownHistory ? null : env.visited.has(cond.visited);
   if ('axis' in cond) return env.axis === undefined ? null : compareOp(env.axis, cond.axis.op, cond.axis.value);
   if ('chance' in cond) return isNum(cond.chance) ? env.roll(cond.chance) : null;
   if ('ref' in cond) {

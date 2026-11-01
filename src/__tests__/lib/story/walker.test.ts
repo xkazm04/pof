@@ -1,7 +1,8 @@
 /**
  * WP3 acceptance 1-5 on committed graphs: determinism, the §11 minimum graph's 50/50 endings,
  * OPTION_NEVER_OFFERED (and not on a rare-but-reachable option), a softlock lead that replays, and
- * unmeasured nodes ABSENT from reach. Plus the lead contract on every state finding.
+ * the two silences of reach (wave 4): a covered node no walk reached is an explicit MEASURED 0, a
+ * node the run does not cover stays ABSENT. Plus the lead contract on every state finding.
  *
  * The minimum graph is read FROM THE STANDARD ITSELF, as WP1's import test does.
  */
@@ -143,13 +144,33 @@ describe('SOFTLOCK_LEAD (acceptance 4)', () => {
   });
 });
 
-describe('unmeasured is never 0 (acceptance 5)', () => {
+describe('measured zero vs unmeasured (acceptance 5, wave-4 rule)', () => {
   const r = sampleGraph(offerGraph(), { seed: 11, samples: 2000 });
 
-  it('unreached nodes are ABSENT from the reach map, never 0', () => {
-    expect('ORPH' in r.evidence.reach).toBe(false); // structurally unreachable
-    expect('E.big' in r.evidence.reach).toBe(false); // reachable, never reached
-    for (const row of Object.values(r.evidence.reach)) for (const v of Object.values(row)) expect(v).toBeGreaterThan(0);
+  it('a covered node no walk reached is an explicit 0; an uncovered node (orphan) stays ABSENT', () => {
+    expect('ORPH' in r.evidence.reach).toBe(false); // not covered by the run: unmeasured, never 0
+    expect(r.evidence.reach['E.big']).toEqual({ uniform: 0 }); // covered, never reached: a measured 0
+    expect(r.evidence.reach['E.impossible']).toEqual({ uniform: 0 });
+    const zeros = Object.entries(r.evidence.reach).filter(([, row]) => row.uniform === 0).map(([id]) => id).sort();
+    const nnr = r.findings.filter((f) => f.code === 'NODE_NEVER_REACHED').map((f) => f.nodes[0]).sort();
+    expect(zeros).toEqual(nnr); // every NODE_NEVER_REACHED lead has its 0 row, and only those are 0
+    for (const [id, row] of Object.entries(r.evidence.reach)) if (!zeros.includes(id)) expect(row.uniform).toBeGreaterThan(0);
+  });
+
+  it('with no walks nothing is measured: no row is 0', () => {
+    expect(sampleGraph(offerGraph(), { seed: 11, samples: 0 }).evidence.reach).toEqual({});
+  });
+
+  it('a node behind an unknown edge kind is not covered: absent, and not a NODE_NEVER_REACHED lead', () => {
+    const g = offerGraph();
+    const island = {
+      ...g,
+      nodes: [...g.nodes, { id: 'ISLE', kind: 'event' as const, title: 'Behind a portal' }],
+      edges: [...g.edges, { id: 'tp', from: 'PICK', to: 'ISLE', kind: 'portal' as unknown as 'then' }, { id: 'ti', from: 'ISLE', to: 'E.plain', kind: 'then' as const }],
+    };
+    const ri = sampleGraph(island, { seed: 11, samples: 200 });
+    expect('ISLE' in ri.evidence.reach).toBe(false);
+    expect(ri.findings.some((f) => f.nodes.includes('ISLE'))).toBe(false);
   });
 
   it('NODE_NEVER_REACHED for a structurally reachable node only — never for WP2 orphans', () => {
@@ -173,7 +194,7 @@ describe('domains, cohorts, floors', () => {
       cohorts: [{ id: 'uniform', policy: 'uniform' }, { id: 'taker', policy: 'weighted', weights: { take: 1, refuse: 0 } }],
     });
     expect(r.evidence.reach.E1).toEqual({ uniform: r.evidence.reach.E1.uniform, taker: 100 });
-    expect(r.evidence.reach.E2.taker).toBeUndefined();
+    expect(r.evidence.reach.E2.taker).toBe(0); // the taker cohort covered E2 and never reached it: measured
     expect(r.evidence.runs[0].cohorts).toEqual(['uniform', 'taker']);
     expect(r.evidence.runs[0].n).toBe(1000);
   });

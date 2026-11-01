@@ -47,6 +47,25 @@ describe('mergeEvidence', () => {
     expect('S-5' in m.reach).toBe(false);
   });
 
+  it('explicit zeros merge like any value: imported 12 outranks a sampled measured 0, kept as shadowed', () => {
+    const imp: StoryEvidence = { runs: imported(H).runs, reach: { 'S-9': { uniform: 12 } } };
+    const smp: StoryEvidence = { runs: sampled.runs, reach: { 'S-9': { uniform: 0 }, 'S-10': { uniform: 0 } } };
+    const m = mergeEvidence({ currentHash: H, imported: imp, sampled: smp });
+    expect(m.reach['S-9'].uniform).toMatchObject({ value: 12, source: 'imported', status: 'verified' });
+    expect(m.reach['S-9'].uniform.shadowed).toMatchObject({ value: 0, source: 'sampled', status: 'verified' });
+    // A sampled 0 alone is a verified MEASURED zero: present, 0, passing — not coerced away.
+    expect(m.reach['S-10'].uniform).toMatchObject({ value: 0, source: 'sampled', runId: 'walk', status: 'verified' });
+    expect(cellPasses(m.reach['S-10'].uniform)).toBe(true);
+    expect(toStoryEvidence(m).reach['S-10']).toEqual({ uniform: 0 });
+  });
+
+  it('an imported 0 against a stale hash stays stale; a sampled value never upgrades it', () => {
+    const imp: StoryEvidence = { runs: imported('sha256:older').runs, reach: { 'S-9': { uniform: 0 } } };
+    const m = mergeEvidence({ currentHash: H, imported: imp, sampled: { runs: sampled.runs, reach: { 'S-9': { uniform: 30 } } } });
+    expect(m.reach['S-9'].uniform).toMatchObject({ value: 0, source: 'imported', status: 'stale' });
+    expect(cellPasses(m.reach['S-9'].uniform)).toBe(false);
+  });
+
   it('the plain StoryEvidence carries every run and the winning values', () => {
     const e = toStoryEvidence(mergeEvidence({ currentHash: H, imported: imported(H), sampled }));
     expect(e.runs.map((r) => r.runId)).toEqual(['sim', 'walk']);

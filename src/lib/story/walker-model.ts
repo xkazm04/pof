@@ -19,7 +19,11 @@
  *     counted as an option). Offering it at EVERY child would end a 30-line conversation at its
  *     first line half the time; never offering it loops a conversation whose last line returns to
  *     its hub forever. Mid-container positions do not see it;
- *   - a position whose authored edges all fail, with no exit to take, is a STALL.
+ *   - a position whose authored edges all fail, with no exit to take, is a STALL;
+ *   - a non-choice position with `then` edges marked `mode: 'all'` is a FORK: every such edge that
+ *     holds is a parallel thread (`walker.ts` runs them; `resolveFork` in `walker-resolve.ts`).
+ * `walkable()` is the set of real nodes the walker can reach at all (guards ignored): the nodes a
+ * run COVERS, so a covered node no walk reached is a measured 0 and anything else stays absent.
  * Resolution at a site (which way on a walk takes) lives in `walker-resolve.ts`.
  */
 
@@ -53,6 +57,10 @@ export interface Site {
   /** Choice sites: distinct option keys (`optionId`, else edge id) and the arcs of each. */
   optionKeys: readonly string[];
   byKey: readonly (readonly number[])[];
+  /** Per authored arc: a `then` edge with `mode: 'all'` (a parallel thread at a fork). */
+  parallel: readonly boolean[];
+  /** A non-choice site with at least one parallel arc. */
+  fork: boolean;
 }
 
 export interface WalkModel {
@@ -67,7 +75,15 @@ export interface WalkModel {
   untypedEdges: readonly string[];
   /** Some guard reads `flag` / `visited`, so walks must keep their history. */
   needsHistory: boolean;
+  /** Some site is a fork (`mode: 'all'`), so walks may run several threads. */
+  hasFork: boolean;
   site(pos: string): Site;
+  /**
+   * Real node ids a walk can reach at all: from the entries over every move the walker can make
+   * (authored edges whatever their guards, a last line's exit, the containment fall-through), each
+   * with the containers above it. Orphans, templates and nodes behind unknown edge kinds are out.
+   */
+  walkable(): ReadonlySet<string>;
   /** The node and every container above it. */
   lineage(id: string): readonly string[];
 }
@@ -152,6 +168,7 @@ export function buildWalkModel(graph: StoryGraph): WalkModel {
         byKey[k].push(i);
       });
     }
+    const parallel = authored.map((a) => a.edge!.kind === 'then' && a.edge!.mode === 'all');
     const s: Site = {
       node,
       display,
@@ -167,13 +184,35 @@ export function buildWalkModel(graph: StoryGraph): WalkModel {
       exit,
       optionKeys,
       byKey,
+      parallel,
+      fork: !choice && parallel.some(Boolean),
     };
     sites.set(pos, s);
     return s;
   };
 
+  let covered: Set<string> | undefined;
+  const walkable = (): ReadonlySet<string> => {
+    if (covered) return covered;
+    const seen = new Set<string>(topo.roots);
+    const queue = [...seen];
+    for (let head = 0; head < queue.length; head++) {
+      const s = site(queue[head]);
+      const next = s.authored.length === 0 ? (s.ending ? [] : s.fallback) : [...s.authored.map((a) => a.to), ...(s.exit ? [s.exit] : [])];
+      for (const to of next) {
+        if (seen.has(to)) continue;
+        seen.add(to);
+        queue.push(to);
+      }
+    }
+    covered = new Set<string>();
+    for (const pos of seen) for (const id of lineage(displayId(pos))) if (topo.nodeById.has(id)) covered.add(id);
+    return covered;
+  };
+  const hasFork = graph.edges.some((e) => e.kind === 'then' && e.mode === 'all');
+
   return {
     graph, topo, ids, vars, declared: new Set(vars.keys()), setVars, endingByNode,
-    untypedEdges: [...untyped].sort(), needsHistory, site, lineage,
+    untypedEdges: [...untyped].sort(), needsHistory, hasFork, site, lineage, walkable,
   };
 }

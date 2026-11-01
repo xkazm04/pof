@@ -11,6 +11,11 @@
  * counts as holding — optimistic, so a lead is never made from a guard nothing can read. An edge's
  * `chance` is one more conjunct. A miss caused only by `chance` rolls is not a stall: the walker
  * then takes one of the edges `chance` made possible.
+ *
+ * A FORK (`Site.fork`: a non-choice site with `then` edges marked `mode: 'all'`) resolves to
+ * several moves (`resolveFork`): every parallel edge that holds, in document order, plus ONE way on
+ * picked among the holding `any` edges exactly as above (with a last line's exit competing there).
+ * A guarded parallel edge whose guard fails spawns nothing. The walker runs each move as a thread.
  */
 
 import type { StoryArc } from '@/lib/story/reachability';
@@ -21,8 +26,14 @@ export type Pick = (n: number) => number;
 export type PolicyPick = (keys: readonly string[]) => number;
 
 /** `offered`: at a choice, the indices (into `Site.optionKeys`) of the options offered this visit. */
+export interface Move {
+  to: string;
+  arc?: StoryArc;
+}
+
 export type Resolution =
   | { kind: 'move'; to: string; arc?: StoryArc; offered?: readonly number[] }
+  | { kind: 'fork'; moves: readonly Move[]; offered?: undefined }
   | { kind: 'ending' | 'stall' | 'terminal'; offered?: readonly number[] };
 
 const POSSIBLE = (p: number) => p > 0;
@@ -43,6 +54,7 @@ export function isStalled(s: Site, env: EvalEnv): boolean {
 const rankOf = (s: Site, i: number, v: Tri) => (v === null ? 2 : s.guards[i] ? 0 : 1);
 
 export function resolve(model: WalkModel, s: Site, env: EvalEnv, pick: Pick, policy: PolicyPick): Resolution {
+  if (s.fork) return resolveFork(model, s, env, pick);
   const n = s.authored.length;
   if (n === 0) {
     if (s.ending) return { kind: 'ending' };
@@ -95,4 +107,37 @@ export function resolve(model: WalkModel, s: Site, env: EvalEnv, pick: Pick, pol
   }
   const i = live[live.length === 1 ? 0 : pick(live.length)];
   return { kind: 'move', to: s.authored[i].to, arc: s.authored[i], offered };
+}
+
+/** A fork: every holding parallel edge, then one way on among the holding `any` edges (see header). */
+function resolveFork(model: WalkModel, s: Site, env: EvalEnv, pick: Pick): Resolution {
+  let v = evaluateArcs(s, env);
+  if (v.every((x) => x === false)) {
+    v = evaluateArcs(s, env, true);
+    if (v.every((x) => x === false)) {
+      if (s.ending) return { kind: 'ending' };
+      if (s.exit) return { kind: 'move', to: s.exit };
+      return { kind: 'stall' };
+    }
+  }
+  const vals = v;
+  const live = s.authored.map((_, i) => i).filter((i) => vals[i] !== false);
+  const moves: Move[] = live.filter((i) => s.parallel[i]).map((i) => ({ to: s.authored[i].to, arc: s.authored[i] }));
+  const one = live.filter((i) => !s.parallel[i]);
+  if (one.length > 0) {
+    let j: number | undefined;
+    if (s.gate) {
+      const prec = (i: number) => model.endingByNode.get(s.authored[i].to)?.precedence ?? Infinity;
+      const unknown = (i: number) => (vals[i] === null ? 1 : 0);
+      j = [...one].sort((a, b) => prec(a) - prec(b) || unknown(a) - unknown(b) || a - b)[0];
+    } else if (s.exit) {
+      const k = pick(one.length + 1);
+      if (k === one.length) moves.push({ to: s.exit });
+      else j = one[k];
+    } else {
+      j = one[one.length === 1 ? 0 : pick(one.length)];
+    }
+    if (j !== undefined) moves.push({ to: s.authored[j].to, arc: s.authored[j] });
+  }
+  return moves.length === 1 ? { kind: 'move', to: moves[0].to, arc: moves[0].arc } : { kind: 'fork', moves };
 }

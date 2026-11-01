@@ -72,6 +72,9 @@ describe('POST /api/story/walk', () => {
     expect(lock.altitude).toBe('state');
     expect(lock.lead).toMatchObject({ seed: 3, samples: 400, state: { coins: 1 }, path: ['START', 'CHOOSE', 'COUNT'] });
     expect(lock.detail).toContain('not a proven defect');
+    // E.rich is covered and never reached: a MEASURED zero in the report, beside its NODE_NEVER_REACHED lead.
+    expect(report.evidence.reach['E.rich']).toEqual({ uniform: 0 });
+    expect(report.findings.some((f) => f.code === 'NODE_NEVER_REACHED' && f.nodes[0] === 'E.rich')).toBe(true);
   });
 
   it('progress advances in chunks on a larger graph', async () => {

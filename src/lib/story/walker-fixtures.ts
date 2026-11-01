@@ -11,7 +11,16 @@
  *                      `big` (x >= 7: satisfiable in the domain, never in a reachable state),
  *                      `impossible` (x > 10: unsatisfiable in the domain). Plus `ORPH`, a node no
  *                      edge reaches (WP2's orphan; the walker must leave it absent, not report it).
- * Pure; no randomness.
+ *   `forkGraph()`      START forks (`mode: 'all'`) into threads A and B, plus C whose guard (x >= 1)
+ *                      never holds, so C never spawns. A writes a, B writes b; both run on to J,
+ *                      whose way on (a AND b) is a JOIN: the first thread there waits (blocked)
+ *                      until the other's write lands, then merges. Every walk ends at E.done, C is
+ *                      a measured 0. With `{ needsC: true }` J also needs c, which only C's thread
+ *                      writes: every walk stalls at J with both threads blocked.
+ *   `livelockGraph(k)` START -> HUB (choice: loop | out). `loop` enters L1 <-> L2, counting n
+ *                      (0..3, clamped) on L1 -> L2; L2 -> E.out only when n >= k. With k = 3 the
+ *                      loop can always still exit (a long walk is only `truncated`); with k = 5 no
+ *                      state in the domain opens it: a closed loop with no ending, a LIVELOCK.
  */
 
 import type { StoryEdge, StoryGraph, StoryNode, StoryVariable } from '@/lib/story/types';
@@ -91,5 +100,60 @@ export function offerGraph(): StoryGraph {
     edges,
     [{ name: 'x', type: 'int', domain: { min: 0, max: 10 }, initial: 0, requiresWrite: false, writers, scope: 'playthrough', external: false }],
     ['E.plain', 'E.rare', 'E.big', 'E.impossible'],
+  );
+}
+
+export function forkGraph(opts: { needsC?: boolean } = {}): StoryGraph {
+  const bool = (name: string, writer: string): StoryVariable =>
+    ({ name, type: 'bool', domain: { values: [true, false] }, initial: false, requiresWrite: false, writers: [writer], scope: 'playthrough', external: false });
+  const has = (v: string) => ({ var: v, op: '==' as const, value: true });
+  return doc(
+    opts.needsC ? 'walker-fork-stall' : 'walker-fork',
+    [
+      { id: 'START', kind: 'entry', title: 'Three threads' },
+      { id: 'A', kind: 'event', title: 'Thread A' },
+      { id: 'B', kind: 'event', title: 'Thread B' },
+      { id: 'C', kind: 'event', title: 'Thread C (never opens)' },
+      { id: 'J', kind: 'event', title: 'The threads meet' },
+      { id: 'E.done', kind: 'ending', title: 'Done' },
+    ],
+    [
+      { id: 'f1', from: 'START', to: 'A', kind: 'then', mode: 'all' },
+      { id: 'f2', from: 'START', to: 'B', kind: 'then', mode: 'all' },
+      { id: 'f3', from: 'START', to: 'C', kind: 'then', mode: 'all', when: { var: 'x', op: '>=', value: 1 } },
+      { id: 'a1', from: 'A', to: 'J', kind: 'then', writes: [{ var: 'a', op: 'set', value: true }] },
+      { id: 'b1', from: 'B', to: 'J', kind: 'then', writes: [{ var: 'b', op: 'set', value: true }] },
+      { id: 'c1', from: 'C', to: 'J', kind: 'then', writes: [{ var: 'c', op: 'set', value: true }] },
+      { id: 'j1', from: 'J', to: 'E.done', kind: 'then', when: { all: [has('a'), has('b'), ...(opts.needsC ? [has('c')] : [])] } },
+    ],
+    [
+      bool('a', 'A'), bool('b', 'B'), bool('c', 'C'),
+      { name: 'x', type: 'int', domain: { min: 0, max: 1 }, initial: 0, requiresWrite: false, writers: [], scope: 'playthrough', external: false },
+    ],
+    ['E.done'],
+  );
+}
+
+export function livelockGraph(exitAt: number): StoryGraph {
+  return doc(
+    `walker-livelock-${exitAt}`,
+    [
+      { id: 'START', kind: 'entry', title: 'Start' },
+      { id: 'HUB', kind: 'choice', title: 'The side road', options: [{ id: 'loop' }, { id: 'out' }] },
+      { id: 'L1', kind: 'event', title: 'Round the well' },
+      { id: 'L2', kind: 'event', title: 'Back to the well' },
+      { id: 'E.out', kind: 'ending', title: 'Out of the loop' },
+      { id: 'E.home', kind: 'ending', title: 'Home' },
+    ],
+    [
+      { id: 'l0', from: 'START', to: 'HUB', kind: 'then' },
+      { id: 'l1', from: 'HUB', to: 'L1', kind: 'option', optionId: 'loop', writes: [{ var: 'n', op: 'set', value: 0 }] },
+      { id: 'l2', from: 'HUB', to: 'E.home', kind: 'option', optionId: 'out' },
+      { id: 'l3', from: 'L1', to: 'L2', kind: 'then', writes: [{ var: 'n', op: 'add', value: 1 }] },
+      { id: 'l4', from: 'L2', to: 'L1', kind: 'then' },
+      { id: 'l5', from: 'L2', to: 'E.out', kind: 'gate', when: { var: 'n', op: '>=', value: exitAt } },
+    ],
+    [{ name: 'n', type: 'int', domain: { min: 0, max: 3 }, initial: 0, requiresWrite: false, writers: ['HUB', 'L1'], scope: 'playthrough', external: false }],
+    ['E.out', 'E.home'],
   );
 }

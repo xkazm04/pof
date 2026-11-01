@@ -275,6 +275,11 @@ export interface StoryLead {
   samples: number;
   state: Readonly<Record<string, unknown>>;
   path: readonly string[];
+  /**
+   * Only when the walk forked (`mode: 'all'`): the thread that made each `path` step (same length;
+   * thread 0 is the walk's first, each fork numbers its new threads in order). Absent = one thread.
+   */
+  threads?: readonly number[];
 }
 
 export interface StoryFinding {
@@ -335,6 +340,11 @@ export interface WalkerCohortOutcome {
   terminal: number;
   /** Walks still progressing when the step cap hit. NOT softlocks. */
   truncated: number;
+  /**
+   * Walks still moving at the step cap inside a closed loop from which no ending is reachable
+   * (LIVELOCK_LEAD). Counted here INSTEAD of `truncated`; present only when some walk livelocked.
+   */
+  livelocked?: number;
 }
 
 /** A write the walker could not apply as written. It is never silently clamped. */
@@ -364,6 +374,8 @@ export interface WalkerReport {
   domainEvents: readonly WalkerDomainEvent[];
   /** Where truncated walks were when the cap hit: display node id -> walks. */
   truncatedAt: Readonly<Record<string, number>>;
+  /** Where livelocked walks were when the cap hit (display node id -> walks); present only when some walk livelocked. */
+  livelockedAt?: Readonly<Record<string, number>>;
   /** Where walks stopped with no traversal edge at all: display node id -> walks (WP2 reports these structurally). */
   terminalAt: Readonly<Record<string, number>>;
   /** False when a guard holds an `expr` atom (§6): such a graph is not gradeable at this altitude. */
