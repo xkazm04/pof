@@ -257,6 +257,12 @@ export interface StoryFinding {
   nodes: readonly string[];
   variables?: readonly string[];
   detail: string;
+  /**
+   * A witness path, entry first, when the claim is about a path rather than a node — today only
+   * `VAR_NO_REACHING_WRITE` (§8: "reports the path, not just the node"). Container exits appear as
+   * the container's own id. Structural, so it is a proof, not a lead.
+   */
+  path?: readonly string[];
   /** Present only on state-altitude findings. */
   lead?: StoryLead;
 }

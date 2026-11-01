@@ -567,3 +567,58 @@ different next step on 36 entities.
   and `plainEntitySummary` says "N held for authoring · M not started".
 - Tests: `src/__tests__/components/layout-lab/coachSettlement.test.ts`,
   `src/__tests__/components/layout-lab/NextStepCoach.test.tsx`, `src/__tests__/lib/catalog/stepSettlement.test.ts`.
+
+## 11. Story-graph checkers — the structural pass as acceptance (2026-11-01)
+
+A `pof.storygraph/1` document (`docs/architecture/storygraph-standard.md`) is graded by the
+structural pass of §8 of that standard, `validateStoryGraph(graph)` in `src/lib/story/validate.ts`
+(pure; split across `reachability.ts`, `structure.ts`, `variables.ts`, `choices.ts`, `budgets.ts`).
+Every finding is `altitude: 'structural'` and carries no `lead`; the state-altitude codes belong to
+the walker and are never emitted here. **A pass is not a playability claim** — structural proof is
+necessary and never sufficient.
+
+`src/lib/catalog/acceptance/storyCheckers.ts` exposes it as six L0 (data-derived) checkers, each
+reading one artifact field (default `storyGraph`; object or JSON text), each owning a fixed slice of
+codes so every structural code is graded by exactly one checker:
+
+| Checker | Codes |
+|---|---|
+| `storyGraphParses` | the importer (`parseStoryGraph`): schema + the loud `variables` block |
+| `storyStructurallySound` | `DANGLING_EDGE`, `DUPLICATE_ID`, `CONTAINMENT_CYCLE`, `ORPHAN_NODE` |
+| `storyEndingsAttainable` | `ENDING_UNREACHABLE`, `NO_ENDING_REACHABLE`, `UNDECLARED_TERMINAL` |
+| `storyVariablesDeclared` | `VAR_UNDECLARED`, `VAR_NO_REACHING_WRITE`, `VAR_DOMAIN_VIOLATION`, `VAR_WRITER_NOT_OWNER`, `VAR_SINGLETON`, `UNTYPED_CONDITION` |
+| `storyChoicesReal` | `FALSE_CHOICE` |
+| `storyBudgetsHeld` | `TEXT_BUDGET_EXCEEDED` |
+
+`storyGraphAcceptance(field)` composes all six with `allOf` (parse first). An `error` or `warn`
+finding fails its checker and the reason names the first five; `info` passes and is counted in the
+detail. Absent field → `pending`; unparseable → `fail` with the importer's reason. One parse + one
+pass per artifact value (a `WeakMap`), however many checkers read it. The slices are marked content
+invariants. **Not yet registered in any pipeline** — the `story-arcs` row adopts them in a later
+package.
+
+The same pass is served read-only at `GET /api/story/findings?graphId=&project=` →
+`{ graphId, project, hash, findings, counts: { byCode, bySeverity }, durationMs }` over the STORED
+graph (same 404/409 resolution as `/api/story/graphs/[graphId]`) — a separate reader of the stored
+artifact, so its verdict is not the producer's self-report.
+
+Semantics a reader needs (the walk, not the code, decides what a finding means):
+
+- **Traversal** is `then` / `option` / `gate` only; `contains`, `influences` and any unknown edge
+  kind are never walked. `template` nodes and their descendants are excluded from every walk.
+- **Containers** (any node with a child): an edge into X enters X's entry children (those no
+  sibling inside X points at); being anywhere inside X opens X's own outgoing edges (an edge from X
+  to its own descendant is an entry, not an exit). Over-approximate on purpose, like guards.
+- **One code per dead node:** a reachable node with no way on is `UNDECLARED_TERMINAL`; the dead
+  nodes that still have a way on are grouped into regions under `NO_ENDING_REACHABLE`. A declared
+  ending that is unreachable is `ENDING_UNREACHABLE`, not also `ORPHAN_NODE`. A declared name used
+  once is `VAR_SINGLETON`; an undeclared one is `VAR_UNDECLARED` only.
+- **Writer ownership** attributes an edge's writes to its SOURCE node (or an enclosing container).
+- `VAR_NO_REACHING_WRITE` carries a witness `path` (entry first) — the additive
+  `StoryFinding.path` field.
+
+Tests: `src/__tests__/lib/story/storygraph-validate.test.ts` (committed: clean generator at 100 /
+1,000 / 10,000 → zero findings; `seedStructuralDefects` in `src/lib/story/defect-fixtures.ts` plants
+one defect per code, found exactly), `storygraph-validate-staged.test.ts` (the gitignored
+`synthetic-scale` answer key, 27/27 + the asserted extras, timing; skips loudly when absent),
+`story-checkers.test.ts`, `src/__tests__/api/story/story-findings-route.test.ts`.
