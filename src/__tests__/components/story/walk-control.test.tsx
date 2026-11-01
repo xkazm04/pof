@@ -172,6 +172,8 @@ describe('Walk control', () => {
     pick('l.none');
     const zero = container.querySelector('[data-role=orrery-walk-cell]');
     expect(zero?.querySelector('b')?.textContent).toBe('0%');
+    expect(zero?.getAttribute('data-reach')).toBe('measured-zero');
+    expect(zero?.textContent).toContain('measured, not reached in 400 walks (sampled, verified)');
     expect(container.querySelector('[data-role=orrery-walk-cells]')?.getAttribute('data-measured')).toBe('true');
 
     pick('l.ghost');

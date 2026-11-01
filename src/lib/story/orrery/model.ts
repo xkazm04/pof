@@ -8,7 +8,8 @@
  *   1. node records and the id index (a virtual dataset root is appended at index N)
  *   2. the edge partition — **`contains` is containment and `influences` is the impact layer, so
  *      neither is traversal**; only `then`/`option`/`gate` reach anything
- *   3. reach rows, by the producer's own cohort names (absent = `null`, which is NOT zero)
+ *   3. reach rows, by the producer's own cohort names — the union over every run — (absent =
+ *      `null`, which is NOT zero; an explicit 0 is a measured zero)
  *   4. forward reachability from the declared entries, which doubles as the topological order for
  *      a document that declares no axis
  *   5. the containment hierarchy, hub docks and the angular layout (`@/lib/story/orrery/layout`)
@@ -101,9 +102,21 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
 
   /* ---- 3. reach: the producer's cohorts, and `null` for anything it did not measure */
   const evidence = raw.evidence;
-  const run0 = evidence?.runs?.[0];
-  const cohorts: string[] = run0 ? [...run0.cohorts] : [];
-  // The cohorts actually present in the rows. Normally the run's own list; a document whose
+  const runs = evidence?.runs ?? [];
+  // The cohort list is the UNION over every run, first-seen in document order. A document that
+  // carries an imported run and a sampled one shows both runs' cohorts; reading only the first run
+  // would hide the second run's cohort entirely (it used to, and `walk.ts` faked a leading run).
+  const cohorts: string[] = [];
+  const addCohort = (c: string) => {
+    if (!cohorts.includes(c)) cohorts.push(c);
+  };
+  for (const r of runs) for (const c of r.cohorts ?? []) addCohort(c);
+  // A row cohort no run declares is still a measured column (its cells are unattributed, so they
+  // read unverified). Only once a run exists: a run-less document keeps an empty cohort list.
+  if (runs.length > 0 && evidence?.reach) {
+    for (const row of Object.values(evidence.reach)) if (row) for (const c of Object.keys(row)) addCohort(c);
+  }
+  // The cohorts actually present in the rows. Normally the cohort list; a document whose
   // evidence declares no run still gets averaged honestly instead of silently dropped.
   const reachCohorts: string[] = [...cohorts];
   if (evidence?.reach) {
@@ -115,6 +128,7 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
       let any = false;
       for (const c of names) {
         const v = row[c];
+        // An explicit 0 is a MEASURED zero and is kept; only a non-number is "not measured".
         if (typeof v !== 'number' || Number.isNaN(v)) continue;
         measured[c] = v;
         any = true;
@@ -362,11 +376,13 @@ export function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel {
     inn,
     cohorts,
     prov: {
-      // Honesty flags are read off the document; none of the three is ever assumed.
-      unverified: !run0?.graphHash,
-      provisional: run0?.provisional === true || source.reachProvisional === true,
+      // Honesty flags are read off the document; none of the three is ever assumed. Doubt never
+      // passes: ONE unpinned run (or no run at all) badges the lens unverified, and ONE provisional
+      // run makes it provisional. A cohort's own cell status is the merge's job (`walk.ts`).
+      unverified: runs.length === 0 || runs.some((r) => !r.graphHash),
+      provisional: runs.some((r) => r.provisional === true) || source.reachProvisional === true,
       generated: /GENERATED/i.test(note),
-      runs: evidence?.runs ?? [],
+      runs,
     },
     spreadRef,
     flat,

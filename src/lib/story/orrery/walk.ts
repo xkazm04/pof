@@ -7,14 +7,14 @@
  *   1. {@link mergeWalkEvidence} — the report's SAMPLED evidence merged under the graph's own
  *      IMPORTED evidence with `mergeEvidence` (§8: imported outranks sampled; the rule lives there,
  *      not here).
- *   2. {@link buildMergedModel} — the Orrery model built over the merged evidence. The model reads
- *      its cohort list off the FIRST run only (`model.ts` step 3), so a document whose imported run
- *      names `completionist…` would hide the walker's `uniform` cohort entirely. Until the model
- *      reads every run (counter-proposed in the WP4 report), this feeds it a leading VIEW run whose
- *      only job is to carry the union of cohort names, then strips it again: the returned model's
- *      `raw.evidence` and `prov.runs` are the real runs, never the view run.
+ *   2. {@link buildMergedModel} — the Orrery model built over the merged evidence. The model takes
+ *      its cohort list as the UNION over every run (`model.ts` step 3), so the walker's `uniform`
+ *      cohort shows beside an imported `completionist…` run with no help from here; the returned
+ *      model's `raw.evidence` and `prov.runs` are the real runs.
  *      `prov.unverified` is recomputed from the merged cells: if ANY displayed cell is `stale` or
- *      `unverified`, the whole lens is badged unverified — doubt never passes (§9).
+ *      `unverified`, the whole lens is badged unverified — doubt never passes (§9). (The model's own
+ *      rule only knows "pinned or not"; a run pinned to ANOTHER revision is stale, which only the
+ *      merge can tell.)
  *   3. {@link withLeads} — walker findings are LEADS, so they enter the Audit tab as ONE separate,
  *      labelled group and never touch `auditTotal`, which stays the structural count.
  */
@@ -22,10 +22,8 @@
 import { mergeEvidence, toStoryEvidence, type EvidenceSource, type EvidenceStatus, type MergedEvidence } from '@/lib/story/evidence';
 import { buildOrreryModel } from '@/lib/story/orrery/model';
 import type { AuditGroup, OrreryModel } from '@/lib/story/orrery/types';
-import type { StoryFinding, StoryGraph, StoryRun, WalkerReport } from '@/lib/story/types';
+import type { StoryFinding, StoryGraph, WalkerReport } from '@/lib/story/types';
 
-/** The view run's id. Internal to {@link buildMergedModel}; it never leaves this module. */
-const VIEW_RUN_ID = '__orrery-merged-view';
 /** The Audit group the leads land in. */
 export const LEADS_GROUP_ID = 'walker-leads';
 export const LEADS_GROUP_TITLE = 'Leads - reproduce before trusting';
@@ -78,37 +76,12 @@ export function cohortStatuses(merged: MergedEvidence): CohortStatus[] {
   return [...by.values()];
 }
 
-/**
- * Build the Orrery model over merged evidence. See the module note for why a view run is used and
- * why it is stripped again. Pure.
- */
+/** Build the Orrery model over merged evidence, badged by the worst displayed cell. Pure. */
 export function buildMergedModel(graph: StoryGraph, key: string, merged: MergedEvidence): OrreryModel {
   const real = toStoryEvidence(merged);
-  const union: string[] = [];
-  const add = (c: string) => {
-    if (!union.includes(c)) union.push(c);
-  };
-  for (const r of real.runs) r.cohorts.forEach(add);
-  // A row cohort no run declares is still a measured column (its cells read `unverified`).
-  for (const row of Object.values(real.reach)) Object.keys(row).forEach(add);
-
-  const worst = worstCellStatus(merged);
-  const verified = worst === 'verified' && merged.graphHash.length > 0;
-  const view: StoryRun = {
-    runId: VIEW_RUN_ID,
-    engine: 'orrery-merged-view',
-    n: real.runs[0]?.n ?? 0,
-    graphHash: verified ? merged.graphHash : null,
-    cohorts: union,
-  };
-  if (real.runs.some((r) => r.provisional === true)) view.provisional = true;
-
-  const built = buildOrreryModel({ ...graph, evidence: { ...real, runs: [view, ...real.runs] } }, key);
-  return {
-    ...built,
-    raw: { ...graph, evidence: real },
-    prov: { ...built.prov, unverified: !verified, runs: real.runs },
-  };
+  const built = buildOrreryModel({ ...graph, evidence: real }, key);
+  const verified = worstCellStatus(merged) === 'verified' && merged.graphHash.length > 0;
+  return { ...built, prov: { ...built.prov, unverified: !verified } };
 }
 
 /** `a › b › c … x › y › z (n steps)` — the head and tail of a lead's path. */

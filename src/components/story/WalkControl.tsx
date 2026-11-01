@@ -173,11 +173,24 @@ function WalkCells({ model, selected, merged }: { model: OrreryModel; selected: 
       </MicroLabel>
       {Object.entries(row).map(([cohort, cell]) => {
         const s = STATUS_TEXT[cell.status];
+        // An explicit 0 is a MEASURED zero: the run covered this node and none of its walks reached
+        // it. It is said in words, so it never reads like the "unmeasured" row above.
+        const zero = cell.value === 0;
+        const walks = merged.runs.find((r) => r.runId === cell.runId)?.n;
         return (
-          <div key={cohort} data-role="orrery-walk-cell" data-status={cell.status} data-source={cell.source}>
+          <div
+            key={cohort}
+            data-role="orrery-walk-cell"
+            data-status={cell.status}
+            data-source={cell.source}
+            data-reach={zero ? 'measured-zero' : 'measured'}
+          >
             <span>{cohort}</span>
             <b>{cell.value}%</b>
             <span>
+              {zero
+                ? `measured, not reached in ${typeof walks === 'number' ? `${walks.toLocaleString()} walks` : 'any walk'} (${cell.source}, ${cell.status}) · `
+                : ''}
               {s.glyph} {cell.source} · {s.text}
               {cell.shadowed ? ` (outranks sampled ${cell.shadowed.value}%)` : ''}
             </span>
