@@ -1,6 +1,6 @@
 ---
 name: diablo
-description: Long-running LEARNING loop that breaks Diablo I (1996) down through PoF's catalog pipelines and replicates it toward UE — not to ship a game, but because every place PoF cannot hold, derive or produce what a complete shipped ARPG needed is an adjustment worth making. Phase A resolves the ingest backlog; Phase B replicates the game in dependency-ordered WAVES, each ending at a HUMAN GATE (never auto-proceeds). The dependency chronology ("we cannot create X without Y"), the adjustment ledger and all wave state live in the Obsidian vault (Diablo/). Invoke with /diablo [next | status | backlog | path | gate | ingest].
+description: Long-running LEARNING loop that breaks Diablo I (1996) down through PoF's catalog pipelines and replicates it toward UE — not to ship a game, but because every place PoF cannot hold, derive or produce what a complete shipped ARPG needed is an adjustment worth making. Phase A resolves the ingest backlog; Phase B replicates the game in dependency-ordered WAVES, each ending at a HUMAN GATE (never auto-proceeds). The dependency chronology ("we cannot create X without Y"), the adjustment ledger and the backlog live in the repo (docs/research/diablo/) since the 2026-10-19 machine reset destroyed the vault; the resume point and the wave notes live in the Obsidian vault (Diablo/). Invoke with /diablo [next | status | backlog | path | gate | ingest].
 version: 1.3
 ---
 
@@ -16,16 +16,27 @@ successful wave. A wave that papers over X to look finished is the only real fai
 > on every ingested entity anyway — they are how an ingested value is told apart from a
 > designed one, which the loop needs regardless of licence.
 
-> **Engine vs. memory.** This file is the engine. Memory is the Obsidian vault
-> `C:/Users/kazda/Documents/Obsidian/pof/Diablo/` — **read `Diablo.md` first, every session.**
-> It holds `State.md` (resume point), `Backlog.md`, `Path/` (the dependency graph — the
-> "chronology of game making"), `Waves/` (one note per wave), `Adjustments.md` (the ledger)
-> and `Findings.md` (defects in the SOURCE data, not in PoF).
+> **Engine vs. memory — and durable vs. not.** This file is the engine. On 2026-10-19 a machine
+> reset destroyed the vault, the reference clone, the wrapper DB and the UE project; everything in
+> the repo survived, and the reference pin came back only by accident (it was quoted in the canon
+> profile's `refs:`). So by the operator's W108 decision D-G2-1 the loop's **product** is repo state:
+>
+> - **In the repo — `docs/research/diablo/`:** `Backlog.md`, `Path/` (the dependency graph — the
+>   "chronology of game making"), `Adjustments.md` (the ledger), `Findings.md` (defects in the
+>   SOURCE data, not in PoF). Committed with each wave. They carry no reference VALUES.
+> - **In the vault `C:/Users/kazda/Documents/Obsidian/pof/Diablo/`:** `Diablo.md`, `State.md`
+>   (resume point), `Waves/` (one note per wave), `Codex/`. Working notes.
+>
+> **Read both, every session:** vault `Diablo.md` → vault `State.md` → `docs/research/diablo/Backlog.md`
+> → `docs/research/diablo/Path/Index.md` → the newest `Waves/` note. A vault that is missing is not
+> a reason to stop — generation 2 was rebuilt from the repo alone — but it IS a finding to record.
 
 ## The tools (never eyeball, never re-derive)
 
 ```bash
-ROOT="C:/Users/kazda/kiro/reference/devilutionX/assets/txtdata"   # sparse clone, pinned (see State.md)
+ROOT="C:/Users/kazda/kiro/reference/devilutionX/assets/txtdata"   # sparse clone; the pin and the
+# exact clone recipe are DIABLO1_PIN / DIABLO1_OBTAIN in src/lib/catalog/ingest/diablo1.ts — in the
+# repo, asserted by diablo1-mapping.test.ts, never only in a note (W108 B-G2-2).
 npx tsx scripts/diablo/ingest.ts --root "$ROOT"                           # wrap every mapped table (idempotent)
 npx tsx scripts/diablo/ingest.ts --root "$ROOT" --promote bestiary --ids d1-MT_NZOMBIE,…   # promote a wave's slice
 npx tsx scripts/diablo/status.ts [--json]                                 # the GATE snapshot + coverage trend
@@ -46,20 +57,20 @@ npx tsx scripts/diablo/status.ts [--json]                                 # the 
 
 ## BOOT (every session)
 
-1. Read the vault: `Diablo.md` → `State.md` → `Backlog.md` → `Path/Index.md` → the newest
-   `Waves/` note. Read `.claude/fleet-memory.md` (repo law). Obey `State.md`'s `status`:
+1. Read, in order: vault `Diablo.md` → vault `State.md` → repo `docs/research/diablo/Backlog.md`
+   → repo `docs/research/diablo/Path/Index.md` → the newest vault `Waves/` note. Read `.claude/fleet-memory.md` (repo law). Obey `State.md`'s `status`:
    **`awaiting-gate` means the operator has not answered — ask, do not proceed.**
 2. `cd` nowhere; run `ingest.ts` then `status.ts`. A non-zero **`rawChanged`** means the upstream
-   data moved under the wrappers: record it in `Findings.md` and understand it before anything else.
+   data moved under the wrappers: record it in `docs/research/diablo/Findings.md` and understand it before anything else.
 3. State the resume point in one line to the operator, then act on the argument:
    `next` (default) · `status` (snapshot only) · `backlog` (Phase A only) · `path` (print the
    ready frontier) · `gate` (re-present the open gate) · `ingest` (re-ingest + report only).
 
 ## Phase A — resolve the backlog
 
-`Backlog.md` lists every item with `status: open | done | decision | descoped`.
+`docs/research/diablo/Backlog.md` lists every item with `status: open | done | decision | descoped`.
 - **S/M items with an obvious fix** → TDD, one commit each (`diablo: <item> — …`), mark `done`,
-  add an `Adjustments.md` line with the measured effect.
+  add a `docs/research/diablo/Adjustments.md` line with the measured effect.
 - **`decision` items** (a schema choice, a new catalog, a genre assumption) are never decided by
   the loop. Collect them; when only decisions remain, go to the GATE with a recommendation for each.
 - New defects found while working are ADDED to the backlog with evidence — the list is allowed
@@ -70,7 +81,7 @@ npx tsx scripts/diablo/status.ts [--json]                                 # the 
 A **wave** is one coherent slice that can be reviewed in one sitting: a style decision, a
 family of entities through their pipelines, one system. Never "all 112 monsters".
 
-1. **Pick** from the ready frontier: a `Path/` node whose `requires:` are all `done`. Prefer the
+1. **Pick** from the ready frontier: a `docs/research/diablo/Path/` node whose `requires:` are all `done`. Prefer the
    node that unblocks the most others. Write `Waves/W<NN>-<slug>.md` (goal, nodes, entities, the
    expected numbers BEFORE running anything).
 2. **Look at the data first.** For any table the wave touches, read its value census (the
@@ -82,10 +93,10 @@ family of entities through their pipelines, one system. Never "all 112 monsters"
    the real upstream header in the mapping test (column NAMES only — values never enter the repo).
 4. **Promote only the wave's slice**, then drive its pipelines. Record every step that fails,
    defers, or needs a field the entity cannot supply.
-5. **Forge the path.** Each "cannot do X without Y" becomes (or extends) a `Path/` node with the
+5. **Forge the path.** Each "cannot do X without Y" becomes (or extends) a `docs/research/diablo/Path/` node with the
    evidence (file:line, the failing step, the missing field). New prerequisites are discovered,
    not planned — the graph is supposed to grow.
-6. **Measure.** `status.ts` before/after; write the deltas into the wave note and `Adjustments.md`.
+6. **Measure.** `status.ts` before/after; write the deltas into the wave note and `docs/research/diablo/Adjustments.md`.
 7. **GATE — stop.** Set `State.md` `status: awaiting-gate`, then ask the operator with the
    question tool: what landed, what the snapshot says, the decisions needed (each with a
    recommendation), and the proposed next wave. Options: continue as proposed · continue with
@@ -150,7 +161,7 @@ does both); remove the junction with `rmdir`, never recursively.
 
 ## Forging the Path (the chronology of game making)
 
-One note per node in `Path/`, frontmatter:
+One note per node in `docs/research/diablo/Path/`, frontmatter:
 
 ```yaml
 kind: style | system | content | data | capability
@@ -161,7 +172,7 @@ evidence: "why this dependency is real — file:line, failing step, missing fiel
 
 A dependency is written down only with evidence (a failing step, a missing field, a prompt that
 had nothing to cite). "Feels like it comes first" is not evidence. When a node completes, append
-one line to `Path/Index.md`'s **Chronology** (date · node · what made it done), so the order
+one line to `docs/research/diablo/Path/Index.md`'s **Chronology** (date · node · what made it done), so the order
 PoF actually needed things in is recoverable later — that sequence is a finding in itself.
 
 ## Laws
@@ -175,7 +186,7 @@ PoF actually needed things in is recoverable later — that sequence is a findin
 - **Consult the registry BEFORE a design decision, not after.** Resolve the governing subjects
   through `.ai/registry-map.json` / `knowledge/<domain>/index.json` (for this loop at least
   `import-normalization` and `reference-parity-gating`). Where the chassis falls short, record a
-  deviation in `Backlog.md` § registry deviations — never lower the standard to fit the code.
+  deviation in `docs/research/diablo/Backlog.md` § registry deviations — never lower the standard to fit the code.
   Parity law for Phase B: a step SEEDED from the reference is never graded `pass` for matching the
   reference; parity is measured by a tool that reads both sides through the same pipeline.
 - **Never weaken a checker or a mapping to make a number move.** Coverage rises by mapping a

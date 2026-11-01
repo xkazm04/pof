@@ -21,6 +21,22 @@ import { dropped, gap, mapped, type FieldMap } from './fieldMap';
 import { dropValues, split, unwrap } from './decode';
 import type { EntityProvenance } from '../types';
 
+/**
+ * The upstream commit the data root must be at. Named here, in the repo, because /diablo W108
+ * found it recoverable after a machine reset ONLY by accident — it was quoted in the canon
+ * profile's `refs:` strings, while its designated home was a vault note that the reset destroyed
+ * (backlog B-G2-2). A reference read at no pin re-projects silently when upstream moves.
+ */
+export const DIABLO1_PIN = '4138a829e991a7d528c7d8240e0c7a73c5b22948';
+
+export const DIABLO1_REPO = 'https://github.com/diasurgical/devilutionX';
+
+export const DIABLO1_OBTAIN =
+  `git clone --filter=blob:none --no-checkout ${DIABLO1_REPO} devilutionX `
+  + '&& git -C devilutionX sparse-checkout init --cone && git -C devilutionX sparse-checkout set assets/txtdata '
+  + `&& git -C devilutionX fetch --filter=blob:none --unshallow origin && git -C devilutionX checkout ${DIABLO1_PIN} `
+  + '— the data root is assets/txtdata (49 TSVs); values never enter this repo';
+
 export const DIABLO1_SOURCE = {
   sourceGame: 'Diablo I (1996)',
   sourceProject: 'DevilutionX (diasurgical/devilutionX) — assets/txtdata',

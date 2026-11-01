@@ -17,6 +17,7 @@ import {
   inputGateOverridden,
   type InputGateOutcome,
 } from '@/lib/visual-gen/input-gate';
+import { meshPromptFor } from '@/lib/media-prompts/meshPrompts';
 
 /**
  * POST /api/visual-gen/generate
@@ -158,8 +159,13 @@ export async function POST(request: NextRequest) {
     if (!dispatch || !dispatch.modes.includes(mode as RunnerMode)) {
       return apiError(runnerRefusal(providerId, mode), 400);
     }
+    // The craft pack is composed here, after shape routing saw the RAW prompt, so the runner still
+    // receives one prompt string. No pack for the class (or no prompt) leaves the prompt untouched.
+    const sentPrompt = mode === 'text-to-3d' && prompt?.trim()
+      ? meshPromptFor(assetClass, prompt) ?? prompt
+      : prompt;
     const started = dispatch.start({
-      mode: mode as RunnerMode, prompt, imageDataUrl, viewDataUrls, assetClass, mcResolution, maxAttempts,
+      mode: mode as RunnerMode, prompt: sentPrompt, imageDataUrl, viewDataUrls, assetClass, mcResolution, maxAttempts,
     });
     if (!started.ok) return apiError(started.error, 400);
     // `inputGate` is absent on text-to-3d (nothing to gate) and on multiview without a

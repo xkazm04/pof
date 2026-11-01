@@ -1,0 +1,419 @@
+{
+  "schema": "asset-needs/1",
+  "project": "bp",
+  "generatedAt": "2026-10-25T23:10:25.899Z",
+  "source": {
+    "repo": "bp",
+    "commit": "181154a308b74229786aeb0d7bc2e4b71e70406d",
+    "pofCommit": "d5d38b7c2a6844d7c6d48ec838df81083a1fb3a6"
+  },
+  "rules": {
+    "notes": [
+      "Fidelity pass rule: \"Pass: no element below 2, and elements 1, 4, 7, 9, 10 and 11 at 3.\" (docs/concepts/vr-light-table/art-breakdown.md:72)",
+      "Poly budget is per asset: tris at or under the manifest's budget_tris, summed over meshes, the largest mesh when budget_note says \"per mesh\" (scripts/check-art.mjs (c)); no per-class budget is stated",
+      "P4 per-asset guide (triangles): Lamp agent: head, two-joint arm, base 30k; Light table frame 10k; Survey pin 500, instanced; Studio kit (shelves, desk lamp, mug, drawing tubes, pinned drawings) 80k total (docs/concepts/vr-light-table/plan.md:520); a manifest's budget_tris supersedes it",
+      "Every manifest carries gates input, mesh_acceptance, scale, finishing, poly_budget, each pass: true (apps/vr/ArtSource/*/manifest.json; scripts/check-art.mjs (b))",
+      "Class material also carries gate tiling (apps/vr/ArtSource/*/manifest.json)",
+      "Each asset passes the same chain, from the registry: concept sheet, then an input gate (reconstructability), then TRELLIS.2, then mesh acceptance, scale normalisation, finishing (low-poly retopology and UV, PBR baked), a poly budget, and finally UE import through the editor MCP. (docs/concepts/vr-light-table/plan.md:514)",
+      "Scene budget for the whole slice, borrowed from mage-arena's numbers as a start and re-measured in P3: 150 draw calls and 350k visible triangles or fewer. (docs/concepts/vr-light-table/plan.md:527)",
+      "Prop sheets for image-to-3D follow the registry's input gating, not the style block: one object, plain neutral background, canonical pose, even light, no text on the object, the object whole and uncropped. A beautiful prop image that breaks those rules is rejected before TRELLIS.2 runs. (docs/concepts/vr-light-table/art-breakdown.md:57)",
+      "Style block, Palette with roles: ground: blueprint blue `#0B2A6B` to `#123A8C`; linework, volumes and the scan band: cyan-white `#BFE8FF`; attention (pins, agent head): amber `#FFB547`; decision accents: warm paper `#F3E9D2`; studio: near-black blue `#0A0F18` (docs/concepts/vr-light-table/art-breakdown.md:53)",
+      "Style block, Finish: soft bloom on edges, light haze, warm practical lights against a cool table, slight film grain (docs/concepts/vr-light-table/art-breakdown.md:54)",
+      "Style block, Never: galaxy or star imagery, neon cyberpunk clutter, fisheye, readable fake text, purple gradients (docs/concepts/vr-light-table/art-breakdown.md:55)",
+      "Texture convention: 8 of 14 manifests with a textures entry pack ORM as R occlusion, G roughness, B metal, with a tangent-space OpenGL normal (apps/vr/ArtSource/*/manifest.json textures)"
+    ]
+  },
+  "inventory": [
+    {
+      "id": "city-backdrop",
+      "name": "City backdrop",
+      "class": "backdrop-matte",
+      "tris": 72,
+      "budgetTris": 200,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "fixture-kit",
+      "name": "Fixture kit",
+      "class": "prop-instanced-kit",
+      "gravitoneClass": "prop",
+      "tris": 444,
+      "budgetTris": 800,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 1,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "hands-capture",
+      "name": "Hands capture",
+      "class": "capture-hands",
+      "tris": 21848,
+      "budgetTris": 30000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 1,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "lamp-agent",
+      "name": "Lamp agent",
+      "class": "character-prop",
+      "gravitoneClass": "character",
+      "tris": 14730,
+      "budgetTris": 15000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 1,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "light-table-frame",
+      "name": "Light table frame",
+      "class": "prop-hero",
+      "gravitoneClass": "prop",
+      "tris": 8082,
+      "budgetTris": 10000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "mat-blueprint-paper",
+      "name": "Blueprint paper material",
+      "class": "material",
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true,
+        "tiling": true
+      }
+    },
+    {
+      "id": "mat-brushed-aluminium",
+      "name": "Brushed aluminium material",
+      "class": "material",
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true,
+        "tiling": true
+      }
+    },
+    {
+      "id": "mat-vellum",
+      "name": "Vellum material",
+      "class": "material",
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true,
+        "tiling": true
+      }
+    },
+    {
+      "id": "mat-warm-wood",
+      "name": "Warm wood material",
+      "class": "material",
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true,
+        "tiling": true
+      }
+    },
+    {
+      "id": "studio-architecture",
+      "name": "Studio architecture",
+      "class": "studio-kit",
+      "gravitoneClass": "prop",
+      "tris": 10576,
+      "budgetTris": 12000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      }
+    },
+    {
+      "id": "studio-desk-clutter",
+      "name": "Studio desk clutter",
+      "class": "studio-kit",
+      "gravitoneClass": "prop",
+      "tris": 12539,
+      "budgetTris": 30000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      }
+    },
+    {
+      "id": "studio-desk-lamp",
+      "name": "Studio desk lamp",
+      "class": "set-dressing",
+      "gravitoneClass": "prop",
+      "tris": 6964,
+      "budgetTris": 16000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "studio-drawing-tubes",
+      "name": "Studio drawing tubes",
+      "class": "set-dressing",
+      "gravitoneClass": "prop",
+      "tris": 10220,
+      "budgetTris": 20000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "studio-mug",
+      "name": "Studio mug",
+      "class": "set-dressing",
+      "gravitoneClass": "prop",
+      "tris": 3828,
+      "budgetTris": 8000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "studio-pinned-drawings",
+      "name": "Studio pinned drawings",
+      "class": "set-dressing",
+      "gravitoneClass": "prop",
+      "tris": 3596,
+      "budgetTris": 12000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "studio-shelves",
+      "name": "Studio shelves",
+      "class": "set-dressing",
+      "gravitoneClass": "prop",
+      "tris": 17144,
+      "budgetTris": 24000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 2,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    },
+    {
+      "id": "studio-wall-kit",
+      "name": "Studio wall kit",
+      "class": "studio-kit",
+      "gravitoneClass": "prop",
+      "tris": 7760,
+      "budgetTris": 20000,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      }
+    },
+    {
+      "id": "survey-pin",
+      "name": "Survey pin",
+      "class": "prop-instanced",
+      "gravitoneClass": "prop",
+      "tris": 468,
+      "budgetTris": 500,
+      "gates": {
+        "finishing": true,
+        "input": true,
+        "mesh_acceptance": true,
+        "poly_budget": true,
+        "scale": true
+      },
+      "score": {
+        "value": 0,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md"
+      }
+    }
+  ],
+  "needs": [
+    {
+      "id": "need-furniture-inside-rooms",
+      "kind": "scored-low",
+      "subject": "Small furniture inside rooms",
+      "class": "prop-instanced-kit",
+      "gravitoneClass": "prop",
+      "why": "Tiles are plain blocks, shown only at L2. No fixture kit yet",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:43",
+      "budgetTris": 800,
+      "priority": 2,
+      "assetId": "fixture-kit"
+    },
+    {
+      "id": "need-amber-pins-with-tags",
+      "kind": "scored-low",
+      "subject": "Amber pins with paper tags (\"R-11 TEMP 28 °C\")",
+      "class": "prop-instanced",
+      "gravitoneClass": "prop",
+      "why": "Not built (L5)",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:45",
+      "budgetTris": 500,
+      "priority": 1,
+      "assetId": "survey-pin"
+    },
+    {
+      "id": "need-scan-line",
+      "kind": "scored-low",
+      "subject": "The cyan scan line sweeping across a wing",
+      "class": "shader",
+      "why": "Not built (L5)",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:46",
+      "priority": 2
+    },
+    {
+      "id": "need-lamp-agent",
+      "kind": "scored-low",
+      "subject": "The lamp agent with a warm glowing head and jointed arm",
+      "class": "character-prop",
+      "gravitoneClass": "character",
+      "why": "Its warm head is in the upper third. It reads as a desk lamp, not the concept's character, and the glow edge is ragged",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:47",
+      "budgetTris": 15000,
+      "priority": 1,
+      "assetId": "lamp-agent"
+    },
+    {
+      "id": "need-decision-card",
+      "kind": "scored-low",
+      "subject": "The floating decision card with Approve and Decline",
+      "class": "data + text layer",
+      "why": "Not built (L5)",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:48",
+      "priority": 1
+    },
+    {
+      "id": "need-wrist-panel",
+      "kind": "scored-low",
+      "subject": "The wrist panel: Package A/B/C with a progress ring",
+      "class": "data + text layer",
+      "why": "Not built (L3.5, L5)",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:49",
+      "priority": 1
+    },
+    {
+      "id": "need-real-hands",
+      "kind": "scored-low",
+      "subject": "Real hands, one pointing",
+      "class": "capture-hands",
+      "why": "The SDK hand meshes are placeholders without a headset, dim under the rim. Live hands are not proven",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:50",
+      "budgetTris": 30000,
+      "priority": 2,
+      "assetId": "hands-capture"
+    }
+  ]
+}

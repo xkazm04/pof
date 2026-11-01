@@ -4,6 +4,83 @@ Plan authored 2026-07-08 (Fable analysis pass). Execution: Opus-orchestrated, wo
 by workstream. Goal: move `/status` from "technically correct" to "professional-grade,
 strictly judged, produced by the right model at the right thinking budget."
 
+## Execution status (2026-10-22, evidence audit — supersedes the 2026-07-08 block below)
+
+**Tree the audit saw:** branch `autopilot/project-kpi-stewardship-fd5c9ae2` cut from local `master`
+at `331fd0f2`. The local master was **23 commits behind `origin/master`** when this was read
+(`git rev-list --count master..origin/master` = 23). None of those 23 commits touch an audited
+path (`git diff --stat master origin/master` over `src/lib/judge`, the judge/benchmark scripts,
+`model-policy.ts`, `benchmark-db.ts`, the three API routes, `ModelsView.tsx`, `.claude/plans`,
+`.ai/directions` is empty). Documentation and decision only: no source was changed or run, and no
+judge, benchmark or calibration draw was spent.
+
+**The rubric is v4, not v2.** `src/lib/judge/rubrics.ts:25` — `RUBRIC_VERSION = 4`. History the
+2026-07-08 block never recorded (header comment, rubrics.ts:8-24):
+- **v3** (83725ebd, 2026-07-13): canon-aware — the judge receives the catalog's binding canon and
+  a projection of the entity's sibling steps; every v2 pass became provisional.
+- **v4** (99ed6fcf, 2026-08-04): same contract TEXT, corrected harness INPUT — `produceDirection`
+  stripped from the judged payload (`payload.ts`), nested sibling projection on by default. The
+  header's "+16.9 contaminated" A/B was later found CONFOUNDED (it omitted canon context); on
+  identical content v4 ≈ v3 (n=31, mean −1.5) — `.claude/fleet-memory.md` 2026-07-30 [judge].
+
+**The judge library is 16 modules, not 2.** `src/lib/judge/`: admission, bindingRule,
+calibration, calibrationLabels, calibration-labels-db, contentHash, dimensions, fleetPlan, payload,
+rejudgePlan, rubrics, siblingContext, spendMeter, stepBinding, verdictStanding, verdictTrend.
+
+**The 2026-10-19 machine reset.** `.claude/fleet-memory.md` 2026-10-22 [diablo] DECISION records
+that the reset destroyed `~/.pof/pof.db` with no backup, and the W108 DELIVERED line records
+"promoted/artifacts/UE assets are 0 and are NOT being bulk-restored". On 2026-10-22 `~/.pof/`
+holds a 4 MB `pof.db` dated 2026-10-22 and **no `judge-calibration.jsonl`** (file listing only).
+What tables that rebuilt DB holds was not queried by this audit; it is
+measured in "Artifact store, measured 2026-10-22" below (the four quality-program tables are
+absent). Every DB-held result recorded before 2026-10-19 (the
+2026-07-08 scores, the sweeps below) survives only as commit messages and fleet-memory lines.
+
+| # | Item | Closed (built, with evidence) | Open | What remains — script · table · acceptance · cost shape |
+|---|------|-------------------------------|------|---------------------------------------------------------|
+| 1 | Full-map rejudge | The sweep harness. `scripts/judge-run.ts --all` with `--median N` (:128, default 1), bounded pool `--concurrency` (:138, default 4), a skip rule that reuses a verdict only while it binds to the same `stepContentHash` + rubric (`fleetPlan.ts` `judgeSkipDecision`; 8f7d1bf9), every draw metered and budget-gated with drain-never-kill on a stop (`spendMeter.ts`; judge-run header), a free read-only cost preview `GET /api/judge-verdicts?plan=1[&force=1]` (`rejudgePlan.ts`, route.ts:24-46; b04927cd), one admission door for verdict writes (`admission.ts`; 41ef5d36), append-only history + trend (`verdictTrend.ts`, `VERDICT_HISTORY_LIMIT` 20; 2b72b454), standing that counts only what acceptance counts (`verdictStanding.ts`; b0b3b8d6). | **The sweep itself.** No committed evidence of a full-map v4 sweep — only partial ones: 90 swept cells around the v4 bump (fleet-memory 2026-07-30), the 8 input-schemes cells re-judged sweep-v4 median-of-3 on 2026-10-07 (ef149746). The campaign is **paused by App Master decision** (fleet-memory 2026-10-09 [readiness]): untouched 2026-09-01 text cells score 70-77 on non-recording `judge-one` probes where their stored verdicts say 88-90, so the stored baseline does not reproduce. The sibling-projection digest filed on 2026-09-16 (bba723dc: 131 of 143 bound panel verdicts had a sibling updated since judgment) is **not implemented** (no digest field anywhere in `src/lib/judge` or `scripts/`). After the reset, no artifact exists to judge: the `pipeline_artifacts` table is absent (see "Artifact store, measured 2026-10-22" below). | Script: `npx tsx scripts/judge-run.ts --all --median 3` (add `--rejudge` only for rows judged from a pre-v4 contaminated payload, judge-run header :44-51). Writes `judge_verdicts` + `judge_verdict_history` through `admission.ts`. Acceptance: `GET /api/judge-verdicts?plan=1` lists every judgeable artifact as `unchanged` (no `never`/`scheme`/`rubric`/`content` bucket), i.e. each holds a v4 verdict bound to its content on record. Cost: draws = judgeable artifacts × 3, Opus/high each (`model-policy.ts` `judge-content`). Structural ceiling 299 judgeable (catalog, step) pairs in `src/lib/status/step-facts.json` (219 text-config, 39 2d-art, 15 audio, 13 3d-mesh, 13 animation, across 33 catalogs) × entities with an artifact; the 2026-07-08 plan estimated ~250 verdicts, so ~750 draws. Dollars per draw: unverified (the preview prices from `cli_spend` estimates and flags unestimated types as a floor). **Blocked on** (a) the drift pause and (b) an artifact store to judge. |
+| 2 | Calibration labels | The bench. Content-bound labels in `judge_calibration_labels` (`calibration-labels-db.ts`; 5f5f08ca), bound to `stepContentHash` + `RUBRIC_VERSION` and retired when either moves (`calibrationLabels.ts` `labelBindingIssue`); labelling from the /status Evidence modal (`CalibrationLabelBar.tsx`; e6c5aacd); `GET/POST /api/judge-calibration` (POST operator-guarded, route.ts:102); `judge-run.ts --calibrate` scores the served set, writes nothing to `judge_verdicts`, appends to `~/.pof/judge-calibration.jsonl`, exits 4 under threshold (6d5d9f43); standing ladder unrun/stale/unscored/provisional/undersampled/enforced-pass/enforced-fail (`calibration.ts:205-212`); threshold 0.85 (`:38`), enforcement floor 10 confirmed (`:52`); guard test `src/__tests__/lib/judge/calibration.test.ts`; docs d617ca35. | **Every label.** The repo seed `CALIBRATION` (`calibration.ts:95-99`) is 3 targets, all `provisional`, all media (fleet-memory 2026-07-30: "never cite it as rubric-safety evidence"). No committed evidence of any confirmed label or any `--calibrate` run. `~/.pof/judge-calibration.jsonl` does not exist on 2026-10-22, so the standing reads **`unrun`** (`readCalibrationHistory`: missing file = empty history). Labels in the rebuilt DB: none, the `judge_calibration_labels` table is absent (see "Artifact store, measured 2026-10-22" below). Inter-human agreement: never measured (`CALIBRATION_HUMAN_CEILING_NOTE`). A label POST needs an artifact on record (route.ts doc, 400 otherwise), so this is also gated on an artifact store. | Human: the operator labels ≥ 10 artifacts (the docstring's target is ~20) spanning all three bands and the text, 2D, 3D, audio and animation classes, in the Evidence modal. Then `npx tsx scripts/judge-run.ts --calibrate --median 3` (`--dry` plans it free). Table: `judge_calibration_labels` in, `~/.pof/judge-calibration.jsonl` out. Acceptance: standing `enforced-pass` (confirmed agreement ≥ 0.85 over ≥ 10 confirmed labels at rubric v4); `enforced-fail` means rubric work + a version bump, never a lower threshold. Cost: ≤ 20 targets × 3 draws = ≤ 60 Opus/high draws (dollars unverified, as above); the binding cost is operator labelling time. |
+| 3 | Full benchmark matrix | The harness and the surface: `scripts/model-benchmark.ts` (d7180662, untouched since 2026-07-08), `model_benchmarks` (`benchmark-db.ts`), `GET /api/model-benchmarks`, `GET/PUT /api/model-policy`, /status Models tab (`ModelsView.tsx`). The policy registry is live and dispatches resolve through it (`model-policy.ts` `taskClassForDispatchType`). | **The matrix, and the harness is not fit to run it honestly.** Committed evidence of results is the two 2026-07-08 cells only (opus/med 79 vs sonnet/low 70). From the code: 2 sample tasks (`SAMPLE_TASKS` :24) × 5 combos (`DEFAULT_COMBOS` :30), produce-text only, so 8 of 9 task classes are unbenchmarked; one judge draw per cell, and the upsert on `(task_class, model, effort, task_id)` (benchmark-db :44) overwrites a re-run instead of accumulating; the judge prompt is canon-blind (`buildRubricPrompt` without `canonContext`/`siblingContext`, :75), so its scores are not v4-comparable, and the table has no `rubric_version` column; no cost is recorded (`--output-format text`, `tokens` never set) though the winner rule breaks ties on cost and the ModelsView header promises cost; no `recordSpend` and no preflight budget gate, which judge-run and judge-one both have; the judge spawns with the alias `judge.model` (:76) while judge-run spawns `MODEL_IDS[...]` (`claude-opus-4-8`, model-policy.ts:46), so the two need not be the same judge; `--write-winners` writes produce-text only, from aggregates over every row ever recorded. Whether any `model_benchmarks` / `model_policy` rows survive the reset: unverified. | Harness repair first (a source change under `scripts/` and `src/lib/`, outside this audit): meter + budget-gate through `spendMeter.ts`, the canon-aware v4 prompt judge-run builds, a `rubric_version` column, median-of-3 judge draws, recorded cost, the same pinned judge as judge-run, samples for more classes. Then `npx tsx scripts/model-benchmark.ts` and `--write-winners`. Table: `model_benchmarks` → `model_policy` (source `benchmark`). Acceptance: every benchmarked class has a winner with ≥ 3 samples per cell at rubric v4 and a recorded cost, written as `source: 'benchmark'`, visible on the Models tab. Cost: per cell 1 produce draw + 3 Opus/high judge draws; the current 2×5 matrix = 10 produce + 30 judge draws; the plan's target (~30 tasks × ~10 combos) = ~300 produce + ~900 judge draws. Dollars unverified. |
+| 4 | Media prompts | — | — | **Closed 2026-10-22** — three packs, each composed by its real generation path: icons into the contact-sheet prompt (22babad7), ElevenLabs audio at the audio-gen route (32330762), Tripo text-to-3D at the visual-gen generate route (`meshPrompts.ts`; 711106ac). **Ungraded:** no measured quality lift for any of the three packs — nothing has scored generated icons, audio or meshes against them. |
+
+Campaign order and cost: `.ai/directions/2026-10-22-quality-program-campaign.md`. Short form:
+an artifact store first (the operator's call), then calibration (it decides the 2026-10-09 drift
+question), then the full-map rejudge, then the benchmark after its harness repair.
+
+### Artifact store, measured 2026-10-22 (supersedes the "unverified" markers above)
+
+**Result.** `~/.pof/pof.db` (4,030,464 bytes, modified 2026-10-22) holds 20 tables:
+build_history, catalog_entities, checklist_metadata, eval_findings, feature_matrix,
+gdd_gap_resolutions, genre_suggestions, milestone_deadlines, module_scans, project_progress,
+recent_projects, reference_ingest_runs, reference_wrappers, request_log, review_snapshots,
+session_analytics, session_log, settings, sqlite_sequence, telemetry_snapshots. The four
+quality-program tables (`pipeline_artifacts`, `judge_verdicts`, `judge_calibration_labels`,
+`model_benchmarks`) and `pipeline_artifact_revisions` are **absent**, not empty: the tables do not
+exist. They are created lazily with `CREATE TABLE IF NOT EXISTS` on first use
+(`src/lib/pipeline-artifacts-db.ts:62`), so absence means no artifact, verdict, calibration label
+or benchmark row has been written to this file since the 2026-10-19 reset.
+
+**Method and scope.** A direct read-only `better-sqlite3` open (`readonly: true`) of
+`~/.pof/pof.db`, listing `sqlite_master` and taking `COUNT(*)` of each table that exists, with
+`POF_DB_PATH` unset. `src/lib/db.ts:12` falls back to `~/.pof/pof.db` when it is unset, so this is
+the same file `GET /api/judge-verdicts?plan=1` reads through `getDb()`. The count was taken from
+the database directly. Nothing was written, migrated or deleted. I did not measure `model_policy`.
+
+**Not run.** The free HTTP preview `GET /api/judge-verdicts?plan=1` was not run. Port 3001 was held
+by an unrelated Vite dev server (it answered `{"detail":"Not found"}` and served a different app),
+PoF's Next.js server was not up, and no server was started for this. So the preview's own bucket
+breakdown (`never` / `scheme` / `rubric` / `content` / `unchanged`) is **not on record**. What is on
+record is that the preview would iterate an absent artifact table and so has nothing to plan.
+
+**Trap.** A 4 MB `pof.db` dated 2026-10-22 looks like a surviving store and is not one: it is the
+rebuilt app database, and it holds none of the quality-program tables.
+
+**Consequence for the open items (no verdict changes).** Milestone 1 goal 4 (calibration) and all
+three milestone 2 goals still have no artifact set to judge or label against; a calibration POST
+returns 400 with no artifact on record. They remain operator-blocked exactly as recorded above.
+The operator's open asks are untouched by this block; it records the number only. Dollars per draw
+remain unverified.
+
 ## Execution status (2026-07-08, Opus)
 
 All four workstreams' **infrastructure is built, committed, tested, and proven live**. What

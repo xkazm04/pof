@@ -2,7 +2,7 @@ import type { ProjectRule } from './types';
 
 export const CANON_SEED: ProjectRule[] = [
   // ── GAME ──
-  { id: 'game-genre', category: 'game', scope: 'global', title: 'Genre', body: 'PoF is a single-player Action RPG (ARPG) built in UE5.7.' },
+  { id: 'game-genre', category: 'game', scope: 'global', title: 'Genre', body: 'PoF is a single-player Action RPG (ARPG) built in UE5.8.' },
   { id: 'game-pillars', category: 'game', scope: 'global', title: 'Pillars', body: 'Disciplined, rhythmic melee (weave light/heavy, never button-mash); power is earned, not gifted; grounded dark fantasy over high fantasy.' },
   { id: 'game-tone', category: 'game', scope: 'global', title: 'Tone', body: "Grim, weathered, earned — a soldier's world, not a hero's fantasy. Restraint over spectacle; items and enemies feel used and real." },
   { id: 'game-setting', category: 'game', scope: 'global', title: 'Setting', body: 'Post-Sundering dark fantasy; militant factions such as the Ashen Order. Magic is dangerous and costly.' },

@@ -14,12 +14,20 @@ const svc = {
   getStatus: vi.fn(() => ({ host: 'localhost', port: 9876, connected: false })),
   probe: vi.fn(async () => ({ host: 'localhost', port: 9876, connected: false })),
   executeCode: vi.fn<(code: string) => Promise<ReturnType<typeof ok<{ result: string }>>>>(async () => ok({ result: 'ran' })),
+  generateHyper3D: vi.fn(async () => ok({ jobId: 'job-1', status: 'pending' })),
+  generateHunyuan3D: vi.fn(async () => ok({ jobId: 'job-2', status: 'pending' })),
+  importGeneratedAsset: vi.fn(async () => ok({ objectName: 'Crate' })),
+  downloadPolyHaven: vi.fn(async () => ok({ objectName: 'rock' })),
+  downloadSketchfab: vi.fn(async () => ok({ objectName: 'chair' })),
 };
 
 vi.mock('@/lib/blender-mcp/service', () => ({ getService: () => svc }));
 
 const { POST: bridge } = await import('@/app/api/blender-mcp/route');
 const { POST: execute } = await import('@/app/api/blender-mcp/execute/route');
+const { POST: generate } = await import('@/app/api/blender-mcp/generate/route');
+const { POST: importJob } = await import('@/app/api/blender-mcp/generate/import/route');
+const { POST: download } = await import('@/app/api/blender-mcp/assets/download/route');
 
 function req(path: string, body: unknown, headers: Record<string, string> = {}) {
   return new NextRequest(`http://localhost:3001${path}`, {
@@ -100,5 +108,34 @@ describe('POST /api/blender-mcp — connect is guarded and loopback-only', () =>
     const res = await bridge(req('/api/blender-mcp', { action: 'status' }, FOREIGN));
     expect(res.status).toBe(200);
     expect(svc.probe).toHaveBeenCalledTimes(1);
+  });
+});
+
+// generate starts a PAID provider job, import writes into the live scene, and download
+// pulls a remote asset to disk and imports it: all three are guarded like execute.
+describe('POST generate / generate/import / assets/download — operator guard', () => {
+  const cases = [
+    ['/api/blender-mcp/generate', generate, { provider: 'hyper3d', prompt: 'crate' }, svc.generateHyper3D],
+    ['/api/blender-mcp/generate/import', importJob, { jobId: 'job-guard', provider: 'hyper3d' }, svc.importGeneratedAsset],
+    ['/api/blender-mcp/assets/download', download, { source: 'polyhaven', id: 'rock' }, svc.downloadPolyHaven],
+  ] as const;
+
+  it.each(cases)('%s refuses a foreign Origin with 403 and calls nothing', async (path, handler, body, call) => {
+    const res = await handler(req(path, body, FOREIGN));
+    expect(res.status).toBe(403);
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it.each(cases)('%s refuses a tokenless call when a token is configured', async (path, handler, body, call) => {
+    process.env.POF_OPERATOR_TOKEN = 'secret';
+    const res = await handler(req(path, body));
+    expect(res.status).toBe(401);
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it.each(cases)('%s runs a same-origin call', async (path, handler, body, call) => {
+    const res = await handler(req(path, body, SAME));
+    expect(res.status).toBeLessThan(300);
+    expect(call).toHaveBeenCalledTimes(1);
   });
 });

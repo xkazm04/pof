@@ -80,10 +80,15 @@ export async function POST(request: NextRequest) {
       discarded: result.discarded,
       discardedFaces: result.discardedFaces,
       capped: result.capped,
+      // The group's frame: every part shares one scale (rescaleSplitGroup), and `origin`
+      // is where it sat in the reference image - `_NN` is a face-count rank, not identity.
+      groupExtents: result.groupExtents,
       parts: result.parts.map((p) => ({
         name: p.name,
         faces: p.faces,
         share: p.share,
+        extents: p.extents,
+        origin: p.origin,
         url: assetUrl(p.name, SPLIT_OUTPUT_DIR),
       })),
       durationMs: result.durationMs,

@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
       style: dna.clause ?? body?.style ?? SHEET_DEFAULTS.style,
       background: body?.background ?? SHEET_DEFAULTS.background,
       accent: typeof body?.accent === 'string' ? body.accent : undefined,
+      catalogId,
       cast: cast.map((c) => ({ id: c.entityId!, brief: c.brief! })),
       width: DEFAULT_SHEET_PX,
       height: DEFAULT_SHEET_PX,

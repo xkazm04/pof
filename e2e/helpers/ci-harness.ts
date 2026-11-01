@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { resolveEditorBinary } from '@/lib/ue-launch/engines';
 
 /**
  * CI-runnable harness mode.
@@ -26,12 +27,31 @@ export function resolveHarnessMode(env: EnvLike = process.env): HarnessRunMode {
   return 'stub';
 }
 
-const DEFAULT_UE_CMD =
-  'C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe';
+/** `POF_UE_ENGINE` as a version (`5.8`, `5.7.3`) — the meaning src/lib/ue-launch/engines.ts gives it. */
+const ENGINE_VERSION = /^\d+\.\d+(\.\d+)?$/;
+
+/**
+ * Resolve the UnrealEditor binary the harness shells out to — the TOOLING engine, not the
+ * game project's engine version. Delegates to the app's own resolver
+ * (`resolveEditorBinary`: POF_UE_CMD / POF_UE_EDITOR → POF_UE_EDITOR_CMD → POF_UE_ENGINE
+ * version → the UE_5.8 install default), so the e2e harness and the test-gate runner can no
+ * longer disagree about which engine they mean. One legacy form survives: e2e used to read
+ * POF_UE_ENGINE as a `...\Engine\Binaries\Win64` DIRECTORY; a non-version value is still
+ * honoured that way so an existing operator env keeps working.
+ */
+export function resolveUEBinary(windowed: boolean, env: EnvLike = process.env): string {
+  const override = env[windowed ? 'POF_UE_EDITOR' : 'POF_UE_CMD']?.trim();
+  if (override) return override;
+  const engine = env.POF_UE_ENGINE?.trim();
+  if (engine && !ENGINE_VERSION.test(engine)) {
+    return `${engine}\\${windowed ? 'UnrealEditor.exe' : 'UnrealEditor-Cmd.exe'}`;
+  }
+  return resolveEditorBinary({ windowed }, env);
+}
 
 /** Resolve the UnrealEditor-Cmd path the harness would use (env-overridable). */
 export function resolveUECmd(env: EnvLike = process.env): string {
-  return env.POF_UE_CMD ?? DEFAULT_UE_CMD;
+  return resolveUEBinary(false, env);
 }
 
 /** True when a UE install is present — used to skip UE steps on a UE-less runner. */

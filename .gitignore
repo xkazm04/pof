@@ -139,3 +139,6 @@ docs/index.bleve/
 # orrery promotion harness (package C) - the harness page + its git-ignored route shim
 .harness/
 /src/app/orrery-harness/
+
+# bp product blueprint: machine-local scan store (adopt-bp)
+.ai/lens-scan/

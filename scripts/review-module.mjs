@@ -4,6 +4,10 @@
 //   npm run review:module -- combat --project-path "C:\Users\kazda\Documents\Unreal Projects\PoF" --ue-version 5.7.3
 //   npm run review:module -- combat --project-path "..." --ue-version 5.7.3 --write
 //
+// --ue-version is the GAME project's engine version (the production PoF project is still on
+// 5.7 per docs/ue58-mcp-convergence-plan.md), not the editor binary PoF's tooling launches —
+// so the 5.7.3 example is deliberate. Pass whatever version the project you review is on.
+//
 // DRY-RUN BY DEFAULT: without --write it prints the plan and starts nothing. --write is
 // the only thing that spends a CLI run.
 // CAPPED: at most DAILY_REVIEW_CAP (3) reviews per local calendar day, counted in a ledger

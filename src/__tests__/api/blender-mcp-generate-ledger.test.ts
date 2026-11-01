@@ -111,3 +111,13 @@ describe('POST /generate/import is idempotent', () => {
     expect(importGeneratedAsset).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('an unknown provider is refused before the service is called', () => {
+  it('generate, status and import answer 400 and record nothing', async () => {
+    expect((await submit(post(BASE, { provider: 'meshy', prompt: 'crate' }))).status).toBe(400);
+    expect((await status(new NextRequest(`${BASE}/status?jobId=j1&provider=__proto__`))).status).toBe(400);
+    expect((await importAsset(post(`${BASE}/import`, { jobId: 'j1', provider: 'constructor' }))).status).toBe(400);
+    for (const f of [generateHyper3D, generateHunyuan3D, pollJobStatus, importGeneratedAsset]) expect(f).not.toHaveBeenCalled();
+    expect((await jobsNow()).jobs).toEqual([]);
+  });
+});

@@ -13,6 +13,7 @@
 
 import type { SubModuleId } from '@/types/modules';
 import { getEnginePath } from '@/lib/prompt-context';
+import { resolveEditorBinary } from '@/lib/ue-launch/engines';
 
 export interface VisualCheckOptions {
   /** UE project root (CLI working directory). Screenshot dir is derived from it. */
@@ -42,10 +43,13 @@ export interface VisualCheckOptions {
   mode?: 'hud' | 'lighting' | 'character';
 }
 
-/** Fallback editor path used only when neither `ueVersion` nor an explicit
- *  override is supplied (kept in sync with e2e/helpers/ue-verification.ts). */
-const DEFAULT_EDITOR =
-  'C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor.exe';
+/** Fallback editor used only when neither `ueVersion` nor an explicit override is
+ *  supplied: the windowed binary of the TOOLING engine, from the same resolver the e2e
+ *  helpers and the test-gate runner use (POF_UE_EDITOR_CMD / POF_UE_ENGINE, else the
+ *  UE_5.8 install default). Not the game project's engine version. */
+function defaultEditor(): string {
+  return resolveEditorBinary({ windowed: true });
+}
 const DEFAULT_MAP = '/Game/Maps/VerticalSlice';
 
 /** UnrealEditor.exe under an engine install root. */
@@ -56,7 +60,7 @@ function editorExeFor(enginePath: string): string {
 export function buildVisualCheckSection(opts: VisualCheckOptions): string {
   // Derive the editor from the project's UE version so this section agrees with
   // the prompt header's `Engine:` line; explicit `editorExe`/env still win.
-  const derivedEditor = opts.ueVersion ? editorExeFor(getEnginePath(opts.ueVersion)) : DEFAULT_EDITOR;
+  const derivedEditor = opts.ueVersion ? editorExeFor(getEnginePath(opts.ueVersion)) : defaultEditor();
   const editorExe = opts.editorExe ?? process.env.POF_UE_EDITOR ?? derivedEditor;
   const map = opts.map ?? process.env.POF_VERIFY_MAP ?? DEFAULT_MAP;
   const resX = opts.resX ?? 1280;

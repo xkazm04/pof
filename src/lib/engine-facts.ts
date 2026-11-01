@@ -79,6 +79,8 @@ const FACTS_5_8: EngineFacts = {
   naniteDisplacement: NANITE_DISPLACEMENT,
 };
 
+// DELIBERATE: a supported-version branch for projects still on UE 5.7 (selected by
+// getEngineFacts from ProjectContext.ueVersion) — not drift from the 5.8 default.
 const FACTS_5_7: EngineFacts = {
   version: '5.7',
   msvc: '14.44',

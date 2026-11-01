@@ -29,6 +29,7 @@ import {
   upsertSet,
   type FileRemoval,
 } from '@/lib/audio-asset-db';
+import { audioPromptFor } from '@/lib/media-prompts/audioPrompts';
 import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
 import { isAudioKind, refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
 
@@ -107,8 +108,11 @@ export async function POST(request: NextRequest) {
   // Scope the cache to the destination set/event so the same prompt aimed at a
   // different set is a miss (and generates INTO that set) rather than returning
   // the original set's asset and silently dropping the requested one.
+  // The craft pack is composed here so the provider still receives one prompt string; the stored
+  // asset keeps the caller's own text. Hashing the composed text keeps the cache honest if a pack changes.
+  const composedPrompt = audioPromptFor(kind, prompt);
   const promptHash = computePromptHash({
-    provider: p.id, kind, prompt, durationSeconds: body.durationSeconds,
+    provider: p.id, kind, prompt: composedPrompt, durationSeconds: body.durationSeconds,
     setKey: body.setId ?? body.setName, eventKey: body.eventKey,
   });
 
@@ -126,7 +130,7 @@ export async function POST(request: NextRequest) {
 
   let result;
   try {
-    result = await p.generate({ kind, prompt, durationSeconds: body.durationSeconds });
+    result = await p.generate({ kind, prompt: composedPrompt, durationSeconds: body.durationSeconds });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'generation failed';
     if (msg.includes('ELEVENLABS_API_KEY')) return apiError(msg, 503);

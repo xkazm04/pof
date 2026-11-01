@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  resolveHarnessMode, resolveUECmd, isUEAvailable, shouldRunUEChecks,
+  resolveHarnessMode, resolveUECmd, resolveUEBinary, isUEAvailable, shouldRunUEChecks,
   requiresDevServer, runsGeminiChecks, ciVerificationPlan, fullVerificationPlan,
 } from './ci-harness';
 
@@ -21,6 +21,22 @@ describe('resolveHarnessMode', () => {
 describe('resolveUECmd / isUEAvailable', () => {
   it('uses POF_UE_CMD override when set', () => {
     expect(resolveUECmd({ POF_UE_CMD: 'X:\\ue.exe' })).toBe('X:\\ue.exe');
+  });
+
+  it('defaults to the UE_5.8 tooling engine, never 5.7', () => {
+    expect(resolveUECmd({})).toBe('C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe');
+    expect(resolveUEBinary(true, {})).toBe('C:\\Program Files\\Epic Games\\UE_5.8\\Engine\\Binaries\\Win64\\UnrealEditor.exe');
+  });
+
+  it('honours the configured install and a POF_UE_ENGINE version', () => {
+    expect(resolveUECmd({ POF_UE_EDITOR_CMD: 'D:\\UE\\UnrealEditor-Cmd.exe' })).toBe('D:\\UE\\UnrealEditor-Cmd.exe');
+    expect(resolveUECmd({ POF_UE_ENGINE: '5.6' })).toBe('C:\\Program Files\\Epic Games\\UE_5.6\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe');
+  });
+
+  it('keeps the legacy POF_UE_ENGINE binaries-directory form working', () => {
+    expect(resolveUECmd({ POF_UE_ENGINE: 'D:\\UE\\Win64' })).toBe('D:\\UE\\Win64\\UnrealEditor-Cmd.exe');
+    expect(resolveUEBinary(true, { POF_UE_ENGINE: 'D:\\UE\\Win64' })).toBe('D:\\UE\\Win64\\UnrealEditor.exe');
+    expect(resolveUEBinary(true, { POF_UE_ENGINE: 'D:\\UE\\Win64', POF_UE_EDITOR: 'X:\\ed.exe' })).toBe('X:\\ed.exe');
   });
 
   it('isUEAvailable reflects the injected existence check', () => {

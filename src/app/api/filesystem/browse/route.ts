@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 import {
   toolRow,
   buildBootstrapPlan,
@@ -10,6 +11,7 @@ import {
   type DetectedEngine,
   type DetectedTool,
 } from '@/lib/project-setup/toolchain';
+import { compareReleases } from '@/lib/project-setup/engineFloor';
 
 interface ListResponse {
   path: string;
@@ -260,7 +262,8 @@ async function scanForEngines(): Promise<DetectedEngine[]> {
     // Epic Games directory doesn't exist — no engines found
   }
 
-  return engines.sort((a, b) => b.version.localeCompare(a.version));
+  // Newest first by parsed release: as text, "5.10.0" sorts below "5.9.0".
+  return engines.sort((a, b) => compareReleases(b.version, a.version));
 }
 
 async function scanForTooling(): Promise<DetectedTool[]> {
@@ -437,15 +440,8 @@ async function scanForProjects(): Promise<DetectedProject[]> {
   });
 }
 
-function resolvePath(input: string): string {
-  if (input === '~' || input.startsWith('~/') || input.startsWith('~\\')) {
-    return path.join(os.homedir(), input.slice(1));
-  }
-  return input;
-}
-
-async function handleList(requestedPath: string) {
-  const normalized = path.normalize(resolvePath(requestedPath));
+/** `normalized` has already passed `checkLocalPath` (local, absolute, normalized). */
+async function handleList(normalized: string) {
 
   if (!(await directoryExists(normalized))) {
     return apiSuccess({
@@ -490,7 +486,9 @@ export async function POST(request: NextRequest) {
         if (!requestedPath) {
           return apiError('path is required for list action', 400);
         }
-        return handleList(requestedPath);
+        const checked = checkLocalPath(requestedPath, 'path', { expandHome: true });
+        if (!checked.ok) return apiError(checked.error, 400);
+        return handleList(checked.data);
       }
 
       case 'detect-projects': {
@@ -512,9 +510,10 @@ export async function POST(request: NextRequest) {
         if (!requestedPath) {
           return apiError('path is required for validate-path action', 400);
         }
-        const normalized = path.normalize(resolvePath(requestedPath));
-        const exists = await directoryExists(normalized);
-        return apiSuccess({ exists, path: normalized } satisfies ValidatePathResponse);
+        const checked = checkLocalPath(requestedPath, 'path', { expandHome: true });
+        if (!checked.ok) return apiError(checked.error, 400);
+        const exists = await directoryExists(checked.data);
+        return apiSuccess({ exists, path: checked.data } satisfies ValidatePathResponse);
       }
 
       case 'drives': {

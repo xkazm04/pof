@@ -12,11 +12,13 @@ import {
   buildGeminiArgs,
   type FunctionalResult,
 } from './verification-core';
+import { resolveUEBinary } from './ci-harness';
 
 // All paths are env-overridable so the harness runs on CI / other machines.
-const UE_ROOT = process.env.POF_UE_ENGINE ?? 'C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64';
-const UE_CMD = process.env.POF_UE_CMD ?? `${UE_ROOT}\\UnrealEditor-Cmd.exe`;
-const UE_EDITOR = process.env.POF_UE_EDITOR ?? `${UE_ROOT}\\UnrealEditor.exe`;
+// The editor binaries come from the one shared resolver (ci-harness.ts → the app's
+// resolveEditorBinary, UE_5.8 install default), so no engine literal lives here.
+const UE_CMD = resolveUEBinary(false);
+const UE_EDITOR = resolveUEBinary(true);
 const UPROJECT = process.env.POF_UPROJECT ?? 'C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF\\PoF.uproject';
 const UE_PROJECT_DIR = process.env.POF_UE_PROJECT_DIR ?? 'C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF';
 const SCREENSHOT_DIR = `${UE_PROJECT_DIR}\\Saved\\Screenshots\\WindowsEditor`;
