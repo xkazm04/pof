@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "56748bfb-d14c-4276-a2c2-60eedd917e0a",
+ "subject": "shader-budget-authoring",
+ "evaluatedAt": "2026-11-01T22:06:50.556321+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "shader-budget-authoring",
+   "context": "material-lab",
+   "reason": "evidence leans on AdvancedTexturePanel/index.tsx, which is not a tracked file"
+  }
+ ],
+ "consults": []
+}
