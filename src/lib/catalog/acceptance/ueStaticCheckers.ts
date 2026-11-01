@@ -64,6 +64,11 @@ export function resolveUeRoot(): string | null {
   return fs.existsSync(fallback) ? fallback : null;
 }
 
+/** Whether a configured engine-project root exists on disk (server-only, same lazy fs as the checkers). */
+export function ueRootExists(root: string): boolean {
+  return serverModules().fs.existsSync(root);
+}
+
 function walk(dir: string, ext: string, out: string[] = []): string[] {
   const { fs, path } = serverModules();
   if (!fs.existsSync(dir)) return out;

@@ -19,6 +19,9 @@ import { getCatalogPipeline } from '../pipeline-registry';
 import '@/lib/catalog/pipelines/registry.generated';
 import { seededEntities } from '../seed';
 import { realArtifactIO, createTouched, sweepRow, sweepIODeps, contentVerdictVia, type SweepFilter } from './regrade';
+import type { GameId } from '@/lib/games/types';
+import { DEFAULT_GAME, gameOfEntity } from '@/lib/games/registry';
+import { ueRootForGame, unboundReason } from '@/lib/games/ueBinding';
 
 export type StaticVerifyFilter = SweepFilter;
 
@@ -67,6 +70,26 @@ export function aggregateStatic(results: AcceptanceResult[], label: string): Acc
   return { label, tier: 'L2', status: 'pass', detail: `${results.length}/${results.length} UE static checks present` };
 }
 
+/** The L2 verdict for a step whose entity belongs to a game with no engine project bound: deferred
+ *  with the game's reason — never `fail`, and never graded against PoF's UE root. Pure. */
+export function unboundStaticVerdict(game: GameId, label: string): AcceptanceResult {
+  return { label, tier: 'L2', status: 'deferred', detail: 'engine project unbound', reason: unboundReason(game) };
+}
+
+/**
+ * Run a step's checks against the root of the ENTITY's game. PoF reads `pofRoot` (resolved once per
+ * sweep, exactly as before); another game reads its own binding and, when that is unbound, defers
+ * without running a single checker. Pure over its inputs.
+ */
+export function staticVerdictForGame(
+  checks: UeChecker[], label: string, game: GameId, pofRoot: string | null, rootForGame: (id: GameId) => string | null,
+): AcceptanceResult | null {
+  if (game === DEFAULT_GAME) return aggregateStatic(checks.map((c) => c(pofRoot)), label);
+  const root = rootForGame(game);
+  if (root === null) return checks.length ? unboundStaticVerdict(game, label) : null;
+  return aggregateStatic(checks.map((c) => c(root)), label);
+}
+
 /** Lives in combineVerdicts (both sweeps fold through it); re-exported for existing importers. */
 export { holdsBackAtDataTier };
 
@@ -87,6 +110,11 @@ export interface StaticVerifyDeps {
   /** Re-derive one entity's lifecycle cache, once per entity an APPLY run wrote. Optional; absent
    *  → no sync (a stage, a hand-built dep set). */
   syncLifecycle?: (catalogId: string, entityId: string) => void;
+  /** The game an artifact's entity belongs to (`gameOfEntity`), which picks the UE root its checks
+   *  read. Optional; absent → every row is PoF's and reads `resolveUeRoot()` (today's behaviour). */
+  entityGame?: (catalogId: string, entityId: string) => GameId;
+  /** A non-PoF game's engine root (null = unbound → deferred). Optional; absent → `ueRootForGame`. */
+  ueRootForGame?: (id: GameId) => string | null;
 }
 
 /**
@@ -105,6 +133,12 @@ export function verifyStaticAll(
   const results: StaticVerifyRow[] = [];
   let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, delegated = 0, changed = 0;
   const touched = createTouched();
+  // One binding lookup per non-PoF game per sweep (a ue5 root is an fs probe).
+  const gameRoots = new Map<GameId, string | null>();
+  const rootForGame = (id: GameId): string | null => {
+    if (!gameRoots.has(id)) gameRoots.set(id, (deps.ueRootForGame ?? ueRootForGame)(id));
+    return gameRoots.get(id) ?? null;
+  };
 
   for (const a of deps.listArtifacts(filter)) {
     // A packaging step answers to BOTH its static checks and its package's disk truth; if each
@@ -113,7 +147,8 @@ export function verifyStaticAll(
     if (deps.isPackaging?.(a.catalogId, a.step)) { delegated++; continue; }
     const checks = deps.getStaticChecks(a.catalogId, a.entityId, a.step);
     if (!checks || !checks.length) { skipped++; continue; }
-    const staticVerdict = aggregateStatic(checks.map((c) => c(ueRoot)), a.step);
+    const game = deps.entityGame?.(a.catalogId, a.entityId) ?? DEFAULT_GAME;
+    const staticVerdict = staticVerdictForGame(checks, a.step, game, ueRoot, rootForGame);
     if (!staticVerdict) { skipped++; continue; }
     // A symbol existing in UE says nothing about the content: static may never lift a row its
     // own checker holds back at the data tiers — pending/fail (the d1 Stat Blocks' declared
@@ -147,6 +182,13 @@ export function staticChecksFor(catalogId: string, entityId: string, step: strin
   return spec.staticChecks({ id: entity.id, name: entity.name, lifecycle: entity.lifecycle, data: entity.data });
 }
 
+/** The game a seeded/persisted entity belongs to, derived from its canon profile. An entity the
+ *  server cannot resolve has no checks either (`staticChecksFor` → null), so `pof` is moot there. */
+export function entityGameFor(catalogId: string, entityId: string): GameId {
+  const entity = seededEntities(catalogId).find((e) => e.id === entityId);
+  return entity ? gameOfEntity(entity) : DEFAULT_GAME;
+}
+
 /** The step's own content checker re-run RAW on the STORED data (`contentVerdictVia` over the
  *  real store), or null when no row / no checker — what the lab's package panel folds in. */
 export function contentVerdictFor(catalogId: string, entityId: string, step: string): AcceptanceResult | null {
@@ -157,14 +199,15 @@ export const defaultStaticVerifyDeps: StaticVerifyDeps = {
   resolveUeRoot,
   getStaticChecks: staticChecksFor,
   isPackaging: isPackagingLabel,
+  entityGame: entityGameFor,
   ...sweepIODeps(realArtifactIO),
 };
 
-/** One step's aggregated L2 static verdict against the resolved UE root, or null when the
- *  step declares no checks — what the packaging sweep folds into a packaging step's grade. */
+/** One step's aggregated L2 static verdict against the UE root of the entity's GAME, or null when
+ *  the step declares no checks — what the packaging sweep folds into a packaging step's grade. */
 export function staticVerdictFor(catalogId: string, entityId: string, step: string): AcceptanceResult | null {
   const checks = staticChecksFor(catalogId, entityId, step);
   if (!checks?.length) return null;
-  const root = resolveUeRoot();
-  return aggregateStatic(checks.map((c) => c(root)), step);
+  const game = entityGameFor(catalogId, entityId);
+  return staticVerdictForGame(checks, step, game, game === DEFAULT_GAME ? resolveUeRoot() : null, ueRootForGame);
 }

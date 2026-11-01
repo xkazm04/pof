@@ -52,8 +52,27 @@ export const CANON_PROFILES: Readonly<Record<string, CanonProfile>> = {
     styleDnaByClass: { creature: DIABLO1_CREATURE_STYLE_DNA },
   },
   // GTAI: Uprising (games/gtai). Seed empty: its canon arrives through the pitch intake and lives
-  // versioned in games/gtai/canon.json. WP1 fills `inheritsPof` with engineering-convention ids.
-  gtai: { id: 'gtai', title: 'GTAI: Uprising', inheritsPof: [], seed: [] },
+  // versioned in games/gtai/canon.json. It inherits only `project`-category ENGINEERING conventions
+  // (the diablo1 precedent's vetted set, adjusted) — no PoF design, world, art or balance law.
+  gtai: {
+    id: 'gtai', title: 'GTAI: Uprising', seed: [],
+    inheritsPof: [
+      'proj-naming', 'proj-quality', 'proj-hud-binding',
+      'input-remap-conflict', 'input-a11y', 'tutorial-telemetry',
+      'arpg-wiring-contract', 'screen-flow-nav-contract',
+      // Beyond the diablo1 set (diablo1 carries engine-derived laws of its own for these): FSM tags
+      // drive hooks; music mastering/bus discipline (a loudness standard, not a world).
+      'state-graph-fsm-wiring', 'music-loudness-target',
+      // NOT inherited (Director review, 2026-11-01): `proj-sot` names PoF's ARPG classes
+      // (UARPGAttributeSet, ARPGDamageExecution); `proj-links` and `quest-reward-binding` chain
+      // through loot-tables/items, which GTAI omits. A gtai source-of-truth rule replaces `proj-sot`
+      // once the engine is chosen. Also NOT inherited, though diablo1 does: `arpg-affix-is-ge` (GTAI omits the affixes/items
+      // pipelines) and `char-config-not-cpp` (binds NPCs to PoF's AARPGNPCActor, an architecture
+      // choice for an engine project GTAI has not chosen). Likewise `save-discrete-only`,
+      // `cutscene-sequencer-wiring`, `dialog-tree-wiring` (name PoF's ARPG runtime classes) and every
+      // balance law (`proj-balance`, `proj-economy`, `vendor-laws`, `repair-value-scaled`).
+    ],
+  },
 };
 
 export const profileOfRule = (r: Pick<ProjectRule, 'profile'>): string => r.profile ?? DEFAULT_CANON_PROFILE;

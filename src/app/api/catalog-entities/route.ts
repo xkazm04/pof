@@ -14,13 +14,20 @@
  *
  * GET is unguarded (a read); POST/DELETE go through `requireOperator` like every other
  * privileged catalog→UE write (see `src/lib/api-auth.ts`).
+ *
+ * POST is also the AUTHORED-provenance door (spark gtai-uprising-project): an entity authored for
+ * another game carries `{ kind: 'authored', canonProfile, authoredVia }` so `canonProfileOf` /
+ * `gameOfEntity` place it in its game instead of silently falling back to PoF's. Ingest provenance
+ * has its own path (`src/lib/catalog/ingest/`) and is refused here.
  */
 import type { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { listEntities, listAllEntities, getEntity, upsertEntity, deleteEntity, type CatalogEntitySource } from '@/lib/catalog-db';
 import { codeSeededEntities, entityCollisions } from '@/lib/catalog/seed';
-import type { StoredCatalogEntity } from '@/lib/catalog/types';
+import type { AuthoredProvenance, EntityProvenance, StoredCatalogEntity } from '@/lib/catalog/types';
+import { CANON_PROFILES } from '@/lib/catalog/canon/profiles';
+import type { Result } from '@/types/result';
 
 /**
  * DERIVED from the union, not listed beside it. A hand-written `['user','one-shot']` is a
@@ -35,6 +42,42 @@ const SOURCE_DESCRIPTIONS: Record<CatalogEntitySource, string> = {
   ingest: 'parsed from an external game’s data tables; carries `entity.provenance`',
 };
 const SOURCES = Object.keys(SOURCE_DESCRIPTIONS) as CatalogEntitySource[];
+
+/** Exhaustive over the union for the same reason as `SOURCE_DESCRIPTIONS`. */
+const AUTHORED_VIA_KEYS: Record<AuthoredProvenance['authoredVia'], true> = { intake: true, user: true, 'one-shot': true };
+const AUTHORED_VIA = Object.keys(AUTHORED_VIA_KEYS) as AuthoredProvenance['authoredVia'][];
+
+/**
+ * Validate a POSTed `provenance`. Only `kind: 'authored'` with a REGISTERED canon profile passes;
+ * `authoredAt` defaults to now. Pure; not exported (a route file may only export its handlers).
+ */
+function parseAuthoredProvenance(raw: unknown): Result<AuthoredProvenance, string> {
+  if (!raw || typeof raw !== 'object') return { ok: false, error: 'provenance must be an object' };
+  const p = raw as Record<string, unknown>;
+  if (p.kind === 'ingest') {
+    return { ok: false, error: 'provenance kind "ingest" is not accepted here — ingested rows come through the ingest path (src/lib/catalog/ingest)' };
+  }
+  if (p.kind !== 'authored') return { ok: false, error: `Unknown provenance kind "${String(p.kind)}" — expected "authored"` };
+  const registered = Object.keys(CANON_PROFILES);
+  if (typeof p.canonProfile !== 'string' || !registered.includes(p.canonProfile)) {
+    return { ok: false, error: `Unregistered canon profile "${String(p.canonProfile)}" — registered: ${registered.join(', ')}` };
+  }
+  if (!AUTHORED_VIA.includes(p.authoredVia as AuthoredProvenance['authoredVia'])) {
+    return { ok: false, error: `Unknown authoredVia "${String(p.authoredVia)}" — expected one of ${AUTHORED_VIA.join(', ')}` };
+  }
+  if (p.authoredAt !== undefined && (typeof p.authoredAt !== 'string' || Number.isNaN(Date.parse(p.authoredAt)))) {
+    return { ok: false, error: 'authoredAt must be an ISO timestamp when given' };
+  }
+  return {
+    ok: true,
+    data: {
+      kind: 'authored',
+      canonProfile: p.canonProfile,
+      authoredVia: p.authoredVia as AuthoredProvenance['authoredVia'],
+      authoredAt: (p.authoredAt as string | undefined) ?? new Date().toISOString(),
+    },
+  };
+}
 
 /** GET /api/catalog-entities?catalogId=bestiary → the persisted rows + any id collisions; `?all=1` → every row. */
 export async function GET(req: NextRequest) {
@@ -58,9 +101,11 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/catalog-entities
- * body: { catalogId, entityId, name, source?, tags?, categoryPath?, data? }
+ * body: { catalogId, entityId, name, source?, tags?, categoryPath?, data?, provenance? }
  *
- * Idempotent on `(catalogId, entityId)`.
+ * Idempotent on `(catalogId, entityId)`. `provenance` (optional) must be authored with a registered
+ * canon profile (400 otherwise). A re-POST WITHOUT provenance keeps the stored one: an edit from a
+ * client that does not know about games must not silently move the entity back to PoF's world.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -75,6 +120,7 @@ export async function POST(req: NextRequest) {
       tags?: string[];
       categoryPath?: string[];
       data?: unknown;
+      provenance?: unknown;
     };
     const { catalogId, entityId, name } = body;
     if (!catalogId || !entityId || !name) {
@@ -83,6 +129,14 @@ export async function POST(req: NextRequest) {
     const source = (body.source ?? 'user') as CatalogEntitySource;
     if (!SOURCES.includes(source)) {
       return apiError(`Unknown source "${body.source}" — expected one of ${SOURCES.join(', ')}`, 400);
+    }
+    let provenance: EntityProvenance | undefined;
+    if (body.provenance !== undefined) {
+      const parsed = parseAuthoredProvenance(body.provenance);
+      if (!parsed.ok) return apiError(parsed.error, 400);
+      provenance = parsed.data;
+    } else {
+      provenance = getEntity(catalogId, entityId)?.entity.provenance;
     }
     const shadowed = codeSeededEntities(catalogId).find((e) => e.id === entityId);
     if (shadowed) {
@@ -101,6 +155,7 @@ export async function POST(req: NextRequest) {
       tags: body.tags ?? [],
       lifecycle: 'planned',
       data: body.data,
+      ...(provenance ? { provenance } : {}),
     };
     return apiSuccess(upsertEntity({ catalogId, entityId, source, entity }));
   } catch (e) {
