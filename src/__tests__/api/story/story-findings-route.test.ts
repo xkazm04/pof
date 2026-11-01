@@ -47,9 +47,9 @@ describe('GET /api/story/findings', () => {
     expect(d.graphId).toBe('seeded');
     expect(d.project).toBe(P);
     expect(d.hash).toBe(hash);
-    expect(d.findings).toHaveLength(23); // 15 original codes + 8 wave-4 defects (six codes; UNKNOWN_KIND and PRECEDENCE_NOT_TOTAL planted twice)
+    expect(d.findings).toHaveLength(26); // 15 original codes + 8 wave-4 defects (six codes; UNKNOWN_KIND and PRECEDENCE_NOT_TOTAL planted twice) + 3 wave-5 (a bare gate node, an unsupported influence, an unknown profile coreKind)
     expect(d.findings.every((f) => f.altitude === 'structural' && f.lead === undefined)).toBe(true);
-    expect(Object.values(d.counts.byCode).reduce((a, b) => a + b, 0)).toBe(23);
+    expect(Object.values(d.counts.byCode).reduce((a, b) => a + b, 0)).toBe(26);
     expect(d.counts.byCode.FALSE_CHOICE).toBe(1);
     expect(typeof d.durationMs).toBe('number');
   });

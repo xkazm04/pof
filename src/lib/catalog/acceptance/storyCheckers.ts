@@ -6,7 +6,8 @@
  *
  *   storyGraphParses        — the document passes the importer (schema + loud variables block)
  *   storyStructurallySound  — DANGLING_EDGE, DUPLICATE_ID, CONTAINMENT_CYCLE, ORPHAN_NODE,
- *                             GATE_WITHOUT_CONDITION, PARENT_CONTAINS_MISMATCH, UNKNOWN_KIND (info)
+ *                             GATE_WITHOUT_CONDITION, PARENT_CONTAINS_MISMATCH,
+ *                             INFLUENCES_UNSUPPORTED, UNKNOWN_KIND (info)
  *   storyEndingsAttainable  — ENDING_UNREACHABLE, NO_ENDING_REACHABLE, UNDECLARED_TERMINAL,
  *                             PRECEDENCE_NOT_TOTAL
  *   storyVariablesDeclared  — VAR_*, UNTYPED_CONDITION, STRING_VAR_NO_VALUES (info)
@@ -83,7 +84,7 @@ function slice(field: string, label: string, codes: readonly StoryFindingCode[],
 
 /** Which structural codes each slice owns. Every structural code appears in exactly one row. */
 export const STORY_SLICE_CODES = {
-  structure: ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE', 'GATE_WITHOUT_CONDITION', 'PARENT_CONTAINS_MISMATCH', 'UNKNOWN_KIND'],
+  structure: ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE', 'GATE_WITHOUT_CONDITION', 'PARENT_CONTAINS_MISMATCH', 'INFLUENCES_UNSUPPORTED', 'UNKNOWN_KIND'],
   endings: ['ENDING_UNREACHABLE', 'NO_ENDING_REACHABLE', 'UNDECLARED_TERMINAL', 'PRECEDENCE_NOT_TOTAL'],
   variables: ['VAR_UNDECLARED', 'VAR_NO_REACHING_WRITE', 'VAR_DOMAIN_VIOLATION', 'VAR_WRITER_NOT_OWNER', 'VAR_SINGLETON', 'UNTYPED_CONDITION', 'STRING_VAR_NO_VALUES'],
   choices: ['FALSE_CHOICE', 'CHOICE_TOO_FEW_OPTIONS'],

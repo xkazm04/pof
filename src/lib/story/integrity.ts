@@ -1,10 +1,13 @@
 /**
  * The §4 / §5 / §6 MUSTs that had no finding code until the wave-4 amendment pass:
  *
- *   UNKNOWN_KIND             (§4) a node or edge `kind` outside the closed core set. `info`: the
- *                            document is kept and read; the finding is the report §4 obliges.
- *   GATE_WITHOUT_CONDITION   (§4, §5) a `gate` edge, or a traversal edge out of a `gate` node,
- *                            that carries no `when`. One finding per offending edge.
+ *   UNKNOWN_KIND             (§4) a node or edge `kind`, or a `profile.nodeClasses[].coreKind`,
+ *                            outside the closed core set. `info`: the document is kept and read;
+ *                            the finding is the report §4 obliges.
+ *   GATE_WITHOUT_CONDITION   (§4, §5, wave 5) a `gate` EDGE with no `when` (one per edge); or a
+ *                            gate NODE none of whose outgoing traversal edges carries a `when` (one
+ *                            per node): it branches on nothing. An unguarded `then` beside a
+ *                            guarded edge is the gate's DEFAULT ("else") branch and is allowed.
  *   PARENT_CONTAINS_MISMATCH (§5) `contains` mirrors `node.parent`; where both forms name a
  *                            child's parent they must agree.
  *   PRECEDENCE_NOT_TOTAL     (§6) where endings declare `precedence` it must be a total order:
@@ -13,7 +16,7 @@
  * Split out of `structure.ts` to keep each file small. Pure: no clock, no I/O.
  */
 
-import type { StoryFinding, StoryGraph, StoryNode } from '@/lib/story/types';
+import type { StoryEdge, StoryFinding, StoryGraph, StoryNode } from '@/lib/story/types';
 import { CORE_EDGE_KINDS, CORE_NODE_KINDS } from '@/lib/story/schema';
 import { isTraversalKind } from '@/lib/story/reachability';
 import { structural } from '@/lib/story/structure';
@@ -21,7 +24,7 @@ import { structural } from '@/lib/story/structure';
 const NODE_KINDS: ReadonlySet<string> = new Set(CORE_NODE_KINDS);
 const EDGE_KINDS: ReadonlySet<string> = new Set(CORE_EDGE_KINDS);
 
-/** UNKNOWN_KIND — one per node and one per edge, saying how each is treated by the walks. */
+/** UNKNOWN_KIND — one per node, edge and profile node class, saying how each is treated. */
 export function unknownKindFindings(graph: StoryGraph, ids: ReadonlySet<string>): StoryFinding[] {
   const out: StoryFinding[] = [];
   for (const n of graph.nodes) {
@@ -33,19 +36,39 @@ export function unknownKindFindings(graph: StoryGraph, ids: ReadonlySet<string>)
     const ends = [...new Set([e.from, e.to].filter((id) => ids.has(id)))];
     out.push(structural('UNKNOWN_KIND', ends, `edge ${e.id} (${e.from} -> ${e.to}) has unknown kind "${e.kind}": kept but NOT walked, so a node reached only through it reads as unreachable`));
   }
+  // A class only labels nodes (each node carries its own `kind`), so no node is named.
+  for (const c of graph.profile?.nodeClasses ?? []) {
+    if (NODE_KINDS.has(c.coreKind)) continue;
+    out.push(structural('UNKNOWN_KIND', [], `profile node class "${c.id}" has unknown coreKind "${c.coreKind}": kept and rendered as a generic node class`));
+  }
   return out;
 }
 
-/** GATE_WITHOUT_CONDITION — per edge; `contains` / `influences` / unknown kinds are not branches. */
+/**
+ * GATE_WITHOUT_CONDITION. (a) every `gate` edge with no `when`, wherever it starts. (b) every gate
+ * node whose outgoing traversal edges are all unguarded and none of them is a `gate` edge: such a
+ * node branches on nothing. A gate node whose unguarded edges include a `gate` edge is left to (a):
+ * guarding that edge is the fix, and it turns the remaining `then` edges into the default branch,
+ * so a node finding there would restate the same fact. A gate node with no traversal edge out is
+ * UNDECLARED_TERMINAL's, not this. `contains` / `influences` / unknown kinds are not branches.
+ */
 export function gateFindings(graph: StoryGraph, nodeById: ReadonlyMap<string, StoryNode>): StoryFinding[] {
   const out: StoryFinding[] = [];
+  const guarded = (e: StoryEdge) => e.when !== undefined && e.when !== null;
+  const outOfGate = new Map<string, StoryEdge[]>();
   for (const e of graph.edges) {
-    if (e.when !== undefined && e.when !== null) continue;
-    const gateEdge = e.kind === 'gate';
-    const fromGate = nodeById.get(e.from)?.kind === 'gate' && isTraversalKind(e.kind);
-    if (!gateEdge && !fromGate) continue;
-    const why = gateEdge ? `gate edge ${e.id}` : `${e.kind} edge ${e.id} out of gate node ${e.from}`;
-    out.push(structural('GATE_WITHOUT_CONDITION', nodeById.has(e.from) ? [e.from] : [], `${why} (${e.from} -> ${e.to}) carries no \`when\``));
+    if (e.kind === 'gate' && !guarded(e)) {
+      out.push(structural('GATE_WITHOUT_CONDITION', nodeById.has(e.from) ? [e.from] : [], `gate edge ${e.id} (${e.from} -> ${e.to}) carries no \`when\``));
+    }
+    if (nodeById.get(e.from)?.kind !== 'gate' || !isTraversalKind(e.kind)) continue;
+    const list = outOfGate.get(e.from);
+    if (list) list.push(e);
+    else outOfGate.set(e.from, [e]);
+  }
+  for (const [gate, edges] of outOfGate) {
+    if (edges.some((e) => guarded(e) || e.kind === 'gate')) continue;
+    const list = edges.map((e) => `${e.kind} ${e.id} -> ${e.to}`).join(', ');
+    out.push(structural('GATE_WITHOUT_CONDITION', [gate], `gate node ${gate} branches on nothing: none of its outgoing edges (${list}) carries a \`when\`. Make it an \`event\`, or guard at least one outgoing edge; unguarded \`then\` edges beside a guarded one are its default branch`));
   }
   return out;
 }

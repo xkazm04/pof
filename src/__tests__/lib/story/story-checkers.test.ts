@@ -49,7 +49,7 @@ describe('story checkers', () => {
   it('each slice fails on the seeded graph and names its own codes only', () => {
     const own: Record<string, string[]> = {
       // Blocking codes only: UNKNOWN_KIND and STRING_VAR_NO_VALUES are `info` and never fail a slice.
-      'Story graph structurally sound': ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE', 'GATE_WITHOUT_CONDITION', 'PARENT_CONTAINS_MISMATCH'],
+      'Story graph structurally sound': ['DANGLING_EDGE', 'DUPLICATE_ID', 'CONTAINMENT_CYCLE', 'ORPHAN_NODE', 'GATE_WITHOUT_CONDITION', 'PARENT_CONTAINS_MISMATCH', 'INFLUENCES_UNSUPPORTED'],
       'Story endings attainable': ['ENDING_UNREACHABLE', 'NO_ENDING_REACHABLE', 'UNDECLARED_TERMINAL', 'PRECEDENCE_NOT_TOTAL'],
       'Story variables declared': ['VAR_UNDECLARED', 'VAR_NO_REACHING_WRITE', 'VAR_DOMAIN_VIOLATION', 'VAR_WRITER_NOT_OWNER', 'VAR_SINGLETON', 'UNTYPED_CONDITION'],
       'Story choices real': ['FALSE_CHOICE', 'CHOICE_TOO_FEW_OPTIONS'],
@@ -63,11 +63,11 @@ describe('story checkers', () => {
     }
   });
 
-  it('every structural code is owned by EXACTLY one slice (the six wave-4 codes included)', () => {
+  it('every structural code is owned by EXACTLY one slice (the wave-4 codes and INFLUENCES_UNSUPPORTED included)', () => {
     const owned = Object.values(STORY_SLICE_CODES).flat();
     expect(new Set(owned).size).toBe(owned.length);
     expect([...owned].sort()).toEqual([...STRUCTURAL_CODES].sort());
-    for (const c of ['CHOICE_TOO_FEW_OPTIONS', 'GATE_WITHOUT_CONDITION', 'UNKNOWN_KIND', 'PARENT_CONTAINS_MISMATCH', 'STRING_VAR_NO_VALUES', 'PRECEDENCE_NOT_TOTAL']) {
+    for (const c of ['CHOICE_TOO_FEW_OPTIONS', 'GATE_WITHOUT_CONDITION', 'UNKNOWN_KIND', 'PARENT_CONTAINS_MISMATCH', 'STRING_VAR_NO_VALUES', 'PRECEDENCE_NOT_TOTAL', 'INFLUENCES_UNSUPPORTED']) {
       expect(owned).toContain(c);
     }
   });

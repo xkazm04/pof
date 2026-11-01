@@ -168,7 +168,9 @@ describe('robustness and the non-traversal rule', () => {
       [{ id: 'X', kind: 'event' }],
       [{ from: 'START', to: 'END', kind: 'then' }, { from: 'START', to: 'X', kind: 'influences' }, { from: 'X', to: 'END', kind: 'then' }],
     );
-    expect(validateStoryGraph(g).map((f) => `${f.code}:${f.nodes.join(',')}`)).toEqual(['ORPHAN_NODE:X']);
+    // X stays an orphan: influences is not walked. (Wave 5: the influence is also unsupported,
+    // START writes nothing and X reads nothing, and that is reported as its own warn.)
+    expect(validateStoryGraph(g).map((f) => `${f.code}:${f.nodes.join(',')}`)).toEqual(['ORPHAN_NODE:X', 'INFLUENCES_UNSUPPORTED:START,X']);
   });
 
   it('unknown node and edge kinds do not crash; an unknown edge is not assumed to connect', () => {

@@ -66,14 +66,22 @@ describe('CHOICE_TOO_FEW_OPTIONS (§4: a choice needs >= 2 options)', () => {
   });
 });
 
-describe('GATE_WITHOUT_CONDITION (§4, §5: gate edges and edges out of a gate carry `when`)', () => {
+describe('GATE_WITHOUT_CONDITION (§4, §5; wave 5: an unguarded `then` beside a guarded edge is the default branch)', () => {
   const when = { visited: 'START' };
   const gate = (edges: Omit<StoryEdge, 'id'>[]) => tiny([{ id: 'G', kind: 'gate' }], [{ from: 'START', to: 'G', kind: 'then' }, ...edges]);
 
-  it('a single unguarded fall-through out of a gate node is still a violation (no exception)', () => {
-    const f = validateStoryGraph(gate([{ from: 'G', to: 'END', kind: 'gate', when }, { from: 'G', to: 'END', kind: 'then' }]));
+  it('near-miss: a guarded edge plus an unguarded `then` fall-through is CLEAN (the default branch)', () => {
+    expect(run(gate([{ from: 'G', to: 'END', kind: 'gate', when }, { from: 'G', to: 'END', kind: 'then' }]))).toEqual([]);
+    // Several unguarded `then` edges beside one guarded edge: still the default branch (one-of by mode).
+    expect(run(gate([{ from: 'G', to: 'END', kind: 'then', when }, { from: 'G', to: 'END', kind: 'then' }, { from: 'G', to: 'END', kind: 'then' }]))).toEqual([]);
+  });
+
+  it('a gate node whose outgoing edges are ALL unguarded `then` edges is flagged ONCE, naming the node and its edges', () => {
+    const f = validateStoryGraph(gate([{ from: 'G', to: 'END', kind: 'then' }, { from: 'G', to: 'END', kind: 'then' }]));
     expect(f.map(brief)).toEqual(['GATE_WITHOUT_CONDITION/error:G']);
-    expect(f[0].detail).toContain('then edge e2 out of gate node G');
+    expect(f[0].detail).toContain('gate node G branches on nothing');
+    expect(f[0].detail).toContain('then e1 -> END, then e2 -> END');
+    expect(f[0].detail).toContain('Make it an `event`, or guard at least one outgoing edge');
   });
 
   it('a `gate` edge with no `when` is flagged wherever it starts, once per edge', () => {
@@ -83,6 +91,16 @@ describe('GATE_WITHOUT_CONDITION (§4, §5: gate edges and edges out of a gate c
       { from: 'A', to: 'END', kind: 'then' },
     ]);
     expect(run(g)).toEqual(['GATE_WITHOUT_CONDITION/error:START', 'GATE_WITHOUT_CONDITION/error:START']);
+  });
+
+  it('a gate node whose unguarded edges include a `gate` edge is reported per edge only (no second node finding)', () => {
+    const f = validateStoryGraph(gate([{ from: 'G', to: 'END', kind: 'gate' }, { from: 'G', to: 'END', kind: 'then' }]));
+    expect(f.map(brief)).toEqual(['GATE_WITHOUT_CONDITION/error:G']);
+    expect(f[0].detail).toMatch(/^gate edge e1 /);
+  });
+
+  it('a gate node with no traversal edge out is UNDECLARED_TERMINAL, not this', () => {
+    expect(run(tiny([{ id: 'G', kind: 'gate' }], [{ from: 'START', to: 'G', kind: 'then' }, { from: 'START', to: 'END', kind: 'then' }]))).toEqual(['UNDECLARED_TERMINAL/warn:G']);
   });
 
   it('near-miss: every edge guarded; a `contains` edge out of a gate is not a branch', () => {

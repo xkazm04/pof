@@ -36,6 +36,7 @@ export const STRUCTURAL_SEVERITY: Readonly<Partial<Record<StoryFindingCode, Stor
   UNKNOWN_KIND: 'info',
   PARENT_CONTAINS_MISMATCH: 'error',
   STRING_VAR_NO_VALUES: 'info',
+  INFLUENCES_UNSUPPORTED: 'warn',
   /** A tie is `error`; a partial declaration (some endings declare it, some do not) is `warn`. */
   PRECEDENCE_NOT_TOTAL: 'error',
 };

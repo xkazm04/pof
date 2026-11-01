@@ -165,6 +165,26 @@ export function seedStructuralDefects(clean: StoryGraph, seed = 1): SeededGraph 
   const tied = g.endings.filter((e) => e.node !== 'X.lost').map((e) => e.node).sort();
   defects.push({ code: 'PRECEDENCE_NOT_TOTAL', nodes: tied, severity: 'error' }, { code: 'PRECEDENCE_NOT_TOTAL', nodes: ['X.lost'], severity: 'warn' });
 
+  // Wave 5. Appended after everything above (its PRNG draws come last), so the earlier manifest is unchanged.
+  // A gate node whose only ways on are unguarded `then` edges branches on nothing (one node finding).
+  hang('X.hollow', 'gate');
+  edge('X.hollow', sink);
+  edge('X.hollow', sink);
+  defects.push({ code: 'GATE_WITHOUT_CONDITION', nodes: ['X.hollow'] });
+
+  // A declared influence the data does not support: the source writes nothing the target's guards read.
+  hang('X.cause');
+  edge('X.cause', sink);
+  hang('X.effect');
+  edge('X.effect', sink);
+  edge('X.cause', 'X.effect', 'influences');
+  defects.push({ code: 'INFLUENCES_UNSUPPORTED', nodes: ['X.cause', 'X.effect'] });
+
+  // A profile node class with a coreKind outside the seven kinds (§4: render generic AND report).
+  const profile = g.profile as { nodeClasses?: { id: string; coreKind: string; label: string }[] };
+  profile.nodeClasses = [...(profile.nodeClasses ?? []), { id: 'x.mystery', coreKind: 'vignette', label: 'Mystery' }];
+  defects.push({ code: 'UNKNOWN_KIND', nodes: [] });
+
   // Drop the `text: undefined` keys the helper left, so the document round-trips through JSON.
   for (const n of g.nodes) if (n.text === undefined) delete n.text;
   return { graph: g, defects };
