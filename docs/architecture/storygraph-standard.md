@@ -532,8 +532,14 @@ and listed in `unknownKinds`; a declared `contentHash` that does not match is re
 monotonic per `(project, graphId)`). Storage: one `story_graphs` table (`src/lib/story/story-db-conn.ts`),
 the full document as JSON. Read: `GET /api/story/graphs[/:graphId]`, drawn by the Orrery at `/story`.
 Validate: `GET /api/story/findings` (every §8 structural code, `src/lib/story/validate.ts`). Walk:
-`POST /api/story/walk` -> 202 `{jobId}`, poll `GET /api/story/walk/:jobId` (§9a, background job). Not yet built:
-the per-node `story_*` tables, the `story-arcs` catalog row, the MCP tools, and the Orrery reading live walker evidence.
+`POST /api/story/walk` -> 202 `{jobId}`, poll `GET /api/story/walk/:jobId` (§9a, background job). Catalog: the
+`story-arcs` row (Concept Brief, Story Graph graded by `storyGraphAcceptance`, Impact Walk — when the stored walk
+record is stale its verdict walks the CURRENT graph itself and names the record as old). Agents: `pof_story_graph`,
+`pof_story_findings`, `pof_story_walk`, `pof_story_import` (`tools/pof-mcp`). Orrery: the Walk control polls a job, merges
+sampled evidence UNDER imported evidence (`mergeEvidence`), marks stale/unverified cells, and lists walker findings as a
+separate "Leads - reproduce before trusting" group. Not yet built: the per-node `story_*` tables, per-cell
+stale/unverified marking on the wheel itself (the lens paint has no status channel), and a produce path that can read
+sibling steps.
 
 **Open amendments (found while implementing, not yet ratified):** who "writes" an edge (source vs target); finding
 codes for MUSTs that have none (choice with < 2 options, gate edge without `when`, unknown kinds, parent/contains
@@ -542,3 +548,8 @@ partition; container-continuation timing (the walker uses the last-line rule, §
 all; precedence direction (implemented: lower number wins); `endings[].floor` for ENDING_BELOW_FLOOR; a `LIVELOCK_LEAD`
 code; whether a cohort's absent reach beside another cohort's measurement is a measured zero; one canonical engine name
 (`pof-walker@1` vs this doc's `pof-sampler/1` example).
+
+Found building the wiring: whether an imported reach value of 0 is a claim ("measured, never reached") or
+disallowed; a canonical paged/summarised form for `evidence.reach` (10k-node graphs carry ~10k rows); how a reader
+presents one cohort mixing imported and sampled cells of different status (implemented: worst status on the badge, exact
+status per cell); `model.ts` reading cohorts from the first run only (the Orrery works around it with a temporary run).
