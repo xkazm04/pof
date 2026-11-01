@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T21:44:46.356Z",
+  "generatedAt": "2026-11-01T17:30:20.760Z",
   "walked": [
     "achievements",
     "affixes",
@@ -29,6 +29,7 @@
     "spellbook",
     "state-graph",
     "status-effects",
+    "story-arcs",
     "tutorial-beats",
     "vendors",
     "vfx",
