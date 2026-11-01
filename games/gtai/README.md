@@ -12,7 +12,8 @@ it is re-seeded from these files idempotently.
 | File | What it holds | Written by |
 |------|---------------|------------|
 | `pitch.md` | Baseline direction: the owner's fusion of the `gtai-uprising-pitch` contest (A/2 spine, D/2 madness, B/3 and D/1 voice) | the contest verdict + owner notes |
-| `art-direction/` | Three 2D/2.5D art directions with design stances, 9 gameplay concepts and 3 Rivet concepts (`index.html` compares them) | concept round, 2026-11-01 |
+| `STATE.md` | The campaign's living state: phase, next steps, decisions, PoF gaps found by the game, session log | every `/gta` session |
+| `art-direction/` | Three 2D/2.5D art directions with design stances, 9 gameplay concepts and 3 Rivet concepts (`index.html` compares them); `LEONARDO-PROMPTS.md` holds the prompts plus camera-pitch tests | concept round, 2026-11-01 |
 | `spike/` | Overnight engine spike: UE 5.8 vs Godot 4 vs Unity 6 on one pistol-duel MVP (`PLAN.md`, `spike.mjs`) | engine decision |
 | `canon.json` | Accepted canon rules, profile `gtai` | the pitch intake, on operator accept |
 | `entities.json` | Accepted starter entities (ids prefixed `gtai-`, authored provenance) | the pitch intake, on operator accept |
@@ -26,3 +27,5 @@ The game's code definition (pipeline manifest, engine binding, canon profile) li
 verdict. Until then every UE-bound acceptance for a gtai entity is `deferred` with
 "no engine project bound for game gtai". When the engine project exists, this folder moves to that
 project's repo or is mirrored there.
+
+To continue the campaign in a new session, run **`/gta`** (`.claude/skills/gta/SKILL.md`). It reads `STATE.md`, agrees the day's or night's plan with the owner, and writes the state back.

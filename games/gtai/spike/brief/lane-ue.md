@@ -1,8 +1,12 @@
 # Lane: Unreal Engine 5.8
 
-You are building `MVP.md` in **Unreal Engine 5.8**, installed at `C:\Program Files\Epic Games\UE_5.8`. Create a
-**new C++ project** in `project/` inside your lane folder (for example `project/GTAISpike.uproject`). Never open or
-modify the existing PoF project in `C:\Users\kazda\Documents\Unreal Projects\PoF`.
+You are building `MVP.md` in **Unreal Engine 5.8**, installed at `C:\Program Files\Epic Games\UE_5.8`.
+
+`project/GTAISpike.uproject` already exists: a C++ module with Paper2D, EnhancedInput, PythonScriptPlugin and
+EditorScriptingUtilities enabled. Prep built the editor target, booted it headless, and packaged it once with
+BuildCookRun. See `PREP.md`.
+
+Never open or modify the existing PoF project in `C:\Users\kazda\Documents\Unreal Projects\PoF`.
 
 ## Pick your 2D / 2.5D approach, and say why in the JOURNAL
 - **Paper2D** (the built-in plugin, under `Engine/Plugins/2D/Paper2D`): flipbooks of sprites. PaperZD is a Marketplace plugin and is NOT installed; do not depend on it.

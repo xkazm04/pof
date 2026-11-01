@@ -14,10 +14,14 @@ journals decide.
 
 | Lane | Engine | Already on this machine | Pre-launch action |
 |---|---|---|---|
-| `ue` | Unreal 5.8 (Paper2D or 3D-ortho, the lane's choice) | yes | none |
-| `godot` | Godot 4.7.2 (GDScript) | **no** | `preflight --fetch-godot` downloads the editor and export templates (about 1 GB) |
-| `unity` | Unity 6000.6.4f1 (URP 2D or 3D-ortho) | editor yes, **licence NO** | **Owner:** sign in to Unity Hub and add a free Personal licence. Probed 2026-11-01: batchmode exits 198 with "Access token is unavailable". Unity Hub's executable is not at its default path, so it may need reinstalling |
-| `art` | Blender 4.2 + code | yes | none |
+| `ue` | Unreal 5.8 (Paper2D or 3D-ortho, the lane's choice) | yes | `prep`: scaffolds `GTAISpike.uproject` (Paper2D, EnhancedInput, Python), builds the editor target, boots it headless, packages once |
+| `godot` | Godot 4.7.2 (GDScript) | installed by `prep` | `prep`: downloads the editor and export templates, scaffolds the project and an export preset, proves a headless export |
+| `unity` | Unity 6000.6.4f1 (URP 2D or 3D-ortho) | yes, licensed | **Unity Hub must stay running all night.** Batchmode takes its licence token from the Hub: exit 198 with the Hub closed, 0 with it open (measured 2026-11-01). `prep` creates the project from `urp-blank`, adds inputsystem, 2d.animation, 2d.sprite, 2d.tilemap and glTFast, and builds a player once |
+| `art` | Blender 4.2 + code | yes | `prep`: proves a headless rigged GLB/FBX export |
+
+**Prep happens before the night** (`spike.mjs prep`, already run on 2026-11-01). Every download, project bootstrap and
+first build is paid in advance, so the night is development only. Each lane's `PREP.md` records the timings, because
+setup cost still counts in the comparison.
 
 **Why a fourth (art) lane, which the host added:**
 - The art lane builds **one shared asset pack** that every engine lane imports: GLB/FBX rigged robots with the six clips, pre-rendered top-down sprite sheets, environment pieces, effects, and a per-engine shader recipe for the style.
@@ -30,7 +34,7 @@ journals decide.
 
 | Time | What happens |
 |---|---|
-| before launch | The owner picks the art direction (`games/gtai/art-direction/index.html`), activates the Unity licence, and runs preflight until it is GO |
+| before launch | The owner picks the art direction (`games/gtai/art-direction/index.html`, or the Leonardo tests in `LEONARDO-PROMPTS.md`) and the camera pitch, keeps Unity Hub open, and runs preflight until it is GO |
 | 21:00 | `run` starts all lanes, staggered 45 s apart. Each lane loops through fresh sessions of up to 100 min, carrying memory in `JOURNAL.md` and its git log |
 | ~23:00 | Art pack v1 lands. The engine lanes swap greybox for real assets |
 | 06:45 | **Freeze**: no new features. Fix bugs, refresh the autoplay, stress and video evidence |
@@ -40,12 +44,15 @@ journals decide.
 ## Launch: commands, from the PoF repo root
 
 ```bash
-# 1. stage the workspace with the chosen art direction (replace variant-N)
+# 0. (done 2026-11-01; re-runnable) environment prep
+node games/gtai/spike/spike.mjs prep
+
+# 1. stage the chosen art direction (replace variant-N; re-runnable)
 node games/gtai/spike/spike.mjs init --style games/gtai/art-direction/variant-N
 
-# 2. fetch Godot, run every check, and include a one-turn model smoke call
-node games/gtai/spike/spike.mjs preflight --fetch-godot --smoke
-#    must print GO. Also: powercfg /change standby-timeout-ac 0, and pause Windows Update for the night
+# 2. every check, plus a one-turn Opus smoke call on BOTH billing paths (API key and subscription)
+node games/gtai/spike/spike.mjs preflight --smoke
+#    must print GO. Also: Unity Hub open, powercfg /change standby-timeout-ac 0, Windows Update paused
 
 # 3. launch (keep the terminal open; Ctrl-C stops only this runner's own sessions)
 node games/gtai/spike/spike.mjs run --until 08:00 --model claude-opus-5-5 --effort high
@@ -60,7 +67,19 @@ node games/gtai/spike/spike.mjs report
 - The workspace is `C:\Users\kazda\kiro\gtai-spike\`, outside this repo. Each lane has its own git repo. Engine projects are large and belong to no PoF commit.
 - Each lane session runs headless with `--permission-mode bypassPermissions`, `--setting-sources project,local` and `--strict-mcp-config`.
   - The lane's brief is its `CLAUDE.md`. Your user-level skills, hooks and MCP servers are not loaded, so every lane gets the same, CLI-only toolset.
-- When a lane hits a usage limit, the runner waits 15 min and retries. **Four Opus lanes for about 11 hours is a lot of usage.** If limits are tight, run the art lane on Sonnet (`--model-art claude-sonnet-5-5`) and keep the engine lanes on one model, for fairness.
+### Billing: drain the API key first, then the subscription (owner's rule, 2026-11-01)
+
+- **By default (`--billing api-first`), every lane starts on the Anthropic API key from the repo's `.env`.** The runner reads either `ANTHROPIC_API_KEY` or the `ANTRHOPIC_API_KEY` spelling currently in the file, and the key is passed only to the lane sessions.
+- **When the key runs out:**
+  1. The first iteration refused for credit or auth (credit balance too low, 402, invalid key) flips **every** lane to the Claude subscription.
+  2. The flip is written to `billing.json`, and the lane continues at once.
+  3. The journal carries the work over, so an iteration cut off mid-task loses only that iteration's unsaved steps.
+- A later run reads `billing.json` and starts on the subscription.
+- `--billing subscription` skips the key. `--billing api` never falls back.
+- Every iteration logs which credential it used: `[api/ANTHROPIC_API_KEY]` or `[subscription/none]`, taken from the CLI's own init event.
+- `status` shows the spend on the key versus the total.
+- On the subscription, when a lane hits a usage limit, the runner waits 15 min and retries.
+- **Four Opus lanes for about 11 hours is a lot of usage.** If limits are tight, put the art lane on Sonnet (`--model-art claude-sonnet-5-5`), and keep the engine lanes on one model, for fairness.
 
 ## What is measured (each lane's `scorecard.json`, plus the runner's own records)
 
@@ -113,7 +132,8 @@ If the results contradict this prior, that is the most useful outcome of the nig
 
 | Risk | Mitigation |
 |---|---|
-| Unity licence still missing at launch | Preflight says NO-GO. The lane logs BLOCKED and still records the friction; the licence wall is itself a finding |
+| Unity Hub closed, so batchmode loses its licence | Preflight checks it. The lane brief says never to close the Hub. A lane that hits it logs BLOCKED and works on non-editor tasks |
+| The API key drains mid-iteration | The runner flips every lane to the subscription and continues. `billing.json` records when |
 | Usage limits stop the lanes mid-night | The runner waits and retries. The art lane can run on Sonnet. `status` shows `LIMIT` |
 | A lane kills another lane's editor process | Every brief forbids name-based kills. The runner kills only its own process trees |
 | The PC sleeps or reboots | Preflight checks standby. Pause Windows Update for the night |

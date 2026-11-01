@@ -1,8 +1,10 @@
 # Lane: Godot 4
 
 You are building `MVP.md` in **Godot 4.7** (the standard build with GDScript, not .NET).
-- Preflight put the editor at `../../tools/godot/` and installed the export templates for this version. If they are missing, download them from the official GitHub release and log the download.
-- Create the project in `project/` inside your lane folder.
+- The editor is in `../../tools/godot/`.
+  - **Use `Godot_v*_win64_console.exe` for every command line.** The plain `.exe` detaches from stdout on Windows, so you would see no output.
+  - The export templates for this version are installed.
+- `project/` already exists: a `project.godot`, an empty `main.tscn`, and a "Windows Desktop" export preset that prep exported successfully. See `PREP.md`.
 
 ## Pick your 2D / 2.5D approach, and say why in the JOURNAL
 - **Pure 2D:** `Sprite2D` / `AnimatedSprite2D` characters with sprite sheets that rotate freely under a top-down camera. Use `TileMapLayer` or polygons for the yard, and `CanvasItem` shaders for the style.

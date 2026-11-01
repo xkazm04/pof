@@ -9,6 +9,17 @@ GTA 2 lineage, about 5 hours long, shipping on Steam.
 engine, with an AI agent doing the work. Your honest record of friction is worth as much as your build. A lane that
 hides its struggles makes the decision worse.
 
+## Already prepared: the night is for development
+The host ran environment prep before launch, and `PREP.md` in your lane folder records it:
+- the engine, templates and packages are installed;
+- `project/` is bootstrapped;
+- one build or export was proven end to end.
+
+So:
+- **Do not re-download or re-create the project.** Start from `project/`.
+- You may restructure it freely. It is your project.
+- If a `PREP.md` step says FAIL, fixing it is your first job. Log the time as FRICTION.
+
 ## The clock
 - The runner tells you, in every prompt, the current time and three times: **freeze**, **report** and **deadline**.
 - Before freeze: build and polish.

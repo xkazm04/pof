@@ -1,15 +1,23 @@
 # Lane: Unity 6
 
-You are building `MVP.md` in **Unity 6000.6.4f1**, at `C:\Program Files\Unity\Hub\Editor\6000.6.4f1\Editor\Unity.exe`. Create the project in
-`project/` inside your lane folder.
+You are building `MVP.md` in **Unity 6000.6.4f1**, at `C:\Program Files\Unity\Hub\Editor\6000.6.4f1\Editor\Unity.exe`.
+
+`project/` already exists. It was created from the `urp-blank` template (URP serves both 2D and 3D), with these packages resolved:
+- `com.unity.inputsystem`
+- `com.unity.2d.animation`, `com.unity.2d.sprite`, `com.unity.2d.tilemap`
+- `com.unity.cloud.gltfast`
+
+Prep also built a Windows player from it once in batchmode. See `PREP.md`.
 
 ## Licence
-The preflight verified that a batchmode run can obtain a licence (the owner activated Unity Personal through Unity
-Hub before launch). If a batchmode run still fails with "No valid Unity Editor license" or exit code 198:
-1. Log `BLOCKED: unity licence`.
-2. Keep working on everything that does not need the editor (C# scripts, asset prep in Blender, the plan).
-3. Retry the licence every iteration.
-Never try to work around licensing.
+Batchmode takes its licence token from **Unity Hub, which must stay running**.
+- Measured 2026-11-01: exit code 198 with the Hub closed, 0 with it open.
+- The Hub belongs to the owner's session. **Never close it or kill it.**
+- If a batchmode run fails with "No valid Unity Editor license", "Access token is unavailable" or exit code 198:
+  1. Log `BLOCKED: unity licence (Hub not running?)`.
+  2. Keep working on everything that does not need the editor (C# scripts, Blender asset prep, the plan).
+  3. Retry each iteration.
+- Never try to work around licensing.
 
 ## Pick your 2D / 2.5D approach, and say why in the JOURNAL
 - **URP 2D:** the 2D Renderer, `SpriteRenderer`, sprite sheets that rotate under a top-down camera, Tilemap for the yard, and optionally the **2D Animation** package for skeletal cutout rigs.

@@ -4,11 +4,13 @@
  * each looping in fresh headless sessions until a deadline. A lane's memory is its own JOURNAL.md and git log.
  * Builtins only.
  *
- *   node games/gtai/spike/spike.mjs init      [--root R] --style <art-direction variant dir>
- *   node games/gtai/spike/spike.mjs preflight [--root R] [--fetch-godot] [--smoke]
+ *   node games/gtai/spike/spike.mjs init      [--root R] [--style <art-direction variant dir>]   (re-runnable)
+ *   node games/gtai/spike/spike.mjs prep      [--root R] [--lanes ue,godot,unity,art]   (downloads + bootstraps + build proofs)
+ *   node games/gtai/spike/spike.mjs preflight [--root R] [--fetch-godot] [--smoke] [--billing api-first|api|subscription]
  *   node games/gtai/spike/spike.mjs run       [--root R] [--until 08:00] [--lanes ue,godot,unity,art]
  *                                             [--model claude-opus-5-5] [--effort high] [--iter-min 100]
  *                                             [--freeze HH:MM] [--report-at HH:MM] [--model-<lane> <id>]
+ *                                             [--billing api-first (default: .env key until drained, then subscription)]
  *   node games/gtai/spike/spike.mjs status    [--root R]
  *   node games/gtai/spike/spike.mjs report    [--root R]
  *
@@ -58,11 +60,16 @@ function copyDir(src, dst) {
   }
 }
 
+// Re-runnable: it rewrites the briefs and (with --style) restages the style, and never touches a lane's
+// project/, JOURNAL.md, evidence or git history. Without --style the style is left as it is (preflight says so).
 function init() {
   const style = opts.style && opts.style !== true ? path.resolve(String(opts.style)) : null;
-  if (!style || !fs.existsSync(path.join(style, 'DESIGN.md'))) die('--style <dir containing DESIGN.md> is required (an art-direction variant)');
+  if (style && !fs.existsSync(path.join(style, 'DESIGN.md'))) die(`--style ${style} has no DESIGN.md (pass an art-direction variant dir)`);
   for (const d of ['shared/style', 'shared/assets', 'tools']) fs.mkdirSync(path.join(ROOT, d), { recursive: true });
-  copyDir(style, path.join(ROOT, 'shared', 'style'));
+  if (style) {
+    fs.rmSync(path.join(ROOT, 'shared', 'style'), { recursive: true, force: true });
+    copyDir(style, path.join(ROOT, 'shared', 'style'));
+  }
   const common = fs.readFileSync(path.join(BRIEF, 'common.md'), 'utf8');
   const mvp = fs.readFileSync(path.join(BRIEF, 'mvp-duel.md'), 'utf8');
   for (const l of ALL_LANES) {
@@ -73,9 +80,49 @@ function init() {
     fs.writeFileSync(path.join(dir, 'CLAUDE.md'), `${lane}\n\n---\n\n${common}`);
     fs.writeFileSync(path.join(dir, 'MVP.md'), mvp);
   }
-  fs.writeFileSync(path.join(ROOT, 'spike.json'), JSON.stringify({ created: new Date().toISOString(), style, lanes: ALL_LANES }, null, 2));
-  log(`init: ${ROOT} (style ${style})`);
+  const prev = fs.existsSync(path.join(ROOT, 'spike.json')) ? JSON.parse(fs.readFileSync(path.join(ROOT, 'spike.json'), 'utf8')) : {};
+  const meta = { ...prev, created: prev.created ?? new Date().toISOString(), updated: new Date().toISOString(), style: style ?? prev.style ?? null, lanes: ALL_LANES };
+  fs.writeFileSync(path.join(ROOT, 'spike.json'), JSON.stringify(meta, null, 2));
+  log(`init: ${ROOT} (style ${meta.style ?? 'NOT STAGED - rerun init --style <variant dir>'})`);
 }
+
+// ---------------------------------------------------------------- billing
+// The owner's rule (2026-11-01): spend the Anthropic API key in the repo's .env first, then fall back to the
+// Claude subscription. The key line may be spelled ANTHROPIC_API_KEY or the owner's ANTRHOPIC_API_KEY.
+const REPO_ENV = path.resolve(HERE, '..', '..', '..', '.env');
+function apiKeyFromEnvFile() {
+  const text = readIf(String(opts['env-file'] ?? REPO_ENV));
+  const m = text.match(/^\s*(?:ANTHROPIC_API_KEY|ANTRHOPIC_API_KEY)\s*=\s*["']?([^"'\r\n]+)["']?\s*$/m);
+  return m ? m[1].trim() : null;
+}
+const BILLING_FILE = () => path.join(ROOT, 'billing.json');
+const billing = {
+  mode: 'subscription', // 'api' | 'subscription'
+  key: null,
+  load() {
+    const want = String(opts.billing ?? 'api-first'); // api-first | api | subscription
+    this.key = apiKeyFromEnvFile();
+    const saved = fs.existsSync(BILLING_FILE()) ? JSON.parse(fs.readFileSync(BILLING_FILE(), 'utf8')) : null;
+    if (want === 'subscription' || !this.key) this.mode = 'subscription';
+    else if (saved?.exhausted && want === 'api-first') this.mode = 'subscription'; // drained on an earlier run
+    else this.mode = 'api';
+    if (want !== 'subscription' && !this.key) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY in .env - using the subscription');
+  },
+  env(base) {
+    const e = { ...base };
+    delete e.ANTHROPIC_API_KEY; delete e.ANTHROPIC_AUTH_TOKEN; // never inherit a stray key from the shell
+    if (this.mode === 'api') e.ANTHROPIC_API_KEY = this.key;
+    return e;
+  },
+  exhaust(reason) {
+    if (this.mode !== 'api') return;
+    this.mode = 'subscription';
+    fs.writeFileSync(BILLING_FILE(), JSON.stringify({ exhausted: true, at: new Date().toISOString(), reason: reason.slice(0, 300) }, null, 2));
+    log(`billing: API key drained or refused (${reason.slice(0, 120).replace(/\s+/g, ' ')}) - switching ALL lanes to the subscription`);
+  },
+};
+// An API-billing failure, as distinct from a subscription usage limit.
+const API_DRAINED = /credit balance is too low|insufficient[_ ]credit|billing|payment required|\b402\b|invalid x-api-key|invalid api key|authentication_error|permission_error/i;
 
 // ---------------------------------------------------------------- preflight
 function run1(file, args, timeoutMs = 60_000) {
@@ -89,7 +136,12 @@ function godotPaths() {
   return { dir, exe: exe ? path.join(dir, exe) : null };
 }
 
-function fetchGodot() {
+// Windows' own bsdtar: the GNU tar on a Git-Bash PATH reads "C:" as a remote host ("Cannot connect to C:").
+const WIN_TAR = path.join(process.env.SystemRoot ?? 'C:/Windows', 'System32', 'tar.exe');
+
+// Async (the downloads are ~1 GB and must not block other lanes' prep) and throwing (a lane failure must not
+// process.exit the whole prep, which orphaned its siblings' steps on the first run).
+async function fetchGodot() {
   const tag = String(opts['godot-tag'] ?? GODOT_TAG_DEFAULT);
   const { dir } = godotPaths();
   fs.mkdirSync(dir, { recursive: true });
@@ -97,37 +149,54 @@ function fetchGodot() {
   const zip = path.join(dir, `Godot_v${tag}_win64.exe.zip`);
   const tpz = path.join(dir, `Godot_v${tag}_export_templates.tpz`);
   for (const [url, out] of [[`${base}/Godot_v${tag}_win64.exe.zip`, zip], [`${base}/Godot_v${tag}_export_templates.tpz`, tpz]]) {
-    if (fs.existsSync(out)) continue;
+    if (fs.existsSync(out) && fs.statSync(out).size > 1e6) continue;
     log(`download ${url}`);
-    const r = run1('curl', ['-fL', '-o', out, url], 30 * 60_000);
-    if (r.code !== 0) die(`download failed: ${url}\n${r.out}`);
+    const r = await exec('curl', ['-fsSL', '-o', out, url], { timeoutMs: 40 * 60_000 });
+    if (r.code !== 0) throw new Error(`download failed: ${url} ${r.out.slice(-200)}`);
   }
-  run1('tar', ['-xf', zip, '-C', dir], 5 * 60_000);
-  // Export templates install to %APPDATA%/Godot/export_templates/<x.y.z.stable>/ (the tpz holds templates/*).
+  if (!godotPaths().exe) {
+    const r = await exec(WIN_TAR, ['-xf', zip, '-C', dir], { timeoutMs: 5 * 60_000 });
+    if (r.code !== 0) throw new Error(`editor unzip failed: ${r.out.slice(-200)}`);
+  }
+  // Export templates install to %APPDATA%/Godot/export_templates/<x.y.z.stable>/ (the tpz is a zip holding templates/*).
   const ver = tag.replace(/-/g, '.');
   const tdir = path.join(process.env.APPDATA ?? '', 'Godot', 'export_templates', ver);
   if (!fs.existsSync(path.join(tdir, 'version.txt'))) {
     const tmp = path.join(dir, 'tpl-extract');
+    fs.rmSync(tmp, { recursive: true, force: true });
     fs.mkdirSync(tmp, { recursive: true });
-    const r = run1('tar', ['-xf', tpz, '-C', tmp], 15 * 60_000);
-    if (r.code !== 0) die(`template extract failed\n${r.out}`);
+    const r = await exec(WIN_TAR, ['-xf', tpz, '-C', tmp], { timeoutMs: 20 * 60_000 });
+    if (r.code !== 0) throw new Error(`template extract failed: ${r.out.slice(-200)}`);
     copyDir(path.join(tmp, 'templates'), tdir);
     fs.rmSync(tmp, { recursive: true, force: true });
   }
   log(`godot ${tag} ready in ${dir}; templates in ${tdir}`);
+  return tdir;
 }
 
-function preflight() {
-  if (opts['fetch-godot']) fetchGodot();
+async function preflight() {
+  if (opts['fetch-godot']) await fetchGodot();
   const rows = [];
   const check = (name, ok, detail, fix = '') => rows.push({ name, ok, detail, fix });
 
   const cl = run1('claude', ['--version']);
   check('claude CLI', cl.code === 0, cl.out.trim().split('\n')[0] ?? '', 'install Claude Code');
+  billing.load();
+  check('billing', true, billing.mode === 'api' ? 'API key from .env first, then the subscription' : 'subscription only');
   if (opts.smoke) {
-    const s = spawnSync('claude', ['-p', '--model', String(opts.model ?? 'claude-opus-5-5'), '--output-format', 'json',
-      '--setting-sources', 'project,local', '--strict-mcp-config'], { input: 'Reply with the single word OK.', encoding: 'utf8', timeout: 180_000, windowsHide: true });
-    check('claude smoke (model + usage)', /\bOK\b/.test(s.stdout ?? ''), (s.stdout ?? s.stderr ?? '').slice(0, 160).replace(/\s+/g, ' '), 'check the model id and remaining usage');
+    // One tiny Opus turn per billing path: the API key (if any) and the subscription.
+    const modes = billing.key ? ['api', 'subscription'] : ['subscription'];
+    for (const m of modes) {
+      const saved = billing.mode; billing.mode = m;
+      const s = spawnSync('claude', ['-p', '--model', String(opts.model ?? 'claude-opus-5-5'), '--output-format', 'stream-json', '--verbose',
+        '--setting-sources', 'project,local', '--strict-mcp-config'], { input: 'Reply with the single word OK.', encoding: 'utf8', timeout: 180_000, windowsHide: true, env: billing.env(process.env) });
+      billing.mode = saved;
+      const src = ((s.stdout ?? '').match(/"apiKeySource"\s*:\s*"([^"]*)"/) ?? [])[1] ?? '?';
+      const res = (s.stdout ?? '').split('\n').reverse().find((l) => l.includes('"type":"result"')) ?? '';
+      const ok = /"result"\s*:\s*"[^"]*\bOK\b/.test(res) && !/"is_error"\s*:\s*true/.test(res);
+      check(`claude smoke via ${m} (key source: ${src})`, ok, (res || s.stderr || '').slice(0, 200).replace(/\s+/g, ' '),
+        m === 'api' ? 'the API key is invalid or has no credit - the run will fall straight through to the subscription' : 'check the model id and remaining subscription usage');
+    }
   }
   for (const f of ['Engine/Binaries/Win64/UnrealEditor.exe', 'Engine/Build/BatchFiles/Build.bat', 'Engine/Build/BatchFiles/RunUAT.bat', 'Engine/Plugins/2D/Paper2D/Paper2D.uplugin']) {
     check(`UE 5.8 ${path.basename(f)}`, fs.existsSync(path.join(UE_ROOT, f)), path.join(UE_ROOT, f));
@@ -143,8 +212,10 @@ function preflight() {
     fs.mkdirSync(path.dirname(lf), { recursive: true });
     const u = run1(UNITY_EXE, ['-batchmode', '-quit', '-nographics', '-logFile', lf], 240_000);
     const text = readIf(lf);
-    const bad = u.code !== 0 || /No valid Unity Editor license|Access token is unavailable|com\.unity\.editor\.headless' was not found/.test(text);
-    check('Unity licence (batchmode)', !bad, `exit ${u.code}`, 'open Unity Hub, sign in, Preferences > Licenses > Add > "Get a free personal license"; then rerun preflight');
+    // "Access token is unavailable" also appears transiently in GOOD runs; the verdict is the exit code plus
+    // a resolved entitlement (the failing run on 2026-11-01 exited 198 with "0 entitlement groups").
+    const bad = u.code !== 0 || /No valid Unity Editor license/.test(text) || !/Successfully resolved entitlement/.test(text);
+    check('Unity licence (batchmode)', !bad, `exit ${u.code}`, 'START UNITY HUB and leave it running (batchmode takes its access token from the Hub - measured 2026-11-01: exit 198 with the Hub closed, 0 with it open); if still failing, Hub > Preferences > Licenses');
   } else check('Unity 6000.6.4f1', false, UNITY_EXE, 'install the editor through Unity Hub');
 
   const b = run1(BLENDER_EXE, ['-b', '--version'], 120_000);
@@ -165,6 +236,223 @@ function preflight() {
   const bad = rows.filter((r) => !r.ok);
   process.stdout.write(bad.length ? `\nNO-GO: ${bad.length} check(s) failed. A lane whose check fails will log BLOCKED and lose the night.\n` : '\nGO: all checks passed.\n');
   process.exitCode = bad.length ? 2 : 0;
+}
+
+// ---------------------------------------------------------------- prep
+// Environment preparation, run once before the night: every download, project bootstrap and toolchain proof
+// (a real export/build per engine), so the lanes spend the night on development. Each lane gets PREP.md with
+// the step timings, because setup cost is part of the engine comparison even when it is paid in advance.
+function exec(file, args, { cwd, timeoutMs = 30 * 60_000, logFile } = {}) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const p = spawn(file, args, { cwd, windowsHide: true });
+    children.add(p);
+    let out = '';
+    const sink = logFile ? fs.createWriteStream(logFile) : null;
+    const onData = (b) => { out = (out + b.toString()).slice(-400_000); sink?.write(b); };
+    p.stdout.on('data', onData); p.stderr.on('data', onData);
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; killTree(p); }, timeoutMs);
+    p.on('error', (e) => { out += `\nspawn error: ${e.message}`; });
+    p.on('close', (code) => { clearTimeout(timer); children.delete(p); sink?.end(); resolve({ code, out, timedOut, s: Math.round((Date.now() - started) / 1000) }); });
+  });
+}
+
+function prepLog(lane) {
+  const f = path.join(laneDir(lane), 'PREP.md');
+  if (!fs.existsSync(f)) fs.writeFileSync(f, `# Environment prep (done before the night, by the host)\n\nSetup is pre-paid so the night is development only. These timings still count in the engine comparison.\n\n`);
+  return async (name, fn) => {
+    const t0 = Date.now();
+    let ok = false, detail = '';
+    try { [ok, detail] = await fn(); } catch (e) { detail = e.message; }
+    const line = `- ${ok ? 'OK  ' : 'FAIL'} ${name} (${Math.round((Date.now() - t0) / 1000)} s)${detail ? ` - ${String(detail).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`;
+    fs.appendFileSync(f, `${line}\n`);
+    log(`prep ${lane}: ${line.slice(2)}`);
+    return ok;
+  };
+}
+
+const UE_FILES = (name) => ({
+  [`${name}.uproject`]: JSON.stringify({
+    FileVersion: 3, EngineAssociation: '5.8', Category: '', Description: 'GTAI engine spike',
+    Modules: [{ Name: name, Type: 'Runtime', LoadingPhase: 'Default', AdditionalDependencies: ['Engine'] }],
+    Plugins: [{ Name: 'Paper2D', Enabled: true }, { Name: 'EnhancedInput', Enabled: true }, { Name: 'PythonScriptPlugin', Enabled: true }, { Name: 'EditorScriptingUtilities', Enabled: true }],
+  }, null, 2),
+  [`Source/${name}.Target.cs`]: `using UnrealBuildTool;\n\npublic class ${name}Target : TargetRules\n{\n\tpublic ${name}Target(TargetInfo Target) : base(Target)\n\t{\n\t\tType = TargetType.Game;\n\t\tDefaultBuildSettings = BuildSettingsVersion.Latest;\n\t\tIncludeOrderVersion = EngineIncludeOrderVersion.Latest;\n\t\tExtraModuleNames.Add("${name}");\n\t}\n}\n`,
+  [`Source/${name}Editor.Target.cs`]: `using UnrealBuildTool;\n\npublic class ${name}EditorTarget : TargetRules\n{\n\tpublic ${name}EditorTarget(TargetInfo Target) : base(Target)\n\t{\n\t\tType = TargetType.Editor;\n\t\tDefaultBuildSettings = BuildSettingsVersion.Latest;\n\t\tIncludeOrderVersion = EngineIncludeOrderVersion.Latest;\n\t\tExtraModuleNames.Add("${name}");\n\t}\n}\n`,
+  [`Source/${name}/${name}.Build.cs`]: `using UnrealBuildTool;\n\npublic class ${name} : ModuleRules\n{\n\tpublic ${name}(ReadOnlyTargetRules Target) : base(Target)\n\t{\n\t\tPCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;\n\t\tPublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "Paper2D" });\n\t}\n}\n`,
+  [`Source/${name}/${name}.h`]: '#pragma once\n\n#include "CoreMinimal.h"\n',
+  [`Source/${name}/${name}.cpp`]: `#include "${name}.h"\n#include "Modules/ModuleManager.h"\n\nIMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, ${name}, "${name}");\n`,
+  'Config/DefaultEngine.ini': '[/Script/EngineSettings.GeneralProjectSettings]\nProjectName=GTAI Spike\n',
+  'Config/DefaultGame.ini': '[/Script/EngineSettings.GeneralProjectSettings]\nProjectName=GTAI Spike\n',
+});
+
+async function prepUe() {
+  const step = prepLog('ue');
+  const proj = path.join(laneDir('ue'), 'project');
+  const up = path.join(proj, 'GTAISpike.uproject');
+  const logs = path.join(laneDir('ue'), 'logs');
+  await step('scaffold C++ project (Paper2D, EnhancedInput, Python enabled)', async () => {
+    if (fs.existsSync(up)) return [true, 'already present'];
+    for (const [rel, body] of Object.entries(UE_FILES('GTAISpike'))) {
+      fs.mkdirSync(path.dirname(path.join(proj, rel)), { recursive: true });
+      fs.writeFileSync(path.join(proj, rel), body);
+    }
+    return [true, up];
+  });
+  const built = await step('Build.bat GTAISpikeEditor Win64 Development', async () => {
+    const r = await exec('cmd', ['/c', path.join(UE_ROOT, 'Engine/Build/BatchFiles/Build.bat'), 'GTAISpikeEditor', 'Win64', 'Development', `-Project=${up}`, '-WaitMutex'],
+      { timeoutMs: 40 * 60_000, logFile: path.join(logs, 'prep-build-editor.log') });
+    return [r.code === 0, r.timedOut ? 'timed out' : (r.out.match(/Result: \w+|Total execution time: [\d.]+ seconds/g) ?? []).join('; ') || `exit ${r.code}`];
+  });
+  if (!built) return;
+  await step('headless editor/game boot (warms project shaders)', async () => {
+    const lf = path.join(logs, 'prep-boot.log');
+    const r = await exec(path.join(UE_ROOT, 'Engine/Binaries/Win64/UnrealEditor.exe'), [up, '-game', '-RenderOffScreen', '-windowed', '-ResX=640', '-ResY=360', '-unattended', '-nosplash', '-ExecCmds=quit', `-abslog=${lf}`],
+      { timeoutMs: 25 * 60_000 });
+    const text = readIf(lf);
+    // Judge by the log, not the exit code (shutdown crashes are a known UE trait on this machine).
+    const ok = /Engine is initialized|LogLoad: Took .* to LoadMap/.test(text);
+    return [ok, `${r.timedOut ? 'timed out (killed own PID); ' : ''}exit ${r.code}; log ${ok ? 'shows engine init' : 'has no engine init line'}`];
+  });
+  await step('RunUAT BuildCookRun Win64 (packaging proof)', async () => {
+    const out = path.join(laneDir('ue'), 'build', 'prep-check');
+    const r = await exec('cmd', ['/c', path.join(UE_ROOT, 'Engine/Build/BatchFiles/RunUAT.bat'), 'BuildCookRun', `-project=${up}`, '-platform=Win64', '-clientconfig=Development',
+      '-build', '-cook', '-stage', '-pak', '-archive', `-archivedirectory=${out}`, '-noP4', '-utf8output', '-unattended', '-nocompileeditor'],
+      { timeoutMs: 60 * 60_000, logFile: path.join(logs, 'prep-package.log') });
+    const exe = fs.existsSync(out) ? fs.readdirSync(out, { recursive: true }).find((f) => /GTAISpike\.exe$/i.test(String(f))) : null;
+    return [r.code === 0 && !!exe, `${r.timedOut ? 'timed out; ' : ''}exit ${r.code}; ${exe ? `packaged ${exe}` : 'no packaged exe'}`];
+  });
+}
+
+async function prepGodot() {
+  const step = prepLog('godot');
+  const fetched = await step('download Godot editor + export templates', async () => { await fetchGodot(); return [!!godotPaths().exe, godotPaths().exe ?? 'no exe after download']; });
+  if (!fetched) return;
+  const dir = godotPaths().dir;
+  const con = fs.readdirSync(dir).find((f) => /_win64_console\.exe$/.test(f));
+  const godot = con ? path.join(dir, con) : godotPaths().exe;
+  const proj = path.join(laneDir('godot'), 'project');
+  const ver = String(opts['godot-tag'] ?? GODOT_TAG_DEFAULT).replace(/-stable$/, '').split('.').slice(0, 2).join('.');
+  await step('scaffold project (project.godot, main.tscn, Windows export preset)', async () => {
+    fs.mkdirSync(proj, { recursive: true });
+    if (!fs.existsSync(path.join(proj, 'project.godot'))) {
+      fs.writeFileSync(path.join(proj, 'project.godot'), `config_version=5\n\n[application]\n\nconfig/name="GTAISpike"\nrun/main_scene="res://main.tscn"\nconfig/features=PackedStringArray("${ver}")\n\n[rendering]\n\nrenderer/rendering_method="forward_plus"\n`);
+      fs.writeFileSync(path.join(proj, 'main.tscn'), '[gd_scene format=3]\n\n[node name="Main" type="Node2D"]\n');
+      fs.writeFileSync(path.join(proj, 'export_presets.cfg'), '[preset.0]\n\nname="Windows Desktop"\nplatform="Windows Desktop"\nrunnable=true\nexport_filter="all_resources"\nexport_path="../build/GTAISpike.exe"\n\n[preset.0.options]\n\nbinary_format/embed_pck=true\n');
+    }
+    return [true, `console exe: ${godot}`];
+  });
+  await step('headless --import', async () => {
+    const r = await exec(godot, ['--headless', '--path', proj, '--import'], { timeoutMs: 10 * 60_000, logFile: path.join(laneDir('godot'), 'logs', 'prep-import.log') });
+    return [r.code === 0 && fs.existsSync(path.join(proj, '.godot')), `exit ${r.code}`];
+  });
+  await step('headless --export-release "Windows Desktop" (export proof)', async () => {
+    const out = path.join(laneDir('godot'), 'build', 'prep-check', 'GTAISpike.exe');
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    const r = await exec(godot, ['--headless', '--path', proj, '--export-release', 'Windows Desktop', out], { timeoutMs: 15 * 60_000, logFile: path.join(laneDir('godot'), 'logs', 'prep-export.log') });
+    return [fs.existsSync(out), `exit ${r.code}; ${fs.existsSync(out) ? `${Math.round(fs.statSync(out).size / 1e6)} MB exe` : 'no exe'}`];
+  });
+}
+
+// Newest version of a Unity-registry package whose minimum editor is <= this editor.
+function unityPackageVersion(name, editor = '6000.6') {
+  // Built-in packages (2d.sprite, 2d.tilemap, ...) ship inside the editor and are not on the registry.
+  const builtin = path.join(path.dirname(UNITY_EXE), 'Data/Resources/PackageManager/BuiltInPackages', name, 'package.json');
+  if (fs.existsSync(builtin)) return JSON.parse(fs.readFileSync(builtin, 'utf8')).version ?? null;
+  const r = run1('curl', ['-fsL', `https://packages.unity.com/${name}`], 60_000);
+  if (r.code !== 0) return null;
+  const doc = JSON.parse(r.out);
+  const num = (v) => String(v).split(/[.-]/).slice(0, 3).map((x) => Number(x) || 0);
+  const cmp = (a, b) => { const x = num(a), y = num(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+  const ok = Object.entries(doc.versions ?? {}).filter(([v, m]) => !/-(pre|exp|preview)/.test(v) && (!m.unity || cmp(m.unity, editor) <= 0)).map(([v]) => v);
+  return ok.sort(cmp).at(-1) ?? null;
+}
+
+async function prepUnity() {
+  const step = prepLog('unity');
+  const proj = path.join(laneDir('unity'), 'project');
+  const logs = path.join(laneDir('unity'), 'logs');
+  const tpl = path.join(path.dirname(UNITY_EXE), 'Data/Resources/PackageManager/ProjectTemplates/com.unity.template.urp-blank-17.2.1.tgz');
+  const created = await step('create project from the urp-blank template (neutral: URP serves 2D and 3D)', async () => {
+    if (fs.existsSync(path.join(proj, 'ProjectSettings'))) return [true, 'already present'];
+    const lf = path.join(logs, 'prep-create.log');
+    const r = await exec(UNITY_EXE, ['-batchmode', '-nographics', '-quit', '-createProject', proj, '-cloneFromTemplate', tpl, '-logFile', lf], { timeoutMs: 30 * 60_000 });
+    return [r.code === 0 && fs.existsSync(path.join(proj, 'Packages', 'manifest.json')), `exit ${r.code}${r.code === 198 ? ' (licence: is Unity Hub running?)' : ''}`];
+  });
+  if (!created) return;
+  await step('add packages (inputsystem, 2d.animation, 2d.sprite, 2d.tilemap, cloud.gltfast) and resolve', async () => {
+    const mf = path.join(proj, 'Packages', 'manifest.json');
+    const m = JSON.parse(fs.readFileSync(mf, 'utf8'));
+    const added = [];
+    for (const n of ['com.unity.inputsystem', 'com.unity.2d.animation', 'com.unity.2d.sprite', 'com.unity.2d.tilemap', 'com.unity.cloud.gltfast']) {
+      if (m.dependencies[n]) continue;
+      const v = unityPackageVersion(n);
+      if (!v) return [false, `no compatible version found for ${n}`];
+      m.dependencies[n] = v; added.push(`${n}@${v}`);
+    }
+    fs.writeFileSync(mf, JSON.stringify(m, null, 2));
+    const lf = path.join(logs, 'prep-resolve.log');
+    const r = await exec(UNITY_EXE, ['-batchmode', '-nographics', '-quit', '-projectPath', proj, '-logFile', lf], { timeoutMs: 30 * 60_000 });
+    const lock = readIf(path.join(proj, 'Packages', 'packages-lock.json'));
+    const missing = ['com.unity.inputsystem', 'com.unity.cloud.gltfast'].filter((n) => !lock.includes(`"${n}"`));
+    const errs = (readIf(lf).match(/error CS\d+[^\n]*/g) ?? []).slice(0, 3);
+    return [r.code === 0 && !missing.length && !errs.length, `exit ${r.code}; added ${added.join(', ') || 'none'}${missing.length ? `; missing in lock: ${missing}` : ''}${errs.length ? `; ${errs.join(' | ')}` : ''}`];
+  });
+  await step('batchmode BuildPlayer StandaloneWindows64 (build proof)', async () => {
+    const ed = path.join(proj, 'Assets', 'Editor');
+    fs.mkdirSync(ed, { recursive: true });
+    const script = path.join(ed, 'PrepBuildCheck.cs');
+    const out = path.join(laneDir('unity'), 'build', 'prep-check', 'GTAISpike.exe').replace(/\\/g, '/');
+    fs.writeFileSync(script, `using UnityEditor;\nusing UnityEditor.Build.Reporting;\nusing UnityEngine;\n\npublic static class PrepBuildCheck\n{\n    public static void Run()\n    {\n        var guids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });\n        var scenes = new string[guids.Length > 0 ? 1 : 0];\n        if (guids.Length > 0) scenes[0] = AssetDatabase.GUIDToAssetPath(guids[0]);\n        var report = BuildPipeline.BuildPlayer(scenes, "${out}", BuildTarget.StandaloneWindows64, BuildOptions.None);\n        Debug.Log("PREP_BUILD_RESULT " + report.summary.result);\n        EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 2);\n    }\n}\n`);
+    const lf = path.join(logs, 'prep-build.log');
+    const r = await exec(UNITY_EXE, ['-batchmode', '-nographics', '-projectPath', proj, '-executeMethod', 'PrepBuildCheck.Run', '-logFile', lf], { timeoutMs: 40 * 60_000 });
+    fs.rmSync(script, { force: true }); fs.rmSync(`${script}.meta`, { force: true });
+    const ok = fs.existsSync(out) && /PREP_BUILD_RESULT Succeeded/.test(readIf(lf));
+    return [ok, `exit ${r.code}; ${ok ? 'player built' : (readIf(lf).match(/PREP_BUILD_RESULT \w+|error[^\n]{0,160}/i) ?? ['no result line'])[0]}`];
+  });
+}
+
+async function prepArt() {
+  const step = prepLog('art');
+  await step('Blender headless: rigged mesh + action -> GLB and FBX export proof', async () => {
+    const dir = path.join(ROOT, 'tools', 'prep-check');
+    fs.mkdirSync(dir, { recursive: true });
+    const py = path.join(dir, 'export_check.py');
+    fs.writeFileSync(py, [
+      'import bpy, sys, os',
+      'out = sys.argv[sys.argv.index("--") + 1]',
+      'bpy.ops.wm.read_factory_settings(use_empty=True)',
+      'bpy.ops.object.armature_add(location=(0, 0, 0)); arm = bpy.context.object',
+      'bpy.ops.mesh.primitive_cube_add(size=0.5, location=(0, 0, 0.5)); cube = bpy.context.object',
+      'cube.parent = arm; mod = cube.modifiers.new("Armature", "ARMATURE"); mod.object = arm',
+      'vg = cube.vertex_groups.new(name=arm.data.bones[0].name); vg.add([v.index for v in cube.data.vertices], 1.0, "REPLACE")',
+      'arm.animation_data_create(); act = bpy.data.actions.new("walk"); arm.animation_data.action = act',
+      'pb = arm.pose.bones[0]',
+      'for f, z in ((1, 0.0), (12, 0.6), (24, 0.0)):',
+      '    pb.rotation_mode = "XYZ"; pb.rotation_euler[2] = z; pb.keyframe_insert("rotation_euler", frame=f)',
+      'bpy.ops.export_scene.gltf(filepath=os.path.join(out, "check.glb"), export_format="GLB", export_animations=True)',
+      'bpy.ops.export_scene.fbx(filepath=os.path.join(out, "check.fbx"), bake_anim=True)',
+      'print("PREP_EXPORT_OK")',
+    ].join('\n'));
+    const r = await exec(BLENDER_EXE, ['-b', '--python', py, '--', dir], { timeoutMs: 10 * 60_000 });
+    const ok = /PREP_EXPORT_OK/.test(r.out) && fs.existsSync(path.join(dir, 'check.glb')) && fs.existsSync(path.join(dir, 'check.fbx'));
+    return [ok, ok ? 'check.glb + check.fbx written' : r.out.slice(-300)];
+  });
+  await step('ffmpeg present (sprite contact sheets, duel.mp4)', async () => { const r = run1('ffmpeg', ['-version']); return [r.code === 0, (r.out.split('\n')[0] ?? '').slice(0, 60)]; });
+}
+
+async function prep() {
+  if (!fs.existsSync(path.join(ROOT, 'spike.json'))) die(`no spike at ${ROOT}: run init first`);
+  const lanes = String(opts.lanes ?? ALL_LANES.join(',')).split(',').map((s) => s.trim());
+  const fns = { ue: prepUe, godot: prepGodot, unity: prepUnity, art: prepArt };
+  const stop = () => { log('prep interrupted - stopping own child processes'); for (const c of children) killTree(c); process.exit(130); };
+  process.on('SIGINT', stop);
+  log(`prep: ${lanes.join(',')}`);
+  await Promise.all(lanes.map((l) => fns[l]()));
+  const fails = lanes.flatMap((l) => readIf(path.join(laneDir(l), 'PREP.md')).split('\n').filter((x) => x.startsWith('- FAIL')).map((x) => `${l}: ${x.slice(7)}`));
+  log(fails.length ? `prep: ${fails.length} failing step(s):\n  ${fails.join('\n  ')}` : 'prep: every step OK');
+  process.exitCode = fails.length ? 2 : 0;
 }
 
 // ---------------------------------------------------------------- run
@@ -211,11 +499,13 @@ function runClaude(lane, text, timeoutMs, n, cfg) {
       '--permission-mode', 'bypassPermissions', '--setting-sources', 'project,local', '--strict-mcp-config',
       '--add-dir', path.join(ROOT, 'shared'), '--add-dir', path.join(ROOT, 'tools')];
     const started = Date.now();
-    const p = spawn('claude', args, { cwd: dir, windowsHide: true, env: { ...process.env, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' } });
+    const mode = billing.mode;
+    const p = spawn('claude', args, { cwd: dir, windowsHide: true, env: billing.env({ ...process.env, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' }) });
     children.add(p);
     let tail = '';
+    let head = '';
     let timedOut = false;
-    p.stdout.on('data', (b) => { out.write(b); tail = (tail + b.toString()).slice(-200_000); });
+    p.stdout.on('data', (b) => { out.write(b); tail = (tail + b.toString()).slice(-200_000); if (head.length < 20_000) head += b.toString(); });
     p.stderr.on('data', (b) => err.write(b));
     p.stdin.on('error', () => {});
     p.stdin.end(text);
@@ -230,11 +520,18 @@ function runClaude(lane, text, timeoutMs, n, cfg) {
         try { result = JSON.parse(line); break; } catch { /* partial line */ }
       }
       const errText = readIf(path.join(dir, 'logs', `iter-${tag}.err`));
-      const blob = `${result?.result ?? ''}\n${errText}`;
+      const blob = `${result?.result ?? ''}\n${errText}\n${tail.slice(-6000)}`;
+      // The stream's system/init event names the credential the CLI actually used: proof of the billing mode.
+      const keySource = (head.match(/"apiKeySource"\s*:\s*"([^"]*)"/) ?? [])[1] ?? null;
+      // Judge drainage on error surfaces only (result text, stderr, API-error lines), never on what the agent wrote:
+      // the game has a boss called "Triage & Billing".
+      const errSurface = `${result?.is_error ? result?.result ?? '' : ''}\n${errText}\n${tail.split('\n').filter((l) => /API Error|"type":"error"|"error":\{/.test(l)).join('\n').slice(-4000)}`;
+      const drained = mode === 'api' && !timedOut && API_DRAINED.test(errSurface);
       resolve({
-        n, code, timedOut, wallS: Math.round((Date.now() - started) / 1000),
+        n, code, timedOut, wallS: Math.round((Date.now() - started) / 1000), billing: mode, keySource, drained,
+        drainReason: drained ? `${errSurface.match(API_DRAINED)?.[0] ?? ''} ${errSurface.trim().slice(0, 200)}` : null,
         costUsd: result?.total_cost_usd ?? null, turns: result?.num_turns ?? null, isError: result?.is_error ?? (code !== 0 && !timedOut),
-        limited: /usage limit|limit reached|rate.?limit|429|overloaded|quota/i.test(blob) && !timedOut,
+        limited: !drained && /usage limit|limit reached|rate.?limit|429|overloaded|quota/i.test(blob) && !timedOut,
       });
     });
   });
@@ -260,7 +557,9 @@ async function laneLoop(lane, t, cfg) {
     const r = await runClaude(lane, prompt(lane, n, phase, t, capAt), capAt.getTime() - now, n, cfg);
     state.iterations.push({ ...r, phase, start: new Date(now).toISOString() });
     fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
-    log(`${lane}: iteration ${n} ${r.timedOut ? 'stopped at cap' : `exit ${r.code}`} ${r.wallS}s${r.costUsd != null ? ` $${r.costUsd.toFixed(2)}` : ''}${r.limited ? ' USAGE-LIMIT' : ''}`);
+    log(`${lane}: iteration ${n} [${r.billing}${r.keySource ? `/${r.keySource}` : ''}] ${r.timedOut ? 'stopped at cap' : `exit ${r.code}`} ${r.wallS}s${r.costUsd != null ? ` $${r.costUsd.toFixed(2)}` : ''}${r.limited ? ' USAGE-LIMIT' : ''}`);
+    // Drained mid-iteration: switch every lane to the subscription and continue at once (the journal carries the work).
+    if (r.drained) { billing.exhaust(r.drainReason ?? 'api error'); if (phase !== 'REPORT') continue; }
     if (phase === 'REPORT') { reported = true; break; }
     if (r.limited) { log(`${lane}: usage limit - waiting 15 min`); await sleep(15 * 60_000); continue; }
     fails = r.isError && r.wallS < 120 ? fails + 1 : 0;
@@ -278,9 +577,10 @@ async function runAll() {
   const freeze = opts.freeze ? nextAt(String(opts.freeze)) : new Date(until.getTime() - 75 * 60_000);
   const report = opts['report-at'] ? nextAt(String(opts['report-at'])) : new Date(until.getTime() - 45 * 60_000);
   if (!(freeze <= report && report < until)) die('need freeze <= report-at < until');
+  billing.load();
   const cfg = { model: String(opts.model ?? 'claude-opus-5-5'), effort: String(opts.effort ?? 'high'), iterMin: Number(opts['iter-min'] ?? 100) };
   const t = { until, freeze, report };
-  log(`run: lanes ${lanes.join(',')} | model ${cfg.model}@${cfg.effort} | freeze ${freeze.toLocaleString()} | report ${report.toLocaleString()} | deadline ${until.toLocaleString()}`);
+  log(`run: billing ${billing.mode}${billing.mode === 'api' ? ' (drain the .env API key first, then the subscription)' : ''} | lanes ${lanes.join(',')} | model ${cfg.model}@${cfg.effort} | freeze ${freeze.toLocaleString()} | report ${report.toLocaleString()} | deadline ${until.toLocaleString()}`);
   const stop = () => { log('interrupted - stopping own child sessions'); for (const c of children) killTree(c); process.exit(130); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
@@ -299,18 +599,20 @@ function laneSummary(l) {
   const blocked = [...j.matchAll(/^.*BLOCKED:.*$/gm)].map((m) => m[0].trim());
   const loops = [...j.matchAll(/LOOP:\s*([\d.]+)/g)].map((m) => Number(m[1]));
   const cost = st.iterations.reduce((s, i) => s + (i.costUsd ?? 0), 0);
+  const apiCost = st.iterations.filter((i) => i.billing === 'api').reduce((s, i) => s + (i.costUsd ?? 0), 0);
   const score = fs.existsSync(path.join(dir, 'scorecard.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'scorecard.json'), 'utf8')) : null;
-  return { l, dir, j, st, friction, milestones, blocked, loops, cost, score };
+  return { l, dir, j, st, friction, milestones, blocked, loops, cost, apiCost, score };
 }
 
 function status() {
   const latest = readIf(path.join(ROOT, 'shared', 'assets', 'LATEST')).trim() || 'none yet';
-  process.stdout.write(`spike ${ROOT} | shared pack: ${latest}\n`);
+  const bill = fs.existsSync(BILLING_FILE()) ? JSON.parse(fs.readFileSync(BILLING_FILE(), 'utf8')) : null;
+  process.stdout.write(`spike ${ROOT} | shared pack: ${latest} | billing: ${bill?.exhausted ? `API key drained at ${bill.at}, now subscription` : 'API key first (not drained)'}\n`);
   for (const l of ALL_LANES) {
     if (!fs.existsSync(laneDir(l))) continue;
     const s = laneSummary(l);
     const last = s.st.iterations.at(-1);
-    process.stdout.write(`\n== ${l}: ${s.st.iterations.length} iteration(s), $${s.cost.toFixed(2)}, ${s.milestones.length} milestone(s), friction ${s.friction} min, blocked ${s.blocked.length}${last ? ` | last: ${last.phase} ${last.timedOut ? 'capped' : `exit ${last.code}`}${last.limited ? ' LIMIT' : ''}` : ''}\n`);
+    process.stdout.write(`\n== ${l}: ${s.st.iterations.length} iteration(s), $${s.cost.toFixed(2)} (API key $${s.apiCost.toFixed(2)}),${s.milestones.length} milestone(s), friction ${s.friction} min, blocked ${s.blocked.length}${last ? ` | last: ${last.phase} ${last.timedOut ? 'capped' : `exit ${last.code}`}${last.limited ? ' LIMIT' : ''}` : ''}\n`);
     process.stdout.write(`${s.j.trim().split('\n').slice(-6).map((x) => `   ${x}`).join('\n')}\n`);
   }
 }
@@ -366,6 +668,6 @@ img{width:100%}.miss{color:var(--mut)}</style><h1>GTAI engine spike</h1><p>See S
 }
 
 // ---------------------------------------------------------------- main
-const cmds = { init, preflight, run: runAll, status, report };
+const cmds = { init, prep, preflight, run: runAll, status, report };
 if (!cmds[cmd]) die('usage: spike.mjs init|preflight|run|status|report [options] (see the header)');
 await cmds[cmd]();
