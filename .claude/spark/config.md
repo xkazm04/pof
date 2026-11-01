@@ -32,6 +32,13 @@ Declared capabilities come from `package.json` scripts, not from another repo's 
 - **`npm run typecheck` is `tsgo`** (TypeScript 7 native, ~10x). It is blind to bundle boundaries:
   only the e2e walker catches a `use client` file that pulls `node:child_process` into the browser
   bundle.
+- **UI verification runs from the MAIN checkout after merge, never in a spark worktree.** A worktree's
+  junctioned `node_modules` makes Turbopack panic ("Symlink ... points out of the filesystem root").
+  Boot `NODE_ENV=development npx next dev -p 3001` in the main checkout, curl `/layout`, `/status` and
+  every new API route, screenshot headless, then kill your own PID. **A page can typecheck and still
+  500 in dev** when a client component reaches `better-sqlite3`; this boot is the seam gate that catches it.
+- **Check `df -h /c` in Phase 0 and before fanning out builders.** The drive sits about 99.5% full, and
+  other sessions' writes took it to 0 bytes mid-build on 2026-11-01.
 - **Capture the summary line and test for `failed` explicitly.** A chain like
   `cmd | grep ... | head` joined with `&&` returns 0 even when tests are red; that has caused a
   broken commit in this repo before.
@@ -132,3 +139,7 @@ when the dialog is done. Waves are uncapped.
 - 2026-10-04: **The contest instrument does not read its own overlay** - `.claude/contest/config.md`
   is host-read, so `vault:` must be passed as `--vault` / `--vault-subdir` on `init` or the vault
   silently falls back to `<repo>/.contest`. Check the init output's `vault:` line before running.
+- 2026-11-01 (gtai-uprising-project): **Scouts proved mount points but never booted the page.** `/` had been
+  500 in dev since 2026-10-19 (a client-bundle leak); only the post-merge smoke test found it. Promoted to
+  `## Gates` (main-checkout dev boot as the seam gate), together with the disk check. The contest-vault lesson
+  recurred and moved to `.claude/contest/config.md ## Engines`.

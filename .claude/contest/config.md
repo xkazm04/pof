@@ -21,6 +21,13 @@ All three CLI families are installed and on PATH on this machine:
 - `claude` -> `/c/users/kazda/.local/bin/claude`
 - `codex` -> `/c/nvm4w/nodejs/codex`
 - `grok` -> `/c/Users/kazda/.grok/bin/grok`
+- `muse` (Muse Code) -> `%LOCALAPPDATA%/Programs/muse/muse.cmd`; headless takes `--model`, not `-m`
+- `agy` (Gemini via Antigravity) -> `%LOCALAPPDATA%/agy/bin/agy`; `agy models` lists slugs
+  (`gemini-4-argon-high`)
+
+**The instrument does not read this overlay's `vault:`.** Pass `--vault C:/Users/kazda/Documents/Obsidian/pof`
+on `init`, or the vault silently falls back to `<repo>/.contest`. This has happened twice (2026-10-04 and
+2026-11-01), so it is promoted from the spark log to here.
 
 So a clean cross-family panel IS available (Codex + Grok judging Claude-built variants satisfies
 "no judge shares a family with every participant, and two judges never share one family with each
