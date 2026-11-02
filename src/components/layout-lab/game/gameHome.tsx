@@ -3,7 +3,8 @@
 /**
  * The lab's GAME view — "where is this game at?" for the ACTIVE game: its manifest pipelines
  * (fit, note, coverage, readiness as separate columns), its planned pipelines ("not built"),
- * the canon rule count for its profiles, the pending pitch-intake count and its engine binding.
+ * the canon rule count for its profiles, the pending pitch-intake count, its engine binding and its
+ * build health (the game-written evidence, `gameHomeBuildHealth.tsx`).
  * Every empty state says what is empty; nothing renders as a blank panel or a fake zero.
  */
 import { StatusTag } from '@/components/ui/StatusTag';
@@ -15,6 +16,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import type { EngineState } from '@/lib/games/scope';
 import { useGameHomeData, type GameHomeRow, type IntakeRead } from './gameHomeData';
 import { GameHomePipelines } from './gameHomePipelines';
+import { GameHomeBuildHealth } from './gameHomeBuildHealth';
 
 /** The engine binding in words + a status level. Exported for tests. */
 export function engineWords(e: EngineState): { level: 'ok' | 'warn'; word: string; detail: string } {
@@ -95,6 +97,7 @@ export function GameHome({ t }: { t: LabTheme }) {
           ) : 'no target declared'}
         </Fact>
       </div>
+      <GameHomeBuildHealth t={t} gameId={d.game.id} />
       {loading && <LoadingRow variant="inline" label="Grading readiness from pipeline artifacts…" />}
       <GameHomePipelines t={t} rows={d.rows} title={d.game.title} onRetry={d.retryArtifacts} />
     </section>

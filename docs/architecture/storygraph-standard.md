@@ -672,6 +672,8 @@ operator-guarded; an unreadable `variables` block refuses the whole document; un
 and listed in `unknownKinds`; a declared `contentHash` that does not match is refused; `revision` is
 monotonic per `(project, graphId)`). Storage: one `story_graphs` table (`src/lib/story/story-db-conn.ts`),
 the full document as JSON. Read: `GET /api/story/graphs[/:graphId]`, drawn by the Orrery at `/story`.
+`/story` follows the active game: with GTAI active it draws the derived GTAI campaign instead
+(`GET /api/games/gtai/story`, not stored; see game-workspaces.md, "Quest loop (GTAI)").
 Validate: `GET /api/story/findings` (every §8 structural code, `src/lib/story/validate.ts`). Walk:
 `POST /api/story/walk` -> 202 `{jobId}`, poll `GET /api/story/walk/:jobId` (§9a, background job). Catalog: the
 `story-arcs` row (Concept Brief, Story Graph graded by `storyGraphAcceptance`, Impact Walk — when the stored walk

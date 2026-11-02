@@ -10,6 +10,8 @@ import { OrreryView, type OrreryDataset, type OrreryExtraContext } from '@/compo
 import { WalkControl } from '@/components/story/WalkControl';
 import type { WalkResult } from '@/components/story/useStoryWalk';
 import { mergeWalkEvidence } from '@/lib/story/orrery/walk';
+import { arrivalGame, useActiveGame, useActiveGameUrlSync } from '@/stores/activeGameStore';
+import { GtaiCampaignMap } from '@/components/story/GtaiCampaignMap';
 import type { StoredStoryGraph, StoryGraphSummary } from '@/lib/story/story-db-conn';
 
 type LoadState =
@@ -44,7 +46,23 @@ async function fetchStoryDatasets(): Promise<LoadState> {
 }
 
 /**
- * /story — the story map. Reads every imported `pof.storygraph/1` document from the
+ * /story — the story map, for the ACTIVE game (`?g=` wins on arrival, the store remembers, as on
+ * /status). GTAI shows its campaign, composed from its quest packages (`GtaiCampaignMap`, ticket
+ * F-11); every other game shows the stored graphs below. Rendered only after hydration, so the
+ * first frame never fetches the wrong game's map.
+ */
+export function StoryMap() {
+  useActiveGameUrlSync();
+  const { gameId: stored, hydrated } = useActiveGame();
+  if (!hydrated) return <LoadingRow label="Loading story map…" />;
+  // The URL sync adopts `?g=` in an effect, AFTER this render; reading the arrival game here keeps
+  // `/story?g=gtai` from first mounting (and fetching) the remembered game's map.
+  const gameId = arrivalGame(window.location.search, stored);
+  return gameId === 'gtai' ? <GtaiCampaignMap /> : <StoredStoryMap />;
+}
+
+/**
+ * The stored-graph story map. Reads every imported `pof.storygraph/1` document from the
  * `story_graphs` table (via `/api/story/graphs`) and renders them in the Orrery.
  *
  * PoF is a READER of the standard: graphs arrive through `POST /api/story/graphs`
@@ -53,7 +71,7 @@ async function fetchStoryDatasets(): Promise<LoadState> {
  * SAMPLED evidence is merged under the document's imported evidence for the lens, and its findings
  * show as leads.
  */
-export function StoryMap() {
+function StoredStoryMap() {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
 
   useEffect(() => {

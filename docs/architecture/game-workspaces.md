@@ -177,6 +177,22 @@ it never covers a PoF path class.
 
 **Environment.** `POF_GODOT_BIN` (the Godot executable) and `POF_GAME_ROOT_<ID>` (the game root override).
 
+**Build health** (ticket F-10). `GET /api/games/[gameId]/build-health` reads every evidence kind through
+`readGodotEvidence` (`buildHealthFor`, `src/lib/games/godot/buildHealth.ts`, server-only); the wire shape and
+the pure helpers are in `buildHealthTypes.ts`, which a client may import. The HEAD is read once per request and
+handed to every kind. Payload `BuildHealth`: `{ gameId, engine, binding: 'bound' | 'unbound', reason?, root,
+head, readAt, rows, aggregate }`. Each row is `{ kind, status, state, detail, reason?, builtAt?, commit?,
+godotVersion?, counts?, metrics? }`, where `state` names the deferral: `absent` (no file), `stale` (reason
+`stale: …`) or `deferred` (HEAD unknown). `aggregate` is `{ status, total, pass, fail, stale, absent, deferred }`:
+any fail → `fail`; every kind passing → `pass`; otherwise `deferred`. A game that is not on Godot, or whose root
+is not on disk, is `binding: 'unbound'` with the reason (`noGameRootReason`), a 200 and not an error; an
+unknown game id is a 404. Ages are `readAt - builtAt`, so the client never reads a clock. `benchReadings`
+judges the bench `metrics` against the STANDARDS §20 hard limits (`p99CpuMs` ≤ 7, `low1Fps` > 45,
+`worstSwapMs` ≤ 50; `worstFrameMs` is recorded with no hard limit); a missing key reads `missing`, never 0.
+The Game home renders it as the "Build health" panel (`layout-lab/game/gameHomeBuildHealth.tsx`, read hook
+`gameHomeBuildHealthData.ts`): one row per kind with a `StatusTag` (pass / fail / stale / absent / deferred),
+the detail, the age and the commit, then the bench block. It reads only the API; it never imports `fs`.
+
 ## The authored-provenance door
 
 `EntityProvenance = IngestProvenance | AuthoredProvenance`. An authored entity has no source row to cite,
@@ -255,7 +271,8 @@ a `scope` (the game id): a move in the same commit as a game switch replaces the
 An empty manifest renders "No pipelines in <title>'s manifest yet" in the lab (Catalogs/Matrix) and on /status.
 
 **Game view.** A fourth lab view, `v=game` (`LabView` gains `'game'`), at `layout-lab/game/`:
-`gameHome.tsx` (facts strip), `gameHomePipelines.tsx` (`DataTable` rows), `gameHomeData.ts` (reads).
+`gameHome.tsx` (facts strip), `gameHomePipelines.tsx` (`DataTable` rows), `gameHomeData.ts` (reads),
+`gameHomeBuildHealth.tsx` (the build-health panel, see "Engine evidence (Godot)").
 Rows are the manifest's built pipelines, then the planned ones. Coverage ("n / expected", or "n · no target
 declared") and readiness are separate columns. Readiness is the best reached rung from the /status model
 (`buildSwimlane` → `readinessOf`) over the game's rows, or "unmeasured", never R0. Planned rows read
@@ -348,5 +365,18 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   parse. `loadQuestContext` adds the economy table (`null` when missing), the voice bibles (basenames of
   `voices/*.md`) and the cast (`GTAI_CAST` plus every ledger package's characters). `loadProposals(runDir)`
   reads `proposals.{claude,grok}.json`; a missing file means that seat produced nothing.
+- **Story map** (ticket F-11). `GET /api/games/gtai/story` (GTAI-only; any other game is a 404) loads the
+  ledger (`loadLedger` over `POF_GAMES_ROOT`, else `cwd`) and returns `campaignMapOf(ledger, notLoaded)`
+  (`src/lib/games/story/campaignMap.ts`, pure) plus `hash` (`storyContentHash`) and `source`:
+  `{ gameId, graph, acts, contractCount, notLoaded, protectedVars, protectedBeats, findings: { errors,
+  warnings, codes }, hash, source }`. Each act is `{ act, title, beats, quests }`; a beat is `open`, `locked`
+  (`OPEN_CANON_BEATS`: the betrayal and soul 4, with the reason) or `claimed` (`claimedBy`), read back from the
+  graph (a claimed beat leaves the node chain and its variable's writer becomes the quest node). A quest is
+  `{ id, title, act, status, logline, claimsBeat?, placedOn }`; `placedOn: null` means it sits in its act
+  (it claims no beat, or its claim was refused). `notLoaded` lists quest folders whose `quest.json` is missing
+  or not `gtai.quest/1`. `/story` with GTAI active (`?g=gtai`, or the remembered game) renders it
+  (`components/story/GtaiCampaignMap.tsx`): one column per act above the Orrery. With no packages it shows
+  the skeleton and "no contracts yet". The graph is derived on every read and is NOT imported into
+  `story_graphs`, so the Walk control does not apply to it; other games keep the stored-graph view.
 - **Tests:** `src/__tests__/games/gtai-quest/` (one clean act1 fixture, one mutation per code; loaders run
   against `os.tmpdir()`).
