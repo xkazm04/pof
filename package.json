@@ -39,7 +39,7 @@
     "lucide-react": "^1.61.0",
     "markdown-to-jsx": "^9.10.3",
     "mermaid": "^12.2.0",
-    "next": "16.4.3",
+    "next": "16.4.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-window": "^2.5.0",
@@ -65,10 +65,13 @@
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "cross-env": "^10.1.0",
     "eslint": "^10",
-    "eslint-config-next": "16.3.3",
+    "eslint-config-next": "16.4.4",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "eslint-plugin-react-hooks": "7.0.1"
   }
 }
