@@ -474,3 +474,9 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 - **Morning:** `/gta morning`, which runs `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-night` and reads `SCOREBOARD.md`, each lane's `REPORT.md` and its ladders.
 - PC sleep and hibernate are off on AC. Disk: 242 GB free.
 - Owner (21:20): no other session works on RTAI or PoF, so the `q1-collect-call` worktree and stray WIP are stale and can be ignored. Never be limited by API credit: the subscription fallback is automatic. The PoF quest-vocabulary guard is unblocked (no coordination needed) and queued after the night.
+- **Quest 1 integrated (22:xx): `q1-collect-call` merged with F-12b on rtai main** (`721fbbb`, pushed).
+  - One scenario plays the real stage with the bot: 11,436 ticks, 6 beats, 23 lines, $1,500. 20/20 checks pass, it is bit-identical, and 2 planted faults are caught. Stubs went from 9 to 3: the placeholder arena and movement, timed whispers, and no bound input.
+  - The vocabulary stays `gtai.quest-rules/2` (`docs/data-contracts.md`).
+  - Main gates: lint 13/13, 166 unit tests, 8 scenarios.
+  - Watch: `scenario_rig_stress` p50 is at its 1.0 ms limit while the night lanes load the machine (1.085 then 0.986 ms).
+  - The night graphics lanes branched from `ad2078b`, so the morning merge layers them onto `721fbbb`.
