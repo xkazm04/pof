@@ -18046,6 +18046,42 @@
         }
       ],
       "registryProposal": "The golden path notes that spec-to-code generation (no source graph) shares the ladder but has 'no source graph to diff against'. This context shows a middle case the corpus does not address: the GUI spec is retained and authoritative, while the code is written by an LLM agent into the engine tree. A spec-to-on-disk-code drift check belongs in the structural-round-trip-diff technique, which currently assumes a graph export."
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/wizard-flows": {
+      "context": "pipeline-step-components",
+      "subject": "wizard-flows",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:36:56.976Z",
+      "techniques": [
+        {
+          "technique": "progress-communication",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/one-shot/OneShotPanel.tsx:110 Position is the raw phase identifier. There is no stage rail or remaining count across analyze/propose/run, and transitions are never announced. ItemGate does name its blockers ('blocked by …'), but the flow-level contract is missing."
+        },
+        {
+          "technique": "snapshot-and-resume",
+          "verdict": "deviation",
+          "evidence": "src/stores/oneShotJobStore.ts:163 The job state behind this panel (jobId, draftEntityId, stepResults) is persisted only to browser localStorage. Its effects are server-side, though: the catalog_entities draft, SQLite artifacts and model spend, which is the local-tier orphan pattern. The persist config has no `version`/`migrate` stamp, and `merge` silently restores a proposal instead of offering resume/discard. restingAfterReload does honestly surface `reload-interrupted`."
+        },
+        {
+          "technique": "commit-boundary",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:42 The review renders the run plan through the same decideStep/stepModeOverrides the apply dispatches with (orchestrator runStep), and the Run button discloses model-dispatch count and off-target status. Apply is claimed synchronously against double-fire (session.claim), records per-step outcomes, and resume/retryFailed re-run only unrecorded or failed parts."
+        },
+        {
+          "technique": "step-state-model",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/ItemGate.tsx:67 Step views read one persisted owned model (labPipelineStore / oneShotJobStore), and validity is a predicate recomputed from sibling state on each render, not an exit-stamped flag. approveAndRun also guards inside the transition (phase check). Minor residue: the catalog select, the refine draft text and forceMore live in screen-local useState."
+        }
+      ],
+      "withdrawn": {
+        "worker": "a091fcb6-f1e1-47ff-930f-d3afd5d63712",
+        "state": "deviation",
+        "at": "2026-11-02T22:37:19.524152+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on one-shot/OneShotPanel.tsx, oneShotJobStore.ts and ProposalView.tsx, which are not among this context's files (all in layout-lab/steps/). Only ItemGate.tsx is in the context, and it was cited for a minor point, so the verdict is about a different context."
+      }
     }
   }
 }
