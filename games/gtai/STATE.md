@@ -136,3 +136,12 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Cost: about 25k plan tokens per image; 10 images in 14 min; no limit hit.
   - At 48 px/m the v2 limbs read without the solid-ink fallback; at 32 px/m they still need it.
   - Next: King's torso, the bind sheets from v2 parts, a stress rerun, and a crowd test at 48 px/m.
+- **The Codex asset evolution: waves 1-4 kept, wave 5 reverted** (`gtai-spike/evolve/`: `EVOLVE.md`, `evidence/ladder.png`, `evidence/evolve.mp4`, `build/GTAISpike-evolve.exe`).
+  1. Ground: asphalt, paving and 32 decals. The gain is subtle, because the 4 px halftone eats the grain.
+  2. Roofs: 10 landmarks plus the generic block. The biggest gain.
+  3. Vehicles: 27 sprites, all truly top-down. Traffic looks good; the bus, fire truck and tank are less punchy than the old blocks.
+  4. Props: 41.
+  5. Pickups and weapon icons: reverted, because they dissolve at 32 px.
+  - Cost: 15 images using contact sheets, no limit hit.
+  - The only code change is one line (mipmaps in `district.gd`). The style needs flat ink fills, so prompt for flat fills from the start next time.
+  - Next round: bold single-glyph pickups, asphalt variants, the 3 rejected props, and effects as their own job.
