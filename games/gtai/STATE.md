@@ -106,3 +106,8 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - **The night was launched at 20:06** with the stretch. The art lane runs on Sonnet 5.5 (the owner's pick, to save usage); the engine lanes run on Opus 5.5. The first iteration of every lane confirmed `apiKeySource: ANTHROPIC_API_KEY`.
 - **21:06 to 21:36: every lane stalled on the API key's monthly spend limit** ("API Error: 400 You have reached your specified API usage limits"). The runner classed it as a usage limit, not a drained key, so it stayed on the key and retried every 15 min. The owner raised the limit, and all four lanes resumed on the key at 21:36. Spend by then: about $52 (UE $13.18, Godot $14.47, Unity $13.22, art $10.81). Morning read: 30 min of night lost; the spend limit is now a known preflight item.
 - **21:49: the runner was restarted with failover billing and the Night push** (`49cb474e`). The supervisor loop restarts it if it exits before 08:00. Lane iterations that were cut off left their files on disk; the brief tells the next session to review and commit them. In the morning, read `push` in each scorecard and watch `evidence/showcase.mp4` first.
+- **The night finished at 07:20** (all lanes reported).
+  - The API key ran dry at about 01:50 ("Credit balance is too low"). Failover moved every lane to the subscription with no stall, and the key was re-probed every 45 min.
+  - Self-reported results: UE, Godot and Unity each claim 19/19 MVP, 5/5 stretch and 7/7 push, with a `showcase.mp4` each. Art: 5/7 push.
+  - Cost including the pre-check: UE $92.57, Godot $97.57, Unity $91.17, art $44.59.
+  - The scoreboard does not separate the engines on its own. The winner comes from the showcases, the evidence and the owner's play-test (`/gta morning`).
