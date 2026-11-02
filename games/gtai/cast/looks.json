@@ -1,0 +1,63 @@
+{
+  "rivet": {
+    "status": "approved",
+    "name": "Rivet",
+    "image": "games/gtai/art-direction/trivet/",
+    "approvedAt": "2026-11-01",
+    "note": "Trivet look lock"
+  },
+  "don-fax": {
+    "status": "approved",
+    "name": "Don Fax",
+    "image": "games/gtai/quests/collect-call/art/don-fax-concept.png",
+    "approvedAt": "2026-11-02",
+    "firstQuest": "collect-call",
+    "source": "Codex image_gen (ChatGPT plan)",
+    "note": "concept turnaround sheet; production art is Trivet cutout parts (later)"
+  },
+  "nurse": {
+    "status": "approved",
+    "name": "Juno Stitch",
+    "image": "games/gtai/quests/collect-call/art/nurse-concept.png",
+    "approvedAt": "2026-11-02",
+    "firstQuest": "collect-call",
+    "source": "Codex image_gen (ChatGPT plan)",
+    "note": "concept turnaround sheet; production art is Trivet cutout parts (later)"
+  },
+  "gunsmith": {
+    "status": "approved",
+    "name": "Brass Halloran",
+    "image": "games/gtai/quests/collect-call/art/gunsmith-concept.png",
+    "approvedAt": "2026-11-02",
+    "firstQuest": "collect-call",
+    "source": "Codex image_gen (ChatGPT plan)",
+    "note": "concept turnaround sheet; production art is Trivet cutout parts (later)"
+  },
+  "scientist": {
+    "status": "approved",
+    "name": "Dr. Ingrid Kilohm",
+    "image": "games/gtai/quests/collect-call/art/scientist-concept.png",
+    "approvedAt": "2026-11-02",
+    "firstQuest": "collect-call",
+    "source": "Codex image_gen (ChatGPT plan)",
+    "note": "concept turnaround sheet; production art is Trivet cutout parts (later)"
+  },
+  "dock-guard": {
+    "status": "approved",
+    "name": "Dock 9 Contractor",
+    "image": "games/gtai/quests/collect-call/art/dock-guard-concept.png",
+    "approvedAt": "2026-11-02",
+    "firstQuest": "collect-call",
+    "source": "Codex image_gen (ChatGPT plan)",
+    "note": "concept turnaround sheet; production art is Trivet cutout parts (later)"
+  },
+  "quartermaster-mertz": {
+    "status": "approved",
+    "name": "Quartermaster Duane Mertz",
+    "image": "games/gtai/quests/collect-call/art/quartermaster-mertz-concept.png",
+    "approvedAt": "2026-11-02",
+    "firstQuest": "collect-call",
+    "source": "qwen-image-3.0-pro via PoF /api/visual-gen/generate-2d (Codex image_gen refused twice: violence filter)",
+    "note": "concept turnaround sheet; production art is Trivet cutout parts (later)"
+  }
+}

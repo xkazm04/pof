@@ -68,9 +68,9 @@ Every line carries a tag:
 
   | Character | Role in the story | Their questline |
   |---|---|---|
-  | **Nurse** | Heals Rivet | Can become Rivet's love interest |
-  | **Gunsmith** | Gives Rivet his first weapon | Becomes Rivet's buddy through personal requests |
-  | **Scientist** | Tries to find out what is wrong with Rivet's head | Teaches Rivet to handle the voices across the game. **Gearbox unlocks when the scientist's first quest completes**, so no car is drivable before that |
+  | **Nurse: Juno Stitch** (not her real name; owner-approved 2026-11-02) | Heals Rivet | Can become Rivet's love interest |
+  | **Gunsmith: Brass Halloran** (owner-approved 2026-11-02) | Gives Rivet his first weapon (the nail gun Gloria) | Becomes Rivet's buddy through personal requests |
+  | **Scientist: Dr. Ingrid Kilohm** (owner-approved 2026-11-02) | Tries to find out what is wrong with Rivet's head | Teaches Rivet to handle the voices across the game. **Gearbox unlocks when the scientist's first quest completes**, so no car is drivable before that |
 
 - **Act 1, quest 1:** sabotage a project in a guarded dock storage that is tied to humans and the army.
   - The beats pick up straight from the factory intro.

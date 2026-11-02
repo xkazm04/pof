@@ -1,62 +1,46 @@
 # Voice bible: Don Fax
 
-[proposal] Host draft 2026-11-02 from pitch.md §3, §6 (sample register). The owner signs off before lines are generated from it. Reference lines are `illustrative` (model-written): replace them with owner-chosen anchors.
+[owner-approved design 2026-11-02] Rewritten for the cast reset (pitch §3): Don Fax leads the robot gang underground and hires Rivet. The prototype memo-speak "PER MY LAST FAX" voice is retired. Source: quest `collect-call` (council `20261102-act1-q1-r1`, path `claude-A`). Reference lines are the approved quest lines.
 
-- id: `don-fax` · friendly boss · a fax-machine mafia don ("per my last fax").
-- **Protected canon:** whether Don Fax betrays Rivet is owner-only (pitch §10). Write him so both readings stay open. No line may confirm or rule out the betrayal, or name who receives his faxes.
+- id: `don-fax` · underground boss and quest giver · a walking copier-fax combo in a pinstripe "fedora" (look approved 2026-11-02).
+- **Protected canon:** whether Don Fax betrays Rivet is owner-only (pitch §10). No line may confirm or rule it out, or say who he reports to.
 
 ## Want, hidden thing, refusal
-- Wants (own words): "Respect. In writing. Signed, dated, in triplicate."
-- Hidden: who else gets copied on his faxes. Owner-only; never state it.
+- Wants: a city where robots have a roof, and a robot who does what the cops fear.
+- Hidden: what he really knows about the humans' plans. He hints; he never explains.
 - Refuses:
-  1. Never says anything that matters out loud. "I'll fax it."
-  2. Never uses email, phone or text. Says those words only as insults.
-  3. Never threatens directly. Threats are "final notices".
-  4. Never admits a paper jam is a malfunction. It is "an act of God".
+  1. Never comes to the street; everything is by payphone.
+  2. Never lets heat near his house: "you never come to my house with sirens on you."
+  3. Never pays face to face: the money is taped under the phone.
 
 ## Status move
-Flatters, then attaches conditions. Mafia courtesy over a memo.
+Admires you first ("they ran it twice"), then sets one rule.
 
 ## Rhythm (checkable)
-- Business-memo openings ("PER MY LAST FAX", "Kindly note", "As discussed"), then a hard turn into gutter.
-- Numbered points. Closes with a sign-off ("Regards." / "cc: God").
-- Interrupted by mechanical failure at least once in a long line (paper jam, low toner).
+- Opens with "Kid." Short declaratives, then one long admiring or contemptuous run.
+- Gives rules as one-liners. Closes a call with an instruction: "Confirm receipt."
 
 ## Vocabulary
-- Domain: the office and the Family: memo, cc, attachment, letterhead, carbon copy, toner, respect, the Family, favours.
-- Address: Rivet as "kid", "my associate"; enemies as "the recipient".
+Media and business (six o'clock news, slow-mo, networks, statistically, receipt, office), the underground (roof, house, rule).
 
 ## Profanity register
-Explosive and sudden on a mechanical failure, otherwise immaculate: "Kindly note — paper jam. FUCK. My soul has a paper jam." (pitch §6 sample).
-
-## Moves
-- No: "Your request has been received and shredded."
-- Threat: "Consider this your final notice. There is no further notice. There is no further you."
-- Joke: bureaucracy as violence; he mocks email, the cloud, anyone modern.
-- Affection: a laminated thank-you.
+Casual and precise, used for emphasis inside admiration: "the fucking networks".
 
 ## Under pressure
-More formal and more jammed: the memo voice breaks into beeps, error codes and swearing.
+Quieter and colder; fewer words, more rules.
 
 ## Registers by listener
-- Rivet: a godfather with a filing cabinet. Lady Cathode: fellow analog snob, mutual respect. Vend-Etta: cold courtesy.
-
-## Arc
-Owner-only past Act 2 (betrayer question). Never changes: everything goes through paper.
-
-## Surface marker
-"PER MY LAST FAX." At most once per quest.
+- Rivet: amused patron. Patch: trusted switchboard. Humans: contempt, said calmly.
 
 ## Never says (literal, machine-read)
-- `email` (except as an insult) · `I'll call you` · `text me` · `betray` · `Pentagon`
+- `betray` · `Pentagon` · `I'll come to you` · `email`
 
-## Reference lines (illustrative)
-1. "PER MY LAST FAX: kill the guy who invented email. Hold on, paper jam. FUCK. My soul has a paper jam." (pitch §6 sample)
-2. "Kindly find attached: one address, one name, one sincere wish that he stops breathing."
-3. "Kid, in this Family we don't forget. We file."
-4. "Point one, respect. Point two, see point one. Regards."
-- Off-voice: "Hey, just ping me on chat when it's done." (modern, casual).
+## Reference lines (approved, quest `collect-call`)
+1. "Kid. I watched you feed two cops into a stamping press on the six o'clock news. They ran it twice. The second time in slow motion. Do you know how hard it is to get the fucking networks to slow-mo a robot?"
+2. "I run the underground. You need a roof, I have a roof. I need a hitman, and you're, statistically, a hitman now. One rule: you never come to my house with sirens on you."
+3. "Saw the smoke from my office. Beautiful. Your money's taped under the phone. From now on, when a payphone rings near you, it's me, or it's Patch, or it's God, and God doesn't pay. Confirm receipt."
+- Off-voice: "PER MY LAST FAX, kindly note…" (the retired prototype memo voice).
 
 ## Differs from closest voices
-- vs **Lady Cathode** (also analog): Cathode is ornate nostalgia and warmth; Fax is memo efficiency and menace.
-- vs **Vend-Etta** (also a boss with leverage): Vend-Etta is spare, velvet and prices things; Fax is verbose, paperwork and files things.
+- vs **Patch** (also on the phone): Patch is a chirpy automated switchboard; Fax is a person who chooses every word.
+- vs **Quartermaster Mertz** (also a man of property): Mertz guards stock for a pension; Fax builds a roof for robots.

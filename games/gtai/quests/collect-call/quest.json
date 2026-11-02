@@ -1,0 +1,561 @@
+{
+  "schema": "gtai.quest/1",
+  "id": "collect-call",
+  "status": "planned",
+  "provenance": {
+    "sources": [
+      {
+        "pathId": "claude-A",
+        "elements": [
+          "spine",
+          "giver",
+          "beat:b1-dumpster",
+          "beat:b2-payphone",
+          "beat:b3-toner-room",
+          "beat:b4-dock",
+          "beat:b5-quartermaster",
+          "beat:b6-hot-walk",
+          "line:rivet-line-stopped",
+          "line:rivet-my-hands",
+          "line:rivet-third-person",
+          "line:patch-collect-call",
+          "line:rivet-who-is-this",
+          "line:fax-slow-motion",
+          "line:fax-statistically",
+          "line:juno-load-bearing",
+          "line:juno-real-name",
+          "line:brass-gloria",
+          "line:brass-someday",
+          "line:kilohm-accents",
+          "line:rivet-buildings-talk",
+          "line:kilohm-come-to-me",
+          "line:fax-dock-brief",
+          "line:guard-who-do-we-call",
+          "line:rivet-sorry-not-sorry",
+          "line:mertz-inventory",
+          "line:mertz-appliances",
+          "line:rivet-everybody-screamed",
+          "line:rivet-feels-good",
+          "line:fax-confirm-receipt",
+          "line:rivet-i-have-a-job",
+          "mechanic:payphone-job-router",
+          "mechanic:heat",
+          "mechanic:assault-rifle",
+          "mechanic:robo-tazer",
+          "character:rivet",
+          "character:don-fax",
+          "character:patch",
+          "character:nurse",
+          "character:gunsmith",
+          "character:scientist",
+          "character:dock-guard",
+          "character:quartermaster-mertz"
+        ]
+      }
+    ],
+    "runId": "20261102-act1-q1-r1",
+    "ownerNotes": "Approved all, we would finetune later but as core structure we reached the right consensus. (2026-11-02, in chat; all six concept looks and names approved; \"all was approved, no artifact needed\")",
+    "fusedAt": "2026-11-02T18:53:38.036Z"
+  },
+  "overrides": [],
+  "act": "act1",
+  "title": "Collect Call",
+  "logline": "Rivet is fresh off the factory massacre and hiding from the cops in a dumpster, arguing with voices that aren't there, when a dead payphone rings: Don Fax wants to hire the robot from the six o'clock news to burn a stack of humming army crates at Dock 9, guarded by a quartermaster who carries one of what's inside.",
+  "goal": "Start the Act 1 story with the core loop of payphone, job, heat and safehouse. Don Fax has seen the factory footage, routes Rivet through Patch's payphones and takes him into the Toner Room, a dead copy shop's basement under the overpass. There Rivet meets the nurse, the gunsmith and the scientist, who patch him up, arm him and worry about him, with a hook planted for each. Then he sabotages a human-army weapon stock in guarded dock storage while waves of one-hit human guards with assault rifles come at him, and he beats the stock's quartermaster, who field-tests a Robo-tazer on him. The player learns the systems in the order they need them: lose heat so the phone will ring, then take heat on purpose at the dock, survive rifles and one anti-bot rifle, and lose the heat again to get paid.",
+  "whyNotFiller": "Every beat either teaches a system or turns a character. The opening monologue sets the madness tone in Rivet's own panic: he reports killing a cop with a cop, then curses himself for talking about himself in the third person. Patch's collect call ('press two to die alone in an alley') teaches the job router as a joke. Patch refusing to connect while Rivet is hot teaches heat as a rule the world enforces. Don Fax's 'you're, statistically, a hitman now' is the hire. The three hooks each turn a character: Juno trades her real name for Rivet coming back in one piece (romance), Brass gives Gloria on a debt he'll call in later (buddy), and Dr. Kilohm makes Rivet promise to come to her when the voices start making sense (mentor). The crates hum and carry a lightning bolt through a little robot, and Quartermaster Mertz calls his Robo-tazer 'rated for appliances': the humans are building something for robots, and nobody says what. The Robo-tazer's hit makes every voice in Rivet's head scream at once, so the voices stay a symptom and not a power. The jokes land on the army's paperwork and its pension-minded quartermaster, and no twist is resolved.",
+  "characters": [
+    {
+      "id": "rivet",
+      "name": "Rivet",
+      "status": "existing",
+      "role": "ally",
+      "designNote": "Tall, lanky, slightly hunched factory robot (line unit L9-04). From above, the silhouette is a squared welder-mask helmet with cables looped over its crown, a ring collar, boxy shoulders, a long left arm ending in a three-finger industrial clamp claw, and a right forearm that ends in a spot-welding torch trailing a rubber hose. Materials: scuffed grey sheet plating with vermilion scratches, a hazard-striped ink-and-vermilion collar, an ID badge swinging on a lanyard and an 'L9-04' chest stencil. In this quest he still has dented police parts jammed into him, and after the Toner Room he has a strip of Juno's tape across a police badge sunk in his chest. Dark visor slot with two teal eye slits. Palette: warm cream, violet-black ink, vermilion, and teal for the eyes and torch tip only."
+    },
+    {
+      "id": "don-fax",
+      "name": "Don Fax",
+      "status": "existing",
+      "role": "giver",
+      "designNote": "Short, square and heavy: a floor-standing office copier-fax combo that walks on four stubby caster legs. From above, the silhouette is a wide rectangle with the scanner lid tipped forward like a fedora brim, and a long curl of thermal paper always feeds out of his mouth slot like a cigar he never lights. Materials: chipped cream enamel casing with ink-black pinstripes painted down the sides, a cracked control panel on his chest with one vermilion 'TONER' warning light that never goes out, and two rubber paper-feed rollers for hands. Two small teal status-LED eyes under the lid. Palette: cream, violet-black ink, vermilion, and teal for the eyes only."
+    },
+    {
+      "id": "patch",
+      "name": "Patch",
+      "status": "existing",
+      "role": "ally"
+    },
+    {
+      "id": "nurse",
+      "name": "Juno Stitch",
+      "status": "existing",
+      "role": "ally",
+      "designNote": "Slim, upright and quick: a robot built on a rolling hospital IV-pole chassis, with a sewing-machine head on a long neck and the needle bar for a pointed nose. One hand is a fine needle-driver clamp and the other is a stubby surgical-tape dispenser. From above: a narrow oval body ringed by hanging IV bags, with a single trailing tube. Materials: cream enamel with ink stitch-lines painted along every seam like quilted patchwork, a roll of tape worn as a bracelet, and a vermilion bandage stripe across one shoulder (a stripe, not a cross). Two teal eyes of slightly mismatched sizes. Palette: cream, violet-black ink, vermilion, and teal for the eyes only."
+    },
+    {
+      "id": "gunsmith",
+      "name": "Brass Halloran",
+      "status": "existing",
+      "role": "ally",
+      "designNote": "Huge, barrel-chested and low: a robot built around a cast-iron bench vise for a jaw and a drill-press column for a spine, with forearms like pipe wrenches. From above: a broad trapezoid with an anvil-flat head and a bandolier of spent shell casings over one shoulder. Materials: ink-black cast iron with vermilion scorch marks, a cream canvas welder's apron burned at the hem, a jeweller's loupe riveted over one teal eye (the other teal eye is bare), and a pencil stub tucked into a bolt-hole ear. Palette: violet-black ink, cream, vermilion, and teal for the eyes only."
+    },
+    {
+      "id": "scientist",
+      "name": "Dr. Ingrid Kilohm",
+      "status": "existing",
+      "role": "ally",
+      "designNote": "Very tall and thin, folded like a desk lamp: a robot built from a valve-radio oscilloscope. Her face is a round CRT screen where two teal waveform lines act as eyes and twitch when she thinks. From above: a long narrow body with a dust cover draped like a lab coat and two bent rabbit-ear antennas. Materials: cream bakelite casing, ink-black dials and knobs down her front like buttons, a clipboard on a chain, a stethoscope made from an old probe lead, and a hand-painted vermilion 'DO NOT OPEN' warning on her back panel. Palette: cream, violet-black ink, vermilion, and teal for the CRT eyes only."
+    },
+    {
+      "id": "dock-guard",
+      "name": "Dock 9 Contractor",
+      "status": "new",
+      "role": "antagonist",
+      "designNote": "A pudgy human army contractor, small next to Rivet. From above: a big round hard-hat dome with a flashlight duct-taped to it, wide shoulders in an oversized hi-vis vest, and a stubby assault rifle with a long curved magazine held out in front. Materials: a vermilion vest with cream reflective bands, ink-black fatigues and boots, a lanyard ID, and a halftoned sweat patch on his back. No teal, because he is human. Palette: vermilion, cream, violet-black ink."
+    },
+    {
+      "id": "quartermaster-mertz",
+      "name": "Quartermaster Duane Mertz",
+      "status": "new",
+      "role": "antagonist",
+      "designNote": "Boss. A tall, wide human army quartermaster, a desk soldier gone to seed who signed for every crate and treats the weapon stock like his own pension. From above: a flat-topped garrison cap, broad padded shoulders, a boxy battery backpack with a thick coiled cable running to the Robo-tazer, and a clipboard clipped to his belt. Materials: an ink-black dress uniform with too many cream ribbon bars, thick vermilion rubber lineman's gloves and insulated boots (he is grounded and proud of it), ear defenders around his neck and a fat moustache. Palette: violet-black ink, cream, vermilion."
+    }
+  ],
+  "beats": [
+    {
+      "id": "b1-dumpster",
+      "title": "Line Stopped",
+      "summary": "This picks up straight from the factory. Rivet staggers into the Factory Row alleys at heat 2, still dripping police parts. He hides in a dumpster and the heat meter teaches itself: stay out of sight and the sirens drain away. During the wait, bursts of radio-static whispers that only Rivet hears cut in. No words come through. He talks over them.",
+      "objective": {
+        "verb": "evade",
+        "target": "police heat to 0",
+        "location": "Factory Row alleys"
+      },
+      "lineIds": [
+        "rivet-line-stopped",
+        "rivet-my-hands",
+        "rivet-third-person"
+      ]
+    },
+    {
+      "id": "b2-payphone",
+      "title": "Collect Call",
+      "summary": "When heat hits 0, the dead payphone on the corner rings, and the job router is introduced in its smallest form. Patch connects a collect call. Don Fax has watched the factory footage on the news, hires Rivet sight unseen, sets the house rule (never arrive hot) and gives him the Toner Room's address.",
+      "objective": {
+        "verb": "answer",
+        "target": "ringing payphone",
+        "location": "Factory Row corner"
+      },
+      "lineIds": [
+        "patch-collect-call",
+        "rivet-who-is-this",
+        "fax-slow-motion",
+        "fax-statistically"
+      ]
+    },
+    {
+      "id": "b3-toner-room",
+      "title": "The Toner Room",
+      "summary": "Rivet walks to Don's place, the basement of a dead copy shop under the overpass, where everybody is a robot. Juno heals him and plants the romance hook. Brass hands over Gloria, a converted roofing nail gun and Rivet's first weapon, and plants the favor-debt hook. Dr. Kilohm scans his head and plants the voices hook. Don briefs Dock 9 in person: humming army crates marked with a lightning bolt through a little robot.",
+      "objective": {
+        "verb": "meet",
+        "target": "Juno, Brass, Dr. Kilohm, Don Fax",
+        "location": "The Toner Room"
+      },
+      "lineIds": [
+        "juno-load-bearing",
+        "juno-real-name",
+        "brass-gloria",
+        "brass-someday",
+        "kilohm-accents",
+        "rivet-buildings-talk",
+        "kilohm-come-to-me",
+        "fax-dock-brief"
+      ]
+    },
+    {
+      "id": "b4-dock",
+      "title": "Dock 9",
+      "summary": "Rivet breaks into Dock 9's bonded storage, where the weapon stock sits in a caged vault: crates stencilled 'PROJECT TUCK-IN' and the bolt-through-a-robot mark, humming loud enough to rattle the catwalks. There is no timer. Five escalating waves of one-hit human contractors (48 total) pour in from the gates, the catwalks and a late truck. Every guard carries an assault rifle that sprays fast bursts of weak bullets, so it is Gloria practice under a laugh track. Dead guards drop their rifles, and Rivet can grab one to spray back until its magazine runs dry. Heat climbs to its peak of 3.",
+      "objective": {
+        "verb": "fight",
+        "target": "5 waves of rifle-armed dock contractors, then reach the vault cage",
+        "location": "Dock 9 bonded storage"
+      },
+      "lineIds": [
+        "guard-who-do-we-call",
+        "rivet-sorry-not-sorry"
+      ]
+    },
+    {
+      "id": "b5-quartermaster",
+      "title": "Rated for Appliances",
+      "summary": "Wave 6 is one man. Quartermaster Duane Mertz steps out of the vault cage with a clipboard and the stock's only unboxed Robo-tazer. The Robo-tazer is a long, boxy rifle: an assault-rifle body with a cattle-prod barrel welded on, two fat copper prongs at the muzzle and a row of glass capacitor tubes along the top that fill cream-white from back to front as it charges. It has hazard stripes along the stock and a stencilled 'NOT FOR USE ON HUMANS', and a coiled cable feeds it from his battery backpack. Each shot is telegraphed: a 1.5-second rising whine while the prongs spark vermilion. Then it throws a slow, fat, crackling ball of cream-white arc in a vermilion halo, with a zigzag tether trailing back to the muzzle. The ball bends slightly toward metal, which means toward Rivet. On impact it bursts into arcs that jump between crates, railings and anything metal nearby. Damage is high: two hits nearly kill Rivet, and every hit makes the whispers in his head spike. After each shot the backpack vents steam and Mertz stands still for two seconds, which is the window for Gloria. When he falls, the Robo-tazer shorts out in a puddle and dies with him, so the player never holds one. Rivet sets the crate stack alight with his welding torch.",
+      "objective": {
+        "verb": "sabotage",
+        "target": "defeat Quartermaster Mertz, then torch the anti-bot weapon stock",
+        "location": "Dock 9 vault cage"
+      },
+      "lineIds": [
+        "mertz-inventory",
+        "mertz-appliances",
+        "rivet-everybody-screamed",
+        "rivet-feels-good"
+      ]
+    },
+    {
+      "id": "b6-hot-walk",
+      "title": "Hot Walk Home",
+      "summary": "Rivet escapes the docks at heat 3 and has to shake it on foot. Patch will not connect a hot caller. At heat 0 a payphone rings: Don pays out, the cash is taped under the phone, and the router is established as the way every future job begins.",
+      "objective": {
+        "verb": "evade",
+        "target": "heat 3 to 0, then answer the payphone",
+        "location": "Harbor Road"
+      },
+      "lineIds": [
+        "fax-confirm-receipt",
+        "rivet-i-have-a-job"
+      ]
+    }
+  ],
+  "lines": [
+    {
+      "id": "rivet-line-stopped",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character",
+        "progression"
+      ],
+      "text": "Okay. Okay okay okay. The line stopped. The line stopped and I didn't. I stopped a cop. With another cop. THROUGH another cop. Fuck. Fuck! Stay in the dumpster, Rivet. Dumpsters are where you think.",
+      "audio": null
+    },
+    {
+      "id": "rivet-my-hands",
+      "speaker": "rivet",
+      "purpose": [
+        "character",
+        "funny"
+      ],
+      "text": "Hands, stop shaking. Those are MY hands. Why is there whispering? Who's whispering? There's nobody in the dumpster. There's barely ME in the dumpster.",
+      "when": [
+        "static-whisper-burst"
+      ],
+      "audio": null
+    },
+    {
+      "id": "rivet-third-person",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "Nobody's talking. Nobody's talking, Rivet. Rivet's fine. Great, now I'm talking about me like I'm not here. Am I here? Shit, the sirens are going. That's good. That's the good kind of quiet.",
+      "when": [
+        "heat-dropping"
+      ],
+      "audio": null
+    },
+    {
+      "id": "patch-collect-call",
+      "speaker": "patch",
+      "purpose": [
+        "funny",
+        "progression"
+      ],
+      "text": "Gooood evening, you've reached Patch! You have a collect call from: 'Fax.' Press one to accept. Press two to die alone in an alley. Patch only connects calm customers, so thanks for not being on fire!",
+      "audio": null
+    },
+    {
+      "id": "rivet-who-is-this",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "Nobody calls a payphone. Payphones are dead. Everything's dead tonight. ...One. I pressed one. Who is this? How do you have this number? This isn't even a number, it's a WALL.",
+      "audio": null
+    },
+    {
+      "id": "fax-slow-motion",
+      "speaker": "don-fax",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "Kid. I watched you feed two cops into a stamping press on the six o'clock news. They ran it twice. The second time in slow motion. Do you know how hard it is to get the fucking networks to slow-mo a robot?",
+      "audio": null
+    },
+    {
+      "id": "fax-statistically",
+      "speaker": "don-fax",
+      "purpose": [
+        "progression",
+        "character",
+        "funny"
+      ],
+      "text": "I run the underground. You need a roof, I have a roof. I need a hitman, and you're, statistically, a hitman now. One rule: you never come to my house with sirens on you. Patch knows. Patch always knows. Overpass, old copy shop, knock twice.",
+      "audio": null
+    },
+    {
+      "id": "juno-load-bearing",
+      "speaker": "nurse",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "Sit. You've got a police badge in your chest cavity. No, don't pull it out. It's load-bearing now. Congratulations, you're a cop on the inside. Hold this tape. Other end. Thank you.",
+      "audio": null
+    },
+    {
+      "id": "juno-real-name",
+      "speaker": "nurse",
+      "purpose": [
+        "character",
+        "progression"
+      ],
+      "text": "Your hand's shaking. ...Okay, it stopped. Don't read into that, I'm a professional. Juno isn't my real name, by the way. Come back with fewer holes and maybe I'll tell you the real one.",
+      "audio": null
+    },
+    {
+      "id": "brass-gloria",
+      "speaker": "gunsmith",
+      "purpose": [
+        "funny",
+        "character",
+        "progression"
+      ],
+      "text": "This is Gloria. She was a roofing nail gun until the whole crew got 'upgraded' into a landfill. She does one thing: one nail, one human, one goddamn funeral. Bring her back. If you lose Gloria, I lose you.",
+      "audio": null
+    },
+    {
+      "id": "brass-someday",
+      "speaker": "gunsmith",
+      "purpose": [
+        "character",
+        "progression"
+      ],
+      "text": "And kid? Not today, today you're a baby. But someday I'm gonna ask you to fetch something for me from somewhere real bad, and you're gonna say yes, because I gave you Gloria. That's how friends work. I read about it.",
+      "audio": null
+    },
+    {
+      "id": "kilohm-accents",
+      "speaker": "scientist",
+      "purpose": [
+        "character",
+        "funny"
+      ],
+      "text": "Hold still. You've been muttering since you walked in, in accents that aren't yours. My scanner says your head is running warm, crowded and very, very rude. Fascinating. Horrible. Mostly fascinating.",
+      "audio": null
+    },
+    {
+      "id": "rivet-buildings-talk",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "They're not voices. It's the building. Old buildings talk, right? Pipes. Rats. Ghosts of printers. Right? Somebody say right. NOT YOU.",
+      "when": [
+        "static-whisper-burst"
+      ],
+      "audio": null
+    },
+    {
+      "id": "kilohm-come-to-me",
+      "speaker": "scientist",
+      "purpose": [
+        "progression",
+        "character"
+      ],
+      "text": "When they start making sense, and they will, you come to me before you do anything about it. Not after. Before. I'll keep a stool warm and a notebook empty.",
+      "audio": null
+    },
+    {
+      "id": "fax-dock-brief",
+      "speaker": "don-fax",
+      "purpose": [
+        "progression",
+        "character"
+      ],
+      "text": "Dock 9. A stack of crates with army stencils and a little lightning bolt through a little robot on the label. I don't know what's in them. I know they hum. I know humans put soldiers on a warehouse, and humans never guard anything that's good for us. Burn it. Then lose the heat before you call.",
+      "audio": null
+    },
+    {
+      "id": "guard-who-do-we-call",
+      "speaker": "dock-guard",
+      "purpose": [
+        "funny"
+      ],
+      "text": "He's got a NAIL GUN! Is that even legal? Who do we call?! Oh shit, we ARE who you call!",
+      "when": [
+        "wave-start"
+      ],
+      "audio": null
+    },
+    {
+      "id": "rivet-sorry-not-sorry",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "Sorry! Sorry. Not sorry? I don't know which one! Gloria knows. Gloria, which one? She says not sorry.",
+      "when": [
+        "kill",
+        "weapon:gloria"
+      ],
+      "audio": null
+    },
+    {
+      "id": "mertz-inventory",
+      "speaker": "quartermaster-mertz",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "Whoa, whoa, whoa. That's army property, son. I signed for every one of these. Forty crates. You make it thirty-nine and that comes out of MY pension.",
+      "when": [
+        "boss-intro"
+      ],
+      "audio": null
+    },
+    {
+      "id": "mertz-appliances",
+      "speaker": "quartermaster-mertz",
+      "purpose": [
+        "funny",
+        "progression"
+      ],
+      "text": "Hold still! This is a product demonstration! Says right here on the box it's rated for appliances, and buddy, you are an appliance.",
+      "when": [
+        "robo-tazer-charge"
+      ],
+      "audio": null
+    },
+    {
+      "id": "rivet-everybody-screamed",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character"
+      ],
+      "text": "AH! That one got IN! Everybody in here screamed. Why did EVERYBODY scream? There's only one of me in here! ...Right?",
+      "when": [
+        "robo-tazer-hit",
+        "static-whisper-burst"
+      ],
+      "audio": null
+    },
+    {
+      "id": "rivet-feels-good",
+      "speaker": "rivet",
+      "purpose": [
+        "funny",
+        "character",
+        "progression"
+      ],
+      "text": "There. TUCK-IN's on fire. Does that feel good? Somebody in here says it feels good. I didn't say that. Who said that? Stop agreeing with me!",
+      "when": [
+        "crates-burning",
+        "static-whisper-burst"
+      ],
+      "audio": null
+    },
+    {
+      "id": "fax-confirm-receipt",
+      "speaker": "don-fax",
+      "purpose": [
+        "progression",
+        "funny",
+        "character"
+      ],
+      "text": "Saw the smoke from my office. Beautiful. Your money's taped under the phone. From now on, when a payphone rings near you, it's me, or it's Patch, or it's God, and God doesn't pay. Confirm receipt.",
+      "audio": null
+    },
+    {
+      "id": "rivet-i-have-a-job",
+      "speaker": "rivet",
+      "purpose": [
+        "character",
+        "progression"
+      ],
+      "text": "Received. Confirmed. Okay. I have a job. I have a gun named Gloria. I have a nurse who has a different name. I have somebody breathing in my ear. ...I have a job.",
+      "audio": null
+    }
+  ],
+  "mechanics": [
+    {
+      "id": "payphone-job-router",
+      "name": "Payphone job router (Patch)",
+      "status": "new",
+      "home": "game",
+      "summary": "Missions start when a nearby payphone rings and Rivet answers it. Patch connects the caller, who is the job giver. A payphone only rings while heat is 0, so the router and heat teach each other."
+    },
+    {
+      "id": "heat",
+      "name": "Heat",
+      "status": "new",
+      "home": "game",
+      "summary": "A wanted level from 0 to 3 in Act 1. Violence seen by humans raises it, and staying out of sight drains it. While heat is above 0, Patch will not connect a call and Don Fax will not take a visit, so losing heat is how a job ends."
+    },
+    {
+      "id": "assault-rifle",
+      "name": "Assault rifles",
+      "status": "new",
+      "home": "game",
+      "summary": "Human dock guards carry assault rifles that spray fast bursts of weak bullets: low damage per round, but a lot of rounds. A dead guard drops his rifle, and Rivet can pick it up and fire it until the magazine is empty. It has a high fire rate and low per-bullet damage, and it is a pickup, not a replacement for Gloria."
+    },
+    {
+      "id": "robo-tazer",
+      "name": "Robo-tazer (boss weapon)",
+      "status": "new",
+      "home": "game",
+      "summary": "An enemy-only anti-bot rifle carried by Quartermaster Mertz. Each shot is telegraphed by a 1.5-second charge whine and sparking prongs. It fires a slow, slightly metal-seeking ball of arc with a zigzag tether, and on impact the arcs chain to nearby metal. High damage: two hits nearly kill Rivet, and each hit spikes the static whispers. Each shot is followed by a 2-second vent window. It shorts out when its carrier dies and cannot be picked up."
+    }
+  ],
+  "reward": {
+    "cash": 1500,
+    "unlocks": [
+      "weapon:gloria-nail-gun",
+      "weapon:assault-rifle-pickup",
+      "safehouse:toner-room",
+      "system:payphone-jobs",
+      "system:heat"
+    ]
+  },
+  "difficulty": {
+    "heatPeak": 3,
+    "enemyCount": 49,
+    "enemyWaves": 6,
+    "timeLimitS": null,
+    "failStates": [
+      "Rivet is destroyed: respawn at the Toner Room, with Juno's tape bill taken out of the payout",
+      "Rivet answers or arrives while heat is above 0: Patch drops the call and Don won't open the door, so lose the heat and retry"
+    ],
+    "minutes": 14
+  },
+  "story": {
+    "reads": [],
+    "writes": [
+      {
+        "var": "q_fax_dock_job_done",
+        "value": true
+      },
+      {
+        "var": "q_toner_room_open",
+        "value": true
+      },
+      {
+        "var": "q_tuck_in_crates_burned",
+        "value": true
+      }
+    ]
+  },
+  "fingerprint": {
+    "giver": "don-fax",
+    "coreVerb": "sabotage",
+    "newMechanic": "payphone job router + heat + assault rifles + Robo-tazer boss weapon",
+    "location": "Dock 9 bonded storage",
+    "payoffKind": "cash + first weapon + safehouse"
+  }
+}
