@@ -90,6 +90,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-02 | The game caps heat at 5 while the quest contract allows 6 (Krump's army); there is no madness meter (runtime stub returns `lucid`); the memo box shows an "F: HANG UP" tab on quest subtitles | medium | open (game-side) |
 | 2026-11-02 | Council seats run with full permissions in the shared checkout (cwd = the run folder) | medium | open: run seats in a throwaway worktree, as tiger does |
 | 2026-11-02 | The voice bibles' reference lines are model-written; the seats copied them almost verbatim | medium | open: owner picks the anchor lines |
+| Quest vocabulary drift: the council (PoF quest contract `types.ts`) allows free verbs, bark tags and places; the game runtime plays only the verbs and conditions in rtai `data/tables/quest_rules.json`. The owner-approved `collect-call` failed to load with 18 errors | high | open: the game side (F-12b) grows the runtime; the PoF side needs a guard reading the runtime's `quest_rules.json` (the sibling-owned quest tooling, coordinate before editing) |
 
 ## Session log
 
@@ -421,3 +422,9 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 - **Morning:**
   - `node games/gtai/quest/night.mjs status --lane C:/Users/kazda/kiro/gtai-night/q1-collect-call`, then `/gta morning`.
   - Copy `evidence/selftest.json` and a frame into `games/gtai/quests/collect-call/evidence/` and re-sync. The PoF In-game step then grades it.
+- **F-12 quest runtime: merged into rtai main and pushed** (`abbd4b5`).
+  - The `gtai.quest/1` loader, the state machine on the F-05 tick, and lines as data (`tr()` keys and the `@joke` overlay). It emits `contract_started` and `contract_completed`.
+  - The spike fixture plays headless, bit-identical. 95 unit tests, 5 scenarios.
+  - **The owner-approved first contract `collect-call` (another session's `/gta --quest`) does not load yet:** its verbs and bark tags are outside the runtime vocabulary. F-12b (lane D) grows the runtime and exports its vocabulary. A new PoF gap is recorded.
+  - Profanity sits inline in the base text (LOC-06). The owner decides at Phase 3 entry.
+- **The CI native job is green on GitHub** (33 min cold). Lane A is adding the godot-cpp cache.
