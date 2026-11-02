@@ -428,3 +428,14 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **The owner-approved first contract `collect-call` (another session's `/gta --quest`) does not load yet:** its verbs and bark tags are outside the runtime vocabulary. F-12b (lane D) grows the runtime and exports its vocabulary. A new PoF gap is recorded.
   - Profanity sits inline in the base text (LOC-06). The owner decides at Phase 3 entry.
 - **The CI native job is green on GitHub** (33 min cold). Lane A is adding the godot-cpp cache.
+- **F-07 hardening and the art wiring: merged into rtai main and pushed** (`1571fce`, then `b850499`).
+  - **The stall:** a hitch log (TEL-03; frames over 25 ms go to `user://logs/hitches.jsonl` with phase times plus a canary thread). It attributes every post-warm-up hitch to a present (swap-chain) wait; game and render work stay under 0.3 ms. The 25-89 ms first-frame pipeline compile moved into a 27 ms loading prewarm. The spike's 165-440 ms process stalls did not reproduce (WPR needs elevation).
+  - **Bench (3 runs, 4 scenarios, 60 s, release export):** p99 2.63 ms, 1% low 242 fps, worst swap 16.7 ms, 1 frame over 50 ms (63 ms riot, a present wait), 0 unexplained. Vsync does NOT remove the present hitches (correction logged).
+  - **Police flow field:** native 100-329 us against the 2 ms budget, with exact parity. In the chase scenario, 8 cops close from 60.7 m to 6.5 m.
+  - **Art wiring:** 43 of 65 textures draw D4 under `look_d4` by default; `selftest` evidence includes frames at 32 and 48 px/m. Still placeholders: people (dots), vehicles (rectangles), decals, and the kerb corner tile.
+  - Native CI cache: SCons cache plus `-j4`; the warm CI time is still to be measured.
+  - Gates on main: lint 13/13, 102 unit tests, 6 scenarios.
+- **Foundation status:**
+  - Done: F-01 to F-08, F-10, F-11, F-12.
+  - Running: F-09b (the rig port, lane B) and F-12b (`collect-call` playability, lane D).
+  - Left: F-13 (the texel decision; the numbers are in, owner sign-off pending) and the PoF quest-vocabulary guard.
