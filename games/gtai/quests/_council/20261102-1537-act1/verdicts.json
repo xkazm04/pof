@@ -1,0 +1,237 @@
+{
+  "claude-A": {
+    "subject": "claude-A",
+    "guards": [
+      {
+        "guard": "story",
+        "state": "red",
+        "basis": "gtai-campaign baseline + 0 ledger quests",
+        "findings": [
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "don_fax.jobs_done",
+            "message": "writes undeclared don_fax.jobs_done: declare quest state as q_<name>"
+          },
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "souls.gearbox.unlocked",
+            "message": "reads undeclared souls.gearbox.unlocked"
+          }
+        ]
+      },
+      {
+        "guard": "economy",
+        "state": "green",
+        "basis": "quest-economy.json r1 (provisional)",
+        "findings": [
+          {
+            "code": "CASH_VS_SOUL_UPGRADE",
+            "severity": "info",
+            "message": "cash 1200 = 0.60 x the cheapest soul-upgrade tier (2000)"
+          }
+        ]
+      },
+      {
+        "guard": "lines",
+        "state": "green",
+        "basis": "structural only; judge unmeasured",
+        "findings": [
+          {
+            "code": "EDITORIAL_TELL",
+            "severity": "warn",
+            "ref": "a-gearbox-getaway",
+            "message": "editorial (unmeasured): a-gearbox-getaway: \"it's not X, it's Y\" reversal [not-x-its-y]"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "warn",
+            "ref": "kevin-cloud",
+            "message": "kevin-cloud has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"
+          }
+        ]
+      },
+      {
+        "guard": "uniqueness",
+        "state": "green",
+        "basis": "0 ledger quests",
+        "findings": []
+      }
+    ],
+    "blockedBy": [
+      "story"
+    ],
+    "blocked": true
+  },
+  "claude-B": {
+    "subject": "claude-B",
+    "guards": [
+      {
+        "guard": "story",
+        "state": "red",
+        "basis": "gtai-campaign baseline + 0 ledger quests",
+        "findings": [
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "krump.questline",
+            "message": "writes undeclared krump.questline: declare quest state as q_<name>"
+          },
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "krump.targets_tidied",
+            "message": "writes undeclared krump.targets_tidied: declare quest state as q_<name>"
+          },
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "souls.gearbox.unlocked",
+            "message": "reads undeclared souls.gearbox.unlocked"
+          }
+        ]
+      },
+      {
+        "guard": "economy",
+        "state": "green",
+        "basis": "quest-economy.json r1 (provisional)",
+        "findings": [
+          {
+            "code": "CASH_VS_SOUL_UPGRADE",
+            "severity": "info",
+            "message": "cash 800 = 0.40 x the cheapest soul-upgrade tier (2000)"
+          }
+        ]
+      },
+      {
+        "guard": "lines",
+        "state": "green",
+        "basis": "structural only; judge unmeasured",
+        "findings": [
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "warn",
+            "ref": "mister-softserve",
+            "message": "mister-softserve has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"
+          }
+        ]
+      },
+      {
+        "guard": "uniqueness",
+        "state": "green",
+        "basis": "0 ledger quests",
+        "findings": []
+      }
+    ],
+    "blockedBy": [
+      "story"
+    ],
+    "blocked": true
+  },
+  "grok-A": {
+    "subject": "grok-A",
+    "guards": [
+      {
+        "guard": "story",
+        "state": "red",
+        "basis": "gtai-campaign baseline + 0 ledger quests",
+        "findings": [
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "don_fax.jobs_done",
+            "message": "writes undeclared don_fax.jobs_done: declare quest state as q_<name>"
+          },
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "krump.questline",
+            "message": "writes undeclared krump.questline: declare quest state as q_<name>"
+          }
+        ]
+      },
+      {
+        "guard": "economy",
+        "state": "green",
+        "basis": "quest-economy.json r1 (provisional)",
+        "findings": [
+          {
+            "code": "CASH_VS_SOUL_UPGRADE",
+            "severity": "info",
+            "message": "cash 900 = 0.45 x the cheapest soul-upgrade tier (2000)"
+          }
+        ]
+      },
+      {
+        "guard": "lines",
+        "state": "green",
+        "basis": "structural only; judge unmeasured",
+        "findings": [
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "warn",
+            "ref": "stamp",
+            "message": "stamp has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"
+          }
+        ]
+      },
+      {
+        "guard": "uniqueness",
+        "state": "green",
+        "basis": "0 ledger quests",
+        "findings": []
+      }
+    ],
+    "blockedBy": [
+      "story"
+    ],
+    "blocked": true
+  },
+  "grok-B": {
+    "subject": "grok-B",
+    "guards": [
+      {
+        "guard": "story",
+        "state": "red",
+        "basis": "gtai-campaign baseline + 0 ledger quests",
+        "findings": [
+          {
+            "code": "UNKNOWN_VAR",
+            "severity": "error",
+            "ref": "souls.gearbox.unlocked",
+            "message": "writes undeclared souls.gearbox.unlocked: declare quest state as q_<name>"
+          }
+        ]
+      },
+      {
+        "guard": "economy",
+        "state": "green",
+        "basis": "quest-economy.json r1 (provisional)",
+        "findings": [
+          {
+            "code": "CASH_VS_SOUL_UPGRADE",
+            "severity": "info",
+            "message": "cash 1100 = 0.55 x the cheapest soul-upgrade tier (2000)"
+          }
+        ]
+      },
+      {
+        "guard": "lines",
+        "state": "green",
+        "basis": "structural only; judge unmeasured",
+        "findings": []
+      },
+      {
+        "guard": "uniqueness",
+        "state": "green",
+        "basis": "0 ledger quests",
+        "findings": []
+      }
+    ],
+    "blockedBy": [
+      "story"
+    ],
+    "blocked": true
+  }
+}

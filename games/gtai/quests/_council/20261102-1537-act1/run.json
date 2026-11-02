@@ -1,0 +1,25 @@
+{
+  "runId": "20261102-1537-act1",
+  "act": "act1",
+  "goal": "smoke test: a short Don Fax job",
+  "constraints": "",
+  "createdAt": "2026-11-02T14:37:45.589Z",
+  "voices": [
+    "big-lenny-lift",
+    "don-fax",
+    "gearbox",
+    "general-krump",
+    "hauler",
+    "king",
+    "lady-cathode",
+    "mc-crumbtray",
+    "patch",
+    "rivet",
+    "sentry",
+    "sister-suction",
+    "the-valet",
+    "vend-etta"
+  ],
+  "ledger": [],
+  "economyRevision": 1
+}
