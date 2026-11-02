@@ -132,6 +132,10 @@ when the dialog is done. Waves are uncapped.
   wants it **assessed, not adopted** - name what it gets right, keep that, and say plainly where
   your judgement differs and why.
 
+- **Content and character choices for GTAI belong to `/gta --quest`, not to `/spark`** (2026-11-02, gtai-phase-2): asked which soul and contract the slice holds, the owner answered "handshaked via /gta --quest", and moved King out of the slice. Offer "decided through `/gta --quest`" as an option for any game-content question.
+- **When a question hides a legal or brand risk, include a "change the thing" option** (2026-11-02): asked when to create the Steam app given the "GTAI" trademark proximity, the owner rebranded the title to RTAI instead. None of the options offered a rename.
+- **The owner picks the higher quality bar over the safe route on art** (2026-11-02): the slice is built in D4 rather than with D4 trialled alongside D1. Recommend the safe route, but put the critical-path cost in the option text.
+
 ## Skill improvement log
 
 - 2026-10-04 (story-decision-graph, first run): **The `Skill` tool could not resolve a
@@ -164,3 +168,5 @@ when the dialog is done. Waves are uncapped.
   expected by design, not a defect. Say so in the commit so nobody reads it as a deletion.
 - 2026-11-01 story-decision-graph resume: the idea note's frontmatter said `status: scouted` while its Build record showed 7 shipped commits - on `resume`, derive the phase from the Build record + `git log` over the brief's paths, never from the frontmatter alone, and rewrite the frontmatter when you wrap.
 - 2026-11-01 story-decision-graph wiring: three parallel builders on file-disjoint scopes worked; two numbers a builder reported (art reach 77, 'walk can never pass') were wrong/partly wrong until the Director re-measured - re-run any pinned-count test yourself, and ask scouts/builders whether a produce body can read sibling steps BEFORE designing a step that depends on the stored sibling. Also: Phase 0 must note any dev server holding .next/dev/lock, since the e2e walker gate needs it stopped (ask the operator, never kill a PID you did not start).
+- 2026-11-02 gtai-phase-2: **a relative path resolved against the repo root breaks inside a spark worktree.** `GameDef.engine.root: '../gtai'` resolved to `.claude/worktrees/gtai`, so the seam smoke read `root: null` until `POF_GAME_ROOT_GTAI` was set. Run any sibling-repo seam smoke from the main checkout after merge, or pass the env override. Also, builders in a fresh worktree must run `node scripts/gen-pipeline-registry.mjs` before `tsc`, because the generated registry is git-ignored.
+- 2026-11-02 gtai-phase-2: **a cross-repo contract can be built by two parallel builders when the brief carries every wire identifier and the verdict table.** The PoF reader and the greenfield game repo's writer met at the first seam smoke with no fix-ups.
