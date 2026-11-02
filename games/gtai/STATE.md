@@ -1,4 +1,4 @@
-# GTAI: Uprising: campaign state
+# GTAI: Uprising (public title: RTAI: Uprising): campaign state
 
 The living memory of the dual GTAI + PoF campaign. `/gta` reads this file first and writes it last.
 Design truth is in `pitch.md`; this file is *where we are*.
@@ -20,17 +20,18 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - **First real use:** an act-1 quest, after the owner replaces the illustrative voice-bible lines with chosen anchors.
 - **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2. The quest guards protect all three, and the betrayal and soul-4 beats stay unclaimable until they are decided.
 
-## Roadmap (provisional: Phase 2 rewrites it once the engine is known)
+## Roadmap (Phase 2 plan signed 2026-11-02: see `PHASE2.md`)
 
 | Phase | Goal | Exit | Status |
 |---|---|---|---|
-| 0 Foundation | PoF multi-game workspaces; pitch contest; baseline direction | `?g=gtai` live; `pitch.md` baseline v1 | **done** 2026-11-01 |
+| 0 Foundation of PoF | PoF multi-game workspaces; pitch contest; baseline direction | `?g=gtai` live; `pitch.md` baseline v1 | **done** 2026-11-01 |
 | 1 Look and engine | Art direction, camera pitch, engine | Engine locked with evidence | **done** 2026-11-02 (Godot 4.7.2) |
-| 2 Production plan | Way of work, test strategy, phases and features (the owner's original ask); pitch intake turned into canon; story graph mission pass; PoF engine adapter if not UE | A signed plan with milestones | not started |
-| 3 Vertical slice | Clock-Out tutorial, 1 mission, 1 soul, heat 1-3, madness bands, through PoF pipelines (firearms, top-down-camera, wanted-heat) | A stranger plays 10 minutes and laughs | not started |
-| 4 Act 1 | First district, 2 friendly bosses, King, Krump radio | Act 1 playable start to end | not started |
-| 5 Campaign | Acts 2-4, Pentagon finale, 4 souls | About 5 h, complete | not started |
-| 6 Ship | Steam: store page, achievements, cloud saves, Deck, mature-content survey | Released | not started |
+| 2 Production plan | Way of work, test strategy, phases, features | A signed plan | **done** 2026-11-02 (`PHASE2.md`, `STANDARDS.md`) |
+| 2a Foundation | Fresh repo `kiro/gtai` (STANDARDS §22); PoF Godot evidence adapter and gates; event bus; determinism; city port and hardening; D4 art lanes; build-health page; story map; quest runtime port; texel decision (tickets F-01 to F-13) | CI green on GitHub; PoF shows the game's evidence; city port inside the §20 budgets | **in progress** (F-01, F-02 built in spark `gtai-phase-2`) |
+| 2b Vertical slice (D4) | Clock-Out tutorial, the first contract (via `/gta --quest`), Gearbox (car hijack), heat 1-3, madness band 1, one streamed district, checkpoint save, local achievements | The owner plays it start to finish; §20 budgets hold (PC plus throttle proxy); all gates green in CI; visible in PoF | not started |
+| 3 Act 1 | Act 1 district, friendly bosses, Krump radio; real Steam app | Act 1 playable start to end | not started |
+| 4 Campaign | Acts 2-4, Pentagon finale, 4 souls | About 5 h, complete | not started |
+| 5 Ship | Steam store, survey, Deck (bought here), release checklist | Released | not started |
 
 ## Decisions log
 
@@ -57,6 +58,12 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - **Tech-stack gate:** the large-map stress test and the core world rendering and simulation technique run now, in parallel. This is the only blocker before going full steam into the Godot project (gate criteria: `research/godot-city-scale.md` section 4).
 - 2026-11-02. **Engineering standard written: `STANDARDS.md` binds Phase 2.** It holds 187 numbered rules in 19 sections (GIT through LEG), the performance budgets, the spike gap table, the day-one repo checklist and 13 owner questions. It is built from the four reports in `research/standards/`. The spike is evidence, not product: the real game starts as a fresh repo set up per section 22, and a deviation is a dated line in `docs/decisions.md`, never a silent change.
 
+- **2026-11-02 Phase 2 plan signed (`PHASE2.md`, spark `gtai-phase-2`).**
+  - Shape: Foundation (F-01 to F-13) then a D4 vertical slice (Clock-Out tutorial, the first contract via `/gta --quest`, Gearbox). King leaves the slice. The fallback art is D3.
+  - Repo: fresh `kiro/gtai`, private GitHub with LFS.
+  - Way of work: a day handshake plus night lanes.
+  - **Public title RTAI: Uprising.**
+  - The Steam app is created at slice end; the calendar is set at slice exit; the Deck is bought near release.
 ## PoF gaps found by the game
 
 | Found | Gap | Severity | State |

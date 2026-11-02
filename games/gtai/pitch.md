@@ -1,5 +1,7 @@
 # GTAI: Uprising: baseline direction
 
+Public title: **RTAI: Uprising** ("Robot Theft A.I."), the owner's 2026-11-02 rebrand; `gtai` stays the internal id.
+
 Status: **baseline v1, 2026-11-01.** This is a fusion from the `gtai-uprising-pitch` contest. The owner's review
 picked A/2 *DEAD SHIFT* as the story spine, character (Rivet) and look. It took D/2 *BACKSEAT*'s madness as the
 selling point, B/3 and D/1 as the voice of the dialogue, and a cast from ten variants.
@@ -172,7 +174,7 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
 ## 9. Production notes **[proposal]**
 
 - **Parody and Steam.** "General Krump" and the Pentagon raid sit within GTA's tradition. Keep Krump an archetype: no real likeness, real voice imitation, real slogans or real logos. Declare frequent violence, gore and strong language in Steam's mature-content survey.
-- **Engine is [open]** and decided by the overnight spike in `games/gtai/spike/`. UE 5.8, Godot 4 and Unity 6 each build the same pistol-duel MVP, and the morning scorecard decides.
+- **Engine: Godot 4.7.2 [owner, 2026-11-02]**, locked after the overnight spike (`STATE.md`). Before that, it was decided by the overnight spike in `games/gtai/spike/`. UE 5.8, Godot 4 and Unity 6 each build the same pistol-duel MVP, and the morning scorecard decides.
   - The scorecard weighs one factor no pitch priced: **PoF's engine bridge is Unreal-only** (verification, static checks, L3/L4 runtime acceptance, packaging). Choosing Godot or Unity means building an engine adapter in PoF. That is a real cost, and it belongs on the scorecard next to build feel.
 - **PoF manages development.** Every operation goes through the game workspace (`?g=gtai`):
   - canon via the Canon-view pitch intake (this file);

@@ -842,7 +842,7 @@ The spike against this standard, ordered by what Phase 2 must fix first. E = `gt
 
 Merged from the four reports. Only questions that need a human decision are kept; measurement questions became rules or checklist items.
 
-1. **Public title.** "GTAI" sits one letter from Take-Two's "GTA" mark, and the Steam name locks at the first store review. Do you commission a trademark search and counsel's opinion now, and what is the fallback title? (LEG-01, REL-03)
+1. **Public title. RESOLVED 2026-11-02:** the owner rebranded the public title to **RTAI: Uprising** ("Robot Theft A.I."); `gtai` stays internal. LEG-01 still applies: run a quick clearance search on "RTAI" before the store review. Original question: "GTAI" sits one letter from Take-Two's "GTA" mark, and the Steam name locks at the first store review. Do you commission a trademark search and counsel's opinion now, and what is the fallback title? (LEG-01, REL-03)
 2. **Legal entity and country.** Sole proprietor under your legal name, or a company? This sets the name on the bank, tax (W-9 vs W-8BEN) and SDA records, and changing it later means re-onboarding.
 3. **Platforms and hardware.** Windows plus Proton only, or also a native Linux build? Either way you need a real Steam Deck: will you buy or borrow one? Deck Verified, the renderer choice and crash capture cannot be decided without it.
 4. **Release window and Steamworks start.** When do you create the app ($100, which starts the 21-day clock and gives the App ID that real achievement testing needs)? Which Next Fest: 22 Feb-1 Mar 2027 (register by 10 Jan) or 14-21 Jun 2027? A game gets one Next Fest, ever.
