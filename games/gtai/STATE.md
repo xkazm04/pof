@@ -42,6 +42,15 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - 2026-11-02. **Art route: Nano Banana parts + a 2D cutout rig** (owner). This supersedes the 2026-11-01 media rule ("image generation for concept only") for GTAI characters. Nano Banana paints top-down parts on chroma green; a script keys them and reduces them to the 4 inks; Godot Skeleton2D plus procedural motion animates them. Steam's content survey must disclose AI-generated art. Tripo is not used. The motion comes from the rig, not from generated frames: the generated pose sheets drift in camera and proportion.
 - 2026-11-01. The owner's play feel outranks every spike metric. Proposed weights are in `spike/PLAN.md`.
 
+- **2026-11-02 (owner): camera and art roadmap.**
+  - Camera: 32 px/m on foot by default, 48 px/m in a car. Boss fights and the final-fight areas get a closer camera, so the character design shines and the combat feels immersive.
+  - Art roadmap:
+    1. **D1 Riso Refined is this session's graphic goal**: an interstep, clean at both close and long distance because it is simple.
+    2. **D4 Ink and Hatch (hybrid) is the roadmap goal.** Doctrine: a black-and-white baseline, with colour used rarely, only to highlight what matters. The target frame is `art-direction/directions-v2/d4h2_mock.jpg`.
+    3. **D5 Inked Grime is the possible step after D4.**
+    4. **The backup if D4 fails is D3 Clear Line.** D2 Linocut is rejected.
+  - **Tech-stack gate:** the large-map stress test and the core world rendering and simulation technique run now, in parallel. This is the only blocker before going full steam into the Godot project (gate criteria: `research/godot-city-scale.md` section 4).
+
 ## PoF gaps found by the game
 
 | Found | Gap | Severity | State |
