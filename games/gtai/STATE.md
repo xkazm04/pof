@@ -333,3 +333,21 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Texel decision (F-13 input): one district is 67.8 MB at 80-96 px/m against 143 MB at 128 px/m. Codex holds only about 84 px/m of real detail, so 128 px/m would be an upscale.
 - **rtai repo fix:** `core.hooksPath=.githooks` had bypassed the git-lfs hooks. They are now committed in `.githooks` (`10caa20`), and 91 LFS objects (23 MB) uploaded.
 - **Standing permission (owner):** push rtai `main` after each verified merge. Never force-push. PoF and the registry stay no-push.
+- **F-06 city port: merged into rtai main and pushed** (`2f4c88e`).
+  - The native GDExtension: godot-cpp pinned at `e103d348` (no 4.7 tag exists), the 851-line spike split into 13 files of 164 lines or fewer, and shared sim constants generated from JSON.
+  - Parity is bit-identical over 1200 steps; a planted change is caught. A step is 0.032 ms native against 2.28 ms in GDScript.
+  - Chunk files carry a version-and-hash header. `--replay` checks the real city.
+  - **Bench (release export, 400 actors):**
+
+    | Scenario | p99 | 1% low | worst swap | visible actors (avg) |
+    |---|---|---|---|---|
+    | crowded drive (9.6 px/m) | 1.18 ms | 432 fps | 1.65 ms | 49 |
+    | riot | 0.97 ms | 604 fps | 2.20 ms | 299 |
+
+  - An earlier run hit 32.6 and 41.4 ms frames outside the swap windows; that goes to F-07. The city still draws placeholders, and the art wiring is queued.
+- **F-08b: merged** (`538446a`). Charcoal streets, the manhole fix, roof hatching, and Rivet's flat-tint at 48 px/m. Owner approved.
+- **`.gitattributes` union-merges** `docs/decisions.md` and the provenance log, because every lane merge had conflicted there.
+- **Next lanes (owner):**
+  - A: F-07 hardening (stall profiling, a gameplay-zoom drive bench at 48 px/m, the police flow field), then the art wiring (D4 art into the city, `look_d4` as default, `selftest` evidence).
+  - B: F-09b, the rig port (LOD, pooling, prewarm, the 50/200 stress test).
+  - D: F-12, the quest runtime port.
