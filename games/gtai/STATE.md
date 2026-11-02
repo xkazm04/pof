@@ -13,7 +13,12 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - **Next steps**
   1. **The night is running** (launched 20:06; it freezes at 06:45, reports at 07:15 and ends at 08:00). Engine lanes run Opus 5.5 at high effort; the art lane runs Sonnet 5.5 (owner). All lanes bill the API key first. Check it anytime with `node games/gtai/spike/spike.mjs status`. Keep Unity Hub open.
   2. Morning (`/gta morning`): run the report, review the evidence, have the owner play-test, lock the engine. Then do Phase 2 planning.
-- **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2.
+- **Quest loop ready (2026-11-02): `/gta --quest [act] [goal]`.**
+  - The council is Opus 5.5 + Grok, two contrasting paths each. PoF guards score every path, the owner fuses them in an artifact, then the quest is executed end to end as a package (`games/gtai/quests/<id>/`).
+  - The Godot runtime is `game/quest/` on branch `quest-runtime` in `gtai-spike/evolve/project-quest`. It is **not yet merged** into evolve master.
+  - Each quest is a row of the PoF `contracts` pipeline.
+  - **First real use:** an act-1 quest, after the owner replaces the illustrative voice-bible lines with chosen anchors.
+- **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2. The quest guards protect all three, and the betrayal and soul-4 beats stay unclaimable until they are decided.
 
 ## Roadmap (provisional: Phase 2 rewrites it once the engine is known)
 
@@ -61,6 +66,11 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-01 | The e2e walker has not been run over gtai-scoped pipelines | medium | open |
 | 2026-11-01 | The Leonardo API account is out of credit; concept art fell back to qwen-image | low | worked around |
 | 2026-11-01 | No PoF pipeline page shows engine-spike state. It lives in the spike workspace, outside PoF | medium | open: candidate for Phase 2 |
+| 2026-11-02 | No quest tooling: no canon guard, no reward/difficulty model, no line gate | high | **built** (spark `gta-quest-loop`) |
+| 2026-11-02 | Quest locations and targets are free words; the runtime maps them through `quests/markers.json`, but no PoF guard checks them against it | medium | open |
+| 2026-11-02 | The game caps heat at 5 while the quest contract allows 6 (Krump's army); there is no madness meter (runtime stub returns `lucid`); the memo box shows an "F: HANG UP" tab on quest subtitles | medium | open (game-side) |
+| 2026-11-02 | Council seats run with full permissions in the shared checkout (cwd = the run folder) | medium | open: run seats in a throwaway worktree, as tiger does |
+| 2026-11-02 | The voice bibles' reference lines are model-written; the seats copied them almost verbatim | medium | open: owner picks the anchor lines |
 
 ## Session log
 
@@ -207,3 +217,35 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - The arena camera (`assets/arenas.json`) eases to about 64 px/m and fits both fighters (down to about 44). King is ported into the yard duel (`--king` / F4).
   - Host read of the ladder: the frame is calmer and cleaner, but the mid-grey asphalt now dominates and the frame reads slightly flat. That is a tuning point for the next art pass toward D4.
   - The C: drive hit 0 bytes mid-session (outside cause; 269 GB free after). Godot's cache was repaired, and `tools/shot.sh` now cleans its frame captures.
+
+### 2026-11-02 day: quest loop built (spark `gta-quest-loop`)
+- **Design:** 2 waves with the owner; every recommendation was accepted. The brief is in the Spark vault (`ideas/gta-quest-loop.md`).
+- **The disk hit 0 bytes mid-build** (ENOSPC). Resumed after the owner freed space (77 GB).
+- **PoF commits:**
+  - `52ce6f64` and `694caa0f`: the wire contract.
+  - `3b2c2370`: the guards (65 tests).
+    - Story: a pitch baseline graph, a findings diff per quest, and protected unknowns.
+    - Economy: scored against the provisional `balance/quest-economy.json` r1.
+    - Lines: a purpose tag on every line, voice bibles, editorial tells and the cross-family judge.
+    - Uniqueness.
+  - `f3b65258`: the `contracts` pipeline.
+    - 5 steps: Council, Plan, Guards, Package, In-game. Acceptance is derived server-side.
+    - The quests ledger and sync API.
+    - The full e2e walker passed (68).
+  - `081ceb9e`: the council and the artifact.
+    - `games/gtai/quest/council.mjs`, with `brief`, `run`, `assess`, `render`, `judge` and `check`.
+    - 14 voice bibles and `/gta --quest` in SKILL.md.
+  - `0aed3d36`: `claimsBeat`, so souls are learned through quests. Open-canon beats stay unclaimable. Also `objective.durationS` and `provenance.runId`.
+- **Godot (`gtai-spike/evolve/project-quest`, branch `quest-runtime`):** `adc4a83`, `d14f592` and `f2fa88f`.
+  - The runtime is a loader, runner, verbs, lines with barks, the reward and a selftest.
+  - `--quest-selftest` passes headless: succeeded, 3/3 beats, +$500, heat clamped. I checked the frame by eye.
+  - **Unmerged:** another session commits to evolve master.
+- **Smoke council** (`quests/_council/20261102-1537-act1`): both seats delivered first try, $1.78 in total.
+  - All 4 paths were story-red because the first brief lacked the variable names. That is fixed, and the brief now also lists the claimable beats.
+  - The fuse artifact: https://claude.ai/artifact/Lu8ZvtE63tcU13MAATMZxZ (db save; checked that the store reads, and that it is empty).
+- **Seam gate on :3001:** `GET /api/games/gtai/quests` returns the envelope (0 quests). `/layout?g=gtai`, `/status` and `/story` all return 200.
+- **Still open:**
+  - merge `quest-runtime` into evolve master;
+  - a marker-key guard;
+  - owner-picked voice anchors;
+  - the first real quest.
