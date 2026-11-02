@@ -9178,7 +9178,11 @@
           "revision": 3,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 The playground tunes an ARPG character's locomotion, dodge and camera curves (channels accel/dodge/camera), not a vehicle's input-shaping pipeline; a grep of every sub_character file for steer, slew, deadzone, vehicle and brake found nothing (the only near-hit is a comment about the browser throttling rAF in StickFigurePreview.tsx:50), so the subject's precondition of a touch/couch controller steering a vehicle does not hold.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:f80739677d547e38",
+          "evaluatedRevision": 3
         },
         {
           "subject": "mcp-tools",

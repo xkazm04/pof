@@ -1,0 +1,78 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3467abc8-96d2-49cf-afda-b9ab0a52c969",
+ "subject": "steering-feel-profile-shaping",
+ "evaluatedAt": "2026-11-02T22:01:24.116562+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "character-movement-playground",
+   "subject": "steering-feel-profile-shaping",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 The playground tunes an ARPG character's locomotion, dodge and camera curves (channels accel/dodge/camera), not a vehicle's input-shaping pipeline; a grep of every sub_character file for steer, slew, deadzone, vehicle and brake found nothing (the only near-hit is a comment about the browser throttling rAF in StickFigurePreview.tsx:50), so the subject's precondition of a touch/couch controller steering a vehicle does not hold.",
+   "techniques": [
+    {
+     "technique": "deadzone-exponent-remap",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No steering axis or dead zone in this context; curves are character acceleration values."
+    },
+    {
+     "technique": "baseline-preset-preserved",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:53 There is a base character-feel preset with layers on top, which is close in spirit, but the technique is about vehicle shaping profiles and scripted drivers, so it does not apply."
+    },
+    {
+     "technique": "asymmetric-steer-slew-rise-return",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No steering target or slew limiter exists in this context."
+    },
+    {
+     "technique": "throttle-instant-release-progressive-rise",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 The accel curve is character ground acceleration, not a held-touch throttle."
+    },
+    {
+     "technique": "brake-never-reverses",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No brake control in this context."
+    },
+    {
+     "technique": "five-profile-trace-bands",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No yaw/slip/radius traces; feel comparison here is between character presets."
+    }
+   ],
+   "absenceTerms": [
+    "steer",
+    "slew",
+    "deadzone",
+    "vehicle",
+    "brake"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-02T22:01:24.116562+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "steering-feel-profile-shaping"
+   ],
+   "techniques": [
+    "asymmetric-steer-slew-rise-return",
+    "baseline-preset-preserved",
+    "brake-never-reverses",
+    "deadzone-exponent-remap",
+    "five-profile-trace-bands",
+    "throttle-instant-release-progressive-rise"
+   ],
+   "deviations": 0,
+   "context": "character-movement-playground",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

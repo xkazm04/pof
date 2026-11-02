@@ -17715,6 +17715,47 @@
           "evidence": "src/components/modules/evaluator/AssetScoutView/index.tsx:14 No process is created in this context, so no process-creation strategy is chosen here. Spawning happens outside it, behind the CLI hook and service."
         }
       ]
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/steering-feel-profile-shaping": {
+      "context": "character-movement-playground",
+      "subject": "steering-feel-profile-shaping",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:01:24.116Z",
+      "worker": "3467abc8-96d2-49cf-afda-b9ab0a52c969",
+      "techniques": [
+        {
+          "technique": "deadzone-exponent-remap",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No steering axis or dead zone in this context; curves are character acceleration values."
+        },
+        {
+          "technique": "baseline-preset-preserved",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:53 There is a base character-feel preset with layers on top, which is close in spirit, but the technique is about vehicle shaping profiles and scripted drivers, so it does not apply."
+        },
+        {
+          "technique": "asymmetric-steer-slew-rise-return",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No steering target or slew limiter exists in this context."
+        },
+        {
+          "technique": "throttle-instant-release-progressive-rise",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 The accel curve is character ground acceleration, not a held-touch throttle."
+        },
+        {
+          "technique": "brake-never-reverses",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No brake control in this context."
+        },
+        {
+          "technique": "five-profile-trace-bands",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No yaw/slip/radius traces; feel comparison here is between character presets."
+        }
+      ]
     }
   }
 }
