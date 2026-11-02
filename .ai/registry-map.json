@@ -1898,7 +1898,11 @@
           "revision": 3,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:63 The picker card reports the template's raw rule count, but adoption (index.tsx loadTemplate) runs bindRulesToAbility and drops rules that target other abilities. Confirm can therefore create fewer rules than the preview showed, which is a preview showing something other than the instance. Adoption also persists no template id, version or provenance stamp.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:3dd9549b75f4f998",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
