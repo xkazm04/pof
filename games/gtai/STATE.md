@@ -150,3 +150,20 @@ Design truth is in `pitch.md`; this file is *where we are*.
   1. Environment in `evolve/project`: the dual camera, flat-fill asphalt variants, bold pickup glyphs, the 3 rejected props.
   2. Characters: King's torso, bind sheets and a stress rerun in `cutout`; then cops and pedestrians as rigs in the game (worktree `evolve/project-chars`, branch `chars`).
   3. The art-direction study: 4-5 directions from "evolve the current riso" to "chase the Rivet concept", with mocks, parts tests and feasibility. The board is `art-direction/directions-v2/index.html`, with an optional shader prototype in branch `artdir`.
+- **Round 2 done (all three agents), merged on `evolve/project` master** (`e18aa58`). `build/GTAISpike-evolve.exe` is rebuilt and the selftest passes.
+  - **Environment:**
+    - The dual camera is in, with `--ppm-foot=`/`--ppm-car=` for A/B. Frames: `evolve/evidence/round2/camera-grid.png`. The owner's mapping gives about 21 m of view ahead at 64 km/h; swapped gives about 28 m.
+    - Also in: 3 flat-fill asphalt variants per tile, 6 bold pickup glyphs (all better at 32 px/m), the newsstand and jersey barrier, and the bus, fire engine and tank. The bench was reverted.
+    - 6 images.
+  - **Characters** (merged from `chars`):
+    - Rivet, the cops (3 variants) and the pedestrians (7) run as rigs; `--sprites` gives the old sprites. King's torso, cape and bind sheets are done.
+    - At 32 px/m the crowd and cops read; Rivet reads worse than his old sprite. At 48 px/m everything reads.
+    - Rigs cost about 45 us each; 246 pedestrians take 25.4 ms (LOD) vs 21.1 ms as sprites. 10 images.
+  - **Art directions:** the board is `art-direction/directions-v2/index.html`, with 5 directions and in-engine `--look=fine|hatch|wash|lino|clear`.
+    1. Riso Refined (score 5)
+    2. Linocut (4)
+    3. Clear Line (4, needs about 7 inks)
+    4. Ink and Hatch, hybrid form (4)
+    5. Inked Grime, the Rivet concept itself (2)
+    - Finding: no hand-drawn detail survives on 32 px/m characters, so the comic look must live in the world.
+    - Recommendation: chase D4 hybrid; D1 is the safe backup; D2 is the bold alternative. 20 images.
