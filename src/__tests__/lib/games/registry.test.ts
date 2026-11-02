@@ -54,8 +54,8 @@ describe('registry coherence', () => {
     expect(authoringProfileOf('pof')).toBe('pof');
     expect(authoringProfileOf('gtai')).toBe('gtai');
   });
-  it('gtai is locked on Godot 4.7.2 (no project root yet) and keeps its design truth in games/gtai', () => {
-    expect(GAMES.gtai.engine).toEqual({ kind: 'godot', version: '4.7.2', root: null });
+  it('gtai is locked on Godot 4.7.2, its root is the sibling game repo, and it keeps its design truth in games/gtai', () => {
+    expect(GAMES.gtai.engine).toEqual({ kind: 'godot', version: '4.7.2', root: '../gtai' });
     expect(GAMES.gtai.designDir).toBe('games/gtai');
   });
 });

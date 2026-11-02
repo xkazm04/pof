@@ -1,8 +1,11 @@
 /**
  * UE-static acceptance per GAME (WP1 criterion 3): a gtai entity's L2 static check reads gtai's
- * engine binding — unbound today — and returns `deferred` "no engine project bound for game gtai"
+ * binding and, while its game root is not on disk, returns `deferred` "no game root for gtai ..."
  * without running a checker against PoF's UE tree. A pof entity's check is byte-identical to the
- * pre-games behaviour.
+ * pre-games behaviour. (The godot evidence branch itself: `staticVerifyGodot.test.ts`.)
+ *
+ * `POF_GAME_ROOT_GTAI` is pinned to a path that does not exist, so the sibling `../gtai` checkout
+ * (present on the operator's machine) can never make these assertions depend on its evidence.
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -10,9 +13,28 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Isolate from the operator's real ~/.pof/pof.db.
-vi.hoisted(() => {
+const prevGameRoot = vi.hoisted(() => {
   const d = process.env.TEMP || process.env.TMPDIR || '/tmp';
   process.env.POF_DB_PATH = `${d}/pof-test-static-verify-game-${process.pid}.db`;
+  const prev = process.env.POF_GAME_ROOT_GTAI;
+  process.env.POF_GAME_ROOT_GTAI = `${d}/pof-test-no-such-gtai-root-${process.pid}`;
+  return prev;
+});
+afterAll(() => {
+  if (prevGameRoot === undefined) delete process.env.POF_GAME_ROOT_GTAI; else process.env.POF_GAME_ROOT_GTAI = prevGameRoot;
+});
+
+// The bound-root case needs a non-pof UE game; GameId is a closed union, so it rides on gtai's id.
+const fake = vi.hoisted(() => ({ gtaiEngine: null as GameDef['engine'] | null }));
+vi.mock('@/lib/games/registry', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/games/registry')>();
+  return {
+    ...real,
+    getGame: (id: string) => {
+      const g = real.getGame(id);
+      return id === 'gtai' && fake.gtaiEngine ? { ...g, engine: fake.gtaiEngine } : g;
+    },
+  };
 });
 
 import {
@@ -21,11 +43,11 @@ import {
 } from '@/lib/catalog/acceptance/staticVerify';
 import { resolveUeRoot, type UeChecker } from '@/lib/catalog/acceptance/ueStaticCheckers';
 import type { AcceptanceResult } from '@/lib/catalog/acceptance/types';
-import type { GameId } from '@/lib/games/types';
+import type { GameDef, GameId } from '@/lib/games/types';
 import { upsertEntity, deleteEntity } from '@/lib/catalog-db';
 import { codeSeededEntities } from '@/lib/catalog/seed';
 
-const REASON = "game gtai runs on Godot 4.7.2: PoF's engine bridge is UE-only (no Godot adapter yet)";
+const REASON = /^no game root for gtai \(Godot 4\.7\.2\): POF_GAME_ROOT_GTAI=.+ is not on disk$/;
 const pass = (l: string): AcceptanceResult => ({ label: l, tier: 'L2', status: 'pass', detail: 'present' });
 
 describe('verifyStaticAll per entity game', () => {
@@ -52,7 +74,7 @@ describe('verifyStaticAll per entity game', () => {
     }), { apply: false });
     const gtai = s.results.find((r) => r.entityId === 'gtai-cop');
     expect(gtai?.to).toBe('deferred');
-    expect(gtai?.reason).toBe(REASON);
+    expect(gtai?.reason).toMatch(REASON);
     expect(seen).toEqual(['C:/ue']); // only the pof row ran its checker, against PoF's root
     expect(s.failed).toBe(0);
   });
@@ -64,18 +86,23 @@ describe('verifyStaticAll per entity game', () => {
     expect(after.results[0].to).toBe('pass');
   });
 
-  it('a non-pof game with a bound root grades against THAT root', () => {
-    const s = verifyStaticAll({}, deps({
-      listArtifacts: () => [rows[1]],
-      entityGame: () => 'gtai',
-      ueRootForGame: () => 'D:/gtai-ue',
-    }), { apply: false });
-    expect(s.results[0].to).toBe('fail');
-    expect(s.results[0].reason ?? s.results[0].detail).toMatch(/D:\/gtai-ue/);
+  it('a non-pof UE game with a bound root grades against THAT root', () => {
+    fake.gtaiEngine = { kind: 'ue5', root: 'D:/gtai-ue' };
+    try {
+      const s = verifyStaticAll({}, deps({
+        listArtifacts: () => [rows[1]],
+        entityGame: () => 'gtai',
+        ueRootForGame: () => 'D:/gtai-ue',
+      }), { apply: false });
+      expect(s.results[0].to).toBe('fail');
+      expect(s.results[0].reason ?? s.results[0].detail).toMatch(/D:\/gtai-ue/);
+    } finally {
+      fake.gtaiEngine = null;
+    }
   });
 
   it('the unbound verdict is deferred at L2, never fail', () => {
-    expect(unboundStaticVerdict('gtai', 'Stat Block')).toMatchObject({ status: 'deferred', tier: 'L2', reason: REASON });
+    expect(unboundStaticVerdict('gtai', 'Stat Block')).toMatchObject({ status: 'deferred', tier: 'L2', reason: expect.stringMatching(REASON) });
   });
 });
 
@@ -104,10 +131,10 @@ describe('staticVerdictFor against the real registry + store', () => {
     expect(entityGameFor('bestiary', codeSeededEntities('bestiary')[0].id)).toBe('pof');
   });
 
-  it('a gtai entity’s UE-static check is deferred: "no engine project bound for game gtai"', () => {
+  it('a gtai entity’s L2 check is deferred while its game root is not on disk: "no game root for gtai"', () => {
     const v = staticVerdictFor('bestiary', 'gtai-test-cop', 'Stat Block');
     expect(v?.status).toBe('deferred');
-    expect(v?.reason).toBe(REASON);
+    expect(v?.reason).toMatch(REASON);
   });
 
   it('a pof entity’s check is unchanged: the same verdict as its checks run against resolveUeRoot()', () => {
@@ -117,6 +144,6 @@ describe('staticVerdictFor against the real registry + store', () => {
     const legacy = aggregateStatic(checks!.map((c) => c(resolveUeRoot())), 'Stat Block');
     expect(staticVerdictFor('bestiary', seed, 'Stat Block')).toEqual(legacy);
     expect(legacy?.status).toBe('deferred');
-    expect(legacy?.reason).not.toBe(REASON);
+    expect(legacy?.reason).not.toMatch(REASON);
   });
 });

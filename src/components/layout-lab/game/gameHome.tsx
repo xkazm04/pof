@@ -23,7 +23,7 @@ export function engineWords(e: EngineState): { level: 'ok' | 'warn'; word: strin
     case 'unbound': return { level: 'warn', word: 'unbound', detail: 'no engine project bound — UE-bound acceptance defers' };
     case 'bound': return { level: 'ok', word: 'bound', detail: e.root };
     case 'project-default': return { level: 'ok', word: 'bound', detail: 'the PoF UE project (POF_UE_ROOT, else the default project), resolved server-side' };
-    case 'adapter-missing': return { level: 'warn', word: `${e.engine} ${e.version}`, detail: `engine locked; PoF's engine bridge is UE-only, so engine-bound acceptance defers until a ${e.engine} adapter exists${e.root ? ` (project ${e.root})` : ''}` };
+    case 'adapter-missing': return { level: 'warn', word: `${e.engine} ${e.version}`, detail: `engine locked; L2 reads the game's build/evidence (lint + unit-tests)${e.root ? ` under ${e.root}` : ''}, and defers as unbound while that root is not on disk; the runtime tiers are UE-only and defer` };
   }
 }
 

@@ -9,6 +9,7 @@
  */
 
 import type { SubModuleId } from '@/types/modules';
+import type { GameId } from '@/lib/games/types';
 
 /**
  * Which numerator the stop condition compares against the target pass-rate.
@@ -152,13 +153,24 @@ export interface VerificationGate {
      * judge it (frame exists + not black; optional VLM). Advisory + opt-in
      * (`ueVisual`); `unverifiable` when no UE env. See `ue-visual-gate.ts`.
      */
-    | 'ue-visual';
+    | 'ue-visual'
+    /**
+     * Godot headless run in a game's OWN repo (`gameRootFor(game)`), judged by the
+     * `pof.godot-evidence/1` file the run wrote (`unit-tests` / `export-audit`), not by exit
+     * code alone. `unverifiable` with no `POF_GODOT_BIN`, no game root, or nothing to run.
+     * See `godot-gates.ts`.
+     */
+    | 'godot-test' | 'godot-export';
   /** Whether this gate is required (blocks progress) or advisory */
   required: boolean;
   /** Command to run or function key */
   command?: string;
   /** Automation test filter (ue-test gates only), e.g. "Project" or "PoF.Combat". */
   filter?: string;
+  /** The game whose repo a godot-* gate runs in (godot gates only). Absent → unverifiable. */
+  game?: GameId;
+  /** Script passed as `-s <script>` when a godot-* gate has no `command` (godot gates only). */
+  script?: string;
 }
 
 export interface VerificationResult {

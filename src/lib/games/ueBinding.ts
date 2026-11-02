@@ -4,6 +4,7 @@
  * `ueStaticCheckers`, so importing this module never drags `node:fs` into a client chunk).
  *
  * - `pof` → the existing chain (`POF_UE_ROOT` env, else the default PoF UE project).
+ * - (a godot game's OWN repo root is `gameRootFor` in `gameRoot.ts`; only the Godot evidence adapter reads it)
  * - a game whose engine is `undecided` or non-UE (`godot`), or `ue5` with `root: null` other than pof → `null` =
  *   "no engine project bound"; callers DEFER with `unboundReason(id)`, never fail and never fall back
  *   to PoF's project (that would grade one game against another's engine tree).
@@ -24,6 +25,6 @@ export function ueRootForGame(id: GameId): string | null {
 
 export function unboundReason(id: GameId): string {
   const { engine } = getGame(id);
-  if (engine.kind === 'godot') return `game ${id} runs on Godot ${engine.version}: PoF's engine bridge is UE-only (no Godot adapter yet)`;
+  if (engine.kind === 'godot') return `game ${id} runs on Godot ${engine.version}: PoF's engine bridge is UE-only (no Godot adapter yet for the runtime tiers; L2 reads the game's build/evidence)`;
   return `no engine project bound for game ${id}`;
 }

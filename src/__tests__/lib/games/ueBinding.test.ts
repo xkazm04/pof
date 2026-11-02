@@ -72,6 +72,6 @@ describe('ueRootForGame', () => {
   });
 
   it('names the reason per game: gtai is locked on Godot, so the reason names the missing adapter', () => {
-    expect(unboundReason('gtai')).toBe("game gtai runs on Godot 4.7.2: PoF's engine bridge is UE-only (no Godot adapter yet)");
+    expect(unboundReason('gtai')).toBe("game gtai runs on Godot 4.7.2: PoF's engine bridge is UE-only (no Godot adapter yet for the runtime tiers; L2 reads the game's build/evidence)");
   });
 });

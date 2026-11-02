@@ -49,6 +49,8 @@ export type RouteAnswer = 'can' | 'cannot' | 'unknown';
 export interface RouterEnv {
   /** `resolveUeEnv() !== null` - POF_UE_EDITOR_CMD and POF_UE_UPROJECT are both set. */
   hasUeEnv: boolean;
+  /** `resolveGodotEnv() !== null` - POF_GODOT_BIN is set (godot-* gates). `undefined` = not probed. */
+  hasGodotEnv?: boolean;
   /** A statePath exists to place captures / abslogs. Default true (the orchestrator always has one). */
   hasStatePath?: boolean;
   /** A dev server answers on :3000 right now. `undefined` = not probed. */
@@ -158,6 +160,10 @@ const GATE_PROFILES: Record<GateType, GateProfile> = {
   'ue-compile': { judges: ['ue-source'], reads: 'UE C++ through UnrealBuildTool' },
   'ue-test': { judges: ['ue-source', 'ue-content'], reads: 'registered UE automation tests' },
   'ue-visual': { judges: ['ue-source', 'ue-content'], reads: 'a frame from a headless game boot' },
+  // A godot gate judges the GAME's own repo (GDScript, scenes), a tree this router has no class for:
+  // it can return a verdict, but never about any path class this repo distinguishes.
+  'godot-test': { judges: [], reads: "a Godot game repo's unit-test evidence" },
+  'godot-export': { judges: [], reads: "a Godot game repo's export-audit evidence" },
 };
 
 /** Gate-level preconditions: can the gate return ANY verdict, whatever the change? */
@@ -187,6 +193,14 @@ function preconditionRoute(gate: VerificationGate, env: RouterEnv): { answer: Ro
           ? 'a filter that matches no registered test reads unverifiable at run time'
           : 'a headless boot that yields no frame reads unverifiable at run time',
       };
+    case 'godot-test':
+    case 'godot-export':
+      // Mirrors godot-gates.ts `planGodotGate`; the game root is an fs probe the router leaves to run time.
+      if (env.hasGodotEnv === false) return { answer: 'cannot', reason: 'no Godot environment (POF_GODOT_BIN is not set)' };
+      if (!gate.game) return { answer: 'cannot', reason: 'the gate names no game, so there is no repo to run in' };
+      if (!gate.command && !gate.script) return { answer: 'cannot', reason: 'neither a command nor a script, so nothing would run' };
+      if (env.hasGodotEnv === undefined) return { answer: 'unknown', reason: 'POF_GODOT_BIN not probed' };
+      return { answer: 'can', reason: 'a game root not on disk, or no fresh evidence written, reads unverifiable at run time' };
     case 'visual':
       if (!hasState) return { answer: 'cannot', reason: 'no statePath to store the page captures' };
       if (env.visualSpecDiscoverable === false) {

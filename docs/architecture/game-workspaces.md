@@ -5,10 +5,12 @@ pipeline manifest and an engine binding. PoF's own ARPG is game `pof`; **GTAI: U
 open-city crime sandbox) is game `gtai`, the first non-ARPG game. Introduced by spark
 `gtai-uprising-project` (2026-11-01).
 
-Sources of truth: `src/lib/games/` (`types.ts`, `registry.ts`, `pof.ts`, `gtai.ts`, `ueBinding.ts`),
+Sources of truth: `src/lib/games/` (`types.ts`, `registry.ts`, `pof.ts`, `gtai.ts`, `ueBinding.ts`,
+`gameRoot.ts`, `godot/evidenceTypes.ts`, `godot/readEvidence.ts`), `src/lib/harness/godot-gates.ts`,
 `src/lib/catalog/canon/profiles.ts`, `src/app/api/catalog-entities/route.ts`,
 `src/lib/catalog/acceptance/staticVerify.ts`. Tests: `src/__tests__/lib/games/`,
-`src/__tests__/api/catalog-entities-provenance.test.ts`.
+`src/__tests__/api/catalog-entities-provenance.test.ts`, `src/__tests__/games/godot/`,
+`src/__tests__/lib/harness/godot-gates.test.ts`.
 
 ## What a game is
 
@@ -20,7 +22,7 @@ Sources of truth: `src/lib/games/` (`types.ts`, `registry.ts`, `pof.ts`, `gtai.t
 | `title` | Display name. |
 | `canonProfiles` | The canon profiles whose entities belong to this game. The **first** is the profile new entities are authored under (`authoringProfileOf`). |
 | `manifest` | Which pipelines the game uses: `'all'` (PoF) or a list of `ManifestEntry`. |
-| `engine` | `{ kind: 'ue5', root: string \| null }`, `{ kind: 'godot', version, root: string \| null }` (a locked non-UE engine; PoF's bridge is UE-only, so engine-bound acceptance defers with an adapter-missing reason) or `{ kind: 'undecided' }`. |
+| `engine` | `{ kind: 'ue5', root: string \| null }`, `{ kind: 'godot', version, root: string \| null }` (a locked non-UE engine; `root` is the game's own repo relative to the PoF repo root. L2 reads its evidence, see "Engine evidence (Godot)"; the runtime tiers are UE-only and defer with an adapter-missing reason) or `{ kind: 'undecided' }`. |
 | `designDir` | Repo-relative folder holding the game's versioned design truth (`games/gtai`). |
 
 Games are registered in code (`GAMES` in `registry.ts`), not in the DB. The registry is pure (no Node
@@ -87,7 +89,7 @@ This convention applies once, everywhere in the games layer.
 |------|---------|
 | `pof` | `resolveUeRoot()`, the existing chain: `POF_UE_ROOT`, else the default PoF UE project. |
 | engine `undecided` | `null` |
-| engine `godot` (gtai, locked 2026-11-02) | `null`; `unboundReason` names the missing Godot adapter |
+| engine `godot` (gtai, locked 2026-11-02) | `null`; a godot game's L2 reads its own repo through `gameRootFor` instead (next section), and `unboundReason` names the runtime tiers that still have no Godot adapter |
 | `ue5` with `root: null` (other than pof) | `null` |
 | `ue5` with a root | that root if it exists on disk, else `null` |
 
@@ -97,11 +99,83 @@ graded against PoF's UE root, because that would grade one game against another 
 
 Wired seam: the L2 static sweep. `verifyStaticAll` takes an optional `entityGame` dep
 (`entityGameFor` → `gameOfEntity` of the seeded/persisted entity). A pof row reads the sweep's one
-`resolveUeRoot()` exactly as before. Any other game reads its own binding, resolved once per sweep, and
-an unbound game short-circuits to `unboundStaticVerdict` without running a checker. `staticVerdictFor`
+`resolveUeRoot()` exactly as before. Any other UE game reads its own binding, resolved once per sweep, and
+an unbound game short-circuits to `unboundStaticVerdict` without running a checker. A godot game never runs
+the UE checkers; its L2 comes from evidence (next section). `staticVerdictFor`
 (which the packaging sweep folds in) resolves the root the same way. Not yet game-aware: the packaging
 sweep's own disk check (`packageArtifacts.ts`), the L3/L4 drain and `audio-import-preflight`. They
 still read `resolveUeRoot()` directly.
+
+## Engine evidence (Godot)
+
+PoF's engine bridge is UE-only. For a game on Godot (gtai), the game writes its own run results as files
+and PoF reads them: the `pof.godot-evidence/1` contract (spark `gtai-phase-2`, WP2). PoF never observes
+the run, so every file is dated against the game repo's HEAD. Sources: `src/lib/games/gameRoot.ts`,
+`src/lib/games/godot/evidenceTypes.ts`, `src/lib/games/godot/readEvidence.ts`, the godot branch of
+`staticVerify.ts`, `src/lib/harness/godot-gates.ts`.
+
+**Game root** (`gameRootFor(id)`, server-only). `POF_GAME_ROOT_<ID>` (id uppercased, `-` → `_`) wins when
+set, and is authoritative: a set value that is not on disk resolves to `null` rather than falling back,
+so a typo never grades a different checkout. Otherwise a godot game's `engine.root` (gtai: `'../gtai'`) is
+resolved against the PoF repo root (`POF_GAMES_ROOT`, else `cwd`). Neither on disk → `null` = unbound, and
+the L2 verdict defers with `noGameRootReason(id)` ("no game root for gtai (Godot 4.7.2): ..."). The Game
+home's engine fact still reads `adapter-missing` (it is a pure view and cannot see the disk).
+
+**Location.** `<gameRoot>/build/evidence/<kind>.json`; frames in `<gameRoot>/build/evidence/frames/`.
+`build/` is git-ignored in the game repo.
+
+**Envelope.**
+
+| Field | Type |
+|-------|------|
+| `schema` | `'pof.godot-evidence/1'` |
+| `kind` | `'lint' \| 'unit-tests' \| 'scenario-tests' \| 'parity' \| 'selftest' \| 'bench' \| 'export-audit' \| 'achievements'` |
+| `gameId` | the registry id (`'gtai'`) |
+| `commit` | full SHA of the game repo HEAD at run time |
+| `builtAt` | ISO timestamp |
+| `godotVersion` | string |
+| `status` | `'pass' \| 'fail'` |
+| `summary` | string |
+| `counts?` | `{ passed, failed, skipped }` numbers |
+| `metrics?` | `Record<string, number>`; bench keys `p99CpuMs`, `low1Fps`, `worstSwapMs`, `worstFrameMs` |
+| `artifacts?` | paths relative to the evidence dir |
+
+Optional keys are omitted, never `null`; a `null` optional key is a malformed envelope.
+
+**Verdict** (`readGodotEvidence(root, kind)`; the first matching row wins):
+
+| Condition | Verdict |
+|-----------|---------|
+| file absent | `deferred`: "no evidence yet" |
+| unparseable; schema, kind or gameId mismatch; a required field missing; an optional key `null` | `fail` |
+| the game HEAD cannot be read (`git -C <root> rev-parse HEAD` failed) | `deferred`, the reason says so |
+| `commit` ≠ the game HEAD | `deferred`: "stale: evidence from <sha7>, HEAD <sha7>" |
+| `status: 'fail'` | `fail` |
+| otherwise | `pass` |
+
+**L2 for a godot game.** `staticVerdictForGame` reads the `lint` and `unit-tests` evidence for any step
+that declares static checks: both pass → `pass`; either fails → `fail`; otherwise `deferred`, the reason
+naming each kind that is not a pass (`lint: no evidence yet; unit-tests: ...`). A sweep resolves the root
+once per game and reads each kind once. `contractsCheckers.ts` (the contracts `In-game` step's selftest
+file evidence) is a separate reader and is unchanged.
+
+**Harness gates.** `VerificationGate.type` gains `'godot-test'` (judged by `unit-tests` evidence) and
+`'godot-export'` (judged by `export-audit` evidence), with the gate fields `game` and `script`
+(`createGodotGate(type, game, { script | command })`). `verify()` runs `"<POF_GODOT_BIN>" --headless --path
+"<root>" -s <script>` (or the gate's `command`) in the game root, then reads the evidence file:
+
+| Outcome | Gate result |
+|---------|-------------|
+| no `POF_GODOT_BIN`, no `game`, no game root, or neither command nor script | `unverifiable` (nothing runs) |
+| evidence `fail` (including malformed) | fail |
+| evidence `pass`, `builtAt` not before the run start, exit 0 | pass |
+| evidence absent, stale or HEAD unknown; pass but older than the run; pass with a non-zero exit | `unverifiable` |
+
+`checkSuccessReachable` treats a required godot gate that cannot plan as blocking, and the change router
+answers from `RouterEnv.hasGodotEnv`. A godot gate judges the game repo, which no change class covers, so
+it never covers a PoF path class.
+
+**Environment.** `POF_GODOT_BIN` (the Godot executable) and `POF_GAME_ROOT_<ID>` (the game root override).
 
 ## The authored-provenance door
 
@@ -145,7 +219,9 @@ art or balance law. Rules that bind to PoF's ARPG runtime classes (`char-config-
    `gtaiManifest.test.ts`.
 5. Create `games/<id>/README.md` (the versioned design truth: pitch, canon, entities).
 6. When the engine project exists, set `engine: { kind: 'ue5', root }`. Acceptance then reads that root,
-   and `ueRootForGame` returns it while it exists on disk.
+   and `ueRootForGame` returns it while it exists on disk. For a Godot game, set
+   `engine: { kind: 'godot', version, root }` and have the game write `pof.godot-evidence/1` files
+   (see "Engine evidence (Godot)").
 
 ## Active game in the UI
 

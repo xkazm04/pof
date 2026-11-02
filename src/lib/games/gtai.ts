@@ -4,9 +4,11 @@ import type { GameDef, ManifestEntry } from './types';
  * GTAI: Uprising — a top-down open-city crime sandbox in the GTA 2 mould: a rogue factory robot takes
  * hitman contracts from underground robot bosses, steals and drives vehicles, causes mayhem, and
  * answers to police wanted heat. About 5 hours, Steam. The engine is **Godot 4.7.2**, locked by the owner on
- * 2026-11-02 after the overnight UE/Godot/Unity spike (games/gtai/STATE.md). PoF's engine bridge is UE-only,
- * so every engine-bound acceptance for a gtai entity defers with the adapter-missing reason
- * (`ueBinding.ts`) until a Godot adapter exists. `root` stays null until the game's Godot project exists.
+ * 2026-11-02 after the overnight UE/Godot/Unity spike (games/gtai/STATE.md). `root` is the game's own repo,
+ * resolved against the PoF repo root (`../gtai`, a sibling checkout of PoF); `POF_GAME_ROOT_GTAI`
+ * overrides it (`gameRoot.ts`). L2 static verify reads the game-written `pof.godot-evidence/1` files there
+ * (`lint` + `unit-tests`); a root that is not on disk defers as unbound. The runtime tiers (L3/L4 drain,
+ * packaging) are still UE-only and defer with the adapter reason (`ueBinding.ts`).
  *
  * The manifest classifies every registered pipeline (checked against each pipeline's step labels,
  * not only the scout's table): `reuse` = genre-neutral as-is, `reskin` = reworkable for the genre
@@ -79,6 +81,6 @@ export const GTAI_GAME: GameDef = {
   title: 'GTAI: Uprising',
   canonProfiles: ['gtai'],
   manifest: GTAI_MANIFEST,
-  engine: { kind: 'godot', version: '4.7.2', root: null },
+  engine: { kind: 'godot', version: '4.7.2', root: '../gtai' },
   designDir: 'games/gtai',
 };

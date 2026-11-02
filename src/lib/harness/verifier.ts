@@ -4,6 +4,7 @@
  * Gate types `verify()` actually dispatches on (see the branch chain there):
  * - command gates: typecheck / lint / test / build / playtest / custom
  * - UE5: `ue-compile` (UBT), `ue-test` (abslog-judged), `ue-visual` (game-runs)
+ * - Godot: `godot-test` / `godot-export` (judged by the game-written evidence file; `godot-gates.ts`)
  * - `visual`: the Playwright webapp capture
  *
  * A working-tree cleanliness gate was described here and implemented as
@@ -27,6 +28,7 @@ import type {
 import { runVisualGate, createVisualGate } from './visual-gate';
 import { detectUeGates, deriveUeTestCommand, parseAutomationLog, resolveUeEnv, type UeGateOptions } from './ue-gates';
 import { runUeVisualGate, createUeVisualGate } from './ue-visual-gate';
+import { isGodotGate, planGodotGate, runGodotGate } from './godot-gates';
 
 // ── Gate Execution ──────────────────────────────────────────────────────────
 
@@ -295,9 +297,11 @@ async function runUeTestGate(
  * so a static answer would be a guess. Everything else needs a command; a
  * required `ue-test` additionally needs the UE env to derive one.
  */
-function gateCannotVerify(gate: VerificationGate, hasUeEnv: boolean): boolean {
+function gateCannotVerify(gate: VerificationGate, hasUeEnv: boolean, godotReady: (g: VerificationGate) => boolean): boolean {
   if (gate.type === 'visual' || gate.type === 'ue-visual') return false;
   if (gate.type === 'ue-test') return !hasUeEnv;
+  // A godot gate needs POF_GODOT_BIN, a game root on disk and a command or script, not just a command.
+  if (isGodotGate(gate)) return !godotReady(gate);
   return !gate.command;
 }
 
@@ -324,12 +328,13 @@ export interface SuccessReachability {
 export function checkSuccessReachable(
   gates: VerificationGate[],
   passRateBasis: 'verified' | 'self-reported',
-  opts: { hasUeEnv?: boolean } = {},
+  opts: { hasUeEnv?: boolean; godotReady?: (gate: VerificationGate) => boolean } = {},
 ): SuccessReachability {
   if (passRateBasis !== 'verified') return { reachable: true, blockingGates: [] };
   const hasUeEnv = opts.hasUeEnv ?? resolveUeEnv() !== null;
+  const godotReady = opts.godotReady ?? ((g: VerificationGate) => planGodotGate(g).ok);
   const blockingGates = gates
-    .filter(g => g.required && gateCannotVerify(g, hasUeEnv))
+    .filter(g => g.required && gateCannotVerify(g, hasUeEnv, godotReady))
     .map(g => g.name);
   if (blockingGates.length === 0) return { reachable: true, blockingGates: [] };
   return {
@@ -338,9 +343,10 @@ export function checkSuccessReachable(
     reason:
       `Success is UNREACHABLE as configured: passRateBasis 'verified' only counts a feature when every `
       + `required gate passes, but required gate(s) [${blockingGates.join(', ')}] cannot verify `
-      + '(no command configured, or no UE env for a UE gate). The verified pass-rate will stay at 0%, so the loop '
-      + 'will run every iteration and stop only at the budget cap. Fix: configure the gate command '
-      + '(POF_UE_EDITOR_CMD + POF_UE_UPROJECT for UE gates), drop the gate\'s `required` flag, '
+      + '(no command configured, no UE env for a UE gate, or no Godot env/game root for a Godot gate). The verified '
+      + 'pass-rate will stay at 0%, so the loop will run every iteration and stop only at the budget cap. Fix: configure '
+      + 'the gate command (POF_UE_EDITOR_CMD + POF_UE_UPROJECT for UE gates; POF_GODOT_BIN + POF_GAME_ROOT_<ID> for '
+      + 'Godot gates), drop the gate\'s `required` flag, '
       + "or set passRateBasis:'self-reported' to score on the executor's own reports.",
   };
 }
@@ -389,6 +395,9 @@ export async function verify(
       results.push(await runUeCompileGate(gate, projectPath));
     } else if (gate.type === 'ue-test') {
       results.push(await runUeTestGate(gate, projectPath, statePath, iteration));
+    } else if (isGodotGate(gate)) {
+      // Runs in the GAME's repo (gameRootFor), not projectPath; judged by the evidence file it wrote.
+      results.push(await runGodotGate(gate, { run: (command, cwd) => runCommand(command, cwd, 30 * 60 * 1000) }));
     } else if (gate.type === 'ue-visual') {
       if (!statePath) {
         // No statePath → nowhere to store the frame; report unverifiable, never a pass.
