@@ -3,7 +3,7 @@
 One line per entry, append-only, newest last. This file is the cross-session
 memory for parallel Claude sessions working in this repo: **key decisions,
 deliveries, and reusable conventions only** — never logs, never file dumps.
-Cap: at most 200 ENTRY lines (the `- [date] [area] KIND:` lines below; this header
+Cap: at most 300 ENTRY lines (the `- [date] [area] KIND:` lines below; this header
 does not count). When it grows past that, run `node scripts/fleet-memory-cap.mjs --prune`:
 it moves the oldest DELIVERED lines, verbatim, to `.claude/fleet-memory-archive.md` — it
 never deletes them, and never touches a DECISION or CONVENTION line (those outlive

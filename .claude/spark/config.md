@@ -58,7 +58,7 @@ Declared capabilities come from `package.json` scripts, not from another repo's 
   Never fake one.
 - **fleet-memory is Director-only during a wave.** Builders report their one-line DELIVERED in their
   final report; if every builder spends the quota the Director has none left, and pruning at the
-  ~200-line cap can delete a sibling's fresh line.
+  ~300-line cap can delete a sibling's fresh line.
 
 ## Repo law
 

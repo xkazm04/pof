@@ -36,7 +36,7 @@ Rules for every session:
    plus a CONVENTION only if you established a genuinely reusable pattern.
 3. **Never** paste logs, diffs, or file contents into it; never rewrite or
    delete other sessions' lines. The one exception is the cap: the file holds
-   at most 200 **entries** (`- [date] [area] KIND:` lines; the header does not
+   at most 300 **entries** (`- [date] [area] KIND:` lines; the header does not
    count). Past that, `node scripts/fleet-memory-cap.mjs --prune` moves the
    oldest DELIVERED lines verbatim to `.claude/fleet-memory-archive.md` (append-only,
    nothing is lost). DECISION and CONVENTION lines are never pruned; if they alone
