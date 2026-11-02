@@ -55,6 +55,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
     3. **D5 Inked Grime is the possible step after D4.**
     4. **The backup if D4 fails is D3 Clear Line.** D2 Linocut is rejected.
   - **Tech-stack gate:** the large-map stress test and the core world rendering and simulation technique run now, in parallel. This is the only blocker before going full steam into the Godot project (gate criteria: `research/godot-city-scale.md` section 4).
+- 2026-11-02. **Engineering standard written: `STANDARDS.md` binds Phase 2.** It holds 187 numbered rules in 19 sections (GIT through LEG), the performance budgets, the spike gap table, the day-one repo checklist and 13 owner questions. It is built from the four reports in `research/standards/`. The spike is evidence, not product: the real game starts as a fresh repo set up per section 22, and a deviation is a dated line in `docs/decisions.md`, never a silent change.
 
 ## PoF gaps found by the game
 
