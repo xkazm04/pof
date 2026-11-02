@@ -1,0 +1,4 @@
+Generated one image using the built-in tool with the prompt from `PROMPT.gunsmith.md` and copied it to `./gunsmith.png`.
+
+Original path:
+`C:\Users\kazda\.codex\generated_images\01a19d73-0fff-71a1-9228-1cf8a11a73bb\exec-4949ed2a-3ebe-485c-9846-de7de9f45913.png`

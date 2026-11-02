@@ -1,0 +1,4 @@
+Created one image with built-in imagegen and saved it as [nurse.png](nurse.png).
+
+Original path:
+`C:\Users\kazda\.codex\generated_images\01a19d71-7f76-77d3-90cd-f58076f52379\exec-65c83a7c-c5a6-4adb-9b9f-6b7143e45e9c.png`

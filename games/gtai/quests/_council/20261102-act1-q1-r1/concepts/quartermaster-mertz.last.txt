@@ -1,0 +1,1 @@
+The built-in image generator rejected the request with a `violence` safety flag. No image was produced, so `quartermaster-mertz.png` was not created and there is no original path to print.
