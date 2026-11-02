@@ -200,3 +200,10 @@ Design truth is in `pitch.md`; this file is *where we are*.
     - The first batch's 165-440 ms stalls (with no streaming involved) were never root-caused.
     - Deck is a proxy only.
   - Before the port: profile the stall on an idle machine (WPR or PIX), add a crowded-drive scenario, test on real Deck hardware, add the police flow field.
+- **D1 Riso Refined: done, it is the default look** (`evolve/project` master, 7 commits; `EVOLVE.md` "D1 round"; `evidence/d1/`). The selftest and missiontest pass (87.65 s, unchanged).
+  - Flat ink tint with a light 3 px screen; `--look=riso` keeps the old print.
+  - The colour doctrine is applied: 47 world sprites lost their vermilion. Colour stays only on cops, danger cues, pickups, souls and Rivet's collar.
+  - Rivet prints as a "sticker" at 32 px/m (grey limbs, cream rim). The host checked `rivet-3x-32ppm.png`: he now reads as a robot, at least on par with the old sprite. He is still crab-wide.
+  - The arena camera (`assets/arenas.json`) eases to about 64 px/m and fits both fighters (down to about 44). King is ported into the yard duel (`--king` / F4).
+  - Host read of the ladder: the frame is calmer and cleaner, but the mid-grey asphalt now dominates and the frame reads slightly flat. That is a tuning point for the next art pass toward D4.
+  - The C: drive hit 0 bytes mid-session (outside cause; 269 GB free after). Godot's cache was repaired, and `tools/shot.sh` now cleans its frame captures.
