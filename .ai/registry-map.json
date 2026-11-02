@@ -11867,7 +11867,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:124 The context only sends data to the app's own local relative API routes (module-scan import GET/PATCH), and its 'telemetry' is a local genre-pattern scan of the UE project. I searched both directories for sentry, beforeSend, redact, scrub and sendDefaultPii and got no hits. package.json has no hosted error-tracker or analytics client either, and src/lib/logger.ts has no fetch/http/send transport. So no record here passes to an outside custodian, which is the subject's precondition.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:291ed63388cf9602",
+          "evaluatedRevision": 1
         },
         {
           "subject": "supply-chain",

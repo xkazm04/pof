@@ -17828,6 +17828,32 @@
           "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:49 The selector exposes the module's trace pass (combat-trace for arpg-combat, constants.ts PASS_ICONS) as an optional fifth pass. Only one module defines a trace, and that is a lib-level choice."
         }
       ]
+    },
+    "80cab220-4eac-4a25-8873-f1c42c257174/telemetry-pii-redaction": {
+      "context": "core-engine-scan-telemetry",
+      "subject": "telemetry-pii-redaction",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:12:37.837Z",
+      "worker": "b9191e61-2d98-40ef-945d-87aac567a21b",
+      "techniques": [
+        {
+          "technique": "emit-site-inventory",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:73 Only emit site is a same-origin local API read; no outbound telemetry transport to inventory."
+        },
+        {
+          "technique": "hook-coverage-gaps",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:78 Failures go to the local logger, which has no remote transport; no scrubbing callback or capture site exists to cover."
+        },
+        {
+          "technique": "denylist-plus-pattern-pass",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:25 'Telemetry' here means a local project genre scan, not an outbound record, so there's no scrub function to judge."
+        }
+      ]
     }
   }
 }
