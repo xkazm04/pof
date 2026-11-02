@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "69830749-a1b7-4334-90ea-3e59e4d14c63",
+ "subject": "subsystem-review-doctrine",
+ "evaluatedAt": "2026-11-02T22:09:35.301277+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "subsystem-review-doctrine",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:350 The pass selector lets a user deselect the ground-truth pass and still run structure/quality/performance (which cli-task-handlers.ts just concatenates per selected pass), so later passes can conclude on premises nothing confirmed, and there is no 'not run, blocked on premise' state.",
+   "techniques": [
+    {
+     "technique": "four-pass-ordering",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:350 Any non-empty subset of passes may run. Ground-truth is not a gating prerequisite, and passes run as independent prompts with no entitlement chain or blocked state."
+    },
+    {
+     "technique": "ground-truth-pass-before-proposals",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:273 A ground-truth pass exists and is on by default (lib prompt has identity/members/observable behaviour/refusal). But the finding schema only allows a findings array, and a refusal ([]) renders as an empty/clean list here. The refusal is never reported as a result."
+    },
+    {
+     "technique": "regression-diff-new-persisting-resolved",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/ScanDelta.tsx:90 Three buckets plus notRescanned scope restriction and line-free matching are realized. But 'cleared' does not split resolved-by-deletion from fixed, the buckets are totals with no severity breakdown, and nothing promotes findings that persist across 3 runs."
+    },
+    {
+     "technique": "severity-by-consequence",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/constants.ts:19 Effort is shown as its own axis with wall-clock bands (~5m/~30m/~2h/>2h) beside severity. Severity is shown as a distribution, not averaged (index.tsx summary stats). The impact-based severity ladder lives in the lib prompt."
+    },
+    {
+     "technique": "trace-one-interaction-end-to-end",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:49 The selector exposes the module's trace pass (combat-trace for arpg-combat, constants.ts PASS_ICONS) as an optional fifth pass. Only one module defines a trace, and that is a lib-level choice."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-02T22:09:35.301277+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "subsystem-review-doctrine"
+   ],
+   "techniques": [
+    "four-pass-ordering",
+    "ground-truth-pass-before-proposals",
+    "regression-diff-new-persisting-resolved",
+    "severity-by-consequence",
+    "trace-one-interaction-end-to-end"
+   ],
+   "deviations": 1,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -11965,7 +11965,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:350 The pass selector lets a user deselect the ground-truth pass and still run structure/quality/performance (which cli-task-handlers.ts just concatenates per selected pass), so later passes can conclude on premises nothing confirmed, and there is no 'not run, blocked on premise' state.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:4237af459a590ced",
+          "evaluatedRevision": 2
         },
         {
           "subject": "observability-telemetry",

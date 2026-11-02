@@ -17792,6 +17792,42 @@
           "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:29 Renders happen per user op. There is no event-rate stream to throttle."
         }
       ]
+    },
+    "80cab220-4eac-4a25-8873-f1c42c257174/subsystem-review-doctrine": {
+      "context": "core-engine-scan-telemetry",
+      "subject": "subsystem-review-doctrine",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:09:35.301Z",
+      "worker": "69830749-a1b7-4334-90ea-3e59e4d14c63",
+      "techniques": [
+        {
+          "technique": "four-pass-ordering",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:350 Any non-empty subset of passes may run. Ground-truth is not a gating prerequisite, and passes run as independent prompts with no entitlement chain or blocked state."
+        },
+        {
+          "technique": "ground-truth-pass-before-proposals",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:273 A ground-truth pass exists and is on by default (lib prompt has identity/members/observable behaviour/refusal). But the finding schema only allows a findings array, and a refusal ([]) renders as an empty/clean list here. The refusal is never reported as a result."
+        },
+        {
+          "technique": "regression-diff-new-persisting-resolved",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/ScanTab/ScanDelta.tsx:90 Three buckets plus notRescanned scope restriction and line-free matching are realized. But 'cleared' does not split resolved-by-deletion from fixed, the buckets are totals with no severity breakdown, and nothing promotes findings that persist across 3 runs."
+        },
+        {
+          "technique": "severity-by-consequence",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/ScanTab/constants.ts:19 Effort is shown as its own axis with wall-clock bands (~5m/~30m/~2h/>2h) beside severity. Severity is shown as a distribution, not averaged (index.tsx summary stats). The impact-based severity ladder lives in the lib prompt."
+        },
+        {
+          "technique": "trace-one-interaction-end-to-end",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:49 The selector exposes the module's trace pass (combat-trace for arpg-combat, constants.ts PASS_ICONS) as an optional fifth pass. Only one module defines a trace, and that is a lib-level choice."
+        }
+      ]
     }
   }
 }
