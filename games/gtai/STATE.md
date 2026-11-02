@@ -325,3 +325,11 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - A 60 s replay that is bit-identical and frame-rate invariant, and catches a planted change. 45 tests pass.
   - **F-06 (the city port) launched** in lane A, branch `f06-city`. It adds the `scenario-tests`, `parity` and `bench` evidence kinds.
   - **Lane B** (F-08/F-09 D4 art) is still running.
+- **F-08 and F-09 D4 art: merged into rtai main and pushed** (`b894191`, CI green).
+  - Assets: 10 roofs, 13 ground tiles (96 px/m, 3 variants each), 20 props, and D4 parts for Rivet, the cop (patrol and riot) and the pedestrian (2 torso variants). Plus the `look_d4` print-pass shaders.
+  - Cost: 20 Codex images, none rejected. 98 provenance lines; masters in `C:\Users\kazda\kiro\gtai-masters\d4\`, with no backup yet.
+  - Gates: the crop tests against D1 pass.
+  - **Owner review: the roofs and Rivet are approved. The streets miss the target**: light lavender wash, where the target has charcoal streets against cream. Follow-up **F-08b** (lane B, branch `f08b-streets`) darkens the asphalt, fixes the manhole outlines and adds roof hatching, with crops against the target frame.
+  - Texel decision (F-13 input): one district is 67.8 MB at 80-96 px/m against 143 MB at 128 px/m. Codex holds only about 84 px/m of real detail, so 128 px/m would be an upscale.
+- **rtai repo fix:** `core.hooksPath=.githooks` had bypassed the git-lfs hooks. They are now committed in `.githooks` (`10caa20`), and 91 LFS objects (23 MB) uploaded.
+- **Standing permission (owner):** push rtai `main` after each verified merge. Never force-push. PoF and the registry stay no-push.
