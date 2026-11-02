@@ -145,3 +145,8 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Cost: 15 images using contact sheets, no limit hit.
   - The only code change is one line (mipmaps in `district.gd`). The style needs flat ink fills, so prompt for flat fills from the start next time.
   - Next round: bold single-glyph pickups, asphalt variants, the 3 rejected props, and effects as their own job.
+- **Camera (owner, 2026-11-02):** dual zoom, 48 px/m in a vehicle and 32 px/m on foot, as two swappable constants. The host flagged that the old build zoomed out in cars, as GTA 2 did; frames of both mappings go to the owner.
+- **Round 2 running, three Codex agents:**
+  1. Environment in `evolve/project`: the dual camera, flat-fill asphalt variants, bold pickup glyphs, the 3 rejected props.
+  2. Characters: King's torso, bind sheets and a stress rerun in `cutout`; then cops and pedestrians as rigs in the game (worktree `evolve/project-chars`, branch `chars`).
+  3. The art-direction study: 4-5 directions from "evolve the current riso" to "chase the Rivet concept", with mocks, parts tests and feasibility. The board is `art-direction/directions-v2/index.html`, with an optional shader prototype in branch `artdir`.
