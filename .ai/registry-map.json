@@ -1844,7 +1844,11 @@
           "revision": 2,
           "changedAt": "2026-08-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/GeneratedFilesPanel.tsx:35 The panel calls a run 'declared-and-defined' just because the agent reported a file list, even when the build failed, and it ranks that rung below 'compiles'; the standard ranks it above, and nothing here or in CodegenReport reads the emitted .h/.cpp back to check that both sides agree, so the panel claims a rung it never proved.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:3471f66cad0688ed",
+          "evaluatedRevision": 2
         },
         {
           "subject": "untrusted-extension-host",

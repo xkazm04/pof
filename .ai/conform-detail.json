@@ -18009,6 +18009,43 @@
         "at": "2026-11-02T22:29:17.795461+00:00",
         "reason": "reviewer (sonnet): The not-applicable anchor (write/route.ts:8) is only a destructuring of the request body and does not show that no vendored upstream tree or patch stack exists; the \"first-party\" claim is not supported by the line. One technique anchor (ue5-source/parse/route.ts) lies outside this context's file lis"
       }
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/visual-script-to-code-transpilation": {
+      "context": "ability-blueprint",
+      "subject": "visual-script-to-code-transpilation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:33:31.831Z",
+      "worker": "9bc7344a-f866-4f02-8dae-18b97bf40462",
+      "techniques": [
+        {
+          "technique": "declaration-definition-parity",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/GeneratedFilesPanel.tsx:35 There is no step that reads the output back and asserts parity (procedure step 3). CodegenReport only carries filesWritten/buildOk/seedRan, yet a failed build is labelled 'declared-and-defined'. On the plus side, the class name and the file stem come from one sanitiser (codegen.ts:57), so the one-source half of the identifier rule is met."
+        },
+        {
+          "technique": "graph-type-to-code-type-mapping",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/codegen.ts:107 An empty or unmappable attribute falls back to an invented name and emits UARPGAttributeSet::GetUnknownAttribute(), which does not exist. The shared renderModifierInfo's null→TODO refusal is bypassed, and the preview disagrees with the preflight's 'becomes // TODO: unknown attribute' contract. The DURATION_POLICY Record at line 62 is a total enum map, but the attribute entry is the fallback the technique forbids. Also, sanitizeIdentifier (line 43) strips characters without a warning."
+        },
+        {
+          "technique": "structural-round-trip-diff",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/CodePreview.tsx:43 The only comparison the context offers is a line-oriented LCS text diff between two preview renderings. Nothing compares the retained spec, which is still the authority, with the generated C++ files in the UE project, so drift after an agent writes or someone hand-edits those files cannot be detected."
+        },
+        {
+          "technique": "plain-language-jargon-layer",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/CodePreview.tsx:107 The emitted C++ (UPROPERTY(BlueprintReadOnly…), DurationPolicy, FGameplayModifierInfo) is shown as raw highlighted HTML with no inline term layer. The repo already has a single-sourced glossary with a BlueprintReadOnly entry (src/lib/blueprint-jargon.ts via JargonTerm/TermChip), but grep finds no use of it under sub_ability/. Partly met: the preflight messages are designer-worded, structured findings."
+        },
+        {
+          "technique": "event-override-signature-resolution",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/types.ts:27 The wiring graph's node kinds are attributes, effects and tag rules only. There are no event nodes to resolve against an owner type. The PreAttributeChange/PostGameplayEffectExecute overrides, which do carry `override`, live in src/lib/gas-codegen.ts, outside this context."
+        }
+      ],
+      "registryProposal": "The golden path notes that spec-to-code generation (no source graph) shares the ladder but has 'no source graph to diff against'. This context shows a middle case the corpus does not address: the GUI spec is retained and authoritative, while the code is written by an LLM agent into the engine tree. A spec-to-on-disk-code drift check belongs in the structural-round-trip-diff technique, which currently assumes a graph export."
     }
   }
 }
