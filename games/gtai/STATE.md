@@ -473,4 +473,4 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 - **Rules:** evidence in `C:\Users\kazda\kiro\gtai-masters\night\<lane>\`, with a ladder per lane. Branch-only commits, with no push or merge; the Director merges with the owner in the morning.
 - **Morning:** `/gta morning`, which runs `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-night` and reads `SCOREBOARD.md`, each lane's `REPORT.md` and its ladders.
 - PC sleep and hibernate are off on AC. Disk: 242 GB free.
-- Note: another session runs a `q1-collect-call` worktree on rtai (`gtai-wt\q1-collect-call`); leave it alone.
+- Owner (21:20): no other session works on RTAI or PoF, so the `q1-collect-call` worktree and stray WIP are stale and can be ignored. Never be limited by API credit: the subscription fallback is automatic. The PoF quest-vocabulary guard is unblocked (no coordination needed) and queued after the night.
