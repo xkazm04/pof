@@ -400,3 +400,24 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 - Dr. Ingrid Kilohm (`scientist`): Act 1 · Collect Call. Scans his "crowded" head; makes him promise to come to her first.
 - Quartermaster Duane Mertz (`quartermaster-mertz`): Act 1 · Collect Call. Boss at Dock 9; dies with his Robo-tazer.
 - Dock 9 Contractor (`dock-guard`): Act 1 · Collect Call. Weak assault-rifle guards, 6 waves.
+
+### 2026-11-02 night: plan (quest 1 build, unattended)
+- **Owner:** build "Collect Call" tonight, unattended, the whole quest end to end.
+- **Lane:** `games/gtai/quest/night.mjs` (new; modelled on `spike.mjs`).
+  - Lane folder: `C:\Users\kazda\kiro\gtai-night\q1-collect-call\`, holding `BRIEF.md`, `JOURNAL.md`, `status.json`, `logs/`, `evidence/` and `REPORT.md`.
+  - It builds in worktree `kiro/gtai-wt/q1-collect-call`, branch `q1-collect-call`. It never merges and never touches the PoF repo.
+- **Gate:** the lane waits until F-12 (the quest runtime port, a sibling lane in `gtai-wt/f12-quest`) is on `kiro/gtai` main, then branches from main.
+  - **If F-12 has not merged by 03:00, the lane stops as BLOCKED.** It never builds on unfinished F-12 work.
+- **Launched 20:03** (PID 39860), state `waiting-gate`, Opus 5.5 at high effort, until 08:00.
+- **Billing:** subscription. The `.env` API key is drained ("Credit balance is too low", smoke-tested 20:02), so the api-first rule falls through to the subscription.
+- **Preflight:** 236 GB free; AC standby set to never.
+- **Done criteria in the brief:**
+  - a headless scenario from the start to "paid";
+  - unit tests for the payphone heat rule, the Robo-tazer, the waves and the payout;
+  - one frame per beat (opened and described), plus `selftest.json`;
+  - lint and test green;
+  - `REPORT.md`.
+  - Placeholder art; no image generation tonight.
+- **Morning:**
+  - `node games/gtai/quest/night.mjs status --lane C:/Users/kazda/kiro/gtai-night/q1-collect-call`, then `/gta morning`.
+  - Copy `evidence/selftest.json` and a frame into `games/gtai/quests/collect-call/evidence/` and re-sync. The PoF In-game step then grades it.
