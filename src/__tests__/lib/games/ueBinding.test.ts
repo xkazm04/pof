@@ -44,7 +44,7 @@ describe('ueRootForGame', () => {
     expect(ueRootForGame('pof')).toBe(dir);
   });
 
-  it('gtai (engine undecided) → null, never PoF’s root', () => {
+  it('gtai (engine godot, no adapter) → null, never PoF’s root', () => {
     fake.gtaiEngine = null;
     expect(ueRootForGame('gtai')).toBeNull();
   });
@@ -65,7 +65,13 @@ describe('ueRootForGame', () => {
     fake.gtaiEngine = null;
   });
 
-  it('names the unbound reason per game', () => {
-    expect(unboundReason('gtai')).toBe('no engine project bound for game gtai');
+  it('a godot game → null: PoF has no Godot adapter, never PoF’s UE root', () => {
+    fake.gtaiEngine = { kind: 'godot', version: '4.7.2', root: dir };
+    expect(ueRootForGame('gtai')).toBeNull();
+    fake.gtaiEngine = null;
+  });
+
+  it('names the reason per game: gtai is locked on Godot, so the reason names the missing adapter', () => {
+    expect(unboundReason('gtai')).toBe("game gtai runs on Godot 4.7.2: PoF's engine bridge is UE-only (no Godot adapter yet)");
   });
 });

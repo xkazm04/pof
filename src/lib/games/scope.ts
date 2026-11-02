@@ -181,10 +181,13 @@ export type EngineState =
   | { kind: 'unbound' }
   | { kind: 'bound'; root: string }
   /** pof's `root: null` means "the existing server-side chain" (POF_UE_ROOT, else the default project). */
-  | { kind: 'project-default' };
+  | { kind: 'project-default' }
+  /** A locked engine PoF has no bridge for yet (UE-only today): engine-bound acceptance defers. */
+  | { kind: 'adapter-missing'; engine: 'godot'; version: string; root: string | null };
 
 export function engineStateOf(game: Pick<GameDef, 'id' | 'engine'>): EngineState {
   if (game.engine.kind === 'undecided') return { kind: 'undecided' };
+  if (game.engine.kind === 'godot') return { kind: 'adapter-missing', engine: 'godot', version: game.engine.version, root: game.engine.root };
   if (game.engine.root !== null) return { kind: 'bound', root: game.engine.root };
   return game.id === DEFAULT_GAME ? { kind: 'project-default' } : { kind: 'unbound' };
 }

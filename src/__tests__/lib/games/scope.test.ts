@@ -138,5 +138,7 @@ describe('Game home model', () => {
     expect(engineStateOf({ id: 'pof', engine: { kind: 'ue5', root: null } })).toEqual({ kind: 'project-default' });
     expect(engineStateOf({ id: 'gtai', engine: { kind: 'ue5', root: null } })).toEqual({ kind: 'unbound' });
     expect(engineStateOf({ id: 'gtai', engine: { kind: 'ue5', root: 'D:/GTAI' } })).toEqual({ kind: 'bound', root: 'D:/GTAI' });
+    expect(engineStateOf({ id: 'gtai', engine: { kind: 'godot', version: '4.7.2', root: null } }))
+      .toEqual({ kind: 'adapter-missing', engine: 'godot', version: '4.7.2', root: null });
   });
 });

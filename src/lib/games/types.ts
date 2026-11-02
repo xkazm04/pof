@@ -31,6 +31,9 @@ export interface ManifestEntry {
 
 export type GameEngine =
   | { kind: 'ue5'; root: string | null }
+  /** A locked non-UE engine. PoF's engine bridge (static verify, L3/L4 drain, packaging) is UE-only, so
+   *  engine-bound acceptance for such a game DEFERS with an adapter-missing reason until an adapter exists. */
+  | { kind: 'godot'; version: string; root: string | null }
   | { kind: 'undecided' };
 
 export interface GameDef {

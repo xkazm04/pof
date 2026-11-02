@@ -20,7 +20,7 @@ Sources of truth: `src/lib/games/` (`types.ts`, `registry.ts`, `pof.ts`, `gtai.t
 | `title` | Display name. |
 | `canonProfiles` | The canon profiles whose entities belong to this game. The **first** is the profile new entities are authored under (`authoringProfileOf`). |
 | `manifest` | Which pipelines the game uses: `'all'` (PoF) or a list of `ManifestEntry`. |
-| `engine` | `{ kind: 'ue5', root: string \| null }` or `{ kind: 'undecided' }`. |
+| `engine` | `{ kind: 'ue5', root: string \| null }`, `{ kind: 'godot', version, root: string \| null }` (a locked non-UE engine; PoF's bridge is UE-only, so engine-bound acceptance defers with an adapter-missing reason) or `{ kind: 'undecided' }`. |
 | `designDir` | Repo-relative folder holding the game's versioned design truth (`games/gtai`). |
 
 Games are registered in code (`GAMES` in `registry.ts`), not in the DB. The registry is pure (no Node
@@ -86,7 +86,8 @@ This convention applies once, everywhere in the games layer.
 | Game | Returns |
 |------|---------|
 | `pof` | `resolveUeRoot()`, the existing chain: `POF_UE_ROOT`, else the default PoF UE project. |
-| engine `undecided` (gtai today) | `null` |
+| engine `undecided` | `null` |
+| engine `godot` (gtai, locked 2026-11-02) | `null`; `unboundReason` names the missing Godot adapter |
 | `ue5` with `root: null` (other than pof) | `null` |
 | `ue5` with a root | that root if it exists on disk, else `null` |
 
@@ -184,7 +185,7 @@ declared") and readiness are separate columns. Readiness is the best reached run
 (`buildSwimlane` → `readinessOf`) over the game's rows, or "unmeasured", never R0. Planned rows read
 "not built". The strip shows the canon rule count (union of `rulesForProfile` over the game's profiles), the
 pending intake (`GET /api/games/<id>/intake`, or "intake unavailable (<reason>)" with retry), the engine
-(`engineStateOf`: undecided / unbound / bound root / pof's server-side project default), and declared
+(`engineStateOf`: undecided / unbound / bound root / pof's server-side project default / adapter-missing for a locked non-UE engine), and declared
 coverage as a `MeterBar`, shown only when some row declares a target.
 
 ## Pitch intake

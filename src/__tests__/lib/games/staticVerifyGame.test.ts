@@ -25,7 +25,7 @@ import type { GameId } from '@/lib/games/types';
 import { upsertEntity, deleteEntity } from '@/lib/catalog-db';
 import { codeSeededEntities } from '@/lib/catalog/seed';
 
-const REASON = 'no engine project bound for game gtai';
+const REASON = "game gtai runs on Godot 4.7.2: PoF's engine bridge is UE-only (no Godot adapter yet)";
 const pass = (l: string): AcceptanceResult => ({ label: l, tier: 'L2', status: 'pass', detail: 'present' });
 
 describe('verifyStaticAll per entity game', () => {

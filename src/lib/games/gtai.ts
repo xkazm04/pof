@@ -3,9 +3,10 @@ import type { GameDef, ManifestEntry } from './types';
 /**
  * GTAI: Uprising — a top-down open-city crime sandbox in the GTA 2 mould: a rogue factory robot takes
  * hitman contracts from underground robot bosses, steals and drives vehicles, causes mayhem, and
- * answers to police wanted heat. About 5 hours, Steam. The engine is chosen after the design contest
- * verdict, so it is `undecided` and every UE-bound acceptance for a gtai entity defers with that
- * reason (`ueBinding.ts`).
+ * answers to police wanted heat. About 5 hours, Steam. The engine is **Godot 4.7.2**, locked by the owner on
+ * 2026-11-02 after the overnight UE/Godot/Unity spike (games/gtai/STATE.md). PoF's engine bridge is UE-only,
+ * so every engine-bound acceptance for a gtai entity defers with the adapter-missing reason
+ * (`ueBinding.ts`) until a Godot adapter exists. `root` stays null until the game's Godot project exists.
  *
  * The manifest classifies every registered pipeline (checked against each pipeline's step labels,
  * not only the scout's table): `reuse` = genre-neutral as-is, `reskin` = reworkable for the genre
@@ -47,6 +48,7 @@ const GTAI_MANIFEST: readonly ManifestEntry[] = [
   { catalogId: 'save-points', fit: 'reuse' },
   { catalogId: 'tutorial-beats', fit: 'reuse' },
   { catalogId: 'achievements', fit: 'reuse', note: 'Steam achievements' },
+  { catalogId: 'story-arcs', fit: 'reuse', note: 'the campaign as pof.storygraph/1: contracts, the betrayal and the four souls as gated decisions' },
 
   // ── planned: genre pipelines the game needs that do not exist yet ──
   { catalogId: 'vehicles', fit: 'planned', note: 'stealable vehicles: top-down arcade handling, mass-based collision, damage states' },
@@ -77,6 +79,6 @@ export const GTAI_GAME: GameDef = {
   title: 'GTAI: Uprising',
   canonProfiles: ['gtai'],
   manifest: GTAI_MANIFEST,
-  engine: { kind: 'undecided' },
+  engine: { kind: 'godot', version: '4.7.2', root: null },
   designDir: 'games/gtai',
 };
