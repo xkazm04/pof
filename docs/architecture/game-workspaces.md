@@ -224,3 +224,53 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   design dir). It groups proposals by kind and shows each one with its pitch quote and payload
   (`DataTable`). It has accept/reject buttons and a confirmed "Accept all rules" (`ConfirmDialog`). Run is
   disabled, with the reason shown, while the pitch is a placeholder.
+
+## Quest loop (GTAI)
+
+`/gta --quest` takes one GTAI quest from brief to playable (spark `gta-quest-loop`). The wire contract is
+`src/lib/games/gtai-quest/types.ts`; read its absent-value header first.
+
+- **Flow.** A council of two seats (Claude, Grok) writes 2 variants each (`gtai.questProposal/1`): A in the
+  act's expected tone, B a deliberate swerve. PoF's guards pre-score all 4 paths. The owner fuses them in an
+  HTML artifact. The Director writes the package (`games/gtai/quests/<id>/quest.json`, `gtai.quest/1`), the
+  guards re-score it, and a Godot runtime plays it. A red guard blocks unless the package carries an
+  override for that guard with a non-blank reason (`assessQuest` in `assess.ts`).
+- **Campaign baseline** (`campaignBaseline.ts`). Pitch §2-4 as data: `GTAI_CAST` (the fourth soul is the
+  placeholder `soul-4`, never a named soul), `GTAI_ARC` (owner beats per act, `[owner]` or `[proposal]`),
+  and the campaign variables with their owning writer beats. `soul4_identity`, `betrayer` and
+  `act_antagonist_order` are protected open canon: declared with an **empty `writers`** list (the structural
+  validator accepts it), so no quest may write them.
+- **Story guard** (`storyGuard.ts`). `buildCampaignGraph(ledger)` emits `pof.storygraph/1` (project `gtai`,
+  graph `gtai-campaign`): an entry, one `container` per act, the owner beats, then each ledger quest as a
+  `contract` container (realises `contracts/<id>`), ordered by act, then id, with a same-act reader placed
+  after the quest whose `q_` variable it reads. A quest's writes ride its outgoing edge; its reads guard its
+  own entry edge. The empty-ledger baseline validates with zero errors (7 `VAR_SINGLETON` warns: each arc
+  flag is written once and read by no baseline node). `assessStory` codes: `PROTECTED_VAR_WRITE`,
+  `ARC_VAR_NOT_OWNED`, `UNKNOWN_VAR` (quests may only add `q_*` variables), `READS_FUTURE_STATE`,
+  `UNKNOWN_EXISTING_CHARACTER`, `NEW_CHARACTER_COLLIDES`, `NEW_CHARACTER_NO_DESIGN` (warn), plus
+  `GRAPH_<code>` for every error the validator raises with the design merged in that it did not raise
+  without it. A graph finding on a variable a direct code already flagged is not repeated.
+- **Economy guard** (`economyGuard.ts`) against `games/gtai/balance/quest-economy.json` (provisional; the
+  basis names the revision). Codes: `CASH_OUT_OF_BAND` (warn within 25% of the bound crossed, error beyond),
+  `HEAT_OVER_CEILING`, `ENEMIES_OVER_BUDGET`, `WAVES_OVER_BUDGET`, `TIMER_NOT_ALLOWED`, `NO_FAIL_STATE`,
+  `SOUL_UNLOCK_WRONG_ACT` (errors), `MINUTES_OUT_OF_BAND` (warn), and `CASH_VS_SOUL_UPGRADE` (info: the cash
+  as a fraction of the cheapest soul-upgrade tier, the sink context).
+- **Line guard** (`lineGuard.ts`). Structural, always measured: `LINE_NO_PURPOSE`, `LINE_UNKNOWN_SPEAKER`
+  (a quest character, `rivet`, or a soul voice from its own act on), `BEAT_UNKNOWN_LINE`, `DUPLICATE_LINE_ID`,
+  `LINE_REUSED_FROM_LEDGER`, `TOO_FEW_LINES` (< 6), `NO_VOICE_BIBLE` (error for existing, warn for new
+  speakers), `LINE_UNUSED` (warn) and `EDITORIAL_TELL` (warn). The tell patterns are **editorial**: nobody
+  measured them against human dialogue, so every such message starts `editorial (unmeasured):`. With a
+  cross-family judge report: `JUDGE_SAME_FAMILY`, `LINE_NOT_EARNED` (earned < 3), `VOICE_DRIFT` (warn),
+  `LINE_UNJUDGED` (warn). The basis says `structural + judge(<seat>)` or `structural only; judge unmeasured`.
+- **Uniqueness** (`uniqueness.ts`) against every other ledger quest: `DUPLICATE_SHAPE` (giver, verb and new
+  mechanic equal; `null` equals `null`), `DUPLICATE_TITLE`, `NEAR_DUPLICATE` and `MECHANIC_NOT_NEW` (warns).
+- **Unmeasured.** A guard that lacks its input reports `unmeasured`. It never blocks and never passes. Today
+  that is the economy guard with no table. A missing judge does not make the line guard unmeasured: it stays
+  green or red on the structural checks, and its basis says the judge did not run.
+- **Loaders** (`loadContext.ts`, plain node fs, also under `npx tsx`; not in the barrel). `loadLedger` reads
+  every `quests/<id>/quest.json` whose folder does not start with `_`, and logs and skips one that does not
+  parse. `loadQuestContext` adds the economy table (`null` when missing), the voice bibles (basenames of
+  `voices/*.md`) and the cast (`GTAI_CAST` plus every ledger package's characters). `loadProposals(runDir)`
+  reads `proposals.{claude,grok}.json`; a missing file means that seat produced nothing.
+- **Tests:** `src/__tests__/games/gtai-quest/` (one clean act1 fixture, one mutation per code; loaders run
+  against `os.tmpdir()`).
