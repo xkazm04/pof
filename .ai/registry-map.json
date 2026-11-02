@@ -23642,7 +23642,11 @@
           "revision": 8,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:32 This context is a synchronous grid painter. Its only producer boundary is a fire-and-forget onGenerate(config) callback plus an isGenerating boolean, so no incremental model output is consumed or rendered here. A search of all 11 files for ReadableStream, getReader, TextDecoder, EventSource and AbortController found nothing, and neither did a broader search for chunk, delta, token, abort and fetch(.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:f390cca5c416535b",
+          "evaluatedRevision": 8
         },
         {
           "subject": "spatial-audio-scene-authoring",

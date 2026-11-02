@@ -17756,6 +17756,42 @@
           "evidence": "src/components/modules/core-engine/sub_character/playground/PlaygroundTab.tsx:39 No yaw/slip/radius traces; feel comparison here is between character presets."
         }
       ]
+    },
+    "023f8e03-d83d-49d1-b740-04ecdd77362c/streaming-output": {
+      "context": "streaming-zone-planner",
+      "subject": "streaming-output",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:02:59.314Z",
+      "worker": "23268b6c-f39c-4855-9472-9bfc33f6a2c2",
+      "techniques": [
+        {
+          "technique": "stream-parsing",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:32 The context hands a config out and parses no wire chunks or events."
+        },
+        {
+          "technique": "cancellation-and-finalization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:33 The run state arrives as a parent-owned boolean prop. No stream lifecycle or terminal outcome is handled in this context."
+        },
+        {
+          "technique": "run-attribution",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:16 State is a local design-plan reducer driven by user ops. There are no runs whose output could be misattributed."
+        },
+        {
+          "technique": "buffering-and-backpressure",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:29 Input is discrete user clicks, not an unbounded producer, so there is no buffer to size."
+        },
+        {
+          "technique": "render-throttling",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:29 Renders happen per user op. There is no event-rate stream to throttle."
+        }
+      ]
     }
   }
 }
