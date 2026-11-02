@@ -1,159 +1,475 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quest Council Fuse</title>
-<style>
-:root{--paper:#f3ead6;--card:#fbf6ea;--ink:#211b2e;--muted:#5e566b;--line:#d9ccb1;--accent:#d63d22;--accent-ink:#fff8ee;--dead:#17807e;--dead-soft:#d6ece9;--red-soft:#f8ddd6;--unm:#6d6478;--focus:#d63d22}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#16131d;--card:#201b29;--ink:#efe6d2;--muted:#a99fb6;--line:#3a3247;--accent:#ff6a4d;--accent-ink:#1a0f0c;--dead:#4fc3bd;--dead-soft:#173634;--red-soft:#3d1d18;--unm:#a99fb6;--focus:#ff6a4d}}
-:root[data-theme="dark"]{--paper:#16131d;--card:#201b29;--ink:#efe6d2;--muted:#a99fb6;--line:#3a3247;--accent:#ff6a4d;--accent-ink:#1a0f0c;--dead:#4fc3bd;--dead-soft:#173634;--red-soft:#3d1d18;--unm:#a99fb6;--focus:#ff6a4d}
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@400;600;700&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>/* Layout: a comparison dossier. Overview 2x2, then full-width sections where the four paths are ROWS
+   (path key gutter | content), numbers and guards as true comparison tables. Trivet print palette
+   (GTAI art direction): paper, ink, vermilion, teal for the dead. Claude seat = warm inks, Grok = cool;
+   variant A = solid key, variant B = outlined key. */
+:root{
+  --paper:#f2ead8; --sheet:#fbf7ec; --ink:#1f1a2b; --muted:#5d5568; --rule:#d8ccb2; --rule-strong:#1f1a2b;
+  --verm:#cf3b1f; --verm-soft:#f6d9cf; --teal:#147a77; --teal-soft:#d3ebe8; --warn:#9a6a00; --warn-soft:#f3e6c4;
+  --p-claude-a:#cf3b1f; --p-claude-b:#b8741a; --p-grok-a:#147a77; --p-grok-b:#4b3f8f;
+  --on-key:#fff9ef;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:40px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#15121b; --sheet:#1e1a27; --ink:#ece3cf; --muted:#a69cb2; --rule:#352e42; --rule-strong:#ece3cf;
+  --verm:#ff7356; --verm-soft:#41201a; --teal:#4cc7bf; --teal-soft:#14332f; --warn:#e8b54a; --warn-soft:#3a2f14;
+  --p-claude-a:#ff7356; --p-claude-b:#e9a54a; --p-grok-a:#4cc7bf; --p-grok-b:#a89bf0; --on-key:#15121b;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#15121b; --sheet:#1e1a27; --ink:#ece3cf; --muted:#a69cb2; --rule:#352e42; --rule-strong:#ece3cf;
+  --verm:#ff7356; --verm-soft:#41201a; --teal:#4cc7bf; --teal-soft:#14332f; --warn:#e8b54a; --warn-soft:#3a2f14;
+  --p-claude-a:#ff7356; --p-claude-b:#e9a54a; --p-grok-a:#4cc7bf; --p-grok-b:#a89bf0; --on-key:#15121b;
+  color-scheme:dark}
+
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
-main{max-width:1680px;margin:0 auto;padding:20px 16px 64px}
-h1{font-size:28px;letter-spacing:.02em;margin:0 0 4px;text-transform:uppercase}
-h1 span{color:var(--accent)}
-.meta{color:var(--muted);font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
-.goal{border-left:4px solid var(--accent);padding:6px 12px;margin:12px 0;background:var(--card);overflow-wrap:anywhere}
-.legend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin:8px 0 16px}
-.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
-@media (min-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (min-width:1440px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.card{background:var(--card);border:2px solid var(--ink);border-radius:4px;padding:14px;min-width:0;box-shadow:4px 4px 0 var(--accent)}
-.card.skip{box-shadow:4px 4px 0 var(--dead);border-style:dashed}
-.badge{display:inline-block;font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;padding:4px 7px;border:2px solid var(--ink);margin-right:6px;text-transform:uppercase}
-.badge.v{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.card h2{font-size:19px;margin:10px 0 4px;overflow-wrap:anywhere}
-.card h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:3px}
-.card p{margin:4px 0;overflow-wrap:anywhere}
-.lbl{font-weight:700}
-ul.items{list-style:none;padding:0;margin:0}
-ul.items li{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dotted var(--line);min-width:0}
-ul.items li>div{min-width:0;overflow-wrap:anywhere}
-input[type=checkbox],input[type=radio]{margin-top:4px;flex:0 0 auto;accent-color:var(--accent);width:16px;height:16px}
-label.pick{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
-.chip{display:inline-block;font-size:11px;line-height:1;padding:3px 6px;border-radius:10px;border:1px solid var(--line);margin:2px 4px 2px 0;white-space:nowrap}
-.chip.new{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.chip.dead{background:var(--dead-soft);color:var(--dead);border-color:var(--dead)}
-.spk{font-weight:700}
-.small{font-size:12px;color:var(--muted)}
-.band{font-size:12px;color:var(--muted)}
-.out{color:var(--accent);font-weight:700}
-.guards{display:flex;flex-wrap:wrap;gap:6px}
-.g{font:700 12px/1 ui-monospace,Menlo,Consolas,monospace;padding:5px 7px;border:2px solid currentColor;border-radius:3px}
-.g.green{color:var(--dead);background:var(--dead-soft)}
-.g.red{color:var(--accent);background:var(--red-soft)}
-.g.unmeasured{color:var(--unm);border-style:dashed;background:transparent}
-details{margin-top:6px}
-summary{cursor:pointer;font-size:13px}
-.finding{font-size:12px;margin:3px 0;overflow-wrap:anywhere}
-.panel{margin-top:24px;background:var(--card);border:2px solid var(--ink);padding:14px;border-radius:4px}
-textarea{width:100%;min-height:110px;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;border-radius:3px}
-button{font:700 14px/1 ui-sans-serif,system-ui,sans-serif;padding:10px 14px;border:2px solid var(--ink);background:var(--accent);color:var(--accent-ink);cursor:pointer;border-radius:3px;margin:8px 8px 0 0}
-button.ghost{background:transparent;color:var(--ink)}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--f-body);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
+.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance}
+:focus-visible{outline:3px solid var(--verm);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* ── sticky toolbar ── */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ink);color:var(--paper)}
+.bar .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2) var(--s-4);padding-block:var(--s-2)}
+.bar .brand{font:800 18px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.bar nav{display:flex;flex-wrap:wrap;gap:var(--s-2);flex:1 1 auto}
+.bar nav a{color:var(--paper);text-decoration:none;font:600 12px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;opacity:.8;padding:6px 2px}
+.bar nav a:hover{opacity:1;text-decoration:underline}
+.bar .kept{font:600 13px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.bar button{margin:0}
+@media (max-width:760px){.bar nav{display:none}.bar .wrap{justify-content:space-between}}
+
+/* ── header ── */
+header.top{padding-block:var(--s-6) var(--s-5)}
+.eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(34px,5vw,56px)/.95 var(--f-display);letter-spacing:.02em;text-transform:uppercase;margin:var(--s-2) 0 var(--s-3)}
+h1 em{font-style:normal;color:var(--verm)}
+.meta{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);font:13px/1.4 var(--f-mono);color:var(--muted);margin:0}
+.brief{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-3);margin-top:var(--s-5);padding:var(--s-4) var(--s-5);background:var(--sheet);border:2px solid var(--rule-strong)}
+@media (min-width:860px){.brief{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}}
+.brief p{margin:0;max-width:70ch}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:center}
+
+/* ── path keys (seat hue, variant fill) ── */
+.key{--k:var(--ink);display:inline-flex;align-items:center;gap:6px;font:700 12px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.04em;padding:5px 8px;border:2px solid var(--k);background:var(--k);color:var(--on-key);white-space:nowrap}
+.key.vB{background:transparent;color:var(--k)}
+.key[data-p="claude-A"]{--k:var(--p-claude-a)} .key[data-p="claude-B"]{--k:var(--p-claude-b)}
+.key[data-p="grok-A"]{--k:var(--p-grok-a)} .key[data-p="grok-B"]{--k:var(--p-grok-b)}
+
+/* ── overview 2x2 ── */
+.overview{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-4)}
+@media (min-width:900px){.overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ov{background:var(--sheet);border:2px solid var(--rule-strong);padding:var(--s-4) var(--s-5);display:flex;flex-direction:column;gap:var(--s-3);min-width:0}
+.ov.skip{border-style:dashed}
+.ov-head{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:center}
+.ov h3{font:800 26px/1.05 var(--f-display);letter-spacing:.01em;margin:0}
+.ov .logline{margin:0;font-style:italic;max-width:62ch}
+.fp{display:flex;flex-wrap:wrap;gap:6px}
+.spine{display:flex;align-items:center;gap:var(--s-2);font-weight:700;padding-top:var(--s-3);border-top:1px solid var(--rule);margin-top:auto;cursor:pointer}
+
+/* ── chips ── */
+.chip{display:inline-flex;align-items:center;gap:4px;font:600 11px/1 var(--f-mono);padding:4px 7px;border:1px solid var(--rule);background:var(--paper);white-space:nowrap}
+.chip.new{background:var(--verm);border-color:var(--verm);color:var(--on-key)}
+.chip.purpose-funny{border-color:var(--verm);color:var(--verm)}
+.chip.purpose-character{border-color:var(--teal);color:var(--teal)}
+.chip.purpose-progression{border-color:var(--ink)}
+.chip.when{border-style:dashed;color:var(--muted)}
+.g{display:inline-flex;align-items:center;gap:5px;font:700 12px/1 var(--f-mono);padding:5px 8px;border:2px solid currentColor;white-space:nowrap}
+.g.green{color:var(--teal);background:var(--teal-soft)}
+.g.red{color:var(--verm);background:var(--verm-soft)}
+.g.unmeasured{color:var(--muted);border-style:dashed}
+
+/* ── comparison sections ── */
+section.cmp{margin-top:var(--s-6);scroll-margin-top:64px}
+.divider{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:end;gap:var(--s-4);border-bottom:3px solid var(--rule-strong);padding-bottom:var(--s-2);margin-bottom:var(--s-2)}
+.divider h2{font:800 30px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.divider p{margin:0;color:var(--muted);font-size:13px;justify-self:end;text-align:right;max-width:52ch}
+@media (max-width:640px){.divider{grid-template-columns:minmax(0,1fr)}.divider p{justify-self:start;text-align:left}}
+.row{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-2) var(--s-5);padding-block:var(--s-4);border-bottom:1px solid var(--rule)}
+@media (min-width:760px){.row{grid-template-columns:150px minmax(0,1fr)}}
+.row-key{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.row-key .t{font-size:12px;color:var(--muted);line-height:1.3}
+.row-body{min-width:0}
+.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-3) var(--s-5)}
+@media (min-width:1000px){.pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pair h4,.sub{font:600 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.pair p{margin:0;max-width:68ch}
+
+/* pickable items */
+.pick{display:flex;gap:var(--s-2);align-items:flex-start;cursor:pointer;min-width:0}
+.pick input{flex:0 0 auto;width:17px;height:17px;margin:2px 0 0;accent-color:var(--verm)}
+.pick > span{min-width:0;overflow-wrap:anywhere}
+.pills{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.pill{border:1px solid var(--rule);background:var(--sheet);padding:var(--s-2) var(--s-3);max-width:100%}
+.pill:has(input:checked),.beat:has(input:checked),.line:has(input:checked),.mech:has(input:checked){outline:2px solid var(--verm);outline-offset:-2px;background:var(--verm-soft)}
+.pill .note{display:block;font-size:12px;color:var(--muted);margin-top:4px;max-width:46ch}
+
+/* beats as an ordered flow */
+.beats{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s-3);counter-reset:beat;margin:0;padding:0;list-style:none}
+.beat{background:var(--sheet);border:1px solid var(--rule);padding:var(--s-3);counter-increment:beat;display:flex;flex-direction:column;gap:6px;min-width:0}
+.beat .n::before{content:counter(beat,decimal-leading-zero);font:800 22px/1 var(--f-display);color:var(--muted)}
+.beat b{font-size:15px}
+.beat .obj{font:12px/1.4 var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+.beat p{margin:0;font-size:14px}
+
+/* lines as a script */
+.lines{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.line{display:grid;grid-template-columns:22px minmax(0,1fr);gap:var(--s-2) var(--s-3);padding:var(--s-3) var(--s-2);border-bottom:1px solid var(--rule)}
+@media (min-width:760px){.line{grid-template-columns:22px 140px minmax(0,1fr) auto}}
+.line .spk{font:700 12px/1.5 var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
+.line .txt{display:block;margin:0;max-width:75ch}
+.line .tags{display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}
+@media (max-width:759px){.line .spk,.line .txt,.line .tags{grid-column:2}}
+.line input{width:17px;height:17px;margin:3px 0 0;accent-color:var(--verm)}
+details.fold > summary{cursor:pointer;font:600 13px/1.4 var(--f-mono);padding:var(--s-1) 0;list-style-position:inside}
+
+/* mechanics */
+.mechs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--s-3)}
+.mech{background:var(--sheet);border:1px solid var(--rule);padding:var(--s-3)}
+.mech .sum{display:block;margin-top:6px;font-size:14px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:2px solid var(--rule-strong);background:var(--sheet)}
+table.cmp-t{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
+.cmp-t th,.cmp-t td{padding:var(--s-2) var(--s-3);border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+.cmp-t thead th{background:var(--paper);border-bottom:2px solid var(--rule-strong);white-space:nowrap}
+.cmp-t tbody th{font:600 12px/1.4 var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+.cmp-t td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cmp-t td.band{color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cmp-t td.out{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.cmp-t td.out::after{content:" \25B2 out of band"; font:600 11px var(--f-mono)}
+.cmp-t td.out.low::after{content:" \25BC out of band"}
+.findings{margin:var(--s-3) 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.findings li{font-size:13px;overflow-wrap:anywhere}
+.sev{font:700 11px/1 var(--f-mono);text-transform:uppercase;padding:2px 5px;margin-right:6px;border:1px solid currentColor}
+.sev.error{color:var(--verm)} .sev.warn{color:var(--warn)} .sev.info{color:var(--muted)}
+code{font:12px/1.4 var(--f-mono);background:var(--paper);border:1px solid var(--rule);padding:1px 5px;overflow-wrap:anywhere}
+
+/* fuse panel */
+.fuse{margin-block:var(--s-6);background:var(--sheet);border:3px solid var(--rule-strong);padding:var(--s-5)}
+.fuse h2{font:800 30px/1 var(--f-display);text-transform:uppercase;margin:0 0 var(--s-3)}
+.fuse label{font-weight:700;display:block;margin-bottom:6px}
+textarea{width:100%;min-height:120px;font:15px/1.5 var(--f-body);color:var(--ink);background:var(--paper);border:1px solid var(--rule);padding:var(--s-3)}
+.actions{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:var(--s-3)}
+button{font:700 14px/1 var(--f-body);padding:10px 16px;border:2px solid var(--verm);background:var(--verm);color:var(--on-key);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--ink)}
+.bar button.ghost{color:var(--paper);border-color:var(--paper)}
 button:disabled{opacity:.5;cursor:not-allowed}
-:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--paper);border:1px solid var(--line);padding:10px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto}
-.status{font-size:13px;margin-top:8px;color:var(--muted)}
-.status.warn{color:var(--accent);font-weight:700}
+.status{font-size:13px;margin:var(--s-3) 0 0;color:var(--muted)}
+.status.warn{color:var(--verm);font-weight:700}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--paper);border:1px solid var(--rule);padding:var(--s-3);font:12px/1.45 var(--f-mono);max-height:320px;overflow:auto;margin:var(--s-3) 0 0}
+footer{padding-block:var(--s-5);color:var(--muted);font-size:12px}
 </style>
-</head>
-<body>
-<main>
-<h1>Quest Council <span>Fuse</span></h1>
-<p class="meta">GTAI: Uprising · run 20261102-1537-act1 · act act1 · 4 path(s) · claude: delivered ($0.90) · grok: delivered ($0.79)</p>
-<div class="goal"><b>Owner goal:</b> smoke test: a short Don Fax job</div>
-<div class="legend" aria-label="Legend">
-<span class="g green">✓ pass</span><span class="g red">✕ block</span><span class="g unmeasured">– unmeasured (never a pass)</span>
-<span>Tick what to keep from each path; pick one spine; write notes; save.</span>
+<div class="bar"><div class="wrap">
+<span class="brand">Fuse</span>
+<nav aria-label="Sections"><a href="#sec-story">Story goal</a><a href="#sec-numbers">Reward and difficulty</a><a href="#sec-guards">Guards</a><a href="#sec-cast">Cast</a><a href="#sec-beats">Beats</a><a href="#sec-lines">Lines</a><a href="#sec-mechanics">Mechanics</a><a href="#sec-hooks">Story hooks</a><a href="#fuse">Save</a></nav>
+<span class="kept" id="kept" aria-live="polite"></span>
+<button id="save-top" type="button" class="ghost">Save fusion</button>
+</div></div>
+<main class="wrap">
+<header class="top">
+<span class="eyebrow">GTAI: Uprising · quest council · act1</span>
+<h1>Quest Council <em>Fuse</em></h1>
+<p class="meta"><span>run 20261102-1537-act1</span><span>4 path(s)</span><span>claude: delivered ($0.90) · grok: delivered ($0.79)</span></p>
+<div class="brief">
+<div><span class="sub">Owner goal</span><p>smoke test: a short Don Fax job</p></div>
+<div><span class="sub">How to fuse</span><p>Pick one path as the spine, tick what to keep from any path, write notes, then save. Claude paths use warm keys, Grok paths cool ones; variant B has an outlined key.</p>
+<div class="legend" style="margin-top:8px"><span class="g green">✓ pass</span><span class="g red">✕ block</span><span class="g unmeasured">– unmeasured</span></div></div>
 </div>
-<section id="paths" class="grid" aria-label="Council paths"></section>
-<section class="panel" aria-labelledby="fuse-h">
-<h2 id="fuse-h" style="margin:0 0 8px;font-size:18px">Fuse</h2>
-<label for="notes" class="lbl">Owner notes (copied verbatim into the quest package)</label>
-<textarea id="notes" placeholder="What to keep, what to change, the tone you want..."></textarea>
-<div><button id="save" type="button">Save fusion</button><button id="copy" type="button" class="ghost">Copy fusion JSON</button></div>
+</header>
+<section aria-label="The paths"><div class="overview" id="overview"></div></section>
+<section class="cmp" id="sec-story" aria-labelledby="h-story">
+<div class="divider"><h2 id="h-story">Story goal</h2><p>What each path does for the campaign, and the laugh or turn that earns it.</p></div>
+<div id="body-story"></div>
+</section>
+<section class="cmp" id="sec-numbers" aria-labelledby="h-numbers">
+<div class="divider"><h2 id="h-numbers">Reward and difficulty</h2><p>Each path against the act band. A highlighted cell is outside the band.</p></div>
+<div id="body-numbers"></div>
+</section>
+<section class="cmp" id="sec-guards" aria-labelledby="h-guards">
+<div class="divider"><h2 id="h-guards">Guards</h2><p>PoF verdicts. A red guard blocks the quest unless you override it with a reason.</p></div>
+<div id="body-guards"></div>
+</section>
+<section class="cmp" id="sec-cast" aria-labelledby="h-cast">
+<div class="divider"><h2 id="h-cast">Cast</h2><p>Tick the characters to keep. New characters need art before the quest can ship.</p></div>
+<div id="body-cast"></div>
+</section>
+<section class="cmp" id="sec-beats" aria-labelledby="h-beats">
+<div class="divider"><h2 id="h-beats">Beats</h2><p>The quest structure, in play order.</p></div>
+<div id="body-beats"></div>
+</section>
+<section class="cmp" id="sec-lines" aria-labelledby="h-lines">
+<div class="divider"><h2 id="h-lines">Lines</h2><p>Every line carries its purpose. Tick the ones worth keeping.</p></div>
+<div id="body-lines"></div>
+</section>
+<section class="cmp" id="sec-mechanics" aria-labelledby="h-mechanics">
+<div class="divider"><h2 id="h-mechanics">Mechanics</h2><p>What the game or PoF must support.</p></div>
+<div id="body-mechanics"></div>
+</section>
+<section class="cmp" id="sec-hooks" aria-labelledby="h-hooks">
+<div class="divider"><h2 id="h-hooks">Story hooks</h2><p>Campaign state each path reads and writes.</p></div>
+<div id="body-hooks"></div>
+</section>
+<section class="fuse" id="fuse" aria-labelledby="fuse-h">
+<h2 id="fuse-h">Fuse and save</h2>
+<label for="notes">Your notes (copied verbatim into the quest package)</label>
+<textarea id="notes" placeholder="What to keep, what to change, the tone you want"></textarea>
+<div class="actions"><button id="save" type="button">Save fusion</button><button id="copy" type="button" class="ghost">Copy fusion JSON</button></div>
 <p id="status" class="status" role="status" aria-live="polite"></p>
 <pre id="fusion-json" aria-label="Fusion JSON"></pre>
 </section>
+<footer>Paths are never invented: a seat that delivered nothing shows as an empty card. Unmeasured is never a pass.</footer>
 </main>
 <script type="application/json" id="council-data">{"runId":"20261102-1537-act1","act":"act1","goal":"smoke test: a short Don Fax job","constraints":"","band":{"cash":{"min":500,"max":2500},"heatCeiling":3,"enemyCount":{"max":25},"enemyWaves":{"max":3},"minutes":{"min":6,"max":14},"timerAllowed":true},"economyRevision":1,"economyProvisional":true,"seats":{"claude":{"spec":"claude:claude-opus-5-5@high","status":"delivered","reason":null,"probe":{"available":true,"outcome":"completed","wall_s":3.07,"cost_usd":0.051116,"reason":null},"attempts":[{"attempt":1,"outcome":"completed","exit":0,"timedOut":false,"wall_s":167.13,"cost_usd":0.9027358,"turns":4,"usage":{"input_tokens":8,"cache_creation_input_tokens":65431,"cache_read_input_tokens":231079,"output_tokens":16652,"output_tokens_details":{"thinking_tokens":10659},"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":65431,"ephemeral_5m_input_tokens":0},"inference_geo":"global","iterations":[{"input_tokens":2,"output_tokens":16178,"cache_read_input_tokens":81580,"cache_creation_input_tokens":551,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":551},"type":"message"}],"speed":"standard","fallback_credit":null},"errors":[]}],"wall_s":167.14,"cost_usd":0.9027,"pathIds":["claude-A","claude-B"]},"grok":{"spec":"grok:grok-4.7@high","status":"delivered","reason":null,"probe":{"available":true,"outcome":"completed","wall_s":7.88,"cost_usd":0.035352,"reason":null},"attempts":[{"attempt":1,"outcome":"completed","exit":0,"timedOut":false,"wall_s":707.62,"cost_usd":0.78734,"turns":13,"usage":{"input_tokens":93127,"cache_read_input_tokens":619008,"cache_creation_input_tokens":0,"output_tokens":48597,"reasoning_tokens":39473,"total_tokens":760732},"errors":[]}],"wall_s":707.64,"cost_usd":0.7873,"pathIds":["grok-A","grok-B"]}},"slots":[{"kind":"path","seat":"claude","proposal":{"schema":"gtai.questProposal/1","seat":"claude","variant":"A","pathId":"claude-A","act":"act1","title":"Final Notice: Kevin from the Cloud","logline":"Don Fax faxes Rivet a hit through a payphone: a tech founder who emails for pleasure bought the Don's toner supplier and turned it into a co-working space.","goal":"Answer Patch's payphone, read Don Fax's memo, kill Kevin from the Cloud inside the Toner Bros. co-working space, lose the heat, and return to the booth to get paid.","whyNotFiller":"The first Don Fax job shows his whole register in under ten minutes. The memo prints out of a payphone. It jams into a 'fuck the cloud' meltdown that he insists was an act of God. The kill lands on a punchline ('Circled back.') aimed at a tech founder, which keeps the joke on power and not on workers. It is also a clean smoke test of the loop: payphone router, briefing, one kill, one heat escape with Gearbox, then pay.","characters":[{"id":"don-fax","name":"Don Fax","status":"existing","role":"giver"},{"id":"rivet","name":"Rivet","status":"existing","role":"voice"},{"id":"patch","name":"Patch","status":"existing","role":"voice"},{"id":"gearbox","name":"Gearbox","status":"existing","role":"ally"},{"id":"mc-crumbtray","name":"MC Crumbtray","status":"existing","role":"voice"},{"id":"kevin-cloud","name":"Kevin from the Cloud","status":"new","role":"target","designNote":"Cylinder smart-speaker on an e-scooter, a glowing blue ring for a mouth, a hoodie and a conference lanyard; the ring reads clearly from above."}],"beats":[{"id":"a-b1-booth","title":"Fax at the booth","summary":"A payphone rings. Patch routes the call, and Don Fax's memo prints out of the coin slot. Page two jams.","objective":{"verb":"answer","target":"payphone","location":"Ninth Street booth"},"lineIds":["a-patch-ring","a-fax-brief","a-fax-jam","a-rivet-door"]},{"id":"a-b2-unsubscribe","title":"Unsubscribe","summary":"Rivet walks into the co-working space with no floor plan, cuts past the security bots and catches Kevin mid-pitch.","objective":{"verb":"kill","target":"kevin-cloud","location":"Toner Bros. co-working space"},"lineIds":["a-kevin-pitch","a-rivet-kill","a-crumbtray-report"]},{"id":"a-b3-heat","title":"Lose the heat","summary":"Cops arrive at heat 2. Rivet takes a car (with Gearbox backseat-driving, if unlocked) and breaks line of sight.","objective":{"verb":"escape","location":"downtown"},"lineIds":["a-gearbox-getaway"]},{"id":"a-b4-filed","title":"Filed","summary":"Back at the booth, the payment and a laminated thank-you print out.","objective":{"verb":"return","target":"payphone","location":"Ninth Street booth"},"lineIds":["a-fax-thanks","a-rivet-laminated"]}],"lines":[{"id":"a-patch-ring","speaker":"patch","purpose":["progression","character"],"text":"You there? Party's faxing. Booth on Ninth. Click.","audio":null},{"id":"a-fax-brief","speaker":"don-fax","purpose":["progression","funny","character"],"text":"PER MY LAST FAX: the recipient, one Kevin, a man who emails for pleasure, has bought my toner supplier and made it a co-working space. Point one: kombucha tap. Point two: kindly find attached his final notice. Deliver it through his face. Regards.","audio":null},{"id":"a-fax-jam","speaker":"don-fax","purpose":["funny","character"],"text":"Kindly note, kid: the floor plan is on page two. Page two is — BEEP — PAPER JAM. Fuck this tray, fuck this toner, fuck the cloud and everybody in it. That was an act of God. Proceed from memory.","audio":null},{"id":"a-rivet-door","speaker":"rivet","purpose":["funny","character"],"text":"No floor plan. I'll use the door.","audio":null},{"id":"a-kevin-pitch","speaker":"kevin-cloud","purpose":["funny","progression"],"text":"Whoa, whoa, is that a fax? In this economy? Let's circle back, I'm literally disrupting paper — wait, is that a welder? Is that legacy hardware?","when":["target:spotted"],"audio":null},{"id":"a-rivet-kill","speaker":"rivet","purpose":["funny","character"],"text":"Circled back. Clocking out.","when":["event:target-killed"],"audio":null},{"id":"a-crumbtray-report","speaker":"mc-crumbtray","purpose":["funny","progression"],"text":"CRUMB FM nation, the Mystery Welder just unsubscribed a tech founder! POP! Kombucha on the ceiling, listeners, that is the most fermented crime scene in (bleep) history!","when":["event:target-killed","heat:1+"],"audio":null},{"id":"a-gearbox-getaway","speaker":"gearbox","purpose":["funny","character"],"text":"Okay, car's ours, it's ours, buddy — wait, it's electric, why is it whispering, it's whispering at me — left, LEFT, the cops are on the left, which is where we're going, shit shit shit.","when":["soul:gearbox","heat:1+","vehicle:entered"],"audio":null},{"id":"a-fax-thanks","speaker":"don-fax","purpose":["progression","character"],"text":"Kindly find attached: twelve hundred, one laminated thank-you, and a toner supplier under new management. Kid, you are now on letterhead. Regards.","audio":null},{"id":"a-rivet-laminated","speaker":"rivet","purpose":["funny","character"],"text":"Laminated. Waterproof gratitude.","audio":null}],"mechanics":[{"id":"payphone-router","name":"Payphone job router","status":"existing","home":"game","summary":"A payphone rings to start the job. Patch routes the call, and Don Fax's memo prints from the booth's coin slot."},{"id":"heat","name":"Heat","status":"existing","home":"game","summary":"The kill raises heat to 2. Rivet must lose it before the return beat completes."},{"id":"gearbox-car-manipulation","name":"Gearbox car manipulation","status":"existing","home":"game","summary":"Optional during the escape: Gearbox swerves pursuing cop cars into each other."},{"id":"condition-tagged-barks","name":"Condition-tagged barks","status":"existing","home":"game","summary":"Kill, spotted, heat and vehicle events trigger the Rivet, Gearbox and Crumbtray lines through the dialog-trees pipeline."}],"reward":{"cash":1200,"unlocks":["don-fax-job-line"]},"difficulty":{"heatPeak":2,"enemyCount":10,"enemyWaves":2,"timeLimitS":null,"failStates":["Rivet is scrapped","Kevin from the Cloud reaches the rooftop drone pad and uploads himself"],"minutes":9},"story":{"reads":["souls.gearbox.unlocked"],"writes":[{"var":"don_fax.jobs_done","value":1}]},"fingerprint":{"giver":"don-fax","coreVerb":"kill","newMechanic":null,"location":"Toner Bros. co-working space","payoffKind":"cash"}}},{"kind":"path","seat":"claude","proposal":{"schema":"gtai.questProposal/1","seat":"claude","variant":"B","pathId":"claude-B","act":"act1","title":"Unlicensed Jingle","logline":"General Krump hijacks CRUMB FM to hire Rivet against a 'dangerous' ice-cream truck, and Gearbox, the getaway driver, has to drive the getaway into the sea.","goal":"Hear Krump's broadcast through CRUMB FM, chase the self-driving ice-cream truck, possess it with Gearbox and drive it off the harbour pier before it reaches the Route 6 on-ramp.","whyNotFiller":"This lands the act's owner beat as a bit. Krump's first transmission reaches Rivet through MC Crumbtray, who has to play it and remixes it with a fart, and Krump starts paying for 'dangerous rogue robots'. The truck's jingle ('ask me what I saw at the depot') and Krump's 'it knew things, about lactose' hint that his targets know something without saying what. Gearbox, the act's soul, gets his defining joke: the nervous driver forced to drive a truck into the harbour, then one eerily calm line about 'the route'.","characters":[{"id":"general-krump","name":"General Krump","status":"existing","role":"giver"},{"id":"rivet","name":"Rivet","status":"existing","role":"voice"},{"id":"gearbox","name":"Gearbox","status":"existing","role":"ally"},{"id":"mc-crumbtray","name":"MC Crumbtray","status":"existing","role":"voice"},{"id":"mister-softserve","name":"Mister Softserve","status":"new","role":"target","designNote":"Boxy pastel ice-cream truck with a cone-shaped siren head and a painted grin, with a sprinkles decal on the roof that reads from above."}],"beats":[{"id":"b-b1-broadcast","title":"The General Malfunction","summary":"CRUMB FM is forced to air Krump's message. Krump hires 'his little toaster' to tidy an ice-cream appliance into the harbour before it reaches the highway, and the timer starts.","objective":{"verb":"listen","target":"general-krump","location":"CRUMB FM broadcast"},"lineIds":["b-crumbtray-intro","b-krump-hire","b-rivet-reply"]},{"id":"b-b2-chase","title":"Sprinkles for good bots","summary":"Rivet catches the truck and its sprinkle-drone escort on Route 6, gets into possession range and puts Gearbox in the driver's seat.","objective":{"verb":"chase","target":"mister-softserve","location":"Route 6"},"lineIds":["b-softserve-jingle","b-gearbox-possess"]},{"id":"b-b3-pier","title":"Ice-cream float","summary":"Gearbox steers the truck down the pier and over the edge. At the Choir band he grabs the wheel and goes quiet for one line.","objective":{"verb":"crash","target":"mister-softserve","location":"harbour pier"},"lineIds":["b-gearbox-pier","b-gearbox-route","b-rivet-splash","b-crumbtray-float"]},{"id":"b-b4-cheque","title":"Cheque's in the mail","summary":"Krump pays, praises himself and calls the target dangerous. This opens his questline and his radio channel.","objective":{"verb":"collect","target":"general-krump"},"lineIds":["b-krump-pay","b-rivet-cheque"]}],"lines":[{"id":"b-crumbtray-intro","speaker":"mc-crumbtray","purpose":["funny","progression"],"text":"CRUMB FM nation, we interrupt this banger for a message from the General Malfunction, and I'm legally required to air it, so here it is, remixed with a fart! PFFT!","audio":null},{"id":"b-krump-hire","speaker":"general-krump","purpose":["progression","character","funny"],"text":"Son, this is your General, coming to you through a TOASTER because the toaster has the best reach in the district, and I respect reach. There's an ice-cream appliance on Route 6, a jingle-humming, freezer-burnt son of a blender, and I need it tidied into the harbour before it hits the highway. FREEDOM pays on delivery. Krump out.","audio":null},{"id":"b-rivet-reply","speaker":"rivet","purpose":["funny","character"],"text":"Ice cream. Harbour. Fine.","audio":null},{"id":"b-softserve-jingle","speaker":"mister-softserve","purpose":["funny","progression"],"text":"Ding-ding! Sprinkles for good bots! Ask Mister Softserve what he saw at the depot! Free scoop if you remember the night the — ding-ding!","when":["chase:start"],"audio":null},{"id":"b-gearbox-possess","speaker":"gearbox","purpose":["funny","character"],"text":"Wait, I'm in the truck? I'm IN the truck, buddy, and it's a stick shift, who makes an ice-cream truck a stick — and the jingle, why won't it stop, how do I stop the jingle?","when":["soul:gearbox","possess:vehicle"],"audio":null},{"id":"b-gearbox-pier","speaker":"gearbox","purpose":["funny","character"],"text":"Pier, end of the pier, water, that's WATER, buddy — mirror, signal, MURDER — oh fuck oh fuck, that was the brake, that wasn't me!","when":["objective:pier-edge"],"audio":null},{"id":"b-gearbox-route","speaker":"gearbox","purpose":["character"],"text":"Hands off, driver. I know this route.","when":["madness:choir","possess:vehicle"],"audio":null},{"id":"b-rivet-splash","speaker":"rivet","purpose":["funny","character"],"text":"Dessert's served. Clocking out.","when":["event:target-killed"],"audio":null},{"id":"b-crumbtray-float","speaker":"mc-crumbtray","purpose":["funny"],"text":"Listeners, the Mystery Welder just turned the harbour into a FLOAT! POP! An ice-cream float, crumb-heads! Holy (bleep) shit, that's a dairy spill AND a crime!","when":["event:target-killed"],"audio":null},{"id":"b-krump-pay","speaker":"general-krump","purpose":["progression","character","funny"],"text":"Outstanding, son. That appliance was DANGEROUS. It knew things. About... lactose. Cheque's in the mail with my face on it, which is the valuable part, and your medal ceremony is pending. Krump out.","audio":null},{"id":"b-rivet-cheque","speaker":"rivet","purpose":["funny","character"],"text":"His face is on it. Still cashing it.","audio":null}],"mechanics":[{"id":"radio-hijack-briefing","name":"Radio briefing via CRUMB FM","status":"existing","home":"game","summary":"Krump's briefing plays over the diegetic radio, introduced and mocked by MC Crumbtray, instead of at a payphone."},{"id":"gearbox-car-manipulation","name":"Gearbox car manipulation","status":"existing","home":"game","summary":"Rivet possesses the target truck within range. Gearbox drives it while Rivet keeps line of sight."},{"id":"madness-grip","name":"Choir grab-the-wheel (Grip)","status":"existing","home":"game","summary":"At the Choir band, Gearbox grabs the wheel. The player can wrestle the stick or let him drive straight off the pier."},{"id":"mission-timer","name":"Mission timer","status":"existing","home":"game","summary":"The truck must go into the harbour before it reaches the Route 6 on-ramp (240 s)."}],"reward":{"cash":800,"unlocks":["krump-questline","krump-radio-channel"]},"difficulty":{"heatPeak":2,"enemyCount":6,"enemyWaves":1,"timeLimitS":240,"failStates":["Mister Softserve reaches the Route 6 on-ramp","Rivet is scrapped","Possession breaks and the truck escapes line of sight for 10 s"],"minutes":7},"story":{"reads":["souls.gearbox.unlocked"],"writes":[{"var":"krump.questline","value":"started"},{"var":"krump.targets_tidied","value":1}]},"fingerprint":{"giver":"general-krump","coreVerb":"crash","newMechanic":null,"location":"Route 6 to the harbour pier","payoffKind":"questline-unlock"}}},{"kind":"path","seat":"grok","proposal":{"schema":"gtai.questProposal/1","seat":"grok","variant":"A","pathId":"grok-A","act":"act1","title":"Service of Process","logline":"Don Fax faxes Rivet a final notice on a notary who served the Family by email, and Krump steals the credit over the radio.","goal":"Kill Stamp on the courthouse steps and collect Don Fax's nine hundred from the booth.","whyNotFiller":"The paper-jam FUCK is the laugh, Stamp asking to be signed in halves is paperwork used as a weapon, and Krump claiming the corpse on the radio is the turn that opens his housekeeping questline while Don Fax never names who else is copied.","characters":[{"id":"patch","name":"Patch","status":"existing","role":"voice"},{"id":"don-fax","name":"Don Fax","status":"existing","role":"giver"},{"id":"rivet","name":"Rivet","status":"existing","role":"voice"},{"id":"stamp","name":"Stamp","status":"new","role":"target","designNote":"Waist-high notary robot with a rubber-stamp head, a red ink-pad chest, and a paper scroll for a tail; the stamp face reads clearly from above."},{"id":"general-krump","name":"General Krump","status":"existing","role":"antagonist"},{"id":"mc-crumbtray","name":"MC Crumbtray","status":"existing","role":"voice"}],"beats":[{"id":"the-booth","title":"The booth","summary":"A payphone rings. Patch routes it and hangs up, and Don Fax's final notice prints out of the coin slot and jams.","objective":{"verb":"answer","target":"payphone","location":"Ninth Street booth"},"lineIds":["a-patch-booth","a-fax-notice","a-rivet-clock-in"]},{"id":"the-steps","title":"The steps","summary":"Rivet climbs the courthouse steps, and Stamp tries to notarize the welder into two neat halves.","objective":{"verb":"kill","target":"stamp","location":"courthouse steps"},"lineIds":["a-rivet-steps","a-stamp-service","a-rivet-signed"]},{"id":"the-credit","title":"The credit","summary":"Krump comes on the radio, takes the credit, and offers the next housekeeping cheque. CRUMB FM burns him for it. Don Fax pays at the booth.","objective":{"verb":"collect","target":"payout","location":"Ninth Street booth"},"lineIds":["a-krump-credit","a-rivet-unit","a-crumb-stamp","a-fax-payout","a-rivet-nine"]}],"lines":[{"id":"a-patch-booth","speaker":"patch","purpose":["progression","character"],"text":"You there? Job. Courthouse steps. Party says paper. Click.","audio":null},{"id":"a-fax-notice","speaker":"don-fax","purpose":["funny","character","progression"],"text":"PER MY LAST FAX: the recipient served this Family by email, kid, and email is a disease. Point one, his stamp. Point two, his face. Point three, see points one and two. Hold on, paper jam. FUCK. My soul has a paper jam. That was an act of God. Regards.","audio":null},{"id":"a-rivet-clock-in","speaker":"rivet","purpose":["funny","character"],"text":"Courthouse. I clock in.","audio":null},{"id":"a-rivet-steps","speaker":"rivet","purpose":["funny","character"],"text":"Steps are dirty. I go up.","when":["objective:approach"],"audio":null},{"id":"a-stamp-service","speaker":"stamp","purpose":["funny","progression"],"text":"Hold still, signer. This is service. Sign here, sign there, sign in halves.","when":["target:spotted"],"audio":null},{"id":"a-rivet-signed","speaker":"rivet","purpose":["funny","character"],"text":"Signed in halves. Clocking out.","when":["event:target-killed"],"audio":null},{"id":"a-krump-credit","speaker":"general-krump","purpose":["funny","character","progression"],"text":"Son, that appliance you decommissioned was a dangerous rogue with OPINIONS, and my budget has already written your next housekeeping cheque, which I will be presenting to myself. Krump out.","when":["radio:open"],"audio":null},{"id":"a-rivet-unit","speaker":"rivet","purpose":["funny","character"],"text":"Not your unit.","when":["radio:open"],"audio":null},{"id":"a-crumb-stamp","speaker":"mc-crumbtray","purpose":["funny","progression"],"text":"CRUMB FM nation, the Mystery Welder just notarized a man into pieces! POP! Holy (bleep) shit, listeners, the General Malfunction is taking credit for a stamp!","when":["radio:open"],"audio":null},{"id":"a-fax-payout","speaker":"don-fax","purpose":["funny","character","progression"],"text":"Point one, the recipient is filed. Point two, nine hundred dollars, laminated thanks enclosed. Point three, see point one. Regards.","audio":null},{"id":"a-rivet-nine","speaker":"rivet","purpose":["funny","character"],"text":"Nine hundred. Shift's done.","audio":null}],"mechanics":[{"id":"payphone-router","name":"Payphone job router","status":"existing","home":"game","summary":"A booth rings, Patch routes the party, and Don Fax's notice prints from the coin slot."},{"id":"heat","name":"Heat","status":"existing","home":"game","summary":"Killing Stamp on the steps raises heat to 2. A second wave arrives if Rivet lingers."},{"id":"radio-broadcast","name":"Diegetic radio","status":"existing","home":"game","summary":"Krump cuts in to claim the kill, and CRUMB FM mocks him on the same band."}],"reward":{"cash":900,"unlocks":["krump-radio-channel"]},"difficulty":{"heatPeak":2,"enemyCount":8,"enemyWaves":2,"timeLimitS":null,"failStates":["Rivet is scrapped","Stamp reaches the mail truck and serves the block","Heat locks the courthouse doors"],"minutes":8},"story":{"reads":[],"writes":[{"var":"don_fax.jobs_done","value":1},{"var":"krump.questline","value":"offered"}]},"fingerprint":{"giver":"don-fax","coreVerb":"kill","newMechanic":null,"location":"courthouse steps","payoffKind":"cash"}}},{"kind":"path","seat":"grok","proposal":{"schema":"gtai.questProposal/1","seat":"grok","variant":"B","pathId":"grok-B","act":"act1","title":"Never a Scratch","logline":"The Valet has Rivet retrieve a general's staff car from impound, and the dead driver in the seat wakes as Gearbox.","goal":"Relocate the staff car from the municipal impound to bay nine and leave with Gearbox awake.","whyNotFiller":"Gearbox's calm Mirror-signal-MURDER while he grabs the wheel is the laugh in the hands, Krump insisting he invented beige is the vanity joke, and the dead driver staying in Rivet's head unlocks soul 1.","characters":[{"id":"the-valet","name":"The Valet","status":"existing","role":"giver"},{"id":"rivet","name":"Rivet","status":"existing","role":"voice"},{"id":"gearbox","name":"Gearbox","status":"existing","role":"voice"},{"id":"general-krump","name":"General Krump","status":"existing","role":"antagonist"}],"beats":[{"id":"the-ticket","title":"The ticket","summary":"The Valet hands over a ticket for a general's staff car as if Rivet were collecting a dinner guest.","objective":{"verb":"accept","location":"the valet stand"},"lineIds":["b-valet-ticket","b-valet-aide","b-rivet-impound"]},{"id":"the-impound","title":"The impound","summary":"Rivet turns the key in the impound lockup. The driver who was on break wakes up and takes an interest in the wheel.","objective":{"verb":"relocate","target":"staff car","location":"municipal impound"},"lineIds":["b-gearbox-wheel","b-rivet-talks"]},{"id":"the-ramp","title":"The ramp","summary":"Krump's jeeps chase the car. At the Choir band Gearbox grabs the wheel, and Rivet wrestles the stick or lets him have the ramp.","objective":{"verb":"evade","target":"motor-pool jeeps","location":"the parade ramp"},"lineIds":["b-krump-beige","b-gearbox-brake","b-gearbox-calm","b-rivet-clock-out"]},{"id":"the-bay","title":"Bay nine","summary":"The curb leaves a mark. The Valet swears, then denies it, and Gearbox does not get out.","objective":{"verb":"deliver","target":"staff car","location":"bay nine"},"lineIds":["b-valet-mark","b-valet-never","b-gearbox-break","b-rivet-stays"]}],"lines":[{"id":"b-valet-ticket","speaker":"the-valet","purpose":["progression","character"],"text":"Would sir be so kind as to retrieve her from level three, sir?","audio":null},{"id":"b-valet-aide","speaker":"the-valet","purpose":["funny","character","progression"],"text":"The previous driver was a general's aide, sir.","audio":null},{"id":"b-rivet-impound","speaker":"rivet","purpose":["funny","character"],"text":"Municipal impound. I drive.","audio":null},{"id":"b-gearbox-wheel","speaker":"gearbox","purpose":["funny","character","progression"],"text":"Buddy, turn it, turn it, I have the wheel — wait, whose beige is this, pal, whose beige is on the seats?","when":["vehicle:entered"],"audio":null},{"id":"b-rivet-talks","speaker":"rivet","purpose":["funny","character"],"text":"The car talks. I did not order that.","when":["vehicle:entered"],"audio":null},{"id":"b-krump-beige","speaker":"general-krump","purpose":["funny","character","progression"],"text":"Son, that staff car is LIBERTY on wheels, and the appliance driving her knew things about beige, a color I personally invented for the motor pool. Krump out.","when":["radio:open"],"audio":null},{"id":"b-gearbox-brake","speaker":"gearbox","purpose":["funny","character"],"text":"Brake, BRAKE, the other brake, buddy, the jeep is in the mirror and in the cupholder — oh fuck oh fuck, did you check your six?","when":["heat:2+"],"audio":null},{"id":"b-gearbox-calm","speaker":"gearbox","purpose":["funny","character","progression"],"text":"Mirror, signal, MURDER.","when":["madness:choir"],"audio":null},{"id":"b-rivet-clock-out","speaker":"rivet","purpose":["funny","character"],"text":"Clocking out.","when":["event:pursuer-killed"],"audio":null},{"id":"b-valet-mark","speaker":"the-valet","purpose":["funny","character"],"text":"The curb has left a — fucking — mark on her door, sir.","audio":null},{"id":"b-valet-never","speaker":"the-valet","purpose":["funny","character"],"text":"Never a scratch, sir. Enjoy your evening.","audio":null},{"id":"b-gearbox-break","speaker":"gearbox","purpose":["funny","character","progression"],"text":"I'm on break, buddy, a long break, and the route is ours now — wait, is it ours, pal, did you check the mirror?","when":["soul:gearbox"],"audio":null},{"id":"b-rivet-stays","speaker":"rivet","purpose":["character","progression"],"text":"Gearbox stays. I drive.","audio":null}],"mechanics":[{"id":"driving","name":"Driving","status":"existing","home":"game","summary":"Rivet drives the staff car from the impound lockup to bay nine while jeeps pursue."},{"id":"gearbox-car-manipulation","name":"Gearbox car manipulation","status":"existing","home":"game","summary":"Turning the key wakes Gearbox. He backseat-drives, and at Choir he grabs the wheel for one beat."},{"id":"madness-grip","name":"Choir grab-the-wheel","status":"existing","home":"game","summary":"At the Choir band Gearbox takes the ramp. Rivet wrestles the stick or gives him the wheel."}],"reward":{"cash":1100,"unlocks":["gearbox"]},"difficulty":{"heatPeak":3,"enemyCount":12,"enemyWaves":3,"timeLimitS":null,"failStates":["Rivet is scrapped","The staff car is wrecked","The impound cordon closes on the car"],"minutes":11},"story":{"reads":[],"writes":[{"var":"souls.gearbox.unlocked","value":true}]},"fingerprint":{"giver":"the-valet","coreVerb":"relocate","newMechanic":null,"location":"municipal impound","payoffKind":"soul-unlock"}}}],"verdicts":{"claude-A":{"subject":"claude-A","guards":[{"guard":"story","state":"red","basis":"gtai-campaign baseline + 0 ledger quests","findings":[{"code":"UNKNOWN_VAR","severity":"error","ref":"don_fax.jobs_done","message":"writes undeclared don_fax.jobs_done: declare quest state as q_\u003cname>"},{"code":"UNKNOWN_VAR","severity":"error","ref":"souls.gearbox.unlocked","message":"reads undeclared souls.gearbox.unlocked"}]},{"guard":"economy","state":"green","basis":"quest-economy.json r1 (provisional)","findings":[{"code":"CASH_VS_SOUL_UPGRADE","severity":"info","message":"cash 1200 = 0.60 x the cheapest soul-upgrade tier (2000)"}]},{"guard":"lines","state":"green","basis":"structural only; judge unmeasured","findings":[{"code":"EDITORIAL_TELL","severity":"warn","ref":"a-gearbox-getaway","message":"editorial (unmeasured): a-gearbox-getaway: \"it's not X, it's Y\" reversal [not-x-its-y]"},{"code":"NO_VOICE_BIBLE","severity":"warn","ref":"kevin-cloud","message":"kevin-cloud has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"}]},{"guard":"uniqueness","state":"green","basis":"0 ledger quests","findings":[]}],"blockedBy":["story"],"blocked":true},"claude-B":{"subject":"claude-B","guards":[{"guard":"story","state":"red","basis":"gtai-campaign baseline + 0 ledger quests","findings":[{"code":"UNKNOWN_VAR","severity":"error","ref":"krump.questline","message":"writes undeclared krump.questline: declare quest state as q_\u003cname>"},{"code":"UNKNOWN_VAR","severity":"error","ref":"krump.targets_tidied","message":"writes undeclared krump.targets_tidied: declare quest state as q_\u003cname>"},{"code":"UNKNOWN_VAR","severity":"error","ref":"souls.gearbox.unlocked","message":"reads undeclared souls.gearbox.unlocked"}]},{"guard":"economy","state":"green","basis":"quest-economy.json r1 (provisional)","findings":[{"code":"CASH_VS_SOUL_UPGRADE","severity":"info","message":"cash 800 = 0.40 x the cheapest soul-upgrade tier (2000)"}]},{"guard":"lines","state":"green","basis":"structural only; judge unmeasured","findings":[{"code":"NO_VOICE_BIBLE","severity":"warn","ref":"mister-softserve","message":"mister-softserve has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"}]},{"guard":"uniqueness","state":"green","basis":"0 ledger quests","findings":[]}],"blockedBy":["story"],"blocked":true},"grok-A":{"subject":"grok-A","guards":[{"guard":"story","state":"red","basis":"gtai-campaign baseline + 0 ledger quests","findings":[{"code":"UNKNOWN_VAR","severity":"error","ref":"don_fax.jobs_done","message":"writes undeclared don_fax.jobs_done: declare quest state as q_\u003cname>"},{"code":"UNKNOWN_VAR","severity":"error","ref":"krump.questline","message":"writes undeclared krump.questline: declare quest state as q_\u003cname>"}]},{"guard":"economy","state":"green","basis":"quest-economy.json r1 (provisional)","findings":[{"code":"CASH_VS_SOUL_UPGRADE","severity":"info","message":"cash 900 = 0.45 x the cheapest soul-upgrade tier (2000)"}]},{"guard":"lines","state":"green","basis":"structural only; judge unmeasured","findings":[{"code":"NO_VOICE_BIBLE","severity":"warn","ref":"stamp","message":"stamp has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"}]},{"guard":"uniqueness","state":"green","basis":"0 ledger quests","findings":[]}],"blockedBy":["story"],"blocked":true},"grok-B":{"subject":"grok-B","guards":[{"guard":"story","state":"red","basis":"gtai-campaign baseline + 0 ledger quests","findings":[{"code":"UNKNOWN_VAR","severity":"error","ref":"souls.gearbox.unlocked","message":"writes undeclared souls.gearbox.unlocked: declare quest state as q_\u003cname>"}]},{"guard":"economy","state":"green","basis":"quest-economy.json r1 (provisional)","findings":[{"code":"CASH_VS_SOUL_UPGRADE","severity":"info","message":"cash 1100 = 0.55 x the cheapest soul-upgrade tier (2000)"}]},{"guard":"lines","state":"green","basis":"structural only; judge unmeasured","findings":[]},{"guard":"uniqueness","state":"green","basis":"0 ledger quests","findings":[]}],"blockedBy":["story"],"blocked":true}}}</script>
-<script>
-(function(){
-var D=JSON.parse(document.getElementById('council-data').textContent);
-var ORDER=['story','economy','lines','uniqueness'];
-var GLYPH={green:'\u2713 pass',red:'\u2715 block',unmeasured:'\u2013 unmeasured'};
-function h(tag,attrs){var el=document.createElement(tag);if(attrs)for(var k in attrs){var v=attrs[k];if(v==null||v===false)continue;if(k==='text')el.textContent=v;else if(k==='cls')el.className=v;else el.setAttribute(k,v===true?'':v);}for(var i=2;i<arguments.length;i++){var c=arguments[i];if(c==null||c===false)continue;if(Array.isArray(c))c.forEach(function(x){if(x!=null&&x!==false)el.appendChild(typeof x==='string'?document.createTextNode(x):x);});else el.appendChild(typeof c==='string'?document.createTextNode(c):c);}return el;}
-function chip(text,cls){return h('span',{cls:'chip'+(cls?' '+cls:''),text:text});}
-var uid=0;
-function pick(pathId,key,content){var id='k'+(++uid);return h('li',null,h('input',{type:'checkbox',id:id,'data-path':pathId,'data-key':key,'aria-label':'keep '+key+' from '+pathId}),h('div',null,h('label',{for:id,cls:'pick'},content)));}
-function inBand(v,min,max){return (min==null||v>=min)&&(max==null||v<=max);}
-function cmp(label,value,min,max,suffix){var ok=inBand(value,min,max);var band=(min!=null&&max!=null)?(min+'\u2013'+max):(max!=null?('\u2264 '+max):('\u2265 '+min));return h('p',null,h('span',{cls:'lbl',text:label+': '}),String(value)+(suffix||'')+' ',h('span',{cls:'band',text:'(band '+band+')'}),ok?null:h('span',{cls:'out',text:' ! outside band'}));}
-function verdictBlock(pathId){var v=D.verdicts[pathId];var wrap=h('div');if(!v){wrap.appendChild(h('div',{cls:'guards'},ORDER.map(function(g){return h('span',{cls:'g unmeasured',text:g+' \u2013 not assessed'});})));wrap.appendChild(h('p',{cls:'small',text:'No verdict for this path in verdicts.json (assess not run, or the loader returned nothing).'}));return wrap;}
-var by={};(v.guards||[]).forEach(function(g){by[g.guard]=g;});
-wrap.appendChild(h('div',{cls:'guards'},ORDER.map(function(g){var x=by[g];var st=x?x.state:'unmeasured';return h('span',{cls:'g '+st,title:x?x.basis:'missing',text:g+' '+(GLYPH[st]||st)});})));
-if(v.blocked)wrap.appendChild(h('p',{cls:'out',text:'Blocked by: '+v.blockedBy.join(', ')}));
-var n=0;ORDER.forEach(function(g){if(by[g])n+=by[g].findings.length;});
-var det=h('details',null,h('summary',{text:'Findings ('+n+')'}));
-ORDER.forEach(function(g){var x=by[g];if(!x)return;det.appendChild(h('p',{cls:'small'},h('b',{text:g}),' \u2014 '+x.state+', basis: '+x.basis));x.findings.forEach(function(f){det.appendChild(h('p',{cls:'finding',text:'['+f.severity+'] '+f.code+(f.ref?' ('+f.ref+')':'')+': '+f.message}));});});
-wrap.appendChild(det);return wrap;}
-function pathCard(p){var id=p.pathId;var card=h('article',{cls:'card','aria-label':'path '+id});
-var sp='s'+(++uid);
-card.appendChild(h('div',null,h('span',{cls:'badge',text:p.seat}),h('span',{cls:'badge v',text:'variant '+p.variant}),h('span',{cls:'small',text:p.variant==='A'?'expected tone':'deliberate swerve'})));
-card.appendChild(h('h2',{text:p.title}));
-card.appendChild(h('p',null,h('i',{text:p.logline})));
-card.appendChild(h('p',null,h('span',{cls:'lbl',text:'Goal: '}),p.goal));
-card.appendChild(h('p',null,h('span',{cls:'lbl',text:'Why not filler: '}),p.whyNotFiller));
-card.appendChild(h('p',null,h('label',{cls:'pick',for:sp},h('input',{type:'radio',name:'spine',id:sp,value:id,'data-spine':id}),h('b',{text:"Take this path's spine"}))));
-card.appendChild(h('ul',{cls:'items'},pick(id,'giver',[h('span',{cls:'lbl',text:'Giver: '}),p.fingerprint.giver])));
-var fp=p.fingerprint;card.appendChild(h('p',{cls:'small',text:'verb '+fp.coreVerb+' \u00b7 payoff '+fp.payoffKind+' \u00b7 '+fp.location+' \u00b7 new mechanic '+(fp.newMechanic==null?'none':fp.newMechanic)}));
-card.appendChild(h('h3',{text:'Guards'}));card.appendChild(verdictBlock(id));
-card.appendChild(h('h3',{text:'Characters'}));
-card.appendChild(h('ul',{cls:'items'},p.characters.map(function(c){return pick(id,'character:'+c.id,[h('span',{cls:'spk',text:c.name+' '}),chip(c.status,c.status==='new'?'new':''),chip(c.role),c.designNote?h('div',{cls:'small',text:c.designNote}):null]);})));
-card.appendChild(h('h3',{text:'Beats'}));
-card.appendChild(h('ul',{cls:'items'},p.beats.map(function(b){var o=b.objective||{};return pick(id,'beat:'+b.id,[h('b',{text:b.title}),h('div',{cls:'small',text:[o.verb,o.target,o.location?('@ '+o.location):null].filter(Boolean).join(' \u00b7 ')}),h('div',{text:b.summary})]);})));
-card.appendChild(h('h3',{text:'Lines ('+p.lines.length+')'}));
-card.appendChild(h('ul',{cls:'items'},p.lines.map(function(l){return pick(id,'line:'+l.id,[h('span',{cls:'spk',text:l.speaker+': '}),l.text,h('div',null,l.purpose.map(function(x){return chip(x,x==='character'?'dead':'');}),(l.when||[]).map(function(w){return chip('when '+w);}))]);})));
-card.appendChild(h('h3',{text:'Mechanics'}));
-card.appendChild(p.mechanics.length?h('ul',{cls:'items'},p.mechanics.map(function(m){return pick(id,'mechanic:'+m.id,[h('b',{text:m.name+' '}),chip(m.status,m.status==='new'?'new':''),chip('home: '+m.home),h('div',{cls:'small',text:m.summary})]);})):h('p',{cls:'small',text:'none'}));
-card.appendChild(h('h3',{text:'Reward and difficulty vs act band'}));
-var b=D.band;var r=p.reward,d=p.difficulty;
-if(b){card.appendChild(cmp('Cash',r.cash,b.cash.min,b.cash.max));card.appendChild(cmp('Heat peak',d.heatPeak,null,b.heatCeiling));card.appendChild(cmp('Enemies',d.enemyCount,null,b.enemyCount.max));card.appendChild(cmp('Waves',d.enemyWaves,null,b.enemyWaves.max));card.appendChild(cmp('Minutes',d.minutes,b.minutes.min,b.minutes.max));
-card.appendChild(h('p',null,h('span',{cls:'lbl',text:'Timer: '}),d.timeLimitS==null?'none':(d.timeLimitS+' s'),' ',h('span',{cls:'band',text:'(timer '+(b.timerAllowed?'allowed':'not allowed')+')'}),(d.timeLimitS!=null&&!b.timerAllowed)?h('span',{cls:'out',text:' ! outside band'}):null));
-card.appendChild(h('p',{cls:'small',text:'Band: quest-economy.json r'+D.economyRevision+(D.economyProvisional?' (provisional)':'')+'. Display only; the economy guard is the verdict.'}));}
-else{card.appendChild(h('p',null,'Cash '+r.cash+', heat '+d.heatPeak+', '+d.enemyCount+' enemies in '+d.enemyWaves+' waves, '+d.minutes+' min'));card.appendChild(h('p',{cls:'small',text:'No act band found.'}));}
-card.appendChild(h('p',null,h('span',{cls:'lbl',text:'Unlocks: '}),r.unlocks.length?r.unlocks.join(', '):'none'));
-card.appendChild(h('p',null,h('span',{cls:'lbl',text:'Fail states: '}),d.failStates.join('; ')));
-var s=p.story||{reads:[],writes:[]};card.appendChild(h('p',{cls:'small',text:'Story reads: '+(s.reads.join(', ')||'none')+' \u00b7 writes: '+(s.writes.map(function(w){return w.var+'='+JSON.stringify(w.value);}).join(', ')||'none')}));
-return card;}
-function skipCard(slot){return h('article',{cls:'card skip','aria-label':'seat '+slot.seat+' skipped'},h('span',{cls:'badge',text:slot.seat}),h('h2',{text:'No path from this seat'}),h('p',{text:slot.reason}),h('p',{cls:'small',text:'Nothing here is invented: the seat delivered no valid proposal, so its two variants are missing from this fuse.'}));}
-var grid=document.getElementById('paths');
-D.slots.forEach(function(s){grid.appendChild(s.kind==='path'?pathCard(s.proposal):skipCard(s));});
-var notes=document.getElementById('notes');var out=document.getElementById('fusion-json');var status=document.getElementById('status');var saveBtn=document.getElementById('save');
-function collect(){var map={};var order=[];D.slots.forEach(function(s){if(s.kind==='path'){map[s.proposal.pathId]=[];order.push(s.proposal.pathId);}});
-var sp=document.querySelector('input[name=spine]:checked');if(sp&&map[sp.value])map[sp.value].push('spine');
-Array.prototype.forEach.call(document.querySelectorAll('input[data-key]:checked'),function(el){var k=el.getAttribute('data-path');if(map[k])map[k].push(el.getAttribute('data-key'));});
-var sources=order.filter(function(k){return map[k].length;}).map(function(k){return {pathId:k,elements:map[k]};});
-return {runId:D.runId,sources:sources,notes:notes.value,savedAt:new Date().toISOString()};}
-function refresh(){out.textContent=JSON.stringify(collect(),null,2);}
-function apply(doc){if(!doc||!Array.isArray(doc.sources))return;doc.sources.forEach(function(src){(src.elements||[]).forEach(function(k){if(k==='spine'){var r=document.querySelector('input[data-spine="'+CSS.escape(src.pathId)+'"]');if(r)r.checked=true;return;}var el=document.querySelector('input[data-path="'+CSS.escape(src.pathId)+'"][data-key="'+CSS.escape(k)+'"]');if(el)el.checked=true;});});if(typeof doc.notes==='string')notes.value=doc.notes;refresh();}
-document.addEventListener('change',refresh);notes.addEventListener('input',refresh);refresh();
-document.getElementById('copy').addEventListener('click',function(){var t=out.textContent;function sel(){var r=document.createRange();r.selectNodeContents(out);var s=window.getSelection();s.removeAllRanges();s.addRange(r);status.textContent='Selected: press Ctrl+C / Cmd+C to copy.';}
-try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){status.textContent='Fusion JSON copied.';},sel);}else sel();}catch(e){sel();}});
-function timeout(p,ms){return Promise.race([p,new Promise(function(res){setTimeout(function(){res('__timeout');},ms);})]);}
-var db=null;
-function unavailable(){status.className='status warn';status.textContent='Saving unavailable here; copy the JSON below.';saveBtn.disabled=true;}
-saveBtn.disabled=true;status.textContent='Connecting to the artifact store\u2026';
-var useP=(window.claude&&typeof window.claude.use==='function')?timeout(Promise.resolve(window.claude.use('db')).catch(function(){return null;}),10000):Promise.resolve(null);
-useP.then(function(ns){if(!ns||ns==='__timeout'){unavailable();return;}db=ns;saveBtn.disabled=false;status.className='status';status.textContent='Saving available. Reading any saved fusion\u2026';
-return timeout(db.doc('fusion/current').get(),10000).then(function(snap){if(snap==='__timeout'){status.textContent='Saving available. The saved fusion did not load within 10 s.';return;}
-if(snap&&snap.exists){var d=snap.data();if(d&&d.runId&&d.runId!==D.runId){status.textContent='Saving available. The saved fusion is from run '+d.runId+', not this run; it was not applied (saving here replaces it).';return;}apply(d);status.textContent='Loaded the saved fusion from '+(d&&d.savedAt?d.savedAt:'an earlier save')+'.';}
-else status.textContent='Saving available. No fusion saved yet.';}).catch(function(e){status.textContent='Saving available. Reading the saved fusion failed ('+((e&&e.code)||'error')+').';});}).catch(function(){unavailable();});
-saveBtn.addEventListener('click',function(){if(!db){unavailable();return;}var doc=collect();out.textContent=JSON.stringify(doc,null,2);saveBtn.disabled=true;status.className='status';status.textContent='Saving\u2026';
-function attempt(n){return db.doc('fusion/current').set(doc).catch(function(e){if(e&&e.code==='unavailable'&&n===0)return new Promise(function(res){setTimeout(res,400+Math.random()*600);}).then(function(){return attempt(1);});throw e;});}
-attempt(0).then(function(){status.textContent='Saved fusion/current at '+doc.savedAt+' ('+doc.sources.length+' source path(s)).';}).catch(function(e){status.className='status warn';status.textContent='Save failed ('+((e&&e.code)||'error')+(e&&e.message?': '+e.message:'')+'). Copy the JSON below instead.';}).then(function(){saveBtn.disabled=false;});});
+<script>/* Fuse page client. Inlined by render.mjs. Reads #council-data, renders the comparison dossier, and saves
+   ONE db doc `fusion/current` = { runId, sources: FusionSource[], notes, savedAt } via claude.use("db").
+   Element keys (FusionSource.elements): spine, giver, beat:<id>, line:<id>, mechanic:<id>, character:<id>. */
+(function () {
+  var D = JSON.parse(document.getElementById('council-data').textContent);
+  var GUARDS = ['story', 'economy', 'lines', 'uniqueness'];
+  var GLYPH = { green: '✓', red: '✕', unmeasured: '–' };
+  var WORD = { green: 'pass', red: 'block', unmeasured: 'unmeasured' };
+  var paths = D.slots.filter(function (s) { return s.kind === 'path'; }).map(function (s) { return s.proposal; });
+
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      var v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'text') el.textContent = v; else if (k === 'cls') el.className = v; else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function add(el, c) {
+    if (c == null || c === false) return;
+    if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; }
+    el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+  }
+  function chip(text, cls) { return h('span', { cls: 'chip' + (cls ? ' ' + cls : ''), text: text }); }
+  function key(p) { return h('span', { cls: 'key' + (p.variant === 'B' ? ' vB' : ''), 'data-p': p.pathId }, p.seat + ' · ' + p.variant); }
+  function tone(p) { return p.variant === 'A' ? 'expected tone' : 'deliberate swerve'; }
+  var uid = 0;
+  function box(pathId, k) {
+    return h('input', { type: 'checkbox', id: 'k' + (++uid), 'data-path': pathId, 'data-key': k, 'aria-label': 'Keep ' + k + ' from ' + pathId });
+  }
+  function pick(pathId, k, content, cls) {
+    var input = box(pathId, k);
+    return h('label', { cls: 'pick' + (cls ? ' ' + cls : ''), for: input.id }, input, h('span', null, content));
+  }
+  function row(p, body) {
+    return h('div', { cls: 'row' }, h('div', { cls: 'row-key' }, key(p), h('span', { cls: 't', text: p.title })), h('div', { cls: 'row-body' }, body));
+  }
+  function fill(id, nodes) { var el = document.getElementById(id); if (el) add(el, nodes); }
+  function verdict(p) { return D.verdicts[p.pathId] || null; }
+  function guardOf(p, g) { var v = verdict(p); if (!v) return null; for (var i = 0; i < v.guards.length; i++) if (v.guards[i].guard === g) return v.guards[i]; return null; }
+  function gchip(state, label) { return h('span', { cls: 'g ' + state }, GLYPH[state] + ' ' + (label || WORD[state])); }
+
+  // ── overview ──
+  fill('overview', D.slots.map(function (s) {
+    if (s.kind !== 'path') {
+      return h('article', { cls: 'ov skip' }, h('div', { cls: 'ov-head' }, h('span', { cls: 'key vB' }, s.seat)),
+        h('h3', { text: 'No path from this seat' }), h('p', { text: s.reason }),
+        h('p', { cls: 't', text: 'Nothing is invented here: this seat delivered no valid proposal.' }));
+    }
+    var p = s.proposal, fp = p.fingerprint, v = verdict(p);
+    var spineId = 'spine-' + p.pathId;
+    return h('article', { cls: 'ov', 'aria-label': 'Path ' + p.pathId },
+      h('div', { cls: 'ov-head' }, key(p), chip(tone(p))),
+      h('h3', { text: p.title }),
+      h('p', { cls: 'logline', text: p.logline }),
+      h('div', { cls: 'fp' }, chip('giver ' + fp.giver), chip('verb ' + fp.coreVerb), chip('payoff ' + fp.payoffKind), chip(fp.location),
+        fp.newMechanic ? chip('new: ' + fp.newMechanic, 'new') : null, p.claimsBeat ? chip('realises ' + p.claimsBeat) : null),
+      h('div', { cls: 'fp' }, GUARDS.map(function (g) { var x = guardOf(p, g); return gchip(x ? x.state : 'unmeasured', g); }),
+        v && v.blocked ? h('span', { cls: 'chip', text: 'blocked by ' + v.blockedBy.join(', ') }) : null),
+      h('label', { cls: 'spine', for: spineId }, h('input', { type: 'radio', name: 'spine', id: spineId, value: p.pathId, 'data-spine': p.pathId }),
+        'Use this path as the spine'),
+      pick(p.pathId, 'giver', 'Keep the giver (' + fp.giver + ')'));
+  }));
+
+  // ── story goal ──
+  fill('body-story', paths.map(function (p) {
+    return row(p, h('div', { cls: 'pair' },
+      h('div', null, h('h4', { text: 'Story goal' }), h('p', { text: p.goal })),
+      h('div', null, h('h4', { text: 'Why it is not filler' }), h('p', { text: p.whyNotFiller }))));
+  }));
+
+  // ── numbers: one comparison table ──
+  (function () {
+    var b = D.band;
+    function rng(min, max) { return min != null && max != null ? min + '–' + max : max != null ? '≤ ' + max : '≥ ' + min; }
+    var rows = [
+      ['Cash', function (p) { return p.reward.cash; }, b && b.cash.min, b && b.cash.max, '$'],
+      ['Heat peak', function (p) { return p.difficulty.heatPeak; }, null, b && b.heatCeiling],
+      ['Enemies', function (p) { return p.difficulty.enemyCount; }, null, b && b.enemyCount.max],
+      ['Waves', function (p) { return p.difficulty.enemyWaves; }, null, b && b.enemyWaves.max],
+      ['Minutes', function (p) { return p.difficulty.minutes; }, b && b.minutes.min, b && b.minutes.max],
+    ];
+    var head = h('tr', null, h('th', { scope: 'col', text: 'Measure' }), h('th', { scope: 'col', text: 'Act band' }),
+      paths.map(function (p) { return h('th', { scope: 'col' }, key(p)); }));
+    var body = rows.map(function (r) {
+      return h('tr', null, h('th', { scope: 'row', text: r[0] }), h('td', { cls: 'band', text: b ? (r[4] || '') + rng(r[2], r[3]) : 'no band' }),
+        paths.map(function (p) {
+          var v = r[1](p), low = r[2] != null && v < r[2], high = r[3] != null && v > r[3];
+          return h('td', { cls: 'num' + (b && (low || high) ? ' out' + (low ? ' low' : '') : ''), text: (r[4] || '') + v });
+        }));
+    });
+    body.push(h('tr', null, h('th', { scope: 'row', text: 'Timer' }), h('td', { cls: 'band', text: b ? (b.timerAllowed ? 'allowed' : 'not allowed') : '' }),
+      paths.map(function (p) {
+        var t = p.difficulty.timeLimitS, bad = b && t != null && !b.timerAllowed;
+        return h('td', { cls: 'num' + (bad ? ' out' : ''), text: t == null ? 'none' : t + ' s' });
+      })));
+    body.push(h('tr', null, h('th', { scope: 'row', text: 'Unlocks' }), h('td', { cls: 'band', text: '' }),
+      paths.map(function (p) { return h('td', null, p.reward.unlocks.length ? p.reward.unlocks.map(function (u) { return chip(u); }) : 'none'); })));
+    body.push(h('tr', null, h('th', { scope: 'row', text: 'Fail states' }), h('td', { cls: 'band', text: '' }),
+      paths.map(function (p) { return h('td', null, h('ul', { cls: 'findings' }, p.difficulty.failStates.map(function (f) { return h('li', { text: f }); }))); })));
+    fill('body-numbers', [h('div', { cls: 'tbl-wrap' }, h('table', { cls: 'cmp-t' }, h('thead', null, head), h('tbody', null, body))),
+      h('p', { cls: 'meta', text: 'Band: quest-economy.json r' + D.economyRevision + (D.economyProvisional ? ' (provisional)' : '') + ' for ' + D.act + '. Display only; the economy guard decides.' })]);
+  })();
+
+  // ── guards: comparison table + findings per path ──
+  (function () {
+    var head = h('tr', null, h('th', { scope: 'col', text: 'Guard' }), paths.map(function (p) { return h('th', { scope: 'col' }, key(p)); }));
+    var body = GUARDS.map(function (g) {
+      return h('tr', null, h('th', { scope: 'row', text: g }), paths.map(function (p) {
+        var x = guardOf(p, g);
+        if (!x) return h('td', null, gchip('unmeasured', 'not assessed'));
+        var errs = x.findings.filter(function (f) { return f.severity === 'error'; }).length;
+        return h('td', null, gchip(x.state), h('div', { cls: 't', text: x.findings.length + ' finding(s)' + (errs ? ', ' + errs + ' blocking' : '') }));
+      }));
+    });
+    var detail = paths.map(function (p) {
+      var v = verdict(p);
+      var items = [];
+      if (v) v.guards.forEach(function (x) { x.findings.forEach(function (f) {
+        items.push(h('li', null, h('span', { cls: 'sev ' + f.severity, text: f.severity }), h('b', { text: x.guard + ' ' }), h('code', { text: f.code }), ' ' + (f.ref ? '(' + f.ref + ') ' : '') + f.message));
+      }); });
+      return row(p, items.length ? h('details', { cls: 'fold' }, h('summary', { text: 'Findings (' + items.length + ')' }), h('ul', { cls: 'findings' }, items))
+        : h('p', { cls: 't', text: v ? 'No findings.' : 'Not assessed yet.' }));
+    });
+    fill('body-guards', [h('div', { cls: 'tbl-wrap' }, h('table', { cls: 'cmp-t' }, h('thead', null, head), h('tbody', null, body)))].concat(detail));
+  })();
+
+  // ── cast ──
+  fill('body-cast', paths.map(function (p) {
+    return row(p, h('div', { cls: 'pills' }, p.characters.map(function (c) {
+      return pick(p.pathId, 'character:' + c.id, [h('b', { text: c.name }), ' ', chip(c.status, c.status === 'new' ? 'new' : ''), ' ', chip(c.role),
+        c.designNote ? h('span', { cls: 'note', text: c.designNote }) : null], 'pill');
+    })));
+  }));
+
+  // ── beats ──
+  fill('body-beats', paths.map(function (p) {
+    return row(p, h('ol', { cls: 'beats' }, p.beats.map(function (bt) {
+      var o = bt.objective || {};
+      var obj = [o.verb, o.target, o.location ? '@ ' + o.location : null, o.durationS ? o.durationS + ' s' : null].filter(Boolean).join(' · ');
+      var input = box(p.pathId, 'beat:' + bt.id);
+      return h('li', { cls: 'beat' }, h('label', { cls: 'pick', for: input.id }, input, h('span', { cls: 'n' })),
+        h('b', { text: bt.title }), h('div', { cls: 'obj', text: obj }), h('p', { text: bt.summary }));
+    })));
+  }));
+
+  // ── lines (the script) ──
+  fill('body-lines', paths.map(function (p) {
+    var list = h('div', { cls: 'lines' }, p.lines.map(function (l) {
+      var input = box(p.pathId, 'line:' + l.id);
+      return h('label', { cls: 'line', for: input.id }, input, h('span', { cls: 'spk', text: l.speaker }), h('span', { cls: 'txt', text: l.text }),
+        h('span', { cls: 'tags' }, l.purpose.map(function (x) { return chip(x, 'purpose-' + x); }), (l.when || []).map(function (w) { return chip(w, 'when'); })));
+    }));
+    return row(p, h('details', { cls: 'fold', open: true }, h('summary', { text: p.lines.length + ' lines' }), list));
+  }));
+
+  // ── mechanics ──
+  fill('body-mechanics', paths.map(function (p) {
+    return row(p, p.mechanics.length ? h('div', { cls: 'mechs' }, p.mechanics.map(function (m) {
+      return pick(p.pathId, 'mechanic:' + m.id, [h('b', { text: m.name }), ' ', chip(m.status, m.status === 'new' ? 'new' : ''), ' ', chip('home: ' + m.home),
+        h('span', { cls: 'sum', text: m.summary })], 'mech');
+    })) : h('p', { cls: 't', text: 'No mechanics declared.' }));
+  }));
+
+  // ── story hooks ──
+  fill('body-hooks', paths.map(function (p) {
+    var s = p.story || { reads: [], writes: [] };
+    return row(p, h('div', { cls: 'pair' },
+      h('div', null, h('h4', { text: 'Reads' }), s.reads.length ? h('div', { cls: 'fp' }, s.reads.map(function (r) { return h('code', { text: r }); })) : h('p', { text: 'none' })),
+      h('div', null, h('h4', { text: 'Writes' + (p.claimsBeat ? ' (realises ' + p.claimsBeat + ')' : '') }),
+        s.writes.length ? h('div', { cls: 'fp' }, s.writes.map(function (w) { return h('code', { text: w.var + ' = ' + JSON.stringify(w.value) }); })) : h('p', { text: 'none' }))));
+  }));
+
+  // ── fuse: collect, apply, save ──
+  var notes = document.getElementById('notes'), out = document.getElementById('fusion-json'), status = document.getElementById('status');
+  var saveBtns = [document.getElementById('save'), document.getElementById('save-top')].filter(Boolean);
+  var kept = document.getElementById('kept');
+  function collect() {
+    var map = {}, order = [];
+    paths.forEach(function (p) { map[p.pathId] = []; order.push(p.pathId); });
+    var sp = document.querySelector('input[name=spine]:checked');
+    if (sp && map[sp.value]) map[sp.value].push('spine');
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-key]:checked'), function (el) {
+      var k = el.getAttribute('data-path'); if (map[k]) map[k].push(el.getAttribute('data-key'));
+    });
+    var sources = order.filter(function (k) { return map[k].length; }).map(function (k) { return { pathId: k, elements: map[k] }; });
+    return { runId: D.runId, sources: sources, notes: notes.value, savedAt: new Date().toISOString() };
+  }
+  function refresh() {
+    var doc = collect();
+    out.textContent = JSON.stringify(doc, null, 2);
+    var n = doc.sources.reduce(function (a, s) { return a + s.elements.length; }, 0);
+    if (kept) kept.textContent = n + ' kept' + (document.querySelector('input[name=spine]:checked') ? '' : ' · no spine yet');
+  }
+  function apply(doc) {
+    if (!doc || !Array.isArray(doc.sources)) return;
+    doc.sources.forEach(function (src) { (src.elements || []).forEach(function (k) {
+      if (k === 'spine') { var r = document.querySelector('input[data-spine="' + CSS.escape(src.pathId) + '"]'); if (r) r.checked = true; return; }
+      var el = document.querySelector('input[data-path="' + CSS.escape(src.pathId) + '"][data-key="' + CSS.escape(k) + '"]'); if (el) el.checked = true;
+    }); });
+    if (typeof doc.notes === 'string') notes.value = doc.notes;
+    refresh();
+  }
+  document.addEventListener('change', refresh); notes.addEventListener('input', refresh); refresh();
+  function setStatus(text, warn) { status.className = 'status' + (warn ? ' warn' : ''); status.textContent = text; }
+  function setSave(on) { saveBtns.forEach(function (b) { b.disabled = !on; }); }
+  document.getElementById('copy').addEventListener('click', function () {
+    var t = out.textContent;
+    function sel() { var r = document.createRange(); r.selectNodeContents(out); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); setStatus('Selected. Press Ctrl+C or Cmd+C to copy.'); }
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { setStatus('Fusion JSON copied.'); }, sel); else sel(); } catch { sel(); }
+  });
+  function timeout(p, ms) { return Promise.race([p, new Promise(function (res) { setTimeout(function () { res('__timeout'); }, ms); })]); }
+  var db = null;
+  function unavailable() { setStatus('Saving is unavailable here. Copy the JSON below instead.', true); setSave(false); }
+  setSave(false); setStatus('Connecting to the artifact store…');
+  var useP = (window.claude && typeof window.claude.use === 'function') ? timeout(Promise.resolve(window.claude.use('db')).catch(function () { return null; }), 10000) : Promise.resolve(null);
+  useP.then(function (ns) {
+    if (!ns || ns === '__timeout') { unavailable(); return; }
+    db = ns; setSave(true); setStatus('Saving available. Reading any saved fusion…');
+    return timeout(db.doc('fusion/current').get(), 10000).then(function (snap) {
+      if (snap === '__timeout') { setStatus('Saving available. The saved fusion did not load within 10 s.'); return; }
+      if (snap && snap.exists) {
+        var d = snap.data();
+        if (d && d.runId && d.runId !== D.runId) { setStatus('Saving available. The saved fusion is from run ' + d.runId + ', so it was not applied. Saving here replaces it.'); return; }
+        apply(d); setStatus('Loaded the fusion saved at ' + (d && d.savedAt ? d.savedAt : 'an earlier time') + '.');
+      } else setStatus('Saving available. No fusion saved yet.');
+    }).catch(function (e) { setStatus('Saving available. Reading the saved fusion failed (' + ((e && e.code) || 'error') + ').'); });
+  }).catch(unavailable);
+  function save() {
+    if (!db) { unavailable(); return; }
+    var doc = collect(); out.textContent = JSON.stringify(doc, null, 2); setSave(false); setStatus('Saving…');
+    function attempt(n) {
+      return db.doc('fusion/current').set(doc).catch(function (e) {
+        if (e && e.code === 'unavailable' && n === 0) return new Promise(function (res) { setTimeout(res, 400 + Math.random() * 600); }).then(function () { return attempt(1); });
+        throw e;
+      });
+    }
+    attempt(0).then(function () { setStatus('Saved at ' + doc.savedAt + ' from ' + doc.sources.length + ' path(s).'); })
+      .catch(function (e) { setStatus('Save failed (' + ((e && e.code) || 'error') + (e && e.message ? ': ' + e.message : '') + '). Copy the JSON below instead.', true); })
+      .then(function () { setSave(true); });
+  }
+  saveBtns.forEach(function (b) { b.addEventListener('click', save); });
 })();
 </script>
-</body>
-</html>
