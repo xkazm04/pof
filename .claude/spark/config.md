@@ -98,6 +98,11 @@ source of truth.
   red, fix the tree. Stage per file; `git add <file>` can still sweep foreign WIP, so prefer
   authoring new files or `git add -p`.
 - Out-of-scope walls: none beyond CLAUDE.md.
+- **Edit source with the Edit tool, never with inline shell scripts.** A `node -e`, a heredoc-fed `node -`,
+  or `sed` carrying multi-line anchors or `\n`/`\${}` escapes is mangled by this harness's shell wrapper: the
+  replacement silently does not match, or newlines land inside string literals. It happened in 2026-10-04
+  (heredoc) and twice in 2026-11-02 `gta-quest-loop` (a guard patch that applied 1 of 4 replacements;
+  `\n` written as real newlines in council.mjs). Plain-text appends via heredoc are fine.
 - **Numbers in a brief are labelled.** A figure copied into a builder brief from an earlier report is written as 
   `measured <date> at <seed/commit>` or `illustrative`, and re-measured when the brief depends on it (2026-11-02: a brief quoted ashfall's
   10,232 reach rows; it measures 10,712 at seed 1). Second occurrence after the 2026-11-01 builder-count slip, so it lives here, not in the log.
@@ -147,5 +152,15 @@ when the dialog is done. Waves are uncapped.
   500 in dev since 2026-10-19 (a client-bundle leak); only the post-merge smoke test found it. Promoted to
   `## Gates` (main-checkout dev boot as the seam gate), together with the disk check. The contest-vault lesson
   recurred and moved to `.claude/contest/config.md ## Engines`.
+- 2026-11-02 gta-quest-loop: **committed wire types + stubs let 4 packages fan out at once, including the
+  consumer (the contracts pipeline) that was planned as sequential.** The builders' contract-gap reports
+  (`provenance.runId`, `objective.durationS`, quests that realise arc beats) were the most valuable output
+  of the wave. Plan a Director contract pass after the fan-out, not just a merge.
+- 2026-11-02 gta-quest-loop: **a generator briefed against a validator must get the validator's vocabulary
+  generated from the validator's own source.** The first live council invented variable names, so all 4 paths
+  were red on the story guard. The fix: `assess-cli.ts --story-vars` feeds the brief.
+- 2026-11-02 gta-quest-loop: **the fleet-memory live file is all DECISION and CONVENTION (204 entries), so
+  `--prune` sends every new DELIVERED line straight to the archive**, including a sibling's fresh one. This is
+  expected by design, not a defect. Say so in the commit so nobody reads it as a deletion.
 - 2026-11-01 story-decision-graph resume: the idea note's frontmatter said `status: scouted` while its Build record showed 7 shipped commits - on `resume`, derive the phase from the Build record + `git log` over the brief's paths, never from the frontmatter alone, and rewrite the frontmatter when you wrap.
 - 2026-11-01 story-decision-graph wiring: three parallel builders on file-disjoint scopes worked; two numbers a builder reported (art reach 77, 'walk can never pass') were wrong/partly wrong until the Director re-measured - re-run any pinned-count test yourself, and ask scouts/builders whether a produce body can read sibling steps BEFORE designing a step that depends on the stored sibling. Also: Phase 0 must note any dev server holding .next/dev/lock, since the e2e walker gate needs it stopped (ask the operator, never kill a PID you did not start).
