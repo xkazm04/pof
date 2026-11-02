@@ -18,6 +18,17 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - The Godot runtime is `game/quest/` on branch `quest-runtime` in `gtai-spike/evolve/project-quest`. It is **not yet merged** into evolve master.
   - Each quest is a row of the PoF `contracts` pipeline.
   - **First real use:** an act-1 quest, after the owner replaces the illustrative voice-bible lines with chosen anchors.
+- **Quest 1 LOCKED (2026-11-02): `collect-call`, Act 1** (`games/gtai/quests/collect-call/`).
+  - **Status:** the owner approved the structure and all six looks and names; fine-tuning comes later. All guards are green, and Grok judged all 23 lines.
+  - **PoF `contracts` row:** Council, Plan, Guards and Package pass. In-game is not built.
+  - **Next:** build it in the real game repo `kiro/gtai`. That means porting `game/quest/` from the spike branch `quest-runtime`, then:
+    - Trivet cutout parts for the new cast;
+    - the Toner Room safehouse;
+    - Patch's payphone router with its heat rule;
+    - Dock 9 with 6 waves of assault-rifle guards;
+    - the Mertz boss and the Robo-tazer arc ball;
+    - Gloria the nail gun;
+    - burning the crates.
 - **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2. The quest guards protect all three, and the betrayal and soul-4 beats stay unclaimable until they are decided.
 
 ## Roadmap (Phase 2 plan signed 2026-11-02: see `PHASE2.md`)
@@ -351,3 +362,41 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - A: F-07 hardening (stall profiling, a gameplay-zoom drive bench at 48 px/m, the police flow field), then the art wiring (D4 art into the city, `look_d4` as default, `selftest` evidence).
   - B: F-09b, the rig port (LOD, pooling, prewarm, the 50/200 stress test).
   - D: F-12, the quest runtime port.
+
+### 2026-11-02 day: Act 1 quest 1 "Collect Call" designed and locked
+- **Council** (`_council/20261102-act1-q1`, $1.26): Opus "Collect Call" and Grok "Project STILL", one design each, fresh cast. The story guard was green live, which proves the vocabulary fix.
+- **Owner review, then an Opus-only rework** (`-r1`, $0.86):
+  - Krump and MC Crumbtray removed (Crumbtray arrives after the player can drive).
+  - Dock 9 holds electric anti-bot weapons, as a hint.
+  - Boss: Quartermaster Duane Mertz with the **Robo-tazer**.
+  - Assault rifles introduced.
+  - 19 of 23 lines kept verbatim.
+- **Concept sheets** for the new cast:
+  - Codex `image_gen` on the plan made 5 sheets.
+  - Mertz's sheet was refused twice for "violence", so it came from qwen-image through PoF `generate-2d`.
+  - The owner approved all six looks and names in chat.
+- **The cast register of record** is `games/gtai/cast/looks.json`.
+- **8 voice bibles** were written or rewritten for the reset cast. Their reference lines are the approved quest lines.
+- **Guards:** all 4 green.
+- **Cross-family judge:** Grok scored 23/23 at earned 5 and voiceFit 5 ($0.18).
+  - **Caveat:** voiceFit is circular (the bibles were written from these lines), and uniform 5s look like judge leniency. **The owner's line review is the real gate.**
+- **Tooling added:**
+  - council `--variants`, `--fresh-cast`, `--max-new`, `--lines` and `--rework`;
+  - `concepts.mjs`;
+  - a cast register, timelines and a triage section on the fuse page;
+  - economy r2 (weak humans, so bigger waves);
+  - a CRLF fix in the cast parser.
+- **Commits:** `1c9cdf6c`, `cb7d70ed`, `ef875473`, `d1146011`, `e2c54be5`.
+- **Ledger:** `collect-call` · act1 · "Collect Call".
+  - Fingerprint: giver `don-fax`, verb `sabotage`, payoff `cash + first weapon + safehouse`, at Dock 9.
+  - Introduces: payphone router, heat, assault rifles, the Robo-tazer (boss only).
+
+**Cast timeline after quest 1:**
+- Rivet (`rivet`): Act 1 · Collect Call. Wakes up mad in a dumpster, gets hired and burns the TUCK-IN crates.
+- Don Fax (`don-fax`): Act 1 · Collect Call. Hires Rivet by payphone; one rule: no sirens at his house.
+- Patch (`patch`): Act 1 · Collect Call. The voice on the payphone; won't connect a hot caller.
+- Juno Stitch (`nurse`): Act 1 · Collect Call. Patches Rivet; will trade her real name for him coming back whole.
+- Brass Halloran (`gunsmith`): Act 1 · Collect Call. Gives him Gloria, on a debt he'll call in.
+- Dr. Ingrid Kilohm (`scientist`): Act 1 · Collect Call. Scans his "crowded" head; makes him promise to come to her first.
+- Quartermaster Duane Mertz (`quartermaster-mertz`): Act 1 · Collect Call. Boss at Dock 9; dies with his Robo-tazer.
+- Dock 9 Contractor (`dock-guard`): Act 1 · Collect Call. Weak assault-rifle guards, 6 waves.
