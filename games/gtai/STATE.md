@@ -295,3 +295,21 @@ Design truth is in `pitch.md`; this file is *where we are*.
   2. **The parent `C:\Users\kazda\kiro` is no longer a git repo.** Its `.git` was moved, not deleted, to `C:\Users\kazda\kiro-parent-git-backup-20261102\.git`. It held **92 unpushed commits** (paypal, bria, qubic, ascent, ...), and its remote `xkazm04/kiro` no longer exists, so that backup is the only copy. The 3 stale worktrees from 2025-11 under `kiro/.claude/worktrees/` are now detached folders.
   3. The save folder name stays **"RTAI Uprising"**.
   4. The fleet-memory cap was raised to 300 (`0ac8fd68`); it stands at 202/300.
+
+### 2026-11-02 day: plan (first real quest: Act 1, quest 1)
+- **Owner direction** (recorded in `pitch.md` §3, "Cast reset and Don Fax's place"):
+  - The cast is reset to names and positions only.
+  - Don Fax leads the robot gang underground and hires Rivet.
+  - Don Fax's place hosts a nurse, a gunsmith and a scientist. Their side questlines run in later sessions.
+- **The quest:** sabotage a human and army project in a guarded dock storage, picking up from the factory intro.
+  - Mechanics: payphone job router and heat only. No car, because Gearbox unlocks after the scientist's first quest. No timer.
+  - Enemies come in more numbers and waves, because humans are weak (economy r2).
+  - Rivet is nervous and unstable; the quest opens on his monologue, then Don Fax calls.
+- **Council:** 1 variant per seat (`--variants 1`), a fresh cast (`--fresh-cast`, no voice bibles), up to 4 new characters, 12-22 lines.
+- **Reports from now on:** every report carries a cast register (who each name is) and a timeline per character.
+
+### 2026-11-02 (late): day plan, Foundation lanes
+Handshake: an interactive day session. Three lanes run in parallel on disjoint files. The first contract is designed through `/gta --quest` in the next day session, together with the voice anchors.
+- **Lane A (code, rtai worktree `f04-core`):** F-04 (event bus and composition root), then F-05 (determinism core). F-06 (the city port) follows in the same lane once F-05 has landed.
+- **Lane B (art, rtai worktree `f08-art`, Codex):** F-08 and F-09, the D4 Ink and Hatch world and character parts. Crop gates at 32 and 48 px/m against D1; masters live outside git.
+- **Lane C (PoF worktree `gta-f10-f11`):** F-10 (the build-health panel and API), then F-11 (the GTAI campaign graph in `/story`).
