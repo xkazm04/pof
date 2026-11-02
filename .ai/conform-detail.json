@@ -17942,6 +17942,32 @@
       "evaluatedTs": "2026-11-02T22:24:09.307Z",
       "worker": "b2978f16-b125-4248-a847-3dfedc6e56a8",
       "techniques": []
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/usage-analytics": {
+      "context": "session-analytics-reporting",
+      "subject": "usage-analytics",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:27:13.292Z",
+      "worker": "77ffcaf8-ca67-47f2-a61d-95fe92d188d1",
+      "techniques": [
+        {
+          "technique": "coverage-from-registries",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/WeeklyDigestView/ModuleLeaderboard.tsx:12 The leaderboard lists the top 8 of the modules that emitted. moduleActivity is built in src/lib/weekly-digest.ts:56 from the emitted rows only; MODULE_LABELS is imported but used only for labels, never as the frame. SessionAnalyticsDashboard's 'Modules Active' card (index.tsx:95) and the 'Module Performance' list also count only modules with sessions. The time axis is zero-filled (day keys, months) but the module axis is not, which is the 'an exhaustiveness check closes only the axis it encodes' trap."
+        },
+        {
+          "technique": "activation-and-funnel-honesty",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/ModuleStatsRow.tsx:100 Rates are measured from completed outcomes (a CLI task succeeding or failing), not from visits. Each percentage is shown next to its own count: the with/without-context success rates carry their sample sizes in parentheses, and each module row shows its session total (line 63)."
+        },
+        {
+          "technique": "privacy-scrubbing",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/RecentSessionRow.tsx:22 Records do carry free-form prompt text, but the insight is computed and shown only on the user's own machine. A search of these files found no fetch, sendBeacon or keepalive egress; the only network calls go to the app's own local API through relative URLs. This is the golden path's local-first option, so no payload leaves the device."
+        }
+      ]
     }
   }
 }

@@ -22591,7 +22591,11 @@
           "revision": 4,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/WeeklyDigestView/ModuleLeaderboard.tsx:12 The per-module usage reports are built only from modules that emitted sessions. A module nobody worked in drops out of the report instead of showing as an explicit zero, so 'unused' looks the same as 'unmeasured'.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:83367bcb68dbb99a",
+          "evaluatedRevision": 4
         },
         {
           "subject": "session-continuation",
