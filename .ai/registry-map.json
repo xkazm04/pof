@@ -16568,7 +16568,11 @@
           "revision": 2,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/LabSearch.tsx:194 The /layout shell is a desktop authoring composer driven by keyboard shortcuts and mouse clicks, not a landscape phone game controller. I searched all 18 context files and the whole src/components/layout-lab/ directory for setPointerCapture, onPointerDown, pointerId, throttle, handedness, joystick and touchstart and got zero hits, so none of the subject's controls (steering pad, go/fire/brake holds, per-touch ownership, layout or handedness choice) exist here.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:d62c19a7f670c753",
+          "evaluatedRevision": 2
         },
         {
           "subject": "eval-harness",

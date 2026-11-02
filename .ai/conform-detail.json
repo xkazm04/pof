@@ -17932,6 +17932,16 @@
           "evidence": "src/components/modules/core-engine/sub_world/index.tsx:49 The only time-like interaction is a what-if scenario with Try/Undo. There is no live stream feed and no replay feed that could share or fork a renderer."
         }
       ]
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/two-thumb-touch-layout-design": {
+      "context": "lab-shell-and-navigation",
+      "subject": "two-thumb-touch-layout-design",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:24:09.307Z",
+      "worker": "b2978f16-b125-4248-a847-3dfedc6e56a8",
+      "techniques": []
     }
   }
 }
