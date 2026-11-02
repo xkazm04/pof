@@ -5,7 +5,8 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
-- **Phase 1: Look and engine.**
+- **Phase 1: Look and engine is DONE (2026-11-02):** Trivet look, Godot 4.7.2. **Phase 2 is next**, with two workstreams first: (1) the one-day 2D cutout test on Rivet and King, then (2) the city-scale gate.
+- **Phase 1 (history): Look and engine.**
   - **Exit criterion:** the engine locked in `src/lib/games/gtai.ts`, based on the overnight spike's scoreboard plus the owner's play-test.
   - Look and camera are locked: **Trivet** (V1 DEAD INK, 90 degrees overhead), 2026-11-01.
 - **Pre-check done** (19:05 to 19:58, $22.06, all billed to the API key). **No blockers on any engine.** Each engine lane rated its confidence of a runnable Windows build by morning at 5/5; one already exists in each. Reports: `C:\Users\kazda\kiro\gtai-spike\lanes\*\PRECHECK.md`.
@@ -19,7 +20,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | Phase | Goal | Exit | Status |
 |---|---|---|---|
 | 0 Foundation | PoF multi-game workspaces; pitch contest; baseline direction | `?g=gtai` live; `pitch.md` baseline v1 | **done** 2026-11-01 |
-| 1 Look and engine | Art direction, camera pitch, engine | Engine locked with evidence | **in progress** |
+| 1 Look and engine | Art direction, camera pitch, engine | Engine locked with evidence | **done** 2026-11-02 (Godot 4.7.2) |
 | 2 Production plan | Way of work, test strategy, phases and features (the owner's original ask); pitch intake turned into canon; story graph mission pass; PoF engine adapter if not UE | A signed plan with milestones | not started |
 | 3 Vertical slice | Clock-Out tutorial, 1 mission, 1 soul, heat 1-3, madness bands, through PoF pipelines (firearms, top-down-camera, wanted-heat) | A stranger plays 10 minutes and laughs | not started |
 | 4 Act 1 | First district, 2 friendly bosses, King, Krump radio | Act 1 playable start to end | not started |
@@ -37,6 +38,8 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - The target frame is `art-direction/trivet/ref-1-camera-90-TARGET.jpg`, and it is staged as the spike style.
 - 2026-11-01. **The spike gets a 1-hour pre-check before the night** (owner): find each engine's blockers early, so the night can be aimed better. The night continues from the pre-check's lane state.
 - 2026-11-01. **The night never stops for billing, and pushes combat** (owner, 21:50). A drained or limited path is skipped: API key first, then the subscription, and the key is re-probed every 45 min. A "Night push" outranks the remaining stretch items: weapons, combat moves, animation, effects, enemy variety, a mission slice, and a required `showcase.mp4` for the morning side-by-side.
+- 2026-11-02. **Engine locked: Godot 4.7.2** (owner). Godot executed the brief best. The city is kept, behind a 5-7 day scaling gate (`research/godot-city-scale.md`): 400 actors, at most 7 ms CPU, 1% low above 45 fps, no chunk-swap frame over 50 ms; else fall back to one district at a time. Locked in `src/lib/games/gtai.ts` (`205d8b75`).
+- 2026-11-02. **Art route: Nano Banana parts + a 2D cutout rig** (owner). This supersedes the 2026-11-01 media rule ("image generation for concept only") for GTAI characters. Nano Banana paints top-down parts on chroma green; a script keys them and reduces them to the 4 inks; Godot Skeleton2D plus procedural motion animates them. Steam's content survey must disclose AI-generated art. Tripo is not used. The motion comes from the rig, not from generated frames: the generated pose sheets drift in camera and proportion.
 - 2026-11-01. The owner's play feel outranks every spike metric. Proposed weights are in `spike/PLAN.md`.
 
 ## PoF gaps found by the game
@@ -111,3 +114,9 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Self-reported results: UE, Godot and Unity each claim 19/19 MVP, 5/5 stretch and 7/7 push, with a `showcase.mp4` each. Art: 5/7 push.
   - Cost including the pre-check: UE $92.57, Godot $97.57, Unity $91.17, art $44.59.
   - The scoreboard does not separate the engines on its own. The winner comes from the showcases, the evidence and the owner's play-test (`/gta morning`).
+
+### 2026-11-02: morning. Engine locked, art route chosen
+- The owner reviewed the showcases. Godot had the most impressive execution of every requirement. UE and Unity look the same as Godot, because all three used the same over-simple assets.
+- A Sonnet research agent produced `research/godot-city-scale.md`: there is no shipped Godot GTA-like, but the city is feasible with streaming, an activity bubble and a native sim. Gate it first.
+- Nano Banana via `agy` (gemini-4-argon-high, image-generator subagent) made the Rivet and King sheets in `art-direction/trivet/characters/` (`e54081d4`): hero, turnaround with a 90-degree top view, top-down key poses.
+- Engine locked (`205d8b75`). The art route was chosen. A parts-sheet generation for the cutout test is running.
