@@ -158,6 +158,11 @@
               },
               "location": {
                 "type": "string"
+              },
+              "durationS": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Seconds for timed verbs (survive, defend)."
               }
             }
           },
@@ -422,6 +427,11 @@
           "minLength": 1
         }
       }
+    },
+    "claimsBeat": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+.[a-z0-9-]+$",
+      "description": "Arc beat id in this act the quest realises (see the brief's claimable beats)."
     }
   }
 }

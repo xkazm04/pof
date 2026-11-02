@@ -38,6 +38,24 @@ export const QUEST_VAR_PREFIX = 'q_';
 const BASELINE = new Map(BASELINE_VARIABLES.map((v) => [v.name, v]));
 const actIndex = (a: ActId): number => ACT_IDS.indexOf(a);
 const questNodeId = (id: string): string => `quest.${id}`;
+const BEATS = new Map(GTAI_ARC.flatMap((a) => a.beats.map((b) => [b.id, { ...b, act: a.act }] as const)));
+
+/** Beats whose realisation would resolve open canon (who betrays; what the 4th soul is). Claimable only
+ *  after the owner decides, by removing the id here in the same change that records the decision. */
+export const OPEN_CANON_BEATS: readonly string[] = ['act3.betrayal', 'act4.soul-4'];
+
+/** Arc beats a quest may realise (`claimsBeat`): beats that write campaign state, none of it protected,
+ *  and none whose realisation would resolve open canon. */
+export function claimableBeats(): { id: string; act: ActId; title: string; writes: readonly string[] }[] {
+  return [...BEATS.values()]
+    .filter((b) => b.writes.length > 0 && !b.writes.some((v) => (PROTECTED_VAR_NAMES as readonly string[]).includes(v)) && !OPEN_CANON_BEATS.includes(b.id))
+    .map((b) => ({ id: b.id, act: b.act, title: b.title, writes: b.writes }));
+}
+
+const claimable = (beatId: string | undefined, act: ActId) => {
+  const b = beatId ? BEATS.get(beatId) : undefined;
+  return b && b.act === act && claimableBeats().some((c) => c.id === b.id) ? b : undefined;
+};
 
 interface MergeItem {
   id: string;
@@ -107,10 +125,17 @@ function readGuard(design: QuestDesign, types: ReadonlyMap<string, StoryVarType>
 
 function buildGraph(rawItems: readonly MergeItem[]): StoryGraph {
   const items = sortItems(rawItems);
+  // A claimed beat is realised by its quest: the beat node leaves the chain and its variables'
+  // writer becomes the quest node. The first claimant wins; a second is reported by assessStory.
+  const claimedBy = new Map<string, string>();
+  for (const { id, design } of items) {
+    const b = claimable(design.claimsBeat, design.act);
+    if (b && !claimedBy.has(b.id)) claimedBy.set(b.id, questNodeId(id));
+  }
   const variables: StoryVariable[] = [
     ...BASELINE_VARIABLES.map((b): StoryVariable => ({
       name: b.name, type: b.type, domain: b.values ? { values: b.values } : {}, initial: b.initial,
-      writers: b.writers, scope: 'playthrough', external: false, doc: b.doc,
+      writers: b.writers.map((w) => claimedBy.get(w) ?? w), scope: 'playthrough', external: false, doc: b.doc,
     })),
     ...questVariables(items),
   ];
@@ -132,6 +157,7 @@ function buildGraph(rawItems: readonly MergeItem[]): StoryGraph {
       if (prev) edge({ from: prev.id, to: id, ...(when ? { when } : {}), ...(prev.writes?.length ? { writes: prev.writes } : {}) });
     };
     for (const b of arc.beats) {
+      if (claimedBy.has(b.id)) continue;
       const proposal = b.tag === '[proposal]';
       nodes.push({ id: b.id, kind: 'event', class: 'beat', title: b.title, axis: ax, lanes, parent: arc.act, status: b.tag, authoring: proposal ? 'proposal' : 'authored' });
       step(b.id);
@@ -205,11 +231,35 @@ export function assessStory(subject: string, design: QuestDesign, ctx: QuestGuar
   const isProtected = (v: string) => PROTECTED_VARS.includes(v);
   const isQuestVar = (v: string) => v.startsWith(QUEST_VAR_PREFIX);
 
+  const claim = claimable(design.claimsBeat, design.act);
+  const rival = claim ? others.find((p) => p.claimsBeat === claim.id) : undefined;
+  if (design.claimsBeat) {
+    const beat = BEATS.get(design.claimsBeat);
+    if (!beat) {
+      findings.push({ code: 'BEAT_UNKNOWN', severity: 'error', ref: design.claimsBeat, message: `claims ${design.claimsBeat}, which is not an arc beat` });
+    } else if (beat.act !== design.act) {
+      findings.push({ code: 'BEAT_WRONG_ACT', severity: 'error', ref: beat.id, message: `claims ${beat.id} (${beat.act}) from a ${design.act} quest` });
+    } else if (!claim) {
+      const why = OPEN_CANON_BEATS.includes(beat.id) ? ' until the owner resolves its open canon' : '';
+      findings.push({ code: 'BEAT_NOT_CLAIMABLE', severity: 'error', ref: beat.id, message: `${beat.id} cannot be realised by a quest${why}` });
+    } else {
+      if (rival) findings.push({ code: 'BEAT_ALREADY_CLAIMED', severity: 'error', ref: beat.id, message: `${beat.id} is already realised by quest ${rival.id}` });
+      for (const v of beat.writes) {
+        if (!design.story.writes.some((w) => w.var === v)) {
+          findings.push({ code: 'BEAT_CLAIM_UNWRITTEN', severity: 'error', ref: v, message: `claims ${beat.id} but never writes ${v}` });
+          flaggedVars.add(v);
+        }
+      }
+    }
+  }
+
   for (const w of design.story.writes) {
+    if (claim && !rival && claim.writes.includes(w.var)) continue;
+    if (rival && claim?.writes.includes(w.var)) { flaggedVars.add(w.var); continue; }
     if (isProtected(w.var)) {
       findings.push({ code: 'PROTECTED_VAR_WRITE', severity: 'error', ref: w.var, message: `writes ${w.var}: open canon, owner-only` });
     } else if (BASELINE.has(w.var)) {
-      findings.push({ code: 'ARC_VAR_NOT_OWNED', severity: 'error', ref: w.var, message: `writes ${w.var}: only its owner beat (${BASELINE.get(w.var)!.writers.join(', ')}) may write it` });
+      findings.push({ code: 'ARC_VAR_NOT_OWNED', severity: 'error', ref: w.var, message: `writes ${w.var}: only its owner beat (${BASELINE.get(w.var)!.writers.join(', ')}) may write it; a quest realising that beat declares claimsBeat` });
     } else if (!isQuestVar(w.var)) {
       findings.push({ code: 'UNKNOWN_VAR', severity: 'error', ref: w.var, message: `writes undeclared ${w.var}: declare quest state as ${QUEST_VAR_PREFIX}<name>` });
     } else continue;

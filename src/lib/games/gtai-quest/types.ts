@@ -58,6 +58,8 @@ export interface QuestObjective {
   verb: string;
   target?: string;
   location?: string;
+  /** Seconds for timed verbs (`survive`, `defend`). Omit for untimed verbs. */
+  durationS?: number;
 }
 
 export interface QuestBeat {
@@ -140,6 +142,12 @@ export interface QuestDesign {
   difficulty: QuestDifficulty;
   story: QuestStoryHook;
   fingerprint: QuestFingerprint;
+  /**
+   * The arc beat this quest REALISES: a campaign-graph beat id in the quest's own act, e.g. `act1.soul-1`
+   * (souls are learned through quests, pitch §2). The quest then owns that beat's variables and must write
+   * them; one quest per beat; a beat touching protected canon is never claimable. Omit = realises no beat.
+   */
+  claimsBeat?: string;
 }
 
 export type CouncilSeat = 'claude' | 'grok';
@@ -180,6 +188,12 @@ export interface QuestPackage extends QuestDesign {
   status: QuestStatus;
   provenance: {
     sources: readonly FusionSource[];
+    /**
+     * The council run the fusion came from (`games/gtai/quests/_council/<runId>/`). The fuse artifact always
+     * records it and `/gta --quest` always writes it; when ABSENT the contracts Council step infers the run
+     * (and reports "ambiguous" if several match), because path ids like `claude-A` repeat across runs.
+     */
+    runId?: string;
     /** The owner's fusion notes, verbatim. */
     ownerNotes: string;
     fusedAt: string;

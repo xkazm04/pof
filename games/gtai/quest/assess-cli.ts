@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   assessQuest,
+  claimableBeats,
   PROTECTED_VARS,
   QUEST_VAR_PREFIX,
   type LineJudgeReport,
@@ -77,7 +78,7 @@ function storyVars(): number {
     protected: PROTECTED_VARS.includes(v.name),
     writtenByArc: firstWriterAct(v.name),
   }));
-  console.log(JSON.stringify({ questVarPrefix: QUEST_VAR_PREFIX, variables }, null, 2));
+  console.log(JSON.stringify({ questVarPrefix: QUEST_VAR_PREFIX, variables, claimableBeats: claimableBeats() }, null, 2));
   return 0;
 }
 

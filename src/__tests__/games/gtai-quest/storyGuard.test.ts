@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { validateStoryGraph } from '@/lib/story/validate';
-import { assessStory, buildCampaignGraph, PROTECTED_VARS } from '@/lib/games/gtai-quest/storyGuard';
+import { assessStory, buildCampaignGraph, claimableBeats, PROTECTED_VARS } from '@/lib/games/gtai-quest/storyGuard';
 import { GTAI_CAST } from '@/lib/games/gtai-quest/campaignBaseline';
 import { CLEAN, LEDGER_QUEST, ctx, mutate } from '@/__tests__/games/gtai-quest/fixtures';
-import type { QuestDesign } from '@/lib/games/gtai-quest/types';
+import type { QuestDesign, QuestPackage } from '@/lib/games/gtai-quest/types';
 
 const codes = (d: QuestDesign, subject = 'per-my-last-fax') => assessStory(subject, d, ctx()).findings.map((f) => f.code);
 
@@ -95,5 +95,46 @@ describe('assessStory', () => {
   it("a new character another quest already introduced still collides", () => {
     const d = mutate((x) => { x.characters.push({ id: 'dust-bunny', name: 'Dust Bunny', status: 'new', role: 'ally', designNote: 'lint' }); });
     expect(codes(d)).toContain('NEW_CHARACTER_COLLIDES');
+  });
+});
+
+describe('claimsBeat (a quest realises an arc beat)', () => {
+  const soulQuest = (over: Partial<QuestDesign> = {}): QuestDesign => ({
+    ...CLEAN,
+    claimsBeat: 'act1.soul-1',
+    story: { reads: [], writes: [...CLEAN.story.writes, { var: 'soul_gearbox_unlocked', value: true }] },
+    ...over,
+  });
+  const asPackage = (d: QuestDesign, id: string): QuestPackage => ({ ...LEDGER_QUEST, ...d, id });
+  const claimCodes = (d: QuestDesign, ledger: QuestPackage[] = []) =>
+    assessStory('soul-job', d, ctx({ ledger })).findings.map((f) => f.code);
+
+  it('lets the claiming quest write its beat variable, with a clean graph', () => {
+    const v = assessStory('soul-job', soulQuest(), ctx({ ledger: [] }));
+    expect(v.findings.filter((f) => f.severity === 'error')).toEqual([]);
+    expect(v.state).toBe('green');
+  });
+  it('still forbids writing an arc variable without the claim', () => {
+    expect(claimCodes(soulQuest({ claimsBeat: undefined }))).toContain('ARC_VAR_NOT_OWNED');
+  });
+  it('requires the claimed beat to be written', () => {
+    expect(claimCodes(soulQuest({ story: CLEAN.story }))).toContain('BEAT_CLAIM_UNWRITTEN');
+  });
+  it('rejects unknown, wrong-act and open-canon beats', () => {
+    expect(claimCodes(soulQuest({ claimsBeat: 'act1.nope' }))).toContain('BEAT_UNKNOWN');
+    expect(claimCodes(soulQuest({ claimsBeat: 'act2.soul-2' }))).toContain('BEAT_WRONG_ACT');
+    expect(claimCodes(soulQuest({ act: 'act3', claimsBeat: 'act3.betrayal', story: { reads: [], writes: [{ var: 'betrayal_happened', value: true }] } })))
+      .toContain('BEAT_NOT_CLAIMABLE');
+    expect(claimableBeats().map((b) => b.id)).not.toContain('act4.soul-4');
+    expect(claimableBeats().map((b) => b.id)).toContain('act1.soul-1');
+  });
+  it('allows one quest per beat', () => {
+    expect(claimCodes(soulQuest(), [asPackage(soulQuest({ title: 'Rival' }), 'rival-quest')])).toContain('BEAT_ALREADY_CLAIMED');
+  });
+  it('removes the claimed beat node and makes the quest the writer', () => {
+    const g = buildCampaignGraph([asPackage(soulQuest(), 'soul-job')]);
+    expect(g.nodes.some((n) => n.id === 'act1.soul-1')).toBe(false);
+    expect(g.variables.find((v) => v.name === 'soul_gearbox_unlocked')?.writers).toEqual(['quest.soul-job']);
+    expect(validateStoryGraph(g).filter((f) => f.severity === 'error')).toEqual([]);
   });
 });

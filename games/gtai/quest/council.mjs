@@ -266,7 +266,12 @@ export function storyVarsBlock() {
   });
   const p = v.questVarPrefix;
   return `${rows.join('\n')}\n\nA quest's own state is a new variable named ${tick(`${p}<name>`)} in snake case, e.g. ${tick(`${p}fax_jobs_done`)}. ` +
-    'Any other name is undeclared and blocks the story guard. Read only the variables above, or one an earlier quest writes.';
+    'Any other name is undeclared and blocks the story guard. Read only the variables above, or one an earlier quest writes.' +
+    ((v.claimableBeats ?? []).length
+      ? '\n\nA quest may REALISE one arc beat of its own act by setting `claimsBeat` to the beat id; it then must write ' +
+        "that beat's variables (and only then may it). One quest per beat. Claimable beats:\n" +
+        v.claimableBeats.map((b) => `- ${tick(b.id)} (${b.act}): ${b.title}; writes ${b.writes.map(tick).join(', ')}`).join('\n')
+      : '');
 }
 
 function brief() {
