@@ -130,3 +130,9 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - **Two Codex rounds running:**
   1. The 10-fix parts round for Rivet and King in `gtai-spike/cutout` (`REPORT-v2.md`, with a Codex verdict and a 32 vs 48 px/m comparison).
   2. An evolution of the Godot asset set in `gtai-spike/evolve/project`, a clone of the lane project, in waves: ground, roofs, vehicles, props, then pickups/HUD/fx. Each wave is proven by before/after shots; the results go in `EVOLVE.md` and `evidence/ladder.png`.
+- **Codex parts-fix round: done, Codex verdict yes** (`gtai-spike/cutout/REPORT-v2.md`).
+  - All 10 images held the top-down camera. 9 of the 10 fixes landed; the cape is one tarp but still resized by the slicer. All three hand workarounds were removed.
+  - The technique: "directly above, orthographic plan view" wording, plus a grey guide-shape layout template as Image 1 with the old torso as the scale anchor. Four reference images per call work.
+  - Cost: about 25k plan tokens per image; 10 images in 14 min; no limit hit.
+  - At 48 px/m the v2 limbs read without the solid-ink fallback; at 32 px/m they still need it.
+  - Next: King's torso, the bind sheets from v2 parts, a stress rerun, and a crowd test at 48 px/m.
