@@ -1,0 +1,36 @@
+{
+  "schema": "conform-run/1",
+  "worker": "272b4127-7879-4c64-806f-7a0bb1f6650a",
+  "subject": "vendored-patch-stack",
+  "evaluatedAt": "2026-11-02T22:28:54.513572+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "vendored-patch-stack",
+      "context": "ue5-build-bridge",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchor (write/route.ts:8) is only a destructuring of the request body and does not show that no vendored upstream tree or patch stack exists; the \"first-party\" claim is not supported by the line. One technique anchor (ue5-source/parse/route.ts) lies outside this context's file lis"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-02T22:28:54.513572+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "vendored-patch-stack"
+      ],
+      "techniques": [
+        "collapse-patch-axes-that-share-hunks",
+        "least-invasive-carrier",
+        "one-reset-authority",
+        "patch-set-authority",
+        "reject-triage-is-a-port-not-a-merge"
+      ],
+      "deviations": 0,
+      "context": "ue5-build-bridge",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

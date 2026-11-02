@@ -17968,6 +17968,47 @@
           "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/RecentSessionRow.tsx:22 Records do carry free-form prompt text, but the insight is computed and shown only on the user's own machine. A search of these files found no fetch, sendBeacon or keepalive egress; the only network calls go to the app's own local API through relative URLs. This is the golden path's local-first option, so no payload leaves the device."
         }
       ]
+    },
+    "6d876014-986d-4dbd-8fad-3609af2e0609/vendored-patch-stack": {
+      "context": "ue5-build-bridge",
+      "subject": "vendored-patch-stack",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:28:54.513Z",
+      "techniques": [
+        {
+          "technique": "collapse-patch-axes-that-share-hunks",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/blueprint-transpiler/write/route.ts:8 No patch set exists to split by axis; writes are whole first-party class files."
+        },
+        {
+          "technique": "least-invasive-carrier",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/pof-bridge/compile/hot-patch/route.ts:10 'Hot-patch' means Live Coding a full file in the user's own project, not carrying a change against upstream source."
+        },
+        {
+          "technique": "one-reset-authority",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/ue5-source/parse/route.ts:9 No vendored upstream tree is materialized or reset; the parser reads the caller-supplied project path."
+        },
+        {
+          "technique": "patch-set-authority",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/pof-bridge/compile/hot-patch/route.ts:15 No patch files exist alongside a patched tree, so there is no source-vs-derived authority to pick."
+        },
+        {
+          "technique": "reject-triage-is-a-port-not-a-merge",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/blueprint-transpiler/write/route.ts:15 This 'reject' is a drift guard on a first-party write, not a rejected hunk from an upstream bump."
+        }
+      ],
+      "withdrawn": {
+        "worker": "272b4127-7879-4c64-806f-7a0bb1f6650a",
+        "state": "not-applicable",
+        "at": "2026-11-02T22:29:17.795461+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor (write/route.ts:8) is only a destructuring of the request body and does not show that no vendored upstream tree or patch stack exists; the \"first-party\" claim is not supported by the line. One technique anchor (ue5-source/parse/route.ts) lies outside this context's file lis"
+      }
     }
   }
 }
