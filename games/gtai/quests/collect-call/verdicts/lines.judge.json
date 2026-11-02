@@ -1,0 +1,146 @@
+{
+  "schema": "gtai.lineJudge/1",
+  "judgeSeat": "grok",
+  "authorSeat": "claude",
+  "judgedAt": "2026-11-02T18:57:42.281Z",
+  "lines": [
+    {
+      "lineId": "rivet-line-stopped",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The through-a-cop image, the third-person stay order, and the dumpster hide all land."
+    },
+    {
+      "lineId": "rivet-my-hands",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Shaking hands and an empty dumpster make the whisper denial both his and funny."
+    },
+    {
+      "lineId": "rivet-third-person",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "He catches the third-person slip, and the sirens-as-quiet line is the joke."
+    },
+    {
+      "lineId": "patch-collect-call",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The alley option and the not-on-fire rule are the joke and the heat lesson."
+    },
+    {
+      "lineId": "rivet-who-is-this",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Pressing one on a wall is the joke, and the panic is him obeying before he understands."
+    },
+    {
+      "lineId": "fax-slow-motion",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The slow-motion complaint is the joke and the admiration that starts the hire."
+    },
+    {
+      "lineId": "fax-statistically",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The roof, the siren rule, the copy-shop knock, and the statistical hitman all land."
+    },
+    {
+      "lineId": "juno-load-bearing",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The load-bearing badge is the joke inside orders that end in thank you."
+    },
+    {
+      "lineId": "juno-real-name",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "She names the shake, calls it professional, and trades her real name for his return."
+    },
+    {
+      "lineId": "brass-gloria",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Gloria's name, the funeral triplet, and the lose-her threat hand over the gun."
+    },
+    {
+      "lineId": "brass-someday",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The future fetch is the debt, and the flat I-read-about-it is his whole heart."
+    },
+    {
+      "lineId": "kilohm-accents",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Warm, crowded, and rude is the joke, and she never says what the voices are."
+    },
+    {
+      "lineId": "rivet-buildings-talk",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Printer ghosts are the wrong answer, and NOT YOU shouts the whisper down."
+    },
+    {
+      "lineId": "kilohm-come-to-me",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Before, not after, is her rule, and the stool and notebook make the next visit real."
+    },
+    {
+      "lineId": "fax-dock-brief",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Dock 9, the hum, burn it, and lose the heat are the job, with the plan left unsaid."
+    },
+    {
+      "lineId": "guard-who-do-we-call",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Legal, who do we call, and we are who you call is one complete panic joke."
+    },
+    {
+      "lineId": "rivet-sorry-not-sorry",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Sorry collapsing into not-sorry, with Gloria deciding, fits the kill."
+    },
+    {
+      "lineId": "mertz-inventory",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Forty crates and his pension make the standoff a paperwork emergency."
+    },
+    {
+      "lineId": "mertz-appliances",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "The box rating is the joke and it tells you the charge treats him as an appliance."
+    },
+    {
+      "lineId": "rivet-everybody-screamed",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Everybody screaming in a body of one is the joke and the choir he will not accept."
+    },
+    {
+      "lineId": "rivet-feels-good",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "TUCK-IN burning closes the objective, and he fights whoever enjoyed the fire."
+    },
+    {
+      "lineId": "fax-confirm-receipt",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Taped money, the payphone rule, and God doesn't pay close the contract in his cadence."
+    },
+    {
+      "lineId": "rivet-i-have-a-job",
+      "earned": 5,
+      "voiceFit": 5,
+      "note": "Received and confirmed answers the call, and the list puts the job back on top of the voice."
+    }
+  ]
+}
