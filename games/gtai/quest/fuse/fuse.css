@@ -98,6 +98,19 @@ section.cmp{margin-top:var(--s-6);scroll-margin-top:64px}
 .pair h4,.sub{font:600 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
 .pair p{margin:0;max-width:68ch}
 
+/* cast register */
+.register{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--s-3);margin-top:var(--s-3)}
+.who{background:var(--sheet);border:1px solid var(--rule);padding:var(--s-3) var(--s-4);display:flex;flex-direction:column;gap:6px;min-width:0}
+.who-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-2)}
+.who h3{font:800 22px/1.05 var(--f-display);margin:0;overflow-wrap:anywhere}
+.who .sub{margin-top:6px}
+.t{font-size:12px;color:var(--muted);margin:0}
+.timeline{margin:0;padding:0 0 0 14px;border-left:3px solid var(--rule);list-style:none;display:flex;flex-direction:column;gap:6px}
+.timeline li{font-size:13px;position:relative}
+.timeline li::before{content:"";position:absolute;left:-20px;top:6px;width:9px;height:9px;background:var(--ink);border-radius:50%}
+.timeline li.now::before{background:var(--verm)}
+.nowrole{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px}
+
 /* pickable items */
 .pick{display:flex;gap:var(--s-2);align-items:flex-start;cursor:pointer;min-width:0}
 .pick input{flex:0 0 auto;width:17px;height:17px;margin:2px 0 0;accent-color:var(--verm)}

@@ -35,6 +35,10 @@ export const GTAI_CAST: readonly CastMember[] = [
   { id: 'kronk', name: 'Kronk', kind: 'boss' },
   { id: 'lady-cathode', name: 'Lady Cathode', kind: 'giver' },
   { id: 'don-fax', name: 'Don Fax', kind: 'giver' },
+  // Don Fax's place (owner, 2026-11-02, pitch §3): each has a side questline. Names are working titles.
+  { id: 'nurse', name: 'Nurse', kind: 'giver' },
+  { id: 'gunsmith', name: 'Gunsmith', kind: 'giver' },
+  { id: 'scientist', name: 'Scientist', kind: 'giver' },
   { id: 'big-lenny-lift', name: 'Big Lenny Lift', kind: 'giver' },
   { id: 'vend-etta', name: 'Vend-Etta', kind: 'giver' },
   { id: 'sister-suction', name: 'Sister Suction', kind: 'giver' },

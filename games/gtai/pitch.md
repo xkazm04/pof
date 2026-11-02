@@ -60,6 +60,25 @@ Every line carries a tag:
 
 ## 3. Cast **[owner]** with roles **[proposal]**
 
+### Cast reset and Don Fax's place **[owner, 2026-11-02]**
+
+- **Characters keep only their names and positions from the prototype pitches.** No personality, voice, look or catchphrase carries over; every character is designed fresh and readjusted as the story needs. The player has met nobody when Act 1 begins.
+- **Don Fax leads the robot gang underground.** He notices Rivet after the factory and hires him for hitman work. He is the first character the player meets, by payphone.
+- **Don Fax's place hosts three supporting characters**, each with a side questline played in later sessions:
+
+  | Character | Role in the story | Their questline |
+  |---|---|---|
+  | **Nurse** | Heals Rivet | Can become Rivet's love interest |
+  | **Gunsmith** | Gives Rivet his first weapon | Becomes Rivet's buddy through personal requests |
+  | **Scientist** | Tries to find out what is wrong with Rivet's head | Teaches Rivet to handle the voices across the game. **Gearbox unlocks when the scientist's first quest completes**, so no car is drivable before that |
+
+- **Act 1, quest 1:** sabotage a project in a guarded dock storage that is tied to humans and the army.
+  - The beats pick up straight from the factory intro.
+  - **Mechanics introduced:** the payphone job router and heat.
+  - **No timer.**
+- **Rivet at the start of Act 1:** he has just gone mad. He is extremely nervous, unsure and unstable. His first lines are a monologue to himself, before the payphone rings with Don Fax on the line.
+- **Human enemies are weak:** one hit kills them, and their bullets are weak. Fights are crowds and waves, not duels (`balance/quest-economy.json` r2).
+
 The owner's rule: note the characters now, and decide their roles later. Below are the host's proposed roles. The
 source is the contest variant each came from. Read its `PITCH.md` for the original material.
 

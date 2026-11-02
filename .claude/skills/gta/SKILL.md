@@ -121,6 +121,13 @@ filler.** Every voice line must be funny or move a character or the game forward
      tone) and variant B (a swerve: different giver, verb and payoff). That makes 4 paths.
    - `run` probes each seat first. **A skipped seat is reported to the owner, with its reason from
      `seats.json`.** Never fill its slot by hand. Report the cost from `seats.json`.
+   - **Shape options on `brief`,** used when the owner asks for them:
+     - `--variants 1`: one design per seat;
+     - `--fresh-cast`: names and positions only, no voice bibles, no prototype traits;
+     - `--max-new N`: allow more new characters;
+     - `--lines min-max`: change the line range.
+
+     The shape is stored in `run.json`, and `run` validates against it.
 3. **Assess, render, publish.**
    - `council.mjs assess <runDir>`, then `council.mjs render <runDir>`.
    - Publish `<runDir>/fuse.html` with the Artifact tool, `capabilities: {db:{}, user:{}}`, and give the
@@ -151,6 +158,10 @@ filler.** Every voice line must be funny or move a character or the game forward
    - A headless Godot run of the quest reaches completion, with a frame as evidence.
    - The `contracts` pipeline in PoF shows the quest's state.
 7. **Wrap.** The normal `/gta` wrap below, plus a ledger line in STATE.md (quest id, act, title, fingerprint).
+
+**Every quest report carries a cast register** (owner rule, 2026-11-02): each name with who it is, and a bullet
+timeline of that character's involvement so far, one quest per bullet, in play order. The fuse page renders
+it from the quest ledger. The chat report and the wrap repeat it for every character the quest touches.
 
 Honesty rules for quest mode: a skipped seat is reported, never faked; `unmeasured` is never green; a red
 guard without a recorded override blocks; a frame or it did not play.

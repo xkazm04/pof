@@ -64,6 +64,43 @@
       pick(p.pathId, 'giver', 'Keep the giver (' + fp.giver + ')'));
   }));
 
+  // ── cast register: who each name is, and each character's timeline (owner rule, 2026-11-02) ──
+  (function () {
+    var ledger = D.ledger || [];
+    var ACTS = { prologue: 'Prologue', 'clock-out': 'Clock-Out', act1: 'Act 1', act2: 'Act 2', act3: 'Act 3', act4: 'Act 4', finale: 'Finale' };
+    var order = [], byId = {};
+    function note(id) { if (!byId[id]) { byId[id] = { id: id, here: [], past: [] }; order.push(id); } return byId[id]; }
+    ledger.forEach(function (q) { q.characters.forEach(function (c) { note(c.id).past.push({ q: q, c: c }); }); });
+    paths.forEach(function (p) { p.characters.forEach(function (c) { note(c.id).here.push({ p: p, c: c }); }); });
+    // Rivet first, then whoever this quest introduces, then the rest of the known cast.
+    order.sort(function (a, b) {
+      function rank(id) { return id === 'rivet' ? 0 : byId[id].here.length ? (byId[id].past.length ? 1 : 2) : 3; }
+      return rank(a) - rank(b) || byId[b].here.length - byId[a].here.length;
+    });
+    var cards = order.map(function (id) {
+      var e = byId[id];
+      var names = {};
+      e.past.forEach(function (x) { names[x.c.name] = true; }); e.here.forEach(function (x) { names[x.c.name] = true; });
+      var nameList = Object.keys(names);
+      var status = e.past.length ? 'met in ' + e.past.length + ' earlier quest(s)' : 'first appearance';
+      var look = e.here.map(function (x) { return x.c.designNote ? h('li', null, key(x.p), ' ', x.c.designNote) : null; }).filter(Boolean);
+      var timeline = e.past.map(function (x) {
+        return h('li', null, h('b', { text: (ACTS[x.q.act] || x.q.act) + ' · ' + x.q.title }), ' (' + x.c.role + ', ' + x.q.status + ')');
+      });
+      timeline.push(h('li', { cls: 'now' }, h('b', { text: 'This quest (proposed)' }), ' ',
+        e.here.length ? e.here.map(function (x) { return h('span', { cls: 'nowrole' }, key(x.p), ' ' + x.c.role + ' ' + '“' + x.c.name + '”'); })
+          : 'not in any path'));
+      return h('article', { cls: 'who' },
+        h('div', { cls: 'who-head' }, h('h3', { text: nameList.join(' / ') || id }), h('code', { text: id })),
+        h('p', { cls: 't', text: status + (e.here.length < paths.length && e.here.length ? ' · in ' + e.here.length + ' of ' + paths.length + ' paths' : '') }),
+        look.length ? [h('span', { cls: 'sub', text: 'Look' }), h('ul', { cls: 'findings' }, look)] : null,
+        h('span', { cls: 'sub', text: 'Timeline' }), h('ul', { cls: 'timeline' }, timeline));
+    });
+    fill('body-register', [
+      h('p', { cls: 'meta', text: ledger.length ? ledger.length + ' earlier quest(s) in the ledger.' : 'No earlier quests: every character below is met for the first time.' }),
+      h('div', { cls: 'register' }, cards)]);
+  })();
+
   // ── story goal ──
   fill('body-story', paths.map(function (p) {
     return row(p, h('div', { cls: 'pair' },

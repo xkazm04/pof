@@ -47,7 +47,27 @@ export function collectCouncil(runDir) {
     band: act && economy ? economy.acts?.[act] ?? null : null,
     economyRevision: economy?.revision ?? null, economyProvisional: economy?.provisional ?? null,
     seats: seats?.seats ?? {}, slots, verdicts,
+    ledger: readLedgerSummary(),
   };
+}
+
+const ACT_ORDER = ['prologue', 'clock-out', 'act1', 'act2', 'act3', 'act4', 'finale'];
+
+/** Every shipped or planned quest package, in play order, reduced to what the cast register needs:
+ *  the owner asked (2026-11-02) that every report says who each name is and how far each character has come. */
+function readLedgerSummary() {
+  const dir = path.join(ROOT, 'games', 'gtai', 'quests');
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const id of fs.readdirSync(dir)) {
+    if (id.startsWith('_')) continue;
+    const q = readIf(path.join(dir, id, 'quest.json'));
+    if (!q) continue;
+    out.push({ id, act: q.act, title: q.title, status: q.status,
+      characters: (q.characters ?? []).map((c) => ({ id: c.id, name: c.name, role: c.role })),
+      beats: (q.beats ?? []).map((b) => b.title) });
+  }
+  return out.sort((a, b) => ACT_ORDER.indexOf(a.act) - ACT_ORDER.indexOf(b.act) || (a.id < b.id ? -1 : 1));
 }
 
 // The page's CSS and client script are plain files beside this one (fuse/), inlined at render time so the
@@ -56,6 +76,7 @@ const ASSET = (name) => fs.readFileSync(path.join(HERE, 'fuse', name), 'utf8');
 const FONTS = 'https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@400;600;700&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap';
 
 const SECTIONS = [
+  ['register', 'Cast register', 'Who each name is, and every character\'s story so far.'],
   ['story', 'Story goal', 'What each path does for the campaign, and the laugh or turn that earns it.'],
   ['numbers', 'Reward and difficulty', 'Each path against the act band. A highlighted cell is outside the band.'],
   ['guards', 'Guards', 'PoF verdicts. A red guard blocks the quest unless you override it with a reason.'],

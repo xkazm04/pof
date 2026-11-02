@@ -99,11 +99,12 @@ const kebab = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/
 const stripTags = (s) => s.replace(/\s*\*\*\[(owner|proposal|open)[^\]]*\]\*\*/g, '').trim();
 
 /** Cast from pitch §3: each table row / labelled paragraph -> `- Name (\`id\`): role`. */
-export function castFromPitch(md) {
+export function castFromPitch(md, { namesOnly = false } = {}) {
   const s3 = section(md, 3);
   const out = [];
   let antagonists = false;
-  for (const line of s3.split('\n')) {
+  // CRLF-safe (`.` never matches `\r`) and indent-safe (a table nested under a list item is indented).
+  for (const line of s3.split(/\r?\n/).map((l) => l.trimStart())) {
     // Protected canon (pitch §10): the act-antagonist order/allegiance and the betrayer are owner-only,
     // so the brief never carries the host's proposals for them.
     if (/^\*\*[^*]+\*\*/.test(line) && !line.startsWith('|')) antagonists = /^\*\*Act antagonists/i.test(line);
@@ -115,10 +116,11 @@ export function castFromPitch(md) {
       if (antagonists) role = 'act antagonist (which act, and whose side, is owner-only)';
       role = role.replace(/\.?\s*(Proposed|Alternative) betrayer[^.]*\.?/gi, '').trim();
       const what = cells[0].replace(/\*\*[^*]+\*\*/g, '').replace(/^[,\s]+/, '').trim();
-      for (const n of names) out.push(`- ${n} (\`${kebab(n)}\`)${what && names.length === 1 ? `, ${what}` : ''}: ${role}`);
+      // namesOnly: the owner keeps names and positions, never the prototype's traits (the `what` descriptor).
+      for (const n of names) out.push(`- ${n} (\`${kebab(n)}\`)${what && names.length === 1 && !namesOnly ? `, ${what}` : ''}: ${role}`);
     } else {
       const m = line.match(/^\*\*([^*]+)\*\*:\s*\*\*([^*]+)\*\*\s*(.*)$/);
-      if (m) out.push(`- ${m[2].trim()} (\`${kebab(m[2])}\`): ${m[1].trim().toLowerCase()}. ${stripTags(m[3].replace(/\*\*/g, '')).replace(/^\([^)]*\)\.\s*/, '').split(/(?<=\.)\s/)[0]}`);
+      if (m) out.push(`- ${m[2].trim()} (\`${kebab(m[2])}\`): ${m[1].trim().toLowerCase()}.${namesOnly ? '' : ` ${stripTags(m[3].replace(/\*\*/g, '')).replace(/^\([^)]*\)\.\s*/, '').split(/(?<=\.)\s/)[0]}`}`);
     }
   }
   return out.join('\n');
@@ -198,11 +200,11 @@ export function validateSchema(schema, value, at = '$') {
 }
 
 /** Schema + the brief's own rules for one seat's `[A, B]` delivery. Returns error strings (empty = valid). */
-export function validateDelivery(arr, { seat, act }) {
+export function validateDelivery(arr, { seat, act, variants = 2, maxNew = 1, lines = [8, 14] }) {
   const schema = readJson(SCHEMA_FILE);
-  if (!Array.isArray(arr)) return ['reply must be a JSON array [A, B]'];
+  if (!Array.isArray(arr)) return [`reply must be a JSON array ${variants === 1 ? '[A]' : '[A, B]'}`];
   const errs = [];
-  if (arr.length !== 2) errs.push(`array must have exactly 2 objects, got ${arr.length}`);
+  if (arr.length !== variants) errs.push(`array must have exactly ${variants} object(s), got ${arr.length}`);
   arr.forEach((p, i) => {
     const at = `[${i}]`;
     const s = validateSchema(schema, p, at);
@@ -213,7 +215,7 @@ export function validateDelivery(arr, { seat, act }) {
     if (p.seat !== seat) errs.push(`${at}.seat: must be "${seat}"`);
     if (p.pathId !== `${p.seat}-${p.variant}`) errs.push(`${at}.pathId: must be "${p.seat}-${p.variant}"`);
     if (act && p.act !== act) errs.push(`${at}.act: must be "${act}"`);
-    if (p.lines.length < 8 || p.lines.length > 14) errs.push(`${at}.lines: needs 8-14 lines, got ${p.lines.length}`);
+    if (p.lines.length < lines[0] || p.lines.length > lines[1]) errs.push(`${at}.lines: needs ${lines[0]}-${lines[1]} lines, got ${p.lines.length}`);
     if (p.beats.length < 3) errs.push(`${at}.beats: needs at least 3 beats, got ${p.beats.length}`);
     const lineIds = new Set();
     for (const l of p.lines) { if (lineIds.has(l.id)) errs.push(`${at}.lines: duplicate id "${l.id}"`); lineIds.add(l.id); }
@@ -221,10 +223,10 @@ export function validateDelivery(arr, { seat, act }) {
     for (const l of p.lines) if (!charIds.has(l.speaker)) errs.push(`${at}.lines["${l.id}"].speaker "${l.speaker}" is not a characters id`);
     for (const b of p.beats) for (const id of b.lineIds) if (!lineIds.has(id)) errs.push(`${at}.beats["${b.id}"].lineIds: "${id}" is not a line id`);
     const fresh = p.characters.filter((c) => c.status === 'new');
-    if (fresh.length > 1) errs.push(`${at}.characters: at most one new character per variant, got ${fresh.length}`);
+    if (fresh.length > maxNew) errs.push(`${at}.characters: at most ${maxNew} new character(s) per design, got ${fresh.length}`);
     for (const c of fresh) if (!c.designNote) errs.push(`${at}.characters["${c.id}"]: a new character needs a designNote`);
   });
-  if (errs.length === 0 && arr.length === 2) {
+  if (errs.length === 0 && variants === 2 && arr.length === 2) {
     const [a, b] = arr.map((p) => p.fingerprint);
     for (const k of ['giver', 'coreVerb', 'payoffKind']) if (String(a[k]).toLowerCase() === String(b[k]).toLowerCase()) errs.push(`[1].fingerprint.${k}: variant B must differ from A (both "${a[k]}")`);
   }
@@ -287,7 +289,15 @@ function brief() {
   const economy = readJson(path.join(GTAI, 'balance', 'quest-economy.json'));
   const band = economy.acts?.[act];
   const ledger = readLedger();
-  const voices = voiceIds();
+  // Owner shape options (2026-11-02): one variant per seat, a fresh cast (names and positions only, no
+  // prototype traits and no voice bibles), more new characters, a different line range.
+  const variants = Number(opt('variants', '2'));
+  if (![1, 2].includes(variants)) die('--variants must be 1 or 2');
+  const freshCast = argv.includes('--fresh-cast');
+  const maxNew = Number(opt('max-new', '1'));
+  const [minLines, maxLines] = opt('lines', '8-14').split('-').map(Number);
+  if (!(minLines > 0 && maxLines >= minLines)) die('--lines must be "<min>-<max>"');
+  const voices = freshCast ? [] : voiceIds();
   const strip = (s) => s.replace(/^## \d+\.[^\n]*\n/, '').trim();
   const fill = {
     act, runId, date: new Date().toISOString().slice(0, 10), goal,
@@ -295,11 +305,24 @@ function brief() {
     actRow: actRowFromPitch(pitch, act),
     economyRevision: String(economy.revision),
     economyBand: band ? '```json\n' + JSON.stringify(band, null, 2) + '\n```' : '(no band for this act)',
-    cast: castFromPitch(pitch),
+    cast: freshCast
+      ? 'Names and positions only. **Nothing about these characters is fixed: do not use any personality, voice, look or catchphrase from earlier drafts.** ' +
+        'Invent each character fresh from the owner constraints above. The player has met none of them yet.\n\n' + castFromPitch(pitch, { namesOnly: true })
+      : castFromPitch(pitch),
+    variantWord: variants === 1 ? 'one quest design' : 'two quest variants',
+    contrast: variants === 1
+      ? '## One design\n\nWrite one design: your strongest reading of the owner goal and constraints. The other seat writes its own; make yours distinctly yours.'
+      : '## Forced contrast\n\n- Variant A: the act\'s expected tone and shape.\n- Variant B: a deliberate swerve. A different giver, a different core verb and a different payoff kind than A.',
+    deliverShape: variants === 1 ? '1 object: `[A]` (`"variant": "A"`)' : '2 objects: `[A, B]`',
+    linesRule: `${minLines} to ${maxLines} lines per design.`,
+    newRule: maxNew === 1 ? 'At most one new character per design.' : `At most ${maxNew} new characters per design.`,
     souls: SOULS_BY_ACT[act].length ? SOULS_BY_ACT[act].join(', ') : 'none yet',
     tone: strip(section(pitch, 6)),
     madness: strip(section(pitch, 5)),
-    voices: voices.length ? voices.map((id) => `### Voice bible \`${id}\`\n\n${voiceText(id).replace(/^# /gm, '#### ').replace(/^## /gm, '##### ')}`).join('\n\n') : '(no voice bibles yet)',
+    voices: freshCast
+      ? '## Voice bibles\n\nWithheld for this run by the owner: earlier voice bibles carry traits that no longer hold. Give each speaker a clear, distinct voice of your own.'
+      : '## Voice bibles (verbatim)\n\nEvery line spoken by an existing character must fit that character\'s bible.\n\n' +
+        (voices.length ? voices.map((id) => `### Voice bible \`${id}\`\n\n${voiceText(id).replace(/^# /gm, '#### ').replace(/^## /gm, '##### ')}`).join('\n\n') : '(no voice bibles yet)'),
     storyVars: storyVarsBlock(),
     ledger: ledger.length
       ? ledger.map((q) => `- ${q.title} (${q.act}): giver \`${q.fingerprint?.giver}\`, verb \`${q.fingerprint?.coreVerb}\`, payoff \`${q.fingerprint?.payoffKind}\`, location \`${q.fingerprint?.location}\`, new mechanic \`${q.fingerprint?.newMechanic}\``).join('\n')
@@ -311,7 +334,8 @@ function brief() {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'BRIEF.md'), md);
   fs.copyFileSync(SCHEMA_FILE, path.join(dir, 'proposal.schema.json'));
-  writeJson(path.join(dir, 'run.json'), { runId, act, goal, constraints, createdAt: new Date().toISOString(), voices, ledger: ledger.map((q) => q.id), economyRevision: economy.revision });
+  writeJson(path.join(dir, 'run.json'), { runId, act, goal, constraints, createdAt: new Date().toISOString(), voices, ledger: ledger.map((q) => q.id), economyRevision: economy.revision,
+    shape: { variants, freshCast, maxNew, lines: [minLines, maxLines] } });
   console.log(`brief: ${rel(path.join(dir, 'BRIEF.md'))} (${md.length} chars, ${voices.length} voice bibles, ${ledger.length} ledger quests)`);
   console.log(`next: node games/gtai/quest/council.mjs run ${rel(dir)}`);
 }
@@ -340,6 +364,8 @@ async function runCouncil() {
   const dir = path.resolve(positional(1) ?? die('usage: run <runDir>'));
   if (!fs.existsSync(path.join(dir, 'BRIEF.md'))) die(`${rel(dir)} has no BRIEF.md (run \`brief\` first)`);
   const meta = readJson(path.join(dir, 'run.json'));
+  const shapeNote = meta.shape ? `shape: ${meta.shape.variants} variant(s), fresh cast ${meta.shape.freshCast}, max new ${meta.shape.maxNew}, lines ${meta.shape.lines.join("-")}` : "shape: default";
+  console.log(shapeNote);
   const reg = await loadRegistry().catch((e) => die(e.message));
   const names = opt('seats', 'claude,grok').split(',').map((s) => s.trim()).filter(Boolean);
   const seats = names.map(seatSpec);
@@ -368,16 +394,16 @@ async function runCouncil() {
     const note = (t, n) => rec.attempts.push({ attempt: n, outcome: t.outcome, exit: t.r.exit, timedOut: t.r.timedOut, wall_s: t.r.wall_s, cost_usd: t.parsed.cost_usd ?? null, turns: t.parsed.turns, usage: t.parsed.usage, errors: t.parsed.errors });
     note(turn, 1);
     let arr = turn.outcome === 'completed' ? extractArray(turn.parsed.final) : null;
-    let errors = turn.outcome !== 'completed' ? [`seat ${turn.outcome}: ${turn.parsed.errors.join('; ') || `exit ${turn.r.exit}`}`] : arr ? validateDelivery(arr, { seat: p.id, act: meta.act }) : ['no JSON array found in the reply'];
+    let errors = turn.outcome !== 'completed' ? [`seat ${turn.outcome}: ${turn.parsed.errors.join('; ') || `exit ${turn.r.exit}`}`] : arr ? validateDelivery(arr, { seat: p.id, act: meta.act, ...(meta.shape ?? {}) }) : ['no JSON array found in the reply'];
     if (errors.length && turn.outcome === 'completed') {
       // One repair round: the seat gets its own reply and the validation errors back.
-      const repair = `# Repair\n\nYour reply to BRIEF.md failed validation. Fix every error and reply with only the corrected JSON array [A, B].\n\n## Errors\n\n${errors.map((e) => `- ${e}`).join('\n')}\n\n## Your previous reply\n\n${turn.parsed.final}\n`;
+      const repair = `# Repair\n\nYour reply to BRIEF.md failed validation. Fix every error and reply with only the corrected JSON array.\n\n## Errors\n\n${errors.map((e) => `- ${e}`).join('\n')}\n\n## Your previous reply\n\n${turn.parsed.final}\n`;
       fs.writeFileSync(path.join(dir, `REPAIR.${p.id}.md`), repair);
       console.log(`${p.id}: ${errors.length} validation error(s); one repair round`);
       turn = await seatTurn(reg, p, `Read REPAIR.${p.id}.md and BRIEF.md in the current directory. You are seat "${p.id}". Reply with only the corrected JSON array.`, { cwd: dir, timeoutMs: ceilingMs, logDir: path.join(logRoot, 'attempt-2') });
       note(turn, 2);
       arr = turn.outcome === 'completed' ? extractArray(turn.parsed.final) : null;
-      errors = turn.outcome !== 'completed' ? [`repair ${turn.outcome}: ${turn.parsed.errors.join('; ') || `exit ${turn.r.exit}`}`] : arr ? validateDelivery(arr, { seat: p.id, act: meta.act }) : ['no JSON array found in the repair reply'];
+      errors = turn.outcome !== 'completed' ? [`repair ${turn.outcome}: ${turn.parsed.errors.join('; ') || `exit ${turn.r.exit}`}`] : arr ? validateDelivery(arr, { seat: p.id, act: meta.act, ...(meta.shape ?? {}) }) : ['no JSON array found in the repair reply'];
     }
     rec.wall_s = Math.round((Date.now() - t0) / 10) / 100;
     const costs = rec.attempts.map((a) => a.cost_usd).filter((c) => c != null);

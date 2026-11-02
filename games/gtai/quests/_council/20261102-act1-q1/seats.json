@@ -1,0 +1,109 @@
+{
+  "runId": "20261102-act1-q1",
+  "startedAt": "2026-11-02T17:17:47.880Z",
+  "seats": {
+    "claude": {
+      "spec": "claude:claude-opus-5-5@high",
+      "status": "delivered",
+      "reason": null,
+      "probe": {
+        "available": true,
+        "outcome": "completed",
+        "wall_s": 5.04,
+        "cost_usd": 0.051116,
+        "reason": null
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "outcome": "completed",
+          "exit": 0,
+          "timedOut": false,
+          "wall_s": 163.92,
+          "cost_usd": 0.6529856,
+          "turns": 3,
+          "usage": {
+            "input_tokens": 6,
+            "cache_creation_input_tokens": 46849,
+            "cache_read_input_tokens": 131948,
+            "output_tokens": 12589,
+            "output_tokens_details": {
+              "thinking_tokens": 7085
+            },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 46849,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 12394,
+                "cache_read_input_tokens": 60274,
+                "cache_creation_input_tokens": 3275,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 3275
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard",
+            "fallback_credit": null
+          },
+          "errors": []
+        }
+      ],
+      "wall_s": 163.93,
+      "cost_usd": 0.653,
+      "pathIds": [
+        "claude-A"
+      ]
+    },
+    "grok": {
+      "spec": "grok:grok-4.7@high",
+      "status": "delivered",
+      "reason": null,
+      "probe": {
+        "available": true,
+        "outcome": "completed",
+        "wall_s": 13.11,
+        "cost_usd": 0.03533,
+        "reason": null
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "outcome": "completed",
+          "exit": 0,
+          "timedOut": false,
+          "wall_s": 559.2,
+          "cost_usd": 0.51787,
+          "turns": 11,
+          "usage": {
+            "input_tokens": 89241,
+            "cache_read_input_tokens": 312704,
+            "cache_creation_input_tokens": 0,
+            "output_tokens": 30506,
+            "reasoning_tokens": 26282,
+            "total_tokens": 432451
+          },
+          "errors": []
+        }
+      ],
+      "wall_s": 559.22,
+      "cost_usd": 0.5179,
+      "pathIds": [
+        "grok-A"
+      ]
+    }
+  },
+  "finishedAt": "2026-11-02T17:27:20.340Z",
+  "cost_usd_total": 1.2573,
+  "cost_complete": true
+}

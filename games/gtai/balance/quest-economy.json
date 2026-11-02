@@ -1,16 +1,16 @@
 {
   "schema": "gtai.questEconomy/1",
-  "revision": 1,
+  "revision": 2,
   "provisional": true,
-  "note": "PROVISIONAL (illustrative, authored 2026-11-02 from pitch.md §2/§7, not measured). Act lengths from the arc table (~5 h); cash bands sized so each act's quests buy roughly one soul-upgrade tier; heat ceilings follow the heat ladder (cops 1-2, SWAT 3, feds 4-5, Krump's army 6). The owner tunes this as quests land; every economy verdict names this revision.",
+  "note": "PROVISIONAL. r1 (2026-11-02) was authored from pitch.md §2/§7, not measured. r2 (owner, 2026-11-02): human enemies are weak (die in one hit, fire weak bullets), so every act's enemy-count and wave budgets roughly 2.5x r1; fights are crowds, not duels. Cash bands are unchanged: each act's quests buy about one soul-upgrade tier. Heat ceilings follow the heat ladder (cops 1-2, SWAT 3, feds 4-5, Krump's army 6). Every economy verdict names this revision.",
   "acts": {
-    "prologue":  { "cash": { "min": 0,    "max": 0 },     "heatCeiling": 1, "enemyCount": { "max": 8 },  "enemyWaves": { "max": 1 }, "minutes": { "min": 2, "max": 5 },  "timerAllowed": false },
-    "clock-out": { "cash": { "min": 0,    "max": 300 },   "heatCeiling": 2, "enemyCount": { "max": 15 }, "enemyWaves": { "max": 3 }, "minutes": { "min": 5, "max": 15 }, "timerAllowed": false },
-    "act1":      { "cash": { "min": 500,  "max": 2500 },  "heatCeiling": 3, "enemyCount": { "max": 25 }, "enemyWaves": { "max": 3 }, "minutes": { "min": 6, "max": 14 }, "timerAllowed": true },
-    "act2":      { "cash": { "min": 1500, "max": 5000 },  "heatCeiling": 4, "enemyCount": { "max": 35 }, "enemyWaves": { "max": 4 }, "minutes": { "min": 7, "max": 15 }, "timerAllowed": true },
-    "act3":      { "cash": { "min": 3000, "max": 9000 },  "heatCeiling": 5, "enemyCount": { "max": 50 }, "enemyWaves": { "max": 5 }, "minutes": { "min": 8, "max": 16 }, "timerAllowed": true },
-    "act4":      { "cash": { "min": 5000, "max": 14000 }, "heatCeiling": 6, "enemyCount": { "max": 65 }, "enemyWaves": { "max": 6 }, "minutes": { "min": 8, "max": 18 }, "timerAllowed": true },
-    "finale":    { "cash": { "min": 0,    "max": 0 },     "heatCeiling": 6, "enemyCount": { "max": 120 },"enemyWaves": { "max": 8 }, "minutes": { "min": 15, "max": 35 }, "timerAllowed": false }
+    "prologue":  { "cash": { "min": 0,    "max": 0 },     "heatCeiling": 1, "enemyCount": { "max": 20 },  "enemyWaves": { "max": 2 },  "minutes": { "min": 2, "max": 5 },   "timerAllowed": false },
+    "clock-out": { "cash": { "min": 0,    "max": 300 },   "heatCeiling": 2, "enemyCount": { "max": 35 },  "enemyWaves": { "max": 5 },  "minutes": { "min": 5, "max": 15 },  "timerAllowed": false },
+    "act1":      { "cash": { "min": 500,  "max": 2500 },  "heatCeiling": 3, "enemyCount": { "max": 60 },  "enemyWaves": { "max": 6 },  "minutes": { "min": 6, "max": 14 },  "timerAllowed": true },
+    "act2":      { "cash": { "min": 1500, "max": 5000 },  "heatCeiling": 4, "enemyCount": { "max": 85 },  "enemyWaves": { "max": 8 },  "minutes": { "min": 7, "max": 15 },  "timerAllowed": true },
+    "act3":      { "cash": { "min": 3000, "max": 9000 },  "heatCeiling": 5, "enemyCount": { "max": 120 }, "enemyWaves": { "max": 10 }, "minutes": { "min": 8, "max": 16 },  "timerAllowed": true },
+    "act4":      { "cash": { "min": 5000, "max": 14000 }, "heatCeiling": 6, "enemyCount": { "max": 160 }, "enemyWaves": { "max": 12 }, "minutes": { "min": 8, "max": 18 },  "timerAllowed": true },
+    "finale":    { "cash": { "min": 0,    "max": 0 },     "heatCeiling": 6, "enemyCount": { "max": 300 }, "enemyWaves": { "max": 16 }, "minutes": { "min": 15, "max": 35 }, "timerAllowed": false }
   },
   "soulUpgradePrices": [2000, 5000, 10000, 20000]
 }
