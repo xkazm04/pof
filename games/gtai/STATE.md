@@ -457,3 +457,20 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - `visual-engine`: the layer stack, look profiles as data with the zoom blend, the colour-doctrine check, 2D lighting, the FX system, camera feel.
     - `d4-production`: vehicles, decals, FX sheets, the ped fix, pickups and HUD in D4.
     - `d5-close`: the D5 tier at arena zoom, a grime layer, landmark murals, and a best-frame showcase with a gap list.
+- **F-14 merged: the rig and crowd are in the city** (`ad2078b`, pushed). D4 rigs near the camera, crowd-atlas sprites beyond; no more dots.
+  - Bench with real characters (3 runs, 4 scenarios, release): p99 2.35 ms, 1% low 220 fps, worst frame 48.6 ms, nothing over 50 ms.
+  - Rig cost p50 0.26 ms and p99 0.57-0.59 ms per frame against the 0.3 ms target. The skip-when-no-tick fix went to the night `visual-engine` lane.
+  - Main gates: lint 13/13, 142 unit tests, 8 scenarios. Still placeholders: vehicles, decals, the kerb corner.
+
+### 2026-11-02 night: graphics, until 2026-11-03 09:00 (launched 21:08)
+- Owner's goal: "Go deeper into the graphical design so we setup the visual engine from start and not redesigning whole game after ... perfect through D4 up to D5".
+- **Runner:** `games/gtai/night/night.mjs` (`7c0e9985`), started by `C:\Users\kazda\kiro\gtai-night\launch.cmd` through a minimized PowerShell `Start-Process`, which keeps the supervisor alive across restarts. Phases: freeze 07:30, report 08:15, end 09:00.
+- **Billing:** the `.env` API key is **out of credit** ("Credit balance is too low"). The runner blocked it and runs on the subscription, re-probing the key every 45 min.
+- **Lanes** (rtai worktrees from `ad2078b`; briefs in `gtai-night\briefs\`; each lane journals in its cwd):
+  - `visual-engine` (`n-visual`)
+  - `d4-production` (`n-d4`)
+  - `d5-close` (`n-d5`)
+- **Rules:** evidence in `C:\Users\kazda\kiro\gtai-masters\night\<lane>\`, with a ladder per lane. Branch-only commits, with no push or merge; the Director merges with the owner in the morning.
+- **Morning:** `/gta morning`, which runs `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-night` and reads `SCOREBOARD.md`, each lane's `REPORT.md` and its ladders.
+- PC sleep and hibernate are off on AC. Disk: 242 GB free.
+- Note: another session runs a `q1-collect-call` worktree on rtai (`gtai-wt\q1-collect-call`); leave it alone.
