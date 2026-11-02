@@ -26958,7 +26958,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:55 The module's whole surface is five design tabs (features, map, playtime, density, travel) over static design data. A case-insensitive search of every file under sub_world for replay, scrubber, playback, playhead and seekTo found 0 hits, and there was also no keyframe or requestAnimationFrame code, so nothing re-presents a persisted run on a clock the viewer controls and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-02",
+          "evaluatedAgainst": "sha256-b2:798a88c318279127",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"

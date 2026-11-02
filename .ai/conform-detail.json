@@ -17901,6 +17901,37 @@
         }
       ],
       "registryProposal": "The standard assumes an interview with a parameter surface. In-editor 'archetype preset' catalogs, where you pick one entry and it overwrites a working draft, sit between templates and draft-editing. A note on whether the zero-dimension preset is in scope, and on overwriting unsaved edits during adoption, would make verdicts on such galleries less ambiguous."
+    },
+    "2991dc7e-92df-4e72-a7fe-ea3d15646718/time-travel-replay": {
+      "context": "world-module",
+      "subject": "time-travel-replay",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-02",
+      "evaluatedTs": "2026-11-02T22:17:22.437Z",
+      "worker": "db2d8c5f-49a1-46bf-a541-446465520f5e",
+      "techniques": [
+        {
+          "technique": "timeline-derivation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/travel/ProgressionTimeline.tsx:12 The only 'timeline' here is a static Gantt of zone progression built from hardcoded design constants. It is not derived from timestamped run records, so it is not a replay timeline."
+        },
+        {
+          "technique": "transport-and-time-mapping",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/travel/ProgressionTimeline.tsx:20 The 'current day' marker is a fixed constant. There is no play, pause, seek or speed control and no mapping from replay position to record timestamps."
+        },
+        {
+          "technique": "accrual-overlays",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/_shared/CountUp.tsx:23 CountUp only eases a live badge tally toward its new value. It is not a counter rebuilt at a replay position, so the rule about not showing the ending at frame zero has nothing to apply to."
+        },
+        {
+          "technique": "renderer-reuse",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/index.tsx:49 The only time-like interaction is a what-if scenario with Try/Undo. There is no live stream feed and no replay feed that could share or fork a renderer."
+        }
+      ]
     }
   }
 }
