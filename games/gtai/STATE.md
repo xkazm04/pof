@@ -176,3 +176,27 @@ Design truth is in `pitch.md`; this file is *where we are*.
     5. Inked Grime, the Rivet concept itself (2)
     - Finding: no hand-drawn detail survives on 32 px/m characters, so the comic look must live in the world.
     - Recommendation: chase D4 hybrid; D1 is the safe backup; D2 is the bold alternative. 20 images.
+
+### 2026-11-02 day: plan (quest loop)
+- Owner asked for `/gta --quest` via `/spark` (idea `gta-quest-loop` in the Spark vault). Design is locked over 2 waves.
+  - Council: Opus 5.5 + Grok, 2 forced-contrast variants each, so the artifact shows 4 paths.
+  - The owner fuses the paths in an interactive artifact.
+  - Execution is end to end, and produces a quest package (`games/gtai/quests/<id>/`) that a Godot quest runtime plays.
+- PoF services:
+  - The story-composition guard: a baseline graph with protected unknowns (fourth soul, betrayer, antagonist order).
+  - The reward and difficulty assessor, scored against the provisional `balance/quest-economy.json`.
+  - The line gate: a purpose tag and a voice bible for every line, judged blind by the other model family.
+  - Uniqueness.
+  - A red guard blocks execution unless the owner overrides it with a reason.
+- PoF home: the GTAI `contracts` pipeline.
+- Build order: WP0 contract, then WP1 guards, WP3 council/artifact/skill and WP4 Godot runtime in parallel, then WP2 contracts pipeline.
+- **City-scale gate: GO (provisional)** (`gtai-spike/cityscale/GATE.md`; commits `ea29ea5`, `95df082`).
+  - The exported release build ran 400 actors in the bubble tiers on a streamed 2x2 km city: CPU p99 2.6-3.0 ms, 1% low 148-295 fps, worst chunk-swap frame 5.3 ms.
+  - Native C++ (GDExtension) vs GDScript: 41-49x faster, with bit-identical parity over 1200 steps. GDScript alone fails the riot.
+  - MultiMesh with shared atlases beats canvas items. Cutout rigs go to only the 16 nearest actors, pooled and prewarmed.
+  - **Host review of the JSON:**
+    - The drive run averages only about 3 visible actors, so a crowded street *while* streaming at speed is untested.
+    - The reruns still show isolated 25-45 ms frames outside swaps.
+    - The first batch's 165-440 ms stalls (with no streaming involved) were never root-caused.
+    - Deck is a proxy only.
+  - Before the port: profile the stall on an idle machine (WPR or PIX), add a crowded-drive scenario, test on real Deck hardware, add the police flow field.
