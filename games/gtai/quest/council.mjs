@@ -331,11 +331,27 @@ function brief() {
   let md = fs.readFileSync(path.join(HERE, 'brief.template.md'), 'utf8');
   for (const [k, v] of Object.entries(fill)) md = md.replaceAll(`{{${k}}}`, v);
   if (/\{\{\w+\}\}/.test(md)) die(`template marker left unfilled: ${md.match(/\{\{\w+\}\}/)[0]}`);
+  // --rework <runDir>:<pathId>: the owner reviewed one design and sends notes back to the seat that wrote it.
+  // The previous design goes in verbatim; the seat changes only what the notes require.
+  const rework = opt('rework');
+  let reworkOf = null;
+  if (rework) {
+    const [fromDir, pathId] = rework.split(':');
+    const seatOf = pathId?.split('-')[0];
+    const prev = (readJson(path.resolve(ROOT, fromDir, `proposals.${seatOf}.json`)) ?? []).find((p) => p.pathId === pathId);
+    if (!prev) die(`--rework: no ${pathId} in ${fromDir}`);
+    reworkOf = { run: path.basename(fromDir), pathId };
+    md += `\n## Rework of your earlier design\n\nThe owner reviewed your design \`${pathId}\` from run ${reworkOf.run} and wrote the notes in "The owner's constraints" above. ` +
+      'Rework it:\n\n- Change only what the owner notes require. Keep everything else, and **keep the tone, rhythm and wording of every line you do not have to change**; the owner will review the lines line by line later.\n' +
+      '- Where a note removes a character, remove their lines and give the beat to someone else without inventing a new personality for them.\n' +
+      '- Every character who appears on screen (not voice-only) needs a rich `designNote`: silhouette, materials, signature details and a 3-4 colour palette, enough to brief a concept artist for a turnaround sheet.\n' +
+      `- Keep \`"pathId": "${pathId}"\`.\n\nYour earlier design, verbatim:\n\n\`\`\`json\n${JSON.stringify(prev, null, 2)}\n\`\`\`\n`;
+  }
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'BRIEF.md'), md);
   fs.copyFileSync(SCHEMA_FILE, path.join(dir, 'proposal.schema.json'));
   writeJson(path.join(dir, 'run.json'), { runId, act, goal, constraints, createdAt: new Date().toISOString(), voices, ledger: ledger.map((q) => q.id), economyRevision: economy.revision,
-    shape: { variants, freshCast, maxNew, lines: [minLines, maxLines] } });
+    shape: { variants, freshCast, maxNew, lines: [minLines, maxLines] }, ...(reworkOf ? { reworkOf } : {}) });
   console.log(`brief: ${rel(path.join(dir, 'BRIEF.md'))} (${md.length} chars, ${voices.length} voice bibles, ${ledger.length} ledger quests)`);
   console.log(`next: node games/gtai/quest/council.mjs run ${rel(dir)}`);
 }

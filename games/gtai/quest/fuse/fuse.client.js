@@ -43,6 +43,7 @@
   function gchip(state, label) { return h('span', { cls: 'g ' + state }, GLYPH[state] + ' ' + (label || WORD[state])); }
 
   // ── overview ──
+  if (D.slots.length === 1) document.getElementById('overview').classList.add('solo');
   fill('overview', D.slots.map(function (s) {
     if (s.kind !== 'path') {
       return h('article', { cls: 'ov skip' }, h('div', { cls: 'ov-head' }, h('span', { cls: 'key vB' }, s.seat)),
@@ -99,6 +100,36 @@
     fill('body-register', [
       h('p', { cls: 'meta', text: ledger.length ? ledger.length + ' earlier quest(s) in the ledger.' : 'No earlier quests: every character below is met for the first time.' }),
       h('div', { cls: 'register' }, cards)]);
+  })();
+
+  // ── cast triage: agree each new face's look and name (owner rule, 2026-11-02) ──
+  (function () {
+    var C = D.concepts;
+    if (!C || !Object.keys(C).length) {
+      fill('body-triage', h('p', { cls: 't', text: 'No concept sheets for this run yet. Run concepts.mjs on the run folder, then render again.' }));
+      return;
+    }
+    fill('body-triage', h('div', { cls: 'triage' }, Object.keys(C).map(function (id) {
+      var c = C[id];
+      var img = c.file
+        ? h('a', { href: c.file, target: '_blank', rel: 'noopener', cls: 'sheet' }, h('img', { src: c.file, alt: 'Concept sheet for ' + c.name, loading: 'lazy' }))
+        : h('div', { cls: 'sheet missing', text: 'No image: ' + (c.error || 'not generated') });
+      var nameId = 'tri-name-' + id, noteId = 'tri-note-' + id;
+      var choices = [['approve', 'Approve look'], ['regenerate', 'Regenerate'], ['drop', 'Drop character']].map(function (o) {
+        var rid = 'tri-' + o[0] + '-' + id;
+        return h('label', { cls: 'choice', for: rid }, h('input', { type: 'radio', name: 'tri-' + id, id: rid, value: o[0], 'data-triage': id }), o[1]);
+      });
+      return h('article', { cls: 'tri' }, img,
+        h('div', { cls: 'tri-body' },
+          h('div', { cls: 'who-head' }, h('h3', { text: c.name }), h('code', { text: id })),
+          c.role ? h('p', { cls: 't', text: c.role }) : null,
+          h('label', { cls: 'sub', for: nameId, text: 'Name' }),
+          h('input', { type: 'text', id: nameId, value: c.name, 'data-triage-name': id, cls: 'field' }),
+          h('div', { cls: 'choices', role: 'radiogroup', 'aria-label': 'Decision for ' + c.name }, choices),
+          h('label', { cls: 'sub', for: noteId, text: 'Note (what to change if regenerating)' }),
+          h('textarea', { id: noteId, 'data-triage-note': id, rows: '2', cls: 'field' }),
+          h('details', { cls: 'fold' }, h('summary', { text: 'Design note and prompt' }), h('p', { cls: 't', text: c.designNote || '' }), h('pre', { text: c.prompt || '' }))));
+    })));
   })();
 
   // ── story goal ──
@@ -223,7 +254,14 @@
       var k = el.getAttribute('data-path'); if (map[k]) map[k].push(el.getAttribute('data-key'));
     });
     var sources = order.filter(function (k) { return map[k].length; }).map(function (k) { return { pathId: k, elements: map[k] }; });
-    return { runId: D.runId, sources: sources, notes: notes.value, savedAt: new Date().toISOString() };
+    var triage = {};
+    Object.keys(D.concepts || {}).forEach(function (id) {
+      var d = document.querySelector('input[data-triage="' + CSS.escape(id) + '"]:checked');
+      var n = document.querySelector('[data-triage-name="' + CSS.escape(id) + '"]');
+      var t = document.querySelector('[data-triage-note="' + CSS.escape(id) + '"]');
+      if (d || (n && n.value !== D.concepts[id].name) || (t && t.value)) triage[id] = { decision: d ? d.value : null, name: n ? n.value : D.concepts[id].name, note: t ? t.value : '' };
+    });
+    return { runId: D.runId, sources: sources, triage: triage, notes: notes.value, savedAt: new Date().toISOString() };
   }
   function refresh() {
     var doc = collect();
@@ -237,10 +275,16 @@
       if (k === 'spine') { var r = document.querySelector('input[data-spine="' + CSS.escape(src.pathId) + '"]'); if (r) r.checked = true; return; }
       var el = document.querySelector('input[data-path="' + CSS.escape(src.pathId) + '"][data-key="' + CSS.escape(k) + '"]'); if (el) el.checked = true;
     }); });
+    Object.keys(doc.triage || {}).forEach(function (id) {
+      var x = doc.triage[id];
+      if (x.decision) { var r = document.querySelector('input[data-triage="' + CSS.escape(id) + '"][value="' + CSS.escape(x.decision) + '"]'); if (r) r.checked = true; }
+      var n = document.querySelector('[data-triage-name="' + CSS.escape(id) + '"]'); if (n && typeof x.name === 'string') n.value = x.name;
+      var t = document.querySelector('[data-triage-note="' + CSS.escape(id) + '"]'); if (t && typeof x.note === 'string') t.value = x.note;
+    });
     if (typeof doc.notes === 'string') notes.value = doc.notes;
     refresh();
   }
-  document.addEventListener('change', refresh); notes.addEventListener('input', refresh); refresh();
+  document.addEventListener('change', refresh); document.addEventListener('input', refresh); refresh();
   function setStatus(text, warn) { status.className = 'status' + (warn ? ' warn' : ''); status.textContent = text; }
   function setSave(on) { saveBtns.forEach(function (b) { b.disabled = !on; }); }
   document.getElementById('copy').addEventListener('click', function () {

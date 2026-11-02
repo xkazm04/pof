@@ -27,6 +27,8 @@ export function collectCouncil(runDir) {
   const economy = readIf(path.join(ROOT, 'games', 'gtai', 'balance', 'quest-economy.json'));
   const slots = [];
   for (const seat of SEAT_ORDER) {
+    // A seat that was never convened (e.g. an Opus-only rework) is not "skipped": it is simply not in the run.
+    if (seats?.seats && !seats.seats[seat]) continue;
     const good = readIf(path.join(runDir, `proposals.${seat}.json`));
     if (Array.isArray(good)) {
       for (const p of good) slots.push({ kind: 'path', seat, proposal: p });
@@ -48,6 +50,9 @@ export function collectCouncil(runDir) {
     economyRevision: economy?.revision ?? null, economyProvisional: economy?.provisional ?? null,
     seats: seats?.seats ?? {}, slots, verdicts,
     ledger: readLedgerSummary(),
+    // Concept sheets for characters without an approved look (concepts.mjs). Paths are relative to the run
+    // folder, so the published page ships them as supporting files.
+    concepts: readIf(path.join(runDir, 'concepts.json'))?.characters ?? null,
   };
 }
 
@@ -77,6 +82,7 @@ const FONTS = 'https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wg
 
 const SECTIONS = [
   ['register', 'Cast register', 'Who each name is, and every character\'s story so far.'],
+  ['triage', 'Cast triage', 'New faces need an agreed look and name before the quest is built. Approve, regenerate with a note, or drop.'],
   ['story', 'Story goal', 'What each path does for the campaign, and the laugh or turn that earns it.'],
   ['numbers', 'Reward and difficulty', 'Each path against the act band. A highlighted cell is outside the band.'],
   ['guards', 'Guards', 'PoF verdicts. A red guard blocks the quest unless you override it with a reason.'],
