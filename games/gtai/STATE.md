@@ -439,3 +439,21 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Done: F-01 to F-08, F-10, F-11, F-12.
   - Running: F-09b (the rig port, lane B) and F-12b (`collect-call` playability, lane D).
   - Left: F-13 (the texel decision; the numbers are in, owner sign-off pending) and the PoF quest-vocabulary guard.
+- **F-09b rig port merged** (`730e7cb`).
+  - Typed rig files: gait, aim IK, springs, and the slice clips. Full rigs for the 16 nearest (Rivet always); pools prewarmed (33 rigs); a crowd atlas of 8 looks with 6 clips for the rest.
+  - Rig cost p50 0.42-0.55 ms per tick, inside the 1 ms hard limit but missing the 0.3 ms target; re-measure idle, then go native.
+  - The cream-coat pedestrian reads weakly on cream pavement.
+- **F-12b merged** (`a1f158e`). **`collect-call`, the owner-approved first contract, loads with 0 errors and plays headless to completion** (6 beats, 23 lines, $1500, 5 unlocks; bit-identical replay; 9 systems stubbed and named).
+  - `quest_rules.json` (`gtai.quest-rules/2`) is exported for the PoF guard. 5 new unwired signals.
+  - Main gates: lint 13/13, 142 unit tests, 8 scenarios.
+  - Follow-ups for the next `/gta --quest` session:
+    - (a) place names are package words; the city places table must key on them;
+    - (b) one weapon has two ids (`gloria-nail-gun` / `gloria`);
+    - (c) beat lines fire at beat start, so the b2 and b6 lines play before the phone is answered;
+    - (d) Rivet's death fails the contract until the save layer exists.
+- **F-13 locked (owner): ground 96 px/m, roofs 80 px/m.**
+- **Owner: tonight is graphics only, until 09:00, after the rig and crowd land in the city.** The goal: set up the visual engine from the start and push D4 towards D5. Lane A is wiring the rig and crowd into the city now. A generic night runner (`games/gtai/night/night.mjs`) is being built.
+  - Night lanes, briefs in `C:\Users\kazda\kiro\gtai-night\briefs\`:
+    - `visual-engine`: the layer stack, look profiles as data with the zoom blend, the colour-doctrine check, 2D lighting, the FX system, camera feel.
+    - `d4-production`: vehicles, decals, FX sheets, the ped fix, pickups and HUD in D4.
+    - `d5-close`: the D5 tier at arena zoom, a grime layer, landmark murals, and a best-frame showcase with a gap list.
