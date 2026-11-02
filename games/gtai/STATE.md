@@ -274,3 +274,19 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - `rivet.md` names "GTA 2" in a generation prompt.
   - `detect_3d/compress_to` is set on all 444 texture imports.
   - `embed_pck=true`.
+
+### 2026-11-02: evening. Standards, Phase 2 plan, Foundation started
+- `STANDARDS.md` (187 rules) and the registry forge branch `forge/game-runtime-and-platform` (7 subjects).
+- **Phase 2 plan signed** (`PHASE2.md`, spark `gtai-phase-2`). The public title is **RTAI: Uprising**.
+- **F-01 done:** the game repo is `C:\Users\kazda\kiro\gtai`.
+  - 8 local commits, HEAD `4f9df70`, built to STANDARDS §22.
+  - Test framework: GUT 9.7.1.
+  - Evidence writer: `node tools/evidence/run.mjs` (set `GODOT_BIN`).
+  - Not yet: no remote; the native and export CI jobs and the export proof are stubs.
+- **F-02 done:** PoF reads the game's `pof.godot-evidence/1` (`4b9c4fe4`). The seam smoke gives L2 **pass** for GTAI; bench is deferred.
+- **Owner to-dos:**
+  - **F-03:** create the private GitHub repo, `git remote add origin <url>`, `git push -u origin main --follow-tags`. Budget the LFS pack once art lands.
+  - Add `gtai/` to `kiro/.git/info/exclude` (the repo sits inside the `kiro` tree, GIT-01).
+  - Pick the save-folder studio prefix before the Steam app exists.
+  - Retire superseded DECISION lines in `.claude/fleet-memory.md`. It is 2 entries over its cap of 200 and only DECISION and CONVENTION lines remain, so the prune script cannot fix it.
+- **Next:** `/gta` runs Foundation tickets F-04 onward: the event bus, determinism, the city port and hardening, the D4 art lanes, the build-health page, the story map, the quest runtime port, and the texel decision.
