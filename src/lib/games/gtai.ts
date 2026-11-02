@@ -17,7 +17,7 @@ import type { GameDef, ManifestEntry } from './types';
  */
 const GTAI_MANIFEST: readonly ManifestEntry[] = [
   // ── reskin: the pipeline's shape fits, its ARPG content does not ──
-  { catalogId: 'quests', fit: 'reskin', note: 'quests -> hitman contracts: one contract per quest (target, method, payout, fail on target escape); the boss-rep chaining is the planned `contracts` pipeline' },
+  { catalogId: 'quests', fit: 'reskin', note: 'quests -> hitman contracts: one contract per quest (target, method, payout, fail on target escape); the GTAI quest packages are the `contracts` pipeline' },
   { catalogId: 'factions', fit: 'reskin', note: 'factions -> robot-boss gangs: the rep-tier ladder becomes gang respect (GTA 2 style), hostile acts flip a gang to kill-on-sight' },
   { catalogId: 'zone-map', fit: 'reskin', note: 'zone-map -> city districts, one per gang turf; "Area Level & Density" becomes ped/cop density, not ARPG area level' },
   { catalogId: 'spellbook', fit: 'reskin', note: 'spellbook -> robot abilities (overclock, EMP burst, ram) and weapon specials; gun handling itself is the planned `firearms` pipeline' },
@@ -49,13 +49,13 @@ const GTAI_MANIFEST: readonly ManifestEntry[] = [
   { catalogId: 'tutorial-beats', fit: 'reuse' },
   { catalogId: 'achievements', fit: 'reuse', note: 'Steam achievements' },
   { catalogId: 'story-arcs', fit: 'reuse', note: 'the campaign as pof.storygraph/1: contracts, the betrayal and the four souls as gated decisions' },
+  { catalogId: 'contracts', fit: 'reuse', note: 'GTAI-native (built for this game, not reworked): one row per quest package games/gtai/quests/<id>/quest.json, mirrored by POST /api/games/gtai/quests/sync; Council, Plan, Guards, Package, In-game' },
 
   // ── planned: genre pipelines the game needs that do not exist yet ──
   { catalogId: 'vehicles', fit: 'planned', note: 'stealable vehicles: top-down arcade handling, mass-based collision, damage states' },
   { catalogId: 'wanted-heat', fit: 'planned', note: 'police wanted level: heat sources, escalation tiers, decay, response units' },
   { catalogId: 'traffic', fit: 'planned', note: 'ambient traffic and pedestrians on the road graph: density, behaviour, panic' },
   { catalogId: 'city-blocks', fit: 'planned', note: 'city block and road layout tiles that districts are built from' },
-  { catalogId: 'contracts', fit: 'planned', note: 'contract chains posted by robot bosses and gated by gang respect (the campaign spine)' },
   { catalogId: 'radio', fit: 'planned', note: 'in-vehicle radio stations: tracks, DJ banter, adverts' },
   { catalogId: 'firearms', fit: 'planned', note: 'guns: fire modes, ammo, spread, pickups' },
   { catalogId: 'top-down-camera', fit: 'planned', note: 'GTA 2 style overhead camera: altitude rises with speed, occlusion of tall blocks' },

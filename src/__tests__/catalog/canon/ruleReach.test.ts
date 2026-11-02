@@ -49,10 +49,12 @@ describe('ruleReach', () => {
     expect([...reach.steps].sort()).toEqual([...prompted].sort());
   });
 
-  it('moving a global law from game to art shrinks its reach from 255 to 78 prompts', () => {
+  it('moving a global law from game to art shrinks its reach from 257 to 78 prompts', () => {
     const genre = shipped('game-genre');
-    expect(ruleReach({ ...genre, category: 'game' }, pipelines).stepCount).toBe(255);
+    expect(ruleReach({ ...genre, category: 'game' }, pipelines).stepCount).toBe(257);
     expect(ruleReach({ ...genre, category: 'art' }, pipelines).stepCount).toBe(78);
+    // 257: contracts adds two `rules` steps (Council, Plan) that carry the game category; its
+    // `manifest` steps do not, and none of its checkers are content-invariant, so art stays 78.
     // 78 not 77: story-arcs/Story Graph's checkers are content-invariant, and a content-invariant
     // step is reached by every canon category (canonCategoriesForStep returns undefined), art included.
   });

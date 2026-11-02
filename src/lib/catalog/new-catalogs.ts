@@ -45,6 +45,11 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
     starters: [{ id: 'faction-ashen-order', name: 'The Ashen Order', categoryPath: ['Faction'], tags: [], description: 'A militant order with a reputation ladder.' }] },
   { catalogId: 'story-arcs', label: 'Story Arcs', category: 'Quests & Narrative', description: 'Branching storylines as pof.storygraph/1 documents: decisions, consequences and the state they gate, proven structurally and sampled by the walker.', module: 'dialogue-quests', tracks: ['logic', 'test'],
     starters: [{ id: 'arc-ember-pact', name: 'The Ember Pact Arc', categoryPath: ['Main'], tags: ['intro', 'branching'], description: 'The branching storyline behind The Ember Pact quest: its decisions, the trust they build, and the endings that trust gates.' }] },
+  // GTAI-native (spark gta-quest-loop). Real rows are MIRRORS of games/gtai/quests/<id>/ written by
+  // POST /api/games/gtai/quests/sync (entity gtai-<id>, profile gtai). This starter carries no package, so
+  // every step's produce writes the awaiting-sync marker and defers at L3 — the walker's honest fixture.
+  { catalogId: 'contracts', label: 'Contracts', category: 'Quests & Narrative', description: 'GTAI quests, one row per quest package (games/gtai/quests/<id>/quest.json): council run, fused plan, guards + line judge, package assets, Godot runtime evidence.', module: 'dialogue-quests', tracks: ['logic', 'test'],
+    starters: [{ id: 'contract-awaiting-sync', name: 'Contract (awaiting sync)', categoryPath: ['Starter'], tags: ['fixture'], description: 'Walker fixture with no quest package: every step defers until a real quest folder is synced.' }] },
   // ── Game Assets ──
   { catalogId: 'characters', label: 'Characters', category: 'Game Assets', description: 'Playable or named NPCs with full presentation and behavior.', module: 'arpg-character', tracks: ['logic', 'art-3d', 'animation', 'audio', 'vfx', 'test'],
     starters: [{ id: 'char-captain-vael', name: 'Captain Vael', categoryPath: ['NPC'], tags: ['named'], description: 'A named quest-giver NPC.' }] },

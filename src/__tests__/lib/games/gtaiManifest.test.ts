@@ -15,7 +15,7 @@ import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 
 const registered = allCatalogPipelines().map((p) => p.catalogId);
 const manifest = GTAI_GAME.manifest as readonly ManifestEntry[];
-const PLANNED = ['vehicles', 'wanted-heat', 'traffic', 'city-blocks', 'contracts', 'radio', 'firearms', 'top-down-camera', 'garages'];
+const PLANNED = ['vehicles', 'wanted-heat', 'traffic', 'city-blocks', 'radio', 'firearms', 'top-down-camera', 'garages'];
 const sorted = (xs: readonly string[]) => [...xs].sort();
 
 describe('GTAI manifest', () => {
@@ -53,7 +53,7 @@ describe('GTAI manifest', () => {
     }
   });
 
-  it('lists the 9 planned genre pipelines, with notes, none of them already registered', () => {
+  it('lists the 8 planned genre pipelines, with notes, none of them already registered', () => {
     const planned = manifest.filter((e) => e.fit === 'planned');
     expect(sorted(planned.map((e) => e.catalogId))).toEqual(sorted(PLANNED));
     for (const e of planned) {

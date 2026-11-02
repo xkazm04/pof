@@ -881,6 +881,56 @@
       "note": "Graded from disk truth by the packaging drain (Tier 2, 2026-07-13): verify-packaging rebuilds the package from the row's sibling artifacts (referenced files hashed in place, embedded data-URL art materialized under generated/packages/) AND disk-checks every /Game/ declaration against the UE root's Content/ (cross-validated once against the live asset registry via scripts/ue/verify_package_declarations.py — identical result). Verdict: all files + declarations realized -> pass; anything missing -> deferred with reasons. Asset LOADING/behavior remains the L3 gates' job. Acceptance now also RESOLVES this step's cross-catalog links against real catalog entities (linksResolve, composed via allOf): a link naming an entity that does not exist is caught instead of merely counted. Referential integrity only — the correctness of the linked design is still not verified."
     },
     {
+      "catalogId": "contracts",
+      "step": "Council",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "The council (Claude Opus + Grok seats, games/gtai/quest/council.mjs) writes the proposals; the step grades the quest folder as read by the server sync: provenance names >=1 source path AND the council run folder exists (declared provenance.runId, else the ONE run holding every source path; ambiguous = pending). Stub produce only re-projects the last sync; it never invents a run. checkerMeaningful is false by the code-derived rule: the step-facts probes only see the produce stub (the awaiting-sync marker), so no probe can justify it, although the real derivation is file-backed."
+    },
+    {
+      "catalogId": "contracts",
+      "step": "Plan",
+      "trueEngine": "Claude",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "The Director composes quest.json from the owner fusion. Graded: parses as gtai.quest/1 (contractsParse) with non-empty whyNotFiller and provenance.ownerNotes. Structural only: no PoF judge scores the design; the guards (next step) do the content checks. checkerMeaningful is false by the code-derived rule: the step-facts probes only see the produce stub (the awaiting-sync marker), so no probe can justify it, although the real derivation is file-backed."
+    },
+    {
+      "catalogId": "contracts",
+      "step": "Guards",
+      "trueEngine": "Code",
+      "deliverable": "text-config",
+      "generatorWired": true,
+      "judge": "llm-panel",
+      "checkerMeaningful": false,
+      "note": "Server-derived: assessQuest over loadQuestContext() (story, economy, lines, uniqueness) plus the cross-family line judge report verdicts/lines.judge.json (written by council.mjs judge, the other model family). Pass only when nothing is blocked (an owner override with a reason clears a red guard), no guard is unmeasured and the judge report is present. checkerMeaningful is false by the code-derived rule: the step-facts probes only see the produce stub (the awaiting-sync marker), so no probe can justify it, although the real derivation is file-backed."
+    },
+    {
+      "catalogId": "contracts",
+      "step": "Package",
+      "trueEngine": "Code",
+      "deliverable": "text-config",
+      "generatorWired": false,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "An asset MANIFEST, not art (deliverable text-config: nothing judges pixels here). Files on disk: art/<characterId>* for every new character, and every line reserves audio (null until the voice pass). PoF does not generate this art (the /gta protocol uses the Codex image_gen route), so the step checks existence only, never art quality. checkerMeaningful is false by the code-derived rule: the step-facts probes only see the produce stub (the awaiting-sync marker), so no probe can justify it, although the real derivation is file-backed."
+    },
+    {
+      "catalogId": "contracts",
+      "step": "In-game",
+      "trueEngine": "Code",
+      "deliverable": "ue-runtime",
+      "generatorWired": true,
+      "judge": "none",
+      "checkerMeaningful": false,
+      "note": "Godot, not UE (deliverable class reused for engine runtime). Graded from file evidence the Godot runtime writes: evidence/selftest.json state succeeded + a PNG frame (signature checked) = pass at L3; failed selftest = fail; no evidence = deferred with the Godot adapter-missing reason (ueBinding.unboundReason). PoF does not observe the run itself. checkerMeaningful is false by the code-derived rule: the step-facts probes only see the produce stub (the awaiting-sync marker), so no probe can justify it, although the real derivation is file-backed."
+    },
+    {
       "catalogId": "crafting-recipes",
       "step": "Concept Brief",
       "trueEngine": "Claude",

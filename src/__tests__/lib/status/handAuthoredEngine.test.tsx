@@ -177,6 +177,11 @@ describe('fleet: the trusted `code` class is claimed only by code that computes'
       label: 'Impact Walk',
       why: 'produce runs pof-walker@1 and hashes the graph it walked; the verdict compares that hash to the stored Story Graph sibling and, when it differs, walks the current graph itself',
     },
+    // contracts (GTAI quests): the step data is a server READ of games/gtai/quests/<id>/ (contractsRead.ts),
+    // written only by POST /api/games/gtai/quests/sync; produce re-projects that read and never authors it.
+    { catalogId: 'contracts', label: 'Guards', why: 'the server sync runs assessQuest over loadQuestContext() (files: economy table, voice bibles, ledger) plus the on-disk line judge report' },
+    { catalogId: 'contracts', label: 'Package', why: 'the server sync lists art/<characterId>* on disk per new character and counts audio reservations in quest.json' },
+    { catalogId: 'contracts', label: 'In-game', why: 'the server sync reads evidence/selftest.json and PNG-signature-checks the evidence frames on disk' },
   ];
 
   it('every step resolving to the trusted `code` class is a packaging step (or a listed exception)', () => {
