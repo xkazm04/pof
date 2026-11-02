@@ -313,3 +313,15 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 - **Lane A (code, rtai worktree `f04-core`):** F-04 (event bus and composition root), then F-05 (determinism core). F-06 (the city port) follows in the same lane once F-05 has landed.
 - **Lane B (art, rtai worktree `f08-art`, Codex):** F-08 and F-09, the D4 Ink and Hatch world and character parts. Crop gates at 32 and 48 px/m against D1; masters live outside git.
 - **Lane C (PoF worktree `gta-f10-f11`):** F-10 (the build-health panel and API), then F-11 (the GTAI campaign graph in `/story`).
+- **Lanes, first results (2026-11-02 late):**
+  - **F-10 and F-11 done** (`3fc0b2f0`):
+    - The Game home "Build health" panel and `GET /api/games/[gameId]/build-health`. Live: lint and unit-tests pass at HEAD, the other 6 kinds are absent.
+    - `/story?g=gtai`, the GTAI campaign map (acts and beats from `buildCampaignGraph`; betrayal and soul-4 locked; no contracts yet) and `GET /api/games/gtai/story`.
+    - Smoke-tested on :3001 with screenshots. Gap: the derived graph is browsable in the Orrery but not walker-walkable (it is not imported into the story store).
+  - **F-04 and F-05 done** (rtai `63ae96d`, `b077080`, merged into rtai main locally, **not pushed**):
+    - The typed `Events` bus with `data/schemas/events.json` emitter and wired fields.
+    - The composition root, with an autoload budget of 7 of 7.
+    - A fixed 60 Hz tick, a per-system RNG registry, and lint bans on global RNG and on raw-delta reads.
+    - A 60 s replay that is bit-identical and frame-rate invariant, and catches a planted change. 45 tests pass.
+  - **F-06 (the city port) launched** in lane A, branch `f06-city`. It adds the `scenario-tests`, `parity` and `bench` evidence kinds.
+  - **Lane B** (F-08/F-09 D4 art) is still running.
