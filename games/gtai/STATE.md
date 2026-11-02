@@ -126,3 +126,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Close-up looks rich. At gameplay scale (32 px/m, characters 36-54 px) the rig breaks up into the print dots. A solid-ink small-size mode in the shader helps, but last night's pack sprite still has the cleaner silhouette.
   - Cost: 50 rigs at 2.4 ms/frame (about 200 fps); 200 rigs at 11.6 ms. Cops and pedestrians need a cheaper mode or baked sprites.
   - Generator faults: 3 of 8 sheets broke the top-down rule (every shin and foot is a side view) and King's arms came out about 1.5x scale. REPORT.md lists 10 fixes for the next parts round.
+- **Image source switched to Codex** (owner, 2026-11-02): the Nano Banana plan expires today. Images now come from the Codex CLI's built-in `image_gen` on the ChatGPT Pro plan (`research/chatgpt-pro-image-route.md`, `853d7b1e`). Driving the ChatGPT web or desktop app is ruled out by OpenAI's terms.
+- **Two Codex rounds running:**
+  1. The 10-fix parts round for Rivet and King in `gtai-spike/cutout` (`REPORT-v2.md`, with a Codex verdict and a 32 vs 48 px/m comparison).
+  2. An evolution of the Godot asset set in `gtai-spike/evolve/project`, a clone of the lane project, in waves: ground, roofs, vehicles, props, then pickups/HUD/fx. Each wave is proven by before/after shots; the results go in `EVOLVE.md` and `evidence/ladder.png`.
