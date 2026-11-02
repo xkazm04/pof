@@ -480,3 +480,8 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Main gates: lint 13/13, 166 unit tests, 8 scenarios.
   - Watch: `scenario_rig_stress` p50 is at its 1.0 ms limit while the night lanes load the machine (1.085 then 0.986 ms).
   - The night graphics lanes branched from `ad2078b`, so the morning merge layers them onto `721fbbb`.
+- **22:41: a fourth night lane `noir` was launched** (owner: a "comic noir" direction where every colour matters: red blood and blood-splash animation instead of orange tones, carried into character design, movement and combat).
+  - Own runner root `C:\Users\kazda\kiro\gtai-night-noir`, worktree `gtai-wt\n-noir` (branch `n-noir`, from `721fbbb`), brief `briefs\noir.md`. It runs until 09:00 on the subscription.
+  - **IP rule:** prompts describe the look and never name the inspiring comic.
+  - **Leonardo:** the API has **0 API tokens** and refuses generation ("not enough api tokens", probed 22:35). The 1,728 tokens belong to the web Studio plan, which the API cannot spend. The lane re-probes every session: it uses Leonardo's GPT model with download-then-delete if credits appear, and Codex otherwise.
+  - Morning: `night.mjs status|report --root C:/Users/kazda/kiro/gtai-night-noir`.
