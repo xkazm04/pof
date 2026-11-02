@@ -120,3 +120,9 @@ Design truth is in `pitch.md`; this file is *where we are*.
 - A Sonnet research agent produced `research/godot-city-scale.md`: there is no shipped Godot GTA-like, but the city is feasible with streaming, an activity bubble and a native sim. Gate it first.
 - Nano Banana via `agy` (gemini-4-argon-high, image-generator subagent) made the Rivet and King sheets in `art-direction/trivet/characters/` (`e54081d4`): hero, turnaround with a 90-degree top view, top-down key poses.
 - Engine locked (`205d8b75`). The art route was chosen. A parts-sheet generation for the cutout test is running.
+- **The cutout test finished** (`C:\Users\kazda\kiro\gtai-spike\cutout`, its own git; report in `REPORT.md`, clip `evidence/cutout.mp4`). Verdict: **conditional yes**.
+  - Cutout rigs work for Rivet, the souls and the bosses (about 15 rigs). Each new character costs about an hour; gait, aim, hit reactions and secondary motion are shared code.
+  - Rig: a plain Node2D bone tree with 3D two-bone IK projected onto the ground, not Skeleton2D (its flat IK cannot model the straight-down view).
+  - Close-up looks rich. At gameplay scale (32 px/m, characters 36-54 px) the rig breaks up into the print dots. A solid-ink small-size mode in the shader helps, but last night's pack sprite still has the cleaner silhouette.
+  - Cost: 50 rigs at 2.4 ms/frame (about 200 fps); 200 rigs at 11.6 ms. Cops and pedestrians need a cheaper mode or baked sprites.
+  - Generator faults: 3 of 8 sheets broke the top-down rule (every shin and foot is a side view) and King's arms came out about 1.5x scale. REPORT.md lists 10 fixes for the next parts round.
