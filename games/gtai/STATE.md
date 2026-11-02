@@ -290,3 +290,8 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - Pick the save-folder studio prefix before the Steam app exists.
   - Retire superseded DECISION lines in `.claude/fleet-memory.md`. It is 2 entries over its cap of 200 and only DECISION and CONVENTION lines remain, so the prune script cannot fix it.
 - **Next:** `/gta` runs Foundation tickets F-04 onward: the event bus, determinism, the city port and hardening, the D4 art lanes, the build-health page, the story map, the quest runtime port, and the texel decision.
+- **Owner follow-up, same evening:**
+  1. **F-03 done.** The remote is `https://github.com/xkazm04/rtai` (private). `main` is pushed with 21 LFS objects. **CI is green on GitHub** (run 41485256495): lint, import, tests, evidence, plus the native and export stubs as warnings. The first run failed on a workflow error (`hashFiles()` in a job-level `if`), fixed in `cc61a2f`.
+  2. **The parent `C:\Users\kazda\kiro` is no longer a git repo.** Its `.git` was moved, not deleted, to `C:\Users\kazda\kiro-parent-git-backup-20261102\.git`. It held **92 unpushed commits** (paypal, bria, qubic, ascent, ...), and its remote `xkazm04/kiro` no longer exists, so that backup is the only copy. The 3 stale worktrees from 2025-11 under `kiro/.claude/worktrees/` are now detached folders.
+  3. The save folder name stays **"RTAI Uprising"**.
+  4. The fleet-memory cap was raised to 300 (`0ac8fd68`); it stands at 202/300.
