@@ -250,3 +250,20 @@ Design truth is in `pitch.md`; this file is *where we are*.
   - a marker-key guard;
   - owner-picked voice anchors;
   - the first real quest.
+- **Standards are done** (`STANDARDS.md`: 187 rules, budgets, gaps, day-one checklist, 13 owner questions; research in `research/standards/`).
+- **Mirrored into ai-registry as 7 new game-production subjects**, on the branch `forge/game-runtime-and-platform` (worktree `C:\t\gtai-forge`, commit `a9d30a183`, not merged or pushed; merging is the owner's call):
+  - game-codebase-architecture
+  - streamed-open-world-simulation
+  - save-data-persistence
+  - shipping-data-formats
+  - platform-achievement-pipeline
+  - platform-service-abstraction
+  - storefront-release-compliance
+  - They hold 35 techniques and 17 applications. The Godot thread is the `gdscript--`/`cpp--` applications citing the spike; `gdscript` was added to the bundle stacks. engine-integration is now subdivided into runtime-architecture, shipping-and-platform and engine-safety-and-forensics.
+- **Spike defects found by the forgers** (for Phase 2):
+  - The stamp kill-type is set after `_damage` (`moves.gd:119-120`).
+  - `sfx.gd:177` reads the raw frame delta.
+  - The HUD font is about 9 px on Deck.
+  - `rivet.md` names "GTA 2" in a generation prompt.
+  - `detect_3d/compress_to` is set on all 444 texture imports.
+  - `embed_pck=true`.
