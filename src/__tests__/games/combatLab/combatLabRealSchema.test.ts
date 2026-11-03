@@ -21,7 +21,7 @@ const WEAPONS = {
     { id: 'odd', enabled: true },
   ],
 };
-const table = (doc: unknown): CombatTable => ({ key: 'weapons', file: 'w.json', state: 'ok', ...parseTable('weapons', 'w.json', doc) });
+const table = (doc: unknown): CombatTable => ({ key: 'weapons', file: 'w.json', ...parseTable('weapons', 'w.json', doc) });
 
 describe('arena telemetry as the arena lane writes it', () => {
   it('reads ttk_s per spawn id: mean seconds per series and range, empty lists skipped', () => {

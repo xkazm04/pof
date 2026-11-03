@@ -593,8 +593,17 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   object holding one under a key (preferring the table's own name); nested records flatten one level; at most 14 columns
   and 200 rows, the rest counted, not hidden silently. A telemetry file is read by key name at any depth: `hit_rate`,
   `damage_taken`, `latency`, `dodge`, `knockdown`, `turn_rate`, and time to kill as `{ weapon: { range: s } }`,
-  `{ weapon: { range: { mean } } }` or a record list. **The arena brief names no telemetry folder**, so `telemetryDirs`
-  lists every plausible one; once the arena lane's worktree shows the real one, narrow the list.
+  `{ weapon: { range: { mean } } }`, a record list, or the arena lane's own `gtai.arena-telemetry/1` `ttk_s`
+  (`{ "static_05m": [seconds, ...] }`: the spawn id carries motion + range; seconds are averaged per spawn, labelled
+  with the session's `weapon` when it names one). The arena writes `-1` for a latency it never measured and `0` for the
+  hit rate of a no-shot session; both read "not recorded". **The arena brief names no telemetry folder** (its
+  `ArenaSession.write_telemetry(path)` takes the caller's path), so `telemetryDirs` lists every plausible one; once a real
+  session file lands, narrow the list.
+- **Design-side TTK** (`predictTtk.ts`, `combat/combatDesignTtk.tsx`): beside the measured chart, the weapons table's own
+  arithmetic for a chosen target (the table's `targets`, `{ id, hp }`) and range: shots = ceil(hp / (damage x pellets)),
+  time = gaps at `rof_hz` + a reload per emptied `magazine` + `range / speed_mps`. A perfect shooter (no spread, splash or
+  damage-over-time), labelled as such; disabled / out-of-range / unmodelled weapons are listed, not drawn. Table columns lead
+  with the ones a designer reads first (`LEAD` in `parseTable.ts`) and put `doc` prose last.
 - **Absent is never zero.** A table that is not there is `missing` with the paths looked in; one that cannot be read is
   `invalid` with the parse reason; a metric a session did not record reads "not recorded"; no session says where the file
   is expected, and no chart is drawn from the table or a guess.
