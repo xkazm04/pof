@@ -16,8 +16,8 @@ const COLUMNS = [
 
 export function CombatStations({ t, stations }: { t: LabTheme; stations: StationsRead }) {
   const rows = stations.items.map((s) => ({
-    values: {
-      station: s.unreadable ? `${s.file} (unreadable JSON)` : (s.name ?? s.id ?? s.file),
+    values: s.unreadable ? { station: `${s.file} (unreadable JSON)`, area: 'unreadable', lane: s.from.label, file: s.file } : {
+      station: s.name ?? s.id ?? s.file,
       area: s.area, spawns: s.spawns, props: s.props, 'tuning keys': s.tuningKeys, measurements: s.measurements, lane: s.from.label, file: s.file,
     },
   }));
