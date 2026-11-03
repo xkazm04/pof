@@ -7,9 +7,13 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 - **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
 - **Art direction (owner, 2026-11-03): D5 "Inked Grime" is the target.** Noir is a mid/late-game mission look. Blood is red (noir's FX); cops are blue; Rivet is only slightly larger than a human; the soul trail is descoped. Details in `pitch.md` §8.
-- **Today (2026-11-03):** the four night lanes merge onto main (`int-day`), then a day run `C:\Users\kazda\kiro\gtai-day-d5` chases D5 until 18:00 with 3 lanes: `d5-city`, `d5-cast`, `d5-combat`.
+- **Today (2026-11-03):** the night lanes are merged on rtai main `089400e`. 10 day lanes run until 18:00 in four runner roots:
+  - `gtai-day-d5`: d5-city, d5-cast, d5-combat, slice-play, vehicles, audio;
+  - `gtai-day-2`: collisions, autosave;
+  - `gtai-day-pof`: pof-control-room;
+  - `gtai-day-pof-voice`: pof-voice.
 - **Next steps**
-  1. 18:00 sync: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-day-d5`, an updated verdict page, the owner's verdicts, merge.
+  1. 18:00 sync: run `night.mjs report` for all four roots, update the verdict page, take the owner's verdicts, then merge (rtai `d-*` onto main; PoF `gtai-control-room` and `gtai-voice` onto master).
   2. The PoF quest-vocabulary guard (PoF validates against rtai `quest_rules.json`, `gtai.quest-rules/2`).
   3. Slice gameplay: Gearbox ability, heat ladder, Madness band 1, checkpoint save; the collect-call follow-ups (place names, weapon id, beat timing, respawn).
 - **Quest 1 `collect-call`** plays headless to "paid" on main (3 stubs left: placeholder arena and movement, timed whispers, no bound input).
@@ -75,6 +79,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-02 | Council seats run with full permissions in the shared checkout (cwd = the run folder) | medium | open: run seats in a throwaway worktree, as tiger does |
 | 2026-11-02 | The voice bibles' reference lines are model-written; the seats copied them almost verbatim | medium | open: owner picks the anchor lines |
 | Quest vocabulary drift: the council (PoF quest contract `types.ts`) allows free verbs, bark tags and places; the game runtime plays only the verbs and conditions in rtai `data/tables/quest_rules.json`. The owner-approved `collect-call` failed to load with 18 errors | high | open: the game side (F-12b) grows the runtime; the PoF side needs a guard reading the runtime's `quest_rules.json` (the sibling-owned quest tooling, coordinate before editing) |
+| 2026-11-03 | PoF's ElevenLabs provider calls only `/v1/sound-generation`: no text-to-speech, no voice catalogue, no music kind; the SFX craft pack exceeds the provider's 450-character limit (audio lane POF-GAP 1-3) | high (tts), medium (music, prompt length) | tts: building (lane `pof-voice`); music and prompt length: open |
 
 ## Session log
 
@@ -516,3 +521,38 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - at 64 px/m the D5 ped art covers n-d4's re-toned coats.
   - `city_view.gd` is 250 lines (over the soft cap).
 - **10:04: the 6 game lanes launched** (worktrees `gtai-wt\d-*` from `089400e`, on the subscription). Morning-style report at 18:00: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-day-d5` and `--root C:/Users/kazda/kiro/gtai-day-pof`.
+- **11:30: the owner added three directions.** PC memory has room: 29 GB free of 63 at 11:32.
+  1. "Collisions between characters and NPCs, player should never in its basic form go 'through' any other character in the game, tackle motion should happen with result based on character's size. Starting with crowd the humans should be always weaker. For robots and bosses we can resolve in future as story progresses."
+  2. "Saves, engine for autosave (switching between two slots to prevent infinite saves, and breaking game if save corrupts). Manual save for now descoped. Each quest design will have in its design points for autosave."
+  3. Voice recording:
+     - keep `/gta --quest`'s example lines as they are;
+     - a new `/gta --voice` session: the owner works in PoF while Claude Code generates voices and deliveries until lines are proven;
+     - periodic, in chronological order;
+     - "always human gated" at the start.
+- **11:38: three more lanes launched.** They run on the subscription until 18:00, with the report at 17:30.
+  - **Root `C:\Users\kazda\kiro\gtai-day-2`** (game repo):
+    - **`collisions`** (Opus, `d-bodies`):
+      - a body table, `bodies.json`, with size classes human / rivet_base / robot / boss, plus a reserved rivet_ghost row, and a tackle matrix;
+      - a deterministic contact resolver in both sims, with parity exact;
+      - tackles knock humans down; robots and bosses are `blocked` until the owner designs them;
+      - an `actor_knocked_down` event.
+    - **`autosave`** (Sonnet, `d-save`), building on slice-play's checkpoint:
+      - two rotating slots, `auto_a` and `auto_b`. A write goes to the older slot through tmp, verify, rename;
+      - corrupt slots are quarantined, and the loader falls back to the other slot;
+      - SAV-09 cold-path tests, and `meta.json`;
+      - the two slots replace SAV-03's `.bak`. This is an owner decision, recorded in rtai `docs/decisions.md`.
+  - **Root `C:\Users\kazda\kiro\gtai-day-pof-voice`** (PoF, worktree `pof-wt\voice`, branch `gtai-voice` from `417a2275`):
+    - **`pof-voice`** (Opus):
+      - a Voice room in the GTAI game home: the line queue in play order, takes per line with delivery directions, and casting plus voice design from the bibles;
+      - a `tts` kind in `audio-gen`, which closes the audio lane's POF-GAP 2;
+      - `games/gtai/voice/voice.mjs` for the CLI;
+      - export of approved takes into the game root;
+      - the `/gta --voice` mode.
+    - **The human gate:** a verdict can be set only by a click in the UI, and the CLI path is refused.
+    - **Budget:** at most 15k ElevenLabs characters today.
+  - **The quest contract gains `autosavePoints`** (`[{id, beat, at: start|end, why}]`). The quest end is always a save. The same contract is written into two briefs:
+    - `autosave` reads it in the game;
+    - `pof-control-room` (its item 5) adds the guard to `council.mjs check`, the field to the council prompt, and quest 1's five points.
+  - **Handoffs written into the running briefs:**
+    - slice-play stops extending `features/save`, and leaves body collision to `collisions`;
+    - audio's 23 voice lines are marked temp, and it spends no more characters on voice.
