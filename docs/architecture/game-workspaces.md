@@ -193,6 +193,46 @@ The Game home renders it as the "Build health" panel (`layout-lab/game/gameHomeB
 `gameHomeBuildHealthData.ts`): one row per kind with a `StatusTag` (pass / fail / stale / absent / deferred),
 the detail, the age and the commit, then the bench block. It reads only the API; it never imports `fs`.
 
+## Lanes control room (GTAI day/night runners)
+
+The Game home shows the lane runners that build the game (spark `gtai-control-room`, 2026-11-03): every
+`games/gtai/night/night.mjs --root R` root, each lane in it, read-only. Sources: `src/lib/games/runners/`
+(`runnerTypes.ts` wire shape, client-safe; `readRunners.ts`, `laneState.ts`, `frames.ts`, `runnersConfig.ts`),
+the routes `src/app/api/games/[gameId]/lanes/` (`route.ts`, `frame/route.ts`), the panel
+`layout-lab/game/gameHomeLanes*.tsx`, `gameHomeLaneCard.tsx`, `gameHomeLaneDetail.tsx`. Tests:
+`src/__tests__/games/runners/`, `src/__tests__/components/layout-lab/gameHomeLanes.test.tsx`.
+
+- **Config, not constants.** `GameDef.runners = { roots, masters }` (GTAI: `../gtai-night`, `../gtai-night-noir`,
+  `../gtai-day-d5`, `../gtai-day-pof`; masters `../gtai-masters`), relative to the PoF repo root
+  (`POF_GAMES_ROOT`, else cwd). Env overrides: `POF_GAME_RUNNER_ROOTS_<ID>` (`;`-separated) and
+  `POF_GAME_MASTERS_<ID>`. A game with no `runners` answers `configured: false` with the reason.
+- **Reader** (`readLanesBoard`, `readRunnerRoot`). Reuses the runner's own pure code (`parseConfig`, `planTimes`,
+  `phaseAt` from `games/gtai/night/lib.mjs`, imported as `@/../games/gtai/night/lib.mjs`) and never shells out to
+  `night.mjs`. Reads `night.json`, the schedule from the root's `launch.cmd` (`--until/--freeze/--report-at`, else the
+  runner defaults, labelled), `logs/<lane>/state.json` (iterations, cost, API-key cost, `reportedFor`), `billing.json`,
+  the lane worktree's `JOURNAL.md` last line, `REPORT.md` (a 6000-character excerpt), `git log -1` + branch (the only
+  subprocess, 4 s ceiling), and whether `build/evidence/` exists. Nothing is written in any root. A missing root, an
+  invalid `night.json` or a lane with no state is an honest row with its reason.
+- **State** (`LaneState`, `deriveLaneState`): `done` (reported for this or the previous deadline) > `running` (a
+  session log was written in the last 300 s) > `blocked` (every billing path blocked, or the last session hit a
+  usage limit) > `pending` (no session yet, or the worktree is missing) > `report` / `freeze` / `building` by the
+  runner clock. `planTimes` aims at the NEXT deadline, so a root whose lanes reported for the previous one shows
+  that finished cycle (REPORT), not tomorrow's BUILD. A lane not live for 2 h in BUILD says the runner may be down.
+- **Frames.** `<masters>/<group>/<lane>/frames.json` (an array, or `{ frames }`) of `{ file, title, source?, note?,
+  before? }`. `GET /api/games/<id>/lanes/frame?lane=&file=` serves a file ONLY when that lane's frames.json names it
+  (as `file` or `before`), as a plain relative path with an image extension, whose real path stays inside the lane
+  folder (a symlink out is refused). Lane ids are `[a-z0-9-]+`. Anything else is 400/404 in the envelope.
+- **Wire.** `GET /api/games/<id>/lanes` → `LanesBoard { gameId, readAt, configured, reason?, masters?, roots[] }`;
+  a root is `{ root, name, ok, error?, schedule?, phase?, billing?, lanes[] }`; ages are `readAt - t`, so the client
+  never reads a clock. A cost of 0 with no session reads "no sessions yet", never "free".
+- **UI.** `GameHomeLanes` polls with `useSuspendableEffect` every `UI_TIMEOUTS.lanesPoll` (45 s); a failed poll
+  keeps the last board and says it is stale. A lane card is a button (`StatusTag` for the state: glyph + word); the
+  selected lane's detail is a `DataTable`, the REPORT.md in a `<details>`, and the frame thumbnails.
+- **Lane build evidence.** `GET /api/games/<id>/build-health?lane=<id>` reads that lane worktree's
+  `build/evidence/` through the same `buildHealthFor` (`BuildHealth.lane` names it). The lane is resolved through the
+  configured roots (`laneCwd`), never a path from the query; an unknown lane or a missing worktree is a 404. The lane
+  detail's "Show this lane's build evidence" switches the Build health panel; "Back to the game root" returns.
+
 ## The authored-provenance door
 
 `EntityProvenance = IngestProvenance | AuthoredProvenance`. An authored entity has no source row to cite,
@@ -272,7 +312,7 @@ An empty manifest renders "No pipelines in <title>'s manifest yet" in the lab (C
 
 **Game view.** A fourth lab view, `v=game` (`LabView` gains `'game'`), at `layout-lab/game/`:
 `gameHome.tsx` (facts strip), `gameHomePipelines.tsx` (`DataTable` rows), `gameHomeData.ts` (reads),
-`gameHomeBuildHealth.tsx` (the build-health panel, see "Engine evidence (Godot)").
+`gameHomeBuildHealth.tsx` (the build-health panel, see "Engine evidence (Godot)"), `gameHomeLanes.tsx` (the lanes control room, next section).
 Rows are the manifest's built pipelines, then the planned ones. Coverage ("n / expected", or "n · no target
 declared") and readiness are separate columns. Readiness is the best reached rung from the /status model
 (`buildSwimlane` → `readinessOf`) over the game's rows, or "unmeasured", never R0. Planned rows read

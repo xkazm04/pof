@@ -31,10 +31,10 @@ export function laneFacts(lane: LaneView, readAt: string): Record<string, unknow
 
 function Thumb({ f, laneId }: { f: LaneFrame; laneId: string }) {
   return (
-    <figure data-testid={`lane-frame-${laneId}-${f.file}`} style={{ margin: 0, display: 'grid', gap: 4, minWidth: 0 }}>
-      <a href={f.url} target="_blank" rel="noreferrer" className="focus-ring" aria-label={`Open ${f.title} full size`}>
+    <figure data-testid={`lane-frame-${laneId}-${f.file}`} style={{ margin: 0, display: 'grid', alignContent: 'start', gap: 4, minWidth: 0 }}>
+      <a href={f.url} target="_blank" rel="noreferrer" className="focus-ring" style={{ display: 'block' }} aria-label={`Open ${f.title} full size`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a server-served frame of unknown size; next/image would need a loader for the API route */}
-        <img src={f.url} alt={f.title} loading="lazy" style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', border: '1px solid var(--lab-line)', background: 'var(--lab-panel)' }} />
+        <img src={f.url} alt={f.title} loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', border: '1px solid var(--lab-line)', background: 'var(--lab-panel)' }} />
       </a>
       <figcaption style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink-deep)', overflowWrap: 'anywhere' }}>
         {f.title}{f.source ? ` · ${f.source}` : ''}
