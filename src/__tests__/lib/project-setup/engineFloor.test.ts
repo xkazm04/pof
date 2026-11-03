@@ -11,7 +11,10 @@ const armAList = <T extends { engineVersion: string | null }>(ps: readonly T[], 
 };
 const armASortNewest = (vs: string[]) => [...vs].sort((a, b) => b.localeCompare(a));
 
-const PILLS = ['5.5.4', '5.6.1', '5.7.3', '5.8.0'];
+// The landing offers one UE pill (5.8). The floor logic itself is version-general: an engine
+// persisted from before the 5.5-5.7 toggles were removed (or a future 5.9) is still graded.
+const PILLS = ['5.8.0'];
+const LEGACY_SELECTIONS = ['5.5.4', '5.6.1', '5.7.3'];
 
 // The two projects detected on the authoring machine (Documents/Unreal Projects, 2026-10-31),
 // installed engine UE_5.8 (Build.version 5.8.3).
@@ -27,12 +30,14 @@ const SCRIPTED = [
   { name: 'Full571', engineVersion: '5.7.1' },
 ];
 
-function score(projects: { name: string; engineVersion: string | null }[]) {
+const ALL_SELECTIONS = [...LEGACY_SELECTIONS, ...PILLS];
+
+function score(projects: { name: string; engineVersion: string | null }[], selections: readonly string[] = PILLS) {
   let opensListedA = 0, opensListedB = 0, opens = 0;
   let newerWarnedA = 0, newerWarnedB = 0, newer = 0;
   let unknownListedA = 0, unknownListedB = 0, unknown = 0;
   let silentViolations = 0, matchPrefixIdentical = 0;
-  for (const pill of PILLS) {
+  for (const pill of selections) {
     const a = armAList(projects, pill);
     const b = orderByEngineFit(projects, pill);
     for (const p of projects) {
@@ -59,8 +64,17 @@ function score(projects: { name: string; engineVersion: string | null }[]) {
 }
 
 describe('engine floors (paired A/B)', () => {
-  it('real projects: every pill lists them; under an older pill they are warned, not hidden', () => {
+  it('the landing pill (5.8 only): the real 5.8 projects match, nothing is hidden or warned', () => {
     expect(score(REAL)).toEqual({
+      opens: 2, opensListedA: 2, opensListedB: 2,
+      newer: 0, newerWarnedA: 0, newerWarnedB: 0,
+      unknown: 0, unknownListedA: 0, unknownListedB: 0,
+      silentViolations: 0, matchPrefixIdentical: 1,
+    });
+  });
+
+  it('real projects: every selection lists them; under an older persisted selection they are warned, not hidden', () => {
+    expect(score(REAL, ALL_SELECTIONS)).toEqual({
       opens: 2, opensListedA: 2, opensListedB: 2,          // only the 5.8 pill: A and B agree
       newer: 6, newerWarnedA: 0, newerWarnedB: 6,          // 5.5/5.6/5.7 pills: A hides both
       unknown: 0, unknownListedA: 0, unknownListedB: 0,
@@ -69,7 +83,7 @@ describe('engine floors (paired A/B)', () => {
   });
 
   it('scripted cases: older opens are listed silently, unknown is labelled, never hidden', () => {
-    expect(score(SCRIPTED)).toEqual({
+    expect(score(SCRIPTED, ALL_SELECTIONS)).toEqual({
       opens: 6, opensListedA: 2, opensListedB: 6,          // Legacy55 x4 pills + Full571 x2; A lists each under one
       newer: 2, newerWarnedA: 0, newerWarnedB: 2,          // Full571 under the 5.5 and 5.6 pills
       unknown: 8, unknownListedA: 0, unknownListedB: 8,

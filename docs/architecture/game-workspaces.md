@@ -291,6 +291,17 @@ and the first client render agree. `GameSelector` (`layout-lab/GameSelector.tsx`
 both places: a labelled native `<select>` of `GAMES` titles plus the lab `Button` toggle "All pipelines"
 (shown only for a game whose manifest is not `'all'`).
 
+**Opening a Godot project from the landing screen.** `SetupWizard` has two engine pills: `UE 5.8` (the one
+version in use; 5.5-5.7 toggles are gone, and older projects still open under the `engineFloor` rule) and
+`Godot`. Godot lists the registered Godot games whose repo root holds a `project.godot`
+(`src/lib/project-setup/godotProjects.ts`, server-only, served by the browse route's `detect-godot-projects`
+action; the root resolves through `gameRootFor`, the project folder is `<root>/project` or the root, the
+label is the file's own `config/name`, so GTAI reads "RTAI: Uprising"). Opening one sets
+`projectName`/`projectPath` (the folder with `project.godot`), `setGame(gameId)` and writes `g`, then
+`completeSetup()`; `NewHome` mounts the lab on that game, never UE-only modules. No engine field was added to
+`useProjectStore`: `ueVersion` keeps its UE default for a Godot project, and re-opening one from the recent list
+restores the path, while the active game comes from `pof-active-game` (known gap).
+
 **Scoping.** One pure module, `src/lib/games/scope.ts`, holds every rule:
 - `scopeCatalogIds(gameId, registered, showAll)`: in-manifest catalogs in `registered` order, plus
   off-manifest ones under showAll (flagged in `offManifest`). For `manifest: 'all'` it returns `registered` unchanged.

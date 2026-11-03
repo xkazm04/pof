@@ -11,6 +11,7 @@ vi.mock('next/font/google', () => {
 import { mockFetch } from '@/__tests__/setup';
 import { SetupWizard } from '@/components/modules/project-setup/SetupWizard';
 import { useProjectStore } from '@/stores/projectStore';
+import { useActiveGameStore } from '@/stores/activeGameStore';
 
 beforeEach(() => {
   // Mount fires a detect-projects scan; default to an empty result.
@@ -30,18 +31,49 @@ describe('SetupWizard version switcher', () => {
     expect(pill.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('renders all four version pills including UE 5.8', () => {
+  it('offers UE 5.8 and Godot only: no 5.5 / 5.6 / 5.7 toggles', () => {
     render(<SetupWizard />);
-    for (const value of ['5.5.4', '5.6.1', '5.7.3', '5.8.0']) {
-      expect(screen.getByTestId(`pof-setup-wizard-version-pill-${value}`)).toBeTruthy();
+    expect(screen.getByTestId('pof-setup-wizard-version-pill-5.8.0')).toBeTruthy();
+    expect(screen.getByTestId('pof-setup-wizard-engine-pill-godot')).toBeTruthy();
+    for (const value of ['5.5.4', '5.6.1', '5.7.3']) {
+      expect(screen.queryByTestId(`pof-setup-wizard-version-pill-${value}`)).toBeNull();
     }
   });
 
-  it('switching to UE 5.5 updates the selected version in the store', () => {
+  it('a stale persisted older version is replaced by 5.8 when the UE pill is chosen', () => {
+    useProjectStore.setState({ ueVersion: '5.5.4' });
     render(<SetupWizard />);
-    fireEvent.click(screen.getByTestId('pof-setup-wizard-version-pill-5.5.4'));
-    expect(useProjectStore.getState().ueVersion).toBe('5.5.4');
-    expect(screen.getByTestId('pof-setup-wizard-version-pill-5.5.4').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByTestId('pof-setup-wizard-version-pill-5.8.0'));
+    expect(useProjectStore.getState().ueVersion).toBe('5.8.0');
+  });
+});
+
+describe('SetupWizard Godot', () => {
+  const RTAI = {
+    gameId: 'gtai', name: 'RTAI: Uprising', path: 'C:/Users/me/kiro/gtai/project',
+    root: 'C:/Users/me/kiro/gtai', engineVersion: '4.7.2', validated: true,
+  };
+  const routeByAction = () => {
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      const data = body.action === 'detect-godot-projects' ? { projects: [RTAI] } : { projects: [] };
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ success: true, data }) });
+    }) as unknown as typeof fetch;
+  };
+
+  it('lists RTAI under Godot and opening it selects the gtai game workspace', async () => {
+    routeByAction();
+    useActiveGameStore.setState({ gameId: 'pof' });
+    render(<SetupWizard />);
+    fireEvent.click(screen.getByTestId('pof-setup-wizard-engine-pill-godot'));
+    expect(screen.queryByTestId('pof-setup-wizard-tab-fresh')).toBeNull();
+    const item = await screen.findByTestId('pof-setup-wizard-godot-item-gtai');
+    expect(item.textContent).toContain('RTAI: Uprising');
+    fireEvent.click(item);
+    await waitFor(() => expect(useProjectStore.getState().isSetupComplete).toBe(true));
+    expect(useProjectStore.getState().projectPath).toBe(RTAI.path);
+    expect(useProjectStore.getState().isNewProject).toBe(false);
+    expect(useActiveGameStore.getState().gameId).toBe('gtai');
   });
 });
 

@@ -12,6 +12,7 @@ import {
   type DetectedTool,
 } from '@/lib/project-setup/toolchain';
 import { compareReleases } from '@/lib/project-setup/engineFloor';
+import { detectGodotProjects } from '@/lib/project-setup/godotProjects';
 
 interface ListResponse {
   path: string;
@@ -494,6 +495,11 @@ export async function POST(request: NextRequest) {
       case 'detect-projects': {
         const projects = await scanForProjects();
         return apiSuccess({ projects } satisfies DetectProjectsResponse);
+      }
+
+      case 'detect-godot-projects': {
+        // Godot projects (a folder with project.godot) of the registered Godot games, e.g. RTAI.
+        return apiSuccess({ projects: detectGodotProjects() });
       }
 
       case 'detect-engines': {
