@@ -77,6 +77,6 @@ export interface CombatLabRead {
 }
 
 export const METRIC_LABEL: Record<SessionMetric['key'], string> = {
-  hitRate: 'Hit rate', damageTaken: 'Damage taken', latency: 'Input latency', dodges: 'Dodges', knockdowns: 'Knockdowns', turnRate: 'Turn rate (°/s)', topSpeed: 'Top speed (m/s)', courseTime: 'Course time (s)',
+  hitRate: 'Hit rate', damageTaken: 'Damage taken', latency: 'Input latency', dodges: 'Dodges', knockdowns: 'Knockdowns', turnRate: 'Turn rate (Â°/s)', topSpeed: 'Top speed (m/s)', courseTime: 'Course time (s)',
   pitTime: 'Pit time (s)', pitKills: 'Pit kills', pitWaves: 'Pit waves cleared', coverStops: 'Shots stopped by cover',
 };
