@@ -21,11 +21,13 @@ function OptionColumn({ t, o, group, checked, isDefault, onPick }: {
   return (
     <div data-testid={`decision-option-${o.key}`} style={{ display: 'grid', gap: 'var(--lab-s2)', alignContent: 'start', minWidth: 0, padding: 'var(--lab-s3)',
       border: `1px solid ${checked ? t.ink : t.line}`, background: checked ? t.accentBg : 'transparent', borderRadius: 6 }}>
-      <label style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap', cursor: 'pointer' }}>
-        <input type="radio" name={group} value={o.key} checked={checked} onChange={onPick} />
-        <strong style={{ color: t.inkDeep, fontSize: 'var(--lab-fs-sm)' }}>{o.label}</strong>
-        <MicroLabel mono tone="muted">{o.key}</MicroLabel>
-        {isDefault && <StatusTag level="ok" word="lane's default" />}
+      <label style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'flex-start', cursor: 'pointer' }}>
+        <input type="radio" name={group} value={o.key} checked={checked} onChange={onPick} style={{ flexShrink: 0, marginTop: 3 }} />
+        <span style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
+          <strong style={{ color: t.inkDeep, fontSize: 'var(--lab-fs-sm)' }}>{o.label}</strong>
+          <MicroLabel mono tone="muted">{o.key}</MicroLabel>
+          {isDefault && <StatusTag level="ok" word="lane's default" />}
+        </span>
       </label>
       <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.text }}>{o.tradeoff || <em style={{ color: t.muted }}>no trade-off written</em>}</span>
       {o.media.length === 0
