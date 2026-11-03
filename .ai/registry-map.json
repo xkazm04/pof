@@ -16718,7 +16718,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/judge/calibration.ts:340 The calibration guard that 'fails the build on enforced-fail' gets its verdict from a per-machine log outside the tree, so the same commit passes on a clean clone (unrun) and fails on a machine that has run a calibration. Its input is not a function of the tree it gates, yet it blocks.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "agent-memory",
@@ -20468,7 +20472,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:620 With no sibling context, the Items Test Gate returns PASS because the artifact its own Produce run wrote says `pass: true`. The gate's input is a verdict the gated party authored, so a cooperative record is the only thing that gets checked.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "catalog-pipeline-authoring",

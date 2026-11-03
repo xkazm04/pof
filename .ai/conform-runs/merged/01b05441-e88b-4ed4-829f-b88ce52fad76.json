@@ -1,0 +1,224 @@
+{
+  "schema": "conform-run/1",
+  "worker": "01b05441-e88b-4ed4-829f-b88ce52fad76",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-03T17:52:51.198503+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "judge-craft-quality",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/judge/calibration.ts:340 The calibration guard that 'fails the build on enforced-fail' gets its verdict from a per-machine log outside the tree, so the same commit passes on a clean clone (unrun) and fails on a machine that has run a calibration. Its input is not a function of the tree it gates, yet it blocks.",
+      "techniques": [
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/calibration.ts:340 The guard test asserts not enforced-fail over latestCalibrationRun() read from ~/.pof. It is a blocking verdict on input that lives outside the tree, and it never splits into deterministic and measured halves."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:6 No test ties DIMENSIONS or the rubric text to RUBRIC_VERSION. The only test is judge.test.ts `RUBRIC_VERSION >= 2`. CONTENT_HASH_SCHEME's 'bump on ANY change to serialization' (contentHash.ts:54) is also prose only: payload.test pins the key list but neither pins the canonical form nor forces the bump."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:16 Names the exit path from standing to build failure, and the guard test asserts exactly that."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:23 A missing or empty instrument is a named not-proven standing, never green."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:22 Below the sample floor the rate is reported, not certified."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:32 Reporting surfaces count the same CONDEMNING_PROVENANCE set that acceptance enforces."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/contentHash.ts:48 The hash exclusion list is derived from the judge's strip list (NON_CONTENT_KEYS), so the binding is to the content the judge actually read."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:53 Closed standing vocabulary (current/stale/superseded/unknown), with an explicit unknown instead of a blank."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/dimensions.ts:21 Measured misfires were fixed by narrowing the rubric routing, not by deleting the bar."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/dimensions.ts:27 The escape is scoped to named pairs, not patterns, so it cannot silence other steps."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/app/api/judge-verdicts/route.ts:116 The producer's self-stated 'pass' is re-checked against its score and rubric at the write door before it is stored (route.ts:108-110)."
+        },
+        {
+          "technique": "shared-substrate-check-partition",
+          "verdict": "conformant",
+          "evidence": "src/lib/craft/craftCell.ts:62 The A-axis craft lens and the R-axis judge share an LLM substrate. The craft side is structurally display-only and cannot move a grade."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "conformant",
+          "evidence": "src/lib/craft/craftCell.ts:305 Gauges are keyed to the lens they were scored under, so relabelling cannot dodge a lens."
+        },
+        {
+          "technique": "excess-indicts-the-instrument",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/rubrics.ts:20 A mass of 'invented reference' findings was traced to the harness, not the content, and the affected verdicts were made provisional."
+        }
+      ],
+      "registryProposal": "blocking-by-input-determinism names two input classes: the tree and an external feed. A third is a machine-local measurement log the gate itself writes, as with a calibration history kept outside the repo. It is neither tree-determined nor an outside feed and may deserve an explicit rule: commit the evidence, or keep the gate advisory."
+    },
+    {
+      "context": "pipeline-step-components",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/itemsSteps.ts:620 With no sibling context, the Items Test Gate returns PASS because the artifact its own Produce run wrote says `pass: true`. The gate's input is a verdict the gated party authored, so a cooperative record is the only thing that gets checked.",
+      "techniques": [
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:620 Legacy branch: the artifact's self-recorded verdict yields status pass (line 621-622 'Legacy artifacts recorded the verdict itself')."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:593 A green from app-side sibling acceptance is labelled as a pass 'in the UE project'. ItemGate.tsx:84 confirms the verdict comes only from upstream acceptance, not from the UE functional test."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/ItemGate.tsx:14 When the gate cannot observe a check it reports deferred, not pass or fail."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/ItemGate.tsx:60 The Checks panel, log and banner all derive from one checker context."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:194 A check with no declared dependency is blocked by name instead of passing vacuously."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:584 Reads the resolved checker, drain and judge merge, not re-runs of raw shape checks."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:160 Each blocker names the step and the layer that condemned it, which points to the remedy."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "gdd-compliance",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "build-quality-monitoring",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor RegressionBanner.tsx:6 is a doc comment about the onRebuild prop and does not show that gating is absent. The context also holds BuildNowBar and the build-health lib, which I did not rule out as gating, and the exit-code and hook search terms do not suit a React UI."
+    },
+    {
+      "subject": "quality-gates",
+      "context": "ue5-state-sync",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor LiveStateSyncPanel/index.tsx:4 only describes the live panel's purpose, while the context also includes BidirectionalStateSyncPanel with conflict resolution (deriveConflicts, planResolution) and property write-back. I could not confirm from that line that nothing there refuses a change, s"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-03T17:52:51.198503+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "blocking-by-input-determinism",
+        "excess-indicts-the-instrument",
+        "false-positive-economics",
+        "gate-liveness",
+        "match-the-resolved-artifact",
+        "policy-projection",
+        "prose-rule-drift",
+        "renameable-detector-keys",
+        "self-reported-gate-inputs",
+        "severity-by-construction",
+        "shared-substrate-check-partition",
+        "unmeasurable-criteria",
+        "waiver-names-its-finding"
+      ],
+      "deviations": 1,
+      "context": "judge-craft-quality",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T17:52:51.198503+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "instrument-answers-only-its-own-question",
+        "match-the-resolved-artifact",
+        "policy-projection",
+        "refusal-names-a-reachable-remedy",
+        "self-reported-gate-inputs",
+        "unmeasurable-criteria",
+        "vacuous-by-evaluation"
+      ],
+      "deviations": 1,
+      "context": "pipeline-step-components",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T17:52:51.198503+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "build-quality-monitoring",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T17:52:51.198503+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-state-sync",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
