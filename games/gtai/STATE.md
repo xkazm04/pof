@@ -5,31 +5,15 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
-- **Phase 1: Look and engine is DONE (2026-11-02):** Trivet look, Godot 4.7.2. **Phase 2 is next**, with two workstreams first: (1) the one-day 2D cutout test on Rivet and King, then (2) the city-scale gate.
-- **Phase 1 (history): Look and engine.**
-  - **Exit criterion:** the engine locked in `src/lib/games/gtai.ts`, based on the overnight spike's scoreboard plus the owner's play-test.
-  - Look and camera are locked: **Trivet** (V1 DEAD INK, 90 degrees overhead), 2026-11-01.
-- **Pre-check done** (19:05 to 19:58, $22.06, all billed to the API key). **No blockers on any engine.** Each engine lane rated its confidence of a runnable Windows build by morning at 5/5; one already exists in each. Reports: `C:\Users\kazda\kiro\gtai-spike\lanes\*\PRECHECK.md`.
+- **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
+- **Art direction (owner, 2026-11-03): D5 "Inked Grime" is the target.** Noir is a mid/late-game mission look. Blood is red (noir's FX); cops are blue; Rivet is only slightly larger than a human; the soul trail is descoped. Details in `pitch.md` §8.
+- **Today (2026-11-03):** the four night lanes merge onto main (`int-day`), then a day run `C:\Users\kazda\kiro\gtai-day-d5` chases D5 until 18:00 with 3 lanes: `d5-city`, `d5-cast`, `d5-combat`.
 - **Next steps**
-  1. **The night is running** (launched 20:06; it freezes at 06:45, reports at 07:15 and ends at 08:00). Engine lanes run Opus 5.5 at high effort; the art lane runs Sonnet 5.5 (owner). All lanes bill the API key first. Check it anytime with `node games/gtai/spike/spike.mjs status`. Keep Unity Hub open.
-  2. Morning (`/gta morning`): run the report, review the evidence, have the owner play-test, lock the engine. Then do Phase 2 planning.
-- **Quest loop ready (2026-11-02): `/gta --quest [act] [goal]`.**
-  - The council is Opus 5.5 + Grok, two contrasting paths each. PoF guards score every path, the owner fuses them in an artifact, then the quest is executed end to end as a package (`games/gtai/quests/<id>/`).
-  - The Godot runtime is `game/quest/` on branch `quest-runtime` in `gtai-spike/evolve/project-quest`. It is **not yet merged** into evolve master.
-  - Each quest is a row of the PoF `contracts` pipeline.
-  - **First real use:** an act-1 quest, after the owner replaces the illustrative voice-bible lines with chosen anchors.
-- **Quest 1 LOCKED (2026-11-02): `collect-call`, Act 1** (`games/gtai/quests/collect-call/`).
-  - **Status:** the owner approved the structure and all six looks and names; fine-tuning comes later. All guards are green, and Grok judged all 23 lines.
-  - **PoF `contracts` row:** Council, Plan, Guards and Package pass. In-game is not built.
-  - **Next:** build it in the real game repo `kiro/gtai`. That means porting `game/quest/` from the spike branch `quest-runtime`, then:
-    - Trivet cutout parts for the new cast;
-    - the Toner Room safehouse;
-    - Patch's payphone router with its heat rule;
-    - Dock 9 with 6 waves of assault-rifle guards;
-    - the Mertz boss and the Robo-tazer arc ball;
-    - Gloria the nail gun;
-    - burning the crates.
-- **Waiting on the owner:** fourth soul; betrayer; act antagonist order. All can wait for Phase 2. The quest guards protect all three, and the betrayal and soul-4 beats stay unclaimable until they are decided.
+  1. 18:00 sync: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-day-d5`, an updated verdict page, the owner's verdicts, merge.
+  2. The PoF quest-vocabulary guard (PoF validates against rtai `quest_rules.json`, `gtai.quest-rules/2`).
+  3. Slice gameplay: Gearbox ability, heat ladder, Madness band 1, checkpoint save; the collect-call follow-ups (place names, weapon id, beat timing, respawn).
+- **Quest 1 `collect-call`** plays headless to "paid" on main (3 stubs left: placeholder arena and movement, timed whispers, no bound input).
+- **Waiting on the owner:** fourth soul; betrayer; act antagonist order (none blocks the slice).
 
 ## Roadmap (Phase 2 plan signed 2026-11-02: see `PHASE2.md`)
 
