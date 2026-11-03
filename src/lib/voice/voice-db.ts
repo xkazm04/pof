@@ -34,13 +34,21 @@ export function createVoiceDb(db: Db): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT, takeId TEXT NOT NULL, verdict TEXT NOT NULL, note TEXT, at INTEGER NOT NULL
     );
   `);
-  // A DB created before the silence screen lacks the column; add it once.
-  const cols = db.prepare('PRAGMA table_info(voice_takes)').all() as Array<{ name: string }>;
-  if (!cols.some((c) => c.name === 'maxSilenceMs')) db.exec('ALTER TABLE voice_takes ADD COLUMN maxSilenceMs INTEGER');
+  // A DB created before a column landed lacks it; add each once (silence screen, line class + beat).
+  addMissing(db, 'voice_takes', ['maxSilenceMs INTEGER']);
+  addMissing(db, 'voice_lines', ["lineClass TEXT NOT NULL DEFAULT 'story'", "whenTags TEXT NOT NULL DEFAULT '[]'", 'beatId TEXT', 'beatTitle TEXT', 'beatSummary TEXT']);
+}
+
+function addMissing(db: Db, table: string, defs: readonly string[]): void {
+  const cols = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name));
+  for (const def of defs) if (!cols.has(def.split(' ')[0])) db.exec(`ALTER TABLE ${table} ADD COLUMN ${def}`);
 }
 
 const voiceOf = (r: Raw): VoiceRow => ({ ...(r as unknown as VoiceRow), previews: JSON.parse(String(r.previews)) });
-const lineOf = (r: Raw): QueueLine => ({ ...(r as unknown as QueueLine), purpose: JSON.parse(String(r.purpose)), present: r.present === 1 });
+const lineOf = (r: Raw): QueueLine => {
+  const { whenTags, ...rest } = r;
+  return { ...(rest as unknown as QueueLine), purpose: JSON.parse(String(r.purpose)), when: JSON.parse(String(whenTags ?? '[]')), present: r.present === 1 };
+};
 const takeOf = (r: Raw): TakeRow => ({ ...(r as unknown as TakeRow), settings: JSON.parse(String(r.settings)) });
 
 // ── voices ──
@@ -71,10 +79,13 @@ export function castVoice(db: Db, id: string, at = Date.now()): VoiceRow | null 
 
 // ── line queue ──
 export function upsertLine(db: Db, l: QueueLine): void {
-  db.prepare(`INSERT INTO voice_lines VALUES (@gameId,@questId,@lineId,@speaker,@text,@textHash,@purpose,@questOrder,@lineOrder,@present,@syncedAt)
+  const { when, ...rest } = l;
+  db.prepare(`INSERT INTO voice_lines (gameId,questId,lineId,speaker,text,textHash,purpose,questOrder,lineOrder,present,syncedAt,lineClass,whenTags,beatId,beatTitle,beatSummary)
+    VALUES (@gameId,@questId,@lineId,@speaker,@text,@textHash,@purpose,@questOrder,@lineOrder,@present,@syncedAt,@lineClass,@whenTags,@beatId,@beatTitle,@beatSummary)
     ON CONFLICT(gameId,questId,lineId) DO UPDATE SET speaker=excluded.speaker, text=excluded.text, textHash=excluded.textHash,
-    purpose=excluded.purpose, questOrder=excluded.questOrder, lineOrder=excluded.lineOrder, present=excluded.present, syncedAt=excluded.syncedAt`)
-    .run({ ...l, purpose: JSON.stringify(l.purpose), present: l.present ? 1 : 0 });
+    purpose=excluded.purpose, questOrder=excluded.questOrder, lineOrder=excluded.lineOrder, present=excluded.present, syncedAt=excluded.syncedAt,
+    lineClass=excluded.lineClass, whenTags=excluded.whenTags, beatId=excluded.beatId, beatTitle=excluded.beatTitle, beatSummary=excluded.beatSummary`)
+    .run({ ...rest, whenTags: JSON.stringify(when), purpose: JSON.stringify(l.purpose), present: l.present ? 1 : 0 });
 }
 /** Lines no longer in any package stay (their takes keep history) but leave the queue. */
 export function markAbsentExcept(db: Db, gameId: string, keep: ReadonlySet<string>, at: number): void {

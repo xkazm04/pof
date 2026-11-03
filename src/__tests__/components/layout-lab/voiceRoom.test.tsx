@@ -18,6 +18,8 @@ import type { QueueEntry } from '@/lib/voice/types';
 
 const entry = (questId: string, lineId: string, questOrder: number, lineOrder: number, state: QueueEntry['state'] = 'no-takes'): QueueEntry => ({
   gameId: 'gtai', questId, lineId, speaker: 'rivet', text: `${lineId} text`, textHash: 'h', purpose: ['funny'], questOrder, lineOrder,
+  lineClass: lineId === 'a1' ? 'bark' : 'story', when: lineId === 'a1' ? ['static-whisper-burst'] : [],
+  beatId: 'b1', beatTitle: 'Line Stopped', beatSummary: 'Rivet hides in a dumpster while the heat drains.',
   present: true, syncedAt: 0, state, takes: state === 'no-takes' ? 0 : 1, pending: state === 'awaiting-verdict' ? 1 : 0, approvedTakeId: null,
 });
 
@@ -86,6 +88,17 @@ describe('Voice room', () => {
     expect((init.headers as Record<string, string>)[VOICE_GATE_HEADER]).toBe('TOKEN-123');
     expect(VOICE_GATE_HEADER).toBe('x-voice-gate');
     expect(JSON.parse(String(init.body))).toEqual({ takeId: 'take-1', verdict: 'approved', note: 'perfect panic' });
+  });
+
+  it('marks barks in the queue and shows the line class and its scene', async () => {
+    stubRoutes();
+    render(<VoiceRoom t={LIGHT} />);
+    await waitFor(() => expect(screen.queryByTestId('voice-line-context')).not.toBeNull());
+    expect(screen.getAllByTestId('voice-line-class')).toHaveLength(1);
+    const ctx = screen.getByTestId('voice-line-context');
+    expect(ctx.getAttribute('data-class')).toBe('bark');
+    expect(ctx.textContent).toContain('when: static-whisper-burst');
+    expect(screen.getByTestId('voice-line-beat').textContent).toContain('Scene: Line Stopped');
   });
 
   it('shows the no-clone note in Cast', async () => {

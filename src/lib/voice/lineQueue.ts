@@ -30,17 +30,35 @@ export function playOrder(ledger: readonly QuestPackage[]): QuestPackage[] {
     actNumber(a.act) - actNumber(b.act) || fused(a).localeCompare(fused(b)) || a.id.localeCompare(b.id));
 }
 
+interface BeatRef { id: string; title: string | null; summary: string | null }
+
+/** line id -> the first beat that lists it in `lineIds` (the scene the line is directed for). */
+function beatIndex(q: QuestPackage): Map<string, BeatRef> {
+  const out = new Map<string, BeatRef>();
+  const beats = Array.isArray(q.beats) ? q.beats : [];
+  for (const b of beats) {
+    const ref: BeatRef = { id: String(b.id), title: b.title ? String(b.title) : null, summary: b.summary ? String(b.summary) : null };
+    for (const id of Array.isArray(b.lineIds) ? b.lineIds : []) if (!out.has(id)) out.set(id, ref);
+  }
+  return out;
+}
+
 /** Re-read the packages under `root` and mirror their lines into `voice_lines`. Returns the queue. */
 export function syncQueue(db: Database.Database, gameId: string, root: string, at = Date.now()): QueueLine[] {
   const quests = playOrder(loadLedger(root));
   const keep = new Set<string>();
   db.transaction(() => {
     quests.forEach((q, qi) => {
+      const beatOf = beatIndex(q);
       (q.lines ?? []).forEach((l, li) => {
         keep.add(`${q.id}/${l.id}`);
+        const when = Array.isArray(l.when) ? l.when.map(String) : [];
+        const beat = beatOf.get(l.id) ?? null;
         upsertLine(db, {
           gameId, questId: q.id, lineId: l.id, speaker: l.speaker, text: l.text, textHash: hashText(l.text),
-          purpose: Array.isArray(l.purpose) ? l.purpose.map(String) : [], questOrder: qi, lineOrder: li, present: true, syncedAt: at,
+          purpose: Array.isArray(l.purpose) ? l.purpose.map(String) : [], lineClass: when.length > 0 ? 'bark' : 'story', when,
+          beatId: beat?.id ?? null, beatTitle: beat?.title ?? null, beatSummary: beat?.summary ?? null,
+          questOrder: qi, lineOrder: li, present: true, syncedAt: at,
         });
       });
     });

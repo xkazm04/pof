@@ -10,6 +10,12 @@ export type VoiceStatus = 'candidate' | 'cast';
 export type TakeVerdict = 'pending' | 'approved' | 'rejected' | 'superseded';
 /** A line's state in the queue. `proven` = it has an approved take on its CURRENT text. */
 export type LineState = 'no-takes' | 'awaiting-verdict' | 'all-rejected' | 'proven';
+/**
+ * A line's class, recorded per line (registry `game-dialogue-voice-pipeline`: "the line has a class").
+ * Basis: the quest schema's own definition (`QuestLine.when` = "condition tags for barks"), so a line with
+ * `when` tags is a reactive `bark` and a line without is an authored `story` line played once in its beat.
+ */
+export type LineClass = 'story' | 'bark';
 
 export interface VoicePreview {
   /** The provider's temporary design id (`generated_voice_id`). */
@@ -42,6 +48,13 @@ export interface QueueLine {
   text: string;
   textHash: string;
   purpose: string[];
+  lineClass: LineClass;
+  /** The package's condition tags (`when`), verbatim; empty for a story line. */
+  when: string[];
+  /** The beat that speaks this line (`beats[].lineIds`): the scene a direction is written for. */
+  beatId: string | null;
+  beatTitle: string | null;
+  beatSummary: string | null;
   /** Chronological play position: quest order (ledger), then `lines[]` order. */
   questOrder: number;
   lineOrder: number;

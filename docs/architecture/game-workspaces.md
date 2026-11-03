@@ -392,7 +392,10 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   - `voice_lines`: the line queue, a mirror of every ledger quest's `lines[]`. **Re-synced from the quest package
     on every read** (`syncQueue`); the package is the source of truth for the text. Play order is the act, then
     `provenance.fusedAt`, then the id; inside a quest, the order of `lines[]`. A line gone from its package
-    leaves the queue but keeps its takes.
+    leaves the queue but keeps its takes. Each line also carries its **class** and **scene**, re-read with the
+    text: `bark` when the package gives it `when` tags (the quest schema's own definition: condition tags for
+    barks), else `story`; the scene is the first beat whose `lineIds` lists it (title + summary). The room and
+    `voice.mjs line` show both, because a direction is written for a scene, and a bark is judged for repeat play.
   - `voice_takes`: per line, each take with its delivery direction (the words used), the text actually sent,
     the settings (model, stability, similarity, style, speed), the file, duration and loudness (ffprobe /
     ffmpeg `ebur128`; `null` = unmeasured), the longest internal pause (`silencedetect`; over 1.5 s the room flags a
@@ -425,5 +428,6 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   generate k takes with a direction), Cast (voices with previews, cast, design from the bible).
 - **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `takes`, `design`, `stock`, `voices`,
   `export`; no approve, reject or cast), driven by `/gta --voice` (`.claude/skills/gta/SKILL.md`, Voice mode).
-- **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, supersede, design, export) and the
+- **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, line class + scene + column migration,
+  supersede, design, export) and the
   gate refusal test above.

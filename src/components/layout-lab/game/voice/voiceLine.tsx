@@ -9,6 +9,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import { LINE_STATE } from './voiceQueue';
 import { VoiceTake } from './voiceTake';
 import { VoiceGenerate } from './voiceGenerate';
+import { VoiceLineContext } from './voiceLineContext';
 import { useLineDetail, type LineKey } from './voiceRoomData';
 
 export function VoiceLine({ t, sel, gate, onChanged }: {
@@ -32,6 +33,7 @@ export function VoiceLine({ t, sel, gate, onChanged }: {
         <strong style={{ fontFamily: 'var(--lab-font-mono)', color: t.inkDeep }}>{d.line.speaker}</strong>
         <blockquote style={{ margin: 0, fontSize: 'var(--lab-fs-md, 1rem)', color: t.inkDeep, lineHeight: 1.5 }}>{d.line.text}</blockquote>
         {d.line.purpose.length > 0 && <MicroLabel mono tone="muted">purpose: {d.line.purpose.join(', ')}</MicroLabel>}
+        <VoiceLineContext t={t} line={d.line} />
       </header>
       <details data-testid="voice-bible">
         <summary style={{ cursor: 'pointer', fontSize: 'var(--lab-fs-sm)', color: t.text }}>Voice bible: {d.line.speaker}</summary>

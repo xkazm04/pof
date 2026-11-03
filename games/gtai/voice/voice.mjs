@@ -44,7 +44,12 @@ async function call(path, body) {
 }
 
 const pad = (s, n) => String(s).padEnd(n);
-const lineRow = (e) => `  ${pad(e.questId, 16)} ${pad(e.lineId, 26)} ${pad(e.speaker, 20)} ${pad(e.state, 17)} ${e.text.length > 70 ? `${e.text.slice(0, 67)}...` : e.text}`;
+const lineRow = (e) => `  ${pad(e.questId, 16)} ${pad(e.lineId, 26)} ${pad(e.speaker, 20)} ${pad(e.lineClass ?? 'story', 6)} ${pad(e.state, 17)} ${e.text.length > 70 ? `${e.text.slice(0, 67)}...` : e.text}`;
+/** What a direction is written for: the class (a bark fires on its when-tags and may repeat) and the beat. */
+const contextOf = (l) => [
+  l.lineClass === 'bark' ? `  bark · fires on: ${(l.when ?? []).join(', ')} (if a tag recurs in play, direct it for the repeat hearing too)` : '  story line · plays in the flow of its beat',
+  l.beatId ? `  scene ${l.beatTitle ?? l.beatId}: ${l.beatSummary ?? ''}` : null,
+].filter(Boolean).join('\n');
 
 async function findLine(lineId, questId) {
   const room = await call('');
@@ -78,6 +83,7 @@ async function main() {
       const e = await findLine(opt('line'), opt('quest'));
       const d = await call(`/lines?questId=${encodeURIComponent(e.questId)}&lineId=${encodeURIComponent(e.lineId)}`);
       out(`${d.line.questId}/${d.line.lineId} · ${d.line.speaker} · ${d.line.state}\n  "${d.line.text}"`);
+      out(contextOf(d.line));
       for (const t of d.takes) {
         out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.stale ? ' (stale text)' : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
       }

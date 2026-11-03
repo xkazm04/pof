@@ -3,13 +3,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export interface FixtureLine { id: string; speaker: string; text: string }
+export interface FixtureLine { id: string; speaker: string; text: string; when?: string[] }
+export interface FixtureBeat { id: string; title: string; summary: string; lineIds: string[] }
 
-export function writeQuest(root: string, id: string, act: string, fusedAt: string, lines: FixtureLine[]): void {
+export function writeQuest(root: string, id: string, act: string, fusedAt: string, lines: FixtureLine[], beats: FixtureBeat[] = []): void {
   const dir = path.join(root, 'games', 'gtai', 'quests', id);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'quest.json'), JSON.stringify({
-    schema: 'gtai.quest/1', id, act, title: `Quest ${id}`, provenance: { fusedAt },
+    schema: 'gtai.quest/1', id, act, title: `Quest ${id}`, provenance: { fusedAt }, beats,
     lines: lines.map((l) => ({ ...l, purpose: ['character'], audio: null })),
   }, null, 2));
 }

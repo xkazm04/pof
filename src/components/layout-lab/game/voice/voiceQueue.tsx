@@ -73,6 +73,7 @@ export function VoiceQueue({ t, queue, quests, selected, onSelect, onExport, exp
                       <span style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap' }}>
                         <MicroLabel mono tone="muted">{l.speaker}</MicroLabel>
                         <StatusTag level={s.level} word={s.word} />
+                        {l.lineClass === 'bark' && <span data-testid="voice-line-class" title={`bark: ${l.when.join(', ')}`}><MicroLabel mono tone="muted">bark</MicroLabel></span>}
                         {l.takes > 0 && <MicroLabel mono tone="muted">{l.takes} takes{l.pending ? ` · ${l.pending} pending` : ''}</MicroLabel>}
                       </span>
                       <span style={{ fontSize: 'var(--lab-fs-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.text}</span>
