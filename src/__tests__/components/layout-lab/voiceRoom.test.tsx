@@ -132,8 +132,27 @@ describe('Voice room', () => {
     render(<VoiceRoom t={LIGHT} />);
     await waitFor(() => expect(screen.queryByTestId('voice-take')).not.toBeNull());
     expect(screen.queryByTestId('voice-audio-error')).toBeNull();
-    fireEvent.error(screen.getByTestId('voice-take').querySelector('audio')!);
+    const audio = () => screen.getByTestId('voice-take').querySelector('audio')!;
+    // The room plays a take as the game plays it (mastered); if that fails it falls back to the provider
+    // original ONCE and says so, and only a failing original is an error.
+    expect(audio().getAttribute('src')).toContain('&as=game');
+    fireEvent.error(audio());
+    expect(audio().getAttribute('src')).not.toContain('as=game');
+    expect(screen.getByTestId('voice-audio-fallback').textContent).toContain('provider original');
+    expect(screen.queryByTestId('voice-audio-error')).toBeNull();
+    fireEvent.error(audio());
     expect(screen.getByTestId('voice-audio-error').textContent).toContain('Audio did not load');
+  });
+
+  it('the listen-mode toggle switches a take between as-the-game-plays-it and the provider original', async () => {
+    stubRoutes();
+    render(<VoiceRoom t={LIGHT} />);
+    await waitFor(() => expect(screen.queryByTestId('voice-take')).not.toBeNull());
+    const toggle = screen.getByTestId('voice-take-listen-mode');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByTestId('voice-take').querySelector('audio')!.getAttribute('src')).not.toContain('as=game');
   });
 
   it('nextToJudge walks forward in play order to the next line awaiting a verdict, wrapping, never the open line', () => {

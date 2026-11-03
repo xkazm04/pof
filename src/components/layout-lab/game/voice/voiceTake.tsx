@@ -33,6 +33,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
   // audio nobody listened to is the rubber stamp registry `hitl-approval` warns about. A UI affordance, not
   // part of the server gate (that is gate.ts); Reject stays open (a flagged read-back may be reason enough).
   const [heard, setHeard] = useState(false);
+  const [raw, setRaw] = useState(false);
   const v = VERDICT[take.verdict];
 
   const judge = async (verdict: 'approved' | 'rejected') => {
@@ -57,7 +58,13 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
         {take.readbackWer !== null && take.readbackWer > READBACK_FLAG_WER && <StatusTag level="warn" word={`read-back differs (${fmtWer(take.readbackWer)}): listen for garbled words`} />}
       </div>
-      <VoiceAudio t={t} src={takeAudioUrl(take.id)} label={`Take ${take.id.slice(0, 8)}`} onHeard={() => setHeard(true)} />
+      <VoiceAudio key={raw ? 'raw' : 'game'} t={t} src={takeAudioUrl(take.id, !raw)} fallbackSrc={raw ? undefined : takeAudioUrl(take.id)}
+        fallbackNote="Could not master it as the game plays it: playing the provider original (not at the game's level)."
+        label={`Take ${take.id.slice(0, 8)}${raw ? ', as delivered' : ', as the game plays it'}`} onHeard={() => setHeard(true)} />
+      <button type="button" data-testid="voice-take-listen-mode" onClick={() => setRaw((r) => !r)} aria-pressed={raw}
+        style={{ justifySelf: 'start', fontSize: 'var(--lab-fs-xs)', color: t.muted, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
+        {raw ? 'Hearing the provider original. Hear it as the game plays it' : "Hearing it as the game plays it (game voice level, the speaker's device filter). Hear the provider original"}
+      </button>
       <div style={{ fontSize: 'var(--lab-fs-sm)', color: t.text }}>
         <strong>Direction:</strong> {take.direction || <em style={{ color: t.muted }}>none</em>}
       </div>

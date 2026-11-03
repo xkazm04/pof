@@ -78,7 +78,8 @@ export function postVoice<T>(path: string, body: unknown, gate?: string | null):
   return tryApiFetch<T>(`${VOICE_API}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
 }
 
-export const takeAudioUrl = (takeId: string) => `${VOICE_API}/audio?takeId=${encodeURIComponent(takeId)}`;
+/** `asGame`: the take mastered the way export renders it (game voice level + the speaker's device treatment). */
+export const takeAudioUrl = (takeId: string, asGame = false) => `${VOICE_API}/audio?takeId=${encodeURIComponent(takeId)}${asGame ? '&as=game' : ''}`;
 export const previewAudioUrl = (voiceId: string) => `${VOICE_API}/audio?voiceId=${encodeURIComponent(voiceId)}`;
 
 export const fmtMs = (ms: number | null) => (ms === null ? 'unmeasured' : `${(ms / 1000).toFixed(1)} s`);

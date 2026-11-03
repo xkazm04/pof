@@ -19,15 +19,26 @@ const MEDIA_ERROR: Record<number, string> = {
 /** Played this far through counts as heard (the last words of a line may trail into silence). */
 export const HEARD_FRACTION = 0.8;
 
-export function VoiceAudio({ t, src, label, onHeard }: { t: LabTheme; src: string; label: string; onHeard?: () => void }) {
+/** `fallbackSrc`: played instead when `src` fails (once), with `fallbackNote` saying what the owner now hears. */
+export function VoiceAudio({ t, src, label, onHeard, fallbackSrc, fallbackNote }: {
+  t: LabTheme; src: string; label: string; onHeard?: () => void; fallbackSrc?: string; fallbackNote?: string;
+}) {
   const [failed, setFailed] = useState<string | null>(null);
+  const [fellBack, setFellBack] = useState(false);
+  const playing = fellBack && fallbackSrc ? fallbackSrc : src;
   return (
     <>
-      <audio controls preload="none" src={src} style={{ width: '100%' }} aria-label={label}
-        onError={(e) => setFailed(MEDIA_ERROR[e.currentTarget.error?.code ?? 0] ?? 'unknown media error')}
+      <audio controls preload="none" src={playing} style={{ width: '100%' }} aria-label={label}
+        onError={(e) => {
+          if (fallbackSrc && !fellBack) { setFellBack(true); return; }
+          setFailed(MEDIA_ERROR[e.currentTarget.error?.code ?? 0] ?? 'unknown media error');
+        }}
         onCanPlay={() => setFailed(null)}
         onTimeUpdate={(e) => { const a = e.currentTarget; if (onHeard && a.duration > 0 && a.currentTime / a.duration >= HEARD_FRACTION) onHeard(); }}
         onEnded={() => onHeard?.()} />
+      {fellBack && fallbackNote && !failed && (
+        <span role="status" data-testid="voice-audio-fallback" style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>{fallbackNote}</span>
+      )}
       {failed && (
         <span role="alert" data-testid="voice-audio-error" style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad }}>
           Audio did not load: {failed}. Nothing was judged; generate a fresh take if the file is gone.

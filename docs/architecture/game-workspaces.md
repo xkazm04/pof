@@ -452,7 +452,10 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
   generate k takes with a direction; "Next to judge" jumps to the next line whose takes wait for a verdict), Cast
   (voices with previews, cast, design from the bible). Players are native `<audio controls>` (`voiceAudio.tsx`); a
-  source that fails to load says why instead of looking silent. The queue and the open line re-read every
+  source that fails to load says why instead of looking silent. A take plays **as the game plays it** by default
+  (`audio?takeId=&as=game`, `asGame.ts`: the export master, rendered once per take and target into
+  `<voiceDir>/as-game/`), so the owner judges the level and device filter the player hears and compares takes
+  at matched loudness; a toggle plays the provider original, and a failed master falls back to it once, saying so. The queue and the open line re-read every
   `UI_TIMEOUTS.voiceRoomPoll` (5 s) while visible (`useSuspendableEffect`), so takes the CLI generates appear by themselves.
 - **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `verdicts`, `readback`, `takes`, `design`, `stock`, `voices`,
   `export`; no approve, reject or cast), driven by `/gta --voice` (`.claude/skills/gta/SKILL.md`, Voice mode).
