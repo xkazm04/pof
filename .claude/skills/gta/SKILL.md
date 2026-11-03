@@ -105,6 +105,12 @@ Unattended runs need clear briefs. Each lane brief carries the honesty rules: ev
 2. **Open the evidence files themselves** (frames, `autoplay.json`, the build exe). Never accept a scorecard on its own word.
 3. The owner plays each build and gives verdicts. Record them in STATE.md and, for design decisions, in pitch.md (move the item from **[open]** to **[owner]**).
 4. Re-plan the day from the results.
+5. **Clean up after every evaluation** (owner rule, 2026-11-03: "Clean artifacts from last session which we won't need to keep files cleaner after each evaluation"). Once the verdicts are taken and the approved branches are merged and pushed:
+   - Archive what is worth keeping. The lanes' `REPORT.md` and `JOURNAL.md` go into the game repo (`docs/day/<date>/<lane>/`, done by the merge), and each runner root's `SCOREBOARD.md` goes to `games/gtai/day/<date>/scoreboards/`.
+   - Delete the merged lane worktrees (`git worktree remove`), plus scratch and trial worktrees and their branches. Delete the finished runner roots (logs, billing).
+   - **PoF worktrees:** first unlink the `node_modules` junction with a non-recursive delete of the link itself. A recursive delete through the junction would wipe the main checkout's `node_modules`.
+   - In the masters folder, keep every file a `frames.json` names, plus the art sources. Delete the regenerable scratch: raw `.avi` captures (the `.mp4` stays), Godot import files (`.import`, `.ctex`, `.md5`, `.godot`), and unreferenced iteration frames under `<lane>/frames/` and `<lane>/raw*/`. Report the GB freed.
+   - Never delete a verdict page or a frames file the owner has not finished judging.
 
 ## Quest mode
 
