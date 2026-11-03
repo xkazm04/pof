@@ -70,11 +70,11 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-01 | The Leonardo API account is out of credit; concept art fell back to qwen-image | low | worked around |
 | 2026-11-01 | No PoF pipeline page shows engine-spike state. It lives in the spike workspace, outside PoF | medium | open: candidate for Phase 2 |
 | 2026-11-02 | No quest tooling: no canon guard, no reward/difficulty model, no line gate | high | **built** (spark `gta-quest-loop`) |
-| 2026-11-02 | Quest locations and targets are free words; the runtime maps them through `quests/markers.json`, but no PoF guard checks them against it | medium | open |
+| 2026-11-02 | Quest locations and targets are free words; the runtime maps them through `quests/markers.json`, but no PoF guard checks them against it | medium | open: the vocabulary guard (`7918ef11`) covers verbs, bark tags and fail words, not places (the game owns `gtai.questMarkers/1`) |
 | 2026-11-02 | The game caps heat at 5 while the quest contract allows 6 (Krump's army); there is no madness meter (runtime stub returns `lucid`); the memo box shows an "F: HANG UP" tab on quest subtitles | medium | open (game-side) |
 | 2026-11-02 | Council seats run with full permissions in the shared checkout (cwd = the run folder) | medium | open: run seats in a throwaway worktree, as tiger does |
 | 2026-11-02 | The voice bibles' reference lines are model-written; the seats copied them almost verbatim | medium | open: owner picks the anchor lines |
-| Quest vocabulary drift: the council (PoF quest contract `types.ts`) allows free verbs, bark tags and places; the game runtime plays only the verbs and conditions in rtai `data/tables/quest_rules.json`. The owner-approved `collect-call` failed to load with 18 errors | high | **fixed** 2026-11-03 (PoF `gtai-control-room`: vocabulary guard `src/lib/games/gtai-quest/vocabGuard.ts`, wired into `council.mjs check` and the contracts Guards step; `collect-call` passes, a planted verb fails by name). The game side's F-12b grew the runtime |
+| Quest vocabulary drift: the council (PoF quest contract `types.ts`) allows free verbs, bark tags and places; the game runtime plays only the verbs and conditions in rtai `data/tables/quest_rules.json`. The owner-approved `collect-call` failed to load with 18 errors | high | **fixed** 2026-11-03 in commit `7918ef11` (PoF `gtai-control-room`: vocabulary guard `src/lib/games/gtai-quest/vocabGuard.ts`, wired into `council.mjs check` and the contracts Guards step; `collect-call` passes, a planted verb fails by name). The game side's F-12b grew the runtime |
 
 ## Session log
 
