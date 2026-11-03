@@ -16,7 +16,12 @@ const MEDIA_TYPES: Record<string, { kind: MediaKind; mime: string }> = {
   '.jpeg': { kind: 'image', mime: 'image/jpeg' }, '.webp': { kind: 'image', mime: 'image/webp' },
   '.gif': { kind: 'image', mime: 'image/gif' }, '.mp4': { kind: 'video', mime: 'video/mp4' },
   '.webm': { kind: 'video', mime: 'video/webm' },
+  // A lane's evidence is sometimes a table (gunplay's ttk.md): served as plain text, shown in a <pre>.
+  '.md': { kind: 'text', mime: 'text/plain; charset=utf-8' }, '.txt': { kind: 'text', mime: 'text/plain; charset=utf-8' },
+  '.csv': { kind: 'text', mime: 'text/plain; charset=utf-8' }, '.log': { kind: 'text', mime: 'text/plain; charset=utf-8' },
 };
+/** A text frame is read into the page, so it is capped far lower than a clip. */
+export const MAX_TEXT_BYTES = 1_000_000;
 /** The door reads a file whole to honour ranges, so a clip beyond this is listed but not served. */
 export const MAX_MEDIA_BYTES = 200_000_000;
 export const mediaTypeOf = (file: string) => MEDIA_TYPES[path.extname(file).toLowerCase()];
@@ -98,7 +103,8 @@ function inspectMedia(file: string): { kind: MediaKind; mime: string } | string 
   try {
     const st = fs.statSync(file);
     if (!st.isFile()) return 'not a file';
-    return st.size > MAX_MEDIA_BYTES ? `larger than ${MAX_MEDIA_BYTES / 1_000_000} MB` : type;
+    const cap = type.kind === 'text' ? MAX_TEXT_BYTES : MAX_MEDIA_BYTES;
+    return st.size > cap ? `larger than ${cap / 1_000_000} MB` : type;
   } catch { return 'file not found'; }
 }
 

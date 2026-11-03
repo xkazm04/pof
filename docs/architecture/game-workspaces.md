@@ -552,7 +552,8 @@ pof-arena, 2026-11-03). `?room=decisions` on the Game home, next to the Voice ro
   duplicate id) is listed as a `problem` with its reason, never hidden and never repaired. A `default` that is not an option
   key is dropped. A listed frame that is missing, not a file or an unsupported type is shown as `unservable` with the reason.
 - **Media door** (`GET .../decisions/media?ask=&opt=&n=`). The path comes from the ask file (option `opt`, entry `n`), never
-  from the query, and only an existing media file is served; byte ranges are honoured (clips scrub). A listed `.txt`, a
+  from the query, and only an existing media file is served; byte ranges are honoured (clips scrub). A text frame (a lane's TTK `.md`/`.txt`/`.csv`/`.log`,
+  cap 1 MB) is served as `text/plain` and shown in a `<pre>` fetched on first open; a file of any other type, a
   missing file, an unknown ask/option/index or a bad id is 400/404 in the envelope.
 - **Writing an answer is a human action.** `POST .../decisions` `{ id, choice, note? }` uses the Voice room's gate
   (`@/lib/voice/gate`: a same-origin browser fetch plus the page token from `GET .../decisions/gate`); the CLI and the
@@ -618,4 +619,6 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
 - **Lane-written JSON is read BOM/UTF-16 tolerant** (`src/lib/games/laneJson.ts`): asks, `answers.json`, tables, telemetry and station
   files all go through `readLaneJsonFile`, because a lane on Windows may save with PowerShell (UTF-8 BOM or UTF-16) and a bare
   `JSON.parse` would turn an ask into "unreadable" and `answers.json` into "unusable" (which also blocks the answer writer). What PoF
-  writes back (`answers.json`) is always plain UTF-8.
+  writes back (`answers.json`) is always plain UTF-8. A lane that forgets to escape Windows paths in a frame list is repaired
+  once on a failed parse (`escapeWindowsPaths`: only drive-letter path runs get their backslashes doubled), so the ask is not
+  hidden from the owner (visual-fixes-1 on 2026-11-03); any other broken JSON stays unreadable.

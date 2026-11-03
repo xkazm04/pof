@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { MAX_MEDIA_BYTES, readDecisionsBoard, resolveMedia } from '@/lib/games/decisions/readDecisions';
+import { MAX_MEDIA_BYTES, MAX_TEXT_BYTES, readDecisionsBoard, resolveMedia } from '@/lib/games/decisions/readDecisions';
 import { writeAnswer } from '@/lib/games/decisions/writeAnswer';
 import { decisionsRootFor } from '@/lib/games/decisions/decisionsConfig';
 import { makeDecisionsFixture, type Fixture } from './decisionsFixture';
@@ -68,6 +68,18 @@ describe('resolveMedia (the media door)', () => {
     const m = readDecisionsBoard(fx.root, 'gtai', API).open[0].options[0].media[0];
     expect(m).toMatchObject({ unservable: expect.stringContaining('larger than') });
     expect(resolveMedia(fx.root, 'gunplay-2', 'low', 0)).toMatchObject({ ok: false, status: 404 });
+  });
+  it('serves a listed .md table as plain text, capped far below a clip', () => {
+    fx = makeDecisionsFixture();
+    const md = path.join(fx.media, 'ttk.md');
+    fs.writeFileSync(md, '| weapon | 5 m |\n|---|---|\n| pistol | 0.08 |\n');
+    const ask = JSON.parse(fs.readFileSync(path.join(fx.root, 'asks', 'gunplay-2.json'), 'utf8'));
+    ask.options[0].frames = [md];
+    fs.writeFileSync(path.join(fx.root, 'asks', 'gunplay-2.json'), JSON.stringify(ask));
+    expect(readDecisionsBoard(fx.root, 'gtai', API).open[0].options[0].media[0]).toMatchObject({ kind: 'text', name: 'ttk.md', url: `${API}/media?ask=gunplay-2&opt=low&n=0` });
+    expect(resolveMedia(fx.root, 'gunplay-2', 'low', 0)).toMatchObject({ ok: true, mime: 'text/plain; charset=utf-8' });
+    fs.writeFileSync(md, Buffer.alloc(MAX_TEXT_BYTES + 1, 65));
+    expect(resolveMedia(fx.root, 'gunplay-2', 'low', 0)).toMatchObject({ ok: false, status: 404, reason: expect.stringContaining('larger than') });
   });
   it('refuses a listed non-media file, a missing file, an unknown ask/option/index and a bad id', () => {
     fx = makeDecisionsFixture();

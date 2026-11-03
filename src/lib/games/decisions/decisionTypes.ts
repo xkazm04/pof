@@ -9,7 +9,7 @@
  * Absent-value convention: OMIT a key for "not there" (`answer`, `default`, `reason`); `null` is not used.
  */
 
-export type MediaKind = 'image' | 'video';
+export type MediaKind = 'image' | 'video' | 'text';
 
 export interface DecisionMedia {
   kind: MediaKind;

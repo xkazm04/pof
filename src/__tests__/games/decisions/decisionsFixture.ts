@@ -15,7 +15,7 @@ export function makeDecisionsFixture(opts: { answers?: string | null } = {}): Fi
   fs.mkdirSync(media);
   const shot = path.join(media, 'a.png');
   const clip = path.join(media, 'b.mp4');
-  const secret = path.join(base, 'secret.txt');
+  const secret = path.join(base, 'secret.bin');
   fs.writeFileSync(shot, PNG);
   fs.writeFileSync(clip, Buffer.alloc(64, 7));
   fs.writeFileSync(secret, 'not media');
