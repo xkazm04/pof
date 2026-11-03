@@ -11,7 +11,8 @@ vi.mock('next/font/google', () => {
 });
 
 import { VoiceRoom } from '@/components/layout-lab/game/voice/voiceRoom';
-import { groupByQuest } from '@/components/layout-lab/game/voice/voiceQueue';
+import { groupByQuest, nextToJudge } from '@/components/layout-lab/game/voice/voiceQueue';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { VOICE_GATE_HEADER } from '@/components/layout-lab/game/voice/voiceGateClient';
 import { LIGHT } from '@/components/layout-lab/theme';
 import type { QueueEntry } from '@/lib/voice/types';
@@ -99,6 +100,29 @@ describe('Voice room', () => {
     expect(ctx.getAttribute('data-class')).toBe('bark');
     expect(ctx.textContent).toContain('when: static-whisper-burst');
     expect(screen.getByTestId('voice-line-beat').textContent).toContain('Scene: Line Stopped');
+  });
+
+  it('nextToJudge walks forward in play order to the next line awaiting a verdict, wrapping, never the open line', () => {
+    const q = [entry('q', 'w1', 0, 0, 'awaiting-verdict'), entry('q', 'n1', 0, 1), entry('q', 'w2', 0, 2, 'awaiting-verdict'), entry('q', 'p1', 0, 3, 'proven')];
+    expect(nextToJudge(q, null)?.lineId).toBe('w1');
+    expect(nextToJudge(q, { questId: 'q', lineId: 'w1' })?.lineId).toBe('w2');
+    expect(nextToJudge(q, { questId: 'q', lineId: 'w2' })?.lineId).toBe('w1');
+    expect(nextToJudge([q[0], q[1]], { questId: 'q', lineId: 'w1' })).toBeNull();
+  });
+
+  it('re-reads the queue on the poll interval, so CLI-generated takes appear without a click', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const fetchFn = stubRoutes();
+      render(<VoiceRoom t={LIGHT} />);
+      await waitFor(() => expect(screen.getAllByTestId('voice-quest').length).toBe(2));
+      const roomReads = () => fetchFn.mock.calls.filter(([u]) => String(u).endsWith('/voice')).length;
+      const before = roomReads();
+      await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.voiceRoomPoll + 10);
+      await waitFor(() => expect(roomReads()).toBeGreaterThan(before));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows the no-clone note in Cast', async () => {

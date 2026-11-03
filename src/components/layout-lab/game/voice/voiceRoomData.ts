@@ -4,19 +4,27 @@
  * The Voice room's reads and writes. Every read goes through `tryApiFetch` (the `{ success, data }`
  * envelope); a failed read is a visible reason, never an empty room. The human-gate token is fetched
  * from `.../voice/gate` (a browser-only mint) and refreshed at half-life while the room is visible
- * (`useSuspendableEffect`); verdict and cast writes carry it in `x-voice-gate`.
+ * (`useSuspendableEffect`); verdict and cast writes carry it in `x-voice-gate`. The queue and the open line
+ * re-read every `UI_TIMEOUTS.voiceRoomPoll` while visible, so CLI-generated takes appear on their own.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { RoomState, LineDetail } from '@/lib/voice/room';
 import type { Result } from '@/types/result';
 import { VOICE_API, VOICE_GATE_HEADER, VOICE_GATE_TTL_MS } from './voiceGateClient';
 
 export type Read<T> = { kind: 'loading' } | { kind: 'error'; reason: string } | { kind: 'ready'; data: T };
 
-function useKeyedRead<T>(url: string | null): { read: Read<T>; reload: () => void } {
+function useKeyedRead<T>(url: string | null, pollMs = 0): { read: Read<T>; reload: () => void } {
   const [attempt, setAttempt] = useState(0);
+  // Re-read on an interval while the room is shown and the tab visible (the previous data stays on screen).
+  useSuspendableEffect(() => {
+    if (!url || pollMs <= 0) return;
+    const id = setInterval(() => { if (document.visibilityState !== 'hidden') setAttempt((n) => n + 1); }, pollMs);
+    return () => clearInterval(id);
+  }, [url, pollMs]);
   const key = url ? `${url}#${attempt}` : '';
   const [state, setState] = useState<{ key: string; read: Read<T> }>({ key: '', read: { kind: 'loading' } });
   useEffect(() => {
@@ -35,14 +43,14 @@ function useKeyedRead<T>(url: string | null): { read: Read<T>; reload: () => voi
 }
 
 export function useVoiceRoom() {
-  return useKeyedRead<RoomState>(VOICE_API);
+  return useKeyedRead<RoomState>(VOICE_API, UI_TIMEOUTS.voiceRoomPoll);
 }
 
 export interface LineKey { questId: string; lineId: string }
 
 export function useLineDetail(sel: LineKey | null) {
   const url = sel ? `${VOICE_API}/lines?questId=${encodeURIComponent(sel.questId)}&lineId=${encodeURIComponent(sel.lineId)}` : null;
-  return useKeyedRead<LineDetail>(url);
+  return useKeyedRead<LineDetail>(url, UI_TIMEOUTS.voiceRoomPoll);
 }
 
 /** The page-held gate token (null until minted, or with the refusal reason). */

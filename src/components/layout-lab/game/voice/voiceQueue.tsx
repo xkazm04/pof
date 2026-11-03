@@ -30,6 +30,13 @@ export function groupByQuest(entries: readonly QueueEntry[]): Array<{ questId: s
   return out;
 }
 
+/** The next line with takes waiting for a verdict AFTER `sel` in play order (wrapping), or null when none wait. */
+export function nextToJudge(entries: readonly QueueEntry[], sel: LineKey | null): QueueEntry | null {
+  const waiting = (e: QueueEntry) => e.state === 'awaiting-verdict';
+  const at = sel ? entries.findIndex((e) => e.questId === sel.questId && e.lineId === sel.lineId) : -1;
+  return [...entries.slice(at + 1), ...entries.slice(0, at + 1)].find((e) => waiting(e) && !(sel && e.questId === sel.questId && e.lineId === sel.lineId)) ?? null;
+}
+
 export interface ExportNote { questId: string; text: string }
 
 export function VoiceQueue({ t, queue, quests, selected, onSelect, onExport, exportNote }: {

@@ -11,7 +11,8 @@ import { MicroLabel } from '@/components/ui/MicroLabel';
 import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { LabTheme } from '@/components/layout-lab/theme';
-import { VoiceQueue, type ExportNote } from './voiceQueue';
+import type { QueueEntry } from '@/lib/voice/types';
+import { VoiceQueue, nextToJudge, type ExportNote } from './voiceQueue';
 import { VoiceLine } from './voiceLine';
 import { VoiceCast } from './voiceCast';
 import { postVoice, useGateToken, useVoiceRoom, type LineKey } from './voiceRoomData';
@@ -67,12 +68,29 @@ export function VoiceRoom({ t }: { t: LabTheme }) {
           <div style={{ flex: '1 1 300px', minWidth: 0 }}>
             <VoiceQueue t={t} queue={data.queue} quests={data.status.quests} selected={sel} onSelect={setPicked} onExport={(q) => void doExport(q)} exportNote={exportNote} />
           </div>
-          <div style={{ flex: '2 1 420px', minWidth: 0 }}>
+          <div style={{ flex: '2 1 420px', minWidth: 0, display: 'grid', gap: 'var(--lab-s2)', alignContent: 'start' }}>
+            <NextToJudge t={t} queue={data.queue} sel={sel} onSelect={setPicked} />
             <VoiceLine t={t} sel={sel} gate={gate} onChanged={reload} />
           </div>
         </div>
       )}
       {data && tab === 'cast' && <VoiceCast t={t} queue={data.queue} voices={data.voices} gate={gate.token} onChanged={reload} />}
     </section>
+  );
+}
+
+/** Jump to the next line whose takes wait for a verdict (fewer clicks per verdict, not fewer verdicts). */
+function NextToJudge({ t, queue, sel, onSelect }: { t: LabTheme; queue: QueueEntry[]; sel: LineKey | null; onSelect: (k: LineKey) => void }) {
+  const waiting = queue.filter((e) => e.state === 'awaiting-verdict').length;
+  const next = nextToJudge(queue, sel);
+  return (
+    <div style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <MicroLabel mono tone="muted">{waiting} {waiting === 1 ? 'line waits' : 'lines wait'} for your verdict</MicroLabel>
+      <button type="button" className="focus-ring" data-testid="voice-next-to-judge" disabled={!next}
+        onClick={() => next && onSelect({ questId: next.questId, lineId: next.lineId })}
+        style={{ fontSize: 'var(--lab-fs-xs)', padding: '2px 8px', border: `1px solid ${t.line}`, borderRadius: 4, background: 'transparent', color: next ? t.text : t.muted, cursor: next ? 'pointer' : 'default' }}>
+        {next ? `Next to judge: ${next.lineId} →` : 'Nothing else waiting'}
+      </button>
+    </div>
   );
 }

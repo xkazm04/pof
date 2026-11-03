@@ -93,6 +93,9 @@ export const UI_TIMEOUTS = {
   moduleAggregateTtl: 5000,
   /** Interval the lab runner chip polls the drain lease status (suspend-gated). */
   runnerLeasePoll: 5000,
+  /** Interval the GTAI Voice room re-reads its queue and the open line while visible (suspend-gated), so
+   *  takes the `/gta --voice` CLI generates appear without a click. */
+  voiceRoomPoll: 5000,
   /** Interval the /story Orrery polls a background walker job (`GET /api/story/walk/:jobId`,
    *  suspend-gated). A 10k-node walk finishes in seconds, so the progress bar needs sub-second
    *  ticks to read as progress rather than a jump. */
