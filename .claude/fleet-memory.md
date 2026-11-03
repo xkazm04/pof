@@ -256,3 +256,4 @@ KIND is one of:
 - [2026-11-03] [gtai-arena] DELIVERED: Combat lab reads the arena's real gtai.arena-telemetry/1 (ttk_s per spawn id) and the lane tables, and charts table-derived TTK by weapon/target/range beside the measured bars; Decisions room verified on the first real ask.
 - [2026-11-03] [gtai-arena] DELIVERED: Combat lab reads the arena lane's evidence/arena telemetry folder, so the live measured TTK chart shows the real range-bot session.
 - [2026-11-03] [gtai-arena] DELIVERED: Decisions room reads an ask whose frame paths lack backslash escaping (repaired once on a failed parse) and shows a lane's .md/.txt/.csv/.log frame (gunplay's ttk.md) inline as plain text; Combat lab shows a course session's course_time_s.
+- [2026-11-03] [gtai-arena] DELIVERED: Combat lab reads the lanes' real `arena_stations` shape (a `stations` array per file), pit/course session columns, and a Decisions-room clip Retry; validate green (15270 tests).
