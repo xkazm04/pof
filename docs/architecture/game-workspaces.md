@@ -606,3 +606,7 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   keys, reported measurements). The room lists one row per file across the sources, counting by key name (`spawn*`, `prop*`,
   `tun*`/`expose*`, `measure*`/`report*`); a count the file lacks reads "not in file", an unparseable file is flagged, and no
   files says where they are expected. The wire field `stations` is optional so an older server still renders.
+- **Lane-written JSON is read BOM/UTF-16 tolerant** (`src/lib/games/laneJson.ts`): asks, `answers.json`, tables, telemetry and station
+  files all go through `readLaneJsonFile`, because a lane on Windows may save with PowerShell (UTF-8 BOM or UTF-16) and a bare
+  `JSON.parse` would turn an ask into "unreadable" and `answers.json` into "unusable" (which also blocks the answer writer). What PoF
+  writes back (`answers.json`) is always plain UTF-8.
