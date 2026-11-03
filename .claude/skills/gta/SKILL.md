@@ -171,7 +171,7 @@ guard without a recorded override blocks; a frame or it did not play.
 
 `/gta --voice` turns quest lines into recorded voice, line by line, in chronological play order. Quest mode is
 unchanged: its example lines stay as they are, with `audio: null`, until this mode proves them. The room is
-`/layout?g=gtai&v=game&room=voice` in PoF; the headless side is `games/gtai/voice/voice.mjs` (its header has
+`/layout?g=gtai&c=spellbook&v=game&room=voice` in PoF (a cold link needs a `c=`, or it lands on Catalogs; the "Voice room" button on the GTAI game home also opens it); the headless side is `games/gtai/voice/voice.mjs` (its header has
 every command). **Voice is human gated, enforced:** a take verdict and a cast are clicks in the Voice room only.
 The routes refuse any other caller (403), and `voice.mjs` has no approve, reject or cast command.
 

@@ -16,6 +16,7 @@ import { VoiceLine } from './voiceLine';
 import { VoiceCast } from './voiceCast';
 import { postVoice, useGateToken, useVoiceRoom, type LineKey } from './voiceRoomData';
 import { openRoom } from './voiceRoomParam';
+import { useExclusivePlayback } from './voiceExclusivePlay';
 
 type Tab = 'queue' | 'cast';
 const TABS = [{ id: 'queue' as const, label: 'Queue' }, { id: 'cast' as const, label: 'Cast' }];
@@ -25,6 +26,7 @@ interface ExportReport { written: unknown[]; skipped: unknown[] }
 export function VoiceRoom({ t }: { t: LabTheme }) {
   const { read, reload } = useVoiceRoom();
   const gate = useGateToken();
+  const roomRef = useExclusivePlayback<HTMLElement>();
   const [tab, setTab] = useState<Tab>('queue');
   const [picked, setPicked] = useState<LineKey | null>(null);
   const [exportNote, setExportNote] = useState<ExportNote | null>(null);
@@ -39,8 +41,8 @@ export function VoiceRoom({ t }: { t: LabTheme }) {
   const sel = picked ?? (data?.status.next[0] ? { questId: data.status.next[0].questId, lineId: data.status.next[0].lineId } : data?.queue[0] ? { questId: data.queue[0].questId, lineId: data.queue[0].lineId } : null);
 
   return (
-    <section data-testid="voice-room" aria-labelledby="voice-room-title"
-      style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', alignContent: 'start', gap: 'var(--lab-s4)' }}>
+    <section ref={roomRef} data-testid="voice-room" aria-labelledby="voice-room-title"
+      style={{ flex: 1, minHeight: 0, maxWidth: '100vw', boxSizing: 'border-box', overflow: 'auto', color: t.text, padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', alignContent: 'start', gap: 'var(--lab-s4)' }}>
       <header style={{ display: 'grid', gap: 'var(--lab-s1)' }}>
         <button type="button" className="focus-ring" onClick={() => openRoom(null)}
           style={{ justifySelf: 'start', background: 'transparent', border: 'none', padding: 0, color: t.muted, cursor: 'pointer', fontSize: 'var(--lab-fs-xs)' }}>
@@ -54,7 +56,10 @@ export function VoiceRoom({ t }: { t: LabTheme }) {
           </span>
         )}
       </header>
-      <TabBar tabs={TABS} activeId={tab} onChange={setTab} layoutId="voice-room-tabs" accent="var(--lab-ink)" ariaLabel="Voice room sections" />
+      {/* TabBar colours labels with the app theme's --text / --color-text (dark-theme light text); scope it to the lab theme. */}
+      <div style={{ ['--text' as string]: t.inkDeep, ['--text-muted' as string]: t.muted, ['--color-text' as string]: t.inkDeep, ['--color-text-muted' as string]: t.muted }}>
+        <TabBar tabs={TABS} activeId={tab} onChange={setTab} layoutId="voice-room-tabs" accent="var(--lab-ink)" ariaLabel="Voice room sections" />
+      </div>
       {read.kind === 'loading' && <LoadingRow variant="inline" label="Reading the line queue…" />}
       {read.kind === 'error' && <InlineErrorRetry message={`voice room unavailable (${read.reason})`} onRetry={reload} />}
       {data && tab === 'queue' && (

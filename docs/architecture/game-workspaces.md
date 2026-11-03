@@ -419,7 +419,7 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
   `project/quests/<quest>/quest.json` line gets `audio: { path: "res://…", takeId, voiceId, model }`. The game root is
   `gameRootFor` (`POF_GAME_ROOT_GTAI` points tests at a fixture).
-- **UI:** `/layout?g=gtai&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
+- **UI:** `/layout?g=gtai&c=spellbook&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
   generate k takes with a direction), Cast (voices with previews, cast, design from the bible).
 - **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `takes`, `design`, `stock`, `voices`,
