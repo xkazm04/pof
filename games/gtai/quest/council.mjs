@@ -7,7 +7,14 @@
 //   node games/gtai/quest/council.mjs assess <runDir>
 //   node games/gtai/quest/council.mjs render <runDir>
 //   node games/gtai/quest/council.mjs judge  <questDir> --author claude|grok [--ceiling-min 30]
-//   node games/gtai/quest/council.mjs check  <questDir>
+//   node games/gtai/quest/council.mjs check  <questDir> [--game-root <game repo>] [--allow-unmeasured]
+//
+// `assess` and `check` run the PoF guards, including the vocabulary guard: it reads the game runtime's
+// project/data/tables/quest_rules.json (POF_GAME_ROOT_GTAI, else --game-root, else ../gtai) and fails any
+// verb, bark tag or condition the runtime does not play, naming each. `check` exits 1 when blocked and 3
+// when the vocabulary could not be read (unmeasured is not a pass). The `autosave` guard fails a quest whose
+// autosavePoints are missing (designs from 2026-11-04 on), name an unknown beat, carry a bad `at`, repeat an id
+// or give no `why`; it names each point.
 //
 // Seats run through the ai-registry's contest machinery (engineCommand, parseEnvelope, classifyOutcome,
 // resolveBin, runSeat), imported from the registry checkout ($AI_REGISTRY_DIR, else `registry.local` in
@@ -217,6 +224,13 @@ export function validateDelivery(arr, { seat, act, variants = 2, maxNew = 1, lin
     if (act && p.act !== act) errs.push(`${at}.act: must be "${act}"`);
     if (p.lines.length < lines[0] || p.lines.length > lines[1]) errs.push(`${at}.lines: needs ${lines[0]}-${lines[1]} lines, got ${p.lines.length}`);
     if (p.beats.length < 3) errs.push(`${at}.beats: needs at least 3 beats, got ${p.beats.length}`);
+    const beatIds = new Set(p.beats.map((b) => b.id));
+    const saveIds = new Set();
+    for (const a of p.autosavePoints) {
+      if (saveIds.has(a.id)) errs.push(`${at}.autosavePoints: duplicate id "${a.id}"`);
+      saveIds.add(a.id);
+      if (!beatIds.has(a.beat)) errs.push(`${at}.autosavePoints["${a.id}"].beat "${a.beat}" is not a beat id (${[...beatIds].join(', ')})`);
+    }
     const lineIds = new Set();
     for (const l of p.lines) { if (lineIds.has(l.id)) errs.push(`${at}.lines: duplicate id "${l.id}"`); lineIds.add(l.id); }
     const charIds = new Set(p.characters.map((c) => c.id));
@@ -345,6 +359,7 @@ function brief() {
       'Rework it:\n\n- Change only what the owner notes require. Keep everything else, and **keep the tone, rhythm and wording of every line you do not have to change**; the owner will review the lines line by line later.\n' +
       '- Where a note removes a character, remove their lines and give the beat to someone else without inventing a new personality for them.\n' +
       '- Every character who appears on screen (not voice-only) needs a rich `designNote`: silhouette, materials, signature details and a 3-4 colour palette, enough to brief a concept artist for a turnaround sheet.\n' +
+      '- Keep `autosavePoints` consistent with the beats: if a note removes or renames a beat, move its autosave points to a surviving beat and keep each `why` true.\n' +
       `- Keep \`"pathId": "${pathId}"\`.\n\nYour earlier design, verbatim:\n\n\`\`\`json\n${JSON.stringify(prev, null, 2)}\n\`\`\`\n`;
   }
   fs.mkdirSync(dir, { recursive: true });
@@ -454,14 +469,20 @@ function tsx(args) {
   return r.status ?? 1;
 }
 
+/** `--game-root <dir>` forwarded to the guard CLI (absolute), or nothing. */
+function guardArgs() {
+  const root = opt('game-root');
+  return [...(root ? ['--game-root', path.resolve(root)] : []), ...(argv.includes('--allow-unmeasured') ? ['--allow-unmeasured'] : [])];
+}
+
 function assess() {
   const dir = path.resolve(positional(1) ?? die('usage: assess <runDir>'));
-  process.exit(tsx([dir]));
+  process.exit(tsx([dir, ...guardArgs()]));
 }
 
 function check() {
   const dir = path.resolve(positional(1) ?? die('usage: check <questDir>'));
-  process.exit(tsx(['--package', dir]));
+  process.exit(tsx(['--package', dir, ...guardArgs()]));
 }
 
 async function render() {

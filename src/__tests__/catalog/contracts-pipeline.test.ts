@@ -108,6 +108,7 @@ describe('contracts pipeline — derivations over fixture folders', () => {
   it('Plan: parses as gtai.quest/1 with whyNotFiller + ownerNotes; empty notes or a bad package fail', () => {
     writeQuest(ROOT, 'fax-jam');
     expect(stepOf('fax-jam', 'Plan').status).toBe('pass');
+    expect(stepOf('fax-jam', 'Plan').detail).toContain('1 autosave point(s)');
     writeQuest(ROOT, 'fax-jam', { pkg: questPackage('fax-jam', { whyNotFiller: ' ' }) });
     expect(stepOf('fax-jam', 'Plan')).toMatchObject({ status: 'fail', reason: expect.stringMatching(/whyNotFiller/) });
     writeQuest(ROOT, 'fax-jam', { pkg: { ...questPackage('fax-jam'), id: 'other' } });
@@ -124,6 +125,14 @@ describe('contracts pipeline — derivations over fixture folders', () => {
     const r = stepOf('fax-jam', 'Guards');
     expect(r.status).toBe('pass');
     expect(r.detail).toMatch(/economy overridden: owner: payday act/);
+  });
+
+  it('Guards: a red vocabulary guard fails the step and is named; the owner cannot override it away', () => {
+    writeQuest(ROOT, 'fax-jam');
+    inject.verdict = verdict('fax-jam', { vocabulary: 'red' });
+    expect(stepOf('fax-jam', 'Guards')).toMatchObject({ status: 'fail', detail: 'blocked by vocabulary', reason: expect.stringMatching(/vocabulary:FIXTURE_RED/) });
+    inject.verdict = verdict('fax-jam', { vocabulary: 'unmeasured' });
+    expect(stepOf('fax-jam', 'Guards')).toMatchObject({ status: 'pending', reason: expect.stringContaining('vocabulary (no table)') });
   });
 
   it('Guards: an unmeasured guard or a missing judge report is "not yet" (pending), never pass', () => {

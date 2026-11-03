@@ -42,6 +42,8 @@ export interface BuildHealthAggregate {
 
 export interface BuildHealth {
   gameId: string;
+  /** The lane whose worktree's `build/evidence/` this reads (`?lane=`); OMITTED = the game's own root (main). */
+  lane?: string;
   engine: 'godot' | 'ue5' | 'undecided';
   binding: 'bound' | 'unbound';
   /** Why the game is unbound. Present only when `binding: 'unbound'`. */

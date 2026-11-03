@@ -10,8 +10,8 @@ const nextConfig: NextConfig = {
   // from `better-sqlite3/lib/database.js`. That surfaces as a Playwright
   // `webServer` timeout with a bare "module-not-found" link and no named module,
   // which is very hard to read back to its cause. Pinning removes the inference.
-  turbopack: { root: __dirname },
-  outputFileTracingRoot: __dirname,
+  turbopack: { root: process.env.POF_TURBOPACK_ROOT || __dirname },
+  outputFileTracingRoot: process.env.POF_TURBOPACK_ROOT || __dirname,
   serverExternalPackages: ['better-sqlite3'],
   experimental: {
     // Tree-shake large/barrel packages so each route only bundles the exports it

@@ -53,6 +53,7 @@ function planFacts(raw: unknown, parsed: QuestPackage | null, error?: string): P
     title: str(r.title), act: str(r.act), status: str(r.status),
     logline: str(r.logline), goal: str(r.goal), whyNotFiller: str(r.whyNotFiller), ownerNotes: str(prov.ownerNotes),
     beats: list(r.beats, (b) => ({ id: str(b.id), title: str(b.title), summary: str(b.summary) })),
+    autosavePoints: list(r.autosavePoints, (a) => ({ id: str(a.id), beat: str(a.beat), at: str(a.at), why: str(a.why) })),
     characters: list(r.characters, (c) => ({ id: str(c.id), name: str(c.name), status: str(c.status), role: str(c.role) })),
   };
 }
@@ -74,7 +75,7 @@ function judgeFacts(root: string, questId: string): { facts: JudgeFacts; report:
 function guardsFacts(root: string, pkg: QuestPackage | null, judge: { facts: JudgeFacts; report: LineJudgeReport | null }): GuardsFacts {
   if (!pkg) return { verdict: null, overrides: [], judge: judge.facts };
   try {
-    const verdict = assessQuest(pkg.id, pkg, loadQuestContext(root, judge.report), pkg.overrides, pkg.id);
+    const verdict = assessQuest(pkg.id, pkg, loadQuestContext(root, judge.report), pkg.overrides, pkg.id, pkg.provenance.fusedAt);
     return { verdict, overrides: pkg.overrides, judge: judge.facts };
   } catch (e) {
     return { verdict: null, overrides: pkg.overrides, judge: judge.facts, error: `assessQuest threw: ${errText(e)}` };

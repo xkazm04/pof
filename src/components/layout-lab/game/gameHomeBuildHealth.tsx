@@ -112,12 +112,18 @@ function Bound({ data, t }: { data: BuildHealth; t: LabTheme }) {
   );
 }
 
-export function GameHomeBuildHealth({ t, gameId }: { t: LabTheme; gameId: string }) {
-  const { read, reread } = useBuildHealth(gameId);
+export function GameHomeBuildHealth({ t, gameId, lane = null, onClearLane }: {
+  t: LabTheme; gameId: string; lane?: string | null; onClearLane?: () => void;
+}) {
+  const { read, reread } = useBuildHealth(gameId, lane);
   return (
     <section data-testid="game-home-build-health" aria-labelledby="game-home-build-health-title" style={{ display: 'grid', gap: 'var(--lab-s2)' }}>
       <span style={{ display: 'inline-flex', gap: 'var(--lab-s3)', alignItems: 'center' }}>
-        <h3 id="game-home-build-health-title" style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-ink-deep)' }}>Build health</h3>
+        <h3 id="game-home-build-health-title" style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-ink-deep)' }}>Build health{lane ? ` · lane ${lane}` : ''}</h3>
+        {lane && onClearLane && (
+          <button type="button" className="focus-ring" data-testid="build-health-clear-lane" onClick={onClearLane}
+            style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, textDecoration: 'underline' }}>Back to the game root</button>
+        )}
         {read.kind === 'ok' && (
           <button type="button" className="focus-ring" data-testid="build-health-reread" onClick={reread}
             style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, textDecoration: 'underline' }}>Re-read</button>

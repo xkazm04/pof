@@ -83,4 +83,8 @@ export const GTAI_GAME: GameDef = {
   manifest: GTAI_MANIFEST,
   engine: { kind: 'godot', version: '4.7.2', root: '../gtai' },
   designDir: 'games/gtai',
+  runners: {
+    roots: ['../gtai-night', '../gtai-night-noir', '../gtai-day-d5', '../gtai-day-pof'],
+    masters: '../gtai-masters',
+  },
 };

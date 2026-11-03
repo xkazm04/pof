@@ -217,6 +217,38 @@
       ]
     }
   ],
+  "autosavePoints": [
+    {
+      "id": "as-b2-payphone",
+      "beat": "b2-payphone",
+      "at": "start",
+      "why": "The call that opens the job router is a short, unskippable beat; dying at the dumpster should not replay the hide-and-wait that teaches heat."
+    },
+    {
+      "id": "as-b3-toner-room",
+      "beat": "b3-toner-room",
+      "at": "start",
+      "why": "The Toner Room is three introductions and a weapon handover; a player who has met Juno, Brass and Kilohm should not hear it all again after a dock failure."
+    },
+    {
+      "id": "as-b4-dock",
+      "beat": "b4-dock",
+      "at": "start",
+      "why": "Five waves with no timer is the quest's longest stretch, so a player who falls in wave 3 restarts at the dock gate, not back in the basement after the whole briefing."
+    },
+    {
+      "id": "as-b5-quartermaster",
+      "beat": "b5-quartermaster",
+      "at": "start",
+      "why": "Wave 6 is a one-man boss fight; losing to the Robo-tazer should replay Mertz, not the 48 guards before him."
+    },
+    {
+      "id": "as-b6-hot-walk",
+      "beat": "b6-hot-walk",
+      "at": "start",
+      "why": "The walk home at heat 3 can fail on its own, and replaying it from the vault keeps the player from redoing the fight."
+    }
+  ],
   "lines": [
     {
       "id": "rivet-line-stopped",

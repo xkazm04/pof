@@ -193,6 +193,46 @@ The Game home renders it as the "Build health" panel (`layout-lab/game/gameHomeB
 `gameHomeBuildHealthData.ts`): one row per kind with a `StatusTag` (pass / fail / stale / absent / deferred),
 the detail, the age and the commit, then the bench block. It reads only the API; it never imports `fs`.
 
+## Lanes control room (GTAI day/night runners)
+
+The Game home shows the lane runners that build the game (spark `gtai-control-room`, 2026-11-03): every
+`games/gtai/night/night.mjs --root R` root, each lane in it, read-only. Sources: `src/lib/games/runners/`
+(`runnerTypes.ts` wire shape, client-safe; `readRunners.ts`, `laneState.ts`, `frames.ts`, `runnersConfig.ts`),
+the routes `src/app/api/games/[gameId]/lanes/` (`route.ts`, `frame/route.ts`), the panel
+`layout-lab/game/gameHomeLanes*.tsx`, `gameHomeLaneCard.tsx`, `gameHomeLaneDetail.tsx`. Tests:
+`src/__tests__/games/runners/`, `src/__tests__/components/layout-lab/gameHomeLanes.test.tsx`.
+
+- **Config, not constants.** `GameDef.runners = { roots, masters }` (GTAI: `../gtai-night`, `../gtai-night-noir`,
+  `../gtai-day-d5`, `../gtai-day-pof`; masters `../gtai-masters`), relative to the PoF repo root
+  (`POF_GAMES_ROOT`, else cwd). Env overrides: `POF_GAME_RUNNER_ROOTS_<ID>` (`;`-separated) and
+  `POF_GAME_MASTERS_<ID>`. A game with no `runners` answers `configured: false` with the reason.
+- **Reader** (`readLanesBoard`, `readRunnerRoot`). Reuses the runner's own pure code (`parseConfig`, `planTimes`,
+  `phaseAt` from `games/gtai/night/lib.mjs`, imported as `@/../games/gtai/night/lib.mjs`) and never shells out to
+  `night.mjs`. Reads `night.json`, the schedule from the root's `launch.cmd` (`--until/--freeze/--report-at`, else the
+  runner defaults, labelled), `logs/<lane>/state.json` (iterations, cost, API-key cost, `reportedFor`), `billing.json`,
+  the lane worktree's `JOURNAL.md` last line, `REPORT.md` (a 6000-character excerpt), `git log -1` + branch (the only
+  subprocess, 4 s ceiling), and whether `build/evidence/` exists. Nothing is written in any root. A missing root, an
+  invalid `night.json` or a lane with no state is an honest row with its reason.
+- **State** (`LaneState`, `deriveLaneState`): `done` (reported for this or the previous deadline) > `running` (a
+  session log was written in the last 300 s) > `blocked` (every billing path blocked, or the last session hit a
+  usage limit) > `pending` (no session yet, or the worktree is missing) > `report` / `freeze` / `building` by the
+  runner clock. `planTimes` aims at the NEXT deadline, so a root whose lanes reported for the previous one shows
+  that finished cycle (REPORT), not tomorrow's BUILD. A lane not live for 2 h in BUILD says the runner may be down. While a session writes, the card shows its number (`liveSession`, from the newest `iter-NNN.jsonl`), because `state.json` lags one session behind. The commit line also says how many commits the lane made since its first session log appeared (`runStart` = that log's creation time, `commitsThisRun` = `git log --since`): `0` reads "no commit of its own yet (tip is the base)" because a freshly cut branch shows its base commit as its tip, which is not the lane's work; unknown (no log or git failed) shows nothing rather than a 0. The session line also says how many sessions failed (`failedSessions`: a non-zero exit or a usage limit; a session stopped at its cap or with an unknown exit code is not counted), so a 3-second crash does not read as a plain "session done".
+- **Frames.** `<masters>/<group>/<lane>/frames.json` (an array, or `{ frames }`) of `{ file, title, source?, note?,
+  before? }`. `GET /api/games/<id>/lanes/frame?lane=&file=` serves a file ONLY when that lane's frames.json names it
+  (as `file` or `before`), as a plain relative path with an image extension, whose real path stays inside the lane
+  folder (a symlink out is refused). Lane ids are `[a-z0-9-]+`. Anything else is 400/404 in the envelope.
+- **Wire.** `GET /api/games/<id>/lanes` → `LanesBoard { gameId, readAt, configured, reason?, masters?, roots[] }`;
+  a root is `{ root, name, ok, error?, schedule?, phase?, billing?, lanes[] }`; ages are `readAt - t`, so the client
+  never reads a clock. A cost of 0 with no session reads "no sessions yet", never "free".
+- **UI.** `GameHomeLanes` polls with `useSuspendableEffect` every `UI_TIMEOUTS.lanesPoll` (45 s); a failed poll
+  keeps the last board and says it is stale. A lane card is a button (`StatusTag` for the state: glyph + word); the
+  selected lane's detail is a `DataTable`, the REPORT.md in a `<details>`, and the frame thumbnails.
+- **Lane build evidence.** `GET /api/games/<id>/build-health?lane=<id>` reads that lane worktree's
+  `build/evidence/` through the same `buildHealthFor` (`BuildHealth.lane` names it). The lane is resolved through the
+  configured roots (`laneCwd`), never a path from the query; an unknown lane or a missing worktree is a 404. The lane
+  detail's "Show this lane's build evidence" switches the Build health panel; "Back to the game root" returns.
+
 ## The authored-provenance door
 
 `EntityProvenance = IngestProvenance | AuthoredProvenance`. An authored entity has no source row to cite,
@@ -272,7 +312,7 @@ An empty manifest renders "No pipelines in <title>'s manifest yet" in the lab (C
 
 **Game view.** A fourth lab view, `v=game` (`LabView` gains `'game'`), at `layout-lab/game/`:
 `gameHome.tsx` (facts strip), `gameHomePipelines.tsx` (`DataTable` rows), `gameHomeData.ts` (reads),
-`gameHomeBuildHealth.tsx` (the build-health panel, see "Engine evidence (Godot)").
+`gameHomeBuildHealth.tsx` (the build-health panel, see "Engine evidence (Godot)"), `gameHomeLanes.tsx` (the lanes control room, next section).
 Rows are the manifest's built pipelines, then the planned ones. Coverage ("n / expected", or "n · no target
 declared") and readiness are separate columns. Readiness is the best reached rung from the /status model
 (`buildSwimlane` → `readinessOf`) over the game's rows, or "unmeasured", never R0. Planned rows read
@@ -357,6 +397,31 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   `LINE_UNJUDGED` (warn). The basis says `structural + judge(<seat>)` or `structural only; judge unmeasured`.
 - **Uniqueness** (`uniqueness.ts`) against every other ledger quest: `DUPLICATE_SHAPE` (giver, verb and new
   mechanic equal; `null` equals `null`), `DUPLICATE_TITLE`, `NEAR_DUPLICATE` and `MECHANIC_NOT_NEW` (warns).
+- **Vocabulary guard** (`vocabGuard.ts`, `questRules.ts`; the fifth guard, id `vocabulary`). The council's contract
+  allows free verbs, bark tags and fail words; the Godot runtime plays only what the game repo's
+  `project/data/tables/quest_rules.json` (`gtai.quest-rules/2`) declares. `ctx.rules` (`QuestRules`) is that table,
+  read by `loadQuestRules(gameRoot)` from `gameRootFor('gtai')` (`POF_GAME_ROOT_GTAI` first, then `engine.root`),
+  or passed explicitly to `loadQuestContext(root, judge, gameRoot)`. Codes (errors): `VOCAB_UNKNOWN_VERB`,
+  `VOCAB_MISSING_TARGET` / `VOCAB_MISSING_LOCATION` (the verb row needs one), `VOCAB_UNKNOWN_EVENT_TAG` (a bare `when`
+  tag that is neither an `event_tags` id nor `quest:<verb>_done`), `VOCAB_UNKNOWN_CONDITION` (kind not declared),
+  `VOCAB_UNKNOWN_CONDITION_VALUE` (value outside `values` / `pattern`); warn: `VOCAB_FAIL_STATE_UNDETECTABLE` (no
+  `fail_rules` row matches the phrase, whole words, first full-group match wins). Each finding names the offending
+  verb or tag and its beat or line. Places (`questPlaces.ts`): when the game has staged this quest's places table (`project/data/tables/<quest_id_with_underscores>_places.json`, `gtai.questMarkers/1`, loaded by `loadQuestPlaces` into `ctx.places` by quest id), a beat's `location` must be a marker (`VOCAB_UNKNOWN_PLACE`), a vehicle-verb target (`enter_vehicle` handler) a vehicle and any other targeted verb's target an actor (`VOCAB_UNKNOWN_TARGET`), and an encounter verb's location a marker that holds an encounter (`VOCAB_NO_ENCOUNTER`), the same three rules as the runtime's `quest_beat_validator.gd`. A quest with no staged table yet (the world stages it after design) is not place-checked, and the verdict `basis` says so. No table
+  readable => `unmeasured`. The guard is in `NON_OVERRIDABLE_GUARDS`: an owner override cannot waive it, because the
+  runtime refuses the package at load regardless. It reaches the `contracts` pipeline's Guards step through
+  `assessQuest` (blocked => fail naming `vocabulary:<CODE>`, unmeasured => pending). CLI: `council.mjs check <questDir>
+  [--game-root <repo>] [--allow-unmeasured]` exits 1 when blocked and 3 when the vocabulary was unmeasured.
+- **Autosave guard** (`autosaveGuard.ts`; the sixth guard, id `autosave`). Owner 2026-11-03: each quest design carries
+  its autosave points. `QuestDesign.autosavePoints?: AutosavePoint[]` is `{ id, beat, at: 'start' | 'end', why }`; the
+  game's save engine (rtai `d-save`) reads the field as written, and the quest's end is always an autosave, declared or
+  not. Pure, needs no table. Errors, each naming the point id (or `#<index>`): `AUTOSAVE_MISSING` (absent or empty;
+  a warn for a package whose `provenance.fusedAt` precedes `AUTOSAVE_REQUIRED_FROM` = 2026-11-04, error for every
+  proposal and later package), `AUTOSAVE_BAD_SHAPE`, `AUTOSAVE_DUPLICATE_ID`, `AUTOSAVE_UNKNOWN_BEAT` (not in `beats[]`),
+  `AUTOSAVE_BAD_AT`, `AUTOSAVE_EMPTY_WHY`. `assessQuest(..., designedAt)` takes the date; it is in
+  `NON_OVERRIDABLE_GUARDS`. The council asks for the field in `brief.template.md`, `proposal.schema.json` (required,
+  at least one point) and `validateDelivery` (unknown beat, duplicate id: the seat repairs before the guards run);
+  `council.mjs check` prints each failing point. The `contracts` Plan step shows the point count
+  (`PlanFacts.autosavePoints`). `collect-call` declares `as-b2-payphone` .. `as-b6-hot-walk`, each at `start`.
 - **Unmeasured.** A guard that lacks its input reports `unmeasured`. It never blocks and never passes. Today
   that is the economy guard with no table. A missing judge does not make the line guard unmeasured: it stays
   green or red on the structural checks, and its basis says the judge did not run.

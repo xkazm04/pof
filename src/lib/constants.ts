@@ -199,6 +199,9 @@ export const UI_TIMEOUTS = {
   /** How long a tab-title outcome ('(Failed)', '(Done)', ...) lingers once the tab is SEEN.
    *  A hidden tab holds the outcome indefinitely; this countdown starts on visibility. */
   tabOutcomeLinger: 4_000,
+  /** Interval the Game home's lanes control room re-reads the lane runners (suspend-gated). The lanes
+   *  commit and journal every few minutes, so a half-minute read is live enough without hammering git. */
+  lanesPoll: 45_000,
 } as const;
 
 /**

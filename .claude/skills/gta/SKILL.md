@@ -136,7 +136,8 @@ filler.** Every voice line must be funny or move a character or the game forward
 4. **Read the fusion and compose the package.**
    - ArtifactData `get` of `fusion/current` on that artifact, or the JSON the owner pasted.
    - Compose `games/gtai/quests/<id>/quest.json` (`gtai.quest/1`) following the fusion's sources, with
-     `provenance.ownerNotes` copied verbatim.
+     `provenance.ownerNotes` copied verbatim. Carry the fused design's `autosavePoints` (id, beat, `at`,
+     `why`); if the fusion dropped or moved a beat, move its points and keep each `why` true.
    - Run `council.mjs check games/gtai/quests/<id>`. A red guard means: fix it, or ask the owner for an
      override, which is recorded in `overrides` with the reason. Exit 1 means blocked.
 5. **Execute end to end.**
@@ -153,7 +154,9 @@ filler.** Every voice line must be funny or move a character or the game forward
      A PoF gap goes into STATE.md under "PoF gaps found by the game", or gets built.
    - **Copy the package** into the Godot project's `quests/<id>/`.
 6. **Verify.**
-   - `check` is green, or red with a recorded owner override.
+   - `check` is green, or red with a recorded owner override (the vocabulary and autosave guards cannot be
+     overridden). The autosave guard must be green: every
+     point names a real beat, `at` is `start`/`end`, ids are unique, each has a `why`.
    - `verdicts/lines.judge.json` is present.
    - A headless Godot run of the quest reaches completion, with a frame as evidence.
    - The `contracts` pipeline in PoF shows the quest's state.

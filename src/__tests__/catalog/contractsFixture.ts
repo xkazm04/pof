@@ -18,6 +18,7 @@ export function questPackage(id: string, over: Partial<QuestPackage> = {}): Ques
       { id: 'clerk-7', name: 'Clerk 7', status: 'new', role: 'target', designNote: 'a stapler on legs' },
     ],
     beats: [{ id: 'b1', title: 'Briefing', summary: 'Fax briefs Rivet.', objective: { verb: 'deliver' }, lineIds: ['l1'] }],
+    autosavePoints: [{ id: 'as-b1', beat: 'b1', at: 'start', why: 'The briefing is a long talk nobody replays.' }],
     lines: [{ id: 'l1', speaker: 'don-fax', purpose: ['funny'], text: 'Jam it.', audio: null }],
     mechanics: [],
     reward: { cash: 800, unlocks: [] },
@@ -62,7 +63,7 @@ const green = (guard: GuardId): GuardVerdict => ({ guard, state: 'green', basis:
 
 /** An injected verdict: every guard green unless overridden by `states`; `blockedBy` follows assessQuest's rule. */
 export function verdict(subject: string, states: Partial<Record<GuardId, 'green' | 'red' | 'unmeasured'>> = {}, overridden: GuardId[] = []): QuestVerdict {
-  const guards = (['story', 'economy', 'lines', 'uniqueness'] as GuardId[]).map((g) => {
+  const guards = (['story', 'economy', 'lines', 'uniqueness', 'vocabulary', 'autosave'] as GuardId[]).map((g) => {
     const st = states[g] ?? 'green';
     return st === 'red'
       ? { guard: g, state: st, basis: 'fixture', findings: [{ code: 'FIXTURE_RED', severity: 'error' as const, message: 'red' }] }

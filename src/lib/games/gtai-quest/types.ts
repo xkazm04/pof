@@ -71,6 +71,17 @@ export interface QuestBeat {
   lineIds: readonly string[];
 }
 
+/** Where the save engine may checkpoint a quest (owner 2026-11-03). The quest's end is always an autosave, declared or not. */
+export interface AutosavePoint {
+  /** Unique inside the quest, kebab: `as-b2-payphone`. */
+  id: string;
+  /** A `QuestBeat.id` in this quest. */
+  beat: string;
+  at: 'start' | 'end';
+  /** One sentence: what replaying from here saves the player. */
+  why: string;
+}
+
 export interface QuestMechanic {
   id: string;
   name: string;
@@ -136,6 +147,11 @@ export interface QuestDesign {
   whyNotFiller: string;
   characters: readonly QuestCharacter[];
   beats: readonly QuestBeat[];
+  /**
+   * Checkpoints the designer places at beat boundaries, each with a reason. Required by the `autosave` guard for
+   * every design made on or after 2026-11-04 (earlier packages are warned). Omit = none declared.
+   */
+  autosavePoints?: readonly AutosavePoint[];
   lines: readonly QuestLine[];
   mechanics: readonly QuestMechanic[];
   reward: QuestReward;
@@ -171,8 +187,10 @@ export interface FusionSource {
   elements: readonly string[];
 }
 
-export type GuardId = 'story' | 'economy' | 'lines' | 'uniqueness';
-export const GUARD_IDS: readonly GuardId[] = ['story', 'economy', 'lines', 'uniqueness'];
+export type GuardId = 'story' | 'economy' | 'lines' | 'uniqueness' | 'vocabulary' | 'autosave';
+export const GUARD_IDS: readonly GuardId[] = ['story', 'economy', 'lines', 'uniqueness', 'vocabulary', 'autosave'];
+/** Guards an owner override cannot waive: the runtime refuses the package at its boundary whatever the owner says (vocabulary), or the save engine reads the points as written (autosave). */
+export const NON_OVERRIDABLE_GUARDS: readonly GuardId[] = ['vocabulary', 'autosave'];
 
 export interface GuardOverride {
   guard: GuardId;
@@ -232,6 +250,51 @@ export interface QuestVerdict {
   blocked: boolean;
 }
 
+// ── The runtime vocabulary (`<gameRoot>/project/data/tables/quest_rules.json`, `gtai.quest-rules/2`) ──
+
+export const QUEST_RULES_SCHEMA = 'gtai.quest-rules/2' as const;
+
+export interface RuleVerb {
+  id: string;
+  needsTarget: boolean;
+  needsLocation: boolean;
+  needsEncounter: boolean;
+  /** The verb's handler is `enter_vehicle`: its target is a vehicle tag; any other target is an actor tag (the runtime's rule). */
+  targetIsVehicle: boolean;
+}
+
+/** The tags of a quest's places table (`gtai.questMarkers/1`), projected to the names a package may use. */
+export interface QuestPlaces {
+  markers: readonly string[];
+  vehicles: readonly string[];
+  actors: readonly string[];
+  /** Markers that hold a combat encounter. */
+  encounters: readonly string[];
+}
+
+/** A bark condition kind (`soul:`, `heat:`): a closed `values` list, or a `pattern` for the open ones. */
+export interface RuleCondition {
+  id: string;
+  values?: readonly string[];
+  pattern?: string;
+}
+
+export interface RuleFailRule {
+  id: string;
+  /** Keyword groups; a phrase matches when every group has a whole-word hit. */
+  groups: readonly (readonly string[])[];
+}
+
+/** What the game runtime plays, projected from `quest_rules.json` to what PoF guards need. */
+export interface QuestRules {
+  schema: typeof QUEST_RULES_SCHEMA;
+  verbs: readonly RuleVerb[];
+  conditions: readonly RuleCondition[];
+  /** Bare event-tag ids a line's `when` may carry. */
+  eventTags: readonly string[];
+  failRules: readonly RuleFailRule[];
+}
+
 // ── Provisional per-act balance table (`games/gtai/balance/quest-economy.json`) ──
 
 export interface ActEconomy {
@@ -285,4 +348,8 @@ export interface QuestGuardContext {
   ledger: readonly QuestPackage[];
   /** Cross-family judge report for this subject, if one ran. */
   judge: LineJudgeReport | null;
+  /** The runtime's playable vocabulary (`quest_rules.json` in the game repo); `null` = not readable, the vocabulary guard is unmeasured. */
+  rules: QuestRules | null;
+  /** Places tables the game has staged, by quest id; a quest with none yet is not place-checked (the world supplies them later). */
+  places?: ReadonlyMap<string, QuestPlaces>;
 }

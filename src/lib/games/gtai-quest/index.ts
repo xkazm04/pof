@@ -17,3 +17,6 @@ export {
   firstWriterAct,
 } from '@/lib/games/gtai-quest/campaignBaseline';
 export type { ArcAct, ArcBeat, BaselineVariable, CastKind, CastMember } from '@/lib/games/gtai-quest/campaignBaseline';
+export { assessVocabulary, matchFailRule, whyTagUnplayable } from '@/lib/games/gtai-quest/vocabGuard';
+export { parseQuestRules } from '@/lib/games/gtai-quest/questRules';
+export { assessAutosave, autosaveFindings, predatesAutosave, AUTOSAVE_REQUIRED_FROM } from '@/lib/games/gtai-quest/autosaveGuard';
