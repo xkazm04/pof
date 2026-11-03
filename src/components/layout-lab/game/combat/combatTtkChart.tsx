@@ -31,7 +31,7 @@ export function CombatTtkChart({ t, sessions, expected }: { t: LabTheme; session
   return (
     <div data-testid="combat-ttk" style={{ display: 'grid', gap: 'var(--lab-s2)' }}>
       <ChartPanel t={t} variant="bars" rows={rows} labelWidth={150} ariaLabel={`Measured time to kill in seconds by weapon and range, from ${s.file}`} />
-      <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Measured in {s.file} ({s.from.label}); highlighted = fastest at that range. Lower is faster.</span>
+      <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Measured in {s.file}, read from {s.from.label}; highlighted = fastest at that range. Lower is faster.</span>
     </div>
   );
 }
