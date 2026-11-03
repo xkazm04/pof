@@ -22,6 +22,7 @@ This skill reads both at the start and writes STATE.md at the end.
 | `/gta night` | Handshake about unattended work. Then **prepare everything before the owner leaves** (prep, preflight GO), launch, and report what is running |
 | `/gta morning` | Review what ran overnight (scoreboard, evidence, journals, cost), take the owner's verdicts, record them, then plan the day |
 | `/gta --quest [act] [goal]` | Design and execute one quest through the council and the fuse (see **Quest mode**) |
+| `/gta --voice` | A human-gated voice session: Claude generates takes and voices, the owner judges in the PoF Voice room (see **Voice mode**) |
 
 ## 1. State brief: always, before any question
 
@@ -165,6 +166,36 @@ it from the quest ledger. The chat report and the wrap repeat it for every chara
 
 Honesty rules for quest mode: a skipped seat is reported, never faked; `unmeasured` is never green; a red
 guard without a recorded override blocks; a frame or it did not play.
+
+## Voice mode
+
+`/gta --voice` turns quest lines into recorded voice, line by line, in chronological play order. Quest mode is
+unchanged: its example lines stay as they are, with `audio: null`, until this mode proves them. The room is
+`/layout?g=gtai&v=game&room=voice` in PoF; the headless side is `games/gtai/voice/voice.mjs` (its header has
+every command). **Voice is human gated, enforced:** a take verdict and a cast are clicks in the Voice room only.
+The routes refuse any other caller (403), and `voice.mjs` has no approve, reject or cast command.
+
+1. **State brief.** Add `node games/gtai/voice/voice.mjs status` to the normal brief: proven / total lines,
+   per quest, and the next unproven lines in play order.
+2. **One handshake.** One `AskUserQuestion`: how much today (a few lines, one quest, several quests), and any
+   character whose voice the owner wants to redesign. Lines are worked in play order unless the owner says otherwise.
+3. **Open the room.** Make sure the PoF dev server on `:3001` is up (start it if not), then give the owner the
+   Voice room link.
+4. **The loop, per line:**
+   - No voice for the speaker yet: `voice.mjs design --character <id> --n 3` from the voice bible, or
+     `voice.mjs stock ...` for a premade voice. The owner listens to the previews and casts one in the room.
+     Never imitate or clone a real person's voice; no recordings are uploaded.
+   - `voice.mjs takes --line <id> --n 3 --direction "<words>"`, with directions written from the speaker's bible
+     (`games/gtai/voices/<id>.md`) and the owner's notes. On `eleven_v3` the direction becomes audio tags. The
+     profanity in the lines is kept as written.
+   - The owner listens and judges in the room (approve or reject, with a note).
+   - `voice.mjs line --line <id>` reads the verdicts and notes; Claude writes the next round's directions from
+     them. A line is done only when the owner has approved a take. A text edit in the quest package makes
+     the older takes stale.
+5. **Claude never approves, casts or exports by itself.** Export (`voice.mjs export --quest <id>`, or the
+   room's Export button) runs only when the owner asks; it writes only approved takes into the game.
+6. **Wrap.** The normal wrap, plus a voice line in STATE.md: the proven count (before and after), the characters
+   spent this session (`status` prints the running total), and the voices cast.
 
 ## 4. Wrap: every session, even a short one
 

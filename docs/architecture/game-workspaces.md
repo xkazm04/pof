@@ -380,3 +380,47 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   `story_graphs`, so the Walk control does not apply to it; other games keep the stored-graph view.
 - **Tests:** `src/__tests__/games/gtai-quest/` (one clean act1 fixture, one mutation per code; loaders run
   against `os.tmpdir()`).
+
+## Voice room (GTAI)
+
+Quest lines become recorded voice here, human gated (lane pof-voice, 2026-11-03). Quest mode keeps writing
+example lines with `audio: null`; the Voice room proves them, line by line, in chronological play order.
+
+- **Objects** (`src/lib/voice/`, tables created by `getVoiceDb()` on the shared connection):
+  - `voice_voices`: a voice per character. The provider voice id, `source` (`designed` from a text description,
+    or `stock`), the design prompt, the preview takes, and `status` (`candidate | cast`, one cast per character).
+  - `voice_lines`: the line queue, a mirror of every ledger quest's `lines[]`. **Re-synced from the quest package
+    on every read** (`syncQueue`); the package is the source of truth for the text. Play order is the act, then
+    `provenance.fusedAt`, then the id; inside a quest, the order of `lines[]`. A line gone from its package
+    leaves the queue but keeps its takes.
+  - `voice_takes`: per line, each take with its delivery direction (the words used), the text actually sent,
+    the settings (model, stability, similarity, style, speed), the file, duration and loudness (ffprobe /
+    ffmpeg `ebur128`; `null` = unmeasured), and the billed characters. `voice_verdicts` is the verdict history.
+- **States:** `no-takes`, `awaiting-verdict`, `all-rejected`, `proven`. A line is proven only by an approved take
+  on its current text (a take carries the hash of the text it spoke, so a package edit makes it stale). At most
+  one approved take per line: approving another marks the previous one `superseded`, history kept.
+- **Provider** (`src/lib/audio-gen/providers/elevenlabs-speech.ts`, the `tts` kind): `/v1/text-to-speech/{voice_id}`
+  with `eleven_v3` by default, where the direction becomes inline audio tags (`[whispers] [panicking] …`); on
+  `eleven_multilingual_v2` the direction is recorded but not sent (tags would be spoken). Voice design is
+  `/v1/text-to-voice/design` from the character's voice bible (`games/gtai/voices/<id>.md`), then
+  `/v1/text-to-voice` creates the chosen preview on first use. Never a clone; the description carries an
+  "original voice" clause. The Sound Forge still refuses `tts` (it has no voice picker) and says so.
+- **The human gate** (`src/lib/voice/gate.ts`): `takes/verdict` and `voices/cast` require a browser fetch
+  (`Sec-Fetch-Site: same-origin`) carrying the page token from `GET voice/gate`, which is minted only for a
+  browser fetch and signed with a per-process secret (10 minutes). The CLI and agent tools are refused 403
+  (`src/__tests__/api/voice-gate.test.ts`). The limit is written down: a local process that forges browser
+  headers passes; the gate stops accidents and the agent path, not an adversary.
+- **Routes** (`/api/games/gtai/voice`): `GET` (room state; `?view=status`), `lines` (one line + bible + takes),
+  `takes` (generate k), `takes/verdict` (gated), `voices` (list, design, stock candidate), `voices/cast`
+  (gated), `gate`, `audio?takeId|voiceId`, `export`.
+- **Export** (`exportQuest`): only proven lines, mp3 to Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
+  `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
+  `project/quests/<quest>/quest.json` line gets `audio: { path: "res://…", takeId, voiceId }`. The game root is
+  `gameRootFor` (`POF_GAME_ROOT_GTAI` points tests at a fixture).
+- **UI:** `/layout?g=gtai&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
+  progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
+  generate k takes with a direction), Cast (voices with previews, cast, design from the bible).
+- **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `takes`, `design`, `stock`, `voices`,
+  `export`; no approve, reject or cast), driven by `/gta --voice` (`.claude/skills/gta/SKILL.md`, Voice mode).
+- **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, supersede, design, export) and the
+  gate refusal test above.
