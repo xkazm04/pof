@@ -1,6 +1,6 @@
 /**
  * Server-only (fs): the arena's stations. Every lane adds its station as one file in `GameCombatLab.stationsDir`
- * (`id`, `name`, `area`, a spawn list, props, the tuning keys it exposes, the measurements it reports); this lists them
+ * (a `stations` array of `id`, `name`, `area`, a spawn list, props, the tuning keys it exposes, the measurements it reports); this lists them
  * across sources so the owner sees which lane has plugged in what. Schema-tolerant: a count is the length of the first
  * list/map under a key that names it, and is omitted when the file has no such key (never 0).
  */
@@ -25,7 +25,7 @@ function countUnder(doc: Record<string, unknown>, ...needles: string[]): number 
 export function stationOf(file: string, from: ArenaStation['from'], doc: unknown): ArenaStation {
   const d = isRec(doc) ? doc : {};
   const st: ArenaStation = { file, from };
-  const id = str(d.id), name = str(d.name), area = str(d.area);
+  const id = str(d.id), name = str(d.name), area = str(d.area) ?? str(d.kind);
   if (id) st.id = id;
   if (name) st.name = name;
   if (area) st.area = area;
@@ -48,7 +48,11 @@ export function readStations(dirRel: string, sources: SourceDir[]): StationsRead
       const from = { id: s.id, label: s.label };
       try {
         if (fs.statSync(full).size > 1_000_000) throw new Error('too large');
-        items.push(stationOf(n, from, readLaneJsonFile(full)));
+        const doc = readLaneJsonFile(full);
+        // The lanes' real files hold a `stations` array (several stations per lane file); a bare station object also reads.
+        const list = isRec(doc) && Array.isArray(doc.stations) ? doc.stations : undefined;
+        if (list?.length) for (const e of list) items.push(stationOf(n, from, e));
+        else items.push(stationOf(n, from, doc));
       } catch { items.push({ file: n, from, unreadable: true }); }
     }
   }

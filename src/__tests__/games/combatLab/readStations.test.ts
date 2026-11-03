@@ -36,6 +36,20 @@ describe('readStations', () => {
     expect(r.items[0].spawns).toBe(1);
     expect(r.items[1].unreadable).toBe(true);
   });
+  it("expands a lane file's stations array into one row per station (the lanes' real shape)", () => {
+    const src = root({
+      'arena.json': { lane: 'arena', schema: 'gtai.arena-station/1', stations: [
+        { id: 'range', name: 'Range', area: 'range', spawns: [1, 2, 3], props: [1], tuning: [1, 2], measures: ['ttk'] },
+        { id: 'pit', name: 'Pit', area: 'pit', spawns: [1], props: [], tuning: [], measures: [] },
+      ] },
+      'enemy-ai.json': { stations: [{ id: 'enemy_pit', kind: 'pit', script: 'x.gd' }] },
+    });
+    const r = readStations('tables/arena_stations', [src]);
+    expect(r.items.map((i) => [i.file, i.id])).toEqual([['arena.json', 'range'], ['arena.json', 'pit'], ['enemy-ai.json', 'enemy_pit']]);
+    expect(r.items[0]).toMatchObject({ spawns: 3, props: 1, tuningKeys: 2, measurements: 1 });
+    expect(r.items[2]).toMatchObject({ area: 'pit' }); // kind stands in for a missing area
+    expect(r.items[2]).not.toHaveProperty('spawns');
+  });
   it('says where stations are expected when there are none, and skips the user:// source', () => {
     const r = readStations('tables/arena_stations', [{ id: 'userdata', label: 'engine user://', root: os.tmpdir(), telemetryDirs: ['x'] }]);
     expect(r.items).toEqual([]);
