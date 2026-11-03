@@ -411,6 +411,17 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   runtime refuses the package at load regardless. It reaches the `contracts` pipeline's Guards step through
   `assessQuest` (blocked => fail naming `vocabulary:<CODE>`, unmeasured => pending). CLI: `council.mjs check <questDir>
   [--game-root <repo>] [--allow-unmeasured]` exits 1 when blocked and 3 when the vocabulary was unmeasured.
+- **Autosave guard** (`autosaveGuard.ts`; the sixth guard, id `autosave`). Owner 2026-11-03: each quest design carries
+  its autosave points. `QuestDesign.autosavePoints?: AutosavePoint[]` is `{ id, beat, at: 'start' | 'end', why }`; the
+  game's save engine (rtai `d-save`) reads the field as written, and the quest's end is always an autosave, declared or
+  not. Pure, needs no table. Errors, each naming the point id (or `#<index>`): `AUTOSAVE_MISSING` (absent or empty;
+  a warn for a package whose `provenance.fusedAt` precedes `AUTOSAVE_REQUIRED_FROM` = 2026-11-04, error for every
+  proposal and later package), `AUTOSAVE_BAD_SHAPE`, `AUTOSAVE_DUPLICATE_ID`, `AUTOSAVE_UNKNOWN_BEAT` (not in `beats[]`),
+  `AUTOSAVE_BAD_AT`, `AUTOSAVE_EMPTY_WHY`. `assessQuest(..., designedAt)` takes the date; it is in
+  `NON_OVERRIDABLE_GUARDS`. The council asks for the field in `brief.template.md`, `proposal.schema.json` (required,
+  at least one point) and `validateDelivery` (unknown beat, duplicate id: the seat repairs before the guards run);
+  `council.mjs check` prints each failing point. The `contracts` Plan step shows the point count
+  (`PlanFacts.autosavePoints`). `collect-call` declares `as-b2-payphone` .. `as-b6-hot-walk`, each at `start`.
 - **Unmeasured.** A guard that lacks its input reports `unmeasured`. It never blocks and never passes. Today
   that is the economy guard with no table. A missing judge does not make the line guard unmeasured: it stays
   green or red on the structural checks, and its basis says the judge did not run.
