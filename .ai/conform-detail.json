@@ -185,23 +185,30 @@
       "subject": "eval-harness",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-08-31",
-      "worker": "w10-gravitone-pof",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:02:30.692Z",
+      "worker": "40387776-7e0b-4b43-8a9b-fd7b9286b5ce",
       "techniques": [
         {
           "technique": "judge-stability",
-          "verdict": "conformant",
-          "evidence": "src/lib/judge/calibration.ts:170-245 — RUBRIC_VERSION pinned and stamped per verdict, standings distinguish unrun/stale/unscored/provisional/enforced-{pass,fail}, drift measured between persisted runs (calibrationDrift)"
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/verdictTrend.ts:87 Pinning and anchor calibration are strong (calibration.ts enforces agreement on confirmed labels per RUBRIC_VERSION). The trend still splices scores from different rubric versions and models into one delta (craftCell movement does the same across lensVersion), and the technique names that splice as the failure."
         },
         {
           "technique": "scenario-design",
-          "verdict": "deviation",
-          "evidence": "src/lib/judge/contentHash.ts:35 VOLATILE_KEYS (2 keys) vs src/lib/judge/payload.ts:12-17 NON_CONTENT_KEYS (4 keys) — the verdict-identity hash and the judge's actual read set disagree, so metadata-only edits (produceDirection, audioAssets) falsely mark a verdict stale; corroborates the same-context sibling verdict on quality-verdict-integrity"
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/contentHash.ts:51 Identity hash derives its exclusions from the one list the judge strips (provenance, generation prompt), under a versioned scheme (CONTENT_HASH_SCHEME v3). Verdicts therefore bind to content, not to producer material."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/fleetPlan.ts:108 Bounded fan-out pool. Unchanged content under the same rubric skips re-judging (fleetPlan.ts:78), and spendMeter refuses over-budget runs."
         },
         {
           "technique": "metric-role-contract",
           "verdict": "conformant",
-          "evidence": "src/lib/judge/rubrics.ts:61-66,98 — one BANDS threshold table, verdict='pass' only over the shippable band, dimensions scored separately from the pass/fail decision"
+          "evidence": "src/lib/judge/rubrics.ts:61-66,98 — one BANDS threshold table, verdict='pass' only over the shippable band, dimensions scored separately from the pass/fail decision",
+          "carriedFrom": "2026-08-31"
         }
       ]
     },
@@ -18719,6 +18726,83 @@
         "state": "not-applicable",
         "at": "2026-11-03T17:53:47.233737+00:00",
         "reason": "reviewer (sonnet): The anchor LiveStateSyncPanel/index.tsx:4 only describes the live panel's purpose, while the context also includes BidirectionalStateSyncPanel with conflict resolution (deriveConflicts, planResolution) and property write-back. I could not confirm from that line that nothing there refuses a change, s"
+      }
+    },
+    "234034cf-29e8-432e-aca8-490e30e9f45d/eval-harness": {
+      "context": "prompt-evolution",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:02:30.692Z",
+      "worker": "40387776-7e0b-4b43-8a9b-fd7b9286b5ce",
+      "techniques": [
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/ab-testing.ts:145 Volume alone concludes the test and decideWinner always returns an id, so an unresolved draw is published as a win."
+        },
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:158 A near-tie is broken by mean duration over every trial, including failed runs. That is the unconditioned efficiency delta the technique names as the failure."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/judge-fitness.ts:134 Per-prompt-version judge fitness (JudgeFitnessStrip) averages verdicts across every rubric version and judge model the verdict rows carry, which splices different instruments into one mean."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/engine.ts:609 The module headline (StatsPanel bestSuccessRate and +improvement) is the max over every arm of every concluded test, a best-of-many estimate that is biased upward and never priced."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/app/api/checklist/complete/route.ts:70 A trial's success is the run's own callback claim. The candidate CLI session writes the flag that self-reported A/B verdicts crown on, whenever fewer than 3 judge verdicts exist per arm."
+        }
+      ]
+    },
+    "fb32be4a-b388-4f9a-9888-4f8301b69db4/eval-harness": {
+      "context": "module-evaluator",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:02:30.692Z",
+      "worker": "40387776-7e0b-4b43-8a9b-fd7b9286b5ce",
+      "techniques": [
+        {
+          "technique": "measurement-revision",
+          "verdict": "deviation",
+          "evidence": "src/stores/deepEvalStore.ts:55 n=1 vs n=1 flips are labelled RESOLVED/NEW (SonarQube-style diff borrowed from a deterministic analyzer); no replication or rate per finding."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/types/evaluator.ts:21 Evaluator reports, kept as a 10-entry scanHistory (evaluatorStore.ts:27), carry a score with no judge model, prompt version or pass-set version, so scores across eval-prompt revisions are compared as one series."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "deviation",
+          "evidence": "src/lib/evaluator/module-eval-prompts.ts:65 Mechanical facts (class exists, parent, file path, UPROPERTY members) are left to the model instead of asserted deterministically. The structured verdict channel (FINDING_SCHEMA, :43) does exist."
+        }
+      ]
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/eval-harness": {
+      "context": "character-overview-input",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:02:30.692Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "40387776-7e0b-4b43-8a9b-fd7b9286b5ce",
+        "state": "not-applicable",
+        "at": "2026-11-03T23:03:09.829759+00:00",
+        "reason": "reviewer (sonnet): The anchor (index.tsx:70) is tab-navigation JSX, which does not show that no model is run or scored here. The search terms missed the real model use: the AI Feel and Input tabs call TaskFactory.askClaude through execute (AIFeelTab.tsx:103, InputBindingsTable.tsx:52), and those hits only surface on '"
       }
     }
   }

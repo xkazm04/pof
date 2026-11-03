@@ -16675,9 +16675,12 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown",
-          "evidence": "judge-stability is strongly realized (src/lib/judge/calibration.ts:170-245 pins RUBRIC_VERSION, distinguishes stale/provisional/enforced standings, never fakes a pass), but scenario-design's identity mechanism disagrees with what the judge reads: contentHash.ts:35 excludes only 2 keys while payload.ts:12-17 strips 4 (produceDirection, audioAssets) — the same key-divergence already flagged as a deviation on this context's sibling pair quality-verdict-integrity (2026-08-23) and still unresolved. [re-judged 2026-09-22: the recorded deviation is FIXED - contentHash.ts:13 now imports NON_CONTENT_KEYS from payload.ts and :51 derives the excluded set from it (v3), so the hash and the judge strip by one list instead of two kept in sync by hand. Not re-stamped conformant: eval-harness gained 11 techniques since (selection-over-noise, reliability-aggregation, monitor-inside-the-loop among them) and none was read against this context. Returned to the unjudged queue.]",
-          "source": "conform"
+          "state": "deviation",
+          "evidence": "src/lib/judge/verdictTrend.ts:87 The re-judge trend labels a step improved or regressed from last-minus-first score across a 20-entry history that spans rubric versions and judge models without checking either, so a rubric bump reads as a product change even though each point carries its rubricVersion and model.",
+          "source": "conform",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "quality-verdict-integrity",
@@ -19597,7 +19600,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/stores/deepEvalStore.ts:55 A single non-deterministic LLM scan is diffed against a single prior scan (regression-diff.ts), so a finding the model simply did not re-sample is reported RESOLVED and a newly sampled one NEW: a second sample is presented as a correction.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-memory",
@@ -22740,7 +22747,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/prompt-evolution/ab-testing.ts:145 Auto-conclude crowns a winner once the trial count reaches minTrials*4 even when the z-band is 'none', so the A/B card (ABTestCard) publishes a winner where the between-arm spread never cleared the noise, instead of reporting the tie.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "production-prompt-architecture",
