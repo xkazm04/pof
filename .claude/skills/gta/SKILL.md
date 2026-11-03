@@ -191,7 +191,8 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
    - Each new take is read back by a local Whisper within about half a minute (`voice.mjs line` prints
      "heard N% wrong"). A take over 15 % likely garbled or dropped words: tell the owner which one, and offer a
      fresh take; never delete or hide it. The read-back hears words only, never the acting.
-   - The owner listens and judges in the room (approve or reject, with a note).
+   - The owner listens and judges in the room (approve or reject, with a note). Approve, and Cast for a voice
+     with a preview, unlock only after the owner has played it through; "Next to judge" walks the waiting lines.
    - `voice.mjs verdicts --since <the last round's start, e.g. 30m>` reads every verdict and note since then,
      grouped by line (`voice.mjs line --line <id>` shows one line's takes, class and scene); Claude writes the
      next round's directions from them. A line is done only when the owner has approved a take. Fix order when a render is wrong (registry

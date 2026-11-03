@@ -43,12 +43,12 @@ const DETAIL = { line: QUEUE[0], bible: '# Voice bible: Rivet', takes: [TAKE], h
 
 const ok = (data: unknown) => Promise.resolve({ json: () => Promise.resolve({ success: true, data }) });
 
-function stubRoutes() {
+function stubRoutes(state: unknown = STATE) {
   const fn = vi.fn((url: string) => {
     if (url.endsWith('/voice/gate')) return ok({ token: 'TOKEN-123', expiresAt: Date.now() + 600_000 });
     if (url.includes('/voice/lines?')) return ok(DETAIL);
     if (url.endsWith('/voice/takes/verdict')) return ok({ take: { ...TAKE, verdict: 'approved' } });
-    if (url.endsWith('/voice')) return ok(STATE);
+    if (url.endsWith('/voice')) return ok(state);
     return Promise.resolve({ json: () => Promise.resolve({ success: false, error: `unrouted ${url}` }) });
   });
   vi.stubGlobal('fetch', fn);
@@ -155,6 +155,23 @@ describe('Voice room', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('Cast of a voice with a preview unlocks only after the preview was played through', async () => {
+    const designed = {
+      id: 'v-designed', gameId: 'gtai', characterId: 'rivet', name: 'Designed #1', providerVoiceId: null, source: 'designed', designPrompt: 'a nervous robot',
+      previews: [{ generatedVoiceId: 'g1', file: 'f', durationMs: 3000 }], status: 'candidate', createdAt: 0, updatedAt: 0,
+    };
+    stubRoutes({ ...STATE, voices: [designed] });
+    render(<VoiceRoom t={LIGHT} />);
+    await waitFor(() => expect(screen.getAllByTestId('voice-quest').length).toBe(2));
+    fireEvent.click(screen.getByRole('tab', { name: /Cast/ }));
+    await waitFor(() => expect(screen.queryByTestId('voice-candidate')).not.toBeNull());
+    const btn = screen.getByTestId('voice-cast-btn') as HTMLButtonElement;
+    await waitFor(() => expect(screen.getByTestId('voice-candidate').textContent).toContain('Cast unlocks once you have played the preview through'));
+    expect(btn.disabled).toBe(true);
+    fireEvent.ended(screen.getByTestId('voice-candidate').querySelector('audio')!);
+    await waitFor(() => expect(btn.disabled).toBe(false));
   });
 
   it('shows the no-clone note in Cast', async () => {

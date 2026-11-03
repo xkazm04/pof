@@ -421,6 +421,7 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   headers passes; the gate stops accidents and the agent path, not an adversary. In the page, **Approve unlocks
   only after the take has been played through** (80 %, `voiceAudio.tsx` `HEARD_FRACTION`): a UI guard against
   approving unheard audio (registry `hitl-approval`, rubber-stamping), not part of the server gate; Reject stays open.
+  Cast works the same way for a voice with a preview (a stock voice has none and is judged by its takes).
 - **Routes** (`/api/games/gtai/voice`): `GET` (room state; `?view=status`; `?view=verdicts&since=<ms>`, the owner's
   verdicts and notes with each take's line and direction, read-only), `lines` (one line + bible + takes),
   `takes` (generate k; the new takes are then read back in the background by `scripts/voice/readback.py`, one

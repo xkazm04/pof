@@ -27,6 +27,9 @@ function VoiceCard({ t, v, gate, onChanged }: { t: LabTheme; v: VoiceRow; gate: 
     if (r.ok) onChanged(); else setError(r.error);
   };
   const preview = v.previews[0];
+  // With a preview, casting unlocks once it was played through (as Approve does for a take): no unheard cast.
+  const [heard, setHeard] = useState(false);
+  const mustListen = !!preview && !heard;
   return (
     <li data-testid="voice-candidate" data-voice={v.id} data-status={v.status}
       style={{ listStyle: 'none', display: 'grid', gap: 'var(--lab-s1)', padding: 'var(--lab-s2)', border: `1px solid ${v.status === 'cast' ? t.ink : t.line}`, borderRadius: 6 }}>
@@ -36,7 +39,7 @@ function VoiceCard({ t, v, gate, onChanged }: { t: LabTheme; v: VoiceRow; gate: 
         <MicroLabel mono tone="muted">{v.source}{v.providerVoiceId ? ` · ${v.providerVoiceId}` : ' · not created yet'}</MicroLabel>
       </div>
       {preview
-        ? <VoiceAudio t={t} src={previewAudioUrl(v.id)} label={`Preview of ${v.name}`} />
+        ? <VoiceAudio t={t} src={previewAudioUrl(v.id)} label={`Preview of ${v.name}`} onHeard={() => setHeard(true)} />
         : <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>No preview (stock voice): judge it by its takes.</span>}
       {preview && <MicroLabel mono tone="muted">preview {fmtMs(preview.durationMs)}</MicroLabel>}
       {v.designPrompt && (
@@ -45,7 +48,8 @@ function VoiceCard({ t, v, gate, onChanged }: { t: LabTheme; v: VoiceRow; gate: 
           <p style={{ fontSize: 'var(--lab-fs-xs)', margin: 0 }}>{v.designPrompt}</p>
         </details>
       )}
-      {v.status !== 'cast' && <LabButton t={t} testId="voice-cast-btn" disabled={!gate} onClick={() => void cast()}>Cast this voice</LabButton>}
+      {v.status !== 'cast' && <LabButton t={t} testId="voice-cast-btn" disabled={!gate || mustListen} onClick={() => void cast()}>Cast this voice</LabButton>}
+      {v.status !== 'cast' && mustListen && <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Cast unlocks once you have played the preview through.</span>}
       {error && <span role="alert" style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad }}>{error}</span>}
     </li>
   );
