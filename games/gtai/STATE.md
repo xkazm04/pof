@@ -620,3 +620,16 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Pool size 16 px under D5; noir keeps 22.
 - **Evening run launched 20:50** on the merged main, until 00:00 (6 lanes, `e-*` worktrees).
 - **Cleanup:** 18 merged or scratch rtai worktrees removed and their 15 branches deleted. `int-day` is kept until the 00:00 merge.
+
+### 2026-11-04 night: plan (weapons and combat, all the way in; until 09:00)
+- **Owner direction (00:05, verbatim):** "skip the report and continue with night scope where you ended in weapon/combat coverage: Design, Equiped design on player, Shooting design, Animation on human oponents, more advanced weapons will one shot them with unique animation/brutality. Proceed until 9:00 with any API spend allowance, then any level of monthly subscription usage."
+- **Evening owner direction (21:25):** the state was not judgeable: no weapon design, no final animation, no opponent reaction on hit. Visual impression is the key; go all the way in with the design. All evening asks were closed as default placeholders except rivet-motion-1 = A (T2 arms) and gunplay-3 = A (tight locked burst), which are owner picks.
+- **Merge:** the six evening branches (`e-*`) are being merged onto rtai main by an integration agent in `gtai-wt\int-day`. The night lanes start from that main.
+- **Night root `C:\Users\kazda\kiro\gtai-n4`** (6 lanes, Opus, 60-minute iterations, api-first then subscription, freeze 08:30, report 08:40). Branches `n-*`:
+  - `weapon-art`: the design language and every weapon drawn and cut for the rig (Codex image route, one at a time);
+  - `rivet-arsenal`: the evening motion and melee wired into the live game; holding, aiming, recoil, reload and switch per grip class;
+  - `gunplay`: the full weapon behaviours in the real fight (`CombatArena`); shooting design per weapon; the uniques; readable enemy fire on real rigs; the riot blood cost fix;
+  - `human-reactions`: directional hit reactions, stagger, knockdown, deaths by damage type, crowd reactions, enemy brains in the live arena and city;
+  - `brutality`: one-shot signature kills for the advanced weapons (rocket gibs, hand-cannon blowback, burn to ash, electro skeleton, katana split, plasma hole, chainsaw, plasma sword, ray-gun dust, shard burst, mini-nuke shadows), with a `--gore=full|reduced` flag;
+  - `showcase`: merges the five lanes every iteration, films a combat reel in the arena and the city, sends defects back as REQUESTs, and exports the morning exe.
+- **PoF:** `gtai-arena` merged onto master (`e0075cfd`); the evening worktree, branch, :3013 server and runner root removed.
