@@ -599,3 +599,8 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
 - **UI.** `CombatLabRoom` polls every `UI_TIMEOUTS.combatLabPoll` (20 s, `useSuspendableEffect`), keeps the last read when a
   poll fails and says so. Time to kill by range is the shared `ChartPanel` bars (one row per weapon at a range, fastest at
   each range highlighted); tables and sessions are the shared `DataTable`.
+- **Arena stations** (`GameCombatLab.stationsDir`, GTAI `project/data/tables/arena_stations`; `readStations.ts`). The arena
+  lane's brief makes every lane plug in through one `arena_stations/<lane>.json` (id, name, area, spawn list, props, tuning
+  keys, reported measurements). The room lists one row per file across the sources, counting by key name (`spawn*`, `prop*`,
+  `tun*`/`expose*`, `measure*`/`report*`); a count the file lacks reads "not in file", an unparseable file is flagged, and no
+  files says where they are expected. The wire field `stations` is optional so an older server still renders.

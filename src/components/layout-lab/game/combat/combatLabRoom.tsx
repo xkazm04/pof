@@ -16,6 +16,7 @@ import { useCombatLab } from './combatLabData';
 import { CombatTtkChart } from './combatTtkChart';
 import { CombatTableBlock } from './combatTables';
 import { CombatSessions } from './combatSessions';
+import { CombatStations } from './combatStations';
 
 const H = { margin: 0, fontSize: 'var(--lab-fs-sm)' } as const;
 
@@ -50,6 +51,7 @@ export function CombatLabRoom({ t, gameId }: { t: LabTheme; gameId: string }) {
           <h3 style={{ ...H, color: t.inkDeep }}>Time to kill by range</h3>
           <CombatTtkChart t={t} sessions={d.telemetry.sessions} expected={d.telemetry.expected} />
           {d.tables.map((tb) => <CombatTableBlock key={tb.key} t={t} table={tb} />)}
+          {d.stations && <CombatStations t={t} stations={d.stations} />}
           <h3 style={{ ...H, color: t.inkDeep }}>Arena telemetry</h3>
           <CombatSessions t={t} sessions={d.telemetry.sessions} expected={d.telemetry.expected} />
         </>

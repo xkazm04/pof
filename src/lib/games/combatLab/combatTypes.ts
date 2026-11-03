@@ -47,6 +47,17 @@ export interface TelemetrySession {
   other: Record<string, string | number | boolean>;
 }
 
+/** One lane's station file in the arena's stations folder. Counts are omitted when the file has no such list. */
+export interface ArenaStation {
+  file: string;
+  from: CombatSource;
+  id?: string; name?: string; area?: string;
+  spawns?: number; props?: number; tuningKeys?: number; measurements?: number;
+  /** The file could not be read as JSON. */
+  unreadable?: boolean;
+}
+export interface StationsRead { dir: string; items: ArenaStation[]; expected: string }
+
 export interface CombatLabRead {
   gameId: string;
   readAt: string;
@@ -57,6 +68,8 @@ export interface CombatLabRead {
   /** What can be picked: `auto`, `main`, each lane worktree that exists. */
   sources: CombatSource[];
   tables: CombatTable[];
+  /** Optional on the wire so a read from an older server still renders. */
+  stations?: StationsRead;
   telemetry: { dirs: string[]; sessions: TelemetrySession[]; expected: string };
 }
 

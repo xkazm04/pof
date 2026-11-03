@@ -9,6 +9,7 @@ import path from 'node:path';
 import type { GameCombatLab } from '@/lib/games/types';
 import { COMBAT_TABLE_KEYS, type CombatSource, type CombatTable, type CombatTableKey, type TelemetrySession } from './combatTypes';
 import { parseTable } from './parseTable';
+import { readStations } from './readStations';
 import { metricsOf, scalarsOf, ttkOf } from './parseSession';
 
 /** `telemetryDirs`: read these (instead of the config's) for sessions, and never for tables (the engine's user:// folder). */
@@ -66,6 +67,7 @@ export function readCombatLab(
   return {
     gameId, readAt: now.toISOString(), configured: true, source, sources: pickable,
     tables: COMBAT_TABLE_KEYS.map((k) => readTable(k, cfg.tables[k], sources)),
+    ...(cfg.stationsDir ? { stations: readStations(cfg.stationsDir, sources) } : {}),
     telemetry: {
       dirs: [...cfg.telemetryDirs],
       sessions: readSessions(cfg.telemetryDirs, sources, now.getTime()),

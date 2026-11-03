@@ -68,6 +68,20 @@ describe('Combat lab', () => {
     expect(screen.getByTestId('combat-sessions').textContent).toContain('not recorded');
   });
 
+  it('lists the arena stations, "not in file" for an absent count, and says where they are expected when none', async () => {
+    const from = { id: 'gunplay', label: 'lane gunplay' };
+    stubFetch(() => ({ success: true, data: read({ stations: { dir: 'project/data/tables/arena_stations', expected: 'x', items: [{ file: 'gunplay.json', from, name: 'Range', area: 'range', spawns: 4 }] } }) }));
+    room();
+    const grid = await screen.findByTestId('combat-grid-stations');
+    expect(grid.textContent).toContain('Range');
+    expect(grid.textContent).toContain('— not in file');
+    expect(screen.getByTestId('combat-stations').getAttribute('data-count')).toBe('1');
+    cleanup();
+    stubFetch(() => ({ success: true, data: read({ stations: { dir: 'd', expected: 'one JSON file per lane in STATIONS-DIR', items: [] } }) }));
+    room();
+    expect((await screen.findByTestId('combat-stations')).textContent).toContain('STATIONS-DIR');
+  });
+
   it('says so with no telemetry and with sessions that recorded no time to kill', async () => {
     stubFetch(() => ({ success: true, data: read({ telemetry: { dirs: [], sessions: [], expected: 'EXPECTED-PATH' } }) }));
     room();
