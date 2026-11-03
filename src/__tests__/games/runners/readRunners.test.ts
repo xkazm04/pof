@@ -154,7 +154,7 @@ describe('readLanesBoard / config', () => {
   it('roots come from the manifest, relative to the repo root, and env overrides win', () => {
     const base = path.join(tmp, 'repo');
     const manifest = runnersConfigFor('gtai', { env: {}, repoRoot: base, exists: () => true });
-    expect(manifest?.roots.map((r) => path.basename(r))).toEqual(['gtai-night', 'gtai-night-noir', 'gtai-day-d5', 'gtai-day-pof']);
+    expect(manifest?.roots.map((r) => path.basename(r))).toEqual(['gtai-night', 'gtai-night-noir', 'gtai-day-d5', 'gtai-day-pof', 'gtai-eve']);
     expect(manifest?.roots[0]).toBe(path.resolve(base, '../gtai-night'));
     expect(path.basename(manifest?.masters ?? '')).toBe('gtai-masters');
     const env = { POF_GAME_RUNNER_ROOTS_GTAI: `${tmp}/a; ${tmp}/b`, POF_GAME_MASTERS_GTAI: `${tmp}/m` };

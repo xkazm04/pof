@@ -56,6 +56,17 @@ export interface GameDecisions {
   root: string;
 }
 
+/**
+ * The combat lab's inputs: the game tables the combat lanes write (paths relative to a game root OR a lane
+ * worktree), the folders the arena writes per-session telemetry JSON into, and the runner roots (by folder name)
+ * whose lanes are searched. Nothing is hard-coded in the reader.
+ */
+export interface GameCombatLab {
+  tables: { weapons: string; enemies: string; powers: string };
+  telemetryDirs: readonly string[];
+  laneRoots: readonly string[];
+}
+
 export interface GameDef {
   id: GameId;
   title: string;
@@ -70,6 +81,8 @@ export interface GameDef {
   runners?: GameRunners;
   /** Owner design-decision folder; OMIT = the game has no decision board. */
   decisions?: GameDecisions;
+  /** Combat lab inputs; OMIT = the game has no combat lab. */
+  combatLab?: GameCombatLab;
 }
 
 /** The split a game's manifest makes of the registered pipelines. */
