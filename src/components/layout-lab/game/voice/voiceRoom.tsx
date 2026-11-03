@@ -1,0 +1,73 @@
+'use client';
+
+/**
+ * The GTAI Voice room (lane pof-voice): the owner listens and judges here while the `/gta --voice` CLI
+ * generates takes. Queue (lines in play order) beside the selected line; Cast (voices per character).
+ * Human gated: verdicts and casting are clicks in this page, carrying its gate token.
+ */
+import { useState } from 'react';
+import { TabBar } from '@/components/ui/TabBar';
+import { MicroLabel } from '@/components/ui/MicroLabel';
+import { LoadingRow } from '@/components/ui/LoadingRow';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import type { LabTheme } from '@/components/layout-lab/theme';
+import { VoiceQueue, type ExportNote } from './voiceQueue';
+import { VoiceLine } from './voiceLine';
+import { VoiceCast } from './voiceCast';
+import { postVoice, useGateToken, useVoiceRoom, type LineKey } from './voiceRoomData';
+import { openRoom } from './voiceRoomParam';
+
+type Tab = 'queue' | 'cast';
+const TABS = [{ id: 'queue' as const, label: 'Queue' }, { id: 'cast' as const, label: 'Cast' }];
+
+interface ExportReport { written: unknown[]; skipped: unknown[] }
+
+export function VoiceRoom({ t }: { t: LabTheme }) {
+  const { read, reload } = useVoiceRoom();
+  const gate = useGateToken();
+  const [tab, setTab] = useState<Tab>('queue');
+  const [picked, setPicked] = useState<LineKey | null>(null);
+  const [exportNote, setExportNote] = useState<ExportNote | null>(null);
+
+  const doExport = async (questId: string) => {
+    setExportNote({ questId, text: 'Exporting…' });
+    const r = await postVoice<ExportReport>('/export', { questId });
+    setExportNote({ questId, text: r.ok ? `${r.data.written.length} written · ${r.data.skipped.length} skipped (not proven)` : `Export refused: ${r.error}` });
+  };
+
+  const data = read.kind === 'ready' ? read.data : null;
+  const sel = picked ?? (data?.status.next[0] ? { questId: data.status.next[0].questId, lineId: data.status.next[0].lineId } : data?.queue[0] ? { questId: data.queue[0].questId, lineId: data.queue[0].lineId } : null);
+
+  return (
+    <section data-testid="voice-room" aria-labelledby="voice-room-title"
+      style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', alignContent: 'start', gap: 'var(--lab-s4)' }}>
+      <header style={{ display: 'grid', gap: 'var(--lab-s1)' }}>
+        <button type="button" className="focus-ring" onClick={() => openRoom(null)}
+          style={{ justifySelf: 'start', background: 'transparent', border: 'none', padding: 0, color: t.muted, cursor: 'pointer', fontSize: 'var(--lab-fs-xs)' }}>
+          ← Game home
+        </button>
+        <MicroLabel mono uppercase tone="muted">GTAI · Voice room</MicroLabel>
+        <h2 id="voice-room-title" style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xl)', color: t.inkDeep, margin: 0 }}>Voice</h2>
+        {data && (
+          <span data-testid="voice-status" style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
+            {data.status.proven} / {data.status.total} lines proven · {data.status.chars} characters spent on takes · a line is proven only by your approval
+          </span>
+        )}
+      </header>
+      <TabBar tabs={TABS} activeId={tab} onChange={setTab} layoutId="voice-room-tabs" accent="var(--lab-ink)" ariaLabel="Voice room sections" />
+      {read.kind === 'loading' && <LoadingRow variant="inline" label="Reading the line queue…" />}
+      {read.kind === 'error' && <InlineErrorRetry message={`voice room unavailable (${read.reason})`} onRetry={reload} />}
+      {data && tab === 'queue' && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s4)', alignItems: 'start' }}>
+          <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+            <VoiceQueue t={t} queue={data.queue} quests={data.status.quests} selected={sel} onSelect={setPicked} onExport={(q) => void doExport(q)} exportNote={exportNote} />
+          </div>
+          <div style={{ flex: '2 1 420px', minWidth: 0 }}>
+            <VoiceLine t={t} sel={sel} gate={gate} onChanged={reload} />
+          </div>
+        </div>
+      )}
+      {data && tab === 'cast' && <VoiceCast t={t} queue={data.queue} voices={data.voices} gate={gate.token} onChanged={reload} />}
+    </section>
+  );
+}
