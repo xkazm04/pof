@@ -18195,6 +18195,36 @@
           "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:12 The packaging grade is re-derived from what is actually on disk, which closes the known hollow-pass class."
         }
       ]
+    },
+    "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/test-harness": {
+      "context": "build-history-config",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T10:56:44.847Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "c75301ec-c28b-46de-943e-ce429fcaa89d",
+        "state": "not-applicable",
+        "at": "2026-11-03T10:57:07.275112+00:00",
+        "reason": "reviewer (sonnet): The anchor (BuildHistoryDashboard/index.tsx:8) is an import line, so it doesn't show that a test harness is absent; the repo has vitest.config.ts and playwright.config.ts, and the claim rests on an absence search with arbitrary terms."
+      }
+    },
+    "0b31785f-a922-4da7-ac3f-bcf06c56f97f/test-harness": {
+      "context": "ue5-state-sync",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T10:56:44.847Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "c75301ec-c28b-46de-943e-ce429fcaa89d",
+        "state": "not-applicable",
+        "at": "2026-11-03T10:57:07.431602+00:00",
+        "reason": "reviewer (sonnet): The anchor (LiveStateSyncPanel/index.tsx:4) is a doc-comment line and is in a directory that isn't among the context's listed files (BidirectionalStateSyncPanel/*). It doesn't show that test infrastructure is absent, and the repo has vitest and playwright configs."
+      }
     }
   }
 }
