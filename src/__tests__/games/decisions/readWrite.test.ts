@@ -133,6 +133,32 @@ describe('writeAnswer', () => {
   });
 });
 
+describe('writeAnswer with concurrent readers', () => {
+  it('a lane re-reading answers.json during many writes always sees a complete document, and no answer is lost', async () => {
+    fx = makeDecisionsFixture({ answers: null });
+    const file = path.join(fx.root, 'answers.json');
+    let torn = 0;
+    let reads = 0;
+    let done = false;
+    const reader = (async () => {
+      while (!done) {
+        try { JSON.parse(fs.readFileSync(file, 'utf8')); reads++; } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT' && (e as NodeJS.ErrnoException).code !== 'EBUSY' && (e as NodeJS.ErrnoException).code !== 'EPERM') torn++; }
+        await new Promise((r) => setImmediate(r));
+      }
+    })();
+    const ids = ['arena-1', 'gunplay-2'];
+    for (let i = 0; i < 40; i++) {
+      await writeAnswer(fx.root, { id: ids[i % 2], choice: i % 2 ? 'low' : 'pistol', note: `n${i}` });
+      await new Promise((r) => setImmediate(r)); // let the reader run between writes
+    }
+    done = true;
+    await reader;
+    expect(torn).toBe(0);
+    expect(reads).toBeGreaterThan(0);
+    expect(answersOf(fx.root).answers.map((a) => a.id).sort()).toEqual(ids);
+  });
+});
+
 describe('decisionsRootFor', () => {
   it('reads the manifest and lets the env override', () => {
     expect(decisionsRootFor('gtai', { env: {}, repoRoot: path.resolve('/r/pof') })).toBe(path.resolve('/r/gtai-eve/decisions'));
