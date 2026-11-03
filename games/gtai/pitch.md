@@ -165,7 +165,12 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
 ## 7. Combat and progression **[owner]**
 
 - **Start bare-handed:** electroshock melee until the first weapon is found. **[owner]** **[proposal]** End the tutorial on a cop's pistol.
-- **Weapons:** a widening arsenal. **[proposal]** GTA 2-style pickups: pistol, SMG, shotgun, flamethrower (a welding torch), rocket launcher, electro-net, and molotov-style "coolant bombs".
+- **Weapons:** a widening arsenal of pickups. **[owner, 2026-11-03] First weapon set to experiment with:** "We don't need to use all in the game, but we should try in next days to experiment with their design and combat feel."
+  - **Core ranged:** pistol, machine pistol, flamethrower, rocket launcher, electro gun, molotov.
+  - **Unique ranged** (limited use in specific quests): plasma rifle, hand cannon, ray gun, homing shard gun, mini-nuke launcher.
+  - **Melee weapons** (on top of Rivet's native claw combo): electro baton, chainsaw, katana, plasma sword.
+  - The canon nail gun "Gloria" stays.
+  - In-game names are original. The owner's reference names for these weapons (a real gun brand, and items from other games and films) never appear in prompts, assets or game text.
 - **Each soul:** a special ability with in-game upgrades bought to evolve it. **[owner]**
 - **[proposal] One currency, cash.** It comes from bosses, side jobs and mayhem. It buys weapons, ammo and soul upgrades at a hub workshop.
 - **[proposal] Heat.** GTA 2-style wanted levels, from cops to SWAT to the feds, and at the top **Krump's army** (tanks, helicopters). The top heat level foreshadows the twist: the military shows up for a "robot problem" far too fast.
