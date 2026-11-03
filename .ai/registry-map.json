@@ -9717,7 +9717,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/_shared/data.ts:29 This context is UE character design UI (class hierarchy, hitboxes, input bindings, metrics) with no model runs, scenarios or scored trials. A recursive grep of sub_character found no judge, benchmark, trial, rubric or passRate. The 'eval' and 'scenario' hits are in the out-of-context ai-feel and simulator subtabs and refer to a balance simulator, not an eval harness.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "voice-io",
@@ -20748,7 +20752,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/checklist/complete/route.ts:71 The checklist completion callback closes the prompt-evolution A/B loop and books a missing durationMs as a 0 ms trial; ab-testing.ts pickVariant then breaks ties by totalDuration/allTrials, so an arm whose runs never report timing reads as the fastest instead of being incomplete.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "quality-gates",
@@ -21907,7 +21915,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/ScanHistoryTimeline.tsx:29 Any nonzero difference between two single LLM deep-eval scans is shown as a green or red trend arrow. EvaluatorReport (src/types/evaluator.ts:18) carries no judge, model or prompt identity and no repeatability bound, so judge drift or a judge swap reads as product movement.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "test-harness",

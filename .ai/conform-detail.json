@@ -18794,16 +18794,48 @@
       "context": "character-overview-input",
       "subject": "eval-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-03",
-      "evaluatedTs": "2026-11-03T23:02:30.692Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "40387776-7e0b-4b43-8a9b-fd7b9286b5ce",
-        "state": "not-applicable",
-        "at": "2026-11-03T23:03:09.829759+00:00",
-        "reason": "reviewer (sonnet): The anchor (index.tsx:70) is tab-navigation JSX, which does not show that no model is run or scored here. The search terms missed the real model use: the AI Feel and Input tabs call TaskFactory.askClaude through execute (AIFeelTab.tsx:103, InputBindingsTable.tsx:52), and those hits only surface on '"
-      }
+      "evaluatedTs": "2026-11-03T23:34:25.920Z",
+      "worker": "05fb7ea3-82e6-41d8-a3a9-9b6b97a14982",
+      "techniques": []
+    },
+    "6540a636-c13b-4437-a682-d5c71b7d71b4/eval-harness": {
+      "context": "platform-services-api",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:34:25.920Z",
+      "worker": "05fb7ea3-82e6-41d8-a3a9-9b6b97a14982",
+      "techniques": [
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/app/api/checklist/complete/route.ts:71 An unmeasured cost is recorded as zero and averaged over every trial, failed ones included (see src/lib/prompt-evolution/ab-testing.ts:79). The cost comparison is not conditioned on outcome, and incomplete measurements are not marked."
+        },
+        {
+          "technique": "treatment-election-rate",
+          "verdict": "conformant",
+          "evidence": "src/app/api/checklist/complete/route.ts:64 A trial is booked only for the variant the run was actually served. Static or unserved runs are not counted as trials of an arm."
+        }
+      ]
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/eval-harness": {
+      "context": "project-health-dashboards",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:34:25.920Z",
+      "worker": "05fb7ea3-82e6-41d8-a3a9-9b6b97a14982",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/ScanHistoryTimeline.tsx:29 Breaks 'swap judges, keep the chart' and 'the instrument's swing bounds the claim': there is no noise floor or judge provenance beside the delta."
+        }
+      ]
     }
   }
 }
