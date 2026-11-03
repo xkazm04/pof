@@ -48,6 +48,14 @@ export interface GameRunners {
   masters: string;
 }
 
+/**
+ * Where lanes leave the owner design questions (`asks/<lane>-<n>.json`) and where answers go (`answers.json`);
+ * relative to the PoF repo root. Env override `POF_GAME_DECISIONS_<ID>` (`decisionsConfig.ts`).
+ */
+export interface GameDecisions {
+  root: string;
+}
+
 export interface GameDef {
   id: GameId;
   title: string;
@@ -60,6 +68,8 @@ export interface GameDef {
   designDir?: string;
   /** Lane runner roots + the masters folder; OMIT = the game has no lane runners. */
   runners?: GameRunners;
+  /** Owner design-decision folder; OMIT = the game has no decision board. */
+  decisions?: GameDecisions;
 }
 
 /** The split a game's manifest makes of the registered pipelines. */

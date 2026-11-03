@@ -87,4 +87,5 @@ export const GTAI_GAME: GameDef = {
     roots: ['../gtai-night', '../gtai-night-noir', '../gtai-day-d5', '../gtai-day-pof'],
     masters: '../gtai-masters',
   },
+  decisions: { root: '../gtai-eve/decisions' },
 };
