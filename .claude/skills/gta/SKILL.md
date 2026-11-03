@@ -183,7 +183,7 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
    Voice room link.
 4. **The loop, per line:**
    - No voice for the speaker yet: `voice.mjs design --character <id> --n 3` from the voice bible, or
-     `voice.mjs stock ...` for a premade voice. The owner listens to the previews and casts one in the room.
+     `voice.mjs stock ...` for a premade voice (`stock --casting <casting.json>` imports a whole casting file). The owner listens to the previews and casts one in the room.
      Never imitate or clone a real person's voice; no recordings are uploaded.
    - `voice.mjs takes --line <id> --n 3 --direction "<words>"`, with directions written from the speaker's bible
      (`games/gtai/voices/<id>.md`) and the owner's notes. On `eleven_v3` the direction becomes audio tags. The

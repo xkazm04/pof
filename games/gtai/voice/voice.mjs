@@ -10,6 +10,7 @@
  *        [--stability x] [--style x] [--speed x]
  *   node games/gtai/voice/voice.mjs design --character <id> [--n 3] [--description "<text>"]
  *   node games/gtai/voice/voice.mjs stock --character <id> --voice-id <provider id> --name <name> [--note <text>]
+ *   node games/gtai/voice/voice.mjs stock --casting <casting.json>   every premade pick of a casting file (candidates)
  *   node games/gtai/voice/voice.mjs voices [--character <id>]
  *   node games/gtai/voice/voice.mjs export --quest <id>             writes ONLY approved takes into the game
  *
@@ -97,6 +98,17 @@ async function main() {
       return;
     }
     case 'stock': {
+      const casting = opt('casting');
+      if (casting) {
+        // The audio lane's casting.json: { cast: { <character>: { voice_id, voice, note } } } -> one candidate each.
+        const { readFileSync } = await import('node:fs');
+        const cast = JSON.parse(readFileSync(casting, 'utf8')).cast ?? {};
+        for (const [characterId, c] of Object.entries(cast)) {
+          const r = await call('/voices', { action: 'stock', characterId, providerVoiceId: c.voice_id, name: `${c.voice} (stock)`, note: c.note ?? null });
+          out(`  candidate ${r.voices[0].id} ${characterId} = ${c.voice} (stock)`);
+        }
+        return;
+      }
       const r = await call('/voices', { action: 'stock', characterId: opt('character'), providerVoiceId: opt('voice-id'), name: opt('name'), note: opt('note') });
       out(`  candidate ${r.voices[0].id} ${r.voices[0].name} (stock)`);
       return;

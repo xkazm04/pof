@@ -163,3 +163,12 @@ describe('silence screen', () => {
     expect(maxInternalSilenceMs('', 10)).toBe(0);
   });
 });
+
+describe('stock candidates', () => {
+  it('adding the same premade voice twice for a character keeps one candidate', () => {
+    const a = addStockCandidate(db, 'gtai', 'rivet', 'stock-x', 'X', null);
+    const b = addStockCandidate(db, 'gtai', 'rivet', 'stock-x', 'X again', null);
+    expect(b.id).toBe(a.id);
+    expect(listVoices(db, 'gtai').filter((v) => v.characterId === 'rivet')).toHaveLength(1);
+  });
+});

@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { designVoice } from '@/lib/audio-gen/providers/elevenlabs-speech';
 import type { SpeechDesignRequest, SpeechDesignResult } from '@/lib/audio-gen/types';
-import { insertVoice, listLines } from '@/lib/voice/voice-db';
+import { insertVoice, listLines, listVoices } from '@/lib/voice/voice-db';
 import { writeVoiceFile } from '@/lib/voice/storage';
 import type { VoiceRow } from '@/lib/voice/types';
 import type { Result } from '@/types/result';
@@ -82,8 +82,11 @@ export async function designForCharacter(
   }
 }
 
-/** A stock (premade) provider voice as a candidate — e.g. the audio lane's casting.json picks. */
+/** A stock (premade) provider voice as a candidate — e.g. the audio lane's casting.json picks (`voice.mjs stock --casting`). */
 export function addStockCandidate(db: Database.Database, gameId: string, characterId: string, providerVoiceId: string, name: string, note: string | null, at = Date.now()): VoiceRow {
+  // Idempotent: the same premade voice for the same character is one candidate, however often it is added.
+  const existing = listVoices(db, gameId).find((v) => v.characterId === characterId && v.providerVoiceId === providerVoiceId);
+  if (existing) return existing;
   const v: VoiceRow = {
     id: randomUUID(), gameId, characterId, name, providerVoiceId, source: 'stock', designPrompt: note, previews: [],
     status: 'candidate', createdAt: at, updatedAt: at,
