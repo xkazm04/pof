@@ -59,6 +59,12 @@ describe('GameHomeLanes', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
+  it('a first session still running is not "no sessions"', async () => {
+    stubFetch({ success: true, data: board([root({ lanes: [lane({ iterations: 0, liveSession: 1, costUsd: 0, apiCostUsd: 0 })] })]) });
+    panel();
+    expect((await screen.findByTestId('lane-card-pof-control-room')).textContent).toContain('session 1 running · cost is recorded when it ends');
+  });
+
   it('an unconfigured game says so', async () => {
     stubFetch({ success: true, data: board([], { configured: false, reason: 'pof declares no lane runner roots' }) });
     panel();
@@ -80,6 +86,7 @@ describe('GameHomeLanes', () => {
     expect(screen.getByTestId('lane-journal-pof-control-room').textContent).toBe('- 11:55 MILESTONE board reads');
     const idle = screen.getByTestId('lane-card-idle');
     expect(idle.textContent).toContain('no sessions yet');
+    expect(idle.textContent).not.toContain('0 sessions done');
     expect(idle.textContent).toContain('worktree missing');
     expect(idle.textContent).toContain('no JOURNAL.md line yet');
     expect(screen.getByTestId('runner-billing-gtai-day-pof').textContent).toContain('API key blocked until 12:20');
