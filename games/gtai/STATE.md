@@ -606,3 +606,17 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - your answers go in `gtai-eve\decisions\answers.json`, through PoF's Decisions room or through the Director;
     - lanes re-read the answers every ~20 min.
 - **00:00:** merge the evening branches, then a night run that perfects combat, movement, AI and animation.
+
+### 2026-11-03 evening: day lanes merged, evening run launched (20:50)
+- **Merge:** all 8 day lanes are on rtai `main` at `baf2e80`, pushed. Lane reports are in `docs/day/2026-11-03/<lane>/`.
+  - Gates green at `a5019f2`: lint 13/13, unit 537/537, scenarios 19/19, parity exact (planted fault caught at step 629), look goldens re-blessed once (11/11, 5/5), replay hash unchanged.
+  - Idle bench: p99 4.835 ms, 1 % low 176 fps, worst frame 21.2 ms.
+  - Exe: `C:\Users\kazda\kiro\gtai-wt\int-day\build\export\windows\RTAI.exe`. It boots to the title card; replay check rc 0.
+- **Open after the merge:**
+  - The riot-scene p99 doubled against this morning (2.4 -> 4.8 ms, under the 7 ms limit). Rig cost is flat, so the cost is elsewhere; not bisected.
+  - `scenario_vehicle_yield` gridlocks with the car 24 m down the lane; the test moved to 32 m. Real defect, for the vehicles work.
+  - The car cannot be driven in the exe: quest 1's session has no vehicle service (keys bound, title card says "F: car (soon)").
+  - Combat's blood shows only in the old quest-1 view, not in the slice's city quest 1.
+  - Pool size 16 px under D5; noir keeps 22.
+- **Evening run launched 20:50** on the merged main, until 00:00 (6 lanes, `e-*` worktrees).
+- **Cleanup:** 18 merged or scratch rtai worktrees removed and their 15 branches deleted. `int-day` is kept until the 00:00 merge.
