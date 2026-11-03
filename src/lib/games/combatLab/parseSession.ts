@@ -11,6 +11,7 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 const METRIC_KEYS: Array<[SessionMetric['key'], RegExp]> = [
   ['hitRate', /hit_?rate|accuracy/i], ['damageTaken', /damage_?taken/i], ['latency', /latency/i],
   ['dodges', /dodge/i], ['knockdowns', /knock_?down/i], ['turnRate', /turn_?rate/i], ['topSpeed', /top_?speed/i], ['courseTime', /course_?time/i],
+  ['pitTime', /pit_?done/i], ['pitKills', /^pit_?kills$/i], ['pitWaves', /^pit_?waves_?cleared$/i], ['coverStops', /stopped_?by_?cover/i],
 ];
 const TTK_KEY = /^(ttk|time_?to_?kill)/i;
 
@@ -32,6 +33,8 @@ export function metricsOf(doc: unknown): SessionMetric[] {
     // The arena writes -1 for a latency it never measured and 0 for the hit rate of a session with no shots: not data.
     if (key === 'latency' && value < 0) continue;
     if (key === 'hitRate' && find(doc, /^shots$/i, num) === 0) continue;
+    // Every session carries pit_kills 0 / pit_waves 0 when it ran no pit: only a session that spawned a wave has pit metrics.
+    if ((key === 'pitKills' || key === 'pitWaves') && !(find(doc, /^pit_?waves$/i, num) ?? 0)) continue;
     out.push({ key, value });
   }
   return out;

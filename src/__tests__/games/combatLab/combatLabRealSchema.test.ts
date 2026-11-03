@@ -46,6 +46,11 @@ describe('arena telemetry as the arena lane writes it', () => {
   it('reads a course session course_time_s as its own metric (a course run has no shots)', () => {
     expect(metricsOf({ course_time_s: 15.5, shots: 0, hit_rate: 0, knockdowns: 0 })).toEqual([{ key: 'knockdowns', value: 0 }, { key: 'courseTime', value: 15.5 }]);
   });
+  it('reads a pit session pit time, kills, waves cleared and cover stops; a session with no pit has none', () => {
+    const pit = { pit_done_s: 12.4, pit_kills: 5, pit_waves: 2, pit_waves_cleared: 2, shots_stopped_by_cover: 2, knockdowns: 0 };
+    expect(metricsOf(pit)).toEqual([{ key: 'knockdowns', value: 0 }, { key: 'pitTime', value: 12.4 }, { key: 'pitKills', value: 5 }, { key: 'pitWaves', value: 2 }, { key: 'coverStops', value: 2 }]);
+    expect(metricsOf({ pit_kills: 0, pit_waves: 0, pit_waves_cleared: 0, knockdowns: 0 })).toEqual([{ key: 'knockdowns', value: 0 }]);
+  });
   it('treats the arena -1 latency and a no-shot hit rate as not recorded', () => {
     const m = metricsOf({ shots: 0, hit_rate: 0, input_latency_mean_ticks: -1, knockdowns: 0 });
     expect(m).toEqual([{ key: 'knockdowns', value: 0 }]);
