@@ -20,8 +20,8 @@ import type { Result } from '@/types/result';
 
 export interface ExportReport {
   questId: string;
-  /** `lufs`: the written file's measured level (null = unmeasured); `onLevel`: within MASTER_TOLERANCE_LU of the target. */
-  /** `treatment`: the filter chain the speaker is heard through in the game (from `voice_treatments`), if any. */
+  /** `lufs`: the written file's measured level (null = unmeasured); `onLevel`: within MASTER_TOLERANCE_LU of the
+   *  target; `treatment`: the filter chain the speaker is heard through in the game (`voice_treatments`), if any. */
   written: Array<{ lineId: string; path: string; takeId: string; lufs: number | null; onLevel: boolean | null; treatment?: string }>;
   /** The level every written file was mastered to, and where that target came from. */
   mastering: VoiceMasterTarget;
