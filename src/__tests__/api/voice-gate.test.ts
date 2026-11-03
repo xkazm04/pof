@@ -84,6 +84,19 @@ describe('voice room human gate', () => {
     expect((await castPOST(req('/voices/cast', { voiceId }, { ...BROWSER, [GATE_HEADER]: token }), ctx)).status).toBe(200);
   });
 
+  it('re-casting another voice un-proves the line, and approving outside the cast voice is refused 409', async () => {
+    const token = String((await json(await gateGET(req('/gate', undefined, BROWSER), ctx))).data?.token);
+    const h = { ...BROWSER, [GATE_HEADER]: token };
+    const other = await json(await voicesPOST(req('/voices', { action: 'stock', characterId: 'dock-guard', providerVoiceId: 'stock-h', name: 'Other' }), ctx));
+    const otherId = String((other.data?.voices as Array<{ id: string }>)[0].id);
+    expect((await castPOST(req('/voices/cast', { voiceId: otherId }, h), ctx)).status).toBe(200);
+    const room = await json(await roomGET(req(''), ctx));
+    expect((room.data?.status as { proven: number }).proven).toBe(0);
+    const r = await verdictPOST(req('/takes/verdict', { takeId, verdict: 'approved', note: 'again' }, h), ctx);
+    expect(r.status).toBe(409);
+    expect((await json(r)).error).toMatch(/cast voice/);
+  });
+
   it('voice.mjs has no verdict, approve or cast command', async () => {
     const fs = await import('node:fs');
     const src = fs.readFileSync('games/gtai/voice/voice.mjs', 'utf8');
