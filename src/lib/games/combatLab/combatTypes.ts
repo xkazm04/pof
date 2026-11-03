@@ -27,11 +27,14 @@ export interface CombatTable {
   /** Columns left out of `columns` (a table wider than the cap). */
   hiddenColumns: number;
   rows: Array<{ label?: string; values: Record<string, string | number | boolean> }>;
+  /** The weapons table's kill targets (`{ id, hp }`), when the document lists them. */
+  targets?: Array<{ id: string; hp: number }>;
 }
 
-export interface TtkPoint { weapon: string; rangeM: number; seconds: number }
+/** `kills`: how many kills the seconds average (set for the arena's per-spawn lists). */
+export interface TtkPoint { weapon: string; rangeM: number; seconds: number; kills?: number }
 
-export interface SessionMetric { key: 'hitRate' | 'damageTaken' | 'latency' | 'dodges' | 'knockdowns' | 'turnRate'; value: number }
+export interface SessionMetric { key: 'hitRate' | 'damageTaken' | 'latency' | 'dodges' | 'knockdowns' | 'turnRate' | 'topSpeed'; value: number }
 
 export interface TelemetrySession {
   /** File name inside its telemetry folder. */
@@ -74,5 +77,5 @@ export interface CombatLabRead {
 }
 
 export const METRIC_LABEL: Record<SessionMetric['key'], string> = {
-  hitRate: 'Hit rate', damageTaken: 'Damage taken', latency: 'Input latency', dodges: 'Dodges', knockdowns: 'Knockdowns', turnRate: 'Turn rate',
+  hitRate: 'Hit rate', damageTaken: 'Damage taken', latency: 'Input latency', dodges: 'Dodges', knockdowns: 'Knockdowns', turnRate: 'Turn rate', topSpeed: 'Top speed',
 };

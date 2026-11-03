@@ -14,6 +14,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import { openRoom } from '../voice/voiceRoomParam';
 import { useCombatLab } from './combatLabData';
 import { CombatTtkChart } from './combatTtkChart';
+import { CombatDesignTtk } from './combatDesignTtk';
 import { CombatTableBlock } from './combatTables';
 import { CombatSessions } from './combatSessions';
 import { CombatStations } from './combatStations';
@@ -48,8 +49,10 @@ export function CombatLabRoom({ t, gameId }: { t: LabTheme; gameId: string }) {
       {read.kind === 'error' && <InlineErrorRetry message={`combat lab unavailable (${read.message})`} onRetry={reread} />}
       {d?.configured && (
         <>
-          <h3 style={{ ...H, color: t.inkDeep }}>Time to kill by range</h3>
+          <h3 style={{ ...H, color: t.inkDeep }}>Time to kill by range, measured</h3>
           <CombatTtkChart t={t} sessions={d.telemetry.sessions} expected={d.telemetry.expected} />
+          <h3 style={{ ...H, color: t.inkDeep }}>Time to kill by weapon, from the table</h3>
+          <CombatDesignTtk t={t} weapons={d.tables.find((x) => x.key === 'weapons')} />
           {d.tables.map((tb) => <CombatTableBlock key={tb.key} t={t} table={tb} />)}
           {d.stations && <CombatStations t={t} stations={d.stations} />}
           <h3 style={{ ...H, color: t.inkDeep }}>Arena telemetry</h3>

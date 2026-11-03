@@ -40,13 +40,22 @@ export function recordsOf(doc: unknown, name: string): Array<{ label?: string; r
   return 'no rows found (expected an array of records, or a map of id to record)';
 }
 
+/** Columns a designer reads first, per table (absent ones are skipped); `doc` prose always goes last. */
+const LEAD: Record<CombatTable['key'], readonly string[]> = {
+  weapons: ['id', 'tier', 'kind', 'fire_mode', 'enabled', 'damage', 'pellets', 'rof_hz', 'magazine', 'reload_s', 'range_m', 'spread_deg'],
+  melee: ['id', 'name', 'damage', 'reach_m', 'windup_s'],
+  enemies: ['id', 'body', 'hp', 'weapon', 'speed_mps', 'attack_m', 'preferred_m', 'reaction_s', 'aggression'],
+  powers: ['id', 'action', 'duration_s', 'cooldown_s', 'madness_cost'],
+};
+
 export function parseTable(key: CombatTable['key'], file: string, doc: unknown): Pick<CombatTable, 'state' | 'reason' | 'columns' | 'hiddenColumns' | 'rows'> {
   const recs = recordsOf(doc, key);
   if (typeof recs === 'string') return { state: 'invalid', reason: recs, columns: [], hiddenColumns: 0, rows: [] };
   const rows = recs.slice(0, MAX_ROWS).map(({ label, rec }) => ({ ...(label ? { label } : {}), values: flatten(rec) }));
   const seen: string[] = [];
   for (const r of rows) for (const k of Object.keys(r.values)) if (!seen.includes(k)) seen.push(k);
-  const lead = ['id', 'name', 'label'].filter((k) => seen.includes(k));
-  const all = [...lead, ...seen.filter((k) => !lead.includes(k))];
+  const lead = [...LEAD[key], 'id', 'name', 'label'].filter((k, i, a) => seen.includes(k) && a.indexOf(k) === i);
+  const tail = seen.filter((k) => !lead.includes(k));
+  const all = [...lead, ...tail.filter((k) => k !== 'doc'), ...tail.filter((k) => k === 'doc')];
   return { state: 'ok', columns: all.slice(0, MAX_COLUMNS), hiddenColumns: Math.max(0, all.length - MAX_COLUMNS), rows };
 }

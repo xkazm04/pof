@@ -10,7 +10,7 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 
 const METRIC_KEYS: Array<[SessionMetric['key'], RegExp]> = [
   ['hitRate', /hit_?rate|accuracy/i], ['damageTaken', /damage_?taken/i], ['latency', /latency/i],
-  ['dodges', /dodge/i], ['knockdowns', /knock_?down/i], ['turnRate', /turn_?rate/i],
+  ['dodges', /dodge/i], ['knockdowns', /knock_?down/i], ['turnRate', /turn_?rate/i], ['topSpeed', /top_?speed/i],
 ];
 const TTK_KEY = /^(ttk|time_?to_?kill)/i;
 
@@ -33,6 +33,8 @@ export function metricsOf(doc: unknown): SessionMetric[] {
   return out;
 }
 
+/** Arena spawn ids encode motion and range: `static_05m`, `strafe_10m`, `approach_35m`. */
+const SPAWN_ID = /^([a-z][a-z_]*?)_(\d+(?:\.\d+)?)m$/i;
 const rangeOf = (k: string): number | undefined => { const m = /-?\d+(\.\d+)?/.exec(k); return m ? Number(m[0]) : undefined; };
 
 function ttkFrom(v: unknown): TtkPoint[] {
@@ -47,6 +49,12 @@ function ttkFrom(v: unknown): TtkPoint[] {
     }
   } else if (isRec(v)) {
     for (const [weapon, byRange] of Object.entries(v)) {
+      if (Array.isArray(byRange)) { // the arena's own shape: ttk_s { "<motion>_<range>m": [seconds, ...] }, one entry per kill
+        const spawn = SPAWN_ID.exec(weapon);
+        const kills = byRange.map(num).filter((x): x is number => x !== undefined);
+        if (spawn && kills.length) out.push({ weapon: spawn[1], rangeM: Number(spawn[2]), seconds: kills.reduce((a, b) => a + b, 0) / kills.length, kills: kills.length });
+        continue;
+      }
       if (!isRec(byRange)) continue;
       for (const [k, s] of Object.entries(byRange)) {
         const rangeM = rangeOf(k);
@@ -59,7 +67,10 @@ function ttkFrom(v: unknown): TtkPoint[] {
 }
 
 export function ttkOf(doc: unknown): TtkPoint[] {
-  return find(doc, TTK_KEY, (x) => { const p = ttkFrom(x); return p.length ? p : undefined; }) ?? [];
+  const points = find(doc, TTK_KEY, (x) => { const p = ttkFrom(x); return p.length ? p : undefined; }) ?? [];
+  // A session that names the weapon it fired labels every spawn-id series with it ("pistol · strafe").
+  const named = isRec(doc) ? [doc.weapon, doc.weapon_id].find((x): x is string => typeof x === 'string') : undefined;
+  return named ? points.map((p) => (p.kills === undefined ? p : { ...p, weapon: `${named} · ${p.weapon}` })) : points;
 }
 
 export function scalarsOf(doc: unknown, max = 12): Record<string, string | number | boolean> {

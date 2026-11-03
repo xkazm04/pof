@@ -9,6 +9,7 @@ import path from 'node:path';
 import type { GameCombatLab } from '@/lib/games/types';
 import { COMBAT_TABLE_KEYS, type CombatSource, type CombatTable, type CombatTableKey, type TelemetrySession } from './combatTypes';
 import { parseTable } from './parseTable';
+import { targetsOf } from './predictTtk';
 import { readStations } from './readStations';
 import { metricsOf, scalarsOf, ttkOf } from './parseSession';
 import { readLaneJsonFile } from '@/lib/games/laneJson';
@@ -37,7 +38,10 @@ export function readTable(key: CombatTableKey, rel: string, sources: SourceDir[]
     const from = { id: s.id, label: s.label };
     if (!r.ok) { invalid ??= { key, file: rel, from, state: 'invalid', reason: r.reason, ...empty }; continue; }
     const parsed = parseTable(key, rel, r.doc);
-    if (parsed.state === 'ok') return { key, file: rel, from, ...parsed };
+    if (parsed.state === 'ok') {
+      const targets = key === 'weapons' ? targetsOf(r.doc) : [];
+      return { key, file: rel, from, ...parsed, ...(targets.length ? { targets } : {}) };
+    }
     invalid ??= { key, file: rel, from, ...parsed };
   }
   return invalid ?? { key, file: rel, state: 'missing', reason: `not in ${sources.filter((s) => !s.telemetryDirs).map((s) => s.label).join(', ') || 'any source'}; expected at ${rel}`, ...empty };
