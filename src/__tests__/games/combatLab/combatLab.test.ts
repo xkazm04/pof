@@ -119,6 +119,17 @@ describe('resolveSources', () => {
     expect(s?.selected.map((x) => x.id)).toEqual(['main', 'gunplay']);
     expect(s?.pickable.map((x) => x.id)).toEqual(['auto', 'main', 'gunplay']);
   });
+  it('adds the engine user:// folder as a telemetry-only source when it exists, and tables never come from it', () => {
+    const appData = tmp();
+    put(appData, 'RTAI Uprising/arena/s9.json', { hit_rate: 0.7 });
+    put(appData, 'RTAI Uprising/project/data/tables/weapons.json', { pistol: { damage: 1 } });
+    const cfg = { ...CFG, userData: { appDataFolder: 'RTAI Uprising', telemetryDirs: ['arena'] } };
+    const s = resolveSources(cfg, '/g', board(), 'auto', appData)!;
+    expect(s.selected.map((x) => x.id)).toEqual(['main', 'gunplay', 'userdata']);
+    expect(readSessions(cfg.telemetryDirs, s.selected, 0).map((x) => x.file)).toEqual(['s9.json']);
+    expect(readTable('weapons', cfg.tables.weapons, s.selected)).toMatchObject({ state: 'missing' });
+    expect(resolveSources(cfg, '/g', board(), 'auto', path.join(appData, 'nope'))!.selected.map((x) => x.id)).toEqual(['main', 'gunplay']);
+  });
   it('picks one source, and refuses an unknown or absent one', () => {
     expect(resolveSources(CFG, '/g', board(), 'gunplay')?.selected.map((x) => x.id)).toEqual(['gunplay']);
     expect(resolveSources(CFG, '/g', board(), 'arena')).toBeNull();

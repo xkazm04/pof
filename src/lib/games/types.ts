@@ -65,6 +65,9 @@ export interface GameCombatLab {
   tables: { weapons: string; enemies: string; powers: string };
   telemetryDirs: readonly string[];
   laneRoots: readonly string[];
+  /** The engine's `user://` folder (Godot: `%APPDATA%/<custom_user_dir_name>`), read for telemetry only: a run that
+   *  logs to `user://` lands there whatever worktree it ran in. */
+  userData?: { appDataFolder: string; telemetryDirs: readonly string[] };
 }
 
 export interface GameDef {

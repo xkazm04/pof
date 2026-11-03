@@ -584,6 +584,9 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   is `auto` (default: the game root first, then each lane), `main`, or a lane id; anything else, including a path, is a 404.
   Per table the first source that has it wins and the response names it (`from`); telemetry is every source's sessions,
   newest first (8).
+- **Engine `user://` folder** (`GameCombatLab.userData`, GTAI: `%APPDATA%/RTAI Uprising`, from the project's
+  `custom_user_dir_name`). A run that logs to `user://` lands there whatever worktree it ran in, so it is a fifth source
+  (`userdata`): telemetry only (its own `telemetryDirs`), never tables. Included only when the folder exists.
 - **Schema-tolerant, because the lanes own the schemas.** A table is an array of records, a map of id to record, or an
   object holding one under a key (preferring the table's own name); nested records flatten one level; at most 14 columns
   and 200 rows, the rest counted, not hidden silently. A telemetry file is read by key name at any depth: `hit_rate`,

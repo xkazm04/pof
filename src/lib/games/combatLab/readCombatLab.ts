@@ -11,7 +11,8 @@ import { COMBAT_TABLE_KEYS, type CombatSource, type CombatTable, type CombatTabl
 import { parseTable } from './parseTable';
 import { metricsOf, scalarsOf, ttkOf } from './parseSession';
 
-export interface SourceDir extends CombatSource { root: string }
+/** `telemetryDirs`: read these (instead of the config's) for sessions, and never for tables (the engine's user:// folder). */
+export interface SourceDir extends CombatSource { root: string; telemetryDirs?: readonly string[] }
 export const MAX_SESSIONS = 8;
 const MAX_FILE_BYTES = 2_000_000;
 
@@ -28,7 +29,7 @@ function readJson(file: string): { ok: true; doc: unknown } | { ok: false; reaso
 export function readTable(key: CombatTableKey, rel: string, sources: SourceDir[]): CombatTable {
   const empty = { columns: [], hiddenColumns: 0, rows: [] };
   let invalid: CombatTable | null = null;
-  for (const s of sources) {
+  for (const s of sources.filter((x) => !x.telemetryDirs)) {
     const r = readJson(path.join(s.root, rel));
     if (!r) continue;
     const from = { id: s.id, label: s.label };
@@ -37,13 +38,13 @@ export function readTable(key: CombatTableKey, rel: string, sources: SourceDir[]
     if (parsed.state === 'ok') return { key, file: rel, from, ...parsed };
     invalid ??= { key, file: rel, from, ...parsed };
   }
-  return invalid ?? { key, file: rel, state: 'missing', reason: `not in ${sources.map((s) => s.label).join(', ') || 'any source'}; expected at ${rel}`, ...empty };
+  return invalid ?? { key, file: rel, state: 'missing', reason: `not in ${sources.filter((s) => !s.telemetryDirs).map((s) => s.label).join(', ') || 'any source'}; expected at ${rel}`, ...empty };
 }
 
 export function readSessions(dirs: readonly string[], sources: SourceDir[], nowMs: number): TelemetrySession[] {
   const out: TelemetrySession[] = [];
   for (const s of sources) {
-    for (const rel of dirs) {
+    for (const rel of s.telemetryDirs ?? dirs) {
       const dir = path.join(s.root, rel);
       let names: string[];
       try { names = fs.readdirSync(dir).filter((n) => n.toLowerCase().endsWith('.json')); } catch { continue; }

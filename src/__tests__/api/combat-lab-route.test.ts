@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/games/[gameId]/combat-lab/route';
 
-const ENV = ['POF_GAME_ROOT_GTAI', 'POF_GAME_RUNNER_ROOTS_GTAI'] as const;
+const ENV = ['POF_GAME_ROOT_GTAI', 'POF_GAME_RUNNER_ROOTS_GTAI', 'APPDATA'] as const;
 const prev = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
 let base = '';
 const call = (gameId: string, q = '') => GET(new NextRequest(`http://localhost/api/games/${gameId}/combat-lab${q}`), { params: Promise.resolve({ gameId }) });
@@ -22,6 +22,7 @@ beforeEach(() => {
   fs.writeFileSync(path.join(eve, 'night.json'), JSON.stringify({ common: 'x', lanes: [{ id: 'gunplay', cwd: lane, brief: 'x', model: 'm', effort: 'high', iterMin: 45 }] }));
   process.env.POF_GAME_ROOT_GTAI = main;
   process.env.POF_GAME_RUNNER_ROOTS_GTAI = eve;
+  process.env.APPDATA = path.join(base, 'no-appdata'); // never the machine's real user:// folder
 });
 afterEach(() => {
   fs.rmSync(base, { recursive: true, force: true });
