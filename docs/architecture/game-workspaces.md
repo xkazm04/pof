@@ -429,12 +429,15 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
   `project/quests/<quest>/quest.json` line gets `audio: "res://…ogg"` (a String: the game's `quest_voice.gd` plays
   `audio` only when it is a String) and `audioTake: { takeId, voiceId, model }` beside it. Unproven lines are not
-  touched, so a temp voice the game's audio lane set stays until its line is proven here. The game root is
+  touched, so a temp voice the game's audio lane set stays until its line is proven here. A line an earlier
+  export left in the game (`audioTake`) whose take is no longer proven (text edit, re-cast) is listed as
+  `stale` in the report and left as is: what the game plays is the owner's call. The game root is
   `gameRootFor` (`POF_GAME_ROOT_GTAI` points tests at a fixture).
 - **UI:** `/layout?g=gtai&c=spellbook&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
   generate k takes with a direction; "Next to judge" jumps to the next line whose takes wait for a verdict), Cast
-  (voices with previews, cast, design from the bible). The queue and the open line re-read every
+  (voices with previews, cast, design from the bible). Players are native `<audio controls>` (`voiceAudio.tsx`); a
+  source that fails to load says why instead of looking silent. The queue and the open line re-read every
   `UI_TIMEOUTS.voiceRoomPoll` (5 s) while visible (`useSuspendableEffect`), so takes the CLI generates appear by themselves.
 - **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `verdicts`, `readback`, `takes`, `design`, `stock`, `voices`,
   `export`; no approve, reject or cast), driven by `/gta --voice` (`.claude/skills/gta/SKILL.md`, Voice mode).

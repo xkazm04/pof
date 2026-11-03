@@ -19,6 +19,9 @@ export interface ExportReport {
   questId: string;
   written: Array<{ lineId: string; path: string; takeId: string }>;
   skipped: Array<{ lineId: string; reason: string }>;
+  /** Lines the game still plays from an earlier export whose take is no longer proven here (a text edit or
+   *  a re-cast). Reported, never deleted: what the game plays is the owner's call. */
+  stale: Array<{ lineId: string; takeId: string; reason: string }>;
   questFile: string;
 }
 
@@ -33,14 +36,20 @@ export async function exportQuest(
   const lines = listLines(db, gameId).filter((l) => l.questId === questId);
   if (lines.length === 0) return { ok: false, error: `no queue lines for quest ${questId}` };
   const takes = listTakes(db, gameId, questId);
-  const report: ExportReport = { questId, written: [], skipped: [], questFile };
+  const report: ExportReport = { questId, written: [], skipped: [], stale: [], questFile };
+  const inGame = exportedTakes(questFile);
   const audioByLine = new Map<string, { path: string; takeId: string; voiceId: string; model: string }>();
   const cast = castMap(db, gameId);
   for (const line of lines) {
     const mine = takes.filter((t) => t.lineId === line.lineId);
     const st = lineState(line, mine, cast.get(line.speaker) ?? null);
     const take = st.approvedTakeId ? mine.find((t) => t.id === st.approvedTakeId) : undefined;
-    if (!take) { report.skipped.push({ lineId: line.lineId, reason: `not proven (${st.state})` }); continue; }
+    if (!take) {
+      report.skipped.push({ lineId: line.lineId, reason: `not proven (${st.state})` });
+      const played = inGame.get(line.lineId);
+      if (played) report.stale.push({ lineId: line.lineId, takeId: played, reason: `the game still plays take ${played.slice(0, 8)}, no longer proven here (${st.state})` });
+      continue;
+    }
     const rel = `assets/audio/voice/${questId}/${line.lineId}.ogg`;
     const err = await deps.convert(take.file, path.join(gameRoot, 'project', ...rel.split('/')));
     if (err) { report.skipped.push({ lineId: line.lineId, reason: err }); continue; }
@@ -60,4 +69,14 @@ export async function exportQuest(
     fs.writeFileSync(questFile, JSON.stringify(q, null, 2).replace(/\n/g, eol) + eol);
   }
   return { ok: true, data: report };
+}
+
+/** line id -> the take id an earlier Voice-room export left in the game (`audioTake.takeId`). */
+function exportedTakes(questFile: string): Map<string, string> {
+  try {
+    const q = JSON.parse(fs.readFileSync(questFile, 'utf8')) as { lines?: Array<{ id: string; audioTake?: { takeId?: unknown } }> };
+    return new Map((q.lines ?? []).flatMap((l) => (typeof l.audioTake?.takeId === 'string' ? [[l.id, l.audioTake.takeId] as [string, string]] : [])));
+  } catch {
+    return new Map();
+  }
 }

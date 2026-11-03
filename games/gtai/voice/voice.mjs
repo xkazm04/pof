@@ -168,6 +168,7 @@ async function main() {
       const r = await call('/export', { questId: quest });
       for (const w of r.written) out(`  wrote ${w.lineId} -> ${w.path}`);
       for (const s of r.skipped) out(`  skipped ${s.lineId}: ${s.reason}`);
+      for (const s of r.stale ?? []) out(`  STALE IN GAME ${s.lineId}: ${s.reason} (left as is; the owner decides)`);
       out(`${r.written.length} written, ${r.skipped.length} skipped (unproven lines are never exported)`);
       return;
     }

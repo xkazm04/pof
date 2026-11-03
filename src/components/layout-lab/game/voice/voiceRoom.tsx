@@ -22,7 +22,7 @@ import { useExclusivePlayback } from './voiceExclusivePlay';
 type Tab = 'queue' | 'cast';
 const TABS = [{ id: 'queue' as const, label: 'Queue' }, { id: 'cast' as const, label: 'Cast' }];
 
-interface ExportReport { written: unknown[]; skipped: unknown[] }
+interface ExportReport { written: unknown[]; skipped: unknown[]; stale: Array<{ lineId: string }> }
 
 export function VoiceRoom({ t }: { t: LabTheme }) {
   const { read, reload } = useVoiceRoom();
@@ -35,7 +35,7 @@ export function VoiceRoom({ t }: { t: LabTheme }) {
   const doExport = async (questId: string) => {
     setExportNote({ questId, text: 'Exporting…' });
     const r = await postVoice<ExportReport>('/export', { questId });
-    setExportNote({ questId, text: r.ok ? `${r.data.written.length} written · ${r.data.skipped.length} skipped (not proven)` : `Export refused: ${r.error}` });
+    setExportNote({ questId, text: r.ok ? `${r.data.written.length} written · ${r.data.skipped.length} skipped (not proven)${r.data.stale.length ? ` · the game still plays ${r.data.stale.length} no longer proven: ${r.data.stale.map((s) => s.lineId).join(', ')}` : ''}` : `Export refused: ${r.error}` });
   };
 
   const data = read.kind === 'ready' ? read.data : null;

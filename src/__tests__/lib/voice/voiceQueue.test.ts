@@ -157,6 +157,20 @@ describe('export', () => {
     expect(q.lines[0].audioTake).toEqual({ takeId: r.data[0].id, voiceId: 'stock-g', model: 'eleven_v3' });
     expect(q.lines[1].audio).toBe('res://assets/audio/voice/z2.ogg');
     expect(q.lines[1].audioTake).toBeUndefined();
+    expect(ex.data.stale).toEqual([]);
+
+    // The line's text changes in the package: its exported take is no longer proven. A second export
+    // writes nothing for it, leaves the game file as is, and REPORTS that the game still plays it.
+    writeQuest(root, 'zulu', 'act1', '2026-11-02T00:00:00Z', [
+      { id: 'z1', speaker: 'dock-guard', text: 'Rewritten guard line.' }, { id: 'z2', speaker: 'rivet', text: 'Okay. Okay okay okay.' },
+    ]);
+    syncQueue(db, 'gtai', root);
+    const before = fs.readFileSync(qf, 'utf8');
+    const again = await exportQuest(db, 'gtai', 'zulu', game, { convert: async () => { throw new Error('nothing proven: must not convert'); } });
+    if (!again.ok) throw new Error(again.error);
+    expect(again.data.written).toEqual([]);
+    expect(again.data.stale).toEqual([{ lineId: 'z1', takeId: r.data[0].id, reason: `the game still plays take ${r.data[0].id.slice(0, 8)}, no longer proven here (no-takes)` }]);
+    expect(fs.readFileSync(qf, 'utf8')).toBe(before);
   });
 });
 
