@@ -395,7 +395,8 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
     leaves the queue but keeps its takes.
   - `voice_takes`: per line, each take with its delivery direction (the words used), the text actually sent,
     the settings (model, stability, similarity, style, speed), the file, duration and loudness (ffprobe /
-    ffmpeg `ebur128`; `null` = unmeasured), and the billed characters. `voice_verdicts` is the verdict history.
+    ffmpeg `ebur128`; `null` = unmeasured), the longest internal pause (`silencedetect`; over 1.5 s the room flags a
+    possible dropout), and the billed characters. `voice_verdicts` is the verdict history.
 - **States:** `no-takes`, `awaiting-verdict`, `all-rejected`, `proven`. A line is proven only by an approved take
   on its current text (a take carries the hash of the text it spoke, so a package edit makes it stale). At most
   one approved take per line: approving another marks the previous one `superseded`, history kept. Once the speaker has a cast
