@@ -217,7 +217,7 @@ the routes `src/app/api/games/[gameId]/lanes/` (`route.ts`, `frame/route.ts`), t
   session log was written in the last 300 s) > `blocked` (every billing path blocked, or the last session hit a
   usage limit) > `pending` (no session yet, or the worktree is missing) > `report` / `freeze` / `building` by the
   runner clock. `planTimes` aims at the NEXT deadline, so a root whose lanes reported for the previous one shows
-  that finished cycle (REPORT), not tomorrow's BUILD. A lane not live for 2 h in BUILD says the runner may be down.
+  that finished cycle (REPORT), not tomorrow's BUILD. A lane not live for 2 h in BUILD says the runner may be down. While a session writes, the card shows its number (`liveSession`, from the newest `iter-NNN.jsonl`), because `state.json` lags one session behind.
 - **Frames.** `<masters>/<group>/<lane>/frames.json` (an array, or `{ frames }`) of `{ file, title, source?, note?,
   before? }`. `GET /api/games/<id>/lanes/frame?lane=&file=` serves a file ONLY when that lane's frames.json names it
   (as `file` or `before`), as a plain relative path with an image extension, whose real path stays inside the lane

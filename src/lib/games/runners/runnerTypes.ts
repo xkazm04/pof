@@ -85,6 +85,8 @@ export interface LaneView {
   stateNote?: string;
   phase?: LanePhase;
   iterations: number;
+  /** Session number of the newest `iter-NNN.jsonl` while a session is writing; `state.json` only records finished sessions, so it lags by one. */
+  liveSession?: number;
   /** Sum of `costUsd` over the lane's iterations. */
   costUsd: number;
   /** The part of it billed against the API key (the rest rode the subscription). */

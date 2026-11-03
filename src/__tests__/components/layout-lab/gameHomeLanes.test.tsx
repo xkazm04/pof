@@ -75,7 +75,7 @@ describe('GameHomeLanes', () => {
     expect(card.getAttribute('data-state')).toBe('running');
     expect(card.textContent).toContain('running');
     expect(card.textContent).toContain('claude-sonnet-5-5');
-    expect(card.textContent).toContain('3 sessions · $4.50 ($1.00 API key)');
+    expect(card.textContent).toContain('3 sessions done · $4.50 ($1.00 API key)');
     expect(screen.getByTestId('lane-commit-pof-control-room').textContent).toBe('abcdef0 feat: lanes board · 20 min ago');
     expect(screen.getByTestId('lane-journal-pof-control-room').textContent).toBe('- 11:55 MILESTONE board reads');
     const idle = screen.getByTestId('lane-card-idle');

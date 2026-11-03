@@ -82,12 +82,13 @@ export function billingOf(root: string, nowMs: number): (RunnerBilling & { allBl
   };
 }
 
-/** Seconds since the newest line of the newest session log; undefined when there is none. */
-function liveAge(logDir: string, nowMs: number): number | undefined {
+/** Seconds since the newest line of the newest session log, and that log's session number; undefined when there is none. */
+function liveLog(logDir: string, nowMs: number): { ageS: number; n: number } | undefined {
   try {
     const files = fs.readdirSync(logDir).filter((f) => /^iter-\d+\.jsonl$/.test(f)).sort();
     const last = files.at(-1);
-    return last ? Math.max(0, Math.round((nowMs - fs.statSync(path.join(logDir, last)).mtimeMs) / 1000)) : undefined;
+    if (!last) return undefined;
+    return { ageS: Math.max(0, Math.round((nowMs - fs.statSync(path.join(logDir, last)).mtimeMs) / 1000)), n: Number(/\d+/.exec(last)![0]) };
   } catch { return undefined; }
 }
 
@@ -121,7 +122,8 @@ function laneOf(root: string, l: CfgLane, c: RootCtx): LaneView {
     timedOut: last.timedOut === true, limited: last.limited === true, drained: last.drained === true, wallS: Number(last.wallS ?? 0), start: String(last.start ?? ''),
   };
   const apiCostUsd = its.filter((i) => i.billing === 'api').reduce((s, i) => s + (i.costUsd ?? 0), 0);
-  const age = liveAge(path.join(root, 'logs', l.id), c.nowMs);
+  const log = liveLog(path.join(root, 'logs', l.id), c.nowMs);
+  const age = log?.ageS;
   const { state, note } = deriveLaneState({
     cwdExists, iterations: its.length, ...(st.reportedFor ? { reportedFor: st.reportedFor } : {}), deadlines: c.sched?.deadlines ?? [],
     ...(c.sched ? { phase: c.sched.phase } : {}), ...(age !== undefined ? { liveAgeS: age } : {}),
@@ -135,7 +137,7 @@ function laneOf(root: string, l: CfgLane, c: RootCtx): LaneView {
   return {
     id: l.id, rootName: c.name, model: l.model ?? 'runner default', ...(l.effort ? { effort: l.effort } : {}), cwd: l.cwd, cwdExists,
     ...(branch ? { branch } : {}), state, ...(note ? { stateNote: note } : {}), ...(c.sched ? { phase: c.sched.phase } : {}),
-    iterations: its.length, costUsd: its.reduce((s, i) => s + (i.costUsd ?? 0), 0), apiCostUsd,
+    iterations: its.length, ...(state === 'running' && log ? { liveSession: log.n } : {}), costUsd: its.reduce((s, i) => s + (i.costUsd ?? 0), 0), apiCostUsd,
     ...(lastIteration ? { lastIteration } : {}), ...(commit ? { lastCommit: commit } : {}), ...(journal ? { lastJournalLine: journal } : {}),
     ...(report ? { report } : {}),
     frames: readFrames(c.masters, l.id, (file) => `/api/games/${c.gameId}/lanes/frame?lane=${encodeURIComponent(l.id)}&file=${encodeURIComponent(file)}`),

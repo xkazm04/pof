@@ -43,7 +43,7 @@ export function LaneCard({ lane, readAt, selected, onSelect, t }: {
       </span>
       <MicroLabel mono tone="muted">{lane.model}{lane.effort ? ` · ${lane.effort}` : ''}{lane.phase ? ` · ${lane.phase}` : ''}</MicroLabel>
       <span style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink-deep)' }}>
-        {lane.iterations} {lane.iterations === 1 ? 'session' : 'sessions'} · {costText(lane.costUsd, lane.apiCostUsd, lane.iterations)}
+        {lane.iterations} {lane.iterations === 1 ? 'session' : 'sessions'} done{lane.liveSession !== undefined ? ` · session ${lane.liveSession} running` : ''} · {costText(lane.costUsd, lane.apiCostUsd, lane.iterations)}
       </span>
       <span data-testid={`lane-commit-${lane.id}`} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, overflowWrap: 'anywhere' }}>{commitLine(lane, readAt)}</span>
       <span data-testid={`lane-journal-${lane.id}`} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, overflowWrap: 'anywhere' }}>

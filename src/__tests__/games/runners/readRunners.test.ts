@@ -56,7 +56,7 @@ describe('readRunnerRoot', () => {
     expect(v.billing?.line).toMatch(/^API key blocked until \d\d:\d\d, subscription free$/);
     expect(v.billing?.apiReason).toContain('credit balance');
     const [a, b, c] = v.lanes;
-    expect(a).toMatchObject({ id: 'lane-a', model: 'claude-opus-5-5', state: 'running', iterations: 2, costUsd: 3.25, apiCostUsd: 2, branch: 'lane-branch', hasEvidence: true });
+    expect(a).toMatchObject({ id: 'lane-a', model: 'claude-opus-5-5', state: 'running', liveSession: 2, iterations: 2, costUsd: 3.25, apiCostUsd: 2, branch: 'lane-branch', hasEvidence: true });
     expect(a.lastCommit).toEqual({ sha: 'abc1234deadbeef', subject: 'feat: the thing', at: '2026-11-03T11:50:00+01:00' });
     expect(a.lastJournalLine).toBe('- 11:55 NEXT: the next thing');
     expect(a.report).toMatchObject({ bytes: 7000, truncated: true });
@@ -74,6 +74,7 @@ describe('readRunnerRoot', () => {
     fs.utimesSync(path.join(root, 'logs/lane-a/iter-002.jsonl'), old, old);
     const v = readRunnerRoot(root, 'gtai', undefined, { now: () => NOW, git });
     expect(v.lanes[0].state).toBe('blocked');
+    expect(v.lanes[0].liveSession).toBeUndefined();
     expect(v.billing?.line).toContain('subscription blocked until');
   });
 
