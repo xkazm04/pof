@@ -24,7 +24,7 @@ const TABS = [{ id: 'queue' as const, label: 'Queue' }, { id: 'cast' as const, l
 
 interface ExportReport {
   written: Array<{ lineId: string; onLevel: boolean | null }>; skipped: unknown[]; stale: Array<{ lineId: string }>;
-  mastering: { lufs: number; truePeakDb: number; source: string };
+  mastering: { lufs: number; truePeakDb: number; source: string; refused?: string[] };
 }
 
 /** What the owner reads after Export: counts, the level the files were mastered to, any off-level or stale line. */
@@ -34,6 +34,7 @@ export function exportNoteText(r: ExportReport): string {
     `${r.written.length} written · ${r.skipped.length} skipped (not proven)`,
     r.written.length ? `mastered to ${r.mastering.lufs} LUFS / ${r.mastering.truePeakDb} dBTP (${r.mastering.source})` : '',
     off.length ? `off level after mastering, listen: ${off.join(', ')}` : '',
+    r.mastering.refused?.length ? `voice treatment refused (exported untreated): ${r.mastering.refused.join('; ')}` : '',
     r.stale.length ? `the game still plays ${r.stale.length} no longer proven: ${r.stale.map((s) => s.lineId).join(', ')}` : '',
   ].filter(Boolean).join(' · ');
 }

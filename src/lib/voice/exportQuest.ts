@@ -21,7 +21,8 @@ import type { Result } from '@/types/result';
 export interface ExportReport {
   questId: string;
   /** `lufs`: the written file's measured level (null = unmeasured); `onLevel`: within MASTER_TOLERANCE_LU of the target. */
-  written: Array<{ lineId: string; path: string; takeId: string; lufs: number | null; onLevel: boolean | null }>;
+  /** `treatment`: the filter chain the speaker is heard through in the game (from `voice_treatments`), if any. */
+  written: Array<{ lineId: string; path: string; takeId: string; lufs: number | null; onLevel: boolean | null; treatment?: string }>;
   /** The level every written file was mastered to, and where that target came from. */
   mastering: VoiceMasterTarget;
   skipped: Array<{ lineId: string; reason: string }>;
@@ -32,7 +33,7 @@ export interface ExportReport {
 }
 
 export interface ExportDeps {
-  convert: (src: string, dst: string, target: VoiceMasterTarget) => Promise<string | null>;
+  convert: (src: string, dst: string, target: VoiceMasterTarget, treatment?: string) => Promise<string | null>;
   measureLufs: (abs: string) => Promise<number | null>;
 }
 
@@ -64,12 +65,13 @@ export async function exportQuest(
     }
     const rel = `assets/audio/voice/${questId}/${line.lineId}.ogg`;
     const dst = path.join(gameRoot, 'project', ...rel.split('/'));
-    const err = await deps.convert(take.file, dst, mastering);
+    const treatment = mastering.treatments?.[line.speaker];
+    const err = await deps.convert(take.file, dst, mastering, treatment);
     if (err) { report.skipped.push({ lineId: line.lineId, reason: err }); continue; }
     const lufs = await deps.measureLufs(dst);
     audioByLine.set(line.lineId, { path: `res://${rel}`, takeId: take.id, voiceId: take.providerVoiceId, model: take.settings.model });
     const onLevel = lufs === null ? null : Math.abs(lufs - mastering.lufs) <= MASTER_TOLERANCE_LU;
-    report.written.push({ lineId: line.lineId, path: `res://${rel}`, takeId: take.id, lufs, onLevel });
+    report.written.push({ lineId: line.lineId, path: `res://${rel}`, takeId: take.id, lufs, onLevel, ...(treatment ? { treatment } : {}) });
   }
   if (audioByLine.size > 0) {
     const raw = fs.readFileSync(questFile, 'utf8');

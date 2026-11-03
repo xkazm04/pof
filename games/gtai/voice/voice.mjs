@@ -167,7 +167,8 @@ async function main() {
       if (!quest) throw new Error('export needs --quest <id>');
       const r = await call('/export', { questId: quest });
       if (r.written.length && r.mastering) out(`mastered to ${r.mastering.lufs} LUFS / ${r.mastering.truePeakDb} dBTP, mono (${r.mastering.source})`);
-      for (const w of r.written) out(`  wrote ${w.lineId} -> ${w.path}${w.lufs == null ? ' (level unmeasured)' : ` at ${w.lufs} LUFS${w.onLevel === false ? ' OFF LEVEL: listen' : ''}`}`);
+      for (const x of r.mastering?.refused ?? []) out(`  TREATMENT REFUSED ${x} (that voice exported untreated)`);
+      for (const w of r.written) out(`  wrote ${w.lineId} -> ${w.path}${w.lufs == null ? ' (level unmeasured)' : ` at ${w.lufs} LUFS${w.onLevel === false ? ' OFF LEVEL: listen' : ''}`}${w.treatment ? ` through ${w.treatment}` : ''}`);
       for (const s of r.skipped) out(`  skipped ${s.lineId}: ${s.reason}`);
       for (const s of r.stale ?? []) out(`  STALE IN GAME ${s.lineId}: ${s.reason} (left as is; the owner decides)`);
       out(`${r.written.length} written, ${r.skipped.length} skipped (unproven lines are never exported)`);

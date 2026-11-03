@@ -11,7 +11,7 @@ import { createVoiceDb, listTakes, setVerdict, castVoice, listVoices, verdictFee
 import { queueEntries, statusView, syncQueue } from '@/lib/voice/lineQueue';
 import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate, bibleDescription, designForCharacter, ORIGINAL_VOICE_CLAUSE, readBible } from '@/lib/voice/design';
-import { DEFAULT_VOICE_TARGET, MIX_TABLE, masterArgs, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
+import { DEFAULT_VOICE_TARGET, MIX_TABLE, isSafeTreatment, masterArgs, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
 import { exportQuest } from '@/lib/voice/exportQuest';
 import { directionTags, speechText } from '@/lib/audio-gen/providers/elevenlabs-speech';
 import { makeFixtureRoot, makeGameRoot, writeQuest } from './voiceFixture';
@@ -194,6 +194,35 @@ describe('export', () => {
     expect(voiceMasterTarget(game).source).toContain('no usable loudness');
     const args = masterArgs('in.mp3', 'out.ogg', { lufs: -18, truePeakDb: -2, source: 'x' });
     expect(args.join(' ')).toContain('-ac 1 -ar 44100 -af loudnorm=I=-18:TP=-2:LRA=11 -c:a libvorbis -q:a 4 out.ogg');
+  });
+
+  it('a speaker treatment from voice_treatments is applied before loudnorm; a chain with a non-tone filter is refused, named', async () => {
+    syncQueue(db, 'gtai', root);
+    addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
+    const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 1, direction: '' }, deps);
+    if (!r.ok) throw new Error(r.error);
+    setVerdict(db, r.data[0].id, 'approved', 'yes');
+    const game = makeGameRoot('zulu', ['z1', 'z2']);
+    const table = path.join(game, 'project', 'data', 'tables');
+    fs.mkdirSync(table, { recursive: true });
+    const phone = 'highpass=f=320, lowpass=f=3400,acompressor=threshold=-20dB:ratio=3';
+    fs.writeFileSync(path.join(table, 'audio_mix.json'), JSON.stringify({
+      loudness: { voice_lufs: -18, voice_true_peak_db: -2 },
+      voice_treatments: { 'dock-guard': phone, rivet: 'amovie=elsewhere.wav,lowpass=f=1000' },
+    }));
+    const seen: Array<string | undefined> = [];
+    const ex = await exportQuest(db, 'gtai', 'zulu', game, {
+      convert: async (_s, d, _t, tr) => { seen.push(tr); fs.mkdirSync(path.dirname(d), { recursive: true }); fs.writeFileSync(d, 'ogg'); return null; },
+      measureLufs: async () => -18.2,
+    });
+    if (!ex.ok) throw new Error(ex.error);
+    const chain = 'highpass=f=320,lowpass=f=3400,acompressor=threshold=-20dB:ratio=3';
+    expect(seen).toEqual([chain]);
+    expect(ex.data.written[0]).toMatchObject({ lineId: 'z1', treatment: chain, onLevel: true });
+    expect(ex.data.mastering.treatments).toEqual({ 'dock-guard': chain });
+    expect(ex.data.mastering.refused).toEqual(['rivet: only highpass, lowpass, bandpass, equalizer, acompressor, volume are accepted']);
+    expect(masterArgs('a.mp3', 'b.ogg', ex.data.mastering, chain)).toContain(`${chain},loudnorm=I=-18:TP=-2:LRA=11`);
+    expect(isSafeTreatment('lowpass=f=3400;amovie=x')).toBe(false);
   });
 });
 

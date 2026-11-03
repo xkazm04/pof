@@ -444,6 +444,10 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   fallback), Vorbis q4. It is measured after: the report carries `mastering` (target + source) and per line
   `lufs` / `onLevel` (within 1.5 LU). Provider takes arrive anywhere from -14 to -30 LUFS; unmastered, a
   whispered take would play about 12 LU under the mix the voice bus and duck were tuned for.
+  A speaker the game hears through a device (Patch, the payphone router) gets its filter chain from the same
+  table's optional `voice_treatments: { "<speaker>": "<ffmpeg chain>" }`, applied before loudnorm; only
+  tone filters (`TREATMENT_FILTERS`: highpass, lowpass, bandpass, equalizer, acompressor, volume) are
+  accepted, anything else is refused, named in the report, and that voice exports untreated.
 - **UI:** `/layout?g=gtai&c=spellbook&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
   generate k takes with a direction; "Next to judge" jumps to the next line whose takes wait for a verdict), Cast

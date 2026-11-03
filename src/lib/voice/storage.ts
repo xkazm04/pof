@@ -78,8 +78,8 @@ export async function measureAudio(abs: string): Promise<AudioMeasure> {
 
 /** mp3 → mastered mono Ogg Vorbis at the game's voice target (Godot plays Vorbis; ElevenLabs offers no
  *  ogg output). Resolves an error or null. */
-export async function convertToOgg(src: string, dst: string, target: VoiceMasterTarget): Promise<string | null> {
+export async function convertToOgg(src: string, dst: string, target: VoiceMasterTarget, treatment?: string): Promise<string | null> {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
-  const r = await run('ffmpeg', masterArgs(src, dst, target));
+  const r = await run('ffmpeg', masterArgs(src, dst, target, treatment));
   return r ? null : `ffmpeg could not master ${path.basename(src)} to ogg`;
 }
