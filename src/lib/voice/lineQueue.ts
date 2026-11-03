@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { loadLedger } from '@/lib/games/gtai-quest/loadContext';
 import type { QuestPackage } from '@/lib/games/gtai-quest/types';
-import { listLines, listTakes, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
+import { listLines, listTakes, listVoices, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
 import type { LineState, QueueEntry, QueueLine, TakeRow, VoiceStatusView } from '@/lib/voice/types';
 
 export const hashText = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
@@ -49,11 +49,20 @@ export function syncQueue(db: Database.Database, gameId: string, root: string, a
   return listLines(db, gameId);
 }
 
-/** A take counts only for the text it spoke: a package edit makes it stale. */
-export const isCurrent = (t: TakeRow, line: QueueLine): boolean => t.textHash === line.textHash;
+/**
+ * A take counts only for the text it spoke (a package edit makes it stale) and, once the speaker has a
+ * cast voice, only in that voice: re-casting is a re-cast event (registry `game-dialogue-voice-pipeline`).
+ */
+export const isCurrent = (t: TakeRow, line: QueueLine, castVoiceId: string | null = null): boolean =>
+  t.textHash === line.textHash && (castVoiceId === null || t.voiceId === castVoiceId);
 
-export function lineState(line: QueueLine, takes: readonly TakeRow[]): { state: LineState; approvedTakeId: string | null; pending: number } {
-  const current = takes.filter((t) => isCurrent(t, line));
+/** speaker -> cast voice row id. */
+export function castMap(db: Database.Database, gameId: string): Map<string, string> {
+  return new Map(listVoices(db, gameId).filter((v) => v.status === 'cast').map((v) => [v.characterId, v.id]));
+}
+
+export function lineState(line: QueueLine, takes: readonly TakeRow[], castVoiceId: string | null = null): { state: LineState; approvedTakeId: string | null; pending: number } {
+  const current = takes.filter((t) => isCurrent(t, line, castVoiceId));
   const approved = current.find((t) => t.verdict === 'approved') ?? null;
   const pending = current.filter((t) => t.verdict === 'pending').length;
   if (approved) return { state: 'proven', approvedTakeId: approved.id, pending };
@@ -67,9 +76,11 @@ export function queueEntries(db: Database.Database, gameId: string, lines: reado
     const k = `${t.questId}/${t.lineId}`;
     byLine.set(k, [...(byLine.get(k) ?? []), t]);
   }
+  const cast = castMap(db, gameId);
   return lines.map((l) => {
-    const takes = (byLine.get(`${l.questId}/${l.lineId}`) ?? []).filter((t) => isCurrent(t, l));
-    return { ...l, ...lineState(l, takes), takes: takes.length };
+    const c = cast.get(l.speaker) ?? null;
+    const takes = (byLine.get(`${l.questId}/${l.lineId}`) ?? []).filter((t) => isCurrent(t, l, c));
+    return { ...l, ...lineState(l, takes, c), takes: takes.length };
   });
 }
 

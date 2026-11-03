@@ -39,7 +39,7 @@ export function defaultSettings(over: Partial<TakeSettings> = {}): TakeSettings 
     model,
     stability: clamp(over.stability, 0, 1, 0.5),
     similarityBoost: clamp(over.similarityBoost, 0, 1, 0.75),
-    style: clamp(over.style, 0, 1, 0.3),
+    style: clamp(over.style, 0, 1, 0),
     speed: clamp(over.speed, 0.7, 1.2, 1),
   };
 }

@@ -128,7 +128,24 @@ describe('export', () => {
     expect(ex.data.skipped).toEqual([{ lineId: 'z2', reason: 'not proven (no-takes)' }]);
     expect(converted).toEqual([path.join(game, 'project', 'assets', 'audio', 'voice', 'zulu', 'z1.ogg')]);
     const q = JSON.parse(fs.readFileSync(path.join(game, 'project', 'quests', 'zulu', 'quest.json'), 'utf8'));
-    expect(q.lines[0].audio).toEqual({ path: 'res://assets/audio/voice/zulu/z1.ogg', takeId: r.data[0].id, voiceId: 'stock-g' });
+    expect(q.lines[0].audio).toEqual({ path: 'res://assets/audio/voice/zulu/z1.ogg', takeId: r.data[0].id, voiceId: 'stock-g', model: 'eleven_v3' });
     expect(q.lines[1].audio).toBeNull();
+  });
+});
+
+describe('re-cast', () => {
+  it('casting a different voice un-proves lines approved in the old voice (a re-cast event)', async () => {
+    syncQueue(db, 'gtai', root);
+    const a = addStockCandidate(db, 'gtai', 'rivet', 'stock-a', 'A', null, 1);
+    const b = addStockCandidate(db, 'gtai', 'rivet', 'stock-b', 'B', null, 2);
+    const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z2', n: 1, direction: '', voiceId: a.id }, deps);
+    if (!r.ok) throw new Error(r.error);
+    setVerdict(db, r.data[0].id, 'approved', 'ok');
+    const proven = () => queueEntries(db, 'gtai', syncQueue(db, 'gtai', root)).find((e) => e.lineId === 'z2')!.state;
+    expect(proven()).toBe('proven');
+    castVoice(db, a.id);
+    expect(proven()).toBe('proven');
+    castVoice(db, b.id);
+    expect(proven()).toBe('no-takes');
   });
 });

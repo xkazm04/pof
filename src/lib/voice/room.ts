@@ -4,7 +4,7 @@
  */
 import type Database from 'better-sqlite3';
 import { listTakes, listVoices, totalChars, verdictHistory, getLine } from '@/lib/voice/voice-db';
-import { isCurrent, queueEntries, questTitles, statusView, syncQueue } from '@/lib/voice/lineQueue';
+import { castMap, isCurrent, queueEntries, questTitles, statusView, syncQueue } from '@/lib/voice/lineQueue';
 import { readBible } from '@/lib/voice/design';
 import type { QueueEntry, TakeRow, VerdictEvent, VoiceRow, VoiceStatusView } from '@/lib/voice/types';
 
@@ -15,7 +15,7 @@ export function roomState(db: Database.Database, gameId: string, root: string, n
   return { status: statusView(queue, questTitles(root), totalChars(db, gameId), nextN), queue, voices: listVoices(db, gameId) };
 }
 
-/** A take as the client sees it: no absolute file path, plus whether it is on the current text. */
+/** A take as the client sees it: no absolute file path, plus `stale` (older text, or not the cast voice). */
 export type TakeView = Omit<TakeRow, 'file'> & { stale: boolean };
 
 export interface LineDetail {
@@ -41,7 +41,7 @@ export function lineDetail(db: Database.Database, gameId: string, root: string, 
   return {
     line: entry,
     bible: readBible(root, line.speaker),
-    takes: takes.map((t) => takeView(t, !isCurrent(t, line))).reverse(),
+    takes: takes.map((t) => takeView(t, !isCurrent(t, line, castMap(db, gameId).get(line.speaker) ?? null))).reverse(),
     history: verdictHistory(db, takes.map((t) => t.id)),
     voices: listVoices(db, gameId).filter((v) => v.characterId === line.speaker),
   };
