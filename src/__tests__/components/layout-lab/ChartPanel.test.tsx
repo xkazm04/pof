@@ -33,6 +33,12 @@ describe('scaleLinear', () => {
 });
 
 describe('<ChartPanel variant="bars" />', () => {
+  it('prints valueText instead of the bare number when a row gives one', () => {
+    render(<ChartPanel t={LIGHT} variant="bars" rows={[{ label: 'fast', value: 0.08, valueText: '0.08', unit: 's' }, { label: 'slow', value: 1, valueText: '1.00', unit: 's' }]} />);
+    expect(screen.getByText('1.00s')).toBeTruthy();
+    expect(screen.queryByText('1s')).toBeNull();
+  });
+
   it('renders one row per datum and uses theme tokens for highlight color', () => {
     const { container } = render(
       <ChartPanel

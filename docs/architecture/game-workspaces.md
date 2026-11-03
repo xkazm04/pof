@@ -542,3 +542,102 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
 - **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, line class + scene + column migration,
   supersede, design, export) and the
   gate refusal test above.
+
+## Decisions room (GTAI)
+
+The day lanes ask the owner design questions while the owner is at the machine; the owner answers here (lane
+pof-arena, 2026-11-03). `?room=decisions` on the Game home, next to the Voice room. Sources:
+`src/lib/games/decisions/` (`decisionTypes.ts` wire shape, client-safe; `decisionsConfig.ts`, `readDecisions.ts`,
+`writeAnswer.ts`), routes `src/app/api/games/[gameId]/decisions/` (`route.ts`, `gate/route.ts`, `media/route.ts`), UI
+`layout-lab/game/decisions/`. Tests: `src/__tests__/games/decisions/`, `src/__tests__/api/decisions-gate.test.ts`,
+`src/__tests__/components/layout-lab/decisionsRoom.test.tsx`.
+
+- **The two on-disk shapes belong to the lanes; nothing renames them.** Ask: `<root>/asks/<lane>-<n>.json` =
+  `{ id, lane, question, options: [{ key, label, tradeoff, frames: [abs png/jpg/webp/gif/mp4/webm paths] }], default, asked }`.
+  Answers: `<root>/answers.json` = `{ answers: [{ id, choice, note, at }] }`; the lanes re-read it about every 20 minutes.
+- **Config, not constants.** `GameDef.decisions = { root }` (GTAI: `../gtai-eve/decisions`, relative to the PoF repo root:
+  `POF_GAMES_ROOT`, else cwd); env override `POF_GAME_DECISIONS_<ID>`. A game with none answers `configured: false` with
+  the reason. A PoF worktree is not a sibling of `gtai-eve`, so set the env var there.
+- **Reader** (`readDecisionsBoard`). Open asks first, newest `asked` first (file mtime when `asked` does not parse), then
+  answered ones, newest answer first. An ask that cannot be used (bad id, no question, no options, duplicate option key,
+  duplicate id) is listed as a `problem` with its reason, never hidden and never repaired. A `default` that is not an option
+  key is dropped. A listed frame that is missing, not a file or an unsupported type is shown as `unservable` with the reason.
+- **Media door** (`GET .../decisions/media?ask=&opt=&n=`). The path comes from the ask file (option `opt`, entry `n`), never
+  from the query, and only an existing media file is served; byte ranges are honoured (clips scrub). A text frame (a lane's TTK `.md`/`.txt`/`.csv`/`.log`,
+  cap 1 MB) is served as `text/plain` and shown in a `<pre>` fetched on first open; a file of any other type, a
+  missing file, an unknown ask/option/index or a bad id is 400/404 in the envelope.
+  A clip or image that fails in the browser (a lane may still be encoding it: an mp4 without its `moov` atom) says so and
+  offers **Retry**, which re-requests with a fresh `&retry=n` so the 30 s private cache does not replay the failure.
+- **Writing an answer is a human action.** `POST .../decisions` `{ id, choice, note? }` uses the Voice room's gate
+  (`@/lib/voice/gate`: a same-origin browser fetch plus the page token from `GET .../decisions/gate`); the CLI and the
+  agents get 403. `choice` must be one of that ask's option keys; the note is capped at 2000 characters.
+- **The write is safe with seven lanes reading** (`writeAnswer`): temp file in the same folder, then rename (retried on
+  Windows); every earlier answer and unknown key is kept; one entry per ask id, so a lane taking the first match and one taking
+  the last read the same thing; changing an answer replaces that id's entry and appends the replaced one to
+  `answers.history.jsonl`; an unreadable `answers.json` is refused (409), never overwritten; ask files are never opened for
+  write; writes are serialised in the process.
+- **UI.** `DecisionsRoom` polls every `UI_TIMEOUTS.decisionsPoll` (10 s, `useSuspendableEffect`); a failed poll keeps the last
+  board and says it is stale. A card shows the options side by side (label, trade-off, frames and clips, the lane's default
+  tagged), a radio choice, a note, Save (disabled until an option is picked and the token has arrived). Draft state is
+  per card, so a poll never wipes a note.
+
+## Combat lab (GTAI)
+
+Where the owner judges combat design (lane pof-arena, 2026-11-03): the weapon / enemy / power tables the combat lanes
+write, a measured time-to-kill chart and the latest arena telemetry. `?room=combat` on the Game home. Sources:
+`src/lib/games/combatLab/` (`combatTypes.ts` wire shape, client-safe; `parseTable.ts`, `parseSession.ts` pure;
+`combatSources.ts`, `readCombatLab.ts` fs), route `src/app/api/games/[gameId]/combat-lab/route.ts`, UI
+`layout-lab/game/combat/`. Tests: `src/__tests__/games/combatLab/`, `src/__tests__/api/combat-lab-route.test.ts`,
+`src/__tests__/components/layout-lab/combatLabRoom.test.tsx`.
+
+- **Config, not constants.** `GameDef.combatLab = { tables: { weapons, enemies, powers }, telemetryDirs, laneRoots }`
+  (paths relative to a game root or a lane worktree; `laneRoots` are runner-root folder names, GTAI: `gtai-eve`, which is
+  also in `runners.roots`). The tables are owned by three different lanes (`gunplay` -> `weapons.json`, `enemy-ai` ->
+  `enemies.json`, `ghost-powers` -> `powers.json`), each on its own `e-*` branch tonight, on the game's main after the merge.
+  `tables.melee` is optional (GTAI: `rivet_melee.json`, rivet-motion's timing data, schema `gtai.rivet-melee/1`: groups
+  `claw.hits[]` + `shock`, 60 Hz ticks; `meleeRecords.ts` flattens it to one row per hit and derives `windup_s` / `cycle_s`);
+  a configured melee table that is absent reads "not written yet" like the others, an unconfigured one is not listed.
+- **Sources** (`resolveSources`). `main` = `gameRootFor`; every lane worktree that exists in a `laneRoots` root. `?source=`
+  is `auto` (default: the game root first, then each lane), `main`, or a lane id; anything else, including a path, is a 404.
+  Per table the first source that has it wins and the response names it (`from`); telemetry is every source's sessions,
+  newest first (8).
+- **Engine `user://` folder** (`GameCombatLab.userData`, GTAI: `%APPDATA%/RTAI Uprising`, from the project's
+  `custom_user_dir_name`). A run that logs to `user://` lands there whatever worktree it ran in, so it is a fifth source
+  (`userdata`): telemetry only (its own `telemetryDirs`), never tables. Included only when the folder exists.
+- **Schema-tolerant, because the lanes own the schemas.** A table is an array of records, a map of id to record, or an
+  object holding one under a key (preferring the table's own name); nested records flatten one level; at most 14 columns
+  and 200 rows, the rest counted, not hidden silently. A telemetry file is read by key name at any depth: `hit_rate`,
+  `damage_taken`, `latency`, `dodge`, `knockdown`, `turn_rate`, and time to kill as `{ weapon: { range: s } }`,
+  `{ weapon: { range: { mean } } }`, a record list, or the arena lane's own `gtai.arena-telemetry/1` `ttk_s`
+  (`{ "static_05m": [seconds, ...] }`: the spawn id carries motion + range; seconds are averaged per spawn, labelled
+  with the session's `weapon` when it names one). The arena writes `-1` for a latency it never measured and `0` for the
+  hit rate of a no-shot session; both read "not recorded". **The arena brief names no telemetry folder** (its
+  `ArenaSession.write_telemetry(path)` takes the caller's path), so `telemetryDirs` lists every plausible one; once a real
+  session file lands, narrow the list.
+- **Session columns.** Hit rate, damage taken, latency, dodges, knockdowns, turn rate (deg/s) and top speed (m/s) are always
+  columns; `course_time_s`, the pit's `pit_done_s` / `pit_kills` / `pit_waves_cleared` and `shots_stopped_by_cover` are
+  columns only once some session records them (pit kills / waves count only when `pit_waves` is above 0). Values round to two
+  decimals; the arena logs raw floats.
+- **Design-side TTK** (`predictTtk.ts`, `combat/combatDesignTtk.tsx`): beside the measured chart, the weapons table's own
+  arithmetic for a chosen target (the table's `targets`, `{ id, hp }`) and range: shots = ceil(hp / (damage x pellets)),
+  time = gaps at `rof_hz` + a reload per emptied `magazine` + `range / speed_mps`. A perfect shooter (no spread, splash or
+  damage-over-time), labelled as such; disabled / out-of-range / unmodelled weapons are listed, not drawn. Table columns lead
+  with the ones a designer reads first (`LEAD` in `parseTable.ts`) and put `doc` prose last.
+- **Absent is never zero.** A table that is not there is `missing` with the paths looked in; one that cannot be read is
+  `invalid` with the parse reason; a metric a session did not record reads "not recorded"; no session says where the file
+  is expected, and no chart is drawn from the table or a guess.
+- **UI.** `CombatLabRoom` polls every `UI_TIMEOUTS.combatLabPoll` (20 s, `useSuspendableEffect`), keeps the last read when a
+  poll fails and says so. Time to kill by range is the shared `ChartPanel` bars (one row per weapon at a range, fastest at
+  each range highlighted); tables and sessions are the shared `DataTable`.
+- **Arena stations** (`GameCombatLab.stationsDir`, GTAI `project/data/tables/arena_stations`; `readStations.ts`). The arena
+  lane's brief makes every lane plug in through one `arena_stations/<lane>.json`. The real files hold a `stations` array
+  (`{ lane, schema, stations: [{ id, name, area|kind, spawns[], props[], tuning[], measures[] }] }`, several stations per
+  file; a bare station object also reads). The room lists one row per station across the sources, counting by key name
+  (`spawn*`, `prop*`, `tun*`/`expose*`, `measure*`/`report*`; `kind` stands in for a missing `area`); a count the entry lacks
+  reads "not in file", an unparseable file is flagged, and no files says where they are expected. The wire field `stations` is optional so an older server still renders. A lane file carried by several worktrees (the arena worktree holds a copy of `ghost-powers.json`) lists once per `(file, station id)`: the copy from the lane whose id equals the file name wins, else the first source read.
+- **Lane-written JSON is read BOM/UTF-16 tolerant** (`src/lib/games/laneJson.ts`): asks, `answers.json`, tables, telemetry and station
+  files all go through `readLaneJsonFile`, because a lane on Windows may save with PowerShell (UTF-8 BOM or UTF-16) and a bare
+  `JSON.parse` would turn an ask into "unreadable" and `answers.json` into "unusable" (which also blocks the answer writer). What PoF
+  writes back (`answers.json`) is always plain UTF-8. A lane that forgets to escape Windows paths in a frame list is repaired
+  once on a failed parse (`escapeWindowsPaths`: only drive-letter path runs get their backslashes doubled), so the ask is not
+  hidden from the owner (visual-fixes-1 on 2026-11-03); any other broken JSON stays unreadable.

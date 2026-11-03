@@ -48,6 +48,31 @@ export interface GameRunners {
   masters: string;
 }
 
+/**
+ * Where lanes leave the owner design questions (`asks/<lane>-<n>.json`) and where answers go (`answers.json`);
+ * relative to the PoF repo root. Env override `POF_GAME_DECISIONS_<ID>` (`decisionsConfig.ts`).
+ */
+export interface GameDecisions {
+  root: string;
+}
+
+/**
+ * The combat lab's inputs: the game tables the combat lanes write (paths relative to a game root OR a lane
+ * worktree), the folders the arena writes per-session telemetry JSON into, and the runner roots (by folder name)
+ * whose lanes are searched. Nothing is hard-coded in the reader.
+ */
+export interface GameCombatLab {
+  /** `melee` is optional: rivet-motion keeps its timing data in `rivet_melee.json` (grouped, 60 Hz ticks) beside the shared weapons table. */
+  tables: { weapons: string; enemies: string; powers: string; melee?: string };
+  telemetryDirs: readonly string[];
+  /** Folder (relative to a root) where every lane drops its arena station file. */
+  stationsDir?: string;
+  laneRoots: readonly string[];
+  /** The engine's `user://` folder (Godot: `%APPDATA%/<custom_user_dir_name>`), read for telemetry only: a run that
+   *  logs to `user://` lands there whatever worktree it ran in. */
+  userData?: { appDataFolder: string; telemetryDirs: readonly string[] };
+}
+
 export interface GameDef {
   id: GameId;
   title: string;
@@ -60,6 +85,10 @@ export interface GameDef {
   designDir?: string;
   /** Lane runner roots + the masters folder; OMIT = the game has no lane runners. */
   runners?: GameRunners;
+  /** Owner design-decision folder; OMIT = the game has no decision board. */
+  decisions?: GameDecisions;
+  /** Combat lab inputs; OMIT = the game has no combat lab. */
+  combatLab?: GameCombatLab;
 }
 
 /** The split a game's manifest makes of the registered pipelines. */
