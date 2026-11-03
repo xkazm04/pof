@@ -180,3 +180,12 @@ test('smoke: init into a temp root, status with no lanes, run refuses with exit 
   assert.equal(node('report').status, 0);
   assert.match(fs.readFileSync(path.join(root, 'SCOREBOARD.md'), 'utf8'), /\| ghost \| 0 \|/);
 });
+
+test('the 5-hour subscription limit is a LIMIT that waits for its reset (2026-11-03: 2.5 h of 2-minute retries)', () => {
+  const now = new Date(2026, 10, 3, 13, 12).getTime();
+  const r = classifyFailure({ mode: 'subscription', timedOut: false, errSurface: "You've hit your 5-hour limit · resets 3:40pm (Europe/Prague)", nowMs: now });
+  assert.equal(r.limited, true);
+  assert.equal(new Date(r.resetAt).getHours(), 15);
+  assert.equal(new Date(r.resetAt).getMinutes(), 41);
+  assert.equal(classifyFailure({ mode: 'subscription', timedOut: false, errSurface: '"api_error":"usage_limit_reached"', nowMs: now }).limited, true);
+});

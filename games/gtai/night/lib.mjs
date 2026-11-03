@@ -115,7 +115,7 @@ Evidence goes under ${evidence}/ in the lane cwd.`;
 // unblocks a path in a running night.
 export const API_REPROBE_MIN = 45;
 export const API_DRAINED = /credit balance is too low|insufficient[_ ]credit|specified API usage limits|API usage limits|billing|payment required|\b402\b|invalid x-api-key|invalid api key|authentication_error|permission_error/i;
-export const LIMITED = /usage limit|limit reached|hit your limit|rate.?limit|\b429\b|overloaded|quota/i;
+export const LIMITED = /usage limit|usage_limit_reached|limit reached|hit your (?:[\w-]+ )?limit|rate.?limit|\b429\b|overloaded|quota/i;
 
 export function apiKeyFromText(text) {
   const m = String(text ?? '').match(/^\s*(?:ANTHROPIC_API_KEY|ANTRHOPIC_API_KEY)\s*=\s*["']?([^"'\r\n]+)["']?\s*$/m);
