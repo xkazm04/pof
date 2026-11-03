@@ -50,7 +50,7 @@ export function planFacts(p: PlanFacts): Res {
   if (!p.parsed) return bad('package does not parse', `not gtai.quest/1 — ${p.error ?? 'unknown parse error'}`);
   const empty = [!p.whyNotFiller.trim() && 'whyNotFiller', !p.ownerNotes.trim() && 'provenance.ownerNotes'].filter(Boolean) as string[];
   if (empty.length) return bad(`${empty.length} required field(s) empty`, `empty: ${list(empty)} — no quest is filler, and the owner's fusion notes are kept verbatim`);
-  return ok(`"${p.title}" · ${p.act} · ${p.beats.length} beats · ${p.characters.length} characters`);
+  return ok(`"${p.title}" · ${p.act} · ${p.beats.length} beats · ${p.autosavePoints.length} autosave point(s) · ${p.characters.length} characters`);
 }
 
 export function guardsFacts(g: GuardsFacts): Res {

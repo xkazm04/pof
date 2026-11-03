@@ -60,7 +60,7 @@ registerCatalogPipeline({
     step('plan', 'Plan', 'rules', 'Claude', [
       'Protocol step 4: compose games/gtai/quests/<id>/quest.json (gtai.quest/1) from the owner\'s fusion, provenance.ownerNotes verbatim.',
       'Accepted when quest.json parses as gtai.quest/1 with a non-empty whyNotFiller and provenance.ownerNotes.',
-    ], 'Stub: re-shows the fused design the last sync read (logline, goal, whyNotFiller, beats, characters, ownerNotes).'),
+    ], 'Stub: re-shows the fused design the last sync read (logline, goal, whyNotFiller, beats, autosave points, characters, ownerNotes).'),
     step('guards', 'Guards', 'manifest', 'Code', [
       'Protocol step 4-5: `council.mjs check <questDir>` until green (a red guard needs an owner override with its reason in `overrides`), then `council.mjs judge <questDir> --author <seat>`.',
       'Accepted only when no guard is blocked, none is unmeasured, and verdicts/lines.judge.json is present.',

@@ -11,7 +11,7 @@ import { CLEAN, ECONOMY, LEDGER_QUEST, ctx, mutate } from '@/__tests__/games/gta
 describe('assessQuest', () => {
   it('passes the clean fixture through every guard', () => {
     const v = assessQuest('per-my-last-fax', CLEAN, ctx());
-    expect(v.guards.map((g) => [g.guard, g.state])).toEqual([['story', 'green'], ['economy', 'green'], ['lines', 'green'], ['uniqueness', 'green'], ['vocabulary', 'green']]);
+    expect(v.guards.map((g) => [g.guard, g.state])).toEqual([['story', 'green'], ['economy', 'green'], ['lines', 'green'], ['uniqueness', 'green'], ['vocabulary', 'green'], ['autosave', 'green']]);
     expect(v.blocked).toBe(false);
   });
 

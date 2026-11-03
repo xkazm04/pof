@@ -46,6 +46,12 @@ function printVocabulary(v: QuestVerdict): void {
   for (const f of g.findings) console.error(`vocabulary ${f.severity === 'error' ? 'FAIL' : 'warn'} ${f.code}${f.ref ? ` @ ${f.ref}` : ''}: ${f.message}`);
 }
 
+/** Every autosave point that is wrong (or the missing list), one per line, named by its point id. */
+function printAutosave(v: QuestVerdict): void {
+  const g = v.guards.find((x) => x.guard === 'autosave');
+  for (const f of g?.findings ?? []) console.error(`autosave ${f.severity === 'error' ? 'FAIL' : 'warn'} ${f.code}${f.ref ? ` @ ${f.ref}` : ''}: ${f.message}`);
+}
+
 function summary(v: QuestVerdict): string {
   const chips = v.guards.map((g) => `${g.guard} ${GLYPH[g.state] ?? g.state} (${g.findings.length})`).join('  ');
   return `${v.subject}: ${chips}${v.blocked ? `  BLOCKED by ${v.blockedBy.join(', ')}` : ''}`;
@@ -70,6 +76,7 @@ function assessRun(runDir: string, gameRoot?: string): number {
     verdicts[p.pathId] = assessQuest(p.pathId, p, ctx);
     console.log(summary(verdicts[p.pathId]));
     printVocabulary(verdicts[p.pathId]);
+    printAutosave(verdicts[p.pathId]);
   }
   fs.writeFileSync(path.join(runDir, 'verdicts.json'), `${JSON.stringify(verdicts, null, 2)}\n`);
   console.log(`verdicts: ${Object.keys(verdicts).length} path(s) -> ${path.join(runDir, 'verdicts.json')}`);
@@ -85,10 +92,11 @@ function checkPackage(questDir: string, args: string[]): number {
   }
   const pkg = JSON.parse(fs.readFileSync(file, 'utf8')) as QuestPackage;
   const ctx = loadQuestContext(process.cwd(), readJudge(questDir), gameRoot);
-  const v = assessQuest(pkg.id, pkg, ctx, pkg.overrides ?? [], pkg.id);
+  const v = assessQuest(pkg.id, pkg, ctx, pkg.overrides ?? [], pkg.id, pkg.provenance?.fusedAt);
   console.log(JSON.stringify(v, null, 2));
   console.log(summary(v));
   printVocabulary(v);
+  printAutosave(v);
   if (!ctx.judge) console.log('note: no verdicts/lines.judge.json; run `council.mjs judge` before acceptance');
   if (v.blocked) return 1;
   // The check exists to prove the quest is playable; a vocabulary it could not read proves nothing.

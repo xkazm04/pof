@@ -74,4 +74,5 @@ Each object is valid against `proposal.schema.json` in this folder (schema `gtai
 - Use existing cast ids as written above. Include `rivet` when Rivet speaks.
 - {{newRule}} Every new character (`"status": "new"`) needs a `designNote`: a one-line look for top-down cutout art.
 - `difficulty.timeLimitS` is `null` for no timer. `fingerprint.newMechanic` is `null` when the quest adds no mechanic.
+- `autosavePoints`: where the save engine may checkpoint the quest. At least one point, each `{ "id": "as-<beat id>", "beat": "<an id in beats>", "at": "start" | "end", "why": "<one sentence: what replaying from here saves the player>" }`. Ids are unique. Place a point where a failure should not cost the player what came before: after a long fight, before a boss, after a conversation they would not want to sit through again. Do not place one on every beat out of habit; the quest's end is always an autosave, so you need not declare it. A point with no reason is rejected.
 - Omit a key that does not apply (`target`, `location`, `when`). Do not send it as null.

@@ -108,6 +108,7 @@ describe('contracts pipeline — derivations over fixture folders', () => {
   it('Plan: parses as gtai.quest/1 with whyNotFiller + ownerNotes; empty notes or a bad package fail', () => {
     writeQuest(ROOT, 'fax-jam');
     expect(stepOf('fax-jam', 'Plan').status).toBe('pass');
+    expect(stepOf('fax-jam', 'Plan').detail).toContain('1 autosave point(s)');
     writeQuest(ROOT, 'fax-jam', { pkg: questPackage('fax-jam', { whyNotFiller: ' ' }) });
     expect(stepOf('fax-jam', 'Plan')).toMatchObject({ status: 'fail', reason: expect.stringMatching(/whyNotFiller/) });
     writeQuest(ROOT, 'fax-jam', { pkg: { ...questPackage('fax-jam'), id: 'other' } });

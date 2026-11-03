@@ -106,9 +106,9 @@ describe('assessQuest wiring', () => {
     const waived = assessQuest('q', d, ctx(), [{ guard: 'vocabulary', reason: 'owner says so', at: '2026-11-03' }]);
     expect(waived.blocked).toBe(true);
   });
-  it('the clean fixture stays unblocked across all five guards', () => {
+  it('the clean fixture stays unblocked across all six guards', () => {
     const v = assessQuest('q', CLEAN, ctx());
-    expect(v.guards.map((g) => g.guard)).toEqual(['story', 'economy', 'lines', 'uniqueness', 'vocabulary']);
+    expect(v.guards.map((g) => g.guard)).toEqual(['story', 'economy', 'lines', 'uniqueness', 'vocabulary', 'autosave']);
     expect(v.guards.find((g) => g.guard === 'vocabulary')?.state).toBe('green');
   });
 });

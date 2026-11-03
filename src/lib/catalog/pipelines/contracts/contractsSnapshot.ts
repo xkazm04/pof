@@ -59,6 +59,8 @@ export interface PlanFacts {
   whyNotFiller: string;
   ownerNotes: string;
   beats: readonly { id: string; title: string; summary: string }[];
+  /** The save engine's checkpoints (`autosavePoints`): empty for a package that declares none. */
+  autosavePoints: readonly { id: string; beat: string; at: string; why: string }[];
   characters: readonly { id: string; name: string; status: string; role: string }[];
 }
 

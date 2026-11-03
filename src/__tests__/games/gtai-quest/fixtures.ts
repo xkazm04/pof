@@ -30,6 +30,9 @@ export const CLEAN: QuestDesign = {
     { id: 'the-run', title: 'The run', summary: 'Grab the cartridge and drive it back.', objective: { verb: 'deliver', target: 'toner cartridge', location: 'fax-office' }, lineIds: ['fax-brief-1', 'gearbox-1', 'rivet-drive-1', 'gearbox-2'] },
     { id: 'the-payoff', title: 'The payoff', summary: 'Don Fax pays, by fax.', objective: { verb: 'deliver', location: 'fax-office' }, lineIds: ['fax-pay-1'] },
   ],
+  autosavePoints: [
+    { id: 'as-the-run', beat: 'the-run', at: 'start', why: 'The cartridge run is the long part, so a failed drive replays only it, not the call.' },
+  ],
   lines: [
     line('fax-intro-1', 'don-fax', 'PER MY LAST FAX: the toner baron owes me a ream. Collect it. Hold on. Paper jam. FUCK.', ['funny', 'progression']),
     line('fax-intro-2', 'rivet', 'I weld car doors. Welded. Past tense. Everyone I welded with lives in my head now.', ['character']),
