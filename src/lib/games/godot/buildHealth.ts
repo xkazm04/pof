@@ -15,6 +15,8 @@ import { aggregateOf, buildHealthState, type BuildHealth, type BuildHealthRow } 
 
 export interface BuildHealthDeps {
   root?: GameRootDeps;
+  /** Read this lane worktree's evidence instead of the game root (already validated against the lanes board). */
+  lane?: { id: string; cwd: string };
   /** Default `gitHeadOf`. */
   headOf?: (root: string) => string | null;
   readFile?: ReadEvidenceDeps['readFile'];
@@ -27,13 +29,13 @@ export function buildHealthFor(gameId: GameId, deps: BuildHealthDeps = {}): Buil
   const readAt = (deps.now ?? (() => new Date()))().toISOString();
   const engine = game.engine.kind;
   const unbound = (reason: string): BuildHealth => ({
-    gameId, engine, binding: 'unbound', reason, root: null, head: null, readAt, rows: [], aggregate: aggregateOf([], false),
+    gameId, ...(deps.lane ? { lane: deps.lane.id } : {}), engine, binding: 'unbound', reason, root: null, head: null, readAt, rows: [], aggregate: aggregateOf([], false),
   });
 
   if (engine !== 'godot') {
     return unbound(`${game.title} is not a Godot game (engine: ${engine}); its build health is not read from pof.godot-evidence/1 files`);
   }
-  const root = gameRootFor(gameId, deps.root);
+  const root = deps.lane ? deps.lane.cwd : gameRootFor(gameId, deps.root);
   if (root === null) return unbound(noGameRootReason(gameId, deps.root?.env));
 
   const head = (deps.headOf ?? gitHeadOf)(root);
@@ -51,5 +53,5 @@ export function buildHealthFor(gameId: GameId, deps: BuildHealthDeps = {}): Buil
       ...(e?.metrics ? { metrics: e.metrics } : {}),
     };
   });
-  return { gameId, engine, binding: 'bound', root, head, readAt, rows, aggregate: aggregateOf(rows, true) };
+  return { gameId, ...(deps.lane ? { lane: deps.lane.id } : {}), engine, binding: 'bound', root, head, readAt, rows, aggregate: aggregateOf(rows, true) };
 }
