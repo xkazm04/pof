@@ -39,7 +39,9 @@ function VoiceCard({ t, v, gate, onChanged }: { t: LabTheme; v: VoiceRow; gate: 
         <MicroLabel mono tone="muted">{v.source}{v.providerVoiceId ? ` · ${v.providerVoiceId}` : ' · not created yet'}</MicroLabel>
       </div>
       {preview
-        ? <VoiceAudio t={t} src={previewAudioUrl(v.id)} label={`Preview of ${v.name}`} onHeard={() => setHeard(true)} />
+        ? <VoiceAudio t={t} src={previewAudioUrl(v.id, true)} fallbackSrc={previewAudioUrl(v.id)}
+            fallbackNote="Could not master it at the game's level: playing the design preview as delivered."
+            label={`Preview of ${v.name}, at the game's voice level`} onHeard={() => setHeard(true)} />
         : <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>No preview (stock voice): judge it by its takes.</span>}
       {preview && <MicroLabel mono tone="muted">preview {fmtMs(preview.durationMs)}</MicroLabel>}
       {v.designPrompt && (

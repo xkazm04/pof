@@ -80,7 +80,7 @@ export function postVoice<T>(path: string, body: unknown, gate?: string | null):
 
 /** `asGame`: the take mastered the way export renders it (game voice level + the speaker's device treatment). */
 export const takeAudioUrl = (takeId: string, asGame = false) => `${VOICE_API}/audio?takeId=${encodeURIComponent(takeId)}${asGame ? '&as=game' : ''}`;
-export const previewAudioUrl = (voiceId: string) => `${VOICE_API}/audio?voiceId=${encodeURIComponent(voiceId)}`;
+export const previewAudioUrl = (voiceId: string, asGame = false) => `${VOICE_API}/audio?voiceId=${encodeURIComponent(voiceId)}${asGame ? '&as=game' : ''}`;
 
 export const fmtMs = (ms: number | null) => (ms === null ? 'unmeasured' : `${(ms / 1000).toFixed(1)} s`);
 export const fmtLufs = (l: number | null) => (l === null ? 'loudness unmeasured' : `${l.toFixed(1)} LUFS`);
