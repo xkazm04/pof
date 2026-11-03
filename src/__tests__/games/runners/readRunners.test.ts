@@ -85,6 +85,16 @@ describe('readRunnerRoot', () => {
     expect(readRunnerRoot(path.join(tmp, 'bad'), 'gtai', undefined, { now: () => NOW }).error).toContain('night.json is invalid');
   });
 
+  it('a root that reported for the previous deadline is a finished cycle, not a fresh BUILD for the next day', () => {
+    const { root } = fixture();
+    const yesterday = new Date('2026-11-02T18:00:00').toISOString();
+    for (const id of ['lane-a', 'lane-b']) w(`runner/logs/${id}/state.json`, JSON.stringify({ lane: id, reportedFor: yesterday, iterations: [it0()] }));
+    const v = readRunnerRoot(root, 'gtai', undefined, { now: () => NOW, git });
+    expect(v.phase).toBe('REPORT');
+    expect(v.schedule?.until).toBe(yesterday);
+    expect(v.lanes.find((l) => l.id === 'lane-a')?.state).toBe('done');
+  });
+
   it('falls back to the runner defaults without a launch.cmd, and says so', () => {
     const { root } = fixture();
     fs.rmSync(path.join(root, 'launch.cmd'));

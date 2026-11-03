@@ -42,17 +42,25 @@ const readJson = <T,>(f: string): T | undefined => { try { return JSON.parse(fs.
 const hhmm = (iso: string) => new Date(iso).toTimeString().slice(0, 5);
 
 /** `--until 18:00 --freeze 17:00 --report-at 17:30` from the root's launch.cmd; night.mjs defaults otherwise. */
-export function scheduleOf(root: string, now: Date): { schedule: RunnerSchedule; deadlines: string[]; phase: LanePhase } | undefined {
+/**
+ * The root's schedule. `planTimes` always aims at the NEXT deadline, so a root that already reported for the one
+ * before it (last night's, finished) would read as a fresh BUILD tomorrow: when any lane reported for the previous
+ * deadline, the previous cycle is the one shown, and its phase at `now` is REPORT (deadline passed).
+ */
+export function scheduleOf(root: string, now: Date, reportedFor: readonly string[] = []): { schedule: RunnerSchedule; deadlines: string[]; phase: LanePhase } | undefined {
   const cmd = readText(path.join(root, 'launch.cmd'));
   const arg = (name: string) => cmd.match(new RegExp(`--${name}\\s+(\\d{1,2}:\\d{2})`))?.[1];
   const given = { until: arg('until'), freeze: arg('freeze'), reportAt: arg('report-at') };
   try {
-    const t = planTimes({ ...(given.until ? { until: given.until } : {}), ...(given.freeze ? { freeze: given.freeze } : {}), ...(given.reportAt ? { reportAt: given.reportAt } : {}) }, now);
-    const prev = new Date(t.until.getTime() - 24 * 3600_000).toISOString();
+    const args = { ...(given.until ? { until: given.until } : {}), ...(given.freeze ? { freeze: given.freeze } : {}), ...(given.reportAt ? { reportAt: given.reportAt } : {}) };
+    const next = planTimes(args, now);
+    const prev = new Date(next.until.getTime() - 24 * 3600_000).toISOString();
+    const finished = reportedFor.includes(prev) && !reportedFor.includes(next.until.toISOString());
+    const t = finished ? planTimes(args, new Date(Date.parse(prev) - 60_000)) : next;
     return {
       schedule: { freeze: t.freeze.toISOString(), report: t.report.toISOString(), until: t.until.toISOString(), source: given.until || given.freeze || given.reportAt ? 'launch.cmd' : 'default' },
       deadlines: [t.until.toISOString(), prev],
-      phase: phaseAt(now.getTime(), t).phase as LanePhase,
+      phase: finished ? 'REPORT' : (phaseAt(now.getTime(), t).phase as LanePhase),
     };
   } catch { return undefined; }
 }
@@ -144,7 +152,8 @@ export function readRunnerRoot(root: string, gameId: string, masters: string | u
   if (!fs.existsSync(configFile)) return bad('no night.json in this root');
   const cfg = parseConfig(readText(configFile), root);
   if (cfg.errors.length) return bad(`night.json is invalid: ${cfg.errors[0]}`);
-  const sched = scheduleOf(root, now);
+  const reported = cfg.lanes.map((l: CfgLane) => readJson<StateFile>(path.join(root, 'logs', l.id, 'state.json'))?.reportedFor).filter((x: string | undefined): x is string => !!x);
+  const sched = scheduleOf(root, now, reported);
   const billing = billingOf(root, now.getTime());
   const ctx: RootCtx = { name, nowMs: now.getTime(), ...(masters ? { masters } : {}), gameId, git: deps.git ?? defaultGit, sched, billing };
   return {
