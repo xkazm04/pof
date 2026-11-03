@@ -18,6 +18,16 @@ describe('decodeLaneJson: a lane on Windows may write JSON with a BOM or as UTF-
     const le = Buffer.from(doc, 'utf16le'); le.swap16();
     expect(decodeLaneJson(Buffer.concat([Buffer.from([0xfe, 0xff]), le]))).toEqual(JSON.parse(doc));
   });
+  it('repairs drive-letter paths written with single backslashes (a lane forgot to escape them)', () => {
+    const bad = '{ "q": "line one\\nline two", "frames": ["C:\\Users\\kazda\\kiro\\road-width.png", "C:\\\\ok\\\\x.png"] }';
+    expect(decodeLaneJson(Buffer.from(bad, 'utf8'))).toEqual({
+      q: 'line one\nline two',
+      frames: ['C:\\Users\\kazda\\kiro\\road-width.png', 'C:\\ok\\x.png'],
+    });
+  });
+  it('does not repair other broken text', () => {
+    expect(() => decodeLaneJson(Buffer.from('{ "a": "bad \\q escape" }', 'utf8'))).toThrow();
+  });
   it('still rejects text that is not JSON', () => { expect(() => decodeLaneJson(Buffer.from('nope'))).toThrow(); });
   it('readLaneJsonFile reads a BOM file from disk', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lanejson-'));
