@@ -4,6 +4,7 @@
  * table's own name). Nested records flatten one level (`a.b`); scalar lists join; other lists read `[n items]`.
  */
 import type { CombatTable } from './combatTypes';
+import { isGroupedMelee, meleeRecords } from './meleeRecords';
 
 export const MAX_COLUMNS = 14;
 export const MAX_ROWS = 200;
@@ -43,13 +44,13 @@ export function recordsOf(doc: unknown, name: string): Array<{ label?: string; r
 /** Columns a designer reads first, per table (absent ones are skipped); `doc` prose always goes last. */
 const LEAD: Record<CombatTable['key'], readonly string[]> = {
   weapons: ['id', 'tier', 'kind', 'fire_mode', 'enabled', 'damage', 'pellets', 'rof_hz', 'magazine', 'reload_s', 'range_m', 'spread_deg'],
-  melee: ['id', 'name', 'damage', 'reach_m', 'windup_s'],
+  melee: ['id', 'group', 'name', 'damage', 'reach_m', 'windup_s', 'cycle_s', 'knockback_m'],
   enemies: ['id', 'body', 'hp', 'weapon', 'speed_mps', 'attack_m', 'preferred_m', 'reaction_s', 'aggression'],
   powers: ['id', 'action', 'duration_s', 'cooldown_s', 'madness_cost'],
 };
 
 export function parseTable(key: CombatTable['key'], file: string, doc: unknown): Pick<CombatTable, 'state' | 'reason' | 'columns' | 'hiddenColumns' | 'rows'> {
-  const recs = recordsOf(doc, key);
+  const recs = key === 'melee' && isGroupedMelee(doc) ? meleeRecords(doc) : recordsOf(doc, key);
   if (typeof recs === 'string') return { state: 'invalid', reason: recs, columns: [], hiddenColumns: 0, rows: [] };
   const rows = recs.slice(0, MAX_ROWS).map(({ label, rec }) => ({ ...(label ? { label } : {}), values: flatten(rec) }));
   const seen: string[] = [];

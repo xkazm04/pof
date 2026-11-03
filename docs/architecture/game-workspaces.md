@@ -583,8 +583,9 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   (paths relative to a game root or a lane worktree; `laneRoots` are runner-root folder names, GTAI: `gtai-eve`, which is
   also in `runners.roots`). The tables are owned by three different lanes (`gunplay` -> `weapons.json`, `enemy-ai` ->
   `enemies.json`, `ghost-powers` -> `powers.json`), each on its own `e-*` branch tonight, on the game's main after the merge.
-  `tables.melee` is optional (GTAI: `melee_weapons.json`, which `rivet-motion` may use instead of rows in the shared weapons
-  table); a configured melee table that is absent reads "not written yet" like the others, an unconfigured one is not listed.
+  `tables.melee` is optional (GTAI: `rivet_melee.json`, rivet-motion's timing data, schema `gtai.rivet-melee/1`: groups
+  `claw.hits[]` + `shock`, 60 Hz ticks; `meleeRecords.ts` flattens it to one row per hit and derives `windup_s` / `cycle_s`);
+  a configured melee table that is absent reads "not written yet" like the others, an unconfigured one is not listed.
 - **Sources** (`resolveSources`). `main` = `gameRootFor`; every lane worktree that exists in a `laneRoots` root. `?source=`
   is `auto` (default: the game root first, then each lane), `main`, or a lane id; anything else, including a path, is a 404.
   Per table the first source that has it wins and the response names it (`from`); telemetry is every source's sessions,

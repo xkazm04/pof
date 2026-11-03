@@ -89,7 +89,7 @@ export const GTAI_GAME: GameDef = {
   },
   decisions: { root: '../gtai-eve/decisions' },
   combatLab: {
-    tables: { weapons: 'project/data/tables/weapons.json', melee: 'project/data/tables/melee_weapons.json', enemies: 'project/data/tables/enemies.json', powers: 'project/data/tables/powers.json' },
+    tables: { weapons: 'project/data/tables/weapons.json', melee: 'project/data/tables/rivet_melee.json', enemies: 'project/data/tables/enemies.json', powers: 'project/data/tables/powers.json' },
     // The arena lane's per-session telemetry JSON: its brief names no folder, so every plausible one is read.
     telemetryDirs: ['evidence/arena', 'project/data/telemetry', 'project/data/arena_telemetry', 'project/dev/arena/telemetry', 'build/telemetry', 'build/arena/telemetry', 'build/evidence/telemetry'],
     stationsDir: 'project/data/tables/arena_stations',

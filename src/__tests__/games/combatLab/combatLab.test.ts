@@ -100,11 +100,11 @@ describe('readCombatLab', () => {
   it('reads the melee table only when the game configures one, and says where it expects it when it is absent', () => {
     const { main, lane } = sources();
     expect(readCombatLab('gtai', CFG, [main, lane], [], 'auto').tables.map((t) => t.key)).toEqual(['weapons', 'enemies', 'powers']);
-    const withMelee = { ...CFG, tables: { ...CFG.tables, melee: 'project/data/tables/melee_weapons.json' } };
+    const withMelee = { ...CFG, tables: { ...CFG.tables, melee: 'project/data/tables/rivet_melee.json' } };
     const r = readCombatLab('gtai', withMelee, [main, lane], [], 'auto');
     expect(r.tables.map((t) => t.key)).toEqual(['weapons', 'melee', 'enemies', 'powers']);
-    expect(r.tables[1]).toMatchObject({ state: 'missing', rows: [], reason: expect.stringContaining('melee_weapons.json') });
-    put(lane.root, 'project/data/tables/melee_weapons.json', { melee_weapons: [{ id: 'baton', damage: 9 }] });
+    expect(r.tables[1]).toMatchObject({ state: 'missing', rows: [], reason: expect.stringContaining('rivet_melee.json') });
+    put(lane.root, 'project/data/tables/rivet_melee.json', { melee_weapons: [{ id: 'baton', damage: 9 }] });
     expect(readCombatLab('gtai', withMelee, [main, lane], [], 'auto').tables[1]).toMatchObject({ state: 'ok', from: { id: 'gunplay' }, rows: [{ values: { id: 'baton', damage: 9 } }] });
   });
 
