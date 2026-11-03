@@ -502,3 +502,17 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - in its own root `C:\Users\kazda\kiro\gtai-day-pof` (PoF repo, worktree `pof-wt\control-room`, branch `gtai-control-room`):
     - `pof-control-room` (Sonnet): the quest-vocabulary guard, plus a game-home control room that shows every runner root's lanes, state, cost, commits, reports and `frames.json` thumbnails. **Launched 09:35** on the subscription (the API key is still out of credit).
   - **Shared-machine rule:** 7 lanes share one GPU, so performance numbers are labelled contended, and only one bench runs at a time (`gtai-day-d5\bench.lock`).
+- **Merge done: rtai main `089400e`, pushed** (worktree `gtai-wt\int-day`, 16 commits on `721fbbb`).
+  - All 4 night lanes merged, and 9 patches applied. 8 applied clean; the quest-1 PrintStage patch was hand-ported, keeping n-d4's tiles.
+  - 2 integration fixes:
+    - the D4-only ped parts fall back to their D4 print at D5 zoom (42 missing-file errors before);
+    - the D5 overlay is off under noir (a 16 % hatch leak at 64 px/m).
+  - The goldens were re-blessed. The lane notes moved to `docs/night/2026-11-02/<lane>/`.
+  - **Gates, all green on a clean tree:** lint 13/13 over 332 files, unit 325, scenarios 8, parity bit-exact, selftest with 0 placeholders.
+  - **The first IDLE bench:** p99 2.405 ms, 1% low 363 fps, worst frame 25.0 ms, 0 hitches over 50 ms, riot rigs p99 0.407 ms.
+  - Owner frames: `C:\Users\kazda\kiro\gtai-masters\day-d5\merge\`.
+  - Open look calls:
+    - n-d4's asphalt grain prints as white speckle under noir;
+    - at 64 px/m the D5 ped art covers n-d4's re-toned coats.
+  - `city_view.gd` is 250 lines (over the soft cap).
+- **10:04: the 6 game lanes launched** (worktrees `gtai-wt\d-*` from `089400e`, on the subscription). Morning-style report at 18:00: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-day-d5` and `--root C:/Users/kazda/kiro/gtai-day-pof`.
