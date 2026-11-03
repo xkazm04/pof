@@ -35,3 +35,15 @@ describe('DecisionMediaItem text frame', () => {
     await waitFor(() => expect(container.textContent).toContain('HTTP 404'));
   });
 });
+
+describe('DecisionMediaItem clip still being written', () => {
+  it('a clip that fails to load offers Retry, which asks again with a fresh URL', () => {
+    const clip = { kind: 'video' as const, name: 'waves.mp4', url: '/api/x/media?ask=a&opt=A&n=1' };
+    const { container } = render(<DecisionMediaItem t={LIGHT} media={clip} />);
+    fireEvent.error(container.querySelector('video') as HTMLVideoElement);
+    expect(container.textContent).toContain('the file did not load');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(container.querySelector('video')?.getAttribute('src')).toBe(`${clip.url}&retry=1`);
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+});

@@ -31,21 +31,28 @@ function TextFrame({ t, url, name }: { t: LabTheme; url: string; name: string })
 
 export function DecisionMediaItem({ t, media }: { t: LabTheme; media: DecisionMedia }) {
   const [failed, setFailed] = useState(false);
+  // A lane may still be writing the clip (an mp4 without its moov atom fails to load); Retry asks again with a fresh URL.
+  const [attempt, setAttempt] = useState(0);
   const why = media.unservable ?? (failed ? 'the file did not load' : null);
+  const src = media.url && attempt > 0 ? `${media.url}${media.url.includes('?') ? '&' : '?'}retry=${attempt}` : media.url;
   return (
     <figure data-testid="decision-media" data-kind={media.kind} style={{ margin: 0, display: 'grid', gap: 'var(--lab-s1)', minWidth: 0 }}>
       {why || !media.url ? (
         <div role="note" style={{ padding: 'var(--lab-s2)', border: `1px dashed ${t.line}`, fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
           {media.name}: {why ?? 'no file'}
+          {failed && !media.unservable && (
+            <button type="button" className="focus-ring" onClick={() => { setFailed(false); setAttempt((n) => n + 1); }}
+              style={{ marginLeft: 'var(--lab-s2)', fontSize: 'var(--lab-fs-xs)', color: t.text, background: 'transparent', border: `1px solid ${t.line}`, cursor: 'pointer' }}>Retry</button>
+          )}
         </div>
       ) : media.kind === 'text' ? (
         <TextFrame t={t} url={media.url} name={media.name} />
       ) : media.kind === 'video' ? (
-        <video controls preload="metadata" src={media.url} aria-label={media.name} style={BOX} onError={() => setFailed(true)} />
+        <video key={attempt} controls preload="metadata" src={src} aria-label={media.name} style={BOX} onError={() => setFailed(true)} />
       ) : (
         <a href={media.url} target="_blank" rel="noreferrer" aria-label={`Open ${media.name} full size`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a served local file, size unknown */}
-          <img src={media.url} alt={media.name} loading="lazy" style={BOX} onError={() => setFailed(true)} />
+          <img key={attempt} src={src} alt={media.name} loading="lazy" style={BOX} onError={() => setFailed(true)} />
         </a>
       )}
       <figcaption style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, overflowWrap: 'anywhere' }}>{media.name}</figcaption>
