@@ -494,3 +494,11 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - `d5-cast`: Rivet rescaled toward the concept, cops redrawn in T1 blue shades, the soul trail removed, portraits updated;
   - `d5-combat`: noir's red blood FX and splashes ported into D5 as the default, the kill beat as an A/B option, and noir as a `look_profiles.json` row for special missions.
 - **18:00 sync:** `night.mjs report --root C:/Users/kazda/kiro/gtai-day-d5`, then the verdict page updated with the day's frames.
+- **Owner (09:30): spread more lanes over the rest of the game, because usage limits have room.** Four more lanes were added (owner picked all four):
+  - in the `gtai-day-d5` root (game repo):
+    - `slice-play` (Opus, `d-slice`): quest 1 playable by the owner from a Windows exe at 18:00, with bound input, the player controller, a real HUD scene, respawn and checkpoint save;
+    - `vehicles` (Opus, `d-vehicles`): the handling model, enter/exit/hijack, car and pedestrian collisions, damage and wreck states through the sim `custom.y`, and a heat hook;
+    - `audio` (Sonnet, `d-audio`): the audio service and event table, an SFX set, quest 1's 23 voice lines and a radio stub, generated through PoF `/api/audio-gen`; PoF gaps are logged as POF-GAP. ElevenLabs had about 72k characters left; the cap is 25k today.
+  - in its own root `C:\Users\kazda\kiro\gtai-day-pof` (PoF repo, worktree `pof-wt\control-room`, branch `gtai-control-room`):
+    - `pof-control-room` (Sonnet): the quest-vocabulary guard, plus a game-home control room that shows every runner root's lanes, state, cost, commits, reports and `frames.json` thumbnails. **Launched 09:35** on the subscription (the API key is still out of credit).
+  - **Shared-machine rule:** 7 lanes share one GPU, so performance numbers are labelled contended, and only one bench runs at a time (`gtai-day-d5\bench.lock`).
