@@ -1,0 +1,171 @@
+{
+ "schema": "conform-run/1",
+ "worker": "48133f92-99f6-4725-8cb0-39cac1cd3936",
+ "subject": "agent-memory",
+ "evaluatedAt": "2026-11-03T22:18:30.600983+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "status-health-dashboard",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/status/judge-verdicts-db.ts:10 The only store in this context is a judge-verdict table that /status reads to colour cells; nothing here captures, consolidates or recalls items into an agent's context. Searching src/app/_dev-inspector, src/components/status and src/lib/status found 0 hits for episod, distill, memoryStore and errorMemory. The 'recall' and 'memory' hits are a recent-picks search list (EntitySearch.tsx:52), an in-memory filter and audio 'Memory Budget' step names.",
+   "techniques": [],
+   "absenceTerms": [
+    "episod",
+    "distill",
+    "memoryStore",
+    "errorMemory"
+   ]
+  },
+  {
+   "context": "project-ops-api",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/error-memory/route.ts:47 The error-memory recall is keyed by module alone over a table with no project column, and no caller in the tree invokes it or passes its result to the prompt header. The store described as 'error memory for prompt injection' is never injected, and if it were, it would mix other projects' errors under the label 'in this project'.",
+   "techniques": [
+    {
+     "technique": "recall-injection",
+     "verdict": "deviation",
+     "evidence": "src/app/api/error-memory/route.ts:44 The only recall door has no caller: grep finds no client of 'get-relevant-errors', and PromptBuilder's errorMemory option (prompt-builder.ts:70) is never supplied, so formatErrorMemory in prompt-context.ts never fires."
+    },
+    {
+     "technique": "owner-and-counterpart-scope",
+     "verdict": "deviation",
+     "evidence": "src/lib/error-memory-db.ts:21 The store is keyed by module, not by owning project, in the single shared ~/.pof DB. The tree admits it: build-error-recurrence.ts:14 says error_memory 'has no project column'."
+    },
+    {
+     "technique": "decay-and-forgetting",
+     "verdict": "deviation",
+     "evidence": "src/app/api/error-memory/route.ts:55 The only lifecycle operation is a resolved flag, which the upsert resets on recurrence (error-memory-db.ts:115). There is no cap, no retirement and no delete, so the store only grows."
+    },
+    {
+     "technique": "episodic-capture",
+     "verdict": "deviation",
+     "evidence": "src/app/api/error-memory/route.ts:31 Each capture is folded into a counter row with no build or run id, so no bounded episode record survives for provenance to cite."
+    },
+    {
+     "technique": "loss-site-inventory",
+     "verdict": "deviation",
+     "evidence": "src/lib/error-memory-db.ts:193 An undesigned cut: rows are pre-truncated by occurrences before keyword relevance is scored, so a keyword-matching error ranked 31st can never be recalled, and nothing reports the cut."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-step-components",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/steps/index.ts:31 This context is the catalog step UI registry plus the one-shot run panels, and it holds no agent memory store. A grep of src/components/layout-lab/steps and src/components/layout-lab/one-shot for memory, recall, episod and consolidat (plus remember, forget, decay) returned zero hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "memory",
+    "recall",
+    "episod",
+    "consolidat"
+   ]
+  },
+  {
+   "context": "cli-terminal-shell",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/cli/useTaskQueue.ts:513 The terminal observes and parses every UE build's errors but keeps them only in a bounded UI cache (evicted at BUILD_PARSE_CACHE_MAX). It never posts them to /api/error-memory, whose 'record-errors' action is documented as 'Record build errors from the CLI' (route.ts:20), so the error-memory pipeline's capture door is never fed from here.",
+   "techniques": [
+    {
+     "technique": "episodic-capture",
+     "verdict": "deviation",
+     "evidence": "src/components/cli/useTaskQueue.ts:513 A meaningful outcome boundary (build result) is observed and parsed here and then discarded into a UI cache. No episode is captured: grep finds no 'record-errors' or /api/error-memory caller anywhere in src/components/cli."
+    }
+   ]
+  },
+  {
+   "context": "inventory-genome-economy",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 This context is an in-game item-genome editor (editor/roller/breeding/evolution tabs) and economy sourcing charts, with no agent memory store. A grep of sub_inventory/dna-genome and sub_inventory/economy for memory, recall, episod and consolidat (plus remember, forget, decay) returned zero hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "memory",
+    "recall",
+    "episod",
+    "consolidat"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-03T22:18:30.600983+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "status-health-dashboard",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:18:30.600983+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [
+    "decay-and-forgetting",
+    "episodic-capture",
+    "loss-site-inventory",
+    "owner-and-counterpart-scope",
+    "recall-injection"
+   ],
+   "deviations": 1,
+   "context": "project-ops-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:18:30.600983+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "pipeline-step-components",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:18:30.600983+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [
+    "episodic-capture"
+   ],
+   "deviations": 1,
+   "context": "cli-terminal-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:18:30.600983+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "inventory-genome-economy",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

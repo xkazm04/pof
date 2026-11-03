@@ -10333,13 +10333,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "not-applicable",
-          "evidence": "src/components/cli/skills.ts:36 Searching context files for memory, recall, episodic, and consolidation returns only transient in-memory UI state and gameplay combat notes in skills.ts, showing that this module is an interactive terminal frontend and static skill-pack manifest (SKILL_PACKS) without an operative working memory or durable memory store, so the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:23599eae61aa7119",
-          "evaluatedRevision": 47,
-          "revisionsBehind": 5,
-          "stale": true
+          "state": "deviation",
+          "evidence": "src/components/cli/useTaskQueue.ts:513 The terminal observes and parses every UE build's errors but keeps them only in a bounded UI cache (evicted at BUILD_PARSE_CACHE_MAX). It never posts them to /api/error-memory, whose 'record-errors' action is documented as 'Record build errors from the CLI' (route.ts:20), so the error-memory pipeline's capture door is never fed from here.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52,
+          "revisionsBehind": 5
         },
         {
           "subject": "prompt-assembly",
@@ -16353,9 +16352,10 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 Searching context files for memory, recall, episodic, and consolidation returns zero hits (only an unrelated UI action prompt note in EconomySourcingTab.tsx:35), proving that this module is an in-game item genome editor and economy sourcing UI (SUB_TABS) where the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_inventory/dna-genome/data.ts:37 This context is an in-game item-genome editor (editor/roller/breeding/evolution tabs) and economy sourcing charts, with no agent memory store. A grep of sub_inventory/dna-genome and sub_inventory/economy for memory, recall, episod and consolidat (plus remember, forget, decay) returned zero hits.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "game-economy-tuning",
@@ -20423,9 +20423,10 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/layout-lab/steps/index.ts:33 Searching context files for memory, recall, episodic, and consolidation returns zero hits, confirming that this module is a React component registry for catalog step inspection and editing where the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "stale": true
+          "evidence": "src/components/layout-lab/steps/index.ts:31 This context is the catalog step UI registry plus the one-shot run panels, and it holds no agent memory store. A grep of src/components/layout-lab/steps and src/components/layout-lab/one-shot for memory, recall, episod and consolidat (plus remember, forget, decay) returned zero hits.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "concept-scene-parity",
@@ -22103,12 +22104,11 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/app/api/error-memory/route.ts:47 The error-memory route recalls build-error memories by module only: there is no project owner, nothing in the tree feeds the result into the prompt header, and nothing ever forgets an entry, so the memory is either never recalled or recalled out of scope.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/app/api/error-memory/route.ts:47 The error-memory recall is keyed by module alone over a table with no project column, and no caller in the tree invokes it or passes its result to the prompt header. The store described as 'error memory for prompt injection' is never injected, and if it were, it would mix other projects' errors under the label 'in this project'.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-runtime-assembly",
@@ -24134,9 +24134,10 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/status/StatusTabs.tsx:15 Searching context files for memory, recall, episodic, and consolidation returns only UI filter state and audio RAM limits, showing this module is a static artifact and pipeline status visualization dashboard where the agent-memory subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-12",
-          "stale": true
+          "evidence": "src/lib/status/judge-verdicts-db.ts:10 The only store in this context is a judge-verdict table that /status reads to colour cells; nothing here captures, consolidates or recalls items into an agent's context. Searching src/app/_dev-inspector, src/components/status and src/lib/status found 0 hits for episod, distill, memoryStore and errorMemory. The 'recall' and 'memory' hits are a recent-picks search list (EntitySearch.tsx:52), an in-memory filter and audio 'Memory Budget' step names.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "production-coverage-measurement",
