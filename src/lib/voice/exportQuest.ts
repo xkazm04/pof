@@ -1,8 +1,10 @@
 /**
  * Export a quest's PROVEN lines into the game (lane pof-voice). Runs only on the owner's Export press or
- * `voice.mjs export`. Writes `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg` and sets the line's
- * `audio` in `<gameRoot>/project/quests/<quest>/quest.json` to `{ path, takeId, voiceId, model }` (the model is
- * recorded per line: a model change is a re-cast event, registry `game-dialogue-voice-pipeline`).
+ * `voice.mjs export`. Writes `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg` and, in
+ * `<gameRoot>/project/quests/<quest>/quest.json`, sets the line's `audio` to the `res://` path — a STRING,
+ * because the game's `quest_voice.gd` plays `audio` only when it is a String — and its `audioTake` to
+ * `{ takeId, voiceId, model }` (the model is recorded per line: a model change is a re-cast event, registry
+ * `game-dialogue-voice-pipeline`). Unproven lines are not touched (a temp voice the audio lane set stays).
  * Nothing unproven is ever written: a line without a current approved take is skipped and listed.
  */
 import fs from 'node:fs';
@@ -47,10 +49,12 @@ export async function exportQuest(
   }
   if (audioByLine.size > 0) {
     const raw = fs.readFileSync(questFile, 'utf8');
-    const q = JSON.parse(raw) as { lines?: Array<{ id: string; audio?: unknown }> };
+    const q = JSON.parse(raw) as { lines?: Array<{ id: string; audio?: unknown; audioTake?: unknown }> };
     for (const l of q.lines ?? []) {
       const a = audioByLine.get(l.id);
-      if (a) l.audio = a;
+      if (!a) continue;
+      l.audio = a.path;
+      l.audioTake = { takeId: a.takeId, voiceId: a.voiceId, model: a.model };
     }
     const eol = raw.includes('\r\n') ? '\r\n' : '\n';
     fs.writeFileSync(questFile, JSON.stringify(q, null, 2).replace(/\n/g, eol) + eol);

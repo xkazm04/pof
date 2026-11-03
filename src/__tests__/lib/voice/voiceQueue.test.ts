@@ -133,13 +133,18 @@ describe('voice design and casting', () => {
 });
 
 describe('export', () => {
-  it('writes only proven lines into the game root and sets audio { path, takeId, voiceId }', async () => {
+  it('writes only proven lines into the game root: audio = res:// path (a String), audioTake = { takeId, voiceId, model }', async () => {
     syncQueue(db, 'gtai', root);
     addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 1, direction: 'shouting' }, deps);
     if (!r.ok) throw new Error(r.error);
     setVerdict(db, r.data[0].id, 'approved', 'yes');
     const game = makeGameRoot('zulu', ['z1', 'z2']);
+    // The audio lane's temp voice on the unproven line (a flat res:// String, as the game holds it today).
+    const qf = path.join(game, 'project', 'quests', 'zulu', 'quest.json');
+    const pre = JSON.parse(fs.readFileSync(qf, 'utf8'));
+    pre.lines[1].audio = 'res://assets/audio/voice/z2.ogg';
+    fs.writeFileSync(qf, JSON.stringify(pre, null, 2));
     const converted: string[] = [];
     const ex = await exportQuest(db, 'gtai', 'zulu', game, { convert: async (_s, d) => { converted.push(d); fs.mkdirSync(path.dirname(d), { recursive: true }); fs.writeFileSync(d, 'ogg'); return null; } });
     if (!ex.ok) throw new Error(ex.error);
@@ -147,8 +152,11 @@ describe('export', () => {
     expect(ex.data.skipped).toEqual([{ lineId: 'z2', reason: 'not proven (no-takes)' }]);
     expect(converted).toEqual([path.join(game, 'project', 'assets', 'audio', 'voice', 'zulu', 'z1.ogg')]);
     const q = JSON.parse(fs.readFileSync(path.join(game, 'project', 'quests', 'zulu', 'quest.json'), 'utf8'));
-    expect(q.lines[0].audio).toEqual({ path: 'res://assets/audio/voice/zulu/z1.ogg', takeId: r.data[0].id, voiceId: 'stock-g', model: 'eleven_v3' });
-    expect(q.lines[1].audio).toBeNull();
+    // `audio` is the String the game's quest_voice.gd plays; the take record sits beside it.
+    expect(q.lines[0].audio).toBe('res://assets/audio/voice/zulu/z1.ogg');
+    expect(q.lines[0].audioTake).toEqual({ takeId: r.data[0].id, voiceId: 'stock-g', model: 'eleven_v3' });
+    expect(q.lines[1].audio).toBe('res://assets/audio/voice/z2.ogg');
+    expect(q.lines[1].audioTake).toBeUndefined();
   });
 });
 

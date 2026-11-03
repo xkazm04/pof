@@ -422,7 +422,9 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   (gated), `gate`, `audio?takeId|voiceId`, `export`.
 - **Export** (`exportQuest`): only proven lines, mp3 to Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
   `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
-  `project/quests/<quest>/quest.json` line gets `audio: { path: "res://…", takeId, voiceId, model }`. The game root is
+  `project/quests/<quest>/quest.json` line gets `audio: "res://…ogg"` (a String: the game's `quest_voice.gd` plays
+  `audio` only when it is a String) and `audioTake: { takeId, voiceId, model }` beside it. Unproven lines are not
+  touched, so a temp voice the game's audio lane set stays until its line is proven here. The game root is
   `gameRootFor` (`POF_GAME_ROOT_GTAI` points tests at a fixture).
 - **UI:** `/layout?g=gtai&c=spellbook&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
