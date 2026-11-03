@@ -42,8 +42,8 @@ export const ElevenLabsProvider: AudioProvider = {
     music: 'PoF only calls /v1/sound-generation, which synthesises sound effects. '
       + 'ElevenLabs music is a separate product and endpoint that PoF does not integrate, '
       + 'so a music request here would return an SFX clip filed as music.',
-    tts: 'Text-to-speech needs /v1/text-to-speech/{voice_id} and a chosen voice; '
-      + 'PoF integrates neither, so speech cannot be produced here.',
+    tts: 'Text-to-speech needs /v1/text-to-speech/{voice_id} and a chosen voice; this forge has no voice '
+      + 'picker, so speech is produced in the game Voice room (providers/elevenlabs-speech.ts), not here.',
   },
 
   async generate(req: AudioGenRequest): Promise<AudioGenResult> {

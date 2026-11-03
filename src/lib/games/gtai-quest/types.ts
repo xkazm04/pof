@@ -36,8 +36,11 @@ export interface QuestLine {
   text: string;
   /** Condition tags for barks: `soul:hauler`, `madness:choir`, `heat:>=3`. Omit = always. */
   when?: readonly string[];
-  /** Reserved for the later voice pass. `null` = not recorded. */
-  audio: null | { file: string; voice: string };
+  /** The voice file the game plays (`res://assets/audio/voice/...ogg`, read as a String by the game's
+   *  `quest_voice.gd`). `null` = not recorded. Written by the Voice room export (or the audio lane's temp pass). */
+  audio: null | string;
+  /** Which approved take the Voice room exported to `audio` (absent for a temp voice). */
+  audioTake?: { takeId: string; voiceId: string; model: string };
 }
 
 export type CharacterStatus = 'existing' | 'new';

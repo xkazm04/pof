@@ -19,6 +19,8 @@ import { useGameHomeData, type GameHomeRow, type IntakeRead } from './gameHomeDa
 import { GameHomePipelines } from './gameHomePipelines';
 import { GameHomeBuildHealth } from './gameHomeBuildHealth';
 import { GameHomeLanes } from './gameHomeLanes';
+import { VoiceRoom } from './voice/voiceRoom';
+import { useRoomParam, openRoom } from './voice/voiceRoomParam';
 
 /** The engine binding in words + a status level. Exported for tests. */
 export function engineWords(e: EngineState): { level: 'ok' | 'warn'; word: string; detail: string } {
@@ -61,11 +63,13 @@ function declaredCoverage(rows: GameHomeRow[]): { count: number; expected: numbe
 export function GameHome({ t }: { t: LabTheme }) {
   const d = useGameHomeData();
   const [evidenceLane, setEvidenceLane] = useState<string | null>(null);
+  const room = useRoomParam();
   const engine = engineWords(d.engine);
   const built = d.rows.filter((r) => r.fit !== 'planned');
   const planned = d.rows.length - built.length;
   const loading = built.some((r) => r.readiness?.kind === 'loading');
   const coverage = declaredCoverage(d.rows);
+  if (room === 'voice' && d.game.id === 'gtai') return <VoiceRoom t={t} />;
   return (
     <section data-testid="game-home" aria-labelledby="game-home-title"
       style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', alignContent: 'start', gap: 'var(--lab-s4)' }}>
@@ -77,6 +81,12 @@ export function GameHome({ t }: { t: LabTheme }) {
             ? 'Manifest: every registered pipeline.'
             : `Manifest: ${built.length} built ${built.length === 1 ? 'pipeline' : 'pipelines'}, ${planned} planned.`}
         </span>
+        {d.game.id === 'gtai' && (
+          <button type="button" className="focus-ring" data-testid="game-home-voice-room" onClick={() => openRoom('voice')}
+            style={{ justifySelf: 'start', fontSize: 'var(--lab-fs-xs)', background: 'transparent', border: `1px solid ${t.line}`, borderRadius: 4, padding: '2px 8px', color: t.text, cursor: 'pointer' }}>
+            Voice room →
+          </button>
+        )}
       </header>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s6)' }}>
         <Fact label="Engine" testId="game-home-engine">

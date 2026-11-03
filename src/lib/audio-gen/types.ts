@@ -52,3 +52,42 @@ export interface AudioProvider {
   unsupported: Partial<Record<AudioKind, string>>;
   generate(req: AudioGenRequest): Promise<AudioGenResult>;
 }
+
+// ── the `tts` kind: speech with a chosen voice (providers/elevenlabs-speech.ts, the Voice room) ──
+
+export interface SpeechSettings {
+  model: string;
+  stability: number;
+  similarityBoost: number;
+  style: number;
+  speed: number;
+}
+
+export interface SpeechRequest {
+  providerVoiceId: string;
+  text: string;
+  /** Delivery direction in words; sent as audio tags only where the model supports them. */
+  direction: string;
+  settings: SpeechSettings;
+}
+
+export interface SpeechResult {
+  bytes: Buffer;
+  format: 'mp3';
+  /** Exactly what was sent and billed. */
+  sentText: string;
+  chars: number;
+}
+
+export interface SpeechDesignRequest {
+  /** The voice description (from the character's voice bible). Never a real person. */
+  description: string;
+  /** 100-1000 chars the previews speak. */
+  text: string;
+}
+
+export interface SpeechDesignResult {
+  previews: Array<{ generatedVoiceId: string; bytes: Buffer; durationMs: number | null }>;
+  text: string;
+  chars: number;
+}

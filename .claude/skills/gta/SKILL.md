@@ -22,6 +22,7 @@ This skill reads both at the start and writes STATE.md at the end.
 | `/gta night` | Handshake about unattended work. Then **prepare everything before the owner leaves** (prep, preflight GO), launch, and report what is running |
 | `/gta morning` | Review what ran overnight (scoreboard, evidence, journals, cost), take the owner's verdicts, record them, then plan the day |
 | `/gta --quest [act] [goal]` | Design and execute one quest through the council and the fuse (see **Quest mode**) |
+| `/gta --voice` | A human-gated voice session: Claude generates takes and voices, the owner judges in the PoF Voice room (see **Voice mode**) |
 
 ## 1. State brief: always, before any question
 
@@ -168,6 +169,49 @@ it from the quest ledger. The chat report and the wrap repeat it for every chara
 
 Honesty rules for quest mode: a skipped seat is reported, never faked; `unmeasured` is never green; a red
 guard without a recorded override blocks; a frame or it did not play.
+
+## Voice mode
+
+`/gta --voice` turns quest lines into recorded voice, line by line, in chronological play order. Quest mode is
+unchanged: its example lines stay as they are, with `audio: null`, until this mode proves them. The room is
+`/layout?g=gtai&c=spellbook&v=game&room=voice` in PoF (a cold link needs a `c=`, or it lands on Catalogs; the "Voice room" button on the GTAI game home also opens it); the headless side is `games/gtai/voice/voice.mjs` (its header has
+every command). **Voice is human gated, enforced:** a take verdict and a cast are clicks in the Voice room only.
+The routes refuse any other caller (403), and `voice.mjs` has no approve, reject or cast command.
+
+1. **State brief.** Add `node games/gtai/voice/voice.mjs status` to the normal brief: proven / total lines,
+   per quest, and the next unproven lines in play order.
+2. **One handshake.** One `AskUserQuestion`: how much today (a few lines, one quest, several quests), and any
+   character whose voice the owner wants to redesign. Lines are worked in play order unless the owner says otherwise.
+3. **Open the room.** Make sure the PoF dev server on `:3001` is up (start it if not), then give the owner the
+   Voice room link.
+4. **The loop, per line:**
+   - No voice for the speaker yet: `voice.mjs design --character <id> --n 3` from the voice bible, or
+     `voice.mjs stock ...` for a premade voice (`stock --casting <casting.json>` imports a whole casting file). The owner listens to the previews and casts one in the room.
+     Never imitate or clone a real person's voice; no recordings are uploaded.
+   - `voice.mjs takes --line <id> --n 3 --direction "<words>"`, with directions written from the speaker's bible
+     (`games/gtai/voices/<id>.md`) and the owner's notes. On `eleven_v3` the direction becomes audio tags. The
+     profanity in the lines is kept as written.
+   - Each new take is read back by a local Whisper within about half a minute (`voice.mjs line` prints
+     "heard N% wrong"). A take over 15 % likely garbled or dropped words: tell the owner which one, and offer a
+     fresh take; never delete or hide it. The read-back hears words only, never the acting.
+   - The owner listens and judges in the room (approve or reject, with a note). Approve, and Cast for a voice
+     with a preview, unlock only after the owner has played it through; "Next to judge" walks the waiting lines.
+     The room plays each take as the game will (mastered to the game's voice level, with the speaker's device
+     filter if the game declares one), so takes compare at matched loudness; the provider original is one
+     click away. Do not judge a direction by the delivered LUFS: the level is set at export.
+     `voice.mjs status` counts lines with a flagged take (read-back or long pause): point the owner there first.
+   - `voice.mjs verdicts --since <the last round's start, e.g. 30m>` reads every verdict and note since then,
+     grouped by line (`voice.mjs line --line <id>` shows one line's takes, class and scene); Claude writes the
+     next round's directions from them. A line is done only when the owner has approved a take. Fix order when a render is wrong (registry
+     `speech-synthesis-script-writing`): another take first, then the words (propose the edit to the owner; the
+     quest package is the text's only home, and an edit makes the older takes stale), settings last. Keep
+     style at 0 and let the words and tags carry the feeling. Casting a different voice un-proves that
+     character's lines (a re-cast event).
+5. **Claude never approves, casts or exports by itself.** Export (`voice.mjs export --quest <id>`, or the
+   room's Export button) runs only when the owner asks; it writes only approved takes into the game, mastered
+   to the game's `audio_mix.json` voice target; relay any OFF LEVEL or TREATMENT REFUSED line it prints.
+6. **Wrap.** The normal wrap, plus a voice line in STATE.md: the proven count (before and after), the characters
+   spent this session (`status` prints the running total), and the voices cast.
 
 ## 4. Wrap: every session, even a short one
 
