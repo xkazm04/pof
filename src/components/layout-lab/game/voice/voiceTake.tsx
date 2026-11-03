@@ -11,7 +11,7 @@ import { MicroLabel } from '@/components/ui/MicroLabel';
 import { LabButton, LabTextarea } from '@/components/layout-lab/steps/controls';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import type { TakeView } from '@/lib/voice/room';
-import type { TakeVerdict } from '@/lib/voice/types';
+import { SILENCE_FLAG_MS, type TakeVerdict } from '@/lib/voice/types';
 import type { StatusLevel } from '@/lib/status-token';
 import { fmtLufs, fmtMs, postVoice, takeAudioUrl } from './voiceRoomData';
 
@@ -47,7 +47,8 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
       <div style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap' }}>
         <StatusTag level={v.level} word={v.word} />
         {take.stale && <StatusTag level="bad" word="stale: older line text or not the cast voice" />}
-        <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · {fmtLufs(take.loudnessLufs)} · {take.chars} chars</MicroLabel>
+        <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · {fmtLufs(take.loudnessLufs)} · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
+        {take.maxSilenceMs !== null && take.maxSilenceMs > SILENCE_FLAG_MS && <StatusTag level="warn" word={`long pause ${fmtMs(take.maxSilenceMs)}: listen for a dropout`} />}
       </div>
       <audio controls preload="none" src={takeAudioUrl(take.id)} style={{ width: '100%' }} aria-label={`Take ${take.id.slice(0, 8)}`} />
       <div style={{ fontSize: 'var(--lab-fs-sm)', color: t.text }}>

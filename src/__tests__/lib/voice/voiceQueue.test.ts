@@ -20,7 +20,7 @@ let root: string;
 const deps: TakeDeps = {
   synth: async (r) => ({ bytes: Buffer.from('mp3'), format: 'mp3', sentText: speechText(r.text, r.direction, r.settings.model), chars: speechText(r.text, r.direction, r.settings.model).length }),
   createVoice: async () => 'created-voice',
-  measure: async () => ({ durationMs: 1234, loudnessLufs: -18.5 }),
+  measure: async () => ({ durationMs: 1234, loudnessLufs: -18.5, maxSilenceMs: 300 }),
   now: () => 1000,
 };
 
@@ -147,5 +147,19 @@ describe('re-cast', () => {
     expect(proven()).toBe('proven');
     castVoice(db, b.id);
     expect(proven()).toBe('no-takes');
+  });
+});
+
+describe('silence screen', () => {
+  it('reports the longest INTERNAL silence, ignoring leading and trailing silence', async () => {
+    const { maxInternalSilenceMs } = await import('@/lib/voice/storage');
+    const stderr = [
+      '[silencedetect @ 0] silence_start: 0', '[silencedetect @ 0] silence_end: 0.4 | silence_duration: 0.4',
+      '[silencedetect @ 0] silence_start: 3.73', '[silencedetect @ 0] silence_end: 4.35 | silence_duration: 0.617574',
+      '[silencedetect @ 0] silence_start: 5.39', '[silencedetect @ 0] silence_end: 5.81 | silence_duration: 0.42',
+      '[silencedetect @ 0] silence_start: 9.1', '[silencedetect @ 0] silence_end: 10 | silence_duration: 0.9',
+    ].join('\r\n');
+    expect(maxInternalSilenceMs(stderr, 10)).toBe(618);
+    expect(maxInternalSilenceMs('', 10)).toBe(0);
   });
 });

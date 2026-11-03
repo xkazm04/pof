@@ -37,17 +37,41 @@ function run(bin: string, args: string[]): Promise<{ stdout: string; stderr: str
   });
 }
 
-export interface AudioMeasure { durationMs: number | null; loudnessLufs: number | null }
+export interface AudioMeasure { durationMs: number | null; loudnessLufs: number | null; maxSilenceMs: number | null }
 
-/** Duration (ffprobe) and integrated loudness (ffmpeg ebur128), each null when unmeasurable. */
+export { SILENCE_FLAG_MS } from '@/lib/voice/types';
+
+/**
+ * The longest INTERNAL silence (ffmpeg `silencedetect`, -40 dB, >= 0.3 s) in ms, ignoring silence that
+ * touches the start or the end of the clip. 0 when there is none. Exported for tests.
+ */
+export function maxInternalSilenceMs(stderr: string, durationSecs: number): number {
+  let max = 0;
+  let start: number | null = null;
+  for (const line of stderr.split(/\r?\n/)) {
+    const s = /silence_start: (-?[\d.]+)/.exec(line);
+    if (s) { start = Number.parseFloat(s[1]); continue; }
+    const e = /silence_end: ([\d.]+) \| silence_duration: ([\d.]+)/.exec(line);
+    if (e && start !== null) {
+      const end = Number.parseFloat(e[1]);
+      if (start > 0.05 && end < durationSecs - 0.05) max = Math.max(max, Math.round(Number.parseFloat(e[2]) * 1000));
+      start = null;
+    }
+  }
+  return max;
+}
+
+/** Duration (ffprobe), integrated loudness (ebur128) and longest internal silence, each null when unmeasurable. */
 export async function measureAudio(abs: string): Promise<AudioMeasure> {
   const probe = await run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', abs]);
   const secs = probe ? Number.parseFloat(probe.stdout.trim()) : Number.NaN;
   const loud = await run('ffmpeg', ['-hide_banner', '-nostats', '-i', abs, '-af', 'ebur128', '-f', 'null', '-']);
   const m = loud ? /I:\s+(-?\d+(?:\.\d+)?) LUFS\s*\n\s*Threshold/.exec(loud.stderr) ?? /I:\s+(-?\d+(?:\.\d+)?) LUFS/.exec(loud.stderr) : null;
+  const sil = Number.isFinite(secs) ? await run('ffmpeg', ['-hide_banner', '-nostats', '-i', abs, '-af', 'silencedetect=n=-40dB:d=0.3', '-f', 'null', '-']) : null;
   return {
     durationMs: Number.isFinite(secs) ? Math.round(secs * 1000) : null,
     loudnessLufs: m ? Number.parseFloat(m[1]) : null,
+    maxSilenceMs: sil ? maxInternalSilenceMs(sil.stderr, secs) : null,
   };
 }
 

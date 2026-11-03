@@ -26,7 +26,7 @@ export function createVoiceDb(db: Db): void {
       id TEXT PRIMARY KEY, gameId TEXT NOT NULL, questId TEXT NOT NULL, lineId TEXT NOT NULL,
       voiceId TEXT NOT NULL, providerVoiceId TEXT NOT NULL, textHash TEXT NOT NULL, direction TEXT NOT NULL,
       sentText TEXT NOT NULL, settings TEXT NOT NULL, file TEXT NOT NULL, durationMs INTEGER,
-      loudnessLufs REAL, chars INTEGER NOT NULL, verdict TEXT NOT NULL DEFAULT 'pending',
+      loudnessLufs REAL, maxSilenceMs INTEGER, chars INTEGER NOT NULL, verdict TEXT NOT NULL DEFAULT 'pending',
       verdictNote TEXT, verdictAt INTEGER, createdAt INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_voice_takes_line ON voice_takes(gameId, questId, lineId);
@@ -34,6 +34,9 @@ export function createVoiceDb(db: Db): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT, takeId TEXT NOT NULL, verdict TEXT NOT NULL, note TEXT, at INTEGER NOT NULL
     );
   `);
+  // A DB created before the silence screen lacks the column; add it once.
+  const cols = db.prepare('PRAGMA table_info(voice_takes)').all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'maxSilenceMs')) db.exec('ALTER TABLE voice_takes ADD COLUMN maxSilenceMs INTEGER');
 }
 
 const voiceOf = (r: Raw): VoiceRow => ({ ...(r as unknown as VoiceRow), previews: JSON.parse(String(r.previews)) });
@@ -89,7 +92,8 @@ export function getLine(db: Db, gameId: string, questId: string, lineId: string)
 
 // ── takes ──
 export function insertTake(db: Db, t: TakeRow): void {
-  db.prepare(`INSERT INTO voice_takes VALUES (@id,@gameId,@questId,@lineId,@voiceId,@providerVoiceId,@textHash,@direction,@sentText,@settings,@file,@durationMs,@loudnessLufs,@chars,@verdict,@verdictNote,@verdictAt,@createdAt)`)
+  db.prepare(`INSERT INTO voice_takes (id,gameId,questId,lineId,voiceId,providerVoiceId,textHash,direction,sentText,settings,file,durationMs,loudnessLufs,maxSilenceMs,chars,verdict,verdictNote,verdictAt,createdAt)
+    VALUES (@id,@gameId,@questId,@lineId,@voiceId,@providerVoiceId,@textHash,@direction,@sentText,@settings,@file,@durationMs,@loudnessLufs,@maxSilenceMs,@chars,@verdict,@verdictNote,@verdictAt,@createdAt)`)
     .run({ ...t, settings: JSON.stringify(t.settings) });
 }
 export function getTake(db: Db, id: string): TakeRow | null {

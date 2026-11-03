@@ -75,6 +75,8 @@ export interface TakeRow {
   file: string;
   durationMs: number | null;
   loudnessLufs: number | null;
+  /** Longest internal silence in ms (a dropout screen); null = unmeasured. */
+  maxSilenceMs: number | null;
   /** Billed characters (`sentText.length`). */
   chars: number;
   verdict: TakeVerdict;
@@ -82,6 +84,10 @@ export interface TakeRow {
   verdictAt: number | null;
   createdAt: number;
 }
+
+/** A render with an internal silence longer than this is flagged as a possible dropout (registry
+ *  `speech-synthesis-script-writing`: measure the render's silence against its length). */
+export const SILENCE_FLAG_MS = 1500;
 
 export interface VerdictEvent {
   takeId: string;
