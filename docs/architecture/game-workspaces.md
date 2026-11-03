@@ -555,6 +555,8 @@ pof-arena, 2026-11-03). `?room=decisions` on the Game home, next to the Voice ro
   from the query, and only an existing media file is served; byte ranges are honoured (clips scrub). A text frame (a lane's TTK `.md`/`.txt`/`.csv`/`.log`,
   cap 1 MB) is served as `text/plain` and shown in a `<pre>` fetched on first open; a file of any other type, a
   missing file, an unknown ask/option/index or a bad id is 400/404 in the envelope.
+  A clip or image that fails in the browser (a lane may still be encoding it: an mp4 without its `moov` atom) says so and
+  offers **Retry**, which re-requests with a fresh `&retry=n` so the 30 s private cache does not replay the failure.
 - **Writing an answer is a human action.** `POST .../decisions` `{ id, choice, note? }` uses the Voice room's gate
   (`@/lib/voice/gate`: a same-origin browser fetch plus the page token from `GET .../decisions/gate`); the CLI and the
   agents get 403. `choice` must be one of that ask's option keys; the note is capped at 2000 characters.
@@ -600,6 +602,10 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   hit rate of a no-shot session; both read "not recorded". **The arena brief names no telemetry folder** (its
   `ArenaSession.write_telemetry(path)` takes the caller's path), so `telemetryDirs` lists every plausible one; once a real
   session file lands, narrow the list.
+- **Session columns.** Hit rate, damage taken, latency, dodges, knockdowns, turn rate (deg/s) and top speed (m/s) are always
+  columns; `course_time_s`, the pit's `pit_done_s` / `pit_kills` / `pit_waves_cleared` and `shots_stopped_by_cover` are
+  columns only once some session records them (pit kills / waves count only when `pit_waves` is above 0). Values round to two
+  decimals; the arena logs raw floats.
 - **Design-side TTK** (`predictTtk.ts`, `combat/combatDesignTtk.tsx`): beside the measured chart, the weapons table's own
   arithmetic for a chosen target (the table's `targets`, `{ id, hp }`) and range: shots = ceil(hp / (damage x pellets)),
   time = gaps at `rof_hz` + a reload per emptied `magazine` + `range / speed_mps`. A perfect shooter (no spread, splash or
@@ -612,10 +618,11 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   poll fails and says so. Time to kill by range is the shared `ChartPanel` bars (one row per weapon at a range, fastest at
   each range highlighted); tables and sessions are the shared `DataTable`.
 - **Arena stations** (`GameCombatLab.stationsDir`, GTAI `project/data/tables/arena_stations`; `readStations.ts`). The arena
-  lane's brief makes every lane plug in through one `arena_stations/<lane>.json` (id, name, area, spawn list, props, tuning
-  keys, reported measurements). The room lists one row per file across the sources, counting by key name (`spawn*`, `prop*`,
-  `tun*`/`expose*`, `measure*`/`report*`); a count the file lacks reads "not in file", an unparseable file is flagged, and no
-  files says where they are expected. The wire field `stations` is optional so an older server still renders.
+  lane's brief makes every lane plug in through one `arena_stations/<lane>.json`. The real files hold a `stations` array
+  (`{ lane, schema, stations: [{ id, name, area|kind, spawns[], props[], tuning[], measures[] }] }`, several stations per
+  file; a bare station object also reads). The room lists one row per station across the sources, counting by key name
+  (`spawn*`, `prop*`, `tun*`/`expose*`, `measure*`/`report*`; `kind` stands in for a missing `area`); a count the entry lacks
+  reads "not in file", an unparseable file is flagged, and no files says where they are expected. The wire field `stations` is optional so an older server still renders.
 - **Lane-written JSON is read BOM/UTF-16 tolerant** (`src/lib/games/laneJson.ts`): asks, `answers.json`, tables, telemetry and station
   files all go through `readLaneJsonFile`, because a lane on Windows may save with PowerShell (UTF-8 BOM or UTF-16) and a bare
   `JSON.parse` would turn an ask into "unreadable" and `answers.json` into "unusable" (which also blocks the answer writer). What PoF
