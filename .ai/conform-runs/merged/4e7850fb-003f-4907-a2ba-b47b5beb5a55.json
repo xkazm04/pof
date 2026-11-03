@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4e7850fb-003f-4907-a2ba-b47b5beb5a55",
+ "subject": "mcp-tools",
+ "evaluatedAt": "2026-11-03T12:00:29.171217+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:43 The crash UI reads crash analysis through a Zustand store backed by /api/crash-analyzer. A case-insensitive search of src/components/modules/evaluator/ for mcp, inputSchema, tools/call and jsonrpc found nothing. The MCP tool pof_crash_analyze is in tools/pof-mcp/src/tools/design.ts, wraps the same HTTP route and imports nothing from this context, so this context has no tool boundary.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "inputSchema",
+    "tools/call",
+    "jsonrpc"
+   ]
+  },
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/labArtifactClient.ts:42 The lab state layer is a browser client that reads pipeline artifacts over the app's own REST envelope. A search of src/components/layout-lab for inputSchema, tools/call, jsonrpc and callTool found nothing. The word MCP appears only in comments (e.g. labContentDrift.ts, labCatalogRefresh.ts) that name the pof-mcp submit path as an outside writer to the shared SQLite rows, and tools/pof-mcp imports no layout-lab module, so no tool schema, transport or result-handling boundary is in this context.",
+   "techniques": [],
+   "absenceTerms": [
+    "inputSchema",
+    "tools/call",
+    "jsonrpc",
+    "callTool"
+   ]
+  },
+  {
+   "context": "lab-shell-and-navigation",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/LabBridgeStrip.tsx:6 The shell's only external-connection surface is a UE bridge status strip, not a tool-protocol client or server. A search of src/components/layout-lab for inputSchema, tools/call, jsonrpc and callTool found nothing. The word MCP appears only in comments (CatalogMatrix.tsx:119, StepCrashBoundary.tsx:67) that name the MCP submit path as an outside writer of rows this UI reads.",
+   "techniques": [],
+   "absenceTerms": [
+    "inputSchema",
+    "tools/call",
+    "jsonrpc",
+    "callTool"
+   ]
+  },
+  {
+   "context": "catalog-gap-analysis",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/catalog/gap-analysis/plugins/types.ts:3 Gap analysis is a pure in-process plugin library (histogram dimensions and expected shares per catalog). A search of src/lib/catalog/gap-analysis for mcp, inputSchema, tools/call and jsonrpc found nothing, and tools/pof-mcp does not import it, so it publishes and consumes no tools. Its 'plugin' and 'catalog' vocabulary matched the subject by keyword only.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "inputSchema",
+    "tools/call",
+    "jsonrpc"
+   ]
+  },
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:31 The scan tab is a React hook over moduleStore scan results that dispatches CLI prompts via useModuleCLI (an agent-CLI transport, not a tool protocol). A search of src/components/modules/core-engine for mcp, inputSchema, tools/call and jsonrpc found nothing, so no tool server or client boundary exists here.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "inputSchema",
+    "tools/call",
+    "jsonrpc"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-03T12:00:29.171217+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T12:00:29.171217+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T12:00:29.171217+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "lab-shell-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T12:00:29.171217+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "catalog-gap-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T12:00:29.171217+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
