@@ -43,7 +43,7 @@ describe('GET /api/games/[gameId]/combat-lab', () => {
 
   it('a chosen lane reads only that lane; an unknown source or a path in the query is a 404, never read', async () => {
     const one = await body(await call('gtai', '?source=gunplay'));
-    expect(one.data!.tables.map((t) => t.state)).toEqual(['ok', 'missing', 'missing']);
+    expect(one.data!.tables.map((t) => t.state)).toEqual(['ok', 'missing', 'missing', 'missing']);
     expect((await call('gtai', '?source=nope')).status).toBe(404);
     expect((await call('gtai', `?source=${encodeURIComponent(base)}`)).status).toBe(404);
   });

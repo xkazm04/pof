@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ArenaStation, StationsRead } from './combatTypes';
 import type { SourceDir } from './readCombatLab';
+import { readLaneJsonFile } from '@/lib/games/laneJson';
 
 const isRec = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
@@ -47,7 +48,7 @@ export function readStations(dirRel: string, sources: SourceDir[]): StationsRead
       const from = { id: s.id, label: s.label };
       try {
         if (fs.statSync(full).size > 1_000_000) throw new Error('too large');
-        items.push(stationOf(n, from, JSON.parse(fs.readFileSync(full, 'utf8'))));
+        items.push(stationOf(n, from, readLaneJsonFile(full)));
       } catch { items.push({ file: n, from, unreadable: true }); }
     }
   }

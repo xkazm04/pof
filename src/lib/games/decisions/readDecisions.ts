@@ -5,6 +5,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { readLaneJsonFile } from '@/lib/games/laneJson';
 import type {
   DecisionMedia, DecisionOption, DecisionProblem, DecisionsBoard, DecisionView, MediaKind,
 } from './decisionTypes';
@@ -62,7 +63,7 @@ export function readAsks(root: string): { asks: Ask[]; problems: DecisionProblem
   for (const name of names) {
     try {
       const file = path.join(dir, name);
-      const parsed = parseAsk(JSON.parse(fs.readFileSync(file, 'utf8')), fs.statSync(file).mtimeMs);
+      const parsed = parseAsk(readLaneJsonFile(file), fs.statSync(file).mtimeMs);
       if (typeof parsed === 'string') problems.push({ file: name, reason: parsed });
       else if (asks.some((a) => a.id === parsed.id)) problems.push({ file: name, reason: `id ${parsed.id} is already used by another ask` });
       else asks.push(parsed);
@@ -80,7 +81,7 @@ export function readAnswers(root: string): AnswersRead {
   const file = path.join(root, 'answers.json');
   if (!fs.existsSync(file)) return { ok: true, answers: [], doc: { answers: [] } };
   try {
-    const doc: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const doc: unknown = readLaneJsonFile(file);
     if (!isObj(doc) || !Array.isArray(doc.answers)) return { ok: false, reason: 'answers.json has no "answers" array' };
     const answers = doc.answers.filter(isObj).map((a) => ({ ...a, id: text(a.id), choice: text(a.choice), note: text(a.note), at: text(a.at) }));
     return { ok: true, answers, doc };

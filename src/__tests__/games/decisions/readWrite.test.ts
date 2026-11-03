@@ -93,6 +93,19 @@ describe('writeAnswer', () => {
     expect(fs.readdirSync(fx.root).filter((n) => n.endsWith('.tmp'))).toEqual([]);
   });
 
+  it('reads an ask saved with a BOM and an answers.json saved as UTF-16, and writes it back as plain UTF-8', async () => {
+    fx = makeDecisionsFixture();
+    const askFile = path.join(fx.root, 'asks', 'gunplay-2.json');
+    fs.writeFileSync(askFile, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), fs.readFileSync(askFile)]));
+    const old = JSON.stringify({ answers: [{ id: 'old-0', choice: 'a', note: 'kept', at: '2026-11-03T18:00:00Z' }] });
+    fs.writeFileSync(path.join(fx.root, 'answers.json'), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(old, 'utf16le')]));
+    expect(readDecisionsBoard(fx.root, 'gtai', API).open.map((d) => d.id)).toContain('gunplay-2');
+    expect(readDecisionsBoard(fx.root, 'gtai', API).problems.map((p) => p.file)).toEqual(['broken-3.json']);
+    const r = await writeAnswer(fx.root, { id: 'gunplay-2', choice: 'low', note: '' }, new Date('2026-11-03T19:45:00Z'));
+    expect(r).toMatchObject({ ok: true });
+    expect(answersOf(fx.root).answers.map((x) => x.id)).toEqual(['old-0', 'gunplay-2']);
+  });
+
   it('creates answers.json when absent', async () => {
     fx = makeDecisionsFixture({ answers: null });
     expect(await writeAnswer(fx.root, { id: 'gunplay-2', choice: 'low' })).toMatchObject({ ok: true });

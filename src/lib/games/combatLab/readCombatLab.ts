@@ -11,6 +11,7 @@ import { COMBAT_TABLE_KEYS, type CombatSource, type CombatTable, type CombatTabl
 import { parseTable } from './parseTable';
 import { readStations } from './readStations';
 import { metricsOf, scalarsOf, ttkOf } from './parseSession';
+import { readLaneJsonFile } from '@/lib/games/laneJson';
 
 /** `telemetryDirs`: read these (instead of the config's) for sessions, and never for tables (the engine's user:// folder). */
 export interface SourceDir extends CombatSource { root: string; telemetryDirs?: readonly string[] }
@@ -22,7 +23,7 @@ function readJson(file: string): { ok: true; doc: unknown } | { ok: false; reaso
   try { st = fs.statSync(file); } catch { return null; }
   if (!st.isFile()) return null;
   if (st.size > MAX_FILE_BYTES) return { ok: false, reason: `larger than ${MAX_FILE_BYTES / 1_000_000} MB` };
-  try { return { ok: true, doc: JSON.parse(fs.readFileSync(file, 'utf8')) }; } catch (e) {
+  try { return { ok: true, doc: readLaneJsonFile(file) }; } catch (e) {
     return { ok: false, reason: `unparseable JSON: ${e instanceof Error ? e.message : 'parse failed'}` };
   }
 }
