@@ -7,6 +7,7 @@
  * build health (the game-written evidence, `gameHomeBuildHealth.tsx`).
  * Every empty state says what is empty; nothing renders as a blank panel or a fake zero.
  */
+import { useState } from 'react';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { MicroLabel } from '@/components/ui/MicroLabel';
@@ -17,6 +18,7 @@ import type { EngineState } from '@/lib/games/scope';
 import { useGameHomeData, type GameHomeRow, type IntakeRead } from './gameHomeData';
 import { GameHomePipelines } from './gameHomePipelines';
 import { GameHomeBuildHealth } from './gameHomeBuildHealth';
+import { GameHomeLanes } from './gameHomeLanes';
 
 /** The engine binding in words + a status level. Exported for tests. */
 export function engineWords(e: EngineState): { level: 'ok' | 'warn'; word: string; detail: string } {
@@ -58,6 +60,7 @@ function declaredCoverage(rows: GameHomeRow[]): { count: number; expected: numbe
 
 export function GameHome({ t }: { t: LabTheme }) {
   const d = useGameHomeData();
+  const [evidenceLane, setEvidenceLane] = useState<string | null>(null);
   const engine = engineWords(d.engine);
   const built = d.rows.filter((r) => r.fit !== 'planned');
   const planned = d.rows.length - built.length;
@@ -97,7 +100,8 @@ export function GameHome({ t }: { t: LabTheme }) {
           ) : 'no target declared'}
         </Fact>
       </div>
-      <GameHomeBuildHealth t={t} gameId={d.game.id} />
+      <GameHomeLanes t={t} gameId={d.game.id} evidenceLane={evidenceLane} onPickEvidence={setEvidenceLane} />
+      <GameHomeBuildHealth t={t} gameId={d.game.id} lane={evidenceLane} onClearLane={() => setEvidenceLane(null)} />
       {loading && <LoadingRow variant="inline" label="Grading readiness from pipeline artifacts…" />}
       <GameHomePipelines t={t} rows={d.rows} title={d.game.title} onRetry={d.retryArtifacts} />
     </section>

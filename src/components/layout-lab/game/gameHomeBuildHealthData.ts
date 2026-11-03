@@ -15,8 +15,8 @@ export type BuildHealthRead =
   | { kind: 'error'; message: string }
   | { kind: 'ok'; data: BuildHealth };
 
-export function buildHealthUrl(gameId: string): string {
-  return `/api/games/${encodeURIComponent(gameId)}/build-health`;
+export function buildHealthUrl(gameId: string, lane?: string | null): string {
+  return `/api/games/${encodeURIComponent(gameId)}/build-health${lane ? `?lane=${encodeURIComponent(lane)}` : ''}`;
 }
 
 /** A response is usable only when it carries the fields the panel reads. Exported for tests. */
@@ -26,13 +26,13 @@ export function isBuildHealth(v: unknown): v is BuildHealth {
     && typeof d.readAt === 'string' && typeof d.aggregate === 'object' && d.aggregate !== null;
 }
 
-export function useBuildHealth(gameId: string): { read: BuildHealthRead; reread: () => void } {
+export function useBuildHealth(gameId: string, lane: string | null = null): { read: BuildHealthRead; reread: () => void } {
   const [state, setState] = useState<{ key: string; read: BuildHealthRead }>({ key: '', read: { kind: 'loading' } });
   const [attempt, setAttempt] = useState(0);
-  const key = `${gameId}#${attempt}`;
+  const key = `${gameId}#${lane ?? ''}#${attempt}`;
   useEffect(() => {
     let cancelled = false;
-    void tryApiFetch<unknown>(buildHealthUrl(gameId)).then((r) => {
+    void tryApiFetch<unknown>(buildHealthUrl(gameId, lane)).then((r) => {
       if (cancelled) return;
       const read: BuildHealthRead = !r.ok ? { kind: 'error', message: r.error }
         : isBuildHealth(r.data) ? { kind: 'ok', data: r.data }
@@ -40,7 +40,7 @@ export function useBuildHealth(gameId: string): { read: BuildHealthRead; reread:
       setState({ key, read });
     });
     return () => { cancelled = true; };
-  }, [gameId, key]);
+  }, [gameId, lane, key]);
   const reread = useCallback(() => setAttempt((n) => n + 1), []);
   return { read: state.key === key ? state.read : { kind: 'loading' }, reread };
 }
