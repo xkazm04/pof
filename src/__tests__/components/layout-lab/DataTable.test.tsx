@@ -98,6 +98,14 @@ describe('ArchetypeStep table view via DataTable', () => {
     expect(screen.queryByText('— missing')).toBeNull();
   });
 
+  it('offers a break after each underscore in ids and headers without adding text', () => {
+    const { container } = render(
+      <DataTable t={t} columns={[{ key: 'spread_deg' }]} rows={[{ values: { spread_deg: 'machine_pistol' } }]} />,
+    );
+    expect(container.querySelectorAll('wbr').length).toBe(2);
+    expect(container.textContent).toBe('spread_degmachine_pistol');
+  });
+
   it('follows rowsKey into a nested row container', () => {
     const nested: StepSpec = {
       archetype: 'rules', label: 'Hazards',
