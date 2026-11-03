@@ -62,7 +62,8 @@ export interface GameDecisions {
  * whose lanes are searched. Nothing is hard-coded in the reader.
  */
 export interface GameCombatLab {
-  tables: { weapons: string; enemies: string; powers: string };
+  /** `melee` is optional: rivet-motion may keep its rows in `melee_weapons.json` beside the shared weapons table. */
+  tables: { weapons: string; enemies: string; powers: string; melee?: string };
   telemetryDirs: readonly string[];
   /** Folder (relative to a root) where every lane drops its arena station file. */
   stationsDir?: string;

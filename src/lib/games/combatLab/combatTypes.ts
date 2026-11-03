@@ -9,8 +9,8 @@
  * session did not record is omitted from `metrics` (never 0). `null` is not used on the wire.
  */
 
-export type CombatTableKey = 'weapons' | 'enemies' | 'powers';
-export const COMBAT_TABLE_KEYS: readonly CombatTableKey[] = ['weapons', 'enemies', 'powers'];
+export type CombatTableKey = 'weapons' | 'melee' | 'enemies' | 'powers';
+export const COMBAT_TABLE_KEYS: readonly CombatTableKey[] = ['weapons', 'melee', 'enemies', 'powers'];
 
 /** Where a read came from: the game root (`main`) or one lane's worktree. */
 export interface CombatSource { id: string; label: string }

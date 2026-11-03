@@ -66,7 +66,7 @@ export function readCombatLab(
 ): import('./combatTypes').CombatLabRead {
   return {
     gameId, readAt: now.toISOString(), configured: true, source, sources: pickable,
-    tables: COMBAT_TABLE_KEYS.map((k) => readTable(k, cfg.tables[k], sources)),
+    tables: COMBAT_TABLE_KEYS.flatMap((k) => { const rel = cfg.tables[k]; return rel ? [readTable(k, rel, sources)] : []; }),
     ...(cfg.stationsDir ? { stations: readStations(cfg.stationsDir, sources) } : {}),
     telemetry: {
       dirs: [...cfg.telemetryDirs],

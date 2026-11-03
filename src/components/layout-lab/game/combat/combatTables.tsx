@@ -10,7 +10,7 @@ import { StatusTag } from '@/components/ui/StatusTag';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import type { CombatTable } from '@/lib/games/combatLab/combatTypes';
 
-const TITLE: Record<CombatTable['key'], string> = { weapons: 'Weapons', enemies: 'Enemy archetypes', powers: 'Ghost powers' };
+const TITLE: Record<CombatTable['key'], string> = { weapons: 'Weapons', melee: 'Melee weapons', enemies: 'Enemy archetypes', powers: 'Ghost powers' };
 
 export function CombatTableBlock({ t, table }: { t: LabTheme; table: CombatTable }) {
   return (
