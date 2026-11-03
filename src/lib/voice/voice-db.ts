@@ -3,7 +3,7 @@
  * Tables: `voice_voices`, `voice_lines` (the queue), `voice_takes`, `voice_verdicts` (history).
  */
 import type Database from 'better-sqlite3';
-import type { QueueLine, TakeRow, VerdictEvent, VoiceRow } from '@/lib/voice/types';
+import type { QueueLine, TakeRow, VerdictEvent, VerdictFeedItem, VoiceRow } from '@/lib/voice/types';
 
 type Db = Database.Database;
 type Raw = Record<string, unknown>;
@@ -145,6 +145,12 @@ export function verdictHistory(db: Db, takeIds: readonly string[]): VerdictEvent
   if (takeIds.length === 0) return [];
   return db.prepare(`SELECT takeId, verdict, note, at FROM voice_verdicts WHERE takeId IN (${takeIds.map(() => '?').join(',')}) ORDER BY id`)
     .all(...takeIds) as VerdictEvent[];
+}
+/** Every verdict event after `since` (ms), oldest first, with the judged take's line and direction. */
+export function verdictFeed(db: Db, gameId: string, since = 0): VerdictFeedItem[] {
+  const rows = db.prepare(`SELECT v.takeId, v.verdict, v.note, v.at, t.questId, t.lineId, t.voiceId, t.direction, t.settings
+    FROM voice_verdicts v JOIN voice_takes t ON t.id = v.takeId WHERE t.gameId=? AND v.at>? ORDER BY v.at, v.id`).all(gameId, since) as Raw[];
+  return rows.map(({ settings, ...r }) => ({ ...(r as unknown as Omit<VerdictFeedItem, 'model'>), model: String(JSON.parse(String(settings)).model ?? '') }));
 }
 export function totalChars(db: Db, gameId: string): number {
   return (db.prepare('SELECT COALESCE(SUM(chars),0) AS n FROM voice_takes WHERE gameId=?').get(gameId) as { n: number }).n;

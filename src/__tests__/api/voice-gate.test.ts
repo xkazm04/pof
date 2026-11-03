@@ -82,6 +82,10 @@ describe('voice room human gate', () => {
     const room = await json(await roomGET(req(''), ctx));
     expect((room.data?.status as { proven: number }).proven).toBe(1);
     expect((await castPOST(req('/voices/cast', { voiceId }, { ...BROWSER, [GATE_HEADER]: token }), ctx)).status).toBe(200);
+    // The read-only feed the CLI reads the owner's notes from: the room's verdict only (the refused CLI ones left no trace).
+    const feed = await json(await roomGET(req('?view=verdicts&since=0'), ctx));
+    expect((feed.data?.verdicts as Array<{ verdict: string; note: string; lineId: string }>).map((v) => [v.lineId, v.verdict, v.note]))
+      .toEqual([['z1', 'approved', 'the panic lands']]);
   });
 
   it('re-casting another voice un-proves the line, and approving outside the cast voice is refused 409', async () => {

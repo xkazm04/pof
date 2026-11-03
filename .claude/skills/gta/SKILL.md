@@ -189,8 +189,9 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
      (`games/gtai/voices/<id>.md`) and the owner's notes. On `eleven_v3` the direction becomes audio tags. The
      profanity in the lines is kept as written.
    - The owner listens and judges in the room (approve or reject, with a note).
-   - `voice.mjs line --line <id>` reads the verdicts and notes; Claude writes the next round's directions from
-     them. A line is done only when the owner has approved a take. Fix order when a render is wrong (registry
+   - `voice.mjs verdicts --since <the last round's start, e.g. 30m>` reads every verdict and note since then,
+     grouped by line (`voice.mjs line --line <id>` shows one line's takes, class and scene); Claude writes the
+     next round's directions from them. A line is done only when the owner has approved a take. Fix order when a render is wrong (registry
      `speech-synthesis-script-writing`): another take first, then the words (propose the edit to the owner; the
      quest package is the text's only home, and an edit makes the older takes stale), settings last. Keep
      style at 0 and let the words and tags carry the feeling. Casting a different voice un-proves that

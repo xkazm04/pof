@@ -7,7 +7,7 @@ vi.hoisted(() => {
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { createVoiceDb, listTakes, setVerdict, castVoice, listVoices, verdictHistory } from '@/lib/voice/voice-db';
+import { createVoiceDb, listTakes, setVerdict, castVoice, listVoices, verdictFeed, verdictHistory } from '@/lib/voice/voice-db';
 import { queueEntries, statusView, syncQueue } from '@/lib/voice/lineQueue';
 import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate, bibleDescription, designForCharacter, ORIGINAL_VOICE_CLAUSE, readBible } from '@/lib/voice/design';
@@ -76,6 +76,25 @@ describe('line queue', () => {
     expect(st.proven).toBe(1);
     expect(st.quests.map((q) => [q.questId, q.proven, q.total])).toEqual([['zulu', 1, 2], ['alpha', 0, 2]]);
     expect(st.next[0].lineId).toBe('z2');
+  });
+
+  it('the verdict feed lists every verdict with its line, direction and note, oldest first, after `since`', async () => {
+    syncQueue(db, 'gtai', root);
+    addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
+    const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 2, direction: 'shouting' }, deps);
+    if (!r.ok) throw new Error(r.error);
+    const [t1, t2] = r.data;
+    setVerdict(db, t1.id, 'rejected', 'too calm', 100);
+    setVerdict(db, t1.id, 'approved', null, 200);
+    setVerdict(db, t2.id, 'approved', 'the one', 300);
+    const feed = verdictFeed(db, 'gtai');
+    expect(feed.map((f) => [f.takeId, f.verdict, f.note, f.at])).toEqual([
+      [t1.id, 'rejected', 'too calm', 100], [t1.id, 'approved', null, 200],
+      [t1.id, 'superseded', `replaced by ${t2.id}`, 300], [t2.id, 'approved', 'the one', 300],
+    ]);
+    expect(feed[0]).toMatchObject({ questId: 'zulu', lineId: 'z1', direction: 'shouting', model: 'eleven_v3' });
+    expect(verdictFeed(db, 'gtai', 200).map((f) => f.verdict)).toEqual(['superseded', 'approved']);
+    expect(verdictFeed(db, 'other-game')).toEqual([]);
   });
 });
 

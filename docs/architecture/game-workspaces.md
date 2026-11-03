@@ -416,7 +416,8 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   browser fetch and signed with a per-process secret (10 minutes). The CLI and agent tools are refused 403
   (`src/__tests__/api/voice-gate.test.ts`). The limit is written down: a local process that forges browser
   headers passes; the gate stops accidents and the agent path, not an adversary.
-- **Routes** (`/api/games/gtai/voice`): `GET` (room state; `?view=status`), `lines` (one line + bible + takes),
+- **Routes** (`/api/games/gtai/voice`): `GET` (room state; `?view=status`; `?view=verdicts&since=<ms>`, the owner's
+  verdicts and notes with each take's line and direction, read-only), `lines` (one line + bible + takes),
   `takes` (generate k), `takes/verdict` (gated), `voices` (list, design, stock candidate), `voices/cast`
   (gated), `gate`, `audio?takeId|voiceId`, `export`.
 - **Export** (`exportQuest`): only proven lines, mp3 to Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
@@ -426,7 +427,7 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
 - **UI:** `/layout?g=gtai&c=spellbook&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
   generate k takes with a direction), Cast (voices with previews, cast, design from the bible).
-- **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `takes`, `design`, `stock`, `voices`,
+- **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `verdicts`, `takes`, `design`, `stock`, `voices`,
   `export`; no approve, reject or cast), driven by `/gta --voice` (`.claude/skills/gta/SKILL.md`, Voice mode).
 - **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, line class + scene + column migration,
   supersede, design, export) and the

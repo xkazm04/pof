@@ -5,6 +5,7 @@
  *   node games/gtai/voice/voice.mjs status                          proven / total, per quest, next unproven
  *   node games/gtai/voice/voice.mjs next [--n N] [--quest <id>]     the next unproven lines, in play order
  *   node games/gtai/voice/voice.mjs line --line <id> [--quest <id>] a line's takes, verdicts and the owner's notes
+ *   node games/gtai/voice/voice.mjs verdicts [--since 2h|<ISO>|<ms>] [--quest <id>]  every verdict + note, by line
  *   node games/gtai/voice/voice.mjs takes --line <id> --n <k> --direction "<text>"
  *        [--quest <id>] [--voice <voiceRowId>] [--model eleven_v3|eleven_multilingual_v2]
  *        [--stability x] [--style x] [--speed x]
@@ -60,6 +61,15 @@ async function findLine(lineId, questId) {
 }
 
 const num = (v) => (v === undefined ? undefined : Number(v));
+/** `--since`: epoch ms, an ISO time, or an age like `45m`, `2h`, `1d`; absent = everything. */
+function sinceMs(v) {
+  if (!v) return 0;
+  const age = /^(\d+)([mhd])$/.exec(v);
+  if (age) return Date.now() - Number(age[1]) * { m: 60_000, h: 3_600_000, d: 86_400_000 }[age[2]];
+  const t = /^\d+$/.test(v) ? Number(v) : Date.parse(v);
+  if (Number.isNaN(t)) throw new Error(`--since ${v}: use epoch ms, an ISO time, or 45m / 2h / 1d`);
+  return t;
+}
 
 async function main() {
   switch (cmd) {
@@ -87,6 +97,22 @@ async function main() {
       for (const t of d.takes) {
         out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.stale ? ' (stale text)' : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
       }
+      return;
+    }
+    case 'verdicts': {
+      // The owner's feedback stream: every verdict + note since --since, so the next round reads one list.
+      const since = sinceMs(opt('since'));
+      const quest = opt('quest');
+      const { verdicts } = await call(`?view=verdicts&since=${since}`);
+      const rows = verdicts.filter((v) => !quest || v.questId === quest);
+      let line = '';
+      for (const v of rows) {
+        const key = `${v.questId}/${v.lineId}`;
+        if (key !== line) { out(key); line = key; }
+        out(`  ${new Date(v.at).toISOString().slice(0, 16)} ${pad(v.verdict, 10)} take ${v.takeId.slice(0, 8)} dir="${v.direction}" ${v.model}${v.note ? ` · note: ${v.note}` : ''}`);
+      }
+      const count = (k) => rows.filter((v) => v.verdict === k).length;
+      out(`${rows.length} verdicts since ${since ? new Date(since).toISOString() : 'the start'}: ${count('approved')} approved, ${count('rejected')} rejected`);
       return;
     }
     case 'takes': {
@@ -137,7 +163,7 @@ async function main() {
       return;
     }
     default:
-      out('usage: voice.mjs status | next | line | takes | design | stock | voices | export (see the header). '
+      out('usage: voice.mjs status | next | line | verdicts | takes | design | stock | voices | export (see the header). '
         + 'There is no approve/reject/cast: the owner does that in the PoF Voice room.');
       process.exitCode = cmd ? 1 : 0;
   }

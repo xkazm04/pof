@@ -109,6 +109,15 @@ export interface VerdictEvent {
   at: number;
 }
 
+/** One verdict event with the take it judged: the owner's feedback stream the next round is written from. */
+export interface VerdictFeedItem extends VerdictEvent {
+  questId: string;
+  lineId: string;
+  voiceId: string;
+  direction: string;
+  model: string;
+}
+
 /** One queue row as the room and the CLI read it. */
 export interface QueueEntry extends QueueLine {
   state: LineState;
