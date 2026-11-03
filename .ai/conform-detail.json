@@ -18355,6 +18355,174 @@
         }
       ],
       "registryProposal": "match-the-resolved-artifact could name source files of the gating machinery itself as a haystack: here the acceptance drain's own source dropped out of text review because of an in-code NUL used as a map-key separator, a common idiom."
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/quality-gates": {
+      "context": "judge-craft-quality",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T16:52:21.464Z",
+      "techniques": [
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "src/app/api/judge-verdicts/route.ts:82 Caller self-declares 'human'; the admission door exempts human passes from the >=90 band rule, so the gated party can author an elevating record."
+        },
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/calibration.ts:16 The build-blocking guard reads the latest LLM calibration run from a machine-local file (calibration.ts:344, homedir ~/.pof), so the same commit is red on one machine and green on another; its verdict is not a function of the tree."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:254 A run that scored nothing returns 'unscored' (refuse), never a rate or a pass."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:206 Distinct could-not-run standings (unrun/stale/unscored/provisional/undersampled) instead of folding into pass."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:17 Seeded provisional labels are a distinct token that never counts as human confirmation."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/calibration.ts:242 Names an in-tree script (scripts/judge-run.ts implements --calibrate)."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:35 Reporting surface's 'standing' is derived from the acceptance layer's own set, not re-spelled."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:50 Closed vocabulary for non-satisfied verdict states (stale/unknown/superseded); blank is not one."
+        },
+        {
+          "technique": "item-liveness",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/verdictStanding.ts:60 Verdict standing is re-evaluated against the current content hash on each read, not a one-time birth certificate."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/app/api/craft-verdicts/route.ts:23 Craft gauges are advisory by construction and labelled as such."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "conformant",
+          "evidence": "src/lib/craft/lens-map.ts:8 Lens routing for media classes keys on deliverable class, not a renameable catalog label."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/dimensions.ts:27 Misfiring rubric narrowed for exact mis-read steps, not loosened globally."
+        },
+        {
+          "technique": "excess-indicts-the-instrument",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/rubrics.ts:17 Inflated/condemning scores were traced to the instrument (payload contamination, empty siblings) and fixed there."
+        }
+      ],
+      "withdrawn": {
+        "worker": "ff8c076b-c583-4dfa-98ce-0a66de5a8c98",
+        "state": "deviation",
+        "at": "2026-11-03T16:52:59.325810+00:00",
+        "reason": "reviewer (sonnet): The deviation's evidence anchor, src/app/api/judge-verdicts/route.ts:82, belongs to the quality-evaluation-api context and is not in judge-craft-quality's file list. I confirmed the claim itself: the route lets the caller set judge='human', admission.ts:42 exempts human passes from the floor, and ju"
+      }
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/quality-gates": {
+      "context": "quality-evaluation-api",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T16:52:21.464Z",
+      "worker": "ff8c076b-c583-4dfa-98ce-0a66de5a8c98",
+      "techniques": [
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:95 Headline field projects a more permissive basis than the enforced one; labelled alternates exist but the default-read field disagrees with the gate."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/animation/route.ts:38 Tier-1 input is raw marker text or the clip itself, never a caller-supplied verdict field."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/animation/route.ts:48 Inapplicable condition is SKIP stated as n/a, not a pass."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/animation/route.ts:200 tier1.status 'not-run' is reported explicitly rather than read as passed."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/visual/route.ts:8 Visual check's advisory severity is stated honestly at the seam."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/app/api/harness/route.ts:379 Identity refusal surfaces as a 400 carrying both actionable remedies."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "src/app/api/regression-tracker/route.ts:77 Dismissal targets one named alert id, not a blanket."
+        }
+      ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/quality-gates": {
+      "context": "step-shared-primitives",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T16:52:21.464Z",
+      "worker": "ff8c076b-c583-4dfa-98ce-0a66de5a8c98",
+      "techniques": [
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:14 Duplicate of VERDICT_STANDING_CHIP rather than an import from the one enumeration."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 An explicit token for 'no real asset' instead of a plausible fabricated preview."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:102 Deferred state names where the remedy actually runs and offers no unreachable local fix."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:51 Machine-written selection records are surfaced as 'auto', making the self-report loud (display only; the gate itself is outside this context)."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:53 Missing provenance gets its own state rather than a blank."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:43 Display surface labelled as non-enforcing."
+        }
+      ]
     }
   }
 }

@@ -1,0 +1,177 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ff8c076b-c583-4dfa-98ce-0a66de5a8c98",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-03T16:52:21.464275+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "quality-evaluation-api",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/harness/route.ts:95 The status summary's headline `passRate` is the executor's self-reported rate while the orchestrator gates on the 'verified' basis by default (orchestrator.ts:785), so the most-read projection of the harness policy overstates what the gate accepts.",
+      "techniques": [
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:95 Headline field projects a more permissive basis than the enforced one; labelled alternates exist but the default-read field disagrees with the gate."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/animation/route.ts:38 Tier-1 input is raw marker text or the clip itself, never a caller-supplied verdict field."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/animation/route.ts:48 Inapplicable condition is SKIP stated as n/a, not a pass."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/animation/route.ts:200 tier1.status 'not-run' is reported explicitly rather than read as passed."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/visual/route.ts:8 Visual check's advisory severity is stated honestly at the seam."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/app/api/harness/route.ts:379 Identity refusal surfaces as a 400 carrying both actionable remedies."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "src/app/api/regression-tracker/route.ts:77 Dismissal targets one named alert id, not a blanket."
+        }
+      ]
+    },
+    {
+      "context": "step-shared-primitives",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:14 The strip hand-maintains its own copy of the verdict-standing vocabulary although src/lib/judge/verdictStanding.ts:46 claims it is shared with ProvenanceStrip, so the two projections of the same policy can drift with nothing to catch it.",
+      "techniques": [
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:14 Duplicate of VERDICT_STANDING_CHIP rather than an import from the one enumeration."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 An explicit token for 'no real asset' instead of a plausible fabricated preview."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:102 Deferred state names where the remedy actually runs and offers no unreachable local fix."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:51 Machine-written selection records are surfaced as 'auto', making the self-report loud (display only; the gate itself is outside this context)."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:53 Missing provenance gets its own state rather than a blank."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:43 Display surface labelled as non-enforcing."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "build-quality-monitoring",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "gdd-compliance",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "judge-craft-quality",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation's evidence anchor, src/app/api/judge-verdicts/route.ts:82, belongs to the quality-evaluation-api context and is not in judge-craft-quality's file list. I confirmed the claim itself: the route lets the caller set judge='human', admission.ts:42 exempts human passes from the floor, and ju"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-03T16:52:21.464275+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "blocking-by-input-determinism",
+        "excess-indicts-the-instrument",
+        "fabrication-economics",
+        "false-positive-economics",
+        "gate-liveness",
+        "item-liveness",
+        "policy-projection",
+        "refusal-names-a-reachable-remedy",
+        "renameable-detector-keys",
+        "self-reported-gate-inputs",
+        "severity-by-construction",
+        "unmeasurable-criteria"
+      ],
+      "deviations": 1,
+      "context": "judge-craft-quality",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T16:52:21.464275+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "gate-liveness",
+        "policy-projection",
+        "refusal-names-a-reachable-remedy",
+        "self-reported-gate-inputs",
+        "severity-by-construction",
+        "unmeasurable-criteria",
+        "waiver-names-its-finding"
+      ],
+      "deviations": 1,
+      "context": "quality-evaluation-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T16:52:21.464275+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "fabrication-economics",
+        "policy-projection",
+        "refusal-names-a-reachable-remedy",
+        "self-reported-gate-inputs",
+        "severity-by-construction"
+      ],
+      "deviations": 1,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

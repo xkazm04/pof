@@ -22922,7 +22922,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/harness/route.ts:95 The status summary's headline `passRate` is the executor's self-reported rate while the orchestrator gates on the 'verified' basis by default (orchestrator.ts:785), so the most-read projection of the harness policy overstates what the gate accepts.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "machine-authored-documentation",
@@ -24401,7 +24405,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/ProvenanceStrip.tsx:14 The strip hand-maintains its own copy of the verdict-standing vocabulary although src/lib/judge/verdictStanding.ts:46 claims it is shared with ProvenanceStrip, so the two projections of the same policy can drift with nothing to catch it.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "generated-workflow-candidates",
