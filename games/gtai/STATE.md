@@ -485,3 +485,28 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **IP rule:** prompts describe the look and never name the inspiring comic.
   - **Leonardo:** the API has **0 API tokens** and refuses generation ("not enough api tokens", probed 22:35). The 1,728 tokens belong to the web Studio plan, which the API cannot spend. The lane re-probes every session: it uses Leonardo's GPT model with download-then-delete if credits appear, and Codex otherwise.
   - Morning: `night.mjs status|report --root C:/Users/kazda/kiro/gtai-night-noir`.
+
+### 2026-11-03 morning: night review and owner verdicts
+- **All 4 night lanes reported at 08:15 with gates green.** Cost about $530 CLI-reported, all on the subscription (the API key was already empty). No lane hit a usage limit.
+  - `n-visual` (187 commits): the visual engine as data (layers, looks, palette gate, lights, FX, camera). The rig is at 0.338 ms against the 0.3 ms target; the rest needs native code.
+  - `n-d4` (299 commits): city placeholders 22 -> 0. 4 changes are delivered as patches (REQUEST 16, 19, 21, 23).
+  - `n-d5` (375 commits): the D5 tier at 64 px/m and above, plus the D5 dev hero scene (the closest frame to the mock tonight), portraits, finishers, phone frame and loading art.
+  - `n-noir` (161 commits): `--look=noir`, the red blood FX and the comic kill beat.
+- **Verdict page** (every frame tagged by source, branch, look and zoom): https://claude.ai/artifact/NrcJzeLbtRi7yqosxpvLZc (scratch `verdict/index.html`).
+- **Owner verdicts (2026-11-03, verbatim in substance):**
+  1. **Rivet is too massive in game.** In the concept he is only slightly larger than a human. He can grow large later, when he transforms into the bulky ghost form.
+  2. **D5 is the superior direction to chase.** H3-H6 (D5 arena zoom, kill-cam, boss arena, portraits) "look great".
+  3. **Descope the ghost/soul trail behind Rivet now,** until a mechanism to use the souls in combat exists later in the game.
+  4. **Noir (N1b, N2b) becomes a special-mission art direction for mid/late game,** not the core style.
+  5. **Adopt noir's blood colour and splashes into D5.**
+  6. **Cops: the T1 mock's look, with blue shades instead of orange.** This supersedes the earlier "ink uniform, vermilion cap" answer of the same morning.
+  - Direction: "decide after slice play" was the first answer; the notes above settle it as **D5 is the target**, noir is a mission look.
+
+### 2026-11-03 day: plan (unattended until 18:00, owner at the office)
+- Owner: "continue this day with chasing D5 until 18:00, I will return from office and we will sync based on the progress achieved".
+- **Step 1 (Director, now):** merge `n-d4`, `n-visual`, `n-d5` and `n-noir` onto rtai main `721fbbb`, apply the lanes' patches, re-bless the goldens, run the gates, push.
+- **Step 2:** a day runner root `C:\Users\kazda\kiro\gtai-day-d5` with 3 lanes from the merged main, until 18:00 (report 17:30):
+  - `d5-city`: the generated city reaches the D5 hero scene's level (roofs, ground, parapets, clutter, shadows), D5 as the default look, and the palette doctrine updated (blood red, cop blue);
+  - `d5-cast`: Rivet rescaled toward the concept, cops redrawn in T1 blue shades, the soul trail removed, portraits updated;
+  - `d5-combat`: noir's red blood FX and splashes ported into D5 as the default, the kill beat as an A/B option, and noir as a `look_profiles.json` row for special missions.
+- **18:00 sync:** `night.mjs report --root C:/Users/kazda/kiro/gtai-day-d5`, then the verdict page updated with the day's frames.
