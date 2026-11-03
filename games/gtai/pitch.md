@@ -190,6 +190,14 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
   - If the owner wants AI-generated sprite sheets for production, that changes the policy, and it should be decided explicitly.
 - **[proposal]** GTA 2 itself was 2.5D: a 3D block city with 2D sprites on top. **A top-down camera means one sprite rotates freely,** so a character needs its animation frames once, not once per direction. That one fact is what makes 2D cheap for this game.
 
+- **[owner, 2026-11-03] Art direction after the graphics night** (supersedes the riso lock above as the production look; the 90-degree camera stands):
+  - **D5 "Inked Grime" is the direction to chase.** It is the D4 "Ink and Hatch" world (`art-direction/directions-v2/d4h2_mock.jpg`) with the Rivet concept's grime, hatch and rust (`trivet/ref-4-rivet-concept.jpg`) where it survives: up close, in arenas, kill-cams and portraits.
+  - **Noir** (black and white with red blood) is a **special-mission art direction for mid/late game**, not the core style.
+  - **Blood is red,** with noir's splash FX (spurts, pools, drips, splats), adopted into D5.
+  - **Cops take the mock's look with blue shades,** not vermilion. Vermilion stays for danger cues, objectives and Rivet's collar; teal stays for the dead.
+  - **Rivet is only slightly larger than a human** (as in the concept). He may grow large later through a bulky ghost transformation.
+  - **The soul trail behind Rivet is descoped** until a combat mechanism uses the souls.
+
 ## 9. Production notes **[proposal]**
 
 - **Parody and Steam.** "General Krump" and the Pentagon raid sit within GTA's tradition. Keep Krump an archetype: no real likeness, real voice imitation, real slogans or real logos. Declare frequent violence, gore and strong language in Steam's mature-content survey.
@@ -207,10 +215,11 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
 |---|---|
 | ~~Art style~~ | **Resolved 2026-11-01 [owner]: V1 DEAD INK, "Trivet"** (`art-direction/trivet/`) |
 | ~~Camera pitch~~ | **Resolved 2026-11-01 [owner]: 90 degrees straight down, orthographic** (GTA 2). One sprite per character rotates freely |
-| Engine | Overnight spike (`games/gtai/spike/`), morning scorecard |
+| ~~Engine~~ | **Resolved 2026-11-02 [owner]: Godot 4.7.2** |
 | Fourth soul | Owner, from §4 |
 | Act antagonist order and allegiance | Owner, then the story-decision-graph mission pass |
 | Betrayer (Don Fax or Vend-Etta) | Owner |
 | Final punchline of the Pentagon raid | Story-graph pass |
 | City districts and map count | After the engine lock (city-blocks pipeline) |
-| AI-generated production sprites | Owner (a fleet-policy change) |
+| ~~AI-generated production sprites~~ | **Resolved 2026-11-02 [owner]: generated parts + a 2D cutout rig** (STATE decisions log) |
+| ~~Production art direction~~ | **Resolved 2026-11-03 [owner]: D5 Inked Grime; noir as a mission look** (§8) |
