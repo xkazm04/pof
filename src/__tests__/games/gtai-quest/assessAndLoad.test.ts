@@ -11,7 +11,7 @@ import { CLEAN, ECONOMY, LEDGER_QUEST, ctx, mutate } from '@/__tests__/games/gta
 describe('assessQuest', () => {
   it('passes the clean fixture through every guard', () => {
     const v = assessQuest('per-my-last-fax', CLEAN, ctx());
-    expect(v.guards.map((g) => [g.guard, g.state])).toEqual([['story', 'green'], ['economy', 'green'], ['lines', 'green'], ['uniqueness', 'green']]);
+    expect(v.guards.map((g) => [g.guard, g.state])).toEqual([['story', 'green'], ['economy', 'green'], ['lines', 'green'], ['uniqueness', 'green'], ['vocabulary', 'green']]);
     expect(v.blocked).toBe(false);
   });
 
@@ -62,7 +62,7 @@ describe('loaders (temp dir)', () => {
   });
 
   it('loadQuestContext assembles economy, voice bibles, cast and ledger', () => {
-    const c = loadQuestContext(root);
+    const c = loadQuestContext(root, null, null);
     expect(c.economy?.revision).toBe(1);
     expect([...c.voiceBibles].sort()).toEqual(['don-fax', 'rivet']);
     expect(c.cast.has('general-krump')).toBe(true);
@@ -74,8 +74,9 @@ describe('loaders (temp dir)', () => {
   it('a missing economy table yields null (unmeasured), and a missing root yields an empty context', () => {
     const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'gtai-quest-empty-'));
     try {
-      const c = loadQuestContext(empty);
+      const c = loadQuestContext(empty, null, null);
       expect(c.economy).toBeNull();
+      expect(c.rules).toBeNull();
       expect(c.ledger).toEqual([]);
       expect(c.voiceBibles.size).toBe(0);
     } finally {

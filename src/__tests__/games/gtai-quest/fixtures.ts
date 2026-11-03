@@ -4,6 +4,7 @@
  */
 
 import { GTAI_CAST } from '@/lib/games/gtai-quest/campaignBaseline';
+import { parseQuestRules } from '@/lib/games/gtai-quest/questRules';
 import type {
   LineJudgeReport,
   QuestDesign,
@@ -11,6 +12,7 @@ import type {
   QuestGuardContext,
   QuestLine,
   QuestPackage,
+  QuestRules,
 } from '@/lib/games/gtai-quest/types';
 
 const line = (id: string, speaker: string, text: string, purpose: QuestLine['purpose'] = ['funny'], when?: string[]): QuestLine =>
@@ -25,7 +27,7 @@ export const CLEAN: QuestDesign = {
   characters: [{ id: 'don-fax', name: 'Don Fax', status: 'existing', role: 'giver' }],
   beats: [
     { id: 'the-call', title: 'The call', summary: 'A payphone rings; Don Fax is on the line.', objective: { verb: 'meet', location: 'fax-office' }, lineIds: ['fax-intro-1', 'fax-intro-2'] },
-    { id: 'the-run', title: 'The run', summary: 'Grab the cartridge and drive it back.', objective: { verb: 'deliver', target: 'toner cartridge' }, lineIds: ['fax-brief-1', 'gearbox-1', 'rivet-drive-1', 'gearbox-2'] },
+    { id: 'the-run', title: 'The run', summary: 'Grab the cartridge and drive it back.', objective: { verb: 'deliver', target: 'toner cartridge', location: 'fax-office' }, lineIds: ['fax-brief-1', 'gearbox-1', 'rivet-drive-1', 'gearbox-2'] },
     { id: 'the-payoff', title: 'The payoff', summary: 'Don Fax pays, by fax.', objective: { verb: 'deliver', location: 'fax-office' }, lineIds: ['fax-pay-1'] },
   ],
   lines: [
@@ -40,7 +42,7 @@ export const CLEAN: QuestDesign = {
   ],
   mechanics: [{ id: 'paper-jam-hazard', name: 'Paper jam', status: 'new', home: 'game', summary: 'Fax machines jam and spray toner as a blinding hazard.' }],
   reward: { cash: 1500, unlocks: ['upgrade:gearbox-residue'] },
-  difficulty: { heatPeak: 2, enemyCount: 12, enemyWaves: 2, timeLimitS: 90, failStates: ['cartridge destroyed'], minutes: 10 },
+  difficulty: { heatPeak: 2, enemyCount: 12, enemyWaves: 2, timeLimitS: 90, failStates: ['vehicle destroyed'], minutes: 10 },
   story: { reads: ['soul_gearbox_unlocked'], writes: [{ var: 'q_fax_jam', value: true }] },
   fingerprint: { giver: 'don-fax', coreVerb: 'deliver', newMechanic: 'paper-jam-hazard', location: 'fax-office', payoffKind: 'character-turn' },
 };
@@ -97,6 +99,37 @@ export const ECONOMY: QuestEconomyTable = {
   soulUpgradePrices: [2000, 5000, 10000, 20000],
 };
 
+/** A trimmed copy of the runtime's `quest_rules.json` (gtai.quest-rules/2), enough rows to mutate against. */
+export const RULES_RAW = {
+  schema: 'gtai.quest-rules/2',
+  verbs: [
+    { id: 'go_to', needs_location: true },
+    { id: 'deliver', needs_location: true },
+    { id: 'steal', needs_target: true },
+    { id: 'kill', needs_target: true },
+    { id: 'escort', needs_target: true, needs_location: true },
+    { id: 'meet', needs_location: true },
+    { id: 'sabotage', needs_location: true, needs_encounter: true },
+  ],
+  conditions: [
+    { id: 'soul', values: ['rivet', 'hauler', 'gearbox', 'sentry', 'mop'] },
+    { id: 'madness', values: ['lucid', 'crowded', 'choir', 'chorus'] },
+    { id: 'weapon', values: ['gloria', 'assault-rifle', 'none'] },
+    { id: 'heat', pattern: '^(>=|<=|>|<|==|=)?(\\d+)$' },
+  ],
+  event_tags: [{ id: 'kill' }, { id: 'wave-start' }, { id: 'boss-intro' }, { id: 'static-whisper-burst' }],
+  fail_rules: [
+    { id: 'rivet_wasted', groups: [['rivet', 'player'], ['dies', 'destroyed', 'wasted']] },
+    { id: 'car_destroyed', groups: [['car', 'van', 'vehicle'], ['destroyed', 'wrecked']] },
+    { id: 'target_escapes', groups: [['escape', 'escapes', 'gets away']] },
+  ],
+};
+export const RULES: QuestRules = (() => {
+  const r = parseQuestRules(RULES_RAW);
+  if (!r.ok) throw new Error(r.error);
+  return r.data;
+})();
+
 export function ctx(over: Partial<QuestGuardContext> = {}): QuestGuardContext {
   return {
     economy: ECONOMY,
@@ -104,6 +137,7 @@ export function ctx(over: Partial<QuestGuardContext> = {}): QuestGuardContext {
     cast: new Set([...GTAI_CAST.map((c) => c.id), 'dust-bunny']),
     ledger: [LEDGER_QUEST],
     judge: null,
+    rules: RULES,
     ...over,
   };
 }

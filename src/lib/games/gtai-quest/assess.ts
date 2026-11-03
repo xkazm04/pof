@@ -2,6 +2,8 @@ import { assessEconomy } from '@/lib/games/gtai-quest/economyGuard';
 import { assessLines } from '@/lib/games/gtai-quest/lineGuard';
 import { assessStory } from '@/lib/games/gtai-quest/storyGuard';
 import { assessUniqueness } from '@/lib/games/gtai-quest/uniqueness';
+import { assessVocabulary } from '@/lib/games/gtai-quest/vocabGuard';
+import { NON_OVERRIDABLE_GUARDS } from '@/lib/games/gtai-quest/types';
 import type {
   GuardId,
   GuardOverride,
@@ -13,7 +15,8 @@ import type {
 
 /**
  * Run every guard on one quest design (a council path or a package). Pure: the caller loads the context.
- * A red guard blocks unless an override for it exists. `unmeasured` never blocks and never passes —
+ * A red guard blocks unless an override for it exists (the vocabulary guard cannot be waived:
+ * the runtime refuses the package at load whatever the owner says). `unmeasured` never blocks and never passes —
  * the pipeline's acceptance treats it as "not yet".
  */
 export function assessQuest(
@@ -28,8 +31,9 @@ export function assessQuest(
     assessEconomy(design, ctx),
     assessLines(design, ctx),
     assessUniqueness(design, ctx, selfId),
+    assessVocabulary(design, ctx),
   ];
-  const overridden = new Set<GuardId>(overrides.filter((o) => o.reason.trim().length > 0).map((o) => o.guard));
+  const overridden = new Set<GuardId>(overrides.filter((o) => o.reason.trim().length > 0 && !NON_OVERRIDABLE_GUARDS.includes(o.guard)).map((o) => o.guard));
   const blockedBy = guards.filter((g) => g.state === 'red' && !overridden.has(g.guard)).map((g) => g.guard);
   return { subject, guards, blockedBy, blocked: blockedBy.length > 0 };
 }

@@ -7,7 +7,12 @@
 //   node games/gtai/quest/council.mjs assess <runDir>
 //   node games/gtai/quest/council.mjs render <runDir>
 //   node games/gtai/quest/council.mjs judge  <questDir> --author claude|grok [--ceiling-min 30]
-//   node games/gtai/quest/council.mjs check  <questDir>
+//   node games/gtai/quest/council.mjs check  <questDir> [--game-root <game repo>] [--allow-unmeasured]
+//
+// `assess` and `check` run the PoF guards, including the vocabulary guard: it reads the game runtime's
+// project/data/tables/quest_rules.json (POF_GAME_ROOT_GTAI, else --game-root, else ../gtai) and fails any
+// verb, bark tag or condition the runtime does not play, naming each. `check` exits 1 when blocked and 3
+// when the vocabulary could not be read (unmeasured is not a pass).
 //
 // Seats run through the ai-registry's contest machinery (engineCommand, parseEnvelope, classifyOutcome,
 // resolveBin, runSeat), imported from the registry checkout ($AI_REGISTRY_DIR, else `registry.local` in
@@ -454,14 +459,20 @@ function tsx(args) {
   return r.status ?? 1;
 }
 
+/** `--game-root <dir>` forwarded to the guard CLI (absolute), or nothing. */
+function guardArgs() {
+  const root = opt('game-root');
+  return [...(root ? ['--game-root', path.resolve(root)] : []), ...(argv.includes('--allow-unmeasured') ? ['--allow-unmeasured'] : [])];
+}
+
 function assess() {
   const dir = path.resolve(positional(1) ?? die('usage: assess <runDir>'));
-  process.exit(tsx([dir]));
+  process.exit(tsx([dir, ...guardArgs()]));
 }
 
 function check() {
   const dir = path.resolve(positional(1) ?? die('usage: check <questDir>'));
-  process.exit(tsx(['--package', dir]));
+  process.exit(tsx(['--package', dir, ...guardArgs()]));
 }
 
 async function render() {

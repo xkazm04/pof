@@ -357,6 +357,20 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   `LINE_UNJUDGED` (warn). The basis says `structural + judge(<seat>)` or `structural only; judge unmeasured`.
 - **Uniqueness** (`uniqueness.ts`) against every other ledger quest: `DUPLICATE_SHAPE` (giver, verb and new
   mechanic equal; `null` equals `null`), `DUPLICATE_TITLE`, `NEAR_DUPLICATE` and `MECHANIC_NOT_NEW` (warns).
+- **Vocabulary guard** (`vocabGuard.ts`, `questRules.ts`; the fifth guard, id `vocabulary`). The council's contract
+  allows free verbs, bark tags and fail words; the Godot runtime plays only what the game repo's
+  `project/data/tables/quest_rules.json` (`gtai.quest-rules/2`) declares. `ctx.rules` (`QuestRules`) is that table,
+  read by `loadQuestRules(gameRoot)` from `gameRootFor('gtai')` (`POF_GAME_ROOT_GTAI` first, then `engine.root`),
+  or passed explicitly to `loadQuestContext(root, judge, gameRoot)`. Codes (errors): `VOCAB_UNKNOWN_VERB`,
+  `VOCAB_MISSING_TARGET` / `VOCAB_MISSING_LOCATION` (the verb row needs one), `VOCAB_UNKNOWN_EVENT_TAG` (a bare `when`
+  tag that is neither an `event_tags` id nor `quest:<verb>_done`), `VOCAB_UNKNOWN_CONDITION` (kind not declared),
+  `VOCAB_UNKNOWN_CONDITION_VALUE` (value outside `values` / `pattern`); warn: `VOCAB_FAIL_STATE_UNDETECTABLE` (no
+  `fail_rules` row matches the phrase, whole words, first full-group match wins). Each finding names the offending
+  verb or tag and its beat or line. Places are the game's contract (`gtai.questMarkers/1`), not checked here. No table
+  readable => `unmeasured`. The guard is in `NON_OVERRIDABLE_GUARDS`: an owner override cannot waive it, because the
+  runtime refuses the package at load regardless. It reaches the `contracts` pipeline's Guards step through
+  `assessQuest` (blocked => fail naming `vocabulary:<CODE>`, unmeasured => pending). CLI: `council.mjs check <questDir>
+  [--game-root <repo>] [--allow-unmeasured]` exits 1 when blocked and 3 when the vocabulary was unmeasured.
 - **Unmeasured.** A guard that lacks its input reports `unmeasured`. It never blocks and never passes. Today
   that is the economy guard with no table. A missing judge does not make the line guard unmeasured: it stays
   green or red on the structural checks, and its basis says the judge did not run.

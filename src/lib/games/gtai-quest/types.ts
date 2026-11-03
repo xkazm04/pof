@@ -171,8 +171,10 @@ export interface FusionSource {
   elements: readonly string[];
 }
 
-export type GuardId = 'story' | 'economy' | 'lines' | 'uniqueness';
-export const GUARD_IDS: readonly GuardId[] = ['story', 'economy', 'lines', 'uniqueness'];
+export type GuardId = 'story' | 'economy' | 'lines' | 'uniqueness' | 'vocabulary';
+export const GUARD_IDS: readonly GuardId[] = ['story', 'economy', 'lines', 'uniqueness', 'vocabulary'];
+/** Guards an owner override cannot waive: the runtime refuses the package at its boundary whatever the owner says. */
+export const NON_OVERRIDABLE_GUARDS: readonly GuardId[] = ['vocabulary'];
 
 export interface GuardOverride {
   guard: GuardId;
@@ -232,6 +234,40 @@ export interface QuestVerdict {
   blocked: boolean;
 }
 
+// ── The runtime vocabulary (`<gameRoot>/project/data/tables/quest_rules.json`, `gtai.quest-rules/2`) ──
+
+export const QUEST_RULES_SCHEMA = 'gtai.quest-rules/2' as const;
+
+export interface RuleVerb {
+  id: string;
+  needsTarget: boolean;
+  needsLocation: boolean;
+  needsEncounter: boolean;
+}
+
+/** A bark condition kind (`soul:`, `heat:`): a closed `values` list, or a `pattern` for the open ones. */
+export interface RuleCondition {
+  id: string;
+  values?: readonly string[];
+  pattern?: string;
+}
+
+export interface RuleFailRule {
+  id: string;
+  /** Keyword groups; a phrase matches when every group has a whole-word hit. */
+  groups: readonly (readonly string[])[];
+}
+
+/** What the game runtime plays, projected from `quest_rules.json` to what PoF guards need. */
+export interface QuestRules {
+  schema: typeof QUEST_RULES_SCHEMA;
+  verbs: readonly RuleVerb[];
+  conditions: readonly RuleCondition[];
+  /** Bare event-tag ids a line's `when` may carry. */
+  eventTags: readonly string[];
+  failRules: readonly RuleFailRule[];
+}
+
 // ── Provisional per-act balance table (`games/gtai/balance/quest-economy.json`) ──
 
 export interface ActEconomy {
@@ -285,4 +321,6 @@ export interface QuestGuardContext {
   ledger: readonly QuestPackage[];
   /** Cross-family judge report for this subject, if one ran. */
   judge: LineJudgeReport | null;
+  /** The runtime's playable vocabulary (`quest_rules.json` in the game repo); `null` = not readable, the vocabulary guard is unmeasured. */
+  rules: QuestRules | null;
 }
