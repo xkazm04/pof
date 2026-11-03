@@ -258,3 +258,4 @@ KIND is one of:
 - [2026-11-03] [gtai-arena] DELIVERED: Decisions room reads an ask whose frame paths lack backslash escaping (repaired once on a failed parse) and shows a lane's .md/.txt/.csv/.log frame (gunplay's ttk.md) inline as plain text; Combat lab shows a course session's course_time_s.
 - [2026-11-03] [gtai-arena] DELIVERED: Combat lab reads the lanes' real `arena_stations` shape (a `stations` array per file), pit/course session columns, and a Decisions-room clip Retry; validate green (15270 tests).
 - [2026-11-03] [combat-lab] DELIVERED: the melee table reads rivet-motion's real `rivet_melee.json` (grouped claw hits + shock, 60 Hz ticks) as one row per hit with derived windup_s/cycle_s; it was pointed at a `melee_weapons.json` nobody wrote.
+- [2026-11-03] [combat-lab] DELIVERED: Arena stations list once per (file, station id) across worktrees, the owning lane copy winning (ghost-powers pads showed twice live); 33 combat-lab tests green.
