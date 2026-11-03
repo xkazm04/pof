@@ -14,9 +14,12 @@
  *  - `VOCAB_UNKNOWN_CONDITION_VALUE`: a known kind with a value outside its `values` / `pattern`;
  *  - `VOCAB_FAIL_STATE_UNDETECTABLE` (warn): a fail-state phrase matches no `fail_rules` row (the runtime
  *    cannot detect that way to lose).
- * Places are the world's contract (`gtai.questMarkers/1`), not this table's: the game checks them.
+ *  - `VOCAB_UNKNOWN_PLACE` / `VOCAB_UNKNOWN_TARGET` / `VOCAB_NO_ENCOUNTER`: when the game has staged this quest's
+ *    places table (`gtai.questMarkers/1`, `ctx.places`), a beat's location, target or encounter it does not hold
+ *    (see `questPlaces.ts`). A quest with no table yet is not place-checked.
  * No table => `unmeasured`, never green. Pure.
  */
+import { placeFindings } from '@/lib/games/gtai-quest/questPlaces';
 import type {
   GuardFinding, GuardVerdict, QuestDesign, QuestGuardContext, QuestRules,
 } from '@/lib/games/gtai-quest/types';
@@ -69,7 +72,7 @@ export function whyTagUnplayable(tag: string, rules: QuestRules): { code: string
   return cond.pattern && patternMatches(cond.pattern, value) ? null : { code: 'VOCAB_UNKNOWN_CONDITION_VALUE', why: `"${value}" does not match the ${kind} pattern ${cond.pattern ?? '(none)'}` };
 }
 
-export function assessVocabulary(design: QuestDesign, ctx: QuestGuardContext): GuardVerdict {
+export function assessVocabulary(design: QuestDesign, ctx: QuestGuardContext, questId?: string): GuardVerdict {
   const rules = ctx.rules;
   if (rules === null) return { guard: 'vocabulary', state: 'unmeasured', basis: 'no quest_rules.json (game root not resolved)', findings: [] };
   const findings: GuardFinding[] = [];
@@ -85,6 +88,8 @@ export function assessVocabulary(design: QuestDesign, ctx: QuestGuardContext): G
     if (row.needsTarget && !target?.trim()) err('VOCAB_MISSING_TARGET', `verb "${verb}" needs an objective.target`, beat.id);
     if (row.needsLocation && !location?.trim()) err('VOCAB_MISSING_LOCATION', `verb "${verb}" needs an objective.location`, beat.id);
   }
+  const places = questId === undefined ? undefined : ctx.places?.get(questId);
+  if (places) findings.push(...placeFindings(design, rules, places));
   for (const line of design.lines) {
     for (const tag of line.when ?? []) {
       const bad = whyTagUnplayable(tag, rules);
@@ -102,7 +107,7 @@ export function assessVocabulary(design: QuestDesign, ctx: QuestGuardContext): G
   return {
     guard: 'vocabulary',
     state: findings.some((f) => f.severity === 'error') ? 'red' : 'green',
-    basis: `quest_rules.json (${rules.schema}): ${rules.verbs.length} verbs, ${rules.conditions.length} condition kinds, ${rules.eventTags.length} event tags`,
+    basis: `quest_rules.json (${rules.schema}): ${rules.verbs.length} verbs, ${rules.conditions.length} condition kinds, ${rules.eventTags.length} event tags; ${places ? `places checked against ${places.markers.length} markers` : 'no places table staged for this quest'}`,
     findings,
   };
 }

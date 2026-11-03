@@ -406,7 +406,7 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   tag that is neither an `event_tags` id nor `quest:<verb>_done`), `VOCAB_UNKNOWN_CONDITION` (kind not declared),
   `VOCAB_UNKNOWN_CONDITION_VALUE` (value outside `values` / `pattern`); warn: `VOCAB_FAIL_STATE_UNDETECTABLE` (no
   `fail_rules` row matches the phrase, whole words, first full-group match wins). Each finding names the offending
-  verb or tag and its beat or line. Places are the game's contract (`gtai.questMarkers/1`), not checked here. No table
+  verb or tag and its beat or line. Places (`questPlaces.ts`): when the game has staged this quest's places table (`project/data/tables/<quest_id_with_underscores>_places.json`, `gtai.questMarkers/1`, loaded by `loadQuestPlaces` into `ctx.places` by quest id), a beat's `location` must be a marker (`VOCAB_UNKNOWN_PLACE`), a vehicle-verb target (`enter_vehicle` handler) a vehicle and any other targeted verb's target an actor (`VOCAB_UNKNOWN_TARGET`), and an encounter verb's location a marker that holds an encounter (`VOCAB_NO_ENCOUNTER`), the same three rules as the runtime's `quest_beat_validator.gd`. A quest with no staged table yet (the world stages it after design) is not place-checked, and the verdict `basis` says so. No table
   readable => `unmeasured`. The guard is in `NON_OVERRIDABLE_GUARDS`: an owner override cannot waive it, because the
   runtime refuses the package at load regardless. It reaches the `contracts` pipeline's Guards step through
   `assessQuest` (blocked => fail naming `vocabulary:<CODE>`, unmeasured => pending). CLI: `council.mjs check <questDir>

@@ -14,7 +14,7 @@ const codes = (d: QuestDesign) => run(d).findings.map((f) => `${f.code}@${f.ref}
 
 describe('parseQuestRules', () => {
   it('projects the runtime table', () => {
-    expect(RULES.verbs.find((v) => v.id === 'escort')).toEqual({ id: 'escort', needsTarget: true, needsLocation: true, needsEncounter: false });
+    expect(RULES.verbs.find((v) => v.id === 'escort')).toEqual({ id: 'escort', needsTarget: true, needsLocation: true, needsEncounter: false, targetIsVehicle: false });
     expect(RULES.eventTags).toContain('wave-start');
   });
   it.each([

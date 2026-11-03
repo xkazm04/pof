@@ -105,7 +105,7 @@ export const RULES_RAW = {
   verbs: [
     { id: 'go_to', needs_location: true },
     { id: 'deliver', needs_location: true },
-    { id: 'steal', needs_target: true },
+    { id: 'steal', needs_target: true, handler: 'enter_vehicle' },
     { id: 'kill', needs_target: true },
     { id: 'escort', needs_target: true, needs_location: true },
     { id: 'meet', needs_location: true },

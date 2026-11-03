@@ -31,7 +31,7 @@ export function assessQuest(
     assessEconomy(design, ctx),
     assessLines(design, ctx),
     assessUniqueness(design, ctx, selfId),
-    assessVocabulary(design, ctx),
+    assessVocabulary(design, ctx, selfId ?? subject),
   ];
   const overridden = new Set<GuardId>(overrides.filter((o) => o.reason.trim().length > 0 && !NON_OVERRIDABLE_GUARDS.includes(o.guard)).map((o) => o.guard));
   const blockedBy = guards.filter((g) => g.state === 'red' && !overridden.has(g.guard)).map((g) => g.guard);

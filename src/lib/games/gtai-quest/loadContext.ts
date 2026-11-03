@@ -3,6 +3,7 @@ import path from 'node:path';
 import { logger } from '@/lib/logger';
 import { GTAI_CAST } from '@/lib/games/gtai-quest/campaignBaseline';
 import { parseQuestRules } from '@/lib/games/gtai-quest/questRules';
+import { parseQuestPlaces } from '@/lib/games/gtai-quest/questPlaces';
 import { gameRootFor } from '@/lib/games/gameRoot';
 import { QUEST_ECONOMY_SCHEMA, QUEST_SCHEMA } from '@/lib/games/gtai-quest/types';
 import type {
@@ -11,6 +12,7 @@ import type {
   QuestEconomyTable,
   QuestGuardContext,
   QuestPackage,
+  QuestPlaces,
   QuestProposal,
   QuestRules,
 } from '@/lib/games/gtai-quest/types';
@@ -96,10 +98,35 @@ export function loadQuestRules(gameRoot: string | null): QuestRules | null {
   return parsed.data;
 }
 
+/** Where the world keeps its staged places tables (`<quest_id_with_underscores>_places.json`), inside the game repo. */
+export const QUEST_PLACES_DIR = ['project', 'data', 'tables'] as const;
+
+const PLACES_SUFFIX = '_places.json';
+
+/**
+ * Every staged places table under `<gameRoot>/project/data/tables/`, keyed by quest id (`collect_call_places.json`
+ * is `collect-call`). An unreadable or off-schema table is logged and skipped: that quest is then simply not
+ * place-checked. Never throws.
+ */
+export function loadQuestPlaces(gameRoot: string | null): Map<string, QuestPlaces> {
+  const out = new Map<string, QuestPlaces>();
+  if (gameRoot === null) return out;
+  const dir = path.join(gameRoot, ...QUEST_PLACES_DIR);
+  let files: string[];
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith(PLACES_SUFFIX)).sort(); } catch { return out; }
+  for (const f of files) {
+    const r = readJson(path.join(dir, f));
+    const parsed = r.ok ? parseQuestPlaces(r.value) : null;
+    if (parsed?.ok) out.set(f.slice(0, -PLACES_SUFFIX.length).replace(/_/g, '-'), parsed.data);
+    else logger.warn(`[gtai-quest] ${f}: ${r.ok ? (parsed && !parsed.ok ? parsed.error : '') : r.error}; that quest is not place-checked`);
+  }
+  return out;
+}
+
 /**
  * Context for assessing a quest (uniqueness skips the subject by id; nothing is excluded here).
  * `gameRoot`: the game repo (`undefined` = resolve it via `gameRootFor('gtai')`: `POF_GAME_ROOT_GTAI`, else
- * `engine.root` against `root`; `null` = none). It only feeds the vocabulary guard.
+ * `engine.root` against `root`; `null` = none). It only feeds the vocabulary guard (rules and places).
  */
 export function loadQuestContext(
   root: string = process.cwd(),
@@ -109,8 +136,8 @@ export function loadQuestContext(
   const ledger = loadLedger(root);
   const cast = new Set<string>(GTAI_CAST.map((c) => c.id));
   for (const p of ledger) for (const c of p.characters ?? []) cast.add(c.id);
-  const rules = loadQuestRules(gameRoot === undefined ? gameRootFor('gtai', { repoRoot: root }) : gameRoot);
-  return { economy: loadEconomy(root), voiceBibles: loadVoiceBibles(root), cast, ledger, judge, rules };
+  const resolved = gameRoot === undefined ? gameRootFor('gtai', { repoRoot: root }) : gameRoot;
+  return { economy: loadEconomy(root), voiceBibles: loadVoiceBibles(root), cast, ledger, judge, rules: loadQuestRules(resolved), places: loadQuestPlaces(resolved) };
 }
 
 const SEATS: readonly CouncilSeat[] = ['claude', 'grok'];

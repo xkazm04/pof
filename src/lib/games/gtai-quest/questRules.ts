@@ -23,7 +23,7 @@ export function parseQuestRules(raw: unknown): Result<QuestRules> {
   const verbs: RuleVerb[] = [];
   for (const v of verbRows) {
     if (typeof v.id !== 'string' || !v.id) return err('a verb row has no id');
-    verbs.push({ id: v.id, needsTarget: v.needs_target === true, needsLocation: v.needs_location === true, needsEncounter: v.needs_encounter === true });
+    verbs.push({ id: v.id, needsTarget: v.needs_target === true, needsLocation: v.needs_location === true, needsEncounter: v.needs_encounter === true, targetIsVehicle: v.handler === 'enter_vehicle' });
   }
   const conditions: RuleCondition[] = [];
   for (const c of condRows) {

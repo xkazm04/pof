@@ -243,6 +243,17 @@ export interface RuleVerb {
   needsTarget: boolean;
   needsLocation: boolean;
   needsEncounter: boolean;
+  /** The verb's handler is `enter_vehicle`: its target is a vehicle tag; any other target is an actor tag (the runtime's rule). */
+  targetIsVehicle: boolean;
+}
+
+/** The tags of a quest's places table (`gtai.questMarkers/1`), projected to the names a package may use. */
+export interface QuestPlaces {
+  markers: readonly string[];
+  vehicles: readonly string[];
+  actors: readonly string[];
+  /** Markers that hold a combat encounter. */
+  encounters: readonly string[];
 }
 
 /** A bark condition kind (`soul:`, `heat:`): a closed `values` list, or a `pattern` for the open ones. */
@@ -323,4 +334,6 @@ export interface QuestGuardContext {
   judge: LineJudgeReport | null;
   /** The runtime's playable vocabulary (`quest_rules.json` in the game repo); `null` = not readable, the vocabulary guard is unmeasured. */
   rules: QuestRules | null;
+  /** Places tables the game has staged, by quest id; a quest with none yet is not place-checked (the world supplies them later). */
+  places?: ReadonlyMap<string, QuestPlaces>;
 }
