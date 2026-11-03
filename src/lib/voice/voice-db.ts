@@ -35,7 +35,7 @@ export function createVoiceDb(db: Db): void {
     );
   `);
   // A DB created before a column landed lacks it; add each once (silence screen, line class + beat).
-  addMissing(db, 'voice_takes', ['maxSilenceMs INTEGER']);
+  addMissing(db, 'voice_takes', ['maxSilenceMs INTEGER', 'readbackText TEXT', 'readbackWer REAL']);
   addMissing(db, 'voice_lines', ["lineClass TEXT NOT NULL DEFAULT 'story'", "whenTags TEXT NOT NULL DEFAULT '[]'", 'beatId TEXT', 'beatTitle TEXT', 'beatSummary TEXT']);
 }
 
@@ -103,9 +103,12 @@ export function getLine(db: Db, gameId: string, questId: string, lineId: string)
 
 // ── takes ──
 export function insertTake(db: Db, t: TakeRow): void {
-  db.prepare(`INSERT INTO voice_takes (id,gameId,questId,lineId,voiceId,providerVoiceId,textHash,direction,sentText,settings,file,durationMs,loudnessLufs,maxSilenceMs,chars,verdict,verdictNote,verdictAt,createdAt)
-    VALUES (@id,@gameId,@questId,@lineId,@voiceId,@providerVoiceId,@textHash,@direction,@sentText,@settings,@file,@durationMs,@loudnessLufs,@maxSilenceMs,@chars,@verdict,@verdictNote,@verdictAt,@createdAt)`)
+  db.prepare(`INSERT INTO voice_takes (id,gameId,questId,lineId,voiceId,providerVoiceId,textHash,direction,sentText,settings,file,durationMs,loudnessLufs,maxSilenceMs,readbackText,readbackWer,chars,verdict,verdictNote,verdictAt,createdAt)
+    VALUES (@id,@gameId,@questId,@lineId,@voiceId,@providerVoiceId,@textHash,@direction,@sentText,@settings,@file,@durationMs,@loudnessLufs,@maxSilenceMs,@readbackText,@readbackWer,@chars,@verdict,@verdictNote,@verdictAt,@createdAt)`)
     .run({ ...t, settings: JSON.stringify(t.settings) });
+}
+export function setReadback(db: Db, takeId: string, text: string, wer: number): void {
+  db.prepare('UPDATE voice_takes SET readbackText=?, readbackWer=? WHERE id=?').run(text, wer, takeId);
 }
 export function getTake(db: Db, id: string): TakeRow | null {
   const r = db.prepare('SELECT * FROM voice_takes WHERE id=?').get(id) as Raw | undefined;

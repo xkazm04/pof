@@ -90,6 +90,10 @@ export interface TakeRow {
   loudnessLufs: number | null;
   /** Longest internal silence in ms (a dropout screen); null = unmeasured. */
   maxSilenceMs: number | null;
+  /** What a local Whisper heard (the read-back ear proxy); null = not read back (yet). */
+  readbackText: string | null;
+  /** Word error rate of `readbackText` against the line text (0..1+); null = not read back. */
+  readbackWer: number | null;
   /** Billed characters (`sentText.length`). */
   chars: number;
   verdict: TakeVerdict;
@@ -101,6 +105,11 @@ export interface TakeRow {
 /** A render with an internal silence longer than this is flagged as a possible dropout (registry
  *  `speech-synthesis-script-writing`: measure the render's silence against its length). */
 export const SILENCE_FLAG_MS = 1500;
+
+/** A take whose read-back word error rate is above this is flagged "listen for garbled words". Basis: the
+ *  game audio lane's Whisper read-back of the 23 temp quest-1 voices averaged 2.9 % and its one real fault
+ *  (a stray TTS syllable) stood out; number words vs digits and names can cost a few points on clean takes. */
+export const READBACK_FLAG_WER = 0.15;
 
 export interface VerdictEvent {
   takeId: string;

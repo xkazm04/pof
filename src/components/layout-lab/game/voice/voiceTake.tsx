@@ -11,9 +11,9 @@ import { MicroLabel } from '@/components/ui/MicroLabel';
 import { LabButton, LabTextarea } from '@/components/layout-lab/steps/controls';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import type { TakeView } from '@/lib/voice/room';
-import { SILENCE_FLAG_MS, type TakeVerdict } from '@/lib/voice/types';
+import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type TakeVerdict } from '@/lib/voice/types';
 import type { StatusLevel } from '@/lib/status-token';
-import { fmtLufs, fmtMs, postVoice, takeAudioUrl } from './voiceRoomData';
+import { fmtLufs, fmtMs, fmtWer, postVoice, takeAudioUrl } from './voiceRoomData';
 
 const VERDICT: Record<TakeVerdict, { level: StatusLevel; word: string }> = {
   pending: { level: 'warn', word: 'pending' },
@@ -49,15 +49,18 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         {take.stale && <StatusTag level="bad" word="stale: older line text or not the cast voice" />}
         <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · {fmtLufs(take.loudnessLufs)} · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
         {take.maxSilenceMs !== null && take.maxSilenceMs > SILENCE_FLAG_MS && <StatusTag level="warn" word={`long pause ${fmtMs(take.maxSilenceMs)}: listen for a dropout`} />}
+        <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
+        {take.readbackWer !== null && take.readbackWer > READBACK_FLAG_WER && <StatusTag level="warn" word={`read-back differs (${fmtWer(take.readbackWer)}): listen for garbled words`} />}
       </div>
       <audio controls preload="none" src={takeAudioUrl(take.id)} style={{ width: '100%' }} aria-label={`Take ${take.id.slice(0, 8)}`} />
       <div style={{ fontSize: 'var(--lab-fs-sm)', color: t.text }}>
         <strong>Direction:</strong> {take.direction || <em style={{ color: t.muted }}>none</em>}
       </div>
       <details>
-        <summary style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, cursor: 'pointer' }}>Sent text and settings</summary>
+        <summary style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, cursor: 'pointer' }}>Sent text, settings and read-back</summary>
         <pre style={{ whiteSpace: 'pre-wrap', fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', margin: 0 }}>
           {take.sentText}{'\n'}stability {take.settings.stability} · style {take.settings.style} · speed {take.settings.speed} · similarity {take.settings.similarityBoost}
+          {take.readbackText !== null && `\nheard (local Whisper read-back, words only): ${take.readbackText}`}
         </pre>
       </details>
       {take.verdictNote && <div style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Note: {take.verdictNote}</div>}

@@ -399,7 +399,10 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   - `voice_takes`: per line, each take with its delivery direction (the words used), the text actually sent,
     the settings (model, stability, similarity, style, speed), the file, duration and loudness (ffprobe /
     ffmpeg `ebur128`; `null` = unmeasured), the longest internal pause (`silencedetect`; over 1.5 s the room flags a
-    possible dropout), and the billed characters. `voice_verdicts` is the verdict history.
+    possible dropout), the **read-back** (`readbackText` + `readbackWer`: what a local Whisper heard and its word
+    error rate against the line, digits read as number words; over 15 % the room flags "listen for garbled
+    words"; an ear proxy for the words only, never the acting), and the billed characters. `voice_verdicts` is
+    the verdict history.
 - **States:** `no-takes`, `awaiting-verdict`, `all-rejected`, `proven`. A line is proven only by an approved take
   on its current text (a take carries the hash of the text it spoke, so a package edit makes it stale). At most
   one approved take per line: approving another marks the previous one `superseded`, history kept. Once the speaker has a cast
@@ -418,7 +421,9 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   headers passes; the gate stops accidents and the agent path, not an adversary.
 - **Routes** (`/api/games/gtai/voice`): `GET` (room state; `?view=status`; `?view=verdicts&since=<ms>`, the owner's
   verdicts and notes with each take's line and direction, read-only), `lines` (one line + bible + takes),
-  `takes` (generate k), `takes/verdict` (gated), `voices` (list, design, stock candidate), `voices/cast`
+  `takes` (generate k; the new takes are then read back in the background by `scripts/voice/readback.py`, one
+  Python process per batch, offline HF cache, off under `NODE_ENV=test` and with `POF_VOICE_READBACK=0`),
+  `readback` (backfill: re-score stored transcripts, then read back takes not heard yet), `takes/verdict` (gated), `voices` (list, design, stock candidate), `voices/cast`
   (gated), `gate`, `audio?takeId|voiceId`, `export`.
 - **Export** (`exportQuest`): only proven lines, mp3 to Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
   `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
@@ -431,7 +436,7 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   generate k takes with a direction; "Next to judge" jumps to the next line whose takes wait for a verdict), Cast
   (voices with previews, cast, design from the bible). The queue and the open line re-read every
   `UI_TIMEOUTS.voiceRoomPoll` (5 s) while visible (`useSuspendableEffect`), so takes the CLI generates appear by themselves.
-- **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `verdicts`, `takes`, `design`, `stock`, `voices`,
+- **Headless:** `games/gtai/voice/voice.mjs` (`status`, `next`, `line`, `verdicts`, `readback`, `takes`, `design`, `stock`, `voices`,
   `export`; no approve, reject or cast), driven by `/gta --voice` (`.claude/skills/gta/SKILL.md`, Voice mode).
 - **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, line class + scene + column migration,
   supersede, design, export) and the

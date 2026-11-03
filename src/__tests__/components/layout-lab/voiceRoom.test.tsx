@@ -37,6 +37,7 @@ const TAKE = {
   id: 'take-1', gameId: 'gtai', questId: 'first-quest', lineId: 'a1', voiceId: 'v1', providerVoiceId: 'p1', textHash: 'h', direction: 'whispered, fast',
   sentText: '[whispered] [fast] a1 text', settings: { model: 'eleven_v3', stability: 0.5, similarityBoost: 0.75, style: 0.3, speed: 1 },
   durationMs: 2100, loudnessLufs: -18.2, chars: 26, verdict: 'pending', verdictNote: null, verdictAt: null, createdAt: 1, stale: false,
+  maxSilenceMs: 200, readbackText: 'a one text whispers', readbackWer: 0.5,
 };
 const DETAIL = { line: QUEUE[0], bible: '# Voice bible: Rivet', takes: [TAKE], history: [], voices: [] };
 
@@ -100,6 +101,16 @@ describe('Voice room', () => {
     expect(ctx.getAttribute('data-class')).toBe('bark');
     expect(ctx.textContent).toContain('when: static-whisper-burst');
     expect(screen.getByTestId('voice-line-beat').textContent).toContain('Scene: Line Stopped');
+  });
+
+  it('shows the read-back and flags a take whose words did not come out', async () => {
+    stubRoutes();
+    render(<VoiceRoom t={LIGHT} />);
+    await waitFor(() => expect(screen.queryByTestId('voice-take')).not.toBeNull());
+    const take = screen.getByTestId('voice-take');
+    expect(screen.getByTestId('voice-readback').textContent).toBe('read-back 50 % word errors');
+    expect(take.textContent).toContain('read-back differs (50 %): listen for garbled words');
+    expect(take.textContent).toContain('heard (local Whisper read-back, words only): a one text whispers');
   });
 
   it('nextToJudge walks forward in play order to the next line awaiting a verdict, wrapping, never the open line', () => {

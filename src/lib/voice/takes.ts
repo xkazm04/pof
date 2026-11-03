@@ -83,7 +83,7 @@ export async function generateTakes(db: Database.Database, req: TakeRequest, dep
       const take: TakeRow = {
         id, gameId: req.gameId, questId: line.questId, lineId: line.lineId, voiceId: voice.id, providerVoiceId,
         textHash: line.textHash, direction, sentText: r.sentText, settings, file, durationMs: m.durationMs,
-        loudnessLufs: m.loudnessLufs, maxSilenceMs: m.maxSilenceMs, chars: r.chars, verdict: 'pending', verdictNote: null, verdictAt: null, createdAt: deps.now() + i,
+        loudnessLufs: m.loudnessLufs, maxSilenceMs: m.maxSilenceMs, readbackText: null, readbackWer: null, chars: r.chars, verdict: 'pending', verdictNote: null, verdictAt: null, createdAt: deps.now() + i,
       };
       insertTake(db, take);
       out.push(take);

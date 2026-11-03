@@ -83,3 +83,4 @@ export const previewAudioUrl = (voiceId: string) => `${VOICE_API}/audio?voiceId=
 
 export const fmtMs = (ms: number | null) => (ms === null ? 'unmeasured' : `${(ms / 1000).toFixed(1)} s`);
 export const fmtLufs = (l: number | null) => (l === null ? 'loudness unmeasured' : `${l.toFixed(1)} LUFS`);
+export const fmtWer = (wer: number) => `${Math.round(wer * 100)} %`;

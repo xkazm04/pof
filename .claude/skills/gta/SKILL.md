@@ -188,6 +188,9 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
    - `voice.mjs takes --line <id> --n 3 --direction "<words>"`, with directions written from the speaker's bible
      (`games/gtai/voices/<id>.md`) and the owner's notes. On `eleven_v3` the direction becomes audio tags. The
      profanity in the lines is kept as written.
+   - Each new take is read back by a local Whisper within about half a minute (`voice.mjs line` prints
+     "heard N% wrong"). A take over 15 % likely garbled or dropped words: tell the owner which one, and offer a
+     fresh take; never delete or hide it. The read-back hears words only, never the acting.
    - The owner listens and judges in the room (approve or reject, with a note).
    - `voice.mjs verdicts --since <the last round's start, e.g. 30m>` reads every verdict and note since then,
      grouped by line (`voice.mjs line --line <id>` shows one line's takes, class and scene); Claude writes the

@@ -6,6 +6,7 @@
  *   node games/gtai/voice/voice.mjs next [--n N] [--quest <id>]     the next unproven lines, in play order
  *   node games/gtai/voice/voice.mjs line --line <id> [--quest <id>] a line's takes, verdicts and the owner's notes
  *   node games/gtai/voice/voice.mjs verdicts [--since 2h|<ISO>|<ms>] [--quest <id>]  every verdict + note, by line
+ *   node games/gtai/voice/voice.mjs readback [--line <id>] [--quest <id>]   local Whisper read-back of takes not read yet
  *   node games/gtai/voice/voice.mjs takes --line <id> --n <k> --direction "<text>"
  *        [--quest <id>] [--voice <voiceRowId>] [--model eleven_v3|eleven_multilingual_v2]
  *        [--stability x] [--style x] [--speed x]
@@ -95,7 +96,7 @@ async function main() {
       out(`${d.line.questId}/${d.line.lineId} · ${d.line.speaker} · ${d.line.state}\n  "${d.line.text}"`);
       out(contextOf(d.line));
       for (const t of d.takes) {
-        out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.stale ? ' (stale text)' : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
+        out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.stale ? ' (stale text)' : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch ${t.readbackWer === null ? 'read-back pending' : `heard ${Math.round(t.readbackWer * 100)}% wrong`}${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
       }
       return;
     }
@@ -113,6 +114,14 @@ async function main() {
       }
       const count = (k) => rows.filter((v) => v.verdict === k).length;
       out(`${rows.length} verdicts since ${since ? new Date(since).toISOString() : 'the start'}: ${count('approved')} approved, ${count('rejected')} rejected`);
+      return;
+    }
+    case 'readback': {
+      // Words-only ear proxy (local Whisper, offline, free): a backfill / retry; new takes are read back on their own.
+      const l = opt('line');
+      const e = l ? await findLine(l, opt('quest')) : null;
+      const r = await call('/readback', e ? { questId: e.questId, lineId: e.lineId } : { questId: opt('quest') });
+      out(`read back ${r.measured} of ${r.requested} takes (${r.rescored} stored scores re-derived)${r.failed.length ? ` · unmeasured: ${r.failed.join('; ')}` : ''}`);
       return;
     }
     case 'takes': {
@@ -163,7 +172,7 @@ async function main() {
       return;
     }
     default:
-      out('usage: voice.mjs status | next | line | verdicts | takes | design | stock | voices | export (see the header). '
+      out('usage: voice.mjs status | next | line | verdicts | readback | takes | design | stock | voices | export (see the header). '
         + 'There is no approve/reject/cast: the owner does that in the PoF Voice room.');
       process.exitCode = cmd ? 1 : 0;
   }

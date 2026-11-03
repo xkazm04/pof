@@ -1,6 +1,8 @@
 /**
  * `POST /api/games/[gameId]/voice/takes` `{ questId, lineId, n, direction, voiceId?, settings? }` — generate
  * k takes (ElevenLabs text-to-speech). Not gated: it only adds `pending` takes for the owner to judge.
+ * The new takes are then read back (local Whisper) in the BACKGROUND; the room's poll shows the result.
+ * Off under test (`NODE_ENV=test`: no Python in unit tests) and with `POF_VOICE_READBACK=0`.
  */
 import type { NextRequest } from 'next/server';
 import { apiError, apiSuccess } from '@/lib/api-utils';
@@ -8,6 +10,7 @@ import { getVoiceDb, questRoot, VOICE_GAMES } from '@/lib/voice/conn';
 import { syncQueue } from '@/lib/voice/lineQueue';
 import { takeView } from '@/lib/voice/room';
 import { generateTakes } from '@/lib/voice/takes';
+import { readbackTakes } from '@/lib/voice/readback';
 import type { TakeSettings } from '@/lib/voice/types';
 
 type Ctx = { params: Promise<{ gameId: string }> };
@@ -28,6 +31,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       settings: (b.settings && typeof b.settings === 'object' ? b.settings : {}) as Partial<TakeSettings>,
     });
     if (!r.ok) return apiError(r.error, 422);
+    if (process.env.NODE_ENV !== 'test' && process.env.POF_VOICE_READBACK !== '0') void readbackTakes(db, r.data.map((t) => t.id));
     return apiSuccess({ takes: r.data.map((t) => takeView(t, false)), chars: r.data.reduce((n, t) => n + t.chars, 0) });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'voice takes POST failed', 500);
