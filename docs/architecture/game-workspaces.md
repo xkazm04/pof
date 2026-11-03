@@ -401,7 +401,9 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
     ffmpeg `ebur128`; `null` = unmeasured), the longest internal pause (`silencedetect`; over 1.5 s the room flags a
     possible dropout), the **read-back** (`readbackText` + `readbackWer`: what a local Whisper heard and its word
     error rate against the line, digits read as number words; over 15 % the room flags "listen for garbled
-    words"; an ear proxy for the words only, never the acting), and the billed characters. `voice_verdicts` is
+    words"; an ear proxy for the words only, never the acting), and the billed characters. A take either screen
+    flags (read-back or long pause) counts in its queue row (`flagged`) and in the status (`flaggedLines`), so
+    the room and `voice.mjs status` point the owner at where to listen first. `voice_verdicts` is
     the verdict history.
 - **States:** `no-takes`, `awaiting-verdict`, `all-rejected`, `proven`. A line is proven only by an approved take
   on its current text (a take carries the hash of the text it spoke, so a package edit makes it stale). At most

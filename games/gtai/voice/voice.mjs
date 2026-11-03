@@ -46,7 +46,7 @@ async function call(path, body) {
 }
 
 const pad = (s, n) => String(s).padEnd(n);
-const lineRow = (e) => `  ${pad(e.questId, 16)} ${pad(e.lineId, 26)} ${pad(e.speaker, 20)} ${pad(e.lineClass ?? 'story', 6)} ${pad(e.state, 17)} ${e.text.length > 70 ? `${e.text.slice(0, 67)}...` : e.text}`;
+const lineRow = (e) => `  ${pad(e.questId, 16)} ${pad(e.lineId, 26)} ${pad(e.speaker, 20)} ${pad(e.lineClass ?? 'story', 6)} ${pad(e.state, 17)}${e.flagged ? ` [${e.flagged} flagged]` : ''} ${e.text.length > 70 ? `${e.text.slice(0, 67)}...` : e.text}`;
 /** What a direction is written for: the class (a bark fires on its when-tags and may repeat) and the beat. */
 const contextOf = (l) => [
   l.lineClass === 'bark' ? `  bark · fires on: ${(l.when ?? []).join(', ')} (if a tag recurs in play, direct it for the repeat hearing too)` : '  story line · plays in the flow of its beat',
@@ -76,7 +76,7 @@ async function main() {
   switch (cmd) {
     case 'status': {
       const s = await call(`?view=status&n=${opt('n', '5')}`);
-      out(`proven ${s.proven} / ${s.total} lines · ${s.chars} characters spent on takes`);
+      out(`proven ${s.proven} / ${s.total} lines · ${s.chars} characters spent on takes${s.flaggedLines ? ` · ${s.flaggedLines} lines with a flagged take (read-back or long pause: point the owner at them)` : ''}`);
       for (const q of s.quests) out(`  ${pad(q.questId, 16)} ${pad(q.title, 28)} ${q.proven}/${q.total}`);
       out('next unproven:');
       for (const e of s.next) out(lineRow(e));

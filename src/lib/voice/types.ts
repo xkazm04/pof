@@ -133,6 +133,8 @@ export interface QueueEntry extends QueueLine {
   takes: number;
   pending: number;
   approvedTakeId: string | null;
+  /** Current takes a screen flags: read-back over READBACK_FLAG_WER or a pause over SILENCE_FLAG_MS. */
+  flagged: number;
 }
 
 export interface QuestProgress {
@@ -149,4 +151,6 @@ export interface VoiceStatusView {
   quests: QuestProgress[];
   next: QueueEntry[];
   chars: number;
+  /** Lines with at least one flagged current take (listen for garbled words / a dropout). */
+  flaggedLines: number;
 }

@@ -12,7 +12,7 @@ vi.hoisted(() => {
 import fs from 'node:fs';
 import Database from 'better-sqlite3';
 import { createVoiceDb, getTake } from '@/lib/voice/voice-db';
-import { syncQueue } from '@/lib/voice/lineQueue';
+import { queueEntries, statusView, syncQueue } from '@/lib/voice/lineQueue';
 import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate } from '@/lib/voice/design';
 import { readbackTakes, rescoreReadbacks, wordErrorRate, words, type Transcribe } from '@/lib/voice/readback';
@@ -64,6 +64,11 @@ describe('readbackTakes', () => {
     expect(out).toEqual({ ok: true, data: { measured: 1, failed: [`${b.id}: decode failed`] } });
     expect(getTake(db, a.id)).toMatchObject({ readbackText: 'Okay, okay. Okay. Okay.', readbackWer: 0 });
     expect(getTake(db, b.id)).toMatchObject({ readbackText: null, readbackWer: null });
+    // A garbled read-back flags the take; the queue row and the status count it.
+    setReadback(db, b.id, 'okay uh', 0.5);
+    const entries = queueEntries(db, 'gtai', syncQueue(db, 'gtai', makeFixtureRoot()));
+    expect(entries.find((e) => e.lineId === 'z2')?.flagged).toBe(1);
+    expect(statusView(entries, {}, 0).flaggedLines).toBe(1);
   });
 
   it('rescore re-derives a stored WER from the stored transcript (no model run)', async () => {

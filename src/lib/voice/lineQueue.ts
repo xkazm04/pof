@@ -14,7 +14,7 @@ import type Database from 'better-sqlite3';
 import { loadLedger } from '@/lib/games/gtai-quest/loadContext';
 import type { QuestPackage } from '@/lib/games/gtai-quest/types';
 import { listLines, listTakes, listVoices, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
-import type { LineState, QueueEntry, QueueLine, TakeRow, VoiceStatusView } from '@/lib/voice/types';
+import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type TakeRow, type VoiceStatusView } from '@/lib/voice/types';
 
 export const hashText = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
 
@@ -99,6 +99,10 @@ export function lineState(line: QueueLine, takes: readonly TakeRow[], castVoiceI
   return { state: pending > 0 ? 'awaiting-verdict' : 'all-rejected', approvedTakeId: null, pending };
 }
 
+/** A take one of the automatic screens flags (the owner still decides; this only says where to listen). */
+export const isFlagged = (t: TakeRow): boolean =>
+  (t.readbackWer !== null && t.readbackWer > READBACK_FLAG_WER) || (t.maxSilenceMs !== null && t.maxSilenceMs > SILENCE_FLAG_MS);
+
 export function queueEntries(db: Database.Database, gameId: string, lines: readonly QueueLine[]): QueueEntry[] {
   const byLine = new Map<string, TakeRow[]>();
   for (const t of listTakes(db, gameId)) {
@@ -109,7 +113,7 @@ export function queueEntries(db: Database.Database, gameId: string, lines: reado
   return lines.map((l) => {
     const c = cast.get(l.speaker) ?? null;
     const takes = (byLine.get(`${l.questId}/${l.lineId}`) ?? []).filter((t) => isCurrent(t, l, c));
-    return { ...l, ...lineState(l, takes, c), takes: takes.length };
+    return { ...l, ...lineState(l, takes, c), takes: takes.length, flagged: takes.filter(isFlagged).length };
   });
 }
 
@@ -127,6 +131,7 @@ export function statusView(entries: readonly QueueEntry[], titles: Readonly<Reco
     quests: [...quests.entries()].map(([questId, q]) => ({ questId, title: titles[questId] ?? questId, ...q })).sort((a, b) => a.questOrder - b.questOrder),
     next: entries.filter((e) => e.state !== 'proven').slice(0, nextN),
     chars,
+    flaggedLines: entries.filter((e) => e.flagged > 0).length,
   };
 }
 

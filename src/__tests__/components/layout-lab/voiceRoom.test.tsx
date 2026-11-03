@@ -22,12 +22,13 @@ const entry = (questId: string, lineId: string, questOrder: number, lineOrder: n
   lineClass: lineId === 'a1' ? 'bark' : 'story', when: lineId === 'a1' ? ['static-whisper-burst'] : [],
   beatId: 'b1', beatTitle: 'Line Stopped', beatSummary: 'Rivet hides in a dumpster while the heat drains.',
   present: true, syncedAt: 0, state, takes: state === 'no-takes' ? 0 : 1, pending: state === 'awaiting-verdict' ? 1 : 0, approvedTakeId: null,
+  flagged: lineId === 'a1' ? 1 : 0,
 });
 
 const QUEUE = [entry('first-quest', 'a1', 0, 0, 'awaiting-verdict'), entry('first-quest', 'a2', 0, 1), entry('second-quest', 'b1', 1, 0, 'proven')];
 const STATE = {
   status: {
-    proven: 1, total: 3, chars: 120, next: [QUEUE[0], QUEUE[1]],
+    proven: 1, total: 3, chars: 120, flaggedLines: 1, next: [QUEUE[0], QUEUE[1]],
     quests: [{ questId: 'first-quest', title: 'First', questOrder: 0, proven: 0, total: 2 }, { questId: 'second-quest', title: 'Second', questOrder: 1, proven: 1, total: 1 }],
   },
   queue: QUEUE,
@@ -109,6 +110,7 @@ describe('Voice room', () => {
     render(<VoiceRoom t={LIGHT} />);
     await waitFor(() => expect(screen.queryByTestId('voice-line-context')).not.toBeNull());
     expect(screen.getAllByTestId('voice-line-class')).toHaveLength(1);
+    expect(screen.getAllByTestId('voice-line-flagged').map((f) => f.textContent)).toEqual(['1 flagged']);
     const ctx = screen.getByTestId('voice-line-context');
     expect(ctx.getAttribute('data-class')).toBe('bark');
     expect(ctx.textContent).toContain('when: static-whisper-burst');
