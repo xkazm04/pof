@@ -193,6 +193,10 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
      fresh take; never delete or hide it. The read-back hears words only, never the acting.
    - The owner listens and judges in the room (approve or reject, with a note). Approve, and Cast for a voice
      with a preview, unlock only after the owner has played it through; "Next to judge" walks the waiting lines.
+     The room plays each take as the game will (mastered to the game's voice level, with the speaker's device
+     filter if the game declares one), so takes compare at matched loudness; the provider original is one
+     click away. Do not judge a direction by the delivered LUFS: the level is set at export.
+     `voice.mjs status` counts lines with a flagged take (read-back or long pause): point the owner there first.
    - `voice.mjs verdicts --since <the last round's start, e.g. 30m>` reads every verdict and note since then,
      grouped by line (`voice.mjs line --line <id>` shows one line's takes, class and scene); Claude writes the
      next round's directions from them. A line is done only when the owner has approved a take. Fix order when a render is wrong (registry
@@ -201,7 +205,8 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
      style at 0 and let the words and tags carry the feeling. Casting a different voice un-proves that
      character's lines (a re-cast event).
 5. **Claude never approves, casts or exports by itself.** Export (`voice.mjs export --quest <id>`, or the
-   room's Export button) runs only when the owner asks; it writes only approved takes into the game.
+   room's Export button) runs only when the owner asks; it writes only approved takes into the game, mastered
+   to the game's `audio_mix.json` voice target; relay any OFF LEVEL or TREATMENT REFUSED line it prints.
 6. **Wrap.** The normal wrap, plus a voice line in STATE.md: the proven count (before and after), the characters
    spent this session (`status` prints the running total), and the voices cast.
 
