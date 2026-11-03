@@ -35,7 +35,9 @@ const PAD_BOTTOM = 20;
 
 /* ── Variant props ──────────────────────────────────────────────────────── */
 
-export interface BarsRow { label: string; value: number; color?: string; highlight?: boolean; unit?: string }
+export interface BarsRow { label: string; value: number; color?: string; highlight?: boolean; unit?: string;
+  /** Printed instead of `value` when the number alone would read wrong (`1` beside `0.08`): the bar still draws `value`. */
+  valueText?: string }
 export interface ScatterPoint { x: number; y: number; color?: string; size?: number; label?: string }
 
 export type ChartPanelProps = {
@@ -90,7 +92,7 @@ function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec }: Ext
               />
             </div>
             <span className={t.fontMono} style={{ width: 44, textAlign: 'right', fontSize: 14, color: t.text }}>
-              {r.value}{r.unit ? r.unit : ''}
+              {r.valueText ?? r.value}{r.unit ? r.unit : ''}
             </span>
           </div>
         );

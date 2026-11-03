@@ -27,7 +27,7 @@ export function CombatDesignTtk({ t, weapons }: { t: LabTheme; weapons?: CombatT
   const target = targets.find((x) => x.id === targetId) ?? targets[0];
   const m = predictTtk(weapons, target, range);
   const rows = m.ready.map((p, i) => ({
-    label: `${p.weapon} · ${p.shots}×`, value: Math.round(p.seconds * 100) / 100, unit: 's',
+    label: `${p.weapon} · ${p.shots}×`, value: Math.round(p.seconds * 100) / 100, valueText: p.seconds.toFixed(2), unit: 's',
     highlight: i === 0, color: i === 0 ? 'var(--lab-ink-deep)' : 'var(--lab-muted)',
   }));
   const note = (label: string, ids: string[]) => (ids.length ? `${label}: ${ids.join(', ')}. ` : '');
