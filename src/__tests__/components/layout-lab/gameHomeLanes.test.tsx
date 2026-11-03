@@ -14,6 +14,7 @@ vi.mock('next/font/google', () => {
 import { GameHomeLanes, scheduleText } from '@/components/layout-lab/game/gameHomeLanes';
 import { LANE_LEVEL, commitLine } from '@/components/layout-lab/game/gameHomeLaneCard';
 import { isLanesBoard } from '@/components/layout-lab/game/gameHomeLanesData';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { LIGHT } from '@/components/layout-lab/theme';
 import type { LanesBoard, LaneView, RunnerRootView } from '@/lib/games/runners/runnerTypes';
 
@@ -112,6 +113,26 @@ describe('GameHomeLanes', () => {
     expect(detail.textContent).toContain('No build/evidence/ folder in this worktree yet.');
     expect(screen.getByTestId('lane-no-frames-pof-control-room').textContent).toContain('No frames.json');
     expect(screen.queryByTestId('lane-report-pof-control-room')).toBeNull();
+  });
+});
+
+describe('polling', () => {
+  it('re-reads on the poll interval and keeps the last board, marked stale, when a poll fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const fn = vi.fn();
+      fn.mockImplementationOnce(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: board([root()]) }) }));
+      fn.mockImplementation(() => Promise.resolve({ json: () => Promise.resolve({ success: false, error: 'disk gone' }) }));
+      vi.stubGlobal('fetch', fn);
+      panel();
+      await screen.findByTestId('lane-card-pof-control-room');
+      await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.lanesPoll + 50);
+      expect((await screen.findByRole('alert')).textContent).toContain('last re-read failed (disk gone)');
+      expect(screen.getByTestId('lane-card-pof-control-room')).toBeTruthy();
+      expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
