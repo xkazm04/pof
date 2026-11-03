@@ -43,6 +43,9 @@ describe('arena telemetry as the arena lane writes it', () => {
     expect(m).toContainEqual({ key: 'topSpeed', value: 5.1 });
     expect(m.find((x) => x.key === 'dodges')).toBeUndefined();
   });
+  it('reads a course session course_time_s as its own metric (a course run has no shots)', () => {
+    expect(metricsOf({ course_time_s: 15.5, shots: 0, hit_rate: 0, knockdowns: 0 })).toEqual([{ key: 'knockdowns', value: 0 }, { key: 'courseTime', value: 15.5 }]);
+  });
   it('treats the arena -1 latency and a no-shot hit rate as not recorded', () => {
     const m = metricsOf({ shots: 0, hit_rate: 0, input_latency_mean_ticks: -1, knockdowns: 0 });
     expect(m).toEqual([{ key: 'knockdowns', value: 0 }]);

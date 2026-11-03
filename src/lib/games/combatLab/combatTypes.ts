@@ -34,7 +34,7 @@ export interface CombatTable {
 /** `kills`: how many kills the seconds average (set for the arena's per-spawn lists). */
 export interface TtkPoint { weapon: string; rangeM: number; seconds: number; kills?: number }
 
-export interface SessionMetric { key: 'hitRate' | 'damageTaken' | 'latency' | 'dodges' | 'knockdowns' | 'turnRate' | 'topSpeed'; value: number }
+export interface SessionMetric { key: 'hitRate' | 'damageTaken' | 'latency' | 'dodges' | 'knockdowns' | 'turnRate' | 'topSpeed' | 'courseTime'; value: number }
 
 export interface TelemetrySession {
   /** File name inside its telemetry folder. */
@@ -77,5 +77,5 @@ export interface CombatLabRead {
 }
 
 export const METRIC_LABEL: Record<SessionMetric['key'], string> = {
-  hitRate: 'Hit rate', damageTaken: 'Damage taken', latency: 'Input latency', dodges: 'Dodges', knockdowns: 'Knockdowns', turnRate: 'Turn rate', topSpeed: 'Top speed',
+  hitRate: 'Hit rate', damageTaken: 'Damage taken', latency: 'Input latency', dodges: 'Dodges', knockdowns: 'Knockdowns', turnRate: 'Turn rate', topSpeed: 'Top speed', courseTime: 'Course time (s)',
 };

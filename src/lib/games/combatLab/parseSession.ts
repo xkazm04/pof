@@ -10,7 +10,7 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 
 const METRIC_KEYS: Array<[SessionMetric['key'], RegExp]> = [
   ['hitRate', /hit_?rate|accuracy/i], ['damageTaken', /damage_?taken/i], ['latency', /latency/i],
-  ['dodges', /dodge/i], ['knockdowns', /knock_?down/i], ['turnRate', /turn_?rate/i], ['topSpeed', /top_?speed/i],
+  ['dodges', /dodge/i], ['knockdowns', /knock_?down/i], ['turnRate', /turn_?rate/i], ['topSpeed', /top_?speed/i], ['courseTime', /course_?time/i],
 ];
 const TTK_KEY = /^(ttk|time_?to_?kill)/i;
 
