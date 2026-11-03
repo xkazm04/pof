@@ -113,6 +113,15 @@ describe('Voice room', () => {
     expect(take.textContent).toContain('heard (local Whisper read-back, words only): a one text whispers');
   });
 
+  it('a take whose audio fails to load says so instead of showing a merely silent player', async () => {
+    stubRoutes();
+    render(<VoiceRoom t={LIGHT} />);
+    await waitFor(() => expect(screen.queryByTestId('voice-take')).not.toBeNull());
+    expect(screen.queryByTestId('voice-audio-error')).toBeNull();
+    fireEvent.error(screen.getByTestId('voice-take').querySelector('audio')!);
+    expect(screen.getByTestId('voice-audio-error').textContent).toContain('Audio did not load');
+  });
+
   it('nextToJudge walks forward in play order to the next line awaiting a verdict, wrapping, never the open line', () => {
     const q = [entry('q', 'w1', 0, 0, 'awaiting-verdict'), entry('q', 'n1', 0, 1), entry('q', 'w2', 0, 2, 'awaiting-verdict'), entry('q', 'p1', 0, 3, 'proven')];
     expect(nextToJudge(q, null)?.lineId).toBe('w1');

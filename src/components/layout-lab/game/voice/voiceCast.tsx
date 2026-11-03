@@ -11,6 +11,7 @@ import { LabButton } from '@/components/layout-lab/steps/controls';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import type { QueueEntry, VoiceRow } from '@/lib/voice/types';
 import { fmtMs, postVoice, previewAudioUrl } from './voiceRoomData';
+import { VoiceAudio } from './voiceAudio';
 import { NO_CLONE_NOTE } from './voiceGateClient';
 
 /** Speakers in first-appearance (play) order. Exported for tests. */
@@ -35,7 +36,7 @@ function VoiceCard({ t, v, gate, onChanged }: { t: LabTheme; v: VoiceRow; gate: 
         <MicroLabel mono tone="muted">{v.source}{v.providerVoiceId ? ` · ${v.providerVoiceId}` : ' · not created yet'}</MicroLabel>
       </div>
       {preview
-        ? <audio controls preload="none" src={previewAudioUrl(v.id)} style={{ width: '100%' }} aria-label={`Preview of ${v.name}`} />
+        ? <VoiceAudio t={t} src={previewAudioUrl(v.id)} label={`Preview of ${v.name}`} />
         : <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>No preview (stock voice): judge it by its takes.</span>}
       {preview && <MicroLabel mono tone="muted">preview {fmtMs(preview.durationMs)}</MicroLabel>}
       {v.designPrompt && (

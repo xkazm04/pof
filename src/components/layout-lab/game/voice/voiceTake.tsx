@@ -14,6 +14,7 @@ import type { TakeView } from '@/lib/voice/room';
 import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type TakeVerdict } from '@/lib/voice/types';
 import type { StatusLevel } from '@/lib/status-token';
 import { fmtLufs, fmtMs, fmtWer, postVoice, takeAudioUrl } from './voiceRoomData';
+import { VoiceAudio } from './voiceAudio';
 
 const VERDICT: Record<TakeVerdict, { level: StatusLevel; word: string }> = {
   pending: { level: 'warn', word: 'pending' },
@@ -52,7 +53,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
         {take.readbackWer !== null && take.readbackWer > READBACK_FLAG_WER && <StatusTag level="warn" word={`read-back differs (${fmtWer(take.readbackWer)}): listen for garbled words`} />}
       </div>
-      <audio controls preload="none" src={takeAudioUrl(take.id)} style={{ width: '100%' }} aria-label={`Take ${take.id.slice(0, 8)}`} />
+      <VoiceAudio t={t} src={takeAudioUrl(take.id)} label={`Take ${take.id.slice(0, 8)}`} />
       <div style={{ fontSize: 'var(--lab-fs-sm)', color: t.text }}>
         <strong>Direction:</strong> {take.direction || <em style={{ color: t.muted }}>none</em>}
       </div>
