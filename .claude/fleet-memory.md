@@ -259,3 +259,4 @@ KIND is one of:
 - [2026-11-03] [gtai-arena] DELIVERED: Combat lab reads the lanes' real `arena_stations` shape (a `stations` array per file), pit/course session columns, and a Decisions-room clip Retry; validate green (15270 tests).
 - [2026-11-03] [combat-lab] DELIVERED: the melee table reads rivet-motion's real `rivet_melee.json` (grouped claw hits + shock, 60 Hz ticks) as one row per hit with derived windup_s/cycle_s; it was pointed at a `melee_weapons.json` nobody wrote.
 - [2026-11-03] [combat-lab] DELIVERED: Arena stations list once per (file, station id) across worktrees, the owning lane copy winning (ghost-powers pads showed twice live); 33 combat-lab tests green.
+- [2026-11-03] [game-workspaces] DELIVERED: shared DataTable offers a <wbr> after each underscore/dot so snake_case ids and headers wrap at the separator (combat lab tables); validate green 15276 tests.
