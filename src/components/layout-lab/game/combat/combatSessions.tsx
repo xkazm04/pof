@@ -12,12 +12,16 @@ import { METRIC_LABEL, type SessionMetric, type TelemetrySession } from '@/lib/g
 import { formatDuration } from '@/lib/format';
 
 const KEYS = Object.keys(METRIC_LABEL) as SessionMetric['key'][];
+/** Metrics only some kinds of session carry (a course run, a pit run): their column appears once a session has them. */
+const NICHE = new Set<SessionMetric['key']>(['courseTime', 'pitTime', 'pitKills', 'pitWaves', 'coverStops']);
+/** The arena logs floats like 4.199999999999996 and 720.000327; two decimals is all a designer reads. */
+const round = (v: number) => Math.round(v * 100) / 100;
 
 export function sessionRow(s: TelemetrySession): { label: string; values: Record<string, string | number | boolean> } {
   const values: Record<string, string | number | boolean> = { source: s.from.id, age: `${formatDuration(Math.round(s.ageMs / 1000) * 1000)} ago` };
   for (const k of KEYS) {
     const m = s.metrics.find((x) => x.key === k);
-    values[k] = m ? m.value : 'not recorded';
+    values[k] = m ? round(m.value) : 'not recorded';
   }
   if (s.ttk.length > 0) values.ttkPoints = s.ttk.length;
   if (s.metrics.length === 0 && s.ttk.length === 0) Object.assign(values, s.other);
@@ -30,9 +34,10 @@ export function CombatSessions({ t, sessions, expected }: { t: LabTheme; session
   }
   const rows = sessions.map(sessionRow);
   const extra = [...new Set(rows.flatMap((r) => Object.keys(r.values)))].filter((k) => k !== 'source' && k !== 'age' && !KEYS.includes(k as SessionMetric['key']) && k !== 'ttkPoints');
+  const shown = KEYS.filter((k) => !NICHE.has(k) || sessions.some((s) => s.metrics.some((m) => m.key === k)));
   const columns = [
     { key: 'source' }, { key: 'age' },
-    ...KEYS.map((k) => ({ key: k, label: METRIC_LABEL[k] })),
+    ...shown.map((k) => ({ key: k, label: METRIC_LABEL[k] })),
     { key: 'ttkPoints', label: 'TTK points' }, ...extra.map((key) => ({ key })),
   ];
   return (

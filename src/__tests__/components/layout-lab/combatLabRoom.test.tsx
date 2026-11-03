@@ -55,6 +55,20 @@ describe('Combat lab', () => {
     expect(other.values).toMatchObject({ build: 'dev' });
   });
 
+  it('rounds logged floats to two decimals, and shows pit/course columns only once a session has them', async () => {
+    const row = sessionRow(session({ metrics: [{ key: 'hitRate', value: 0.3870967741935484 }, { key: 'damageTaken', value: 4.199999999999996 }, { key: 'turnRate', value: 720.000327394338 }] }));
+    expect(row.values).toMatchObject({ hitRate: 0.39, damageTaken: 4.2, turnRate: 720 });
+    stubFetch(() => ({ success: true, data: read() }));
+    room();
+    await screen.findByTestId('combat-sessions');
+    expect(screen.getByTestId('combat-sessions').textContent).not.toMatch(/Pit time|Course time/);
+    cleanup();
+    stubFetch(() => ({ success: true, data: read({ telemetry: { dirs: ['d'], expected: 'x', sessions: [session({ metrics: [{ key: 'pitTime', value: 12.4 }, { key: 'pitKills', value: 5 }] })] } }) }));
+    room();
+    await screen.findByTestId('combat-sessions');
+    expect(screen.getByTestId('combat-sessions').textContent).toMatch(/Pit time/);
+  });
+
   it('renders the chart, the table with its source, and missing / unreadable tables with the reason', async () => {
     stubFetch(() => ({ success: true, data: read() }));
     room();
