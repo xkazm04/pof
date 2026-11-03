@@ -50,6 +50,15 @@ describe('readStations', () => {
     expect(r.items[2]).toMatchObject({ area: 'pit' }); // kind stands in for a missing area
     expect(r.items[2]).not.toHaveProperty('spawns');
   });
+  it('lists a station once when two worktrees carry the same lane file, preferring the owning lane', () => {
+    const body = { stations: [{ id: 'gearbox', name: 'Gearbox', area: 'pad', spawns: [1] }] };
+    const a = { ...root({ 'ghost-powers.json': body }), id: 'arena', label: 'lane arena (e-arena)' };
+    const b = { ...root({ 'ghost-powers.json': body }), id: 'ghost-powers', label: 'lane ghost-powers (e-powers)' };
+    const r = readStations('tables/arena_stations', [a, b]);
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0].from.id).toBe('ghost-powers');
+    expect(readStations('tables/arena_stations', [a]).items[0].from.id).toBe('arena');
+  });
   it('says where stations are expected when there are none, and skips the user:// source', () => {
     const r = readStations('tables/arena_stations', [{ id: 'userdata', label: 'engine user://', root: os.tmpdir(), telemetryDirs: ['x'] }]);
     expect(r.items).toEqual([]);

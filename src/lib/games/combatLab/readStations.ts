@@ -38,7 +38,15 @@ export function stationOf(file: string, from: ArenaStation['from'], doc: unknown
 }
 
 export function readStations(dirRel: string, sources: SourceDir[]): StationsRead {
-  const items: ArenaStation[] = [];
+  // One row per (file, station id): a lane's file can sit in several worktrees (the arena lane carries ghost-powers.json too).
+  // The copy from the lane that owns the file (source id = file name) wins; otherwise the first source read.
+  const byKey = new Map<string, { item: ArenaStation; owned: boolean }>();
+  const add = (item: ArenaStation, sourceId: string) => {
+    const owned = item.file.toLowerCase() === `${sourceId.toLowerCase()}.json`;
+    const key = item.unreadable ? `${item.file}|${sourceId}` : `${item.file}|${item.id ?? ''}`;
+    const have = byKey.get(key);
+    if (!have || (owned && !have.owned)) byKey.set(key, { item, owned });
+  };
   const searched = sources.filter((s) => !s.telemetryDirs);
   for (const s of searched) {
     let names: string[];
@@ -51,11 +59,12 @@ export function readStations(dirRel: string, sources: SourceDir[]): StationsRead
         const doc = readLaneJsonFile(full);
         // The lanes' real files hold a `stations` array (several stations per lane file); a bare station object also reads.
         const list = isRec(doc) && Array.isArray(doc.stations) ? doc.stations : undefined;
-        if (list?.length) for (const e of list) items.push(stationOf(n, from, e));
-        else items.push(stationOf(n, from, doc));
-      } catch { items.push({ file: n, from, unreadable: true }); }
+        if (list?.length) for (const e of list) add(stationOf(n, from, e), s.id);
+        else add(stationOf(n, from, doc), s.id);
+      } catch { add({ file: n, from, unreadable: true }, s.id); }
     }
   }
+  const items = [...byKey.values()].map((e) => e.item);
   return {
     dir: dirRel, items,
     expected: `one JSON file per lane in ${dirRel} (inside the game root or a lane worktree); ${items.length ? '' : `none found in ${searched.map((s) => s.label).join(', ') || 'any source'}`}`.trim(),
