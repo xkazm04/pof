@@ -564,5 +564,5 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - It shows 161 frames, clips and records, each tagged with its source, branch, look and zoom.
     - It lists 22 owner calls, C1-C22.
     - It gives the merge order.
-  - **Nothing is merged yet.** The quest 1 exe is at `gtai-wt\d-sliceuild\export\windows\RTAI.exe`; on that branch it is silent and has no car key.
+  - **Nothing is merged yet.** The quest 1 exe is at `gtai-wt\d-slice\build\export\windows\RTAI.exe`; on that branch it is silent and has no car key.
 
