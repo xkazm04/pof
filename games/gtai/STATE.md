@@ -80,6 +80,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-02 | The voice bibles' reference lines are model-written; the seats copied them almost verbatim | medium | open: owner picks the anchor lines |
 | Quest vocabulary drift: the council (PoF quest contract `types.ts`) allows free verbs, bark tags and places; the game runtime plays only the verbs and conditions in rtai `data/tables/quest_rules.json`. The owner-approved `collect-call` failed to load with 18 errors | high | open: the game side (F-12b) grows the runtime; the PoF side needs a guard reading the runtime's `quest_rules.json` (the sibling-owned quest tooling, coordinate before editing) |
 | 2026-11-03 | PoF's ElevenLabs provider calls only `/v1/sound-generation`: no text-to-speech, no voice catalogue, no music kind; the SFX craft pack exceeds the provider's 450-character limit (audio lane POF-GAP 1-3) | high (tts), medium (music, prompt length) | tts: building (lane `pof-voice`); music and prompt length: open |
+| 2026-11-03 | The night runner (`games/gtai/night/night.mjs`) does not recognise the subscription's 5-hour usage limit (`api_error: usage_limit_reached`, `resetsAt` in `rate_limit_info`): it logged a plain exit 1 and retried every lane every 2 minutes from 13:12 to 15:40, and the lanes' journals could not say why they stopped | medium | open: record LIMIT in the log and sleep until `resetsAt` |
 
 ## Session log
 
@@ -556,3 +557,12 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **Handoffs written into the running briefs:**
     - slice-play stops extending `features/save`, and leaves body collision to `collisions`;
     - audio's 23 voice lines are marked temp, and it spends no more characters on voice.
+- **18:46: the day report.** `night.mjs report` was run for all four roots, and every lane finished its REPORT phase with exit 0.
+  - **Cost:** $337 on the subscription, $0 on the API key. By root: `gtai-day-d5` $252, `gtai-day-2` $37, `gtai-day-pof` $14, `gtai-day-pof-voice` $33.
+  - **About 2.5 h were lost:** the subscription's 5-hour limit ran out at 13:12 and reset at 15:40, so no lane ran in that window. This is now a PoF gap: the runner does not detect the limit.
+  - **Verdict page:** https://claude.ai/artifact/YUeBJK9N1tDq9iVssMDu2k (built in the scratchpad's `verdict-day/`).
+    - It shows 161 frames, clips and records, each tagged with its source, branch, look and zoom.
+    - It lists 22 owner calls, C1-C22.
+    - It gives the merge order.
+  - **Nothing is merged yet.** The quest 1 exe is at `gtai-wt\d-sliceuild\export\windows\RTAI.exe`; on that branch it is silent and has no car key.
+
