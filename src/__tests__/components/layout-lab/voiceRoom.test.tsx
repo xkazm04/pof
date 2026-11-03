@@ -76,12 +76,24 @@ describe('Voice room', () => {
     expect(screen.getByTestId('voice-status').textContent).toContain('1 / 3 lines proven');
   });
 
-  it('Approve posts the verdict with the page gate token header and the note', async () => {
+  it('Approve unlocks only after the take is heard, then posts the verdict with the page gate token header and the note', async () => {
     const fetchFn = stubRoutes();
     render(<VoiceRoom t={LIGHT} />);
     await waitFor(() => expect(screen.queryByTestId('voice-take')).not.toBeNull());
     const approve = screen.getByTestId('voice-approve') as HTMLButtonElement;
+    // Locked until the owner has heard the take: half-way is not enough, played through (>= 80 %) unlocks it.
+    await waitFor(() => expect((screen.getByTestId('voice-reject') as HTMLButtonElement).disabled).toBe(false));
+    expect(approve.disabled).toBe(true);
+    expect(screen.getByTestId('voice-listen-first').textContent).toContain('played this take through');
+    const audio = screen.getByTestId('voice-take').querySelector('audio')!;
+    Object.defineProperty(audio, 'duration', { configurable: true, value: 10 });
+    Object.defineProperty(audio, 'currentTime', { configurable: true, writable: true, value: 5 });
+    fireEvent.timeUpdate(audio);
+    expect(approve.disabled).toBe(true);
+    audio.currentTime = 8.5;
+    fireEvent.timeUpdate(audio);
     await waitFor(() => expect(approve.disabled).toBe(false));
+    expect(screen.queryByTestId('voice-listen-first')).toBeNull();
     const note = screen.getByTestId('voice-verdict-note') as HTMLTextAreaElement;
     fireEvent.change(note, { target: { value: 'perfect panic' } });
     fireEvent.click(approve);

@@ -29,6 +29,10 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Approve unlocks only once this take has been HEARD (played to HEARD_FRACTION) in this page: a verdict on
+  // audio nobody listened to is the rubber stamp registry `hitl-approval` warns about. A UI affordance, not
+  // part of the server gate (that is gate.ts); Reject stays open (a flagged read-back may be reason enough).
+  const [heard, setHeard] = useState(false);
   const v = VERDICT[take.verdict];
 
   const judge = async (verdict: 'approved' | 'rejected') => {
@@ -53,7 +57,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
         {take.readbackWer !== null && take.readbackWer > READBACK_FLAG_WER && <StatusTag level="warn" word={`read-back differs (${fmtWer(take.readbackWer)}): listen for garbled words`} />}
       </div>
-      <VoiceAudio t={t} src={takeAudioUrl(take.id)} label={`Take ${take.id.slice(0, 8)}`} />
+      <VoiceAudio t={t} src={takeAudioUrl(take.id)} label={`Take ${take.id.slice(0, 8)}`} onHeard={() => setHeard(true)} />
       <div style={{ fontSize: 'var(--lab-fs-sm)', color: t.text }}>
         <strong>Direction:</strong> {take.direction || <em style={{ color: t.muted }}>none</em>}
       </div>
@@ -69,9 +73,10 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         <div style={{ display: 'grid', gap: 'var(--lab-s2)' }}>
           <LabTextarea t={t} rows={2} value={note} onChange={setNote} label="Verdict note" placeholder="What works, what to change next round" testId="voice-verdict-note" />
           <div style={{ display: 'flex', gap: 'var(--lab-s2)', flexWrap: 'wrap' }}>
-            <LabButton t={t} testId="voice-approve" disabled={!canJudge} onClick={() => void judge('approved')}>Approve</LabButton>
+            <LabButton t={t} testId="voice-approve" disabled={!canJudge || !heard} onClick={() => void judge('approved')}>Approve</LabButton>
             <LabButton t={t} testId="voice-reject" disabled={!canJudge} onClick={() => void judge('rejected')}>Reject</LabButton>
           </div>
+          {!heard && <span data-testid="voice-listen-first" style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Approve unlocks once you have played this take through.</span>}
         </div>
       )}
       {take.verdict === 'approved' && (
