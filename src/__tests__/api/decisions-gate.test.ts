@@ -19,7 +19,7 @@ const req = (url: string, body?: unknown, headers: Record<string, string> = {}) 
     headers: { 'Content-Type': 'application/json', ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-const json = async (r: Response) => (await r.json()) as { success: boolean; data?: any; error?: string };
+const json = async (r: Response) => (await r.json()) as { success: boolean; data?: Record<string, never> & Record<string, unknown> & { open?: Array<{ id: string }>; configured?: boolean; token?: string; answer?: unknown }; error?: string };
 const answersFile = () => path.join(fx.root, 'answers.json');
 
 beforeEach(() => { fx = makeDecisionsFixture(); process.env.POF_GAME_DECISIONS_GTAI = fx.root; });
@@ -32,8 +32,8 @@ describe('decisions human gate', () => {
   it('GET returns the board in the envelope', async () => {
     const b = await json(await boardGET(req(''), ctx));
     expect(b.success).toBe(true);
-    expect(b.data.open.map((d: { id: string }) => d.id)).toEqual(['gunplay-2', 'arena-1']);
-    expect(b.data.configured).toBe(true);
+    expect(b.data?.open?.map((d) => d.id)).toEqual(['gunplay-2', 'arena-1']);
+    expect(b.data?.configured).toBe(true);
   });
 
   it('refuses a CLI-style answer (no browser metadata, no token) with 403 and writes nothing', async () => {
@@ -57,9 +57,9 @@ describe('decisions human gate', () => {
     expect((await gateGET(req('/gate'), ctx)).status).toBe(403);
     const m = await json(await gateGET(req('/gate', undefined, BROWSER), ctx));
     expect(m.success).toBe(true);
-    const r = await answerPOST(req('', { id: 'arena-1', choice: 'shotgun', note: 'yes' }, { ...BROWSER, [GATE_HEADER]: m.data.token }), ctx);
+    const r = await answerPOST(req('', { id: 'arena-1', choice: 'shotgun', note: 'yes' }, { ...BROWSER, [GATE_HEADER]: String(m.data?.token) }), ctx);
     expect(r.status).toBe(200);
-    expect((await json(r)).data.answer).toMatchObject({ id: 'arena-1', choice: 'shotgun', note: 'yes' });
+    expect((await json(r)).data?.answer).toMatchObject({ id: 'arena-1', choice: 'shotgun', note: 'yes' });
     expect(JSON.parse(fs.readFileSync(answersFile(), 'utf8')).answers.map((a: { id: string }) => a.id)).toEqual(['old-0', 'arena-1']);
   });
 

@@ -20,6 +20,7 @@ import { GameHomePipelines } from './gameHomePipelines';
 import { GameHomeBuildHealth } from './gameHomeBuildHealth';
 import { GameHomeLanes } from './gameHomeLanes';
 import { VoiceRoom } from './voice/voiceRoom';
+import { DecisionsRoom } from './decisions/decisionsRoom';
 import { useRoomParam, openRoom } from './voice/voiceRoomParam';
 
 /** The engine binding in words + a status level. Exported for tests. */
@@ -70,6 +71,7 @@ export function GameHome({ t }: { t: LabTheme }) {
   const loading = built.some((r) => r.readiness?.kind === 'loading');
   const coverage = declaredCoverage(d.rows);
   if (room === 'voice' && d.game.id === 'gtai') return <VoiceRoom t={t} />;
+  if (room === 'decisions' && d.game.decisions) return <DecisionsRoom t={t} gameId={d.game.id} />;
   return (
     <section data-testid="game-home" aria-labelledby="game-home-title"
       style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', alignContent: 'start', gap: 'var(--lab-s4)' }}>
@@ -85,6 +87,12 @@ export function GameHome({ t }: { t: LabTheme }) {
           <button type="button" className="focus-ring" data-testid="game-home-voice-room" onClick={() => openRoom('voice')}
             style={{ justifySelf: 'start', fontSize: 'var(--lab-fs-xs)', background: 'transparent', border: `1px solid ${t.line}`, borderRadius: 4, padding: '2px 8px', color: t.text, cursor: 'pointer' }}>
             Voice room →
+          </button>
+        )}
+        {d.game.decisions && (
+          <button type="button" className="focus-ring" data-testid="game-home-decisions-room" onClick={() => openRoom('decisions')}
+            style={{ justifySelf: 'start', fontSize: 'var(--lab-fs-xs)', background: 'transparent', border: `1px solid ${t.line}`, borderRadius: 4, padding: '2px 8px', color: t.text, cursor: 'pointer' }}>
+            Decisions room →
           </button>
         )}
       </header>

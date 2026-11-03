@@ -531,3 +531,38 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
 - **Tests:** `src/__tests__/lib/voice/` (fixture quests, ordering, re-read, line class + scene + column migration,
   supersede, design, export) and the
   gate refusal test above.
+
+## Decisions room (GTAI)
+
+The day lanes ask the owner design questions while the owner is at the machine; the owner answers here (lane
+pof-arena, 2026-11-03). `?room=decisions` on the Game home, next to the Voice room. Sources:
+`src/lib/games/decisions/` (`decisionTypes.ts` wire shape, client-safe; `decisionsConfig.ts`, `readDecisions.ts`,
+`writeAnswer.ts`), routes `src/app/api/games/[gameId]/decisions/` (`route.ts`, `gate/route.ts`, `media/route.ts`), UI
+`layout-lab/game/decisions/`. Tests: `src/__tests__/games/decisions/`, `src/__tests__/api/decisions-gate.test.ts`,
+`src/__tests__/components/layout-lab/decisionsRoom.test.tsx`.
+
+- **The two on-disk shapes belong to the lanes; nothing renames them.** Ask: `<root>/asks/<lane>-<n>.json` =
+  `{ id, lane, question, options: [{ key, label, tradeoff, frames: [abs png/jpg/webp/gif/mp4/webm paths] }], default, asked }`.
+  Answers: `<root>/answers.json` = `{ answers: [{ id, choice, note, at }] }`; the lanes re-read it about every 20 minutes.
+- **Config, not constants.** `GameDef.decisions = { root }` (GTAI: `../gtai-eve/decisions`, relative to the PoF repo root:
+  `POF_GAMES_ROOT`, else cwd); env override `POF_GAME_DECISIONS_<ID>`. A game with none answers `configured: false` with
+  the reason. A PoF worktree is not a sibling of `gtai-eve`, so set the env var there.
+- **Reader** (`readDecisionsBoard`). Open asks first, newest `asked` first (file mtime when `asked` does not parse), then
+  answered ones, newest answer first. An ask that cannot be used (bad id, no question, no options, duplicate option key,
+  duplicate id) is listed as a `problem` with its reason, never hidden and never repaired. A `default` that is not an option
+  key is dropped. A listed frame that is missing, not a file or an unsupported type is shown as `unservable` with the reason.
+- **Media door** (`GET .../decisions/media?ask=&opt=&n=`). The path comes from the ask file (option `opt`, entry `n`), never
+  from the query, and only an existing media file is served; byte ranges are honoured (clips scrub). A listed `.txt`, a
+  missing file, an unknown ask/option/index or a bad id is 400/404 in the envelope.
+- **Writing an answer is a human action.** `POST .../decisions` `{ id, choice, note? }` uses the Voice room's gate
+  (`@/lib/voice/gate`: a same-origin browser fetch plus the page token from `GET .../decisions/gate`); the CLI and the
+  agents get 403. `choice` must be one of that ask's option keys; the note is capped at 2000 characters.
+- **The write is safe with seven lanes reading** (`writeAnswer`): temp file in the same folder, then rename (retried on
+  Windows); every earlier answer and unknown key is kept; one entry per ask id, so a lane taking the first match and one taking
+  the last read the same thing; changing an answer replaces that id's entry and appends the replaced one to
+  `answers.history.jsonl`; an unreadable `answers.json` is refused (409), never overwritten; ask files are never opened for
+  write; writes are serialised in the process.
+- **UI.** `DecisionsRoom` polls every `UI_TIMEOUTS.decisionsPoll` (10 s, `useSuspendableEffect`); a failed poll keeps the last
+  board and says it is stale. A card shows the options side by side (label, trade-off, frames and clips, the lane's default
+  tagged), a radio choice, a note, Save (disabled until an option is picked and the token has arrived). Draft state is
+  per card, so a poll never wipes a note.

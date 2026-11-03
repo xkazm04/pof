@@ -205,6 +205,8 @@ export const UI_TIMEOUTS = {
   /** Interval the Game home's lanes control room re-reads the lane runners (suspend-gated). The lanes
    *  commit and journal every few minutes, so a half-minute read is live enough without hammering git. */
   lanesPoll: 45_000,
+  /** Interval the Decisions room re-reads its asks (suspend-gated): a lane may ask any minute, the owner is waiting. */
+  decisionsPoll: 10_000,
 } as const;
 
 /**
