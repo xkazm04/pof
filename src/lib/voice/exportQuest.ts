@@ -7,7 +7,8 @@
  * `game-dialogue-voice-pipeline`). Unproven lines are not touched (a temp voice the audio lane set stays).
  * Nothing unproven is ever written: a line without a current approved take is skipped and listed.
  * Every written file is MASTERED to the game's voice target (`mastering.ts`: mono, loudnorm to the
- * `audio_mix.json` loudness) and measured after, so the report shows each line's level against it.
+ * `audio_mix.json` loudness) and measured after, so the report shows each line's level against it. The file
+ * is a copy of the room's as-game master (`asGame.ts`), so what ships is exactly what the owner heard.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,6 +17,7 @@ import { listLines, listTakes } from '@/lib/voice/voice-db';
 import { castMap, lineState } from '@/lib/voice/lineQueue';
 import { convertToOgg, measureAudio } from '@/lib/voice/storage';
 import { MASTER_TOLERANCE_LU, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
+import { asGameFile } from '@/lib/voice/asGame';
 import type { Result } from '@/types/result';
 
 export interface ExportReport {
@@ -65,9 +67,12 @@ export async function exportQuest(
     }
     const rel = `assets/audio/voice/${questId}/${line.lineId}.ogg`;
     const dst = path.join(gameRoot, 'project', ...rel.split('/'));
-    const treatment = mastering.treatments?.[line.speaker];
-    const err = await deps.convert(take.file, dst, mastering, treatment);
-    if (err) { report.skipped.push({ lineId: line.lineId, reason: err }); continue; }
+    // The SAME master the room played (as=game cache): the game gets byte-for-byte what the owner approved.
+    const m = await asGameFile(db, take.id, gameRoot, { convert: deps.convert });
+    if (!m.ok) { report.skipped.push({ lineId: line.lineId, reason: m.error }); continue; }
+    const treatment = m.data.treatment ?? undefined;
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    fs.copyFileSync(m.data.file, dst);
     const lufs = await deps.measureLufs(dst);
     audioByLine.set(line.lineId, { path: `res://${rel}`, takeId: take.id, voiceId: take.providerVoiceId, model: take.settings.model });
     const onLevel = lufs === null ? null : Math.abs(lufs - mastering.lufs) <= MASTER_TOLERANCE_LU;

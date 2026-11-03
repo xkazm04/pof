@@ -443,7 +443,9 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   `voice_true_peak_db`; a game without a usable table gets -18 LUFS / -2 dBTP and the report names the
   fallback), Vorbis q4. It is measured after: the report carries `mastering` (target + source) and per line
   `lufs` / `onLevel` (within 1.5 LU). Provider takes arrive anywhere from -14 to -30 LUFS; unmastered, a
-  whispered take would play about 12 LU under the mix the voice bus and duck were tuned for.
+  whispered take would play about 12 LU under the mix the voice bus and duck were tuned for. The written file
+  is a COPY of the room's as-game master of that take (below), so the game ships byte for byte what the owner
+  heard when approving.
   A speaker the game hears through a device (Patch, the payphone router) gets its filter chain from the same
   table's optional `voice_treatments: { "<speaker>": "<ffmpeg chain>" }`, applied before loudnorm; only
   tone filters (`TREATMENT_FILTERS`: highpass, lowpass, bandpass, equalizer, acompressor, volume) are

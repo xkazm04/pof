@@ -13,6 +13,7 @@ import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate, bibleDescription, designForCharacter, ORIGINAL_VOICE_CLAUSE, readBible } from '@/lib/voice/design';
 import { DEFAULT_VOICE_TARGET, MIX_TABLE, isSafeTreatment, masterArgs, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
 import { exportQuest } from '@/lib/voice/exportQuest';
+import { asGameFile } from '@/lib/voice/asGame';
 import { directionTags, speechText } from '@/lib/audio-gen/providers/elevenlabs-speech';
 import { makeFixtureRoot, makeGameRoot, writeQuest } from './voiceFixture';
 
@@ -160,7 +161,13 @@ describe('export', () => {
     expect(ex.data.mastering).toEqual(targets[0]);
     expect(ex.data.written).toEqual([{ lineId: 'z1', path: 'res://assets/audio/voice/zulu/z1.ogg', takeId: r.data[0].id, lufs: -22.1, onLevel: false }]);
     expect(ex.data.skipped).toEqual([{ lineId: 'z2', reason: 'not proven (no-takes)' }]);
-    expect(converted).toEqual([path.join(game, 'project', 'assets', 'audio', 'voice', 'zulu', 'z1.ogg')]);
+    // Rendered once into the room's as-game cache, then COPIED into the game: what ships is what was heard.
+    expect(converted).toHaveLength(1);
+    expect(path.dirname(converted[0])).toBe(path.join(String(process.env.POF_VOICE_DIR), 'as-game'));
+    const shipped = path.join(game, 'project', 'assets', 'audio', 'voice', 'zulu', 'z1.ogg');
+    const heard = await asGameFile(db, r.data[0].id, game, { convert: async () => { throw new Error('cached: must not re-render'); } });
+    if (!heard.ok) throw new Error(heard.error);
+    expect(fs.readFileSync(shipped)).toEqual(fs.readFileSync(heard.data.file));
     const q = JSON.parse(fs.readFileSync(path.join(game, 'project', 'quests', 'zulu', 'quest.json'), 'utf8'));
     // `audio` is the String the game's quest_voice.gd plays; the take record sits beside it.
     expect(q.lines[0].audio).toBe('res://assets/audio/voice/zulu/z1.ogg');
