@@ -6,18 +6,24 @@
  * `{ takeId, voiceId, model }` (the model is recorded per line: a model change is a re-cast event, registry
  * `game-dialogue-voice-pipeline`). Unproven lines are not touched (a temp voice the audio lane set stays).
  * Nothing unproven is ever written: a line without a current approved take is skipped and listed.
+ * Every written file is MASTERED to the game's voice target (`mastering.ts`: mono, loudnorm to the
+ * `audio_mix.json` loudness) and measured after, so the report shows each line's level against it.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { listLines, listTakes } from '@/lib/voice/voice-db';
 import { castMap, lineState } from '@/lib/voice/lineQueue';
-import { convertToOgg } from '@/lib/voice/storage';
+import { convertToOgg, measureAudio } from '@/lib/voice/storage';
+import { MASTER_TOLERANCE_LU, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
 import type { Result } from '@/types/result';
 
 export interface ExportReport {
   questId: string;
-  written: Array<{ lineId: string; path: string; takeId: string }>;
+  /** `lufs`: the written file's measured level (null = unmeasured); `onLevel`: within MASTER_TOLERANCE_LU of the target. */
+  written: Array<{ lineId: string; path: string; takeId: string; lufs: number | null; onLevel: boolean | null }>;
+  /** The level every written file was mastered to, and where that target came from. */
+  mastering: VoiceMasterTarget;
   skipped: Array<{ lineId: string; reason: string }>;
   /** Lines the game still plays from an earlier export whose take is no longer proven here (a text edit or
    *  a re-cast). Reported, never deleted: what the game plays is the owner's call. */
@@ -25,10 +31,15 @@ export interface ExportReport {
   questFile: string;
 }
 
-export interface ExportDeps { convert: (src: string, dst: string) => Promise<string | null> }
+export interface ExportDeps {
+  convert: (src: string, dst: string, target: VoiceMasterTarget) => Promise<string | null>;
+  measureLufs: (abs: string) => Promise<number | null>;
+}
+
+const DEFAULT_DEPS: ExportDeps = { convert: convertToOgg, measureLufs: async (abs) => (await measureAudio(abs)).loudnessLufs };
 
 export async function exportQuest(
-  db: Database.Database, gameId: string, questId: string, gameRoot: string, deps: ExportDeps = { convert: convertToOgg },
+  db: Database.Database, gameId: string, questId: string, gameRoot: string, deps: ExportDeps = DEFAULT_DEPS,
 ): Promise<Result<ExportReport, string>> {
   if (!/^[a-z0-9-]+$/.test(questId)) return { ok: false, error: `bad quest id ${questId}` };
   const questFile = path.join(gameRoot, 'project', 'quests', questId, 'quest.json');
@@ -36,7 +47,8 @@ export async function exportQuest(
   const lines = listLines(db, gameId).filter((l) => l.questId === questId);
   if (lines.length === 0) return { ok: false, error: `no queue lines for quest ${questId}` };
   const takes = listTakes(db, gameId, questId);
-  const report: ExportReport = { questId, written: [], skipped: [], stale: [], questFile };
+  const mastering = voiceMasterTarget(gameRoot);
+  const report: ExportReport = { questId, written: [], skipped: [], stale: [], mastering, questFile };
   const inGame = exportedTakes(questFile);
   const audioByLine = new Map<string, { path: string; takeId: string; voiceId: string; model: string }>();
   const cast = castMap(db, gameId);
@@ -51,10 +63,13 @@ export async function exportQuest(
       continue;
     }
     const rel = `assets/audio/voice/${questId}/${line.lineId}.ogg`;
-    const err = await deps.convert(take.file, path.join(gameRoot, 'project', ...rel.split('/')));
+    const dst = path.join(gameRoot, 'project', ...rel.split('/'));
+    const err = await deps.convert(take.file, dst, mastering);
     if (err) { report.skipped.push({ lineId: line.lineId, reason: err }); continue; }
+    const lufs = await deps.measureLufs(dst);
     audioByLine.set(line.lineId, { path: `res://${rel}`, takeId: take.id, voiceId: take.providerVoiceId, model: take.settings.model });
-    report.written.push({ lineId: line.lineId, path: `res://${rel}`, takeId: take.id });
+    const onLevel = lufs === null ? null : Math.abs(lufs - mastering.lufs) <= MASTER_TOLERANCE_LU;
+    report.written.push({ lineId: line.lineId, path: `res://${rel}`, takeId: take.id, lufs, onLevel });
   }
   if (audioByLine.size > 0) {
     const raw = fs.readFileSync(questFile, 'utf8');

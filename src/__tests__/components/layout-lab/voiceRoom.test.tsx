@@ -10,7 +10,7 @@ vi.mock('next/font/google', () => {
   return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f };
 });
 
-import { VoiceRoom } from '@/components/layout-lab/game/voice/voiceRoom';
+import { VoiceRoom, exportNoteText } from '@/components/layout-lab/game/voice/voiceRoom';
 import { groupByQuest, nextToJudge } from '@/components/layout-lab/game/voice/voiceQueue';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { VOICE_GATE_HEADER } from '@/components/layout-lab/game/voice/voiceGateClient';
@@ -183,5 +183,15 @@ describe('Voice room', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Cast/ }));
     await waitFor(() => expect(screen.queryByTestId('voice-gate-note')).not.toBeNull());
     expect(screen.getByTestId('voice-gate-note').textContent).toContain('Never imitate or clone');
+  });
+});
+
+describe('exportNoteText', () => {
+  it('names the master level and its source, and points at an off-level line', () => {
+    const text = exportNoteText({
+      written: [{ lineId: 'a1', onLevel: true }, { lineId: 'a2', onLevel: false }], skipped: [{}], stale: [],
+      mastering: { lufs: -18, truePeakDb: -2, source: 'project/data/tables/audio_mix.json' },
+    });
+    expect(text).toBe('2 written · 1 skipped (not proven) · mastered to -18 LUFS / -2 dBTP (project/data/tables/audio_mix.json) · off level after mastering, listen: a2');
   });
 });

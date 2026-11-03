@@ -430,14 +430,20 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   Python process per batch, offline HF cache, off under `NODE_ENV=test` and with `POF_VOICE_READBACK=0`),
   `readback` (backfill: re-score stored transcripts, then read back takes not heard yet), `takes/verdict` (gated), `voices` (list, design, stock candidate), `voices/cast`
   (gated), `gate`, `audio?takeId|voiceId`, `export`.
-- **Export** (`exportQuest`): only proven lines, mp3 to Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
+- **Export** (`exportQuest`): only proven lines, mp3 to mastered Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
   `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
   `project/quests/<quest>/quest.json` line gets `audio: "res://…ogg"` (a String: the game's `quest_voice.gd` plays
   `audio` only when it is a String) and `audioTake: { takeId, voiceId, model }` beside it. Unproven lines are not
   touched, so a temp voice the game's audio lane set stays until its line is proven here. A line an earlier
   export left in the game (`audioTake`) whose take is no longer proven (text edit, re-cast) is listed as
   `stale` in the report and left as is: what the game plays is the owner's call. The game root is
-  `gameRootFor` (`POF_GAME_ROOT_GTAI` points tests at a fixture).
+  `gameRootFor` (`POF_GAME_ROOT_GTAI` points tests at a fixture). Every written file is **mastered**
+  (`mastering.ts`) the way the game's own processor (`tools/audio/process.py`) renders voice: mono, 44.1 kHz,
+  `loudnorm` to the target the game declares in `project/data/tables/audio_mix.json` (`loudness.voice_lufs`,
+  `voice_true_peak_db`; a game without a usable table gets -18 LUFS / -2 dBTP and the report names the
+  fallback), Vorbis q4. It is measured after: the report carries `mastering` (target + source) and per line
+  `lufs` / `onLevel` (within 1.5 LU). Provider takes arrive anywhere from -14 to -30 LUFS; unmastered, a
+  whispered take would play about 12 LU under the mix the voice bus and duck were tuned for.
 - **UI:** `/layout?g=gtai&c=spellbook&v=game&room=voice` (`src/components/layout-lab/game/voice/`): Queue (grouped by quest,
   progress per quest, Export), Line (text, speaker, bible, takes as players, approve or reject with a note,
   generate k takes with a direction; "Next to judge" jumps to the next line whose takes wait for a verdict), Cast

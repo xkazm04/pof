@@ -8,6 +8,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { resolveDbPath } from '@/lib/db';
+import { masterArgs, type VoiceMasterTarget } from '@/lib/voice/mastering';
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -75,9 +76,10 @@ export async function measureAudio(abs: string): Promise<AudioMeasure> {
   };
 }
 
-/** mp3 → Ogg Vorbis (Godot plays Vorbis; ElevenLabs offers no ogg output). Resolves an error or null. */
-export async function convertToOgg(src: string, dst: string): Promise<string | null> {
+/** mp3 → mastered mono Ogg Vorbis at the game's voice target (Godot plays Vorbis; ElevenLabs offers no
+ *  ogg output). Resolves an error or null. */
+export async function convertToOgg(src: string, dst: string, target: VoiceMasterTarget): Promise<string | null> {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
-  const r = await run('ffmpeg', ['-hide_banner', '-y', '-i', src, '-c:a', 'libvorbis', '-q:a', '5', dst]);
-  return r ? null : `ffmpeg could not convert ${path.basename(src)} to ogg`;
+  const r = await run('ffmpeg', masterArgs(src, dst, target));
+  return r ? null : `ffmpeg could not master ${path.basename(src)} to ogg`;
 }

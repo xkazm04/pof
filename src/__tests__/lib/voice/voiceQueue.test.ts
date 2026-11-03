@@ -11,6 +11,7 @@ import { createVoiceDb, listTakes, setVerdict, castVoice, listVoices, verdictFee
 import { queueEntries, statusView, syncQueue } from '@/lib/voice/lineQueue';
 import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate, bibleDescription, designForCharacter, ORIGINAL_VOICE_CLAUSE, readBible } from '@/lib/voice/design';
+import { DEFAULT_VOICE_TARGET, MIX_TABLE, masterArgs, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
 import { exportQuest } from '@/lib/voice/exportQuest';
 import { directionTags, speechText } from '@/lib/audio-gen/providers/elevenlabs-speech';
 import { makeFixtureRoot, makeGameRoot, writeQuest } from './voiceFixture';
@@ -145,10 +146,19 @@ describe('export', () => {
     const pre = JSON.parse(fs.readFileSync(qf, 'utf8'));
     pre.lines[1].audio = 'res://assets/audio/voice/z2.ogg';
     fs.writeFileSync(qf, JSON.stringify(pre, null, 2));
+    // The game declares its voice level in audio_mix.json; export masters every file to it and measures after.
+    fs.mkdirSync(path.join(game, 'project', 'data', 'tables'), { recursive: true });
+    fs.writeFileSync(path.join(game, 'project', 'data', 'tables', 'audio_mix.json'), JSON.stringify({ loudness: { voice_lufs: -20, voice_true_peak_db: -3 } }));
     const converted: string[] = [];
-    const ex = await exportQuest(db, 'gtai', 'zulu', game, { convert: async (_s, d) => { converted.push(d); fs.mkdirSync(path.dirname(d), { recursive: true }); fs.writeFileSync(d, 'ogg'); return null; } });
+    const targets: VoiceMasterTarget[] = [];
+    const ex = await exportQuest(db, 'gtai', 'zulu', game, {
+      convert: async (_s, d, t) => { converted.push(d); targets.push(t); fs.mkdirSync(path.dirname(d), { recursive: true }); fs.writeFileSync(d, 'ogg'); return null; },
+      measureLufs: async () => -22.1,
+    });
     if (!ex.ok) throw new Error(ex.error);
-    expect(ex.data.written.map((w) => w.lineId)).toEqual(['z1']);
+    expect(targets).toEqual([{ lufs: -20, truePeakDb: -3, source: MIX_TABLE }]);
+    expect(ex.data.mastering).toEqual(targets[0]);
+    expect(ex.data.written).toEqual([{ lineId: 'z1', path: 'res://assets/audio/voice/zulu/z1.ogg', takeId: r.data[0].id, lufs: -22.1, onLevel: false }]);
     expect(ex.data.skipped).toEqual([{ lineId: 'z2', reason: 'not proven (no-takes)' }]);
     expect(converted).toEqual([path.join(game, 'project', 'assets', 'audio', 'voice', 'zulu', 'z1.ogg')]);
     const q = JSON.parse(fs.readFileSync(path.join(game, 'project', 'quests', 'zulu', 'quest.json'), 'utf8'));
@@ -166,11 +176,24 @@ describe('export', () => {
     ]);
     syncQueue(db, 'gtai', root);
     const before = fs.readFileSync(qf, 'utf8');
-    const again = await exportQuest(db, 'gtai', 'zulu', game, { convert: async () => { throw new Error('nothing proven: must not convert'); } });
+    const again = await exportQuest(db, 'gtai', 'zulu', game, { convert: async () => { throw new Error('nothing proven: must not convert'); }, measureLufs: async () => null });
     if (!again.ok) throw new Error(again.error);
     expect(again.data.written).toEqual([]);
     expect(again.data.stale).toEqual([{ lineId: 'z1', takeId: r.data[0].id, reason: `the game still plays take ${r.data[0].id.slice(0, 8)}, no longer proven here (no-takes)` }]);
     expect(fs.readFileSync(qf, 'utf8')).toBe(before);
+  });
+
+  it('masters like the game processor; a game without a usable mix table gets the default, named', () => {
+    const game = makeGameRoot('zulu', ['z1']);
+    expect(voiceMasterTarget(game)).toEqual(DEFAULT_VOICE_TARGET);
+    const table = path.join(game, 'project', 'data', 'tables');
+    fs.mkdirSync(table, { recursive: true });
+    fs.writeFileSync(path.join(table, 'audio_mix.json'), '{ not json');
+    expect(voiceMasterTarget(game)).toMatchObject({ lufs: -18, truePeakDb: -2, source: `default: ${MIX_TABLE} is not valid JSON` });
+    fs.writeFileSync(path.join(table, 'audio_mix.json'), JSON.stringify({ loudness: { voice_lufs: 'loud' } }));
+    expect(voiceMasterTarget(game).source).toContain('no usable loudness');
+    const args = masterArgs('in.mp3', 'out.ogg', { lufs: -18, truePeakDb: -2, source: 'x' });
+    expect(args.join(' ')).toContain('-ac 1 -ar 44100 -af loudnorm=I=-18:TP=-2:LRA=11 -c:a libvorbis -q:a 4 out.ogg');
   });
 });
 
