@@ -1,4 +1,9 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { GTAI_GAME } from '@/lib/games/gtai';
+import { readSessions } from '@/lib/games/combatLab/readCombatLab';
 import { parseTable } from '@/lib/games/combatLab/parseTable';
 import { metricsOf, ttkOf } from '@/lib/games/combatLab/parseSession';
 import { predictTtk, targetsOf } from '@/lib/games/combatLab/predictTtk';
@@ -67,5 +72,20 @@ describe('weapon table columns and the design-side TTK', () => {
     expect(smg.shots).toBe(12);
     expect(smg.seconds).toBeCloseTo(11 / 10 + 3 * 2 + 20 / 50, 5); // floor(11/3) = 3 reloads
     expect(m.outOfRange).toEqual(['shotgun']);
+  });
+});
+
+describe('where the arena lane leaves its telemetry', () => {
+  it('the GTAI config reads evidence/arena in the arena lane worktree (the range-bot session)', () => {
+    const cfg = GTAI_GAME.combatLab!;
+    expect(cfg.telemetryDirs).toContain('evidence/arena');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pof-arena-ev-'));
+    try {
+      fs.mkdirSync(path.join(root, 'evidence', 'arena'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'evidence', 'arena', 'arena-range-telemetry.json'), JSON.stringify(TELEMETRY));
+      const s = readSessions(cfg.telemetryDirs, [{ id: 'arena', label: 'lane arena', root }], Date.now());
+      expect(s.map((x) => x.file)).toEqual(['arena-range-telemetry.json']);
+      expect(s[0].ttk.length).toBe(2);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
 });
