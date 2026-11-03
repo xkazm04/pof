@@ -623,7 +623,7 @@ write, a measured time-to-kill chart and the latest arena telemetry. `?room=comb
   (`{ lane, schema, stations: [{ id, name, area|kind, spawns[], props[], tuning[], measures[] }] }`, several stations per
   file; a bare station object also reads). The room lists one row per station across the sources, counting by key name
   (`spawn*`, `prop*`, `tun*`/`expose*`, `measure*`/`report*`; `kind` stands in for a missing `area`); a count the entry lacks
-  reads "not in file", an unparseable file is flagged, and no files says where they are expected. The wire field `stations` is optional so an older server still renders.
+  reads "not in file", an unparseable file is flagged, and no files says where they are expected. The wire field `stations` is optional so an older server still renders. A lane file carried by several worktrees (the arena worktree holds a copy of `ghost-powers.json`) lists once per `(file, station id)`: the copy from the lane whose id equals the file name wins, else the first source read.
 - **Lane-written JSON is read BOM/UTF-16 tolerant** (`src/lib/games/laneJson.ts`): asks, `answers.json`, tables, telemetry and station
   files all go through `readLaneJsonFile`, because a lane on Windows may save with PowerShell (UTF-8 BOM or UTF-16) and a bare
   `JSON.parse` would turn an ask into "unreadable" and `answers.json` into "unusable" (which also blocks the answer writer). What PoF
