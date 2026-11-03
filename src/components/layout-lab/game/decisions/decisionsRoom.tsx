@@ -19,7 +19,7 @@ export function DecisionsRoom({ t, gameId }: { t: LabTheme; gameId: string }) {
   const b = read.kind === 'ok' ? read.data : null;
   return (
     <section data-testid="decisions-room" aria-labelledby="decisions-title"
-      style={{ flex: 1, minHeight: 0, maxWidth: '100vw', boxSizing: 'border-box', overflow: 'auto', color: t.text, padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', alignContent: 'start', gap: 'var(--lab-s4)' }}>
+      style={{ flex: 1, minHeight: 0, maxWidth: '100vw', boxSizing: 'border-box', overflow: 'auto', color: t.text, padding: 'var(--lab-s4) var(--lab-s6)', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', alignContent: 'start', gap: 'var(--lab-s4)' }}>
       <header style={{ display: 'grid', gap: 'var(--lab-s1)' }}>
         <button type="button" className="focus-ring" onClick={() => openRoom(null)}
           style={{ justifySelf: 'start', background: 'transparent', border: 'none', padding: 0, color: t.muted, cursor: 'pointer', fontSize: 'var(--lab-fs-xs)' }}>← Game home</button>

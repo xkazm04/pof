@@ -566,3 +566,33 @@ pof-arena, 2026-11-03). `?room=decisions` on the Game home, next to the Voice ro
   board and says it is stale. A card shows the options side by side (label, trade-off, frames and clips, the lane's default
   tagged), a radio choice, a note, Save (disabled until an option is picked and the token has arrived). Draft state is
   per card, so a poll never wipes a note.
+
+## Combat lab (GTAI)
+
+Where the owner judges combat design (lane pof-arena, 2026-11-03): the weapon / enemy / power tables the combat lanes
+write, a measured time-to-kill chart and the latest arena telemetry. `?room=combat` on the Game home. Sources:
+`src/lib/games/combatLab/` (`combatTypes.ts` wire shape, client-safe; `parseTable.ts`, `parseSession.ts` pure;
+`combatSources.ts`, `readCombatLab.ts` fs), route `src/app/api/games/[gameId]/combat-lab/route.ts`, UI
+`layout-lab/game/combat/`. Tests: `src/__tests__/games/combatLab/`, `src/__tests__/api/combat-lab-route.test.ts`,
+`src/__tests__/components/layout-lab/combatLabRoom.test.tsx`.
+
+- **Config, not constants.** `GameDef.combatLab = { tables: { weapons, enemies, powers }, telemetryDirs, laneRoots }`
+  (paths relative to a game root or a lane worktree; `laneRoots` are runner-root folder names, GTAI: `gtai-eve`, which is
+  also in `runners.roots`). The tables are owned by three different lanes (`gunplay` -> `weapons.json`, `enemy-ai` ->
+  `enemies.json`, `ghost-powers` -> `powers.json`), each on its own `e-*` branch tonight, on the game's main after the merge.
+- **Sources** (`resolveSources`). `main` = `gameRootFor`; every lane worktree that exists in a `laneRoots` root. `?source=`
+  is `auto` (default: the game root first, then each lane), `main`, or a lane id; anything else, including a path, is a 404.
+  Per table the first source that has it wins and the response names it (`from`); telemetry is every source's sessions,
+  newest first (8).
+- **Schema-tolerant, because the lanes own the schemas.** A table is an array of records, a map of id to record, or an
+  object holding one under a key (preferring the table's own name); nested records flatten one level; at most 14 columns
+  and 200 rows, the rest counted, not hidden silently. A telemetry file is read by key name at any depth: `hit_rate`,
+  `damage_taken`, `latency`, `dodge`, `knockdown`, `turn_rate`, and time to kill as `{ weapon: { range: s } }`,
+  `{ weapon: { range: { mean } } }` or a record list. **The arena brief names no telemetry folder**, so `telemetryDirs`
+  lists every plausible one; once the arena lane's worktree shows the real one, narrow the list.
+- **Absent is never zero.** A table that is not there is `missing` with the paths looked in; one that cannot be read is
+  `invalid` with the parse reason; a metric a session did not record reads "not recorded"; no session says where the file
+  is expected, and no chart is drawn from the table or a guess.
+- **UI.** `CombatLabRoom` polls every `UI_TIMEOUTS.combatLabPoll` (20 s, `useSuspendableEffect`), keeps the last read when a
+  poll fails and says so. Time to kill by range is the shared `ChartPanel` bars (one row per weapon at a range, fastest at
+  each range highlighted); tables and sessions are the shared `DataTable`.
