@@ -567,3 +567,42 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - It gives the merge order.
   - **Nothing is merged yet.** The quest 1 exe is at `gtai-wt\d-slice\build\export\windows\RTAI.exe`; on that branch it is silent and has no car key.
 
+
+### 2026-11-03 evening: plan (owner at the machine until 00:00, then a night run)
+- **Owner verdicts on the day page (19:10):**
+  - C1: narrow the roads.
+  - Every other call keeps what the lane shipped, or its recommendation: C15 pool 16 px, C19 a sprint key, C21 line duration follows the voice.
+  - Voice selection is deferred.
+  - The new API key is in PoF `.env` (`ANTRHOPIC_API_KEY`), so the runners go api-first again.
+- **Owner direction:** "Combat, Movement, AI behavior, Animations are now the weakest part" and must be solved before story, quests, static visual bugs and worldbuilding. A test arena to design weapons, enemies, movement for both sides and ghost powers, and to execute animations. "Smooth combat on long and melee range would be the core piece of game we need to master."
+  - On Rivet: too large, and his arms are too large. No directional movement, no movement animation, no unarmed melee.
+  - All characters' thick white border should be thinned by 50 %.
+  - Clean the last session's leftovers after every evaluation.
+- **Owner design decisions (19:20):**
+  - a dev arena plus a cordoned city proving block;
+  - twin-stick aiming with visible, dodgeable bullets;
+  - unarmed melee = a claw combo, a charged shock and the tackle;
+  - the first ghost powers are Hauler (the tank form) and Gearbox (car hijack).
+- **Done:**
+  - PoF master merged `gtai-control-room` (`0b133c99`) and `gtai-voice` (`7cd71d38`). Both lane reports were moved to `games/gtai/day/2026-11-03/`.
+  - Runner fix: it now recognises the "hit your 5-hour limit" message and waits for the reset (`af409eaa`).
+  - Cleanup:
+    - 11.1 GB of masters scratch deleted (raw AVIs, Godot import files, unreferenced iteration frames);
+    - 6 finished runner roots deleted, with their scoreboards archived (`6dd533ba`);
+    - the PoF lane worktrees removed;
+    - `/gta morning` gains a standing cleanup step.
+  - The rtai merge of the 8 day branches is running (Director's integration agent in `gtai-wt\int-day`).
+- **Evening run until 00:00** (freeze 23:30, report 23:40; 45-minute iterations so your answers reach the lanes quickly):
+  - root `C:\Users\kazda\kiro\gtai-eve`, branches `e-*` cut from the merged main:
+    - `arena` (Opus);
+    - `rivet-motion` (Opus): concept proportions, twin-stick body, locomotion, sprint and roll, melee;
+    - `gunplay` (Opus): weapons and the shared hit feel;
+    - `enemy-ai` (Opus);
+    - `ghost-powers` (Opus): Hauler and Gearbox;
+    - `visual-fixes` (Sonnet): the border cut by 50 %, the narrower roads, voice-length line timing.
+  - root `C:\Users\kazda\kiro\gtai-eve-pof`: `pof-arena` (Sonnet, PoF branch `gtai-arena`). It builds a decision board in the GTAI game home and the combat-lab readouts. Launched 19:25 on the API key.
+  - **How you answer the lanes:**
+    - lanes write questions to `gtai-eve\decisions\asks\<lane>-<n>.json` and carry on with their default;
+    - your answers go in `gtai-eve\decisions\answers.json`, through PoF's Decisions room or through the Director;
+    - lanes re-read the answers every ~20 min.
+- **00:00:** merge the evening branches, then a night run that perfects combat, movement, AI and animation.
