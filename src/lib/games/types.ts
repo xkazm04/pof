@@ -37,6 +37,17 @@ export type GameEngine =
   | { kind: 'godot'; version: string; root: string | null }
   | { kind: 'undecided' };
 
+/**
+ * Where a game's overnight/day lane runners live (`games/gtai/night/night.mjs --root R`): each root holds a
+ * `night.json`, `logs/<lane>/state.json` and `billing.json`; `masters` holds `<group>/<lane>/frames.json`.
+ * Paths are relative to the PoF repo root (`POF_GAMES_ROOT`, else cwd). Env overrides (`runnersConfig.ts`):
+ * `POF_GAME_RUNNER_ROOTS_<ID>` (`;`-separated) and `POF_GAME_MASTERS_<ID>`.
+ */
+export interface GameRunners {
+  roots: readonly string[];
+  masters: string;
+}
+
 export interface GameDef {
   id: GameId;
   title: string;
@@ -47,6 +58,8 @@ export interface GameDef {
   engine: GameEngine;
   /** Repo-relative folder holding the game's versioned design truth, e.g. 'games/gtai'. */
   designDir?: string;
+  /** Lane runner roots + the masters folder; OMIT = the game has no lane runners. */
+  runners?: GameRunners;
 }
 
 /** The split a game's manifest makes of the registered pipelines. */
