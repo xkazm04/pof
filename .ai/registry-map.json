@@ -5735,7 +5735,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:6 The 'scene' here is a 2D audio zone and emitter layout, not a rendered visual scene judged against a concept image; a search of the audio module for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "seated-in-world-reading",
@@ -10964,7 +10968,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/FindingRow.tsx:28 This context judges generated C++ source files (findings tied to files and commits), not a visual scene against a concept image, so the look-parity loop has nothing to govern here; a search of the evaluator module for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "test-input-generation",
@@ -15761,7 +15769,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/visual-gen/input-gate.ts:2 This context produces and gates the 2D concept/input images upstream of asset generation, which the golden path assigns to media-generation prompt craft and image-to-3d input gating, not to judging a placed real-time scene against a concept; a search of src/lib/visual-gen, the stores and the generate/leonardo routes found none of concept camera, scene parity, colour grade, reflection probe or play trace.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "repository-landing-document",
@@ -20450,7 +20462,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/ItemArt.tsx:15 These step panels run a per-asset generate/compare/select gallery for catalog entities and never capture a lit real-time scene from a concept camera or score it element by element against a concept image; a case-insensitive search of steps/ and one-shot/ for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "hitl-approval",
@@ -21148,7 +21164,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:19 The scene composer builds a scene tree and exports it through a Blender script, but nothing captures that scene from a concept camera or scores it against a concept; a search of the procedural-engine, scene-composer, auto-rig and import-automation folders for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-memory",
