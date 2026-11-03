@@ -8974,9 +8974,10 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 When a step has no acceptance checker, the write-through persists pass, so the absence of a grader is stored as a passed gate.",
-          "evaluatedAt": "2026-10-12",
-          "stale": true
+          "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 When labGrade finds no checker, the write-through posts `pass`. For checker-less steps the server keeps that producer status, adding only an `UNGRADED:` reason (pipeline-artifacts route), and `settlementOf` returns 'nothing to settle' for any `pass`. A hole in the grader's vision is therefore stored and counted as compliance.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "eval-harness",
@@ -12309,12 +12310,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 Resolve all marks every finding currently in the active list resolved without a verification scan and without a per-finding waiver record.",
-          "evaluatedAt": "2026-10-12",
-          "evaluatedAgainst": "sha256-b2:6e635d76a310aa4b",
-          "evaluatedRevision": 53,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 One click resolves every active finding through the same `resolved_at` timestamp the Verify path writes, with no stated reason. The hand-made blanket dismissal therefore bypasses the scan-verified resolution and leaves a record that cannot tell 'verified gone' from 'waved off'.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54,
+          "revisionsBehind": 1
         },
         {
           "subject": "codebase-scanning",
@@ -20241,7 +20241,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:118 A literal NUL byte in this template string makes git classify pythonDrain.ts as binary (`git ls-files --eol` prints `i/-text`, numstat prints `- -`) and makes grep report 'Binary file matches'. Every diff review and text search of the python-step drain is blind while the file still compiles and ships. Separately, the drain skips any step whose producer-written data already carries `ok`/`created`, so the gate reads evidence the gated producer authors.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "voice-io",
@@ -27192,10 +27196,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "deviation",
-          "evidence": "src/lib/visual-gen/input-gate.ts:212 One boolean override spends a generation through every failing input-gate defect, and the viewer scorer can still return pass after it fills in the topology facts those rules test.",
-          "evaluatedAt": "2026-10-12",
-          "stale": true
+          "state": "conformant",
+          "evidence": "src/lib/visual-gen/input-gate.ts:212 Re-judging the stale deviation: the override is a one-shot request flag that applies only to this gate's single per-image verdict (the shape-route gate has its own `overrideShapeRoute`), the route accepts only the exact value `true`, and the outcome is stamped OVERRIDDEN. The viewer's filled-in clean topology is declared through GATE_ONLY_CODES and rendered as 'measured only by the Tier-1 gate', so neither half of the earlier claim survives as a deviation.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "generated-mesh-acceptance",

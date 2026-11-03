@@ -1,0 +1,306 @@
+{
+ "schema": "conform-run/1",
+ "worker": "263d38d5-5ac8-4637-a290-8ae5ba926f92",
+ "subject": "quality-gates",
+ "evaluatedAt": "2026-11-03T15:44:52.960884+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "visual-gen-mesh-quality-gates",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "src/lib/visual-gen/input-gate.ts:212 Re-judging the stale deviation: the override is a one-shot request flag that applies only to this gate's single per-image verdict (the shape-route gate has its own `overrideShapeRoute`), the route accepts only the exact value `true`, and the outcome is stamped OVERRIDDEN. The viewer's filled-in clean topology is declared through GATE_ONLY_CODES and rendered as 'measured only by the Tier-1 gate', so neither half of the earlier claim survives as a deviation.",
+   "techniques": [
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-critique.ts:2 The checks are laddered by cost: a Tier-0 VLM input gate before the paid generation, a free local trimesh Tier-1 gate, then the paid view critique."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-critique.ts:229 The instrument is checked before the result: a missing venv, python or script returns a distinct `unavailable` state, never a pass or a mesh fail."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/view-critique.ts:207 Views that could not be judged give `unmeasured`, never `pass`. A partly judged set is also `unmeasured`."
+    },
+    {
+     "technique": "false-positive-economics",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:81 The blocking line was fitted on an 88-image labelled set, with good inputs refused counted (0/19) before the line was moved."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:211 The 400 refusal names a fix the reader can act on in-tree (the image properties) plus the exact override field."
+    },
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:219 A one-shot waiver for one gate's one verdict, recorded on the outcome. It cannot reach other gates or other submissions."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:195 The verdict carries the policy it was judged under: which grader's fitted line, the default line, or a caller-set line."
+    },
+    {
+     "technique": "excess-indicts-the-instrument",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/critique-stage.ts:37 A whole population failing was read as a scope error (a post-finish bar applied to pre-finish meshes), so the stage is stated instead of the threshold being retuned."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-critique.ts:131 Severity was traced in the scorer: a caveat claiming face-count fails was removed because no construction lets it fail."
+    },
+    {
+     "technique": "prose-rule-drift",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:4 Input-prep practices that previously lived only in prompts are now enforced by a check at submit time."
+    },
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/sheet-gate.ts:63 The sheet gate reads the delivered artifact, not the request that described it."
+    },
+    {
+     "technique": "vacuous-by-evaluation",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-score.ts:251 scoreGeometry defaults the topology to clean, which makes six rules vacuous. They are named, and StudioInspector renders them as 'Measured only by the Tier-1 gate'. The construct lives in sibling mesh-score.ts, re-exported by mesh-critique.ts:21."
+    },
+    {
+     "technique": "instrument-answers-only-its-own-question",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-score.ts:225 A green from the cheap viewer covers only its geometry question. Topology stays owned by the trimesh gate."
+    },
+    {
+     "technique": "blocking-by-input-determinism",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/input-gate.ts:80 Repeatability of the nondeterministic VLM apparatus was measured (88/88 identical) before its verdict was allowed to block spend."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/mesh-critique.ts:69 Has an explicit third value for 'not obtainable', kept out of the verdict rather than shrugged into pass or fail."
+    }
+   ]
+  },
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 When labGrade finds no checker, the write-through posts `pass`. For checker-less steps the server keeps that producer status, adding only an `UNGRADED:` reason (pipeline-artifacts route), and `settlementOf` returns 'nothing to settle' for any `pass`. A hole in the grader's vision is therefore stored and counted as compliance.",
+   "techniques": [
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:185 A missing grader is the gate's own blindness and should fail closed or be refused. Here it defaults to pass, and rollups count it from `status`."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/labAcceptance.ts:41 The lab resolves checkers in the server's order, so the on-screen projection can only be at or below the server verdict."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:180 A checker that throws records an unsynced reason and posts nothing. It is never folded into a pass."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/Baseline/useBaseline.ts:157 A sync failure carries the server's actionable reason plus a Retry, not a bare flag."
+    },
+    {
+     "technique": "blocking-by-input-determinism",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/batchDrainModel.ts:51 An outage of the external judge or editor is counted as `deferred`, not condemned as fail."
+    }
+   ]
+  },
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 One click resolves every active finding through the same `resolved_at` timestamp the Verify path writes, with no stated reason. The hand-made blanket dismissal therefore bypasses the scan-verified resolution and leaves a record that cannot tell 'verified gone' from 'waved off'.",
+   "techniques": [
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/ScanTab/index.tsx:75 A blanket over the whole active list. The author names no finding and gives no reason, and the dismissal is indistinguishable from a verified resolution."
+    },
+    {
+     "technique": "oracle-frozen-during-repair",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:62 On the fix path the verdict comes from a re-scan (the toolchain), not from the fixer's exit code."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:112 An unrecorded verification scan is marked unverified, never treated as a clean pass."
+    },
+    {
+     "technique": "instrument-answers-only-its-own-question",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:238 The fix run's success answers only 'did it run'. Resolution waits for the scan that owns that question."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-acceptance-engine",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:118 A literal NUL byte in this template string makes git classify pythonDrain.ts as binary (`git ls-files --eol` prints `i/-text`, numstat prints `- -`) and makes grep report 'Binary file matches'. Every diff review and text search of the python-step drain is blind while the file still compiles and ships. Separately, the drain skips any step whose producer-written data already carries `ok`/`created`, so the gate reads evidence the gated producer authors.",
+   "techniques": [
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:118 One raw control byte drops the file out of every text gate and diff. A `\\u0000` escape would keep it text."
+    },
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:55 The 'already drained' test, and pythonStepOk's pass on `data.ok === true`, read fields any producer POST can write. The editor module then never runs."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:156 With no checker the drain writes nothing and reports not-gradable. It never defaults to pass."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:145 A transport failure has its own outcome (bridge-error), separate from pass and fail."
+    },
+    {
+     "technique": "blocking-by-input-determinism",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/pythonDrain.ts:20 A live-editor (external) failure resolves to could-not-run, not to a condemnation."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:124 The condemning-provenance set is exported so every quality surface counts exactly what acceptance believes."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:32 Verdicts are bound to a content hash and rubric version, with a closed vocabulary: current/stale/superseded/unknown."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/dataCheckers.ts:37 The declared-inability token leaves the field non-conforming (pending), neither pass nor fail."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/dataCheckers.ts:34 The produce prompt names the exact keys the checker grades, so following the remedy clears the check."
+    }
+   ],
+   "registryProposal": "match-the-resolved-artifact could name source files of the gating machinery itself as a haystack: here the acceptance drain's own source dropped out of text review because of an in-code NUL used as a map-key separator, a common idiom."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "quality-gates",
+   "context": "build-quality-monitoring",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T15:44:52.960884+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "blocking-by-input-determinism",
+    "excess-indicts-the-instrument",
+    "fabrication-economics",
+    "false-positive-economics",
+    "gate-laddering",
+    "gate-liveness",
+    "instrument-answers-only-its-own-question",
+    "match-the-resolved-artifact",
+    "policy-projection",
+    "prose-rule-drift",
+    "refusal-names-a-reachable-remedy",
+    "severity-by-construction",
+    "unmeasurable-criteria",
+    "vacuous-by-evaluation",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 0,
+   "context": "visual-gen-mesh-quality-gates",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T15:44:52.960884+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "blocking-by-input-determinism",
+    "gate-liveness",
+    "policy-projection",
+    "refusal-names-a-reachable-remedy",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T15:44:52.960884+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "gate-liveness",
+    "instrument-answers-only-its-own-question",
+    "oracle-frozen-during-repair",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 1,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T15:44:52.960884+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "blocking-by-input-determinism",
+    "fabrication-economics",
+    "gate-liveness",
+    "match-the-resolved-artifact",
+    "policy-projection",
+    "refusal-names-a-reachable-remedy",
+    "self-reported-gate-inputs",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 1,
+   "context": "pipeline-acceptance-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
