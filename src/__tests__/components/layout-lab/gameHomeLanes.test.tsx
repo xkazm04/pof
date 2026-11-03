@@ -150,6 +150,10 @@ describe('helpers', () => {
   it('commitLine and scheduleText never invent a value', () => {
     expect(commitLine(lane({ lastCommit: undefined }), READ_AT)).toBe('no commit read');
     expect(commitLine(lane({ lastCommit: undefined, cwdExists: false }), READ_AT)).toBe('worktree missing');
+    expect(commitLine(lane({ commitsThisRun: 0 }), READ_AT)).toContain('no commit of its own yet (tip is the base)');
+    expect(commitLine(lane({ commitsThisRun: 1 }), READ_AT)).toContain('1 commit this run');
+    expect(commitLine(lane({ commitsThisRun: 4 }), READ_AT)).toContain('4 commits this run');
+    expect(commitLine(lane(), READ_AT)).not.toContain('this run');
     expect(scheduleText(root({ schedule: undefined, phase: undefined }))).toBe('schedule unknown');
     expect(scheduleText(root({ schedule: { ...root().schedule!, source: 'default' } }))).toContain('runner defaults');
   });

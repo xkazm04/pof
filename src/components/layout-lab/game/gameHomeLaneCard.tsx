@@ -32,7 +32,14 @@ export function commitLine(lane: LaneView, readAt: string): string {
   const c = lane.lastCommit;
   if (!c) return lane.cwdExists ? 'no commit read' : 'worktree missing';
   const age = ageText(c.at, readAt);
-  return `${c.sha.slice(0, 7)} ${clip(c.subject, 72)}${age ? ` · ${age}` : ''}`;
+  return `${c.sha.slice(0, 7)} ${clip(c.subject, 72)}${age ? ` · ${age}` : ''}${runCommitsText(lane.commitsThisRun)}`;
+}
+
+/** " · 3 commits this run", or the honest "no commit of its own yet" when the tip is still the base the branch was cut from. */
+export function runCommitsText(n: number | undefined): string {
+  if (n === undefined) return '';
+  if (n === 0) return ' · no commit of its own yet (tip is the base)';
+  return ` · ${n} ${n === 1 ? 'commit' : 'commits'} this run`;
 }
 
 export function LaneCard({ lane, readAt, selected, onSelect, t }: {

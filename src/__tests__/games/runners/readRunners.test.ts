@@ -102,6 +102,27 @@ describe('readRunnerRoot', () => {
     expect(readRunnerRoot(root, 'gtai', undefined, { now: () => NOW, git }).schedule?.source).toBe('default');
   });
 
+  it("counts a lane's own commits since its first session log; 0 means the tip is still the base", () => {
+    const { root } = fixture();
+    const seen: string[][] = [];
+    const counting = (_cwd: string, args: string[]) => {
+      if (args[0] === 'log' && args[1].startsWith('--since=')) { seen.push(args); return ['aaa', 'bbb', 'ccc'].join('\n'); }
+      return git(_cwd, args);
+    };
+    const v = readRunnerRoot(root, 'gtai', undefined, { now: () => NOW, git: counting });
+    const [a, b, c] = v.lanes;
+    expect(a.commitsThisRun).toBe(3);
+    expect(a.runStart).toMatch(/^\d{4}-\d\d-\d\dT/);
+    expect(seen[0][1]).toBe(`--since=${a.runStart}`);
+    // lane-b has no session log, lane-c no worktree: unknown, never a fake 0
+    expect(b.commitsThisRun).toBeUndefined();
+    expect(c.commitsThisRun).toBeUndefined();
+    const none = (_cwd: string, args: string[]) => (args[0] === 'log' && args[1].startsWith('--since=') ? '' : git(_cwd, args));
+    expect(readRunnerRoot(root, 'gtai', undefined, { now: () => NOW, git: none }).lanes[0].commitsThisRun).toBe(0);
+    // git unavailable: unknown
+    expect(readRunnerRoot(root, 'gtai', undefined, { now: () => NOW, git: () => '' }).lanes[0].commitsThisRun).toBeUndefined();
+  });
+
   it('serves frames only from frames.json under masters', () => {
     const { root } = fixture();
     const masters = path.join(tmp, 'masters');

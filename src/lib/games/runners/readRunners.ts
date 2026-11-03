@@ -92,6 +92,23 @@ function liveLog(logDir: string, nowMs: number): { ageS: number; n: number } | u
   } catch { return undefined; }
 }
 
+/** When the lane's earliest `iter-NNN.jsonl` was created (ISO): the start of this run for that lane. */
+export function runStartOf(logDir: string): string | undefined {
+  try {
+    const first = fs.readdirSync(logDir).filter((f) => /^iter-\d+\.jsonl$/.test(f)).sort()[0];
+    if (!first) return undefined;
+    const st = fs.statSync(path.join(logDir, first));
+    return new Date(st.birthtimeMs > 0 ? Math.min(st.birthtimeMs, st.mtimeMs) : st.mtimeMs).toISOString();
+  } catch { return undefined; }
+}
+
+/** Commits on HEAD made at or after `sinceIso`; undefined when git could not answer (an empty answer is a real 0 only when git ran). */
+export function commitsSince(git: NonNullable<ReadRunnersDeps['git']>, cwd: string, sinceIso: string): number | undefined {
+  if (!git(cwd, ['rev-parse', 'HEAD'])) return undefined;
+  const out = git(cwd, ['log', `--since=${sinceIso}`, '--format=%H']);
+  return out ? out.split('\n').filter(Boolean).length : 0;
+}
+
 interface StateFile { iterations?: Array<Partial<LaneIteration> & { costUsd?: number }>; reportedFor?: string }
 
 function reportOf(cwd: string): LaneReport | undefined {
@@ -131,13 +148,15 @@ function laneOf(root: string, l: CfgLane, c: RootCtx): LaneView {
     ...(lastIteration?.start ? { lastStartMs: Date.parse(lastIteration.start) } : {}),
   });
   const commit = cwdExists ? commitOf(c.git, l.cwd) : undefined;
+  const runStart = runStartOf(path.join(root, 'logs', l.id));
+  const commitsThisRun = cwdExists && runStart ? commitsSince(c.git, l.cwd, runStart) : undefined;
   const branch = cwdExists ? c.git(l.cwd, ['rev-parse', '--abbrev-ref', 'HEAD']) : '';
   const journal = lastJournalLine(readText(path.join(l.cwd, 'JOURNAL.md')));
   const report = cwdExists ? reportOf(l.cwd) : undefined;
   return {
     id: l.id, rootName: c.name, model: l.model ?? 'runner default', ...(l.effort ? { effort: l.effort } : {}), cwd: l.cwd, cwdExists,
     ...(branch ? { branch } : {}), state, ...(note ? { stateNote: note } : {}), ...(c.sched ? { phase: c.sched.phase } : {}),
-    iterations: its.length, ...(state === 'running' && log ? { liveSession: log.n } : {}), costUsd: its.reduce((s, i) => s + (i.costUsd ?? 0), 0), apiCostUsd,
+    iterations: its.length, ...(state === 'running' && log ? { liveSession: log.n } : {}), ...(runStart ? { runStart } : {}), ...(commitsThisRun !== undefined ? { commitsThisRun } : {}), costUsd: its.reduce((s, i) => s + (i.costUsd ?? 0), 0), apiCostUsd,
     ...(lastIteration ? { lastIteration } : {}), ...(commit ? { lastCommit: commit } : {}), ...(journal ? { lastJournalLine: journal } : {}),
     ...(report ? { report } : {}),
     frames: readFrames(c.masters, l.id, (file) => `/api/games/${c.gameId}/lanes/frame?lane=${encodeURIComponent(l.id)}&file=${encodeURIComponent(file)}`),

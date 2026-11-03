@@ -87,6 +87,10 @@ export interface LaneView {
   iterations: number;
   /** Session number of the newest `iter-NNN.jsonl` while a session is writing; `state.json` only records finished sessions, so it lags by one. */
   liveSession?: number;
+  /** When the lane's first session log appeared (ISO): the start of this run. Absent when no session has ever written a log. */
+  runStart?: string;
+  /** Commits on the lane's branch since `runStart`. 0 means the tip is still the base the branch was cut from; absent = unknown. */
+  commitsThisRun?: number;
   /** Sum of `costUsd` over the lane's iterations. */
   costUsd: number;
   /** The part of it billed against the API key (the rest rode the subscription). */
