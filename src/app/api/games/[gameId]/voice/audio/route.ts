@@ -10,6 +10,7 @@ import { getVoiceDb, VOICE_GAMES } from '@/lib/voice/conn';
 import { isInVoiceDir } from '@/lib/voice/storage';
 import { getTake, getVoice } from '@/lib/voice/voice-db';
 import { asGameFile } from '@/lib/voice/asGame';
+import { audioResponse } from '@/lib/voice/audioResponse';
 import { gameRootFor } from '@/lib/games/gameRoot';
 import type { GameId } from '@/lib/games/types';
 
@@ -25,15 +26,11 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     if (takeId && req.nextUrl.searchParams.get('as') === 'game') {
       const r = await asGameFile(db, takeId, gameRootFor(gameId as GameId));
       if (!r.ok) return apiError(`could not master the take as the game plays it: ${r.error}`, 422);
-      return new Response(new Uint8Array(fs.readFileSync(r.data.file)), {
-        headers: { 'Content-Type': 'audio/ogg', 'Cache-Control': 'private, no-cache' },
-      });
+      return audioResponse(fs.readFileSync(r.data.file), 'audio/ogg', req.headers.get('range'), 'private, no-cache');
     }
     const file = takeId ? getTake(db, takeId)?.file : voiceId ? getVoice(db, voiceId)?.previews[0]?.file : undefined;
     if (!file || !isInVoiceDir(file) || !fs.existsSync(file)) return apiError('no such audio', 404);
-    return new Response(new Uint8Array(fs.readFileSync(file)), {
-      headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=3600' },
-    });
+    return audioResponse(fs.readFileSync(file), 'audio/mpeg', req.headers.get('range'), 'private, max-age=3600');
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'voice audio GET failed', 500);
   }

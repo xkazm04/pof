@@ -53,7 +53,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
       <div style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap' }}>
         <StatusTag level={v.level} word={v.word} />
         {take.stale && <StatusTag level="bad" word="stale: older line text or not the cast voice" />}
-        <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · {fmtLufs(take.loudnessLufs)} · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
+        <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · <span title="The provider's level; the player below plays it at the game's voice level unless you switch to the original">delivered {fmtLufs(take.loudnessLufs)}</span> · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
         {take.maxSilenceMs !== null && take.maxSilenceMs > SILENCE_FLAG_MS && <StatusTag level="warn" word={`long pause ${fmtMs(take.maxSilenceMs)}: listen for a dropout`} />}
         <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
         {take.readbackWer !== null && take.readbackWer > READBACK_FLAG_WER && <StatusTag level="warn" word={`read-back differs (${fmtWer(take.readbackWer)}): listen for garbled words`} />}
@@ -62,7 +62,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         fallbackNote="Could not master it as the game plays it: playing the provider original (not at the game's level)."
         label={`Take ${take.id.slice(0, 8)}${raw ? ', as delivered' : ', as the game plays it'}`} onHeard={() => setHeard(true)} />
       <button type="button" data-testid="voice-take-listen-mode" onClick={() => setRaw((r) => !r)} aria-pressed={raw}
-        style={{ justifySelf: 'start', fontSize: 'var(--lab-fs-xs)', color: t.muted, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
+        style={{ justifySelf: 'start', textAlign: 'left', fontSize: 'var(--lab-fs-xs)', color: t.muted, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
         {raw ? 'Hearing the provider original. Hear it as the game plays it' : "Hearing it as the game plays it (game voice level, the speaker's device filter). Hear the provider original"}
       </button>
       <div style={{ fontSize: 'var(--lab-fs-sm)', color: t.text }}>
