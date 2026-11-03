@@ -42,3 +42,8 @@ export function lastJournalLine(text: string, cap = 300): string | undefined {
   const line = text.split(/\r?\n/).map((x) => x.trim()).filter(Boolean).at(-1);
   return line === undefined ? undefined : line.length > cap ? `${line.slice(0, cap - 1)}…` : line;
 }
+
+/** Sessions that ended in failure: a non-zero exit, or a usage limit. A session stopped at its cap is the design, not a failure; an unknown exit code is not counted. */
+export function countFailedSessions(its: ReadonlyArray<{ code?: number | null; timedOut?: boolean; limited?: boolean }>): number {
+  return its.filter((i) => i.limited === true || (i.timedOut !== true && typeof i.code === 'number' && i.code !== 0)).length;
+}

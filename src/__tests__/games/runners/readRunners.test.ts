@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readLanesBoard, readRunnerRoot, laneCwd } from '@/lib/games/runners/readRunners';
 import { runnersConfigFor } from '@/lib/games/runners/runnersConfig';
-import { deriveLaneState, lastJournalLine } from '@/lib/games/runners/laneState';
+import { countFailedSessions, deriveLaneState, lastJournalLine } from '@/lib/games/runners/laneState';
 import { costText } from '@/lib/games/runners/runnerTypes';
 
 const NOW = new Date('2026-11-03T12:00:00');
@@ -56,7 +56,7 @@ describe('readRunnerRoot', () => {
     expect(v.billing?.line).toMatch(/^API key blocked until \d\d:\d\d, subscription free$/);
     expect(v.billing?.apiReason).toContain('credit balance');
     const [a, b, c] = v.lanes;
-    expect(a).toMatchObject({ id: 'lane-a', model: 'claude-opus-5-5', state: 'running', liveSession: 2, iterations: 2, costUsd: 3.25, apiCostUsd: 2, branch: 'lane-branch', hasEvidence: true });
+    expect(a).toMatchObject({ id: 'lane-a', model: 'claude-opus-5-5', state: 'running', liveSession: 2, iterations: 2, failedSessions: 0, costUsd: 3.25, apiCostUsd: 2, branch: 'lane-branch', hasEvidence: true });
     expect(a.lastCommit).toEqual({ sha: 'abc1234deadbeef', subject: 'feat: the thing', at: '2026-11-03T11:50:00+01:00' });
     expect(a.lastJournalLine).toBe('- 11:55 NEXT: the next thing');
     expect(a.report).toMatchObject({ bytes: 7000, truncated: true });
@@ -179,6 +179,12 @@ describe('pure helpers', () => {
     expect(deriveLaneState({ ...base, phase: 'REPORT' }).state).toBe('report');
     expect(deriveLaneState({ ...base, phase: 'BUILD', liveAgeS: 301 }).state).toBe('building');
     expect(deriveLaneState({ ...base, phase: 'BUILD', lastStartMs: NOW.getTime() - 5 * 3600_000 }).note).toContain('may be down');
+  });
+  it('counts a failed session by exit code or usage limit; a cap stop and an unknown exit are not failures', () => {
+    expect(countFailedSessions([
+      { code: 0 }, { code: 1 }, { code: 1, timedOut: true }, { code: null }, { code: 0, limited: true }, {},
+    ])).toBe(2);
+    expect(countFailedSessions([])).toBe(0);
   });
   it('journal line + cost words never read a missing run as free', () => {
     expect(lastJournalLine('a\n\nb  \n\n')).toBe('b');

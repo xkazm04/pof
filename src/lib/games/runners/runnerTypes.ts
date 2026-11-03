@@ -85,6 +85,8 @@ export interface LaneView {
   stateNote?: string;
   phase?: LanePhase;
   iterations: number;
+  /** Of `iterations`, how many failed (non-zero exit or usage limit; a session stopped at its cap is not a failure). */
+  failedSessions: number;
   /** Session number of the newest `iter-NNN.jsonl` while a session is writing; `state.json` only records finished sessions, so it lags by one. */
   liveSession?: number;
   /** When the lane's first session log appeared (ISO): the start of this run. Absent when no session has ever written a log. */

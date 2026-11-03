@@ -17,7 +17,8 @@ export function sessionLine(lane: LaneView): string {
   const live = lane.liveSession !== undefined ? `session ${lane.liveSession} running` : undefined;
   if (lane.iterations === 0 && live) return `${live} · cost is recorded when it ends`;
   if (lane.iterations === 0) return costText(0, 0, 0);
-  const done = `${lane.iterations} ${lane.iterations === 1 ? 'session' : 'sessions'} done`;
+  const failed = lane.failedSessions > 0 ? ` (${lane.failedSessions} failed)` : '';
+  const done = `${lane.iterations} ${lane.iterations === 1 ? 'session' : 'sessions'} done${failed}`;
   return [done, live, costText(lane.costUsd, lane.apiCostUsd, lane.iterations)].filter(Boolean).join(' · ');
 }
 

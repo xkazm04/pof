@@ -14,7 +14,7 @@ import { getGame } from '@/lib/games/registry';
 import type { GameId } from '@/lib/games/types';
 // The runner's pure parsing, shared with night.mjs so the two cannot drift (`@/` is `src/`; the runner lives beside it).
 import { parseConfig, phaseAt, planTimes } from '@/../games/gtai/night/lib.mjs';
-import { deriveLaneState, lastJournalLine } from '@/lib/games/runners/laneState';
+import { countFailedSessions, deriveLaneState, lastJournalLine } from '@/lib/games/runners/laneState';
 import { readFrames } from '@/lib/games/runners/frames';
 import { runnersConfigFor, type RunnersConfig } from '@/lib/games/runners/runnersConfig';
 import {
@@ -156,7 +156,7 @@ function laneOf(root: string, l: CfgLane, c: RootCtx): LaneView {
   return {
     id: l.id, rootName: c.name, model: l.model ?? 'runner default', ...(l.effort ? { effort: l.effort } : {}), cwd: l.cwd, cwdExists,
     ...(branch ? { branch } : {}), state, ...(note ? { stateNote: note } : {}), ...(c.sched ? { phase: c.sched.phase } : {}),
-    iterations: its.length, ...(state === 'running' && log ? { liveSession: log.n } : {}), ...(runStart ? { runStart } : {}), ...(commitsThisRun !== undefined ? { commitsThisRun } : {}), costUsd: its.reduce((s, i) => s + (i.costUsd ?? 0), 0), apiCostUsd,
+    iterations: its.length, failedSessions: countFailedSessions(its), ...(state === 'running' && log ? { liveSession: log.n } : {}), ...(runStart ? { runStart } : {}), ...(commitsThisRun !== undefined ? { commitsThisRun } : {}), costUsd: its.reduce((s, i) => s + (i.costUsd ?? 0), 0), apiCostUsd,
     ...(lastIteration ? { lastIteration } : {}), ...(commit ? { lastCommit: commit } : {}), ...(journal ? { lastJournalLine: journal } : {}),
     ...(report ? { report } : {}),
     frames: readFrames(c.masters, l.id, (file) => `/api/games/${c.gameId}/lanes/frame?lane=${encodeURIComponent(l.id)}&file=${encodeURIComponent(file)}`),

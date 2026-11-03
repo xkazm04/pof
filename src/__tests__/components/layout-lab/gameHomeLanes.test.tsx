@@ -12,7 +12,7 @@ vi.mock('next/font/google', () => {
 });
 
 import { GameHomeLanes, scheduleText } from '@/components/layout-lab/game/gameHomeLanes';
-import { LANE_LEVEL, commitLine } from '@/components/layout-lab/game/gameHomeLaneCard';
+import { LANE_LEVEL, commitLine, sessionLine } from '@/components/layout-lab/game/gameHomeLaneCard';
 import { isLanesBoard } from '@/components/layout-lab/game/gameHomeLanesData';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { LIGHT } from '@/components/layout-lab/theme';
@@ -21,7 +21,7 @@ import type { LanesBoard, LaneView, RunnerRootView } from '@/lib/games/runners/r
 const READ_AT = '2026-11-03T12:00:00.000Z';
 const lane = (over: Partial<LaneView> = {}): LaneView => ({
   id: 'pof-control-room', rootName: 'gtai-day-pof', model: 'claude-sonnet-5-5', effort: 'high', cwd: 'C:/wt/control-room', cwdExists: true, branch: 'gtai-control-room',
-  state: 'running', phase: 'BUILD', iterations: 3, costUsd: 4.5, apiCostUsd: 1, frames: [], hasEvidence: true,
+  state: 'running', phase: 'BUILD', iterations: 3, failedSessions: 0, costUsd: 4.5, apiCostUsd: 1, frames: [], hasEvidence: true,
   lastCommit: { sha: 'abcdef0123', subject: 'feat: lanes board', at: '2026-11-03T11:40:00.000Z' }, lastJournalLine: '- 11:55 MILESTONE board reads', ...over,
 });
 const root = (over: Partial<RunnerRootView> = {}): RunnerRootView => ({
@@ -84,6 +84,7 @@ describe('GameHomeLanes', () => {
     expect(card.textContent).toContain('3 sessions done · $4.50 ($1.00 API key)');
     expect(screen.getByTestId('lane-commit-pof-control-room').textContent).toBe('abcdef0 feat: lanes board · 20 min ago');
     expect(screen.getByTestId('lane-journal-pof-control-room').textContent).toBe('- 11:55 MILESTONE board reads');
+    expect(card.textContent).not.toContain('failed');
     const idle = screen.getByTestId('lane-card-idle');
     expect(idle.textContent).toContain('no sessions yet');
     expect(idle.textContent).not.toContain('0 sessions done');
@@ -146,6 +147,10 @@ describe('polling', () => {
 describe('helpers', () => {
   it('every lane state has a tag level; blocked is the only bad one', () => {
     expect(Object.entries(LANE_LEVEL).filter(([, l]) => l === 'bad').map(([s]) => s)).toEqual(['blocked']);
+  });
+  it('sessionLine names failed sessions, so a 3-second crash is not a plain "session done"', () => {
+    expect(sessionLine(lane({ iterations: 1, failedSessions: 1, costUsd: 0, apiCostUsd: 0 }))).toBe('1 session done (1 failed) · $0.00 ($0.00 API key)');
+    expect(sessionLine(lane({ failedSessions: 0 }))).toBe('3 sessions done · $4.50 ($1.00 API key)');
   });
   it('commitLine and scheduleText never invent a value', () => {
     expect(commitLine(lane({ lastCommit: undefined }), READ_AT)).toBe('no commit read');
