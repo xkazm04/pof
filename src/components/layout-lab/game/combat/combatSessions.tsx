@@ -42,7 +42,7 @@ export function CombatSessions({ t, sessions, expected }: { t: LabTheme; session
   ];
   return (
     <div data-testid="combat-sessions" style={{ overflowX: 'auto' }}>
-      <div style={{ minWidth: 640 }}>
+      <div style={{ minWidth: columns.length * 112 }}>
         <DataTable t={t} columns={columns} rows={rows} missingText="—" caption={`${sessions.length} latest ${sessions.length === 1 ? 'session' : 'sessions'}, newest first`} />
       </div>
     </div>
