@@ -65,6 +65,24 @@ export function useDecisionsGate(gameId: string): { token: string | null; error:
   return s;
 }
 
+/** How many questions wait for the owner, for the Game home's entry button; undefined until the first read (never 0 by default). */
+export function useOpenDecisionCount(gameId: string, enabled: boolean): number | undefined {
+  const [n, setN] = useState<number | undefined>(undefined);
+  useSuspendableEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    const load = () => {
+      void tryApiFetch<unknown>(decisionsUrl(gameId)).then((r) => {
+        if (!cancelled && r.ok && isBoard(r.data)) setN(r.data.open.length);
+      });
+    };
+    load();
+    const id = setInterval(() => { if (document.visibilityState !== 'hidden') load(); }, UI_TIMEOUTS.decisionsPoll);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [gameId, enabled]);
+  return n;
+}
+
 export interface SavedAnswer { answer: { id: string; choice: string; note: string; at: string }; replaced: boolean }
 
 export function postAnswer(gameId: string, body: { id: string; choice: string; note: string }, token: string | null): Promise<Result<SavedAnswer, string>> {

@@ -21,6 +21,7 @@ import { GameHomeBuildHealth } from './gameHomeBuildHealth';
 import { GameHomeLanes } from './gameHomeLanes';
 import { VoiceRoom } from './voice/voiceRoom';
 import { DecisionsRoom } from './decisions/decisionsRoom';
+import { useOpenDecisionCount } from './decisions/decisionsData';
 import { CombatLabRoom } from './combat/combatLabRoom';
 import { useRoomParam, openRoom } from './voice/voiceRoomParam';
 
@@ -66,6 +67,7 @@ export function GameHome({ t }: { t: LabTheme }) {
   const d = useGameHomeData();
   const [evidenceLane, setEvidenceLane] = useState<string | null>(null);
   const room = useRoomParam();
+  const openAsks = useOpenDecisionCount(d.game.id, !!d.game.decisions);
   const engine = engineWords(d.engine);
   const built = d.rows.filter((r) => r.fit !== 'planned');
   const planned = d.rows.length - built.length;
@@ -95,7 +97,7 @@ export function GameHome({ t }: { t: LabTheme }) {
         {d.game.decisions && (
           <button type="button" className="focus-ring" data-testid="game-home-decisions-room" onClick={() => openRoom('decisions')}
             style={{ fontSize: 'var(--lab-fs-xs)', background: 'transparent', border: `1px solid ${t.line}`, borderRadius: 4, padding: '2px 8px', color: t.text, cursor: 'pointer' }}>
-            Decisions room →
+            Decisions room{openAsks ? ` · ${openAsks} waiting` : ''} →
           </button>
         )}
         {d.game.combatLab && (

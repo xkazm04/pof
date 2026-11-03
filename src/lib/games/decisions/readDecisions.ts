@@ -16,6 +16,8 @@ const MEDIA_TYPES: Record<string, { kind: MediaKind; mime: string }> = {
   '.gif': { kind: 'image', mime: 'image/gif' }, '.mp4': { kind: 'video', mime: 'video/mp4' },
   '.webm': { kind: 'video', mime: 'video/webm' },
 };
+/** The door reads a file whole to honour ranges, so a clip beyond this is listed but not served. */
+export const MAX_MEDIA_BYTES = 200_000_000;
 export const mediaTypeOf = (file: string) => MEDIA_TYPES[path.extname(file).toLowerCase()];
 
 export interface RawAnswer { id: string; choice: string; note: string; at: string; [k: string]: unknown }
@@ -92,7 +94,11 @@ function inspectMedia(file: string): { kind: MediaKind; mime: string } | string 
   const type = mediaTypeOf(file);
   if (!type) return 'unsupported file type';
   if (!path.isAbsolute(file)) return 'not an absolute path';
-  try { return fs.statSync(file).isFile() ? type : 'not a file'; } catch { return 'file not found'; }
+  try {
+    const st = fs.statSync(file);
+    if (!st.isFile()) return 'not a file';
+    return st.size > MAX_MEDIA_BYTES ? `larger than ${MAX_MEDIA_BYTES / 1_000_000} MB` : type;
+  } catch { return 'file not found'; }
 }
 
 const mediaUrl = (base: string, askId: string, key: string, n: number) =>

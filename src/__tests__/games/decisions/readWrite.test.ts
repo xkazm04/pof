@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { readDecisionsBoard, resolveMedia } from '@/lib/games/decisions/readDecisions';
+import { MAX_MEDIA_BYTES, readDecisionsBoard, resolveMedia } from '@/lib/games/decisions/readDecisions';
 import { writeAnswer } from '@/lib/games/decisions/writeAnswer';
 import { decisionsRootFor } from '@/lib/games/decisions/decisionsConfig';
 import { makeDecisionsFixture, type Fixture } from './decisionsFixture';
@@ -56,6 +56,18 @@ describe('resolveMedia (the media door)', () => {
     fx = makeDecisionsFixture();
     expect(resolveMedia(fx.root, 'arena-1', 'pistol', 0)).toMatchObject({ ok: true, mime: 'image/png' });
     expect(resolveMedia(fx.root, 'arena-1', 'pistol', 1)).toMatchObject({ ok: true, mime: 'video/mp4' });
+  });
+  it('lists a clip beyond the size cap as unservable and the door refuses it', () => {
+    fx = makeDecisionsFixture();
+    const big = path.join(fx.media, 'big.mp4');
+    fs.writeFileSync(big, '');
+    fs.truncateSync(big, MAX_MEDIA_BYTES + 1);
+    const ask = JSON.parse(fs.readFileSync(path.join(fx.root, 'asks', 'gunplay-2.json'), 'utf8'));
+    ask.options[0].frames = [big];
+    fs.writeFileSync(path.join(fx.root, 'asks', 'gunplay-2.json'), JSON.stringify(ask));
+    const m = readDecisionsBoard(fx.root, 'gtai', API).open[0].options[0].media[0];
+    expect(m).toMatchObject({ unservable: expect.stringContaining('larger than') });
+    expect(resolveMedia(fx.root, 'gunplay-2', 'low', 0)).toMatchObject({ ok: false, status: 404 });
   });
   it('refuses a listed non-media file, a missing file, an unknown ask/option/index and a bad id', () => {
     fx = makeDecisionsFixture();
