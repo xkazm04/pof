@@ -40,6 +40,19 @@ describe('line class and scene', () => {
     expect(a2).toMatchObject({ lineClass: 'story', when: [], beatId: null });
   });
 
+  it('an unchanged ledger is re-read but its rows are not rewritten; a changed one is', () => {
+    syncQueue(db, 'gtai', root, 100);
+    const at = () => (db.prepare("SELECT syncedAt FROM voice_lines WHERE lineId='z1'").get() as { syncedAt: number }).syncedAt;
+    expect(at()).toBe(100);
+    expect(syncQueue(db, 'gtai', root, 200).map((l) => l.lineId)).toEqual(['z1', 'z2', 'a1', 'a2']);
+    expect(at()).toBe(100);
+    writeQuest(root, 'zulu', 'act1', '2026-11-02T00:00:00Z', [{ id: 'z1', speaker: 'dock-guard', text: 'Changed.' }]);
+    const q = syncQueue(db, 'gtai', root, 300);
+    expect(at()).toBe(300);
+    expect(q.map((l) => l.lineId)).toEqual(['z1', 'a1', 'a2']);
+    expect(q[0].text).toBe('Changed.');
+  });
+
   it('migrates a voice_lines table created before the class/beat columns', () => {
     const old = new Database(':memory:');
     old.exec(`CREATE TABLE voice_lines (gameId TEXT NOT NULL, questId TEXT NOT NULL, lineId TEXT NOT NULL, speaker TEXT NOT NULL,

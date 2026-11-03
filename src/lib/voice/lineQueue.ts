@@ -43,9 +43,19 @@ function beatIndex(q: QuestPackage): Map<string, BeatRef> {
   return out;
 }
 
-/** Re-read the packages under `root` and mirror their lines into `voice_lines`. Returns the queue. */
+/** db -> `${gameId}|${root}` -> hash of the packages last mirrored. The room polls every few seconds and
+ *  each read syncs, so an unchanged ledger must not rewrite every queue row each time. */
+const lastSynced = new WeakMap<Database.Database, Map<string, string>>();
+
+/** Re-read the packages under `root` and mirror their lines into `voice_lines`. Returns the queue.
+ *  The packages are always re-read (they are the source of truth); the rows are rewritten only when the
+ *  packages' content changed since this connection last mirrored them. */
 export function syncQueue(db: Database.Database, gameId: string, root: string, at = Date.now()): QueueLine[] {
   const quests = playOrder(loadLedger(root));
+  const stamp = hashText(JSON.stringify(quests));
+  const seen = lastSynced.get(db) ?? new Map<string, string>();
+  lastSynced.set(db, seen);
+  if (seen.get(`${gameId}|${root}`) === stamp) return listLines(db, gameId);
   const keep = new Set<string>();
   db.transaction(() => {
     quests.forEach((q, qi) => {
@@ -64,6 +74,7 @@ export function syncQueue(db: Database.Database, gameId: string, root: string, a
     });
     markAbsentExcept(db, gameId, keep, at);
   })();
+  seen.set(`${gameId}|${root}`, stamp);
   return listLines(db, gameId);
 }
 
