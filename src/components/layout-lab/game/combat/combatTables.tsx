@@ -25,7 +25,7 @@ export function CombatTableBlock({ t, table }: { t: LabTheme; table: CombatTable
       ) : (
         <div style={{ overflowX: 'auto', display: 'grid', gap: 'var(--lab-s1)' }}>
           <span data-testid={`combat-source-${table.key}`} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, overflowWrap: 'anywhere' }}>{table.file} · read from {table.from?.label}</span>
-          <div style={{ minWidth: Math.min(table.columns.length, 6) * 110 }}>
+          <div style={{ minWidth: table.columns.length * 100 }}>
             <DataTable t={t} testId={`combat-grid-${table.key}`} columns={table.columns.map((key) => ({ key }))} rows={table.rows}
               caption={`${table.rows.length} ${table.rows.length === 1 ? 'row' : 'rows'}${table.hiddenColumns ? ` · ${table.hiddenColumns} more columns not shown` : ''}`} />
           </div>

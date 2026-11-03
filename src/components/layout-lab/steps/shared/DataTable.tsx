@@ -71,7 +71,7 @@ export function DataTable({ t, columns, values, rows, header, missingText = '—
         <div data-testid={testId} style={{ border: `1px solid ${t.line}`, overflowX: 'auto' }}>
           <div className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: grid, background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px', gap: 12 }}>
             {showLabels && <span>{header?.[0] ?? ''}</span>}
-            {columns.map((c) => <span key={c.key}>{c.label ?? c.key}</span>)}
+            {columns.map((c) => <span key={c.key} style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{c.label ?? c.key}</span>)}
           </div>
           {rows.map((r, i) => (
             <div key={r.label ?? i} style={{ display: 'grid', gridTemplateColumns: grid, padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15, gap: 12, alignItems: 'baseline' }}>
