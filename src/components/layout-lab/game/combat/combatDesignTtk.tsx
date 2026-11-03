@@ -27,7 +27,7 @@ export function CombatDesignTtk({ t, weapons }: { t: LabTheme; weapons?: CombatT
   const target = targets.find((x) => x.id === targetId) ?? targets[0];
   const m = predictTtk(weapons, target, range);
   const rows = m.ready.map((p, i) => ({
-    label: p.weapon, value: Math.round(p.seconds * 100) / 100, unit: ` s · ${p.shots} ${p.shots === 1 ? 'shot' : 'shots'}`,
+    label: `${p.weapon} · ${p.shots}×`, value: Math.round(p.seconds * 100) / 100, unit: 's',
     highlight: i === 0, color: i === 0 ? 'var(--lab-ink-deep)' : 'var(--lab-muted)',
   }));
   const note = (label: string, ids: string[]) => (ids.length ? `${label}: ${ids.join(', ')}. ` : '');
@@ -49,10 +49,10 @@ export function CombatDesignTtk({ t, weapons }: { t: LabTheme; weapons?: CombatT
       </div>
       {rows.length === 0
         ? <p style={{ margin: 0, fontSize: 'var(--lab-fs-sm)', color: t.muted }}>No enabled weapon with damage, rof_hz and range_m reaches {range} m.</p>
-        : <ChartPanel t={t} variant="bars" rows={rows} labelWidth={130} ariaLabel={`Designed time to kill in seconds against ${target.id} at ${range} metres, by weapon`} />}
+        : <ChartPanel t={t} variant="bars" rows={rows} labelWidth={170} ariaLabel={`Designed time to kill in seconds against ${target.id} at ${range} metres, by weapon`} />}
       <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
         {note('Out of range', m.outOfRange)}{note('Disabled in the table', m.disabled)}{note('Not modelled (needs damage, rof_hz, range_m)', m.unmodelled)}
-        Perfect shooter: every shot lands (no spread, splash or damage-over-time); includes reloads and projectile flight. Compare with the measured chart above.
+        Label = weapon · shots to kill. Perfect shooter: every shot lands (no spread, splash or damage-over-time); includes reloads and projectile flight. Compare with the measured chart above.
       </span>
     </div>
   );

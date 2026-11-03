@@ -28,7 +28,11 @@ export function metricsOf(doc: unknown): SessionMetric[] {
   const out: SessionMetric[] = [];
   for (const [key, re] of METRIC_KEYS) {
     const value = find(doc, re, num);
-    if (value !== undefined) out.push({ key, value });
+    if (value === undefined) continue;
+    // The arena writes -1 for a latency it never measured and 0 for the hit rate of a session with no shots: not data.
+    if (key === 'latency' && value < 0) continue;
+    if (key === 'hitRate' && find(doc, /^shots$/i, num) === 0) continue;
+    out.push({ key, value });
   }
   return out;
 }

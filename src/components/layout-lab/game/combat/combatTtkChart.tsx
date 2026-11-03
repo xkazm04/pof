@@ -14,7 +14,7 @@ export function ttkRows(points: TtkPoint[]): BarsRow[] {
   const best = new Map<number, number>();
   for (const p of points) best.set(p.rangeM, Math.min(best.get(p.rangeM) ?? Infinity, p.seconds));
   return [...points].sort((a, b) => a.rangeM - b.rangeM || a.seconds - b.seconds).map((p) => ({
-    label: `${p.rangeM} m · ${p.weapon}`, color: best.get(p.rangeM) === p.seconds ? 'var(--lab-ink-deep)' : 'var(--lab-muted)', value: Math.round(p.seconds * 100) / 100, unit: ' s', highlight: best.get(p.rangeM) === p.seconds,
+    label: `${p.rangeM} m · ${p.weapon}`, color: best.get(p.rangeM) === p.seconds ? 'var(--lab-ink-deep)' : 'var(--lab-muted)', value: Math.round(p.seconds * 100) / 100, unit: 's', highlight: best.get(p.rangeM) === p.seconds,
   }));
 }
 

@@ -38,6 +38,10 @@ describe('arena telemetry as the arena lane writes it', () => {
     expect(m).toContainEqual({ key: 'topSpeed', value: 5.1 });
     expect(m.find((x) => x.key === 'dodges')).toBeUndefined();
   });
+  it('treats the arena -1 latency and a no-shot hit rate as not recorded', () => {
+    const m = metricsOf({ shots: 0, hit_rate: 0, input_latency_mean_ticks: -1, knockdowns: 0 });
+    expect(m).toEqual([{ key: 'knockdowns', value: 0 }]);
+  });
 });
 
 describe('weapon table columns and the design-side TTK', () => {
