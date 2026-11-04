@@ -18982,6 +18982,48 @@
       "evaluatedTs": "2026-11-03T23:49:12.598Z",
       "worker": "82f1a853-47ae-4a32-bd0b-a64f0da389f5",
       "techniques": []
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/eval-harness": {
+      "context": "game-design-studio-api",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:25:49.908Z",
+      "worker": "3775b0ad-bf8f-4a20-ae08-cfd925444fa2",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 StartExecutionOptions has model/effort fields; only enableMcp and attribution are passed, so the review judge is unpinned."
+        },
+        {
+          "technique": "comparison-modes",
+          "verdict": "deviation",
+          "evidence": "src/app/api/feature-matrix/history/route.ts:7 Absolute-score trend served from review_snapshots, whose schema (src/lib/db.ts:141) carries counts and avg_quality but no judge model, prompt or rubric version, so an instrument change is not a marked discontinuity."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:134 One batch at a time, modules run serially and can be scoped to the stale set, which caps fan-out; no mock mode was seen here."
+        }
+      ]
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/eval-harness": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:25:49.908Z",
+      "worker": "3775b0ad-bf8f-4a20-ae08-cfd925444fa2",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:183 feature-review resolves to judge-content = 'opus' (src/lib/model-policy.ts:60), an alias rather than a versioned model; the technique requires never an alias that silently upgrades."
+        }
+      ]
     }
   }
 }

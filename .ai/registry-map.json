@@ -13991,7 +13991,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 The batch feature review, an LLM judging each module's implementation whose quality_score and status feed the review-snapshot trend, is spawned with no model/effort option, so the judge is whatever the CLI session default is and trend points shift when that default changes; the model policy maps feature-review to judge-content but this spawn bypasses it.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "test-harness",
@@ -19488,7 +19492,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:183 Module feature reviews (a model judging implementation, whose deltas the hooks surface from review snapshots) are pinned only by task class, and the policy's model type admits only family aliases (haiku/sonnet/opus/fable), so the judge can silently upgrade under a stable trend line.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-runtime-assembly",
