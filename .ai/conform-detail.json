@@ -18888,13 +18888,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T22:13:34.056Z",
+      "evaluatedTs": "2026-11-04T22:30:07.758Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "b152d903-d5da-4af6-8b25-4f26b983251d",
+        "worker": "17e58d88-fa14-4ece-9425-59407b348be6",
         "state": "not-applicable",
-        "at": "2026-11-04T22:14:14.451342+00:00",
-        "reason": "reviewer (sonnet): The anchor ConflictSection.tsx:18 is a doc comment on the conflict picker. It does not show that the panels have no check that refuses anything. The only support is a grep for gate, verdict, waiver and threshold, and those terms may not be how this code names such a check, so I could not confirm the"
+        "at": "2026-11-04T22:30:38.605237+00:00",
+        "reason": "reviewer (sonnet): The anchor (index.tsx:4) is only a doc-comment line and doesn't show that no gate or refusal exists. The panel has conflictResolution.ts, which isn't in the listed context files and returns an 'unavailable' plan and a 'not sent' write outcome. ConflictSection.tsx also disables a choice when there is"
       }
     },
     "234034cf-29e8-432e-aca8-490e30e9f45d/eval-harness": {
