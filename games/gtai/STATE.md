@@ -5,6 +5,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
+- **2026-11-04: the combat night is merged and approved.** rtai main `a1275c82` (pushed) holds the night lanes (weapon art, Rivet's arsenal, gunplay, human reactions, brutality, showcase), Rivet 50 % faster, and corpse decay (`corpse_decay.json`, `--horde`, `--no-decay`). Owner: "nice baselines, all approved"; all lane call defaults stand. Final reel and horde clip: `kiro/gtai-masters/keep-2026-11-04/`. Exe: `kiro/gtai-wt/int-day/build/export/windows/RTAI.exe`. Backlog: rtai `docs/backlog/combat-notes-2026-11-04.md` (electro and plasma-rifle reactions, melee hold and animation, plasma sword art, the homing-shard reaction delay, a Gatling gun, the city-fight lag). Night briefs: `games/gtai/day/2026-11-04/night/`.
 - **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
 - **Art direction (owner, 2026-11-03): D5 "Inked Grime" is the target.** Noir is a mid/late-game mission look. Blood is red (noir's FX); cops are blue; Rivet is only slightly larger than a human; the soul trail is descoped. Details in `pitch.md` §8.
 - **Today (2026-11-03):** the night lanes are merged on rtai main `089400e`. 10 day lanes run until 18:00 in four runner roots:
