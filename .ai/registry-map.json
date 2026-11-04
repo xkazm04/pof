@@ -2423,7 +2423,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:167 This context is a seeded, deterministic Monte-Carlo combat simulator with no LLM, agent or judge under test. A search of sub_ability/gas-balance and sub_ability/tags for judge, rubric, llm, anthropic, claude and openai found no hits. The only eval-adjacent word is a 'verdict' string in balanceHealth.ts, a plain-language balance summary. The eval-harness precondition (models or agents run against scenarios and scored) does not hold.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",

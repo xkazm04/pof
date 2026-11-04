@@ -19451,6 +19451,22 @@
         "at": "2026-11-04T02:42:57.553612+00:00",
         "reason": "reviewer (sonnet): The anchor (procgen-result/route.ts:11) is a doc comment in one CRUD route and does not show the precondition is absent. The context also holds src/app/api/audio-gen/route.ts, which builds a prompt with audioPromptFor, calls a generation provider, and handles caching and quota. The same context hold"
       }
+    },
+    "ee957a28-f90d-4863-8f75-c599520803a4/eval-harness": {
+      "context": "ability-gas-balance",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:56:32.162Z",
+      "worker": "a7865588-9fa5-4188-8dda-c69b33920b3e",
+      "techniques": [
+        {
+          "technique": "reliability-aggregation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:13 Repeated iterations come from a deterministic seeded combat formula, not from a non-deterministic model. There are no trials of a candidate to aggregate."
+        }
+      ]
     }
   }
 }

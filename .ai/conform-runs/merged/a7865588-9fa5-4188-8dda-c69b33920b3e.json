@@ -1,0 +1,68 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a7865588-9fa5-4188-8dda-c69b33920b3e",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-11-04T02:56:32.162763+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ability-gas-balance",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:167 This context is a seeded, deterministic Monte-Carlo combat simulator with no LLM, agent or judge under test. A search of sub_ability/gas-balance and sub_ability/tags for judge, rubric, llm, anthropic, claude and openai found no hits. The only eval-adjacent word is a 'verdict' string in balanceHealth.ts, a plain-language balance summary. The eval-harness precondition (models or agents run against scenarios and scored) does not hold.",
+   "techniques": [
+    {
+     "technique": "reliability-aggregation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:13 Repeated iterations come from a deterministic seeded combat formula, not from a non-deterministic model. There are no trials of a candidate to aggregate."
+    }
+   ],
+   "absenceTerms": [
+    "judge",
+    "rubric",
+    "llm",
+    "anthropic"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "step-shared-primitives",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "catalog-browser-ui",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "catalog-database",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T02:56:32.162763+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "reliability-aggregation"
+   ],
+   "deviations": 0,
+   "context": "ability-gas-balance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
