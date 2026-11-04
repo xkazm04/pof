@@ -7462,7 +7462,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:159 The Total Builds tile says 'all passing' whenever failedCount is 0, even though the report also carries abortedCount. Builds that ran and were then aborted (counted in totalBuilds per build-health.ts:330) have no verdict, and this tile reads them as compliance.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "perf-regression-gating",
@@ -10454,7 +10458,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/AntiPatternWarning.tsx:60 If the anti-pattern prompt check throws, the error is swallowed and no warnings render. A dead checker therefore looks exactly like a prompt that passed, which is the false green the standard names.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "mcp-tools",

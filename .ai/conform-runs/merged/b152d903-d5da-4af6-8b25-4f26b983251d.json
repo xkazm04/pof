@@ -1,0 +1,127 @@
+{
+  "schema": "conform-run/1",
+  "worker": "b152d903-d5da-4af6-8b25-4f26b983251d",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-04T22:13:34.056381+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "build-quality-monitoring",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:159 The Total Builds tile says 'all passing' whenever failedCount is 0, even though the report also carries abortedCount. Builds that ran and were then aborted (counted in totalBuilds per build-health.ts:330) have no verdict, and this tile reads them as compliance.",
+      "techniques": [
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:159 An aborted build is a missing verdict, and this line shows it as passing instead of as a counted unknown."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:203 When errors were counted but none parsed, the panel says so instead of showing the 'No recorded build errors' clean state."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/RegressionBanner.tsx:51 A regression alert comes with an in-app action that re-runs the identical build, so the remedy is always reachable."
+        }
+      ]
+    },
+    {
+      "context": "cli-terminal-shell",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/cli/AntiPatternWarning.tsx:60 If the anti-pattern prompt check throws, the error is swallowed and no warnings render. A dead checker therefore looks exactly like a prompt that passed, which is the false green the standard names.",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/AntiPatternWarning.tsx:60 A failed checker is not reported as failed; showing nothing is the same as a clean result."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:458 A run lost from the server finishes as not-successful and is flagged outcomeUnknown, not shown as a success."
+        },
+        {
+          "technique": "item-liveness",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/dispatchHealth.ts:123 A dispatch that started and never completed becomes 'stuck' after a time threshold computed from the event trail, so silent work is not counted as active forever."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:560 A callback the run emitted without declaring it is treated as failed, not accepted, so the agent cannot add its own records."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "gdd-compliance",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "blender-mcp-bridge",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "ue5-state-sync",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor ConflictSection.tsx:18 is a doc comment on the conflict picker. It does not show that the panels have no check that refuses anything. The only support is a grep for gate, verdict, waiver and threshold, and those terms may not be how this code names such a check, so I could not confirm the"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-04T22:13:34.056381+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "gate-liveness",
+        "refusal-names-a-reachable-remedy",
+        "unmeasurable-criteria"
+      ],
+      "deviations": 1,
+      "context": "build-quality-monitoring",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T22:13:34.056381+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-state-sync",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T22:13:34.056381+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "gate-liveness",
+        "item-liveness",
+        "self-reported-gate-inputs",
+        "unmeasurable-criteria"
+      ],
+      "deviations": 1,
+      "context": "cli-terminal-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
