@@ -19082,6 +19082,59 @@
           "evidence": "src/components/modules/core-engine/sub_bestiary/ai-logic/bt-flowchart-utils.ts:20 The descendant walk uses an explicit loop over a stack plus a visited set, a stateful traversal where the sequential form is the natural one."
         }
       ]
+    },
+    "71f2dcdd-a894-4fda-a381-1ca0388f2b51/agent-runtime-assembly": {
+      "context": "visual-gen-core",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:04:11.454Z",
+      "worker": "a4c85b79-882a-4cb7-86cc-c2e21d53099c",
+      "techniques": [
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/status/route.ts:84 The handle lives in the caller's context and the model polls it (tools/pof-mcp/src/tools/assets.ts:88). The job store is an in-memory Map (src/lib/visual-gen/tripo-job-store.ts:86), so a restart loses it. This is the 'naive integration' the technique names."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/status/route.ts:19 A job that was running when the process died comes back as 'not found', not as closed with an unknown outcome, even though a paid provider task may still deliver. The recover route only partly offsets this."
+        }
+      ]
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/agent-runtime-assembly": {
+      "context": "project-ops-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:04:11.454Z",
+      "worker": "a4c85b79-882a-4cb7-86cc-c2e21d53099c",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/app/api/session-log/route.ts:46 Open runs are closed as cancelled with success 0. The technique asks for an indeterminate closure instead of a definite failure-like verdict."
+        }
+      ]
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/agent-runtime-assembly": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:04:11.454Z",
+      "worker": "a4c85b79-882a-4cb7-86cc-c2e21d53099c",
+      "techniques": [
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:100 A mid-run dispatch is discarded with no trace. useModuleCLI.sendPrompt (src/hooks/useModuleCLI.ts:185) dispatches without checking isRunning into a terminal that, by the comment at useChecklistCLI.ts:97, drops input while streaming."
+        }
+      ]
     }
   }
 }

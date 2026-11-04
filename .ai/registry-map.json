@@ -19516,7 +19516,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useChecklistCLI.ts:100 While an agent run is in flight, a second dispatch is dropped silently: the guard returns with no queue, injection or user signal, and the comment says the terminal itself drops dispatches while streaming. Input that arrives mid-run vanishes instead of joining the running unit at a model-call boundary.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "cost-metering",
@@ -22163,7 +22167,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/session-log/route.ts:46 Every CLI agent session for the project that is 'started' with no terminal row gets a definite 'cancelled' row with success=0 (src/lib/session-log-db.ts:109-110). That includes runs orphaned by an earlier crash or reload whose outcome nobody knows. The vocabulary started|completed|cancelled has no 'outcome unknown' state, so unknown is stored as a failure value.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "prompt-assembly",
@@ -26831,7 +26839,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/status/route.ts:84 A 3D generation outlives a turn, but its job lives only in an in-process Map (tripo/trellis/hunyuan job stores). The caller, including the model through the pof_asset_generate_status MCP tool, keeps the jobId and polls it, so after a restart the handle points at nothing: the standard says to persist a durable row before returning and to serve a bounded projection instead.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "mcp-tools",
