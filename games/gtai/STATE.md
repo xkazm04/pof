@@ -688,3 +688,20 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Mage: spot welder, Tesla-coil bot, substation keeper.
   - Sources are in `kiro/gtai-art/r3/`. `gen.mjs` now honours `IMAGE_LOCK`, shared with the n5 lanes.
 - **Kept variants become night-run targets.** Open: the names; the fast ghost's origin; whether Rivet's big transformed form is the bulky ghost's form.
+
+### 2026-11-04 23:50: the full night (4 lanes until 09:00)
+- **The owner (23:45):** "Beautiful concepts. ... For Mage use Ohm intead of Old Arc. Otherwise keep names of their winning variants and add into nightly run effort to create these characters, animate transformation between characters, design and implement their attacks. You can dispatch two more lanes dedicated to this topic now as the full night run should begin".
+- **The ghosts:** Dent (the crash tester), Tonnage (the stamping press), Kerf (the laser cutter), Ohm (the elder spot welder). Recorded in TARGETS.md and pitch §4 (`0be73977`).
+- **Root `C:\Users\kazda\kiro\gtai-n6`** (new), from main `a1275c82`, merging `n5-cast` at every session:
+  - **`n6-ghost-forms`:** the four forms (Codex part sheets, rigs, locomotion), transformations from base and between forms, switching input and HUD.
+  - **`n6-ghost-powers`:** the attack sets:
+    - Tonnage: press slam and ram;
+    - Dent: seize, steer and overload;
+    - Kerf: blink and slice, with a laser-split kill;
+    - Ohm: a single bolt, with a hook for the mass bolt, strong against machines.
+  - Order for both lanes: Tonnage, Dent, Kerf, Ohm.
+  - **Decisions given to the lanes:**
+    - Rivet's big transformed form is Tonnage's form.
+    - Hauler becomes Tonnage and Gearbox becomes Dent; the old ids stay as aliases.
+- **Root `gtai-n5`** (cast, look) keeps running. All four lanes share `gtai-n5/image.lock` and `bench.lock`.
+- **Morning merge order:** `d6-perf-city`, `d6-combat-notes`, `n5-cast`, `n5-look`, `n6-ghost-forms`, `n6-ghost-powers`.
