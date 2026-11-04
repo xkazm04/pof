@@ -1847,8 +1847,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/index.tsx:43 The editor generates GAS ability specs, C++ code and simulations from a GUI. A search of src/components/modules/core-engine/sub_ability for getUserMedia, SpeechRecognition, speechSynthesis, microphone and MediaRecorder found nothing, so there is no speech pipeline to judge.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "judgeable-spec-authoring",
@@ -8308,9 +8312,10 @@
           "changedAt": "2026-10-18",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/app/api/catalog/route.ts:13 This route reads catalog lifecycle rows, and a search of the listed database, seed, store, and route files for transcription, microphone, text-to-speech, and speechConfig found no speech channel; the characters seed line 'a talker first' is NPC description prose.",
-          "evaluatedAt": "2026-10-13",
-          "stale": true
+          "evidence": "src/app/api/catalog/route.ts:13 The route serves catalog lifecycle rows. I searched the listed catalog/pipeline DB, seed, store and route files for transcri, microphone, text-to-speech, voiceId and speak, and their directories (src/lib, src/stores, src/app/api) for getUserMedia, SpeechRecognition, speechSynthesis, microphone and MediaRecorder: no hits, so this context has no speech channel to judge.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-memory",
@@ -11362,8 +11367,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:27 This is a frame-data and dodge-chain editor whose 'playback' is timeline scrubbing, not audio. A search of src/components/modules/core-engine/sub_combat for getUserMedia, SpeechRecognition, speechSynthesis, microphone and MediaRecorder found nothing, so no voice technique has a precondition here.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
@@ -14538,8 +14547,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/audio-gen/route.ts:106 The only audio provider this route resolves (src/lib/audio-gen/providers/elevenlabs.ts:36, capabilities ['sfx','ambient']) produces sound effects and ambient clips as game assets, and this gate refuses any tts request; speech lives in the separate Voice room code outside this context. The golden path assigns producing sound to a creative brief to another craft. A search of the context's route directories for getUserMedia, SpeechRecognition, speechSynthesis, microphone and MediaRecorder found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "fire-tv-device-realities",
@@ -26124,8 +26137,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/index.tsx:9 The panels sync editor state with UE5 (PIE control, teleport, property watches and writes). A search of src/components/modules/project-setup for getUserMedia, SpeechRecognition, speechSynthesis, microphone and MediaRecorder found nothing, so there is no voice input or output to judge.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "watch-cache-and-resync",

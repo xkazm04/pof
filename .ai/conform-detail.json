@@ -1834,8 +1834,9 @@
       "subject": "voice-io",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T02:27:53.284Z",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:04:58.622Z",
+      "worker": "82a26262-0181-4ee4-8791-78ef3bfca5d7",
       "techniques": [
         {
           "technique": "stt-pipeline",
@@ -1959,14 +1960,15 @@
           "evaluatedAt": "2026-10-13T04:25:19.073Z",
           "worker": "efe5385e-bce1-4e4b-acb0-93cb0b5456c8",
           "reason": "replaced by 07fe4945-1262-497c-9e05-b58648036e5c"
+        },
+        {
+          "state": "not-applicable",
+          "evidence": "src/app/api/catalog/route.ts:13 This route reads catalog lifecycle rows, and a search of the listed database, seed, store, and route files for transcription, microphone, text-to-speech, and speechConfig found no speech channel; the characters seed line 'a talker first' is NPC description prose.",
+          "evaluatedAt": "2026-10-13",
+          "worker": null,
+          "reason": "replaced by 82a26262-0181-4ee4-8791-78ef3bfca5d7"
         }
-      ],
-      "withdrawn": {
-        "worker": "07fe4945-1262-497c-9e05-b58648036e5c",
-        "state": "not-applicable",
-        "at": "2026-10-24T02:28:23.078121+00:00",
-        "reason": "reviewer (sonnet): The anchor src/app/api/catalog/route.ts:13 is only the GET doc comment and does not show that speech is absent, and the context's catalog files (seed-characters.ts, dialogue/bark/talk data) contain many voice/speech/dialogue hits that the verdict dismisses without showing they are only text data."
-      }
+      ]
     },
     "202d11b4-cc1c-4497-9dd0-11aaf786d207/voice-io": {
       "context": "ai-developer-tools-api",
@@ -19298,6 +19300,46 @@
           "evidence": "src/app/api/verify/visual/route.ts:169 The judge's output must be structured JSON, and the verdict shape is checked mechanically before it is stored. Nothing cross-checks verdict=pass against anyEmpty=true, though."
         }
       ]
+    },
+    "0b31785f-a922-4da7-ac3f-bcf06c56f97f/voice-io": {
+      "context": "ue5-state-sync",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:04:58.622Z",
+      "worker": "82a26262-0181-4ee4-8791-78ef3bfca5d7",
+      "techniques": []
+    },
+    "24d18aef-2104-4889-9d67-d20a91d5fdea/voice-io": {
+      "context": "combat-dodge-timeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:04:58.622Z",
+      "worker": "82a26262-0181-4ee4-8791-78ef3bfca5d7",
+      "techniques": []
+    },
+    "01327ce7-fd73-460c-841a-3cd2466211ba/voice-io": {
+      "context": "game-world-content-api",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:04:58.622Z",
+      "worker": "82a26262-0181-4ee4-8791-78ef3bfca5d7",
+      "techniques": []
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/voice-io": {
+      "context": "ability-blueprint",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:04:58.622Z",
+      "worker": "82a26262-0181-4ee4-8791-78ef3bfca5d7",
+      "techniques": []
     }
   }
 }
