@@ -19277,6 +19277,27 @@
       "evaluatedTs": "2026-11-04T01:34:46.029Z",
       "worker": "84629066-c692-428a-bedb-e984e1b168d5",
       "techniques": []
+    },
+    "178c9468-7f24-4c1e-b1ef-daa2d14bc88d/eval-harness": {
+      "context": "ue5-experiment-runner",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:52:38.550Z",
+      "worker": "cd0a4159-2567-4605-a3a9-3e496de44342",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/app/api/verify/visual/route.ts:175 The judge is not pinned (the router picks the eye at call time) and the stored verdict carries no model or packet version; provenance only appears in the HTTP response at line 206."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "src/app/api/verify/visual/route.ts:169 The judge's output must be structured JSON, and the verdict shape is checked mechanically before it is stored. Nothing cross-checks verdict=pass against anyEmpty=true, though."
+        }
+      ]
     }
   }
 }

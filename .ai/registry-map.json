@@ -25793,7 +25793,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/verify/visual/route.ts:175 The route asks a model judge (via the vision router) for a pass/fail verdict on a screenshot and saves it to visual_verifications with only verdict/anyEmpty/elements/notes; the provider, model, effort and prompt version are returned in the response but never stored (the table schema has no column for them), so stored verdicts cannot be tied to the judge that produced them and a silent re-route breaks the series.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-memory",
