@@ -10226,7 +10226,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:159 This context renders streamed CLI log entries, tool rows and a selection toolbar. A search of src/components/cli (including TerminalOutput) found no hits for judge, rubric, scenario, trials or benchmark, so nothing here runs or scores eval scenarios.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "table",

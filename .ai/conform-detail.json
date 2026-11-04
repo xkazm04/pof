@@ -19267,6 +19267,16 @@
       "evaluatedTs": "2026-11-04T01:22:31.958Z",
       "worker": "d23ae61e-7853-4126-8127-b217abd67a98",
       "techniques": []
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/eval-harness": {
+      "context": "cli-terminal-output",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:34:46.029Z",
+      "worker": "84629066-c692-428a-bedb-e984e1b168d5",
+      "techniques": []
     }
   }
 }
