@@ -3220,71 +3220,98 @@
       "subject": "module-design",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:45:49.160Z",
-      "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:47:48.354Z",
       "techniques": [
         {
           "technique": "marked-unverifiable-region",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 Forces an invalid category identifier through a closed SubModuleId type boundary using an unchecked type assertion with no invariant."
-        },
-        {
-          "technique": "module-depth",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:118 Receives an open string from an HTML select change event and casts directly to the closed SubModuleId enum without checking membership."
-        },
-        {
-          "technique": "seams-and-adapters",
-          "verdict": "conformant",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:90 Maintains a strict single-door adapter discipline by routing all plan dispatches through usePlanDispatch."
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 An unmarked, unenclosed type assertion with no written invariant, and the claim it makes is false: 'core-engine' is a CategoryId, not a SubModuleId (checked against src/types/modules.ts)."
         },
         {
           "technique": "io-free-core",
           "verdict": "conformant",
-          "evidence": "src/components/modules/evaluator/FeatureConstellation/helpers.ts:1 Starfield generation is implemented as pure deterministic math seeded by coordinates to avoid render-time randomness."
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 The nodes, edges and placement come from a pure, deterministic function that takes statusMap as a value. The hook is only the shell, and the pure function has its own test (moduleGraph.test.ts)."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:34 NexusView and DependencyGraph share one topology projection with different presets instead of each rebuilding counts and edges, so a change to the topology lands in one place."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:93 The one-click build goes through the single plan-dispatch door rather than building a prompt in the view."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/index.tsx:118 Receives an open string from an HTML select change event and casts directly to the closed SubModuleId enum without checking membership.",
+          "carriedFrom": "2026-10-13"
         },
         {
           "technique": "declarative-or-sequential",
           "verdict": "conformant",
-          "evidence": "src/components/modules/evaluator/NexusView/helpers.ts:6 Explicit sequential loop matches item IDs against prefix list in order of longest prefix precedence."
+          "evidence": "src/components/modules/evaluator/NexusView/helpers.ts:6 Explicit sequential loop matches item IDs against prefix list in order of longest prefix precedence.",
+          "carriedFrom": "2026-10-13"
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 A category identifier ('core-engine') that is not a member of the closed SubModuleId union is forced via an unchecked type assertion into a hook expecting a valid submodule ID.",
+          "evaluatedAt": "2026-10-13T11:45:49.160Z",
+          "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+          "reason": "replaced by c4ac28e8-cf9f-453c-a0ef-5a27af39a230"
+        }
+      ],
+      "withdrawn": {
+        "worker": "c4ac28e8-cf9f-453c-a0ef-5a27af39a230",
+        "state": "deviation",
+        "at": "2026-11-04T00:48:22.219147+00:00",
+        "reason": "reviewer (sonnet): The cast is real (index.tsx:84 `'core-engine' as SubModuleId`, where SUB_MODULE_IDS has only 'core-engine-plan'). But it sits in evaluator/CrossModuleOverlapPanel, which is not among this context's DependencyGraph and NexusView files, so the deviation is about a different context."
+      }
     },
     "dadc026b-804a-4632-ad7f-0c8254660f2c/module-design": {
       "context": "combat-choreography",
       "subject": "module-design",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-13",
-      "evaluatedTs": "2026-10-13T11:45:49.160Z",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:47:48.354Z",
       "techniques": [
         {
-          "technique": "module-depth",
+          "technique": "marked-unverifiable-region",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:7 Violates the rule against extracting purely for line count; adds module interface with exactly one caller and hides no decision."
+          "evidence": "src/components/modules/core-engine/sub_combat/flow/ComboChainDiagram.tsx:51 A call-site downcast across the store boundary: not enclosed in a typed accessor and not accompanied by an invariant."
         },
         {
           "technique": "io-free-core",
           "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_combat/attributes/attribute-defaults-export.ts:28 Attribute defaults Python generator is a pure string transformation over input rows with no file or environment I/O."
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/index.tsx:52 The encounter simulation is a pure lib function given value inputs; the component only debounces and renders."
         },
         {
           "technique": "declarative-or-sequential",
           "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:13 Uses an explicit sequential accumulation loop to aggregate damage into time buckets."
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:13 A single pass fills two accumulators per bucket (player and enemy damage), the multiple-outputs case where an explicit loop is the right form."
         },
         {
-          "technique": "marked-unverifiable-region",
+          "technique": "emitted-code-names-from-a-root",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/attributes/attribute-defaults-export.ts:38 The emitted Python imports its own `unreal` root and names the row struct by an absolute /Script/ path, so nothing depends on the caller's scope."
+        },
+        {
+          "technique": "module-depth",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_combat/CombatNav.tsx:12 Unchecked type assertion casts string 'features' to CombatSubtab to bypass union type checking."
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:7 Violates the rule against extracting purely for line count; adds module interface with exactly one caller and hides no decision.",
+          "carriedFrom": "2026-10-13"
         }
       ],
       "withdrawn": {
-        "worker": "ee14e9ef-8af4-491a-acad-c365a40910eb",
+        "worker": "c4ac28e8-cf9f-453c-a0ef-5a27af39a230",
         "state": "deviation",
-        "at": "2026-10-13T11:46:38.723864+00:00",
-        "reason": "reviewer (sonnet): The CombatNav.tsx:12 technique anchor is wrong: 'features' is a member of the CombatSubtab union (_shared/data.ts:14), so that cast is a literal-type annotation, not a bypass. The usePacingPaths, Python-generator and loop claims were fine."
+        "at": "2026-11-04T00:48:22.377714+00:00",
+        "reason": "reviewer (sonnet): The cast at sub_combat/flow/ComboChainDiagram.tsx:51 is real, but flow/ is not among this context's files (attributes/ and choreography/). I could not confirm flow/ belongs to this context, and the verdict rests on that."
       }
     },
     "24d18aef-2104-4889-9d67-d20a91d5fdea/realtime-combat-semantics": {
@@ -19022,6 +19049,37 @@
           "technique": "judge-stability",
           "verdict": "deviation",
           "evidence": "src/hooks/useModuleCLI.ts:183 feature-review resolves to judge-content = 'opus' (src/lib/model-policy.ts:60), an alias rather than a versioned model; the technique requires never an alias that silently upgrades."
+        }
+      ]
+    },
+    "0d0917c4-e64c-49c7-befe-85c6c3933c2f/module-design": {
+      "context": "bestiary-archetypes-ai",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:47:48.354Z",
+      "worker": "c4ac28e8-cf9f-453c-a0ef-5a27af39a230",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/archetypes/PrimaryArchetypeLifecycle.tsx:37 The catalogId-to-type assertion is made at each call site rather than enclosed behind one checked accessor, and no comment states why it is valid."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/ai-logic/AILogicTab.tsx:33 Detection is a pure function of entity positions and the sense profile, which lives in lib/bestiary/sense-profile and is called with values."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/index.tsx:22 The rule for picking the subject is owned by the same lib module that owns sense profiles, not restated in the shell."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/ai-logic/bt-flowchart-utils.ts:20 The descendant walk uses an explicit loop over a stack plus a visited set, a stateful traversal where the sequential form is the natural one."
         }
       ]
     }

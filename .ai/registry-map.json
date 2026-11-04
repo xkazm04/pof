@@ -6136,7 +6136,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/archetypes/PrimaryArchetypeLifecycle.tsx:37 The store's string-keyed CatalogEntityBase[] is downcast to BestiaryEntry[] at the call site, with no validation and no stated invariant, so a catalog whose shape drifts reaches the lifecycle panel as a wrongly typed value the checker never questioned.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-behaviour-authoring",
@@ -19960,11 +19964,7 @@
           "confidence": "strong",
           "state": "deviation",
           "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:84 A category identifier ('core-engine') that is not a member of the closed SubModuleId union is forced via an unchecked type assertion into a hook expecting a valid submodule ID.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:a33adfb4a8edc0eb",
-          "evaluatedRevision": 17,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-10-13"
         },
         {
           "subject": "test-harness",
