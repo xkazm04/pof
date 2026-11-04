@@ -1,0 +1,12 @@
+{
+  "id": "enemy-ai-1",
+  "lane": "enemy-ai",
+  "question": "Enemy toughness in the arena, counted in nail hits to kill. Built: patrol cop 1, riot cop 2 (and his shield soaks 80 % of hits from the front), SWAT 2, robot gunner 4, robot thug 6. Measured vs a scripted Rivet that dodges and shoots inside 10 m, 3 enemies of one type each: patrol cops cleared in 14.4 s, riot cops 17.5 s (they did 24 damage), SWAT 22.8 s, robot thugs 13.2 s. The robot gunners were not cleared in 40 s because they hold 11 m and the dummy only fires inside 10 m. The day doctrine says humans die to one hit. Keep the built values, make every human die to one hit, or make all of them tougher?",
+  "options": [
+    { "key": "A", "label": "As built: patrol 1, riot 2 + front shield, SWAT 2, gunner 4, thug 6", "tradeoff": "each type asks for a different answer (flank the shield, hide from SWAT bursts, kite the thug); armoured humans bend the one-hit doctrine", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/enemy-ai/pit_mixed_squad_fight.mp4", "C:/Users/kazda/kiro/gtai-masters/eve/enemy-ai/pit_mixed_t0420.png"] },
+    { "key": "B", "label": "Strict doctrine: every human 1 hit (the riot shield still blocks from the front); robots 4 and 6", "tradeoff": "fast and lethal in the quest-1 style; SWAT then only differ by their AI (cover, flanking) and robots carry all the toughness", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/enemy-ai/pit_mixed_squad_fight.mp4"] },
+    { "key": "C", "label": "Tougher all round: patrol 2, riot 3, SWAT 3, gunner 6, thug 10", "tradeoff": "longer fights where melee combos and powers matter more; slower to clear and breaks quest 1's feel", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/enemy-ai/pit_six_cops_two_shooters_dodge.mp4"] }
+  ],
+  "default": "A",
+  "asked": "21:16"
+}

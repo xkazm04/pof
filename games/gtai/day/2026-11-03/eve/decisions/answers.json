@@ -1,0 +1,70 @@
+{
+ "answers": [
+  {
+   "id": "rivet-motion-1",
+   "choice": "A",
+   "note": "Owner: Variant A (T2 ratio). Note the frame labels on the lineup were reversed vs the option keys; this is option A = T2 ratio 0.72. If he still reads too large, propose a lower guard pose next.",
+   "at": "2026-11-03T19:57:43.756Z"
+  },
+  {
+   "id": "arena-1",
+   "choice": "C",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "arena-2",
+   "choice": "A",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "enemy-ai-1",
+   "choice": "A",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "ghost-powers-1",
+   "choice": "A",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "ghost-powers-2",
+   "choice": "B",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "gunplay-1",
+   "choice": "A",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "rivet-motion-2",
+   "choice": "B",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "visual-fixes-1",
+   "choice": "B",
+   "note": "OWNER 21:25: not judgeable in this state - no weapon design, no final animation, no opponent hit reaction. 'The visual impression is the key for judgement and we need to go all the way in with the design.' Keep your default as a placeholder and stop tuning on numbers; re-ask only with a real-time clip in the final look (common.md, Owner direction 21:25).",
+   "at": "2026-11-03T20:35:51.797Z"
+  },
+  {
+   "id": "gunplay-2",
+   "choice": "A",
+   "note": "DIRECTOR for the owner 21:45: not shown to the owner. The clips are debug circles on a blank floor, which the owner's 21:25 direction rules out as the basis of a question (common.md, Owner direction 21:25). Keep A as a placeholder; the enemy-shot tell (aim line then lock) is a good idea, so build it into the full chain: a cop rig with a raised-gun pose as the tell, a muzzle flash, a tracer, Rivet's hit reaction. Re-ask only with that clip in the D5 look.",
+   "at": "2026-11-03T20:44:10.186Z"
+  },
+  {
+   "id": "gunplay-3",
+   "choice": "A",
+   "note": "OWNER 22:55: A, tight burst on the told line (an owner pick on real clips, not a placeholder). Director notes from the stills: at 32 px/m the pistol in the claw barely reads; live contractors clump with corpses into one blob - keep the living readable.",
+   "at": "2026-11-03T22:13:42.680Z"
+  }
+ ]
+}

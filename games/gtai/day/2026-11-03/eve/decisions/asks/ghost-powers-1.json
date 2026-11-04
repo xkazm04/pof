@@ -1,0 +1,33 @@
+{
+  "id": "ghost-powers-1",
+  "lane": "ghost-powers",
+  "question": "Gearbox (remote-hijack a car) control scheme. Built: aim-to-steer, the hijacked car drives at 14 m/s toward the mouse reticle (turns at most 140 deg/s) for up to 6 s while Rivet stays on foot at 35% move speed (the cost). Measured: the car turns onto a robot 17 m off-axis and wrecks it in 1.42 s. Which control should Gearbox have?",
+  "options": [
+    {
+      "key": "A",
+      "label": "Aim-to-steer (as built): the car follows the reticle until it crashes or 6 s end",
+      "tradeoff": "skill-expressive and can thread traffic or chase a dodging enemy; Rivet is slowed and exposed while steering",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/souls-powers.json"
+      ]
+    },
+    {
+      "key": "B",
+      "label": "Target-and-launch: lock an enemy, the car homes on it by itself",
+      "tradeoff": "one click and Rivet keeps full speed and his gun; less skill, more a guided missile",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/souls-powers.json"
+      ]
+    },
+    {
+      "key": "C",
+      "label": "Hybrid: steer while the button is held, release to launch straight at the last aim",
+      "tradeoff": "both feels in one input; slightly harder to teach",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/souls-powers.json"
+      ]
+    }
+  ],
+  "default": "A",
+  "asked": "21:16"
+}

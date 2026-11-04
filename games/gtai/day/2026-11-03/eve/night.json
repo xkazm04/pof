@@ -1,0 +1,11 @@
+{
+  "common": "briefs/common.md",
+  "lanes": [
+    { "id": "arena", "cwd": "C:/Users/kazda/kiro/gtai-wt/e-arena", "brief": "briefs/arena.md", "model": "claude-opus-5-5", "effort": "high", "iterMin": 45, "addDirs": ["C:/Users/kazda/kiro/gtai-masters", "C:/Users/kazda/kiro/gtai-eve", "C:/Users/kazda/kiro/pof/games/gtai", "C:/Users/kazda/kiro/gtai-spike", "C:/Users/kazda/kiro/gtai-wt", "C:/Users/kazda/kiro/ai-registry"] },
+    { "id": "rivet-motion", "cwd": "C:/Users/kazda/kiro/gtai-wt/e-motion", "brief": "briefs/rivet-motion.md", "model": "claude-opus-5-5", "effort": "high", "iterMin": 45, "addDirs": ["C:/Users/kazda/kiro/gtai-masters", "C:/Users/kazda/kiro/gtai-eve", "C:/Users/kazda/kiro/pof/games/gtai", "C:/Users/kazda/kiro/gtai-spike", "C:/Users/kazda/kiro/gtai-wt", "C:/Users/kazda/kiro/ai-registry"] },
+    { "id": "gunplay", "cwd": "C:/Users/kazda/kiro/gtai-wt/e-gunplay", "brief": "briefs/gunplay.md", "model": "claude-opus-5-5", "effort": "high", "iterMin": 45, "addDirs": ["C:/Users/kazda/kiro/gtai-masters", "C:/Users/kazda/kiro/gtai-eve", "C:/Users/kazda/kiro/pof/games/gtai", "C:/Users/kazda/kiro/gtai-spike", "C:/Users/kazda/kiro/gtai-wt", "C:/Users/kazda/kiro/ai-registry"] },
+    { "id": "enemy-ai", "cwd": "C:/Users/kazda/kiro/gtai-wt/e-enemy", "brief": "briefs/enemy-ai.md", "model": "claude-opus-5-5", "effort": "high", "iterMin": 45, "addDirs": ["C:/Users/kazda/kiro/gtai-masters", "C:/Users/kazda/kiro/gtai-eve", "C:/Users/kazda/kiro/pof/games/gtai", "C:/Users/kazda/kiro/gtai-spike", "C:/Users/kazda/kiro/gtai-wt", "C:/Users/kazda/kiro/ai-registry"] },
+    { "id": "ghost-powers", "cwd": "C:/Users/kazda/kiro/gtai-wt/e-powers", "brief": "briefs/ghost-powers.md", "model": "claude-opus-5-5", "effort": "high", "iterMin": 45, "addDirs": ["C:/Users/kazda/kiro/gtai-masters", "C:/Users/kazda/kiro/gtai-eve", "C:/Users/kazda/kiro/pof/games/gtai", "C:/Users/kazda/kiro/gtai-spike", "C:/Users/kazda/kiro/gtai-wt", "C:/Users/kazda/kiro/ai-registry"] },
+    { "id": "visual-fixes", "cwd": "C:/Users/kazda/kiro/gtai-wt/e-fixes", "brief": "briefs/visual-fixes.md", "model": "claude-sonnet-5-5", "effort": "high", "iterMin": 45, "addDirs": ["C:/Users/kazda/kiro/gtai-masters", "C:/Users/kazda/kiro/gtai-eve", "C:/Users/kazda/kiro/pof/games/gtai", "C:/Users/kazda/kiro/gtai-spike", "C:/Users/kazda/kiro/gtai-wt", "C:/Users/kazda/kiro/ai-registry"] }
+  ]
+}

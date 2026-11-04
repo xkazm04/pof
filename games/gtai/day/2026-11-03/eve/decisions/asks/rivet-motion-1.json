@@ -1,0 +1,35 @@
+{
+ "id": "rivet-motion-1",
+ "lane": "rivet-motion",
+ "question": "Rivet's arm and claw proportions: how far to cut the day's long arms? T2 measures arm:leg about 0.8 and a claw about a quarter of the leg; the day rig was 1.13. Body size stays 1.2 (slightly larger than a human). Frame labels: A/B/C left to right after T2.",
+ "options": [
+  {
+   "key": "A",
+   "label": "T2 ratio: arms 0.72 length, claw 0.78, arms 0.8 thick (footprint 1.68 x 1.97 m)",
+   "tradeoff": "matches the concept; the claw reads smaller at 32 px/m",
+   "frames": [
+    "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\rivet-motion\\frames\\rivet-proportions-vs-t2-128ppm.png",
+    "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\rivet-motion\\frames\\rivet-proportions-32ppm-crop2x.png",
+    "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\rivet-motion\\frames\\rivet-proportions-48ppm-crop2x.png"
+   ]
+  },
+  {
+   "key": "B",
+   "label": "Mild cut: arms 0.85, claw 0.9, arms 0.9 thick (1.72 x 2.01 m)",
+   "tradeoff": "keeps more of the claw's punch at gameplay zoom, still longer than T2",
+   "frames": [
+    "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\rivet-motion\\frames\\rivet-proportions-vs-t2-128ppm.png"
+   ]
+  },
+  {
+   "key": "C",
+   "label": "Keep the day arms (1.90 x 2.05 m)",
+   "tradeoff": "no change; the owner called these too large",
+   "frames": [
+    "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\rivet-motion\\frames\\rivet-proportions-vs-t2-128ppm.png"
+   ]
+  }
+ ],
+ "default": "A",
+ "asked": "21:13"
+}
