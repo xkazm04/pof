@@ -5,6 +5,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
+- **2026-11-04 afternoon: the visual targets are set** (the owner judged image rounds 1-2 and said "no need to iterate next round. We have nice visual targets for next runs"): `art-direction/targets-2026-11-04/TARGETS.md`. In short: a slim default cast; Rivet as the lanky + android hybrid; a two-stage transformation; the look a middle ground between today's game and Inked Grime with a riso texture; the alley for close-ups; weapon sheets plus plasma sword +20 % and Gatling barrels +50 %. **Next:** a night run that chases these targets in the engine (rig re-proportioning, the riso texture in the D5 print, weapon art from the sheets).
 - **2026-11-04: the combat night is merged and approved.** rtai main `a1275c82` (pushed) holds the night lanes (weapon art, Rivet's arsenal, gunplay, human reactions, brutality, showcase), Rivet 50 % faster, and corpse decay (`corpse_decay.json`, `--horde`, `--no-decay`). Owner: "nice baselines, all approved"; all lane call defaults stand. Final reel and horde clip: `kiro/gtai-masters/keep-2026-11-04/`. Exe: `kiro/gtai-wt/int-day/build/export/windows/RTAI.exe`. Backlog: rtai `docs/backlog/combat-notes-2026-11-04.md` (electro and plasma-rifle reactions, melee hold and animation, plasma sword art, the homing-shard reaction delay, a Gatling gun, the city-fight lag). Night briefs: `games/gtai/day/2026-11-04/night/`.
 - **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
 - **Art direction (owner, 2026-11-03): D5 "Inked Grime" is the target.** Noir is a mid/late-game mission look. Blood is red (noir's FX); cops are blue; Rivet is only slightly larger than a human; the soul trail is descoped. Details in `pitch.md` §8.
@@ -648,3 +649,13 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **Doctrine:** characters default close to the crowd (slim); the large size belongs only to transformed Rivet, bosses and later-act robots.
 - **Engineering lanes:** root `C:\Users\kazda\kiro\gtai-d6` (runner, until 19:00, freeze 18:30, report 18:40), worktrees `gtai-wt/d6-perf-city` and `gtai-wt/d6-combat-notes` from main `a1275c82`. Lanes never generate images.
 - **Night:** the looks that win the rounds become the night lanes' targets.
+
+### 2026-11-04 day: image rounds judged
+- **Round 1** (24 images): the owner kept the lanky and android Rivets, the transformed form, the slim cops, the crowd, the scale chart, the later robots, the kinetic, heavy and energy sheets, the held poses and Inked Grime refined. Notes asked for the plasma sword +20 %, the Gatling barrels (the left part) +50 %, colour on the effects, and dynamic light combined with riso without shadows. Dropped: the scrapper Rivet and six art directions.
+- **Round 2** (23 images; the Gatling edit was blocked twice by the image tool's violence moderation):
+  - **Kept:** the lanky + android hybrid; the slim cops in action; the in-game scale frames; the later robots seen from above; every weapon target; Inked Grime with riso texture ("Chase middleground between this variant and current game"); the alley ("direction for closeup stages/battles").
+  - **Transformation:** "Fit into Lanky + android hybrid, keep only two stages".
+  - **Grain:** "Tone down graininess of the surface but do not remove completely".
+  - **Dropped:** the pure lanky and pure android bodies, the riso + light variants, effect light alone, the market and the merge.
+- **Evidence:** the verdict page is claude.ai/artifact/UJ3qb5wqriCPCRJREVGpMC; `targets-2026-11-04/verdicts.json` (47 verdicts), `img/` (24 kept images); the round sources are in `kiro/gtai-art/`.
+- **PoF gap (worked around):** PoF has no image-round verdict surface. The rounds ran through a standalone script (`kiro/gtai-art/gen.mjs`, sequential `codex exec` image_gen) and a claude.ai artifact with a db. Candidate: a PoF "Look rounds" room that runs the rounds and records verdicts into the catalog pipeline's acceptance.

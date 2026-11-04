@@ -202,6 +202,17 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
   - **Cops take the mock's look with blue shades,** not vermilion. Vermilion stays for danger cues, objectives and Rivet's collar; teal stays for the dead.
   - **Rivet is only slightly larger than a human** (as in the concept). He may grow large later through a bulky ghost transformation.
   - **The soul trail behind Rivet is descoped** until a combat mechanism uses the souls.
+- **[owner, 2026-11-04] Visual targets from the image rounds** (full list and images: `art-direction/targets-2026-11-04/TARGETS.md`):
+  - **The default cast is slim.** Rivet, the cops and the crowd share roughly one human footprint; Rivet is only slightly larger. Large size is only for Rivet's transformed state, bosses and later-act robots.
+  - **Rivet's default body is the lanky + android hybrid:** lean piston limbs, a work-plated torso, the visor, the hazard collar, the claw and the torch.
+  - **The transformation has two stages only:** the default, then the full form (about 2x height, 3x mass). No middle stage.
+  - **The look to chase is a middle ground between today's game and Inked Grime with a risograph texture:** fine halftone, slight misregistration, paper fibre. Surface grain is toned down but never removed, and there are no long cast shadows.
+  - **The alley is the direction for close-up stages and battles.**
+  - **Weapons:**
+    - the round 1 gun sheets as drawn;
+    - the plasma sword blade 20 % longer;
+    - the Gatling barrels 50 % longer;
+    - the effects in colour, with no blood red.
 
 ## 9. Production notes **[proposal]**
 

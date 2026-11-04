@@ -1,0 +1,378 @@
+[
+ {
+  "id": "r1__a1_inked_grime_plus",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a1_inked_grime_plus",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__a2_heavy_noir_ink",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a2_heavy_noir_ink",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__a3_flat_color_comic",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a3_flat_color_comic",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__a4_riso_print",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a4_riso_print",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__a5_night_sodium",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a5_night_sodium",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__a6_painterly_grunge",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a6_painterly_grunge",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__a7_clean_graphic",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a7_clean_graphic",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__a8_dynamic_light",
+  "round": "r1",
+  "track": "art-direction",
+  "image": "a8_dynamic_light",
+  "verdict": "iterate",
+  "comment": "Try to combine with Risograph print, remove shadows"
+ },
+ {
+  "id": "r1__c1_rivet_slim_lanky",
+  "round": "r1",
+  "track": "characters",
+  "image": "c1_rivet_slim_lanky",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__c2_rivet_slim_scrapper",
+  "round": "r1",
+  "track": "characters",
+  "image": "c2_rivet_slim_scrapper",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r1__c3_rivet_slim_android",
+  "round": "r1",
+  "track": "characters",
+  "image": "c3_rivet_slim_android",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__c4_rivet_transformed",
+  "round": "r1",
+  "track": "characters",
+  "image": "c4_rivet_transformed",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__c5_cops_slim",
+  "round": "r1",
+  "track": "characters",
+  "image": "c5_cops_slim",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__c6_crowd_lineup",
+  "round": "r1",
+  "track": "characters",
+  "image": "c6_crowd_lineup",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__c7_scale_chart",
+  "round": "r1",
+  "track": "characters",
+  "image": "c7_scale_chart",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__c8_late_robots",
+  "round": "r1",
+  "track": "characters",
+  "image": "c8_late_robots",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__w1_guns_kinetic",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w1_guns_kinetic",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__w2_guns_heavy",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w2_guns_heavy",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__w3_guns_energy",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w3_guns_energy",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__w4_melee",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w4_melee",
+  "verdict": "iterate",
+  "comment": "Same increase for plasma sword here"
+ },
+ {
+  "id": "r1__w5_plasma_sword_variants",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w5_plasma_sword_variants",
+  "verdict": "iterate",
+  "comment": "make weapon blade longer with 20% increase"
+ },
+ {
+  "id": "r1__w6_gatling_variants",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w6_gatling_variants",
+  "verdict": "iterate",
+  "comment": "increase length of gatling with 50% increase of the left part"
+ },
+ {
+  "id": "r1__w7_held_poses_topdown",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w7_held_poses_topdown",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r1__w8_fx_sheet",
+  "round": "r1",
+  "track": "weapons",
+  "image": "w8_fx_sheet",
+  "verdict": "iterate",
+  "comment": "Nice but add colors to the effects"
+ },
+ {
+  "id": "r2__a1_riso_light_no_shadow",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a1_riso_light_no_shadow",
+  "verdict": "drop",
+  "comment": "Tone down graininess of the surface but do not remove completely"
+ },
+ {
+  "id": "r2__a2_riso_light_soft",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a2_riso_light_soft",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__a3_riso_light_bold",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a3_riso_light_bold",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__a4_inked_grime_fx_light",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a4_inked_grime_fx_light",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__a5_inked_grime_riso_texture",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a5_inked_grime_riso_texture",
+  "verdict": "keep",
+  "comment": "Chase middleground between this variant and current game."
+ },
+ {
+  "id": "r2__a6_inked_grime_alley",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a6_inked_grime_alley",
+  "verdict": "keep",
+  "comment": "Keep as direction for closeup stages/battles. "
+ },
+ {
+  "id": "r2__a7_inked_grime_market",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a7_inked_grime_market",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__a8_best_merge_ingame",
+  "round": "r2",
+  "track": "art-direction",
+  "image": "a8_best_merge_ingame",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__c1_lanky_true_overhead",
+  "round": "r2",
+  "track": "characters",
+  "image": "c1_lanky_true_overhead",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__c2_android_true_overhead",
+  "round": "r2",
+  "track": "characters",
+  "image": "c2_android_true_overhead",
+  "verdict": "drop",
+  "comment": ""
+ },
+ {
+  "id": "r2__c3_lanky_android_hybrid",
+  "round": "r2",
+  "track": "characters",
+  "image": "c3_lanky_android_hybrid",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__c4_transformation_stages",
+  "round": "r2",
+  "track": "characters",
+  "image": "c4_transformation_stages",
+  "verdict": "iterate",
+  "comment": "Fit into Lanky + android hybrid, keep only two stages (remove middle)"
+ },
+ {
+  "id": "r2__c5_cops_action_overhead",
+  "round": "r2",
+  "track": "characters",
+  "image": "c5_cops_action_overhead",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__c6_cast_ingame_scale_lanky",
+  "round": "r2",
+  "track": "characters",
+  "image": "c6_cast_ingame_scale_lanky",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__c7_cast_ingame_scale_android",
+  "round": "r2",
+  "track": "characters",
+  "image": "c7_cast_ingame_scale_android",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__c8_late_robots_overhead",
+  "round": "r2",
+  "track": "characters",
+  "image": "c8_late_robots_overhead",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w1_plasma_sword_longer",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w1_plasma_sword_longer",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w2_melee_longer_plasma",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w2_melee_longer_plasma",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w4_fx_colour",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w4_fx_colour",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w5_held_guns_overhead",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w5_held_guns_overhead",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w6_held_heavy_overhead",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w6_held_heavy_overhead",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w7_held_melee_overhead",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w7_held_melee_overhead",
+  "verdict": "keep",
+  "comment": ""
+ },
+ {
+  "id": "r2__w8_pickup_icons",
+  "round": "r2",
+  "track": "weapons",
+  "image": "w8_pickup_icons",
+  "verdict": "keep",
+  "comment": ""
+ }
+]
