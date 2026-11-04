@@ -120,6 +120,34 @@ source is the contest variant each came from. Read its `PITCH.md` for the origin
 
 ## 4. The four souls **[owner]** with designs **[proposal]**
 
+### The ghosts, started over **[owner, 2026-11-04]** (supersedes the table below; the old table is kept for reference only)
+The owner, verbatim:
+> 1. I would stick with 4 characters which player discovers through scientist's questline, helping him to understand voices in his head
+> 2. I would follow concepts of
+> - Mechanic ghost, giving ability to drive, and control other vehicle as part of combat (change direction, developing into overload/blowup)
+> - Bulky/tanky ghost: Could be previously in factory larger manufacturing machine, slow but large with high resistance and destructive strength
+> - We will need concept of ghost becoming useful for fast combat style, with speed movement, suitable for 'teleport & assassin' attack. Not sure how to fit into the Factory concept,what type of machine can get close
+> - Mage-like form. Elder smaller robotic character with ability to spawn eletricity from hands making single or later mass electricity attacks efficient against machines.
+> 3. Each ghost will have its unique art concept, name and character development arch. Having one optional quest in each act from point they are enabled, discovering the characters background, developing bond and learning their history. Reward will always lead to improvement of their abilities (unique weapons or boosted effect of ability)
+
+- **The four ghosts:**
+  - **Mechanic:** drives, and in combat seizes other vehicles (steers them, then overloads them until they blow up).
+  - **Bulky:** a former large factory manufacturing machine; slow, huge, highly resistant, destructive.
+  - **Fast:** speed movement, a teleport and assassinate attack.
+  - **Mage:** an elder, smaller robot; electricity from the hands, first single and later mass attacks, strong against machines.
+- **Discovery:** through the scientist's questline (Dr. Ingrid Kilohm's, the one that helps Rivet understand the voices).
+- **Each ghost has:**
+  - a unique art concept, name and character arc;
+  - one optional quest per act from its unlock on (its background, the bond, its history);
+  - quest rewards that always improve its abilities (a unique weapon or a boosted effect).
+- **[open] The fast ghost's factory origin.** The concept round explores three machines: a delta pick-and-place robot, a laser-cutter gantry head, and a pneumatic-tube courier capsule.
+- **[open] Names** for all four.
+- **[open] Overlaps with earlier decisions:**
+  - The bulky ghost overlaps Rivet's two-stage transformation (visual targets, 2026-11-04). Is his big form this ghost's form?
+  - The current powers in the game (Hauler, Gearbox) map onto the bulky and mechanic ghosts.
+- **Concept art:** three variants per ghost for triage, in Look Table round 3. Kept ones become night-run targets.
+
+
 The owner set three of the abilities: car manipulation, remote turret manipulation, and transforming into a large
 tank robot. Each soul changes Rivet's visual design and skill set, and each has upgrades bought in-game that evolve
 the ability. The fourth soul, and every name, is a host proposal.

@@ -675,3 +675,16 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **`n5-look`** (23 commits): the print toward the riso middle ground is done and evidenced, and the alley stage has a first build (`--arena=alley`). Weapon art has not started, and there is no REPORT. Open REQUEST from cast to look: held guns read oversized against the slimmer Rivet.
   - **`d6-perf-city`** and **`d6-combat-notes`** finished at 18:42 with reports, unmerged.
 - **Next (when the owner frees the machine):** merge `d6-*` and `n5-*` onto main, run the gates, film the comparison against the targets, and resume or close the n5 lanes. The root `gtai-n5` and its worktrees are kept until then.
+
+### 2026-11-04 22:00: the ghosts started over (owner)
+- **The owner restarted the whole ghost concept.** Pitch §4 records it as **[owner, 2026-11-04]**:
+  - four ghosts, found through the scientist's questline;
+  - the four: mechanic (vehicle seize, steer, overload and blow up), bulky (a former big factory machine; slow, resistant, destructive), fast (teleport and assassinate; the factory origin is open), mage (an elder small robot; electricity, single then mass, strong against machines);
+  - each with its own art, name and arc, and one optional quest per act from its unlock on, whose reward improves its abilities.
+- **Look Table round 3, "Ghosts":** 12 concept sheets, 3 per ghost.
+  - Mechanic: driver bot, assembly arm, crash tester.
+  - Bulky: stamping press, foundry crucible, loader crane.
+  - Fast: delta picker, laser-cutter head, pneumatic courier.
+  - Mage: spot welder, Tesla-coil bot, substation keeper.
+  - Sources are in `kiro/gtai-art/r3/`. `gen.mjs` now honours `IMAGE_LOCK`, shared with the n5 lanes.
+- **Kept variants become night-run targets.** Open: the names; the fast ghost's origin; whether Rivet's big transformed form is the bulky ghost's form.
