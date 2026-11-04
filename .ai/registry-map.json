@@ -10106,12 +10106,11 @@
           "changedAt": "2026-10-27",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:28 This folder only formats already-typed LogEntry rows; a search of src/components/cli/TerminalOutput found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, or claude.cmd.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:28 This folder only formats already-typed LogEntry rows for display; a search of src/components/cli/TerminalOutput found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions or claude.cmd, so no transport concern is owned here.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
+          "revisionsBehind": 1
         },
         {
           "subject": "terminal-multiplexing",
@@ -10297,12 +10296,11 @@
           "changedAt": "2026-10-27",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/cli/suggestionIntents.ts:150 On any unsuccessful run except a collect prompt, Retry starts a fresh Claude session and resends the original prompt, so a crash or timeout drops the stored thread instead of keeping it until the child says the thread is gone or poisoned.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/cli/useTaskQueue.ts:162 The stored Claude thread id is silently replaced by whatever session id the child reports on connect, so a fresh-session Retry after a crash or timeout, or a resume the CLI quietly started fresh, unbinds the live thread with no gone/poisoned classification, no lineage record and no fresh-thread flag shown to the user.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
+          "revisionsBehind": 1
         },
         {
           "subject": "fleet-orchestration",
@@ -10511,12 +10509,11 @@
           "changedAt": "2026-10-27",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/lib/cli-task.ts:152 The shared structured-answer parser keeps the first @@CALLBACK block and JSON.parses it once, so an echoed example can beat the real answer and no extraction rung is recorded.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/cli-task.ts:152 The shared structured-answer parser takes the FIRST @@CALLBACK block and JSON.parses it once. The prompt shows the model that exact marker with a schema-hint body, so an echoed example beats the real answer, and no extraction ladder or rung telemetry exists.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
+          "revisionsBehind": 1
         },
         {
           "subject": "terminal-multiplexing",
@@ -19437,12 +19434,11 @@
           "changedAt": "2026-10-27",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/hooks/useModuleCLI.ts:185 These hooks only hand a prompt to a mounted terminal tab; a search of src/hooks found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, or claude.cmd.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/hooks/useModuleCLI.ts:185 These hooks build a prompt and hand it to a mounted terminal tab through a window event; a search of src/hooks found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, child_process or claude.cmd, so they own no spawn, envelope, stance, billing or thread id.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -20726,12 +20722,11 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/app/api/checklist/complete/route.ts:13 These routes record checklist completion, spend, and task rows, and the only process they launch is UnrealBuildTool; the listed route directories contain no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions, or claude.cmd.",
-          "evaluatedAt": "2026-10-13",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/app/api/checklist/complete/route.ts:11 These routes record completions, spend, task-registry rows and packaging operations (the only processes they spawn are UE commandlets and UnrealBuildTool via spawnCapture); a search of the listed route directories found no resumeSessionId, stream-json, ANTHROPIC_API_KEY, dangerously-skip-permissions or claude.cmd.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-runtime-assembly",
