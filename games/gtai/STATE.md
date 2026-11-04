@@ -667,3 +667,11 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **`n5-look`:** the D5 print toward the Inked Grime + riso middle ground (fine halftone, slight misregistration, paper fibre, grain toned down but kept, no cast shadows) as a JSON dial; then an alley close-up stage; then weapon art from the sheets (held parts, pickups, coloured effects, the plasma sword +20 %, and the Gatling as a new weapon with barrels +50 %).
 - **No showcase lane** (the owner's limit of two). The Director merges in the morning: the day lanes `d6-perf-city` and `d6-combat-notes` (until 19:00), then `n5-*`.
 - The briefs carry `TARGETS.md` as the reference, the secondary-monitor override, and the rule that combat must not regress.
+
+### 2026-11-04 19:12: n5 run stopped by the owner ("stop the effort, I will need to spare resources for my development")
+- The run was stopped at about 19:12: the supervisor, both lane sessions and the scratch tails were killed by PID, and the watchdog was stopped. Free memory went from 1.1 GB to about 30 GB. WSL alone held 25 GB, so it was not only the lanes.
+- **Where the branches stand:**
+  - **`n5-cast`** (26 commits): the slim cops and hybrid Rivet are in, with the block goldens re-blessed. A `REPORT.md` draft exists. **Four rig files are left uncommitted** in `gtai-wt/n5-cast` (`body_plan.gd`, `cut_rig.gd`, `rig_build.gd`, `rivet_plan.gd`). They are mid-change and fail gdlint, so they are kept on disk, not committed.
+  - **`n5-look`** (23 commits): the print toward the riso middle ground is done and evidenced, and the alley stage has a first build (`--arena=alley`). Weapon art has not started, and there is no REPORT. Open REQUEST from cast to look: held guns read oversized against the slimmer Rivet.
+  - **`d6-perf-city`** and **`d6-combat-notes`** finished at 18:42 with reports, unmerged.
+- **Next (when the owner frees the machine):** merge `d6-*` and `n5-*` onto main, run the gates, film the comparison against the targets, and resume or close the n5 lanes. The root `gtai-n5` and its worktrees are kept until then.
