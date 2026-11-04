@@ -3318,43 +3318,48 @@
       "context": "combat-choreography",
       "subject": "module-design",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "deviation",
       "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T00:47:48.354Z",
+      "evaluatedTs": "2026-11-04T03:11:48.056Z",
+      "worker": "79ccbe73-6bf5-4fcb-9204-d709c5f98cf5",
       "techniques": [
         {
-          "technique": "marked-unverifiable-region",
+          "technique": "locality-and-leverage",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_combat/flow/ComboChainDiagram.tsx:51 A call-site downcast across the store boundary: not enclosed in a typed accessor and not accompanied by an invariant."
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:132 types.ts mixes layout constants, colours, a mutable id generator (line 98) and the scrub/finding lookup. The technique's tell is a container whose name no longer predicts its contents."
         },
         {
           "technique": "io-free-core",
           "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_combat/choreography/index.tsx:52 The encounter simulation is a pure lib function given value inputs; the component only debounces and renders."
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/index.tsx:8 The encounter simulation is a pure lib function that the editor only calls and renders."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:9 Three inputs in, two SVG paths out. Bucketing and stacked-area path construction stay hidden from the timeline."
         },
         {
           "technique": "declarative-or-sequential",
           "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:13 A single pass fills two accumulators per bucket (player and enemy damage), the multiple-outputs case where an explicit loop is the right form."
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:34 The loop builds two outputs (top and bottom path strings) from one pass, which is the case where sequential form is correct."
         },
         {
           "technique": "emitted-code-names-from-a-root",
-          "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_combat/attributes/attribute-defaults-export.ts:38 The emitted Python imports its own `unreal` root and names the row struct by an absolute /Script/ path, so nothing depends on the caller's scope."
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/ue5-export.ts:5 Output is a standalone C++ text block for the user to paste, not a macro or splice that resolves names in a caller's scope."
         },
         {
-          "technique": "module-depth",
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/attributes/attribute-defaults-export.ts:28 Its input is a plain constructible record (tested in attribute-defaults-export.test.ts), so there is no host-only type to mirror."
+        },
+        {
+          "technique": "marked-unverifiable-region",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_combat/choreography/usePacingPaths.ts:7 Violates the rule against extracting purely for line count; adds module interface with exactly one caller and hides no decision.",
-          "carriedFrom": "2026-10-13"
+          "evidence": "src/components/modules/core-engine/sub_combat/flow/ComboChainDiagram.tsx:51 A call-site downcast across the store boundary: not enclosed in a typed accessor and not accompanied by an invariant.",
+          "carriedFrom": "2026-11-04"
         }
-      ],
-      "withdrawn": {
-        "worker": "c4ac28e8-cf9f-453c-a0ef-5a27af39a230",
-        "state": "deviation",
-        "at": "2026-11-04T00:48:22.377714+00:00",
-        "reason": "reviewer (sonnet): The cast at sub_combat/flow/ComboChainDiagram.tsx:51 is real, but flow/ is not among this context's files (attributes/ and choreography/). I could not confirm flow/ belongs to this context, and the verdict rests on that."
-      }
+      ]
     },
     "24d18aef-2104-4889-9d67-d20a91d5fdea/realtime-combat-semantics": {
       "context": "combat-dodge-timeline",
@@ -19467,6 +19472,38 @@
           "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:13 Repeated iterations come from a deterministic seeded combat formula, not from a non-deterministic model. There are no trials of a candidate to aggregate."
         }
       ]
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/module-design": {
+      "context": "core-engine-planning-shell",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:11:48.056Z",
+      "worker": "79ccbe73-6bf5-4fcb-9204-d709c5f98cf5",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/QuickActionsPanel.tsx:1 Same-shape forwarding with no behaviour. RoadmapChecklist.tsx:1 and ContextHealthBadge.tsx:1 are identical shims."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/usePlanMatrixMap.ts:7 Canvas layout and critical-path computation are pure functions in lib/implementation-planner/layout-engine. The hook only wires state."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/usePlanMatrixMap.ts:26 Plan dispatch goes through one shared usePlanDispatch door for both the map and the plan table, so a change to dispatch lands in one place."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/index.tsx:9 Recorded only as supporting evidence. The single hook hides pan/zoom, selection and dispatch state from the view and does not offset the shim deviation above."
+        }
+      ],
+      "registryProposal": "module-depth could distinguish a compatibility re-export that still has importers (a migration seam with a removal date) from one with zero importers (dead pass-through). TypeScript trees keep the second after moving a component, and the technique's pass-through definition covers both without saying which costs more."
     }
   }
 }

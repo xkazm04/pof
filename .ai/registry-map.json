@@ -11140,7 +11140,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:132 A file named types.ts holds scrub-lookup algorithms (computeScrubData, findAlertAt), severity colours, lane-height constants and a module-level id counter, so the filename no longer predicts what is inside and the file has several unrelated reasons to change.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "realtime-combat-semantics",
@@ -12183,7 +12187,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/QuickActionsPanel.tsx:1 QuickActionsPanel.tsx, RoadmapChecklist.tsx and ContextHealthBadge.tsx in core-engine/ are one-line re-exports of modules/shared components, and grep finds no importer of them (ReviewableModuleView imports ../shared directly), so they are pure pass-through layers that give each component a second, unused address.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-memory",
