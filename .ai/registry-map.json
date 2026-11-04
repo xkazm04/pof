@@ -2910,8 +2910,8 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "mcp-tools",
@@ -10362,8 +10362,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "deviation",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/cli/skills.ts:248 Skill packs are string-concatenated in front of a prompt that PromptBuilder already assembled, so a whole standing layer enters the model's text outside the assembler's ordering, budget and any fingerprint: the unsealed door the golden path names.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-runtime-assembly",
@@ -22605,13 +22609,12 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/lib/prompt-context.ts:103-152 formatDynamicContext() inlines the FULL scanned class/plugin/build-dependency lists with no cap, floor/elastic split or truncation notice, so a large UE project floods the prompt; the layered-composition assembler itself (src/lib/prompts/prompt-builder.ts:49-272) is otherwise well realized. [re-judged 2026-09-22: still holds - formatDynamicContext (prompt-context.ts:103) still inlines every class name via .map(c => c.name).join(', ') with no cap, floor/elastic split or truncation notice. The technique added since, elision-to-a-refetch-pointer, names the shape the fix would take.]",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256:d09e57cdf6e2d34e",
-          "evaluatedRevision": 34,
+          "evidence": "src/lib/prompt-context.ts:118 formatDynamicContext still inlines every scanned class name (and every plugin and Build.cs dependency) with no cap, no floor/elastic split, no degradation ladder and no truncation notice, so a large UE project floods the context layer of every prompt the builder assembles.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44,
           "source": "conform",
-          "revisionsBehind": 10,
-          "stale": true
+          "revisionsBehind": 10
         },
         {
           "subject": "production-prompt-architecture",
@@ -23575,8 +23578,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/RecentSessionRow.tsx:22 These components only display recorded prompt previews, quality scores and spend. A recursive search of src/components/modules/evaluator for PromptBuilder, systemInstruction, maxOutputTokens, buildPrompt and injectSkillsIntoPrompt found zero hits, so nothing here assembles or budgets a prompt.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "cost-metering",

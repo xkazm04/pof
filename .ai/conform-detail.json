@@ -6,23 +6,63 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-08-31",
-      "worker": "w10-gravitone-pof",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:22:31.958Z",
+      "worker": "d23ae61e-7853-4126-8127-b217abd67a98",
       "techniques": [
-        {
-          "technique": "layered-composition",
-          "verdict": "conformant",
-          "evidence": "src/lib/prompts/prompt-builder.ts:49-272 — one PromptBuilder class per prompt family, fixed section order enforced in build(), no post-return string concatenation found anywhere .build() is called"
-        },
         {
           "technique": "context-budgeting",
           "verdict": "deviation",
-          "evidence": "src/lib/prompt-context.ts:103-152 — formatDynamicContext() joins every scanned class/plugin/dependency name with no cap and no '...N more' notice; there is no degradation ladder anywhere in this module"
+          "evidence": "src/lib/prompt-context.ts:118 The full class list is inlined with no budget, no ladder and no 'N more not shown' notice. Re-checked 2026-11-04: the earlier verdict still holds."
         },
         {
           "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-context.ts:147 List variables are rendered as joined strings with no cap, and no variable declares a trust class. Partial credit: a missing required section fails loudly (prompt-builder.ts:233 throws)."
+        },
+        {
+          "technique": "context-reachability",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-context.ts:410 The scanned class list is reachable material, cached at scan time, and `scannedAt` is never rendered. The rules forbid the agent from checking it and line 152 calls it authoritative, so the agent is steered away from verifying a cache that may be stale."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/prompt-builder.ts:306 A fluent assembler exists, but the code itself documents hand-rolled prompts that bypass it. withRaw* setters accept pre-rendered text, build() returns an open string, and inside the header the volatile scan and error memory (line 395) come before the stable Rules/policy block."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompts/prompt-builder.ts:271 The assembler returns bare text with no digest of the standing layers. Prompt versions elsewhere are hand-set labels, not fingerprints, so a stale session cannot be detected."
+        },
+        {
+          "technique": "compression-hardens-deferred-decisions",
+          "verdict": "deviation",
+          "evidence": "src/types/prompt-evolution.ts:87 The evolution loop's shorten mutation (implemented at src/lib/prompt-evolution/mutations.ts:127) regex-deletes every parenthetical and em-dash aside, which is where hedges and conditions live. Nothing reviews the diff for a deferred decision that the cut resolved."
+        },
+        {
+          "technique": "task-envelope",
           "verdict": "conformant",
-          "evidence": "src/lib/prompts/prompt-builder.ts:232-237 — build() throws loudly on missing required sections (projectContext, taskInstructions) rather than silently rendering a gap"
+          "evidence": "src/lib/prompt-context.ts:416 The done criterion is a check the model can run against the artifact, not 'verify your answer'. Domain lines are scope statements, not expertise claims."
+        },
+        {
+          "technique": "pinned-prompt-clock",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/prompt-context.ts:105 No date or time is rendered anywhere in the header (even scannedAt is omitted), so the precondition does not hold."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/prompts/prompt-builder.ts:4 This builds one prompt per turn with no transcript layer. The Claude CLI owns the history."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/prompt-context.ts:103-152 formatDynamicContext() inlines the FULL scanned class/plugin/build-dependency lists with no cap, floor/elastic split or truncation notice, so a large UE project floods the prompt; the layered-composition assembler itself (src/lib/prompts/prompt-builder.ts:49-272) is otherwise well realized. [re-judged 2026-09-22: still holds - formatDynamicContext (prompt-context.ts:103) still inlines every class name via .map(c => c.name).join(', ') with no cap, floor/elastic split or truncation notice. The technique added since, elision-to-a-refetch-pointer, names the shape the fix would take.]",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by d23ae61e-7853-4126-8127-b217abd67a98"
         }
       ]
     },
@@ -19135,6 +19175,98 @@
           "evidence": "src/hooks/useChecklistCLI.ts:100 A mid-run dispatch is discarded with no trace. useModuleCLI.sendPrompt (src/hooks/useModuleCLI.ts:185) dispatches without checking isRunning into a terminal that, by the comment at useChecklistCLI.ts:97, drops input while streaming."
         }
       ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/prompt-assembly": {
+      "context": "cli-terminal-shell",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:22:31.958Z",
+      "worker": "d23ae61e-7853-4126-8127-b217abd67a98",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/skills.ts:248 Concatenation after assembly. The packs also land ahead of the ## Project Context section, so they are not a section the assembler owns."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/useTaskQueue.ts:951 Any existing session is resumed. Nothing compares the skill set or standing prompt the session was born under with the current one, so the session can go stale after a configuration change."
+        },
+        {
+          "technique": "deferred-interface-invalidation",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/skills.ts:239 Skill changes never rewrite a live session's standing text. They take effect when the next session starts."
+        },
+        {
+          "technique": "context-ownership-regimes",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/useTaskQueue.ts:770 Agent-held regime: the client sends only the new turn plus a resume id. The CLI holds and compacts the transcript, and the client runs no editing or compaction of its own."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/useTaskQueue.ts:832 The interactive path also sends only deltas, so the client never holds a message list to compact."
+        },
+        {
+          "technique": "contributed-document-admission",
+          "verdict": "not-applicable",
+          "evidence": "src/components/cli/skills.ts:210 Skill packs are authored in-repo (SKILL_PACKS). Nothing is installed from an outside author."
+        }
+      ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/prompt-assembly": {
+      "context": "ai-developer-tools-api",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:22:31.958Z",
+      "techniques": [
+        {
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/live-token/route.ts:82 Hand-written. Line 43 declares 'arpg-combat-effects' etc. and line 15 says the declarations 'mirror advisorTools.ts' rather than being derived from it."
+        },
+        {
+          "technique": "response-reservation-sizing",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:48 Raised from 4096 after truncations rather than derived from a measured length percentile. There is no escalate-on-cut retry, although truncation is honestly detected at line 110."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "src/app/api/claude-terminal/query/route.ts:64 The resume id is forwarded straight to the CLI. No session fingerprint is stored or compared before continuing."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "src/app/api/one-shot/step/route.ts:32 Client inputs are typed and capped (400 chars). Malformed evidence entries are dropped rather than rendered half-formed."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "conformant",
+          "evidence": "src/app/api/one-shot/step/route.ts:257 The step route composes server-side through the single buildStepProducePrompt. Caveat: forge-ability and claude-terminal/query still proxy prompt text built by client-side assemblers."
+        }
+      ],
+      "withdrawn": {
+        "worker": "d23ae61e-7853-4126-8127-b217abd67a98",
+        "state": "deviation",
+        "at": "2026-11-04T01:23:27.040360+00:00",
+        "reason": "reviewer (sonnet): I found no advisorTools.ts anywhere in the repo, and I did not find the dispatcher that decides which panel names are accepted; the evidence says the declaration 'does not accept' the short names and that both texts are hand-copied from advisorTools.ts, and neither claim can be confirmed. Line 82 it"
+      }
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/prompt-assembly": {
+      "context": "session-analytics-reporting",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:22:31.958Z",
+      "worker": "d23ae61e-7853-4126-8127-b217abd67a98",
+      "techniques": []
     }
   }
 }
