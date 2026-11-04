@@ -1,0 +1,150 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
+  "subject": "agent-runtime-assembly",
+  "evaluatedAt": "2026-11-04T02:42:08.960022+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "quality-evaluation-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/harness/route.ts:351 POST /api/harness takes projectPath from an unauthenticated request body and makes it the cwd of a Claude session started with --dangerously-skip-permissions and Bash/Edit/Write (route.ts:343, executor.ts:239), so a key settable through the service door decides where a standing permission carve-out lets the agent write.",
+      "techniques": [
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:351 The widened tier rule says a path key read by a skip-approval carve-out must come from the startup tier only. Here it comes from an HTTP body, and the route has no requireOperator. The sibling experiment/run route gets this right: it calls requireOperator(req) at line 19 and never takes the project path from the caller."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness-runs-db.ts:18 The route calls reapStrandedRuns() (route.ts:218). That function closes orphaned 'running' rows as a first-class 'interrupted' status, not as 'error', and an operator can reopen them."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/harness/route.ts:138 Harness 'checkpoints' are git SHAs per area. They are not a stored conversation state that gets resumed, so the full-versus-delta mode question never comes up."
+        }
+      ]
+    },
+    {
+      "context": "blender-mcp-bridge",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/blender-mcp/service.ts:23 This context is a serialized TCP wire client to the Blender addon, called from app code. I searched src/lib/blender-mcp for subagent, compaction, checkpoint, middleware and registerHook and found nothing: there is no hook chain, no extension loading, no model loop and no stored conversation state, which puts it on the mcp-tools side of the seam the golden path draws.",
+      "techniques": [],
+      "absenceTerms": [
+        "subagent",
+        "compaction",
+        "checkpoint",
+        "middleware",
+        "registerHook"
+      ]
+    },
+    {
+      "context": "cli-terminal-output",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/cli/TerminalOutput/helpers.tsx:54 This context only renders a stream of log entries it receives (pairing tool_use with tool_result for display). I searched src/components/cli/TerminalOutput for subagent, compaction, checkpoint and middleware and found nothing, so it builds no part of the runtime around a model call.",
+      "techniques": [],
+      "absenceTerms": [
+        "subagent",
+        "compaction",
+        "checkpoint",
+        "middleware"
+      ]
+    },
+    {
+      "context": "ue5-bridge-client",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/ue5-bridge/query/route.ts:15 This context is a client layer for the UE5 Remote Control and PoF Bridge plus its stores and hooks. I searched its directories for subagent, compaction, registerHook and checkpointer and found nothing, so there is no agent loop, contributed-hook chain or conversation checkpoint for the subject to govern.",
+      "techniques": [],
+      "absenceTerms": [
+        "subagent",
+        "compaction",
+        "registerHook",
+        "checkpointer"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-runtime-assembly",
+      "context": "game-world-content-api",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (procgen-result/route.ts:11) is a doc comment in one CRUD route and does not show the precondition is absent. The context also holds src/app/api/audio-gen/route.ts, which builds a prompt with audioPromptFor, calls a generation provider, and handles caching and quota. The same context hold"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-04T02:42:08.960022+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "checkpoint-mode-custody",
+        "indeterminate-closure-on-interruption",
+        "operator-tier-code-loading"
+      ],
+      "deviations": 1,
+      "context": "quality-evaluation-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T02:42:08.960022+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "blender-mcp-bridge",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T02:42:08.960022+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "cli-terminal-output",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T02:42:08.960022+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-bridge-client",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T02:42:08.960022+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "game-world-content-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

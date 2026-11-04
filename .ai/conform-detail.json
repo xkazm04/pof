@@ -19380,6 +19380,77 @@
       "evaluatedTs": "2026-11-04T02:28:31.292Z",
       "worker": "83e540d0-76f4-4b17-9fd0-01fa40063b7f",
       "techniques": []
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/agent-runtime-assembly": {
+      "context": "quality-evaluation-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:42:08.960Z",
+      "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
+      "techniques": [
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "deviation",
+          "evidence": "src/app/api/harness/route.ts:351 The widened tier rule says a path key read by a skip-approval carve-out must come from the startup tier only. Here it comes from an HTTP body, and the route has no requireOperator. The sibling experiment/run route gets this right: it calls requireOperator(req) at line 19 and never takes the project path from the caller."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness-runs-db.ts:18 The route calls reapStrandedRuns() (route.ts:218). That function closes orphaned 'running' rows as a first-class 'interrupted' status, not as 'error', and an operator can reopen them."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/harness/route.ts:138 Harness 'checkpoints' are git SHAs per area. They are not a stored conversation state that gets resumed, so the full-versus-delta mode question never comes up."
+        }
+      ]
+    },
+    "d6a661e1-369c-4819-85cf-0a6c31282ef6/agent-runtime-assembly": {
+      "context": "blender-mcp-bridge",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:42:08.960Z",
+      "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
+      "techniques": []
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/agent-runtime-assembly": {
+      "context": "cli-terminal-output",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:42:08.960Z",
+      "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
+      "techniques": []
+    },
+    "a43ea6ff-3c0b-411c-8ace-f97992845e63/agent-runtime-assembly": {
+      "context": "ue5-bridge-client",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:42:08.960Z",
+      "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
+      "techniques": []
+    },
+    "01327ce7-fd73-460c-841a-3cd2466211ba/agent-runtime-assembly": {
+      "context": "game-world-content-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:42:08.960Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
+        "state": "not-applicable",
+        "at": "2026-11-04T02:42:57.553612+00:00",
+        "reason": "reviewer (sonnet): The anchor (procgen-result/route.ts:11) is a doc comment in one CRUD route and does not show the precondition is absent. The context also holds src/app/api/audio-gen/route.ts, which builds a prompt with audioPromptFor, calls a generation provider, and handles caching and quota. The same context hold"
+      }
     }
   }
 }

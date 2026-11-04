@@ -6572,7 +6572,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/blender-mcp/service.ts:23 This context is a serialized TCP wire client to the Blender addon, called from app code. I searched src/lib/blender-mcp for subagent, compaction, checkpoint, middleware and registerHook and found nothing: there is no hook chain, no extension loading, no model loop and no stored conversation state, which puts it on the mcp-tools side of the seam the golden path draws.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "engine-host-contract",
@@ -10275,7 +10279,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/helpers.tsx:54 This context only renders a stream of log entries it receives (pairing tool_use with tool_result for display). I searched src/components/cli/TerminalOutput for subagent, compaction, checkpoint and middleware and found nothing, so it builds no part of the runtime around a model call.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         }
       ],
       "governance": "governed"
@@ -23078,7 +23086,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/harness/route.ts:351 POST /api/harness takes projectPath from an unauthenticated request body and makes it the cwd of a Claude session started with --dangerously-skip-permissions and Bash/Edit/Write (route.ts:343, executor.ts:239), so a key settable through the service door decides where a standing permission carve-out lets the agent write.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "aaa-craft-rubric-authoring",
@@ -25321,7 +25333,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/ue5-bridge/query/route.ts:15 This context is a client layer for the UE5 Remote Control and PoF Bridge plus its stores and hooks. I searched its directories for subagent, compaction, registerHook and checkpointer and found nothing, so there is no agent loop, contributed-hook chain or conversation checkpoint for the subject to govern.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "retrieval",
