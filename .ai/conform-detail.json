@@ -19340,6 +19340,46 @@
       "evaluatedTs": "2026-11-04T02:04:58.622Z",
       "worker": "82a26262-0181-4ee4-8791-78ef3bfca5d7",
       "techniques": []
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/agent-memory": {
+      "context": "build-quality-monitoring",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:28:31.292Z",
+      "worker": "83e540d0-76f4-4b17-9fd0-01fa40063b7f",
+      "techniques": []
+    },
+    "0b31785f-a922-4da7-ac3f-bcf06c56f97f/agent-memory": {
+      "context": "ue5-state-sync",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:28:31.292Z",
+      "worker": "83e540d0-76f4-4b17-9fd0-01fa40063b7f",
+      "techniques": []
+    },
+    "3f0f619b-52a3-4238-b72a-8df88fd452fd/agent-memory": {
+      "context": "item-catalog-pipeline",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:28:31.292Z",
+      "worker": "83e540d0-76f4-4b17-9fd0-01fa40063b7f",
+      "techniques": []
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/agent-memory": {
+      "context": "catalog-browser-ui",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:28:31.292Z",
+      "worker": "83e540d0-76f4-4b17-9fd0-01fa40063b7f",
+      "techniques": []
     }
   }
 }

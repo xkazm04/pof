@@ -7433,8 +7433,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/evaluator/BuildHealthDashboard/index.tsx:21 This context renders UE5 build-health reports, CSV profiler data and batch-review progress, and holds no agent memory store; across src/components/modules/evaluator, rg -i for episod|agentMemory|agent_memory|agent-memory|forgetting|working memory found 0 files, its only 'memory' hits are the profiler's MemoryChart (RAM usage) and an in-memory batch comment, and 'recall' found 0 files.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "quality-gates",
@@ -7906,8 +7910,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/layout-lab/LabSearch.tsx:25 The only memory-shaped things in this context are UI conveniences: search recents ('recall' = recent picks), remembered tabs and preferences, and a deterministic coach ladder. No LLM agent store exists; rg -i for episod|agentMemory|agent_memory|agent-memory|forgetting|working memory across src/components/layout-lab and src/app/layout found 0 files.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "eval-harness",
@@ -16511,8 +16519,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/layout-lab/steps/ItemArt.tsx:59 Each Produce call builds a stateless prompt from the entity name plus the operator's direction, and no recalled agent memory is injected; the step-level genHistory is an artist-facing candidate re-roll record that never goes back into the prompt; rg -i for episod|agentMemory|agent_memory|agent-memory|forgetting|working memory across src/components/layout-lab, src/lib/catalog/pipelines, src/__tests__/catalog and e2e found 0 files.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "catalog-pipeline-authoring",
@@ -26190,8 +26202,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel.ts:6 These panels track live editor state through a UE bridge sync ledger and write log, with no LLM agent and no remembered beliefs; rg -i across src/components/modules/project-setup found 0 files for memory, recall, episod, agentMemory and forgetting.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "quality-gates",
