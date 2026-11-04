@@ -659,3 +659,11 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **Dropped:** the pure lanky and pure android bodies, the riso + light variants, effect light alone, the market and the merge.
 - **Evidence:** the verdict page is claude.ai/artifact/UJ3qb5wqriCPCRJREVGpMC; `targets-2026-11-04/verdicts.json` (47 verdicts), `img/` (24 kept images); the round sources are in `kiro/gtai-art/`.
 - **PoF gap (worked around):** PoF has no image-round verdict surface. The rounds ran through a standalone script (`kiro/gtai-art/gen.mjs`, sequential `codex exec` image_gen) and a claude.ai artifact with a db. Candidate: a PoF "Look rounds" room that runs the rounds and records verdicts into the catalog pipeline's acceptance.
+
+### 2026-11-04 17:40 to 2026-11-05 09:00: plan (chase the visual targets, two lanes only)
+- **Owner (handshake):** the lanes are slim cast rigs, look (riso middle ground) and weapon art from the sheets, started right away. "use two subagents at max though so I can work in parallel with other development".
+- **Root `C:\Users\kazda\kiro\gtai-n5`**, two Opus lanes from main `a1275c82`:
+  - **`n5-cast`:** Rivet as the lanky + android hybrid, at about 1.1x the human footprint; slim patrol, riot and SWAT cops; the crowd on one footprint. Character part sheets come through Codex under `image.lock`.
+  - **`n5-look`:** the D5 print toward the Inked Grime + riso middle ground (fine halftone, slight misregistration, paper fibre, grain toned down but kept, no cast shadows) as a JSON dial; then an alley close-up stage; then weapon art from the sheets (held parts, pickups, coloured effects, the plasma sword +20 %, and the Gatling as a new weapon with barrels +50 %).
+- **No showcase lane** (the owner's limit of two). The Director merges in the morning: the day lanes `d6-perf-city` and `d6-combat-notes` (until 19:00), then `n5-*`.
+- The briefs carry `TARGETS.md` as the reference, the secondary-monitor override, and the rule that combat must not regress.
