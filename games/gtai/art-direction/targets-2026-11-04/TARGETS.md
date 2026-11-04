@@ -55,3 +55,15 @@ The owner judged two Codex image_gen brainstorm rounds on the "RTAI Look Table" 
 - Round 2: effect light on Inked Grime, the market square, and the full merge.
 
 **No cast shadows** came up in the owner's round 1 note on dynamic light ("remove shadows"). The look carries no long cast shadows.
+
+## The ghosts (Look Table round 3, owner verdict 2026-11-04 23:45)
+The owner: "Beautiful concepts. ... For Mage use Ohm intead of Old Arc. Otherwise keep names of their winning variants and add into nightly run effort to create these characters, animate transformation between characters, design and implement their attacks."
+
+| Ghost | Name | The winning concept | Image |
+|---|---|---|---|
+| Mechanic | **Dent** | A battered crash-test robot: a dented humanoid dummy shape, black-and-yellow target discs on the head and joints, a seatbelt harness, a cracked visor. It spent its life being driven into walls and loves the impact. **Ability:** it seizes cars, rides or steers them into enemies, then overloads them until they blow up on impact. | `img/ghost_dent_mechanic.jpg` |
+| Bulky | **Tonnage** | A giant hydraulic stamping press walking on four piston legs, the press head as a heavy brow, die-plates as armour, about 3x the hero's height. Slow, enormous, very resistant, destructive. **Ability:** a press-head slam that flattens a police car, with a shockwave that cracks the street. | `img/ghost_tonnage_bulky.jpg` |
+| Fast | **Kerf** | A laser-cutter gantry head freed from its rails: a sleek, narrow, hovering cutting head with a mirror-lens eye and slim jointed limbs ending in beam emitters, with a duelist's silhouette. Precise and silent. **Ability:** it blinks along a straight teal line behind a target and slices with a thin cutting beam, leaving a glowing cut line in the air (teleport and assassinate). | `img/ghost_kerf_fast.jpg` |
+| Mage | **Ohm** | The elder spot-welding robot: small and hunched, older than everything in the factory, a welding-gun arm like a cane, twin copper electrode fingers, a frayed cable beard, cracked goggles. Smaller than Rivet. **Ability:** a forked bolt from the fingertips (single), and later lightning arcing to many machines at once (mass), strong against machines. | `img/ghost_ohm_mage.jpg` |
+
+Dropped variants: Clutch, Torque, Slag, Hoist, Flick, Dart, Spool, and the substation keeper (whose name, Ohm, moved to the welder).

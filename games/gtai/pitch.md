@@ -146,6 +146,12 @@ The owner, verbatim:
   - The bulky ghost overlaps Rivet's two-stage transformation (visual targets, 2026-11-04). Is his big form this ghost's form?
   - The current powers in the game (Hauler, Gearbox) map onto the bulky and mechanic ghosts.
 - **Concept art:** three variants per ghost for triage, in Look Table round 3. Kept ones become night-run targets.
+- **[owner, 2026-11-04 23:45] The winners and names** (images and descriptions: `art-direction/targets-2026-11-04/TARGETS.md`, The ghosts):
+  - **Dent** (mechanic): the crash-test robot.
+  - **Tonnage** (bulky): the walking stamping press.
+  - **Kerf** (fast): the freed laser-cutter head; this settles the fast ghost's origin.
+  - **Ohm** (mage): the elder spot-welder, with the name Ohm taken from the substation keeper.
+  - The owner: "add into nightly run effort to create these characters, animate transformation between characters, design and implement their attacks."
 
 
 The owner set three of the abilities: car manipulation, remote turret manipulation, and transforming into a large
