@@ -723,3 +723,36 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Act 4 Kronk: magnet crane Kronk, Scrap-God, crusher Messiah.
   - Finale, Krump's machine: command walker Big Brass, Clean Sweep, tank-mech Top Brass.
   - The owner fuses a concept, its powers and a name per boss. The winners become targets to chase in the daily runs.
+
+### 2026-11-05 afternoon: owner verdicts on the calls page and boss round 4; day run d7 (two builders); boss round 5
+- **Reading the verdicts:** Claude Code was signed in to an account in another organization, so it could not read the pages' saved answers. The owner switched accounts, and both pages read directly.
+- **Owner Calls (37 of 38 answered; `perf-city-2` was informational):**
+  - 21 picks keep the built default.
+  - **16 changed the default:**
+    - Rivet: smaller at 1.1x the crowd (`cast-1`), plain head with no visor (`cast-8`), light tan (`cast-9`).
+    - The print and weapons: effects in ink (`look-3`), held guns at fixed class size (`look-4`), pale-paper alley (`look-5`), pickup paper disc (`look-7`), a tan ink for held weapons (`look-8`, not built yet), the shard as a lozenge (`look-12`), the flame as teardrops (`look-14`), the Gatling at true width (`look-18`).
+    - Dent: steers the seized car from afar (`ghost-powers-3`), and is locked until his act (`ghost-powers-5`, not built yet).
+  - **Notes:**
+    - Melee: "The angle and holding of katana and all melee weapons does not seem to be very natural. We may need to create character version with in-built holding the melee weapons to fit naturally".
+    - Guns: "the holding of larger guns above uzi does not look natural and we may need to fix the Rivet states with different equipped weaponry".
+  - **Conflict:** `cast-3` ("guns scale with Rivet", 11:43) and `look-4` ("off", 11:46) set the same value; the later pick wins.
+- **Boss round 4 verdicts:**
+  - **Kept:** Kronk = the magnet crane (b10); Servo = the drone hub (b5).
+  - **King:** iterate the signal monarch (b2) following the original REG-1 King's approach, covering him and his gang in luxury and wealth; the name stays King.
+  - **Torque:** "replicate original design (smaller and extremely agile bot)".
+  - **Finale:** none kept; the command walker (b13) and the brass mech (b15) become finale mini-bosses.
+  - **Mini-bosses:**
+    - b1 toll regent becomes a quest mini-boss with a new name;
+    - b6 strikebreaker becomes a quest mini-boss;
+    - b8 drop hammer becomes a quest mini-boss, placement open;
+    - b7 big riveter (renamed) and b9 Fever become Torque's companions in Act 3.
+  - **Dropped:** b3, b4, b11, b12, b14.
+- **Day run d7** (root `kiro/gtai-d7`, 15:12-20:00, freeze 19:30, report 19:40), two lanes from rtai main `1028c15d`:
+  - **`d7-calls`** flips the 16 changed defaults (old ones stay one flag away) and builds `look-8` and `ghost-powers-5`.
+  - **`d7-held`** builds Rivet's equipped states, one hold per weapon class (blade, long gun, heavy, sidearm, chainsaw), with new arm and claw part art allowed. It deletes the two-hand grip and works on the 1.1x Rivet.
+  - **Billing:** the primary key reported "Credit balance is too low" at launch, and the run moved to the backup key (`api2`) as designed.
+- **Look Table round 5** (`kiro/gtai-art/r5`):
+  - King x3: the gilded press king, the signal monarch gilded, the court on wheels;
+  - Torque x3, small and agile: fever sprinter, pogo riveter, hot scuttler;
+  - Finale x3: the five-sided fortress walker, General Krump in a command suit, the CLEAN SWEEP core;
+  - two rename cards, for b1 (Turnstile?) and b7 (Bucker?).
