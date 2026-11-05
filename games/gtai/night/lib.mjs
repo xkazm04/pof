@@ -122,6 +122,15 @@ export function apiKeyFromText(text) {
   return m ? m[1].trim() : null;
 }
 
+/** The second paid key (owner, 2026-11-05): ANTHROPIC_API_KEY_BACKUP, used once the primary key is drained. Never printed. */
+export function backupKeyFromText(text) {
+  const m = String(text ?? '').match(/^\s*(?:ANTHROPIC_API_KEY_BACKUP|ANTRHOPIC_API_KEY_BACKUP)\s*=\s*["']?([^"'\r\n]+)["']?\s*$/m);
+  return m ? m[1].trim() : null;
+}
+
+/** 'api' is the primary key and 'api2' the backup key: both are paid paths that can drain. */
+export const isApi = (m) => m === 'api' || m === 'api2';
+
 /** When a limit names its reset, wait exactly that long (+1 min); otherwise 15 min. */
 export function resetAt(text, nowMs = Date.now()) {
   const epoch = text.match(/limit reached\|(\d{10})/);
@@ -136,7 +145,7 @@ export function resetAt(text, nowMs = Date.now()) {
 
 /** Judge drainage on error surfaces only, never on what the agent wrote (the game has a boss "Triage & Billing"). */
 export function classifyFailure({ mode, timedOut, errSurface, nowMs = Date.now() }) {
-  const drained = mode === 'api' && !timedOut && API_DRAINED.test(errSurface);
+  const drained = isApi(mode) &&!timedOut && API_DRAINED.test(errSurface);
   const limited = !drained && !timedOut && LIMITED.test(errSurface);
   return {
     drained, drainReason: drained ? `${errSurface.match(API_DRAINED)?.[0] ?? ''} ${errSurface.trim().slice(0, 200)}` : null,
@@ -144,21 +153,21 @@ export function classifyFailure({ mode, timedOut, errSurface, nowMs = Date.now()
   };
 }
 
-export function createBilling({ file, key = null, want = 'api-first', now = () => Date.now(), log = () => {} }) {
+export function createBilling({ file, key = null, key2 = null, want = 'api-first', now = () => Date.now(), log = () => {} }) {
   const read = () => { try { return JSON.parse(fs.readFileSync(file, 'utf8') || '{}'); } catch { return {}; } };
   return {
-    mode: 'subscription', key, want, blocked: { api: 0, subscription: 0 }, reasons: {},
+    mode: 'subscription', key, key2, want, blocked: { api: 0, api2: 0, subscription: 0 }, reasons: {},
     sync() {
       const saved = read();
-      if (saved.blocked) { this.blocked = { api: 0, subscription: 0, ...saved.blocked }; this.reasons = saved.reasons ?? {}; }
+      if (saved.blocked) { this.blocked = { api: 0, api2: 0, subscription: 0, ...saved.blocked }; this.reasons = saved.reasons ?? {}; }
       else if (saved.exhausted) this.blocked.api = Date.parse(saved.at) + API_REPROBE_MIN * 60_000; // the pre-2026-11-01 shape
     },
     save() {
       const iso = (ms) => (ms ? new Date(ms).toISOString() : null);
-      fs.writeFileSync(file, JSON.stringify({ blocked: this.blocked, until: { api: iso(this.blocked.api), subscription: iso(this.blocked.subscription) }, reasons: this.reasons, updated: new Date(now()).toISOString() }, null, 2));
+      fs.writeFileSync(file, JSON.stringify({ blocked: this.blocked, until: { api: iso(this.blocked.api), api2: iso(this.blocked.api2), subscription: iso(this.blocked.subscription) }, reasons: this.reasons, updated: new Date(now()).toISOString() }, null, 2));
     },
-    order() { return this.want === 'subscription' ? ['subscription'] : this.want === 'api' ? ['api'] : ['api', 'subscription']; },
-    usable(m) { return m === 'subscription' || !!this.key; },
+    order() { return this.want === 'subscription' ? ['subscription'] : this.want === 'api' ? ['api', 'api2'] : ['api', 'api2', 'subscription']; },
+    usable(m) { return m === 'subscription' || (m === 'api' ? !!this.key : m === 'api2' ? !!this.key2 : false); },
     pick() {
       this.sync();
       const m = this.order().find((x) => this.usable(x) && this.blocked[x] <= now()) ?? null;
@@ -179,13 +188,14 @@ export function createBilling({ file, key = null, want = 'api-first', now = () =
       const e = { ...base };
       delete e.ANTHROPIC_API_KEY; delete e.ANTHROPIC_AUTH_TOKEN;
       if (m === 'api') e.ANTHROPIC_API_KEY = this.key;
+      if (m === 'api2') e.ANTHROPIC_API_KEY = this.key2;
       return e;
     },
     line() {
       this.sync();
       const bl = (m) => (this.blocked[m] > now() ? `blocked until ${ts(new Date(this.blocked[m]))}` : 'free');
       const next = this.order().find((x) => this.usable(x) && this.blocked[x] <= now()) ?? 'nothing (waiting)';
-      return `API key ${this.key ? bl('api') : 'absent'}, subscription ${bl('subscription')} -> next iteration uses ${next}`;
+      return `API key ${this.key ? bl('api') : 'absent'}, backup key ${this.key2 ? bl('api2') : 'absent'}, subscription ${bl('subscription')} -> next iteration uses ${next}`;
     },
   };
 }

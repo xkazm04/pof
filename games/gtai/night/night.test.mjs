@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { apiKeyFromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, resetAt, ts } from './lib.mjs';
+import { apiKeyFromText, backupKeyFromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, resetAt, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve('C:/night-root');
@@ -188,4 +188,29 @@ test('the 5-hour subscription limit is a LIMIT that waits for its reset (2026-11
   assert.equal(new Date(r.resetAt).getHours(), 15);
   assert.equal(new Date(r.resetAt).getMinutes(), 41);
   assert.equal(classifyFailure({ mode: 'subscription', timedOut: false, errSurface: '"api_error":"usage_limit_reached"', nowMs: now }).limited, true);
+});
+
+test('billing: the backup key (ANTHROPIC_API_KEY_BACKUP) is a second paid path between the primary key and the subscription', () => {
+  const { b, tick } = mkBilling({ opts: { key2: 'sk-backup' } });
+  assert.deepEqual(b.order(), ['api', 'api2', 'subscription']);
+  assert.equal(b.pick(), 'api');
+  b.block('api', at(22, 45).getTime(), 'credit balance is too low');
+  assert.equal(b.pick(), 'api2', 'the backup key takes over when the primary drains');
+  assert.equal(b.env({ ANTHROPIC_API_KEY: 'sk-shell' }, 'api2').ANTHROPIC_API_KEY, 'sk-backup');
+  assert.equal(b.env({}, 'api').ANTHROPIC_API_KEY, 'sk-test');
+  assert.equal(b.env({ ANTHROPIC_API_KEY: 'sk-shell' }, 'subscription').ANTHROPIC_API_KEY, undefined);
+  b.block('api2', at(22, 50).getTime(), 'credit balance is too low');
+  assert.equal(b.pick(), 'subscription');
+  assert.equal(classifyFailure({ mode: 'api2', timedOut: false, errSurface: 'credit balance is too low' }).drained, true);
+  tick(46 * 60_000);
+  assert.equal(b.pick(), 'api', 'the primary is re-probed first');
+  const { b: none } = mkBilling();
+  assert.equal(none.usable('api2'), false, 'no backup key: the path is skipped');
+});
+
+test('billing: backup key spellings and that the primary never matches the backup line', () => {
+  assert.equal(backupKeyFromText('ANTHROPIC_API_KEY_BACKUP=sk-c\n'), 'sk-c');
+  assert.equal(backupKeyFromText('ANTRHOPIC_API_KEY_BACKUP="sk-d"'), 'sk-d');
+  assert.equal(apiKeyFromText('ANTHROPIC_API_KEY_BACKUP=sk-c\n'), null);
+  assert.equal(backupKeyFromText('ANTHROPIC_API_KEY=sk-a'), null);
 });

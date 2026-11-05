@@ -19,7 +19,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, buildPrompt, checkPaths, classifyFailure, createBilling, parseConfig, phaseAt, planTimes, ts } from './lib.mjs';
+import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const [cmd, ...rest] = process.argv.slice(2);
@@ -56,8 +56,10 @@ const billing = createBilling({ file: path.join(ROOT, 'billing.json'), log });
 function loadBilling(quiet = false) {
   billing.want = String(opts.billing ?? 'api-first');
   if (!['api-first', 'api', 'subscription'].includes(billing.want)) die(`--billing must be api-first|api|subscription`);
-  billing.key = apiKeyFromText(readIf(String(opts.dotenv ?? REPO_ENV)));
-  if (!quiet && billing.want !== 'subscription' && !billing.key) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY in .env - using the subscription');
+  const dotenv = readIf(String(opts.dotenv ?? REPO_ENV));
+  billing.key = apiKeyFromText(dotenv);
+  billing.key2 = backupKeyFromText(dotenv);
+  if (!quiet && billing.want !== 'subscription' && !billing.key && !billing.key2) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY / ANTHROPIC_API_KEY_BACKUP in .env - using the subscription');
   billing.pick();
 }
 
@@ -147,8 +149,8 @@ async function laneLoop(lane, t, texts) {
     fs.writeFileSync(stateFile(lane.id), JSON.stringify(state, null, 2));
     log(`${lane.id}: iteration ${n} [${r.billing}${r.keySource ? `/${r.keySource}` : ''}] ${r.timedOut ? 'stopped at cap' : `exit ${r.code}`} ${r.wallS}s${r.costUsd != null ? ` $${r.costUsd.toFixed(2)}` : ''}${r.limited ? ' USAGE-LIMIT' : ''}`);
     // Drained or limited mid-iteration: block that path, go straight on with the next free one. REPORT is retried.
-    if (r.drained) { billing.block('api', Date.now() + API_REPROBE_MIN * 60_000, r.drainReason ?? 'api error'); continue; }
-    if (r.limited) { billing.block(r.billing, r.billing === 'api' ? Math.min(r.resetAt, Date.now() + API_REPROBE_MIN * 60_000) : r.resetAt, r.limitReason ?? 'usage limit'); continue; }
+    if (r.drained) { billing.block(r.billing, Date.now() + API_REPROBE_MIN * 60_000, r.drainReason ?? 'api error'); continue; }
+    if (r.limited) { billing.block(r.billing, isApi(r.billing) ? Math.min(r.resetAt, Date.now() + API_REPROBE_MIN * 60_000) : r.resetAt, r.limitReason ?? 'usage limit'); continue; }
     if (phase === 'REPORT' && !r.isError) {
       state.reportedFor = t.until.toISOString();
       fs.writeFileSync(stateFile(lane.id), JSON.stringify(state, null, 2));
@@ -210,7 +212,7 @@ function laneSummary(l) {
   const journal = readIf(path.join(l.cwd, 'JOURNAL.md'));
   return {
     l, st, last: st.iterations.at(-1), cost: st.iterations.reduce((s, i) => s + (i.costUsd ?? 0), 0),
-    apiCost: st.iterations.filter((i) => i.billing === 'api').reduce((s, i) => s + (i.costUsd ?? 0), 0),
+    apiCost: st.iterations.filter((i) => isApi(i.billing)).reduce((s, i) => s + (i.costUsd ?? 0), 0),
     journalLast: journal.split('\n').map((x) => x.trim()).filter(Boolean).at(-1) ?? '(no JOURNAL.md yet)',
   };
 }
@@ -253,7 +255,7 @@ function billingCmd() {
   loadBilling(true);
   const r = opts.reset === true ? 'all' : opts.reset;
   if (r) {
-    for (const m of r === 'all' ? ['api', 'subscription'] : [String(r)]) { billing.blocked[m] = 0; delete billing.reasons[m]; }
+    for (const m of r === 'all' ? ['api', 'api2', 'subscription'] : [String(r)]) { billing.blocked[m] = 0; delete billing.reasons[m]; }
     billing.save();
   }
   process.stdout.write(`billing: ${billing.line()}\n`);
