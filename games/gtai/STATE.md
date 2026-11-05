@@ -760,3 +760,20 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **Install:** 0.166 is installed side by side in `kiro/codex-next`. The global 0.160 is untouched, because lanes may call it mid-run. `gtai-art/gen-next.mjs` is the runner that uses 0.166.
   - **Model:** neither binary names a 2.6 model; both list `gpt-image-2`, `gpt-image-1.5` and older. The PNGs' C2PA claim says only "ChatGPT / gpt-image". OpenAI says Images 2.6 reached Codex on 2026-11-04, so the model is chosen server-side and cannot be verified locally.
   - **Comparison:** round 5's nine sheets were run twice from the same briefs and references, then paired on the Look Table (Version 6). Timings: 0.160 averaged 152 s, 0.166 averaged 141 s, with no 50 % speed-up. The pairs look near-identical in style.
+
+### 2026-11-05 evening: boss verdicts closed (Look Table round 5)
+- **Act bosses decided:**
+  - King: the court on wheels (0.166);
+  - Servo: the drone hub;
+  - Torque: the fever sprinter (0.166), at or under Rivet's height in the engine;
+  - Kronk: the magnet crane;
+  - **Finale: General Krump himself** in the command suit (0.160).
+- **Finale extras:**
+  - High Command, the headquarters walker (0.166): "one of the challenges in final missions";
+  - Root, the CLEAN SWEEP core (0.160): kept, role open;
+  - Big Brass and Top Brass: finale mini-bosses.
+- **Mini-bosses:** Bucker and Fever, Torque's Act 3 companions; Turnstile, Scab and Hammerfall for quests; plus the scuttler (0.166) as a new quest boss, name and place open.
+- **Targets:** `art-direction/targets-2026-11-05-bosses/BOSSES.md` and `img/` (15 sheets).
+- **Codex 0.160 against 0.166:** the owner kept 4 sheets from 0.166 and 2 from 0.160, with no measurable quality step. The global Codex upgrade is queued for when d7 ends (owner request).
+- **Owner direction:** "We have enough verdicts for the bosses, next nights can proceed with their in-game implementation, moveset design, animations".
+- **Next nights (two builders):** boss implementation one or two bosses at a time, each with its cutout rig and parts from the target, a moveset, the attack animations and a fight arena. Act order is the default (King, Servo, Torque, Kronk, Krump).

@@ -95,14 +95,16 @@ source is the contest variant each came from. Read its `PITCH.md` for the origin
 | **Torque** | B/1 | Act 3: **crazy**. A fever-brained riveter. Krump promised him a military cooling chassis (CLEAN SWEEP firmware) |
 | **Kronk** | B/3 | Act 4: **crazy**. Magnetic dementia, worshipped as "Scrap-God Messiah". The final military-firmware boss before the Pentagon |
 
-**Boss looks [owner, 2026-11-05, Look Table round 4]:**
-- **Kronk** is the magnet-crane robot.
-- **Servo** is the drone hub.
-- **King** keeps his name and the original REG-1 approach, with him and his gang covered in luxury and wealth.
-- **Torque** follows the original design: a smaller, extremely agile bot.
-- **Finale:** the command walker and the brass tank-mech become finale mini-bosses; the main finale boss is open (round 5).
-- **Quest mini-bosses:** the toll regent (renamed), the strikebreaker and the drop hammer.
-- **Torque's Act 3 companions:** the big riveter (renamed) and Fever.
+**Boss looks [owner, 2026-11-05, Look Table rounds 4-5; targets in `art-direction/targets-2026-11-05-bosses/BOSSES.md`]:**
+- **King:** the REG-1 press king, rich, on a gilded stretch-car throne with his gang.
+- **Servo:** the drone-hub courier robot.
+- **Torque:** a small, extremely agile fever sprinter.
+- **Kronk:** the magnet crane with a scrap halo and a cult.
+- **Finale boss: General Krump himself**, in a medal-armoured command suit.
+- **Finale set pieces:** High Command (the headquarters walker, a final-mission challenge), Root (the CLEAN SWEEP core, role open), and the mini-bosses Big Brass and Top Brass.
+- **Act 3 companions to Torque:** Bucker and Fever.
+- **Quest mini-bosses:** Turnstile, Scab and Hammerfall, plus the four-legged scuttler as a new quest boss (name and place open).
+- **Owner (2026-11-05):** "We have enough verdicts for the bosses, next nights can proceed with their in-game implementation, moveset design, animations".
 
 **Friendly bosses and mission givers (pick about 5)**
 
