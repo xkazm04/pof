@@ -756,3 +756,7 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Torque x3, small and agile: fever sprinter, pogo riveter, hot scuttler;
   - Finale x3: the five-sided fortress walker, General Krump in a command suit, the CLEAN SWEEP core;
   - two rename cards, for b1 (Turnstile?) and b7 (Bucker?).
+- **Codex 0.166 versus 0.160** (owner asked to check for GPT Images 2.6):
+  - **Install:** 0.166 is installed side by side in `kiro/codex-next`. The global 0.160 is untouched, because lanes may call it mid-run. `gtai-art/gen-next.mjs` is the runner that uses 0.166.
+  - **Model:** neither binary names a 2.6 model; both list `gpt-image-2`, `gpt-image-1.5` and older. The PNGs' C2PA claim says only "ChatGPT / gpt-image". OpenAI says Images 2.6 reached Codex on 2026-11-04, so the model is chosen server-side and cannot be verified locally.
+  - **Comparison:** round 5's nine sheets were run twice from the same briefs and references, then paired on the Look Table (Version 6). Timings: 0.160 averaged 152 s, 0.166 averaged 141 s, with no 50 % speed-up. The pairs look near-identical in style.
