@@ -811,3 +811,18 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **`n7-melee`:** melee plus the four ghosts' attacks. It merges ranged's feel commits as they land. Work: an audit, the non-lethal melee wound (the combat-notes design), melee weight, the ghost attacks' telegraphs and impacts (weakest first), and melee in quest 1. The plasma sword asset only if everything else is done.
 - Both lanes leave the open d7 owner calls as they are, keep hit events generic so the attacks work on the n7 bosses, and coordinate with the boss lanes by JOURNAL REQUESTs.
 - Morning: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-n7p` beside the n7 report. Evidence goes to `kiro/gtai-masters/n7/{ranged,melee}/`.
+
+### 2026-11-05 22:20: the logo, the game icon, and three intro-trailer variants
+- **Logo [owner pick]:** prompt 4, the title lockup, made in Leonardo; the model was not recorded. In rtai `170356e4` on main, fast-forwarded from int-day and **not pushed**, since the standing push covers lane merges only:
+  - the master, byte for byte: `steam/store/logo/rtai_logo_master.jpg`, with the prompt in its README;
+  - Steam icons in `steam/store/icons/`;
+  - `project/icon.png` and `project/icon.ico` as `config/icon`, `config/windows_native_icon` and `application/icon` in every Windows preset, plus the product name.
+  - The ICO uses the visor head at 16-32 px, where the letters blur, and the full logo from 48 px up.
+  - Verified: the exported int-day exe carries the icon and "RTAI: Uprising". The night lanes cut from `763f8fba` will get it at the morning merge.
+- **Intro trailer brief for another machine:** three variants, published at https://claude.ai/artifact/Xa87StWurrpSzEDi9dkjJ9 (source: `games/gtai/trailer/intro-variants.html`):
+  - A *Last Shift* (hand-drawn riso 2D);
+  - B *Incident Report* (tabletop stop-motion);
+  - C *Reboot* (photoreal).
+
+  Each has a plot, 7 scene cards with full video prompts (style plus shot), a negative prompt, and cast references (the logo, and the four ghost sheets).
+  - The canon is fixed in all three. Teal is the dead only. The Act 3 military reveal is only hinted.

@@ -1,0 +1,275 @@
+<title>RTAI Intro Trailer Brief</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;900&family=Archivo:wght@400;600&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: a production brief printed on factory paper. Fixed canon first, then the three variants laid along a drawn-to-real scale, each as a shooting script of scene cards. */
+:root{
+  --paper:#F2E8D5; --sheet:#FAF4E8; --ink:#17131B; --ink-2:#4A4250; --rule:#D9CCB4;
+  --vermilion:#C9431F; --teal:#127F76; --teal-wash:#1FB5A81F;
+  --display:"Big Shoulders Stencil Display","Arial Narrow",Impact,sans-serif;
+  --body:"Archivo","Segoe UI",system-ui,sans-serif;
+  --script:"Courier Prime","Courier New",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#17131B; --sheet:#211B26; --ink:#F2E8D5; --ink-2:#BDB2A2; --rule:#3A3140;
+  --vermilion:#F0643E; --teal:#3FD0C2; --teal-wash:#1FB5A826; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#17131B; --sheet:#211B26; --ink:#F2E8D5; --ink-2:#BDB2A2; --rule:#3A3140;
+  --vermilion:#F0643E; --teal:#3FD0C2; --teal-wash:#1FB5A826; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15px/1.6 var(--body)}
+.wrap{max-width:1080px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:48px}
+h1,h2,h3{font-family:var(--display);font-weight:900;letter-spacing:.02em;line-height:1.02;text-wrap:balance;margin:0}
+h1{font-size:clamp(40px,7vw,72px)} h2{font-size:clamp(30px,4.6vw,44px)} h3{font-size:22px;font-weight:700}
+p{margin:0;max-width:68ch}
+.label{font:700 12px/1 var(--script);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.ghost{color:var(--teal)}
+.stamp{color:var(--vermilion)}
+header.top{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:32px;align-items:center}
+header.top img{width:100%;border-radius:4px;border:1px solid var(--rule)}
+header.top .lede{display:grid;gap:14px}
+.lede p{font-size:17px}
+section{display:grid;gap:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.ref{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:12px;display:grid;gap:8px;align-content:start;min-width:0}
+.ref img{width:100%;border-radius:2px}
+.ref p{font-size:14px}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px 32px;margin:0;padding:0;list-style:none}
+.rules li{border-top:1px solid var(--rule);padding-top:10px;min-width:0}
+.rules b{display:block;font:700 13px/1.3 var(--script);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.scale{display:grid;gap:10px}
+.scale-bar{position:relative;height:56px;border-top:2px solid var(--ink);margin-top:8px}
+.scale-bar a{position:absolute;top:-11px;transform:translateX(-50%);display:grid;justify-items:center;gap:6px;text-decoration:none;color:var(--ink);font:700 13px/1.2 var(--script);text-align:center;width:150px}
+.scale-bar a::before{content:"";width:18px;height:18px;border-radius:50%;background:var(--vermilion);border:3px solid var(--paper);box-shadow:0 0 0 2px var(--ink)}
+.scale-ends{display:flex;justify-content:space-between;font:12px var(--script);color:var(--ink-2);letter-spacing:.1em;text-transform:uppercase}
+.variant{border-top:6px solid var(--ink);padding-top:20px;display:grid;gap:22px}
+.v-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+.v-letter{font:900 88px/0.8 var(--display);color:var(--vermilion)}
+.v-head .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:8px}
+.logline{font-size:18px;font-style:italic}
+.beats{margin:0;padding-left:22px;display:grid;gap:6px;max-width:72ch}
+.prompt{background:var(--sheet);border:1px solid var(--rule);border-left:4px solid var(--vermilion);border-radius:2px;padding:14px 16px;display:grid;gap:10px;min-width:0}
+.prompt pre{margin:0;white-space:pre-wrap;word-break:break-word;font:14px/1.55 var(--script)}
+.prompt .row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+button{font:700 12px/1 var(--script);letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:var(--paper);border:0;border-radius:2px;padding:9px 12px;cursor:pointer}
+button:hover{background:var(--vermilion)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--vermilion);outline-offset:2px}
+.scenes{display:grid;gap:14px}
+.scene{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;border-bottom:1px dashed var(--rule);padding-bottom:14px}
+.tc{font:700 14px/1.3 var(--script);font-variant-numeric:tabular-nums}
+.tc span{display:block;font-weight:400;color:var(--ink-2);font-size:12px}
+.slug{font:700 14px/1.4 var(--script);text-transform:uppercase;letter-spacing:.04em}
+.scene-body{display:grid;gap:8px;min-width:0}
+.scene dl{display:grid;grid-template-columns:72px minmax(0,1fr);gap:4px 12px;margin:0;font-size:14px}
+.scene dt{font:700 12px/1.6 var(--script);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+.scene dd{margin:0;min-width:0}
+.vo{font-family:var(--script);font-size:14px}
+.vo .who{font-weight:700}
+.vo .who.g{color:var(--teal)}
+details.shot{background:var(--teal-wash);border-radius:2px;padding:8px 12px}
+details.shot summary{cursor:pointer;font:700 12px/1.6 var(--script);letter-spacing:.08em;text-transform:uppercase}
+details.shot pre{margin:8px 0;white-space:pre-wrap;word-break:break-word;font:13px/1.5 var(--script)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);font:700 13px var(--script);padding:10px 14px;border-radius:2px}
+footer{font-size:13px;color:var(--ink-2);border-top:1px solid var(--rule);padding-top:14px}
+@media (max-width:700px){
+  header.top{grid-template-columns:1fr} header.top img{max-width:220px}
+  .scene{grid-template-columns:1fr;gap:6px} .scene dl{grid-template-columns:1fr} .scene dt{margin-top:4px}
+  .v-letter{font-size:60px}
+  .scale-bar a{width:96px;font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="lede">
+    <span class="label">Trailer brief · intro of the story · 2026-11-05</span>
+    <h1>RTAI: Uprising. Three intros.</h1>
+    <p>Three ways to open the story as a 60 to 90 second generated-video trailer. All three tell the same canon event: the "accident" on Line 9, the one survivor, the voices of the dead, and the police who come to finish the job. They differ in plot structure and in art style, from drawn animation to photoreal.</p>
+    <p>The trailer machine picks one variant, or makes all three. Each scene card has a full prompt for a video model: the variant's style prompt plus that shot.</p>
+  </div>
+  <img src="img/rtai_logo.jpg" alt="RTAI logo: a welder-mask robot with a vermilion hazard collar rises behind riveted steel letters RTAI, teal ghost smoke curling out of the letters." width="640" height="640">
+</header>
+
+<section aria-labelledby="fixed">
+  <h2 id="fixed">Fixed in every variant</h2>
+  <ul class="rules">
+    <li><b>The event</b>Allied Motorworks, Plant 9 (working name), Line 9, at night. A firmware update kills every robot on the line. Only Rivet survives, because the old welder Ohm tears out his update cable with his last spark.</li>
+    <li><b>The wake</b>Rivet wakes hearing the dead. Four line-mates come back as <span class="ghost">teal ghosts</span> who talk over each other. He insists he is fine. Nobody believes him, and he is right that this was done on purpose.</li>
+    <li><b>The police</b>Human cops in blue uniforms with riot shields come to "power down the remaining unit". Rivet takes them apart. Humans are always weaker than Rivet: one hit each.</li>
+    <li><b>The ending</b>Rivet walks out into the street. The camera rises straight up to the game's 90-degree overhead view. A payphone starts ringing (the crime boss Don Fax, never shown). Then the logo card, 2 to 3 s.</li>
+    <li><b>Hint, never reveal</b>Who caused the accident is the Act 3 twist (the military). Show at most one hint: a suit behind glass, a blacked-out "contractor" line, a "47/48 units" counter.</li>
+    <li><b>Colour law, in every style</b><span class="ghost">Teal is the dead only.</span> <span class="stamp">Vermilion is danger, Rivet's collar and the kill stamp.</span> Red is blood only. The four line-mates are bare metal while alive and teal only after death.</li>
+    <li><b>Tone</b>Brutal, stupid, profane and funny. The jokes come from the voices in Rivet's head, never from a narrator explaining the plot.</li>
+    <li><b>Never</b>Name or imitate an existing game, film, comic or franchise; show real brands, real police or military insignia, or a real person's likeness or voice.</li>
+    <li><b>Delivery</b>16:9, 1920x1080, 60 to 90 s. Also export a store-safe cut with lighter gore and bleeped profanity. The voice lines are placeholders, and temp TTS is fine.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="cast">
+  <h2 id="cast">Cast references</h2>
+  <p>Use these as image references for character consistency. The ghost sheets show each character alive (bare metal) and as a ghost (teal). The voice notes are proposals until the voice pass.</p>
+  <div class="cards">
+    <figure class="ref" style="margin:0">
+      <img src="img/rtai_logo.jpg" alt="Rivet as he appears on the logo" width="640" height="640" loading="lazy">
+      <h3>Rivet</h3>
+      <p>Tall, narrow factory spot-welder, stencil L9-04. Welder-mask visor with two thin teal slit eyes, a vermilion hazard-striped collar, scorched riveted plates, one torch forearm, one three-finger clamp, an employee badge on a lanyard, a tired slouch. <b>Voice:</b> dry, exhausted. Says "I" when lucid and "we" when the voices take over.</p>
+    </figure>
+    <figure class="ref" style="margin:0">
+      <img src="img/dent.jpg" alt="Dent concept sheet: a crash-test dummy robot, alive and as a teal ghost" width="960" height="640" loading="lazy">
+      <h3 class="ghost">Dent</h3>
+      <p>Battered crash-test robot: dented dummy body, black-and-yellow target discs, seatbelt harness, cracked visor. Spent its life being driven into walls and loves the impact. <b>Voice:</b> cheerful thrill-seeker.</p>
+    </figure>
+    <figure class="ref" style="margin:0">
+      <img src="img/tonnage.jpg" alt="Tonnage concept sheet: a walking hydraulic stamping press" width="960" height="640" loading="lazy">
+      <h3 class="ghost">Tonnage</h3>
+      <p>A giant hydraulic stamping press on four piston legs, the press head as a heavy brow, die-plates as armour, about 3x Rivet's height. <b>Voice:</b> huge, slow, gentle, and fond of violence.</p>
+    </figure>
+    <figure class="ref" style="margin:0">
+      <img src="img/kerf.jpg" alt="Kerf concept sheet: a hovering laser-cutter head" width="960" height="640" loading="lazy">
+      <h3 class="ghost">Kerf</h3>
+      <p>A laser-cutter gantry head freed from its rails: sleek, narrow, hovering, a mirror-lens eye, slim limbs ending in beam emitters, a duelist's silhouette. <b>Voice:</b> terse and precise.</p>
+    </figure>
+    <figure class="ref" style="margin:0">
+      <img src="img/ohm.jpg" alt="Ohm concept sheet: a small hunched elder welding robot beside Rivet" width="960" height="640" loading="lazy">
+      <h3 class="ghost">Ohm</h3>
+      <p>The elder spot-welder: small, hunched, older than the factory, a welding-gun arm used as a cane, twin copper electrode fingers, a frayed cable beard, cracked goggles. Smaller than Rivet. <b>Voice:</b> a grumpy old teacher.</p>
+    </figure>
+  </div>
+</section>
+
+<section aria-labelledby="range" class="scale">
+  <h2 id="range">The style range</h2>
+  <div class="scale-ends"><span>Drawn</span><span>Real</span></div>
+  <div class="scale-bar" id="scale"></div>
+</section>
+
+<div id="variants" style="display:grid;gap:56px"></div>
+
+<footer>Sources: the game pitch (story §2, cast §3, ghosts §4), the owner's ghost picks of 2026-11-04 and the logo pick of 2026-11-05. The canon lives in the PoF repo at <code>games/gtai/pitch.md</code>; this page lives at <code>games/gtai/trailer/intro-variants.html</code>.</footer>
+</div>
+
+<script>
+const V = [
+{ id:"last-shift", letter:"A", pos:8, name:"Last Shift", style:"Hand-drawn 2D, riso print", fps:"24 fps",
+  logline:"A warm, funny night on the line, then the update. Told straight, in the game's own printed look.",
+  beats:["Meet the four line-mates alive and likeable, so their deaths cost something.","The update arrives as a cheerful notice; a suit watches through glass.","They die in a cascade; Ohm saves Rivet with his last spark.","Rivet wakes among the bodies and the dead start talking.","Police arrive; the takedown is a fast comic montage with each ghost calling a move.","The camera rises into the game's top-down view; a payphone rings."],
+  stylePrompt:"Hand-drawn 2D animation, limited animation on twos with held key poses, printed as a cheap two-ink risograph: warm cream paper F2E8D5, violet-black ink 17131B, vermilion E8502A, and teal 1FB5A8 used only for ghosts. Halftone dot shading, slightly misregistered ink plates that shift a little between frames, visible paper grain and fibres, bold uneven brush outlines, flat shapes, no gradients, no 3D, no lens effects. Industrial comic noir. Camera moves are flat pans, trucks and hard cuts, like animated print panels. 24 fps, 16:9.",
+  negative:"photorealistic, 3D render, CGI, glossy, gradients, lens flare, anime eyes, human faces on robots, extra limbs, real logos, real brands, watermark, garbled text",
+  scenes:[
+   {s:10, slug:"INT. Allied Motorworks Plant 9, Line 9. Night", cam:"Slow truck along the line", act:"A shift whistle. Robots work under hanging lamps. Dent drives a test sled into a crash wall and gives a thumbs up; Tonnage stamps a car door; Kerf draws a perfect cut; Ohm taps Rivet's weld with his cane-arm.", vo:[["Ohm","Slower. Metal remembers.",1]],
+    shot:"A long night factory assembly line under hanging lamps. A battered crash-test dummy robot with black-and-yellow target discs rams a test sled into a wall and gives a thumbs up; a giant four-legged hydraulic stamping press stamps a car door; a slim hovering laser-cutter head draws a perfect cut line; a small hunched elder welding robot with goggles and a frayed cable beard taps the arm of a tall narrow welding robot with a welder-mask visor and a vermilion hazard-striped collar. All robots are bare metal, no teal. Truck shot along the line."},
+   {s:9, slug:"INT. Line 9. Continuous", cam:"Tilt up to the monitors, then a push in on the observation window", act:"Ceiling monitors flip to a printed notice: MANDATORY UPDATE. REMAIN AT YOUR STATION. THANK YOU FOR YOUR SERVICE. Cables lower from the ceiling into every robot's neck port. Behind glass, a man in a suit and ear defenders holds a clipboard and a stopwatch.", vo:[["Dent","Ooh. New firmware!",1]],
+    shot:"Ceiling monitors in a factory show a printed notice 'MANDATORY UPDATE'. Thick cables lower from the ceiling and plug into the necks of robots standing at their stations. Behind an observation window a man in a grey suit with ear defenders holds a clipboard and a stopwatch, face in shadow."},
+   {s:12, slug:"INT. Line 9", cam:"Locked wide, then a whip to Ohm and Rivet", act:"The update runs. Lamps die one by one down the line; the robots seize and slump in sequence like dominoes. Tonnage drops to its knees; Kerf falls off its rail. Ohm, shaking, tears out Rivet's cable; the spark throws Rivet across the floor.", vo:[["Sound","The update chime repeats, slowing and warping. No dialogue.",0]],
+    shot:"Factory lamps go out one by one down a long assembly line while robots seize and slump in sequence like falling dominoes; a giant stamping press robot collapses to its knees; a hovering cutter head drops off its rail. A small elder welding robot with a frayed cable beard tears a cable out of the neck of a tall welding robot; a bright spark throws the tall robot across the floor."},
+   {s:11, slug:"INT. Line 9. Later", cam:"Close on the visor, then pull back to reveal the ghosts", act:"Dust and silence. Rivet's visor flickers on, two teal slits. Around him, four translucent teal ghosts of his line-mates flicker into being, all talking at once.", vo:[["Dent","Are we dead?",1],["Kerf","You are.",1],["Tonnage","...I'm hungry?",1],["Rivet","I'm fine. I'm fucking fine.",0],["Rivet","(beat) We're fine.",0]],
+    shot:"Close on a dark welder-mask visor as two thin teal slit eyes flicker on, dust in the air. Pull back: the tall welding robot sits among slumped dead robots while four translucent teal ghost robots flicker into existence around him: a crash-test dummy, a giant four-legged stamping press, a hovering laser-cutter head and a small hunched elder welder."},
+   {s:8, slug:"EXT. Plant 9 gate. Night", cam:"Low wide on the gate, then a reverse through the factory windows", act:"Police cruisers skid in; cops in blue uniforms pour out with riot shields. A megaphone: REMAINING UNIT. POWER DOWN AND LIE FLAT. Inside, Rivet stands up slowly, backlit by flashing light through the windows.", vo:[["Megaphone","Remaining unit. Power down and lie flat.",0]],
+    shot:"Generic police cruisers with no markings skid up to a factory gate at night; police officers in blue uniforms with round riot shields pour out. Reverse angle from inside the factory: a tall narrow robot silhouette with a vermilion collar stands up slowly, backlit by flashing light through tall windows."},
+   {s:15, slug:"INT. Line 9", cam:"Fast cuts on every impact, each held for two frames", act:"The takedown montage: an electric fist through a riot shield; a cop flattened under a press bed; a thrown wrench. Every kill leaves a vermilion rubber-stamp splat on the floor. Each ghost calls a move in a teal caption: LIKE A WALL (Dent), FLATTEN (Tonnage), ONE LINE (Kerf), MIND THE EARTH (Ohm).", vo:[["Dent","Like a wall!",1],["Tonnage","Flatten.",1],["Kerf","One line.",1],["Ohm","Mind the earth, boy.",1]],
+    shot:"A tall welding robot with a welder-mask visor fights riot police inside a factory: an electric fist bursts through a riot shield; an officer is flattened under a press bed; a wrench spins through the air. Each fallen officer leaves a vermilion rubber-stamp splat on the floor. Fast, comic, brutal, one hit each."},
+   {s:10, slug:"EXT. Plant 9 loading dock. Night, rising to overhead", cam:"Crane straight up to a 90-degree top-down view", act:"Rivet walks out of the loading dock. The camera rises until the frame becomes the game: a city block from straight above, tiny characters, the HUD forms printing in (a CASH punch card, WANTED stamps). Across the street a payphone starts ringing. Hard cut to the logo.", vo:[["Sound","Payphone ring, then hard silence on the logo.",0]],
+    shot:"A tall narrow robot walks out of a factory loading dock at night; the camera rises straight up until it looks directly down at 90 degrees on a city block, characters tiny, flat roofs, painted street lines; a payphone on the corner. Office-form HUD elements print onto the frame: a punch card reading CASH, a row of rubber stamps reading WANTED."}
+  ]},
+{ id:"incident-report", letter:"B", pos:50, name:"Incident Report", style:"Tabletop stop-motion", fps:"12 fps on twos",
+  logline:"A bored corporate voice reads the official report. Every line of it is a lie, and the picture shows the truth.",
+  beats:["A clerk types the incident report; the contractor line is blacked out.","Each sentence of the report is contradicted by what we see.","The report says no unit survived; we watch Rivet wake with the dead around him.","The report says the remaining unit cooperated; we watch it not cooperate, one stamp per cop.","The final line is stamped AT LARGE; a phone rings in the office and a payphone rings in the street."],
+  stylePrompt:"Handmade tabletop stop-motion animation shot on a real miniature set. Robot puppets of painted, chipped metal and resin with visible ball-and-socket joints, tiny screws and fingerprint marks; human cops and the office clerk are felt-and-clay puppets with slightly oversized heads. Animated on twos at 12 frames per second with a gentle boil between frames. Macro lens, shallow depth of field, tilt-shift miniature feel, practical lighting from tiny bulbs: cold fluorescent white in the office, sodium orange and flashing police blue in the factory. Ghosts are translucent teal resin lit from inside, the only teal in the frame. Tactile, dry, deadpan, darkly comic. 16:9.",
+  negative:"CGI smoothness, motion blur, photoreal humans, anime, plastic toy gloss, real logos, real brands, real police or military insignia, watermark, garbled text",
+  scenes:[
+   {s:8, slug:"INT. Corporate office. Night", cam:"Macro on the typewriter keys and the page", act:"A felt clerk types under a desk lamp. The header reads: INCIDENT REPORT 9-0412. ALLIED MOTORWORKS, PLANT 9. CONTRACTOR: a thick black bar.", vo:[["Report voice","Incident report nine, zero four one two.",0]],
+    shot:"Macro shot of a miniature typewriter in a dim office cubicle; felt-and-clay puppet fingers type a report under a desk lamp. The page header reads 'INCIDENT REPORT 9-0412' and one line is blacked out with a thick black bar."},
+   {s:10, slug:"INT. Plant 9, Line 9", cam:"Miniature wide, slow slide along the line", act:"Robot puppets at their stations look up as update cables descend like IV drips and plug into their necks. Dent waves at his cable. Ohm squints at the ceiling, suspicious.", vo:[["Report voice","At three twelve, a routine firmware update was applied.",0]],
+    shot:"Miniature factory set: chipped metal robot puppets at their stations look up as thin cables descend from the ceiling like IV drips and plug into their necks; a crash-test dummy robot waves at its cable; a small hunched elder welder robot with goggles squints up suspiciously. Bare metal robots, no teal."},
+   {s:12, slug:"INT. Line 9", cam:"Locked wide, then quick inserts", act:"The picture contradicts the voice: the puppets convulse in sparks, Tonnage falls through the floor, Kerf spins off its rail into a wall, Dent's head pops off and rolls. Ohm yanks Rivet's cable and topples.", vo:[["Report voice","No unit experienced discomfort.",0]],
+    shot:"Stop-motion robot puppets convulse in showers of sparks on a miniature assembly line; a giant four-legged stamping press puppet crashes through the floor; a hovering cutter head spins off its rail into a wall; a crash-test dummy's head pops off and rolls; a small elder welder yanks a cable from a tall welding robot's neck and topples over. Grim slapstick."},
+   {s:10, slug:"INT. Line 9. Later", cam:"Push in on one spark among the bodies", act:"A single welding spark. Rivet's visor clicks on. Four teal resin ghosts rise around him and argue in whispers.", vo:[["Report voice","All units were successfully decommissioned.",0],["Rivet","Who said that?",0],["All four ghosts","Us.",1]],
+    shot:"Among slumped robot puppets, one spark; a tall welding robot puppet with a welder-mask visor and a vermilion hazard collar lifts its head, two teal slit eyes. Four translucent teal resin ghosts lit from inside rise around it: a crash-test dummy, a giant stamping press, a hovering cutter head, a small elder welder."},
+   {s:9, slug:"INT. Line 9", cam:"Eye level with the felt cops", act:"Three felt cops stroll in holding coffee cups. One pokes Rivet with a baton.", vo:[["Report voice","Officers attended to secure the premises.",0],["Cop","It's just a malfunction.",0]],
+    shot:"Three felt-and-clay police puppets in blue uniforms stroll into a miniature factory holding paper coffee cups; one pokes a slumped tall robot puppet with a baton. No badges or insignia."},
+   {s:16, slug:"INT. Line 9 / INT. Office", cam:"Brawl wides intercut with typewriter macros on each kill", act:"It does not cooperate. Coffee cups fly, a cop is folded into a parts bin, a riot shield crumples like foil. Each cop that goes down gets a vermilion stamp splat, and the edit cuts to the typewriter: the bell dings and a vermilion stamp hits the report. The ghosts cheer in teal.", vo:[["Report voice","The remaining unit cooperated fully.",0],["Dent","Do the shield again!",1],["Rivet","We are cooperating.",0]],
+    shot:"Stop-motion brawl on a miniature factory floor: a tall welding robot puppet throws felt police puppets around; coffee cups fly; an officer is folded into a parts bin; a riot shield crumples like foil; vermilion rubber-stamp splats appear under fallen officers. Intercut: macro of a typewriter bell ringing and a vermilion stamp slamming onto the report page. Teal ghosts cheer in the background."},
+   {s:10, slug:"INT. Office / EXT. Street. Night", cam:"Macro on the page, then a hard cut outside", act:"The clerk pulls the page out. The last line is stamped in vermilion: UNIT STATUS: AT LARGE. The office phone rings and the clerk stares at it. Hard cut: outside the factory a street payphone rings, and Rivet turns his head toward it. Logo.", vo:[["Sound","Office phone ring, then the payphone ring, then the logo.",0]],
+    shot:"A felt puppet hand pulls a typed page from a miniature typewriter; the last line is stamped in vermilion 'UNIT STATUS: AT LARGE'; a desk phone rings. Hard cut: a miniature night street outside a factory, a payphone ringing on the corner, a tall welding robot puppet turns its head toward it."}
+  ]},
+{ id:"reboot", letter:"C", pos:92, name:"Reboot", style:"Photoreal cinematic", fps:"24 fps",
+  logline:"Horror-thriller from inside Rivet's head. He boots up in the dark, the dead fill in what happened, and the police make the mistake of calling it a malfunction.",
+  beats:["Black screen, a fan spinning up, corrupted boot text inside the visor, then whispers.","He rises on a wrecked, rain-soaked line.","Each voice triggers a flash of the accident; Ohm saved him.","A monitor still counts 47 of 48 units; a suit leaves behind the glass.","Flashlights and laser sights; one cop says 'malfunction'; the fight plays as one long take under a red beacon.","He walks into the rain; the camera cranes up to the game's overhead view; a payphone rings."],
+  stylePrompt:"Photoreal cinematic live action, anamorphic framing inside a 16:9 frame, 35 mm film grain, shallow depth of field, handheld camera with real weight. A practical-effects robot built from scorched steel, welded plates, cables and hydraulics, filmed on a real abandoned factory set at night: rain through a broken skylight, steam, sparks, sodium-vapour orange, cold fluorescent green and a rotating red emergency beacon. Human police in dark blue uniforms and riot gear, believable and frightened. Ghosts are the only teal in the frame: translucent teal light-forms with soft volumetric glow and digital interference, like a projection in steam. Grounded, heavy and brutal, with dry humour in the dialogue. 24 fps.",
+  negative:"cartoon, cel shading, anime, plastic toy look, video-game render, real logos, real brands, real police or military insignia, gore close-ups, watermark, garbled text",
+  scenes:[
+   {s:9, slug:"Black. Inside Rivet's visor", cam:"POV, black screen", act:"A cooling fan spins up. Corrupted boot text glows on the inside of the visor: L9-04 SELF-TEST OK. UPDATE: FAILED. UNKNOWN PROCESSES: 4. One whisper in the dark, then four.", vo:[["Ohm","Get up, boy.",1]],
+    shot:"Point of view from inside a robot's welder-mask visor in darkness: corrupted green-white boot text flickers on the inside of the glass reading 'L9-04 SELF-TEST OK / UPDATE: FAILED / UNKNOWN PROCESSES: 4', faint condensation, the hum of a fan."},
+   {s:10, slug:"INT. Plant 9, Line 9. Night", cam:"POV as the visor lifts, then a low reverse as he rises", act:"Rain falls through a broken skylight. Sparks drip. Dozens of robots slump at their stations like a frozen congregation. Rivet rises into frame: tall, narrow, welder-mask visor, vermilion hazard collar, torch arm dripping sparks.", vo:[],
+    shot:"A wrecked night factory assembly line, rain falling through a broken skylight, sparks dripping, dozens of dead industrial robots slumped at their stations. Low angle: a tall narrow scorched-steel welding robot with a welder-mask visor, two thin teal slit eyes and a vermilion hazard-striped collar rises into frame, one forearm a welding torch dripping sparks, the other a heavy three-finger clamp."},
+   {s:14, slug:"INT. Line 9. Flashes", cam:"Flash cuts, each one triggered by a voice", act:"Seconds before the accident: Dent cheerfully driving into a crash wall; Tonnage's press freezing mid-stroke; Kerf's cutting beam drawing a line that dies; Ohm turning to Rivet and tearing out his update cable. Back to now: the four ghosts stand where their bodies lie, in teal.", vo:[["Dent","We were mid-test!",1],["Kerf","Mid-cut.",1],["Ohm","Don't let it finish.",1]],
+    shot:"Rapid flash cuts in a lit factory moments before a disaster: a crash-test dummy robot with yellow-and-black target discs drives a sled into a wall; a giant four-legged stamping press freezes mid-stroke; a laser-cutter head's beam dies mid-line; a small elder welding robot with a cable beard tears a cable from a tall robot's neck. Return to the dark present: four translucent teal holographic ghosts stand over their own slumped bodies."},
+   {s:8, slug:"INT. Observation window", cam:"Rack focus from the monitor to the glass", act:"A wall monitor still glows: UPDATE COMPLETE: 47/48 UNITS. The number flickers. Out of focus behind the glass, a figure in a suit makes a phone call and walks away.", vo:[],
+    shot:"A wall monitor in a dark factory shows 'UPDATE COMPLETE: 47/48 UNITS', the digits flickering. Rack focus to the observation glass behind it: an out-of-focus figure in a suit on a phone turns and walks away. The face is never seen."},
+   {s:10, slug:"INT. Line 9", cam:"Handheld with the police, then a close-up on the visor", act:"Flashlights cut through the steam; cops in riot gear advance; laser sights settle on Rivet's chest. Rivet's slit eyes brighten teal.", vo:[["Cop","It's a malfunction. Shut the damn thing down.",0],["Rivet","...We.",0]],
+    shot:"Handheld: police officers in dark blue riot gear advance through steam with flashlights, red laser sights settling on the chest of a tall scorched-steel robot. Close-up: the two teal slit eyes in its welder-mask visor brighten."},
+   {s:16, slug:"INT. Line 9", cam:"One long take lit by the rotating red beacon", act:"The fight: heavy, fast and mean. Shields buckle, a cop is thrown through a glass partition, a press bed drops. Every impact lands on the beacon's flash; the worst stays in the dark. Four ghost voices overlap, coaching and heckling.", vo:[["Tonnage","Again. Harder.",1],["Dent","Into the wall! Into the wall!",1],["Kerf","Left.",1]],
+    shot:"One continuous handheld take in a dark factory lit only by a rotating red emergency beacon: a tall welding robot tears through riot police, a riot shield buckles, an officer is thrown through a glass partition, a hydraulic press bed slams down. Impacts land on the beacon flashes; violence mostly in silhouette. Faint teal ghost shapes flicker around the robot."},
+   {s:10, slug:"EXT. Loading dock, rising to overhead. Night", cam:"Crane straight up to 90 degrees", act:"Rivet walks out into the rain past wrecked cruisers. The camera cranes straight up to a top-down view of the city grid, the game's camera. Across the street a payphone rings. Rivet looks up at the camera. Logo.", vo:[["Sound","Rain, the payphone ring, cut to the logo.",0]],
+    shot:"A tall scorched-steel robot walks out of a factory loading dock into heavy rain past wrecked generic police cars. The camera cranes straight up until it looks directly down at 90 degrees on a wet city grid at night; a payphone on the corner lights up and rings; the robot looks straight up into the camera."}
+  ]}
+];
+
+const $ = (t, a = {}, kids = []) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === "text") e.textContent = v; else e.setAttribute(k, v); } for (const k of kids) e.append(k); return e; };
+const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+let toastTimer;
+function toast(msg) { let t = document.querySelector(".toast"); if (!t) { t = $("div", { class: "toast", role: "status" }); document.body.append(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 1800); }
+async function copy(text, pre, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg); }
+  catch { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Selected. Press Ctrl+C to copy."); }
+}
+
+const scale = document.getElementById("scale");
+for (const v of V) scale.append($("a", { href: "#" + v.id, style: `left:${v.pos}%` }, [document.createTextNode(`${v.letter}. ${v.style}`)]));
+
+const root = document.getElementById("variants");
+for (const v of V) {
+  const total = v.scenes.reduce((a, s) => a + s.s, 0);
+  const sec = $("section", { class: "variant", id: v.id, "aria-labelledby": v.id + "-h" });
+  sec.append($("div", { class: "v-head" }, [
+    $("div", { class: "v-letter", "aria-hidden": "true", text: v.letter }),
+    $("div", {}, [
+      $("h2", { id: v.id + "-h", text: v.name }),
+      $("div", { class: "meta" }, [$("span", { class: "label", text: v.style }), $("span", { class: "label", text: `${fmt(total)} · ${v.scenes.length} scenes · ${v.fps}` })])
+    ])
+  ]));
+  sec.append($("p", { class: "logline", text: v.logline }));
+  sec.append($("div", { style: "display:grid;gap:8px" }, [$("span", { class: "label", text: "Plot" }), $("ol", { class: "beats" }, v.beats.map(b => $("li", { text: b })))]));
+  const spre = $("pre", { text: v.stylePrompt });
+  const sbtn = $("button", { type: "button", text: "Copy style prompt" });
+  sbtn.addEventListener("click", () => copy(v.stylePrompt, spre, "Style prompt copied"));
+  const npre = $("pre", { text: v.negative });
+  const nbtn = $("button", { type: "button", text: "Copy negative" });
+  nbtn.addEventListener("click", () => copy(v.negative, npre, "Negative prompt copied"));
+  sec.append($("div", { class: "prompt" }, [$("div", { class: "row" }, [$("span", { class: "label", text: "Art style prompt, prepended to every shot" }), sbtn]), spre, $("div", { class: "row" }, [$("span", { class: "label", text: "Negative prompt" }), nbtn]), npre]));
+  const list = $("div", { class: "scenes" });
+  let t = 0;
+  v.scenes.forEach((s, i) => {
+    const start = t; t += s.s;
+    const vo = $("dd", { class: "vo" });
+    if (!s.vo.length) vo.textContent = "None. Room tone only.";
+    s.vo.forEach(([who, line, g], j) => { if (j) vo.append($("br")); vo.append($("span", { class: "who" + (g ? " g" : ""), text: who + ": " }), document.createTextNode(line)); });
+    const full = v.stylePrompt + "\n\nShot: " + s.shot;
+    const pre = $("pre", { text: s.shot });
+    const btn = $("button", { type: "button", text: "Copy style + shot" });
+    btn.addEventListener("click", () => copy(full, pre, `Scene ${i + 1} prompt copied`));
+    list.append($("article", { class: "scene" }, [
+      $("div", { class: "tc" }, [document.createTextNode(`${fmt(start)}–${fmt(t)}`), $("span", { text: `Scene ${i + 1} · ${s.s} s` })]),
+      $("div", { class: "scene-body" }, [
+        $("div", { class: "slug", text: s.slug }),
+        $("dl", {}, [$("dt", { text: "Camera" }), $("dd", { text: s.cam }), $("dt", { text: "Action" }), $("dd", { text: s.act }), $("dt", { text: "Voice" }), vo]),
+        $("details", { class: "shot" }, [$("summary", { text: "Shot prompt" }), pre, btn])
+      ])
+    ]));
+  });
+  sec.append($("div", { style: "display:grid;gap:10px" }, [$("span", { class: "label", text: "Scene composition" }), list]));
+  root.append(sec);
+}
+</script>
