@@ -19603,6 +19603,58 @@
           "evidence": "src/components/modules/core-engine/sub_combat/_shared/dodge-math.ts:33 Single binary window, no perfect or normal grade, and DodgeParams has no stat-scaled magnitude. A repo-wide grep found no perfectDodge or stat-scaling of the dodge."
         }
       ]
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/module-design": {
+      "context": "session-analytics-reporting",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:36:50.008Z",
+      "worker": "9303430f-5c21-4e92-a236-e11ac6bf6eb1",
+      "techniques": [
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/helpers.ts:11 The band decision is encoded twice with different cuts; the shared owner exists in @/lib/chart-colors."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/WeeklyDigestView/weekLanded.ts:64 weekLanded is documented as pure and takes time as a parameter (the window), not a clock; tested in weekLanded.test.ts."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/WeeklyDigestView/weekLanded.ts:72 One pass produces items, prevCount, doneByEnd and undated, the multi-output condition where sequential code wins."
+        }
+      ]
+    },
+    "a2e69711-c5de-469c-8672-5863ff80ba72/module-design": {
+      "context": "cross-module-features",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:36:50.008Z",
+      "worker": "9303430f-5c21-4e92-a236-e11ac6bf6eb1",
+      "techniques": [
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/constants.ts:27 Information leaked across a boundary: the category decision is encoded in the registry and again here."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:13 Drill-down and buildable-now logic are pure lib functions; the hook only wires data into them."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:28 The hook hides two shared caches plus the cell assembly behind one call, so the view cannot drift from sibling dashboards."
+        }
+      ]
     }
   }
 }

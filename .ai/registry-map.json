@@ -12950,7 +12950,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/constants.ts:27 The dashboard rebuilds module categories from an id-prefix rule and a hard-coded list, although module-registry.ts owns categoryId per sub-module (getCategoryForSubModule); the lists match today, but adding a content module changes the registry and silently files it under 'Game Systems' here.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "test-harness",
@@ -23814,7 +23818,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/helpers.ts:11 scoreBand restates its own 70/40 cuts, while chart-colors.ts declares SCORE_BANDS (80/60/50) as THE 0-100 table that no surface may restate; a score of 75 reads 'Good' here and 'warn' on GDD compliance, and the no-inline-score-ladder guard misses it because this returns an object.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-cli-transport",

@@ -1,0 +1,109 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9303430f-5c21-4e92-a236-e11ac6bf6eb1",
+ "subject": "module-design",
+ "evaluatedAt": "2026-11-05T23:36:50.008451+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "session-analytics-reporting",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/helpers.ts:11 scoreBand restates its own 70/40 cuts, while chart-colors.ts declares SCORE_BANDS (80/60/50) as THE 0-100 table that no surface may restate; a score of 75 reads 'Good' here and 'warn' on GDD compliance, and the no-inline-score-ladder guard misses it because this returns an object.",
+   "techniques": [
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/helpers.ts:11 The band decision is encoded twice with different cuts; the shared owner exists in @/lib/chart-colors."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/WeeklyDigestView/weekLanded.ts:64 weekLanded is documented as pure and takes time as a parameter (the window), not a clock; tested in weekLanded.test.ts."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/WeeklyDigestView/weekLanded.ts:72 One pass produces items, prevCount, doneByEnd and undated, the multi-output condition where sequential code wins."
+    }
+   ]
+  },
+  {
+   "context": "cross-module-features",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/constants.ts:27 The dashboard rebuilds module categories from an id-prefix rule and a hard-coded list, although module-registry.ts owns categoryId per sub-module (getCategoryForSubModule); the lists match today, but adding a content module changes the registry and silently files it under 'Game Systems' here.",
+   "techniques": [
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/constants.ts:27 Information leaked across a boundary: the category decision is encoded in the registry and again here."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:13 Drill-down and buildable-now logic are pure lib functions; the hook only wires data into them."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:28 The hook hides two shared caches plus the cell assembly behind one call, so the view cannot drift from sibling dashboards."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "module-design",
+   "context": "combat-damage-pipeline",
+   "reason": "evidence leans on combos/design.tsx, which is not a tracked file"
+  },
+  {
+   "subject": "module-design",
+   "context": "gdd-compliance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "module-design",
+   "context": "progression-rewards-internals",
+   "reason": "evidence leans on _internals/progression-data.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-05T23:36:50.008451+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "declarative-or-sequential",
+    "io-free-core",
+    "locality-and-leverage"
+   ],
+   "deviations": 1,
+   "context": "session-analytics-reporting",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T23:36:50.008451+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "io-free-core",
+    "locality-and-leverage",
+    "module-depth"
+   ],
+   "deviations": 1,
+   "context": "cross-module-features",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
