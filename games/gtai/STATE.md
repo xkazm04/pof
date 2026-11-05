@@ -786,3 +786,20 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **`n7-servo`:** Servo; the drone swarm as a standalone system first, then on the framework.
   - Each boss gets a moveset doc (`docs/bosses/<id>.md`), its rig and part sheets, attack animations, an arena, and bot-measured numbers.
   - Still to do at launch: create the worktrees from the merged main, replace `__MAIN__` in the common brief, add override.cfg and the native bin.
+
+### 2026-11-05 18:41: d7 reported, merged; night n7 launched (18:53)
+- **d7 finished at 18:41** (calls 11 iterations, held 8; both reports complete, no hard block).
+  - **calls:** every owner pick from 11:40-11:50 is built as a default, with the old value one flag away. Also built: tan held guns (look-8) and the Gatling's small art re-made as tan steel.
+  - **held:** hold classes as data (`held_classes.json`); a blade class with a one-claw low guard (`--two-hand-grip` deleted); the off claw clamps two-claw weapons; the claws follow the long gun; sidearm 1.2; the class walk.
+  - Gates on the final heads: lint 13/13, unit 1110/0, scenarios 52/52, parity exact, no golden moved, director reel 19/19.
+  - Not done: the long gun is not yet the r2_w5 centre-line hold; there is no drawn claw-around-grip art.
+- **Verdict page:** the Owner Calls artifact (https://claude.ai/artifact/AYfehuXJMLPFRc7ywpfpZ7, version 3) now holds 15 d7 calls (`d7c-*`, `d7h-*`) with stills and exe lines. Every call plays its built default; **waiting on the owner.**
+- **Merged without waiting for the verdicts**, so the night could start early. Every call is a default flip, a single flag or value, and nothing tonight depends on one.
+  - rtai main `763f8fba` (pushed): `def999ca` merges d7-calls and `763f8fba` merges d7-held.
+  - Its `project/` is identical to d7-held's gated head; unit 1110/0 was re-run on the merge. Lane notes are in `docs/day/2026-11-05/{calls,held}/`.
+- **Global Codex upgraded** 0.160 -> 0.166.0 (latest on npm) once d7 ended.
+- **Night n7 launched 18:53** (`kiro/gtai-n7`, until 09:00; freeze 08:30, report 08:40).
+  - Lanes `n7-king` (King plus the boss framework) and `n7-servo` (Servo plus the drone swarm), worktrees from `763f8fba`, Opus 5.5 high.
+  - Both iteration 1s started on the primary API key, which has credit again.
+  - Morning: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-n7`, then the reports, the evidence in `kiro/gtai-masters/n7/`, and a verdict page.
+- **Cleanup held back:** the d7 worktrees and the `gtai-d7` root stay until the owner has judged the d7 page, because its exe lines point into `gtai-wt/d7-held` and `d7-calls`. Also still to clean: d6, n5, n6, `d7-held-before`, and the masters scratch.
