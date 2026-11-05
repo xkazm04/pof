@@ -3057,7 +3057,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/prompt-evolution/route.ts:131 The only judge in this context scores prompt versions, not a real-time scene against a concept image; a search of its route directories for concept image, concept camera, parity and destination light found nothing.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "structured-output",
@@ -7541,7 +7545,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/index.tsx:202 This context measures build health and profiler frame time against a frame budget and holds no concept image or look scorecard; a search of src/components/modules/evaluator for concept image, concept camera, parity and destination light found nothing.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "test-harness",

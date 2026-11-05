@@ -19546,6 +19546,26 @@
           "evidence": "src/components/cli/useTaskQueue.ts:560 A callback the run emitted without declaring it is treated as failed, not accepted, so the agent cannot add its own records."
         }
       ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/concept-scene-parity": {
+      "context": "ai-developer-tools-api",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:28:33.376Z",
+      "worker": "240375dd-0583-4507-a84f-7dafab15c6da",
+      "techniques": []
+    },
+    "751dfa55-3107-450b-a1f0-eb79dc263fcd/concept-scene-parity": {
+      "context": "build-quality-monitoring",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:28:33.376Z",
+      "worker": "240375dd-0583-4507-a84f-7dafab15c6da",
+      "techniques": []
     }
   }
 }
