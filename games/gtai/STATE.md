@@ -777,3 +777,12 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 - **Codex 0.160 against 0.166:** the owner kept 4 sheets from 0.166 and 2 from 0.160, with no measurable quality step. The global Codex upgrade is queued for when d7 ends (owner request).
 - **Owner direction:** "We have enough verdicts for the bosses, next nights can proceed with their in-game implementation, moveset design, animations".
 - **Next nights (two builders):** boss implementation one or two bosses at a time, each with its cutout rig and parts from the target, a moveset, the attack animations and a fight arena. Act order is the default (King, Servo, Torque, Kronk, Krump).
+- **16:42: d7 report moved to 18:40** (owner: "Lets plan d7 report at 18:40, we will start night phase early after that").
+  - The runner reads its times only at launch, so the d7 tree was stopped by PID and relaunched with `--until 19:00 --freeze 18:30 --report-at 18:40`.
+  - The common brief got a restart note: check `git status` and finish or commit the unfinished work.
+  - At the stop, calls had the cast and print groups and Dent (`ghost-powers-3`, `-5`) committed, with `look-8` (the tan ink) in progress. Held had the class walk and the chainsaw two-claw hold committed, and had merged calls.
+- **Night n7 prepared** (root `kiro/gtai-n7`, until 09:00, freeze 08:30, report 08:40), from the main produced by the d7 merge:
+  - **`n7-king`:** King, plus the shared boss framework (state machine, phases, attacks as data, boss HUD, arena loading, `--boss`, `--phase` and `--bot=boss`). He starts from the existing `KingPlan` rig.
+  - **`n7-servo`:** Servo; the drone swarm as a standalone system first, then on the framework.
+  - Each boss gets a moveset doc (`docs/bosses/<id>.md`), its rig and part sheets, attack animations, an arena, and bot-measured numbers.
+  - Still to do at launch: create the worktrees from the merged main, replace `__MAIN__` in the common brief, add override.cfg and the native bin.
