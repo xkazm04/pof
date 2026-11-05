@@ -803,3 +803,11 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - Both iteration 1s started on the primary API key, which has credit again.
   - Morning: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-n7`, then the reports, the evidence in `kiro/gtai-masters/n7/`, and a verdict page.
 - **Cleanup held back:** the d7 worktrees and the `gtai-d7` root stay until the owner has judged the d7 page, because its exe lines point into `gtai-wt/d7-held` and `d7-calls`. Also still to clean: d6, n5, n6, `d7-held-before`, and the masters scratch.
+
+### 2026-11-05 19:19: two more night builders, polish of Rivet's attacks (n7p)
+- **Owner:** "Lets dispatch two more builders over night to polish main player's attacks (range, melee, ghost attacks)". Four builders tonight, on the owner's word; the two-builder pace is the default otherwise.
+- **Root `kiro/gtai-n7p`** runs until 09:00 (freeze 08:30, report 08:40). Worktrees are cut from main `763f8fba`; launched 19:19, and both lanes started on the primary API key.
+  - **`n7-ranged`:** the guns. It owns changes to the existing shared feel module (`features/combat/hit_feel/`, `hit_feel.json`): a directional camera kick, caps, per-weapon overrides and `--feel=off`, all view only. Then a per-weapon audit and polish (recoil, muzzle and tracer, impact, the reaction on the hit frame). Then the backlog's homing-shard reaction delay and the electro and plasma-rifle reactions, heavy-weapon weight, and table guns in quest 1.
+  - **`n7-melee`:** melee plus the four ghosts' attacks. It merges ranged's feel commits as they land. Work: an audit, the non-lethal melee wound (the combat-notes design), melee weight, the ghost attacks' telegraphs and impacts (weakest first), and melee in quest 1. The plasma sword asset only if everything else is done.
+- Both lanes leave the open d7 owner calls as they are, keep hit events generic so the attacks work on the n7 bosses, and coordinate with the boss lanes by JOURNAL REQUESTs.
+- Morning: `node games/gtai/night/night.mjs report --root C:/Users/kazda/kiro/gtai-n7p` beside the n7 report. Evidence goes to `kiro/gtai-masters/n7/{ranged,melee}/`.
