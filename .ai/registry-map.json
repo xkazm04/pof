@@ -5424,12 +5424,11 @@
           "changedAt": "2026-10-26",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 The Sound Forge sends one billed /api/audio-gen POST per take with no reservation taken under a lock, no per-slot attempt cap and no durable stop latch; the monthly quota is explicitly informational and never blocks, so a quota or rate-limit error stops only the current loop and nothing keeps the next run from dispatching.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:e538545a02318806",
-          "evaluatedRevision": 7,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 The Sound Forge dispatches one billed /api/audio-gen POST per take in a plain loop with no reservation taken under a cross-process lock, no per-slot attempt cap across runs, no proof take before the batch and no durable stop latch, and the server route and meter both state the quota is never consulted, so a quota or rate-limit error only aborts the current loop and nothing refuses the next run.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8,
+          "revisionsBehind": 1
         },
         {
           "subject": "codebase-scanning",
@@ -19317,12 +19316,11 @@
           "changedAt": "2026-10-26",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is a filesystem scan of the UE project reconciled against the bridge manifest; a recursive case-insensitive grep of src/components/modules/content/models for candidate, genHistory, acquir, licen and stand-in found no hits, so no generative slot, selection or paid generation is gated here.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:e538545a02318806",
-          "evaluatedRevision": 7,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is a filesystem scan of the UE project reconciled against the bridge manifest; a case-insensitive grep of src/components/modules/content/models for candidate, licen, acquir, genHistory and credit found no hits (its only 'provenance' is declared-vs-inferred dependency edges), so no generative slot, candidate selection or paid generation exists here to gate.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -20645,7 +20643,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/GenerativeStepFrame.tsx:69 The gallery steps grade the selected candidate correctly and defer stand-ins, but a candidate's origin is never recorded as a first-class value at creation: realness is inferred from the file's location and filename rule, from imageUrl presence and from swatch shape, and any on-disk asset path counts as generated with no acquisition/licence branch even though library assets are fed into the same produce.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "render-submission-economy",

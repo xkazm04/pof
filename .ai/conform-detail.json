@@ -15878,19 +15878,30 @@
       "subject": "generative-artifact-gating",
       "bundle": "game-production",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T22:10:13.269Z",
-      "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:52:08.914Z",
+      "worker": "694076e2-0027-48b5-9d5a-22b6a53e840a",
       "techniques": [
         {
           "technique": "grade-the-selected-candidate",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No candidate selection exists; assets come from a disk scan."
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No candidate selection exists; assets come from a disk scan.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "placeholder-is-not-an-asset",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No generative step verdict is produced here."
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 No generative step verdict is produced here.",
+          "carriedFrom": "2026-10-24"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is a filesystem scan of the UE project reconciled against the bridge manifest; a recursive case-insensitive grep of src/components/modules/content/models for candidate, genHistory, acquir, licen and stand-in found no hits, so no generative slot, selection or paid generation is gated here.",
+          "evaluatedAt": "2026-10-24T22:10:13.269Z",
+          "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+          "reason": "replaced by 694076e2-0027-48b5-9d5a-22b6a53e840a"
         }
       ]
     },
@@ -15899,17 +15910,30 @@
       "subject": "generative-artifact-gating",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T22:10:13.269Z",
-      "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:52:08.914Z",
+      "worker": "694076e2-0027-48b5-9d5a-22b6a53e840a",
       "techniques": [
         {
           "technique": "reserve-before-dispatch-stop-latch",
           "verdict": "deviation",
-          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 No ledger and no latch. AudioUsageMeter.tsx:52 says 'generation is never blocked at this limit', and grep of src/lib/audio-gen and api/audio-gen found no latch or reservation."
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 Each take is dispatched directly; no reserve-then-dispatch ledger, no per-slot cap across revisions (only MAX_VARIATIONS_PER_RUN per run), no latch set on first quota evidence."
+        },
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:132 Library sets here are filled only by provider generation; the provider licence is shown undeclared rather than defaulted, but no acquired/downloaded asset shares these slots."
         }
       ],
-      "registryProposal": "reserve-before-dispatch-stop-latch is scoped to 'a metered image generator', but the same failure (an unenforced informational quota, a per-take paid loop) shows up on metered audio generators. Consider widening use_when to any metered media generator."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 The Sound Forge sends one billed /api/audio-gen POST per take with no reservation taken under a lock, no per-slot attempt cap and no durable stop latch; the monthly quota is explicitly informational and never blocks, so a quota or rate-limit error stops only the current loop and nothing keeps the next run from dispatching.",
+          "evaluatedAt": "2026-10-24T22:10:13.269Z",
+          "worker": "538c7b65-e2bb-482f-9338-7254e48e9131",
+          "reason": "replaced by 694076e2-0027-48b5-9d5a-22b6a53e840a"
+        }
+      ]
     },
     "751dfa55-3107-450b-a1f0-eb79dc263fcd/supply-chain": {
       "context": "build-quality-monitoring",
@@ -19653,6 +19677,42 @@
           "technique": "module-depth",
           "verdict": "conformant",
           "evidence": "src/components/modules/evaluator/CrossModuleFeatureDashboard/useCrossModuleFeatureDashboard.ts:28 The hook hides two shared caches plus the cell assembly behind one call, so the view cannot drift from sibling dashboards."
+        }
+      ]
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/generative-artifact-gating": {
+      "context": "pipeline-step-components",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:52:08.914Z",
+      "worker": "694076e2-0027-48b5-9d5a-22b6a53e840a",
+      "techniques": [
+        {
+          "technique": "grade-the-selected-candidate",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/itemsSteps.ts:507 gradeGallerySelection resolves the selection against kept batches, fails on unresolved or back-reference-mismatched selections, and names the asset in the pass detail."
+        },
+        {
+          "technique": "placeholder-is-not-an-asset",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:50 Stubs are deterministic, same-shape and self-describing in the data; no history or a swatch-only selection grades deferred at L4, never pass."
+        },
+        {
+          "technique": "auto-picked-vs-human-chosen-provenance",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/GenerativeStepFrame.tsx:107 Tri-state+none provenance (auto/human/unrecorded) lives in genHistory, is never back-filled, new batches reset to auto, and the marker is shown on the step; acceptance does not fail on it."
+        },
+        {
+          "technique": "generation-history-as-artifact",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:111 GenCandidate has no origin field; origin is read off representation shape (url( vs gradient, imageUrl presence), and pruneHistory deletes old batches rather than marking them discarded (genHistory.ts:185)."
+        },
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:101 Any populated asset path is graded as a generated pass; there is no acquisition-record branch, yet ArchetypeStep.tsx:434 passes library (downloaded) assets into the same produce."
         }
       ]
     }

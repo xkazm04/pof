@@ -1,0 +1,137 @@
+{
+ "schema": "conform-run/1",
+ "worker": "694076e2-0027-48b5-9d5a-22b6a53e840a",
+ "subject": "generative-artifact-gating",
+ "evaluatedAt": "2026-11-05T23:52:08.914053+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "models-asset-inventory",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is a filesystem scan of the UE project reconciled against the bridge manifest; a case-insensitive grep of src/components/modules/content/models for candidate, licen, acquir, genHistory and credit found no hits (its only 'provenance' is declared-vs-inferred dependency edges), so no generative slot, candidate selection or paid generation exists here to gate.",
+   "techniques": [],
+   "absenceTerms": [
+    "candidate",
+    "licen",
+    "acquir",
+    "genHistory",
+    "credit"
+   ]
+  },
+  {
+   "context": "audio-generation-tools",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 The Sound Forge dispatches one billed /api/audio-gen POST per take in a plain loop with no reservation taken under a cross-process lock, no per-slot attempt cap across runs, no proof take before the batch and no durable stop latch, and the server route and meter both state the quota is never consulted, so a quota or rate-limit error only aborts the current loop and nothing refuses the next run.",
+   "techniques": [
+    {
+     "technique": "reserve-before-dispatch-stop-latch",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:103 Each take is dispatched directly; no reserve-then-dispatch ledger, no per-slot cap across revisions (only MAX_VARIATIONS_PER_RUN per run), no latch set on first quota evidence."
+    },
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:132 Library sets here are filled only by provider generation; the provider licence is shown undeclared rather than defaulted, but no acquired/downloaded asset shares these slots."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-step-components",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/steps/GenerativeStepFrame.tsx:69 The gallery steps grade the selected candidate correctly and defer stand-ins, but a candidate's origin is never recorded as a first-class value at creation: realness is inferred from the file's location and filename rule, from imageUrl presence and from swatch shape, and any on-disk asset path counts as generated with no acquisition/licence branch even though library assets are fed into the same produce.",
+   "techniques": [
+    {
+     "technique": "grade-the-selected-candidate",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/itemsSteps.ts:507 gradeGallerySelection resolves the selection against kept batches, fails on unresolved or back-reference-mismatched selections, and names the asset in the pass detail."
+    },
+    {
+     "technique": "placeholder-is-not-an-asset",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:50 Stubs are deterministic, same-shape and self-describing in the data; no history or a swatch-only selection grades deferred at L4, never pass."
+    },
+    {
+     "technique": "auto-picked-vs-human-chosen-provenance",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/GenerativeStepFrame.tsx:107 Tri-state+none provenance (auto/human/unrecorded) lives in genHistory, is never back-filled, new batches reset to auto, and the marker is shown on the step; acceptance does not fail on it."
+    },
+    {
+     "technique": "generation-history-as-artifact",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:111 GenCandidate has no origin field; origin is read off representation shape (url( vs gradient, imageUrl presence), and pruneHistory deletes old batches rather than marking them discarded (genHistory.ts:185)."
+    },
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:101 Any populated asset path is graded as a generated pass; there is no acquisition-record branch, yet ArchetypeStep.tsx:434 passes library (downloaded) assets into the same produce."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generative-artifact-gating",
+   "context": "asset-visual-studio",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "generative-artifact-gating",
+   "context": "visual-gen-quality-and-animation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-05T23:52:08.914053+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "models-asset-inventory",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T23:52:08.914053+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "reserve-before-dispatch-stop-latch"
+   ],
+   "deviations": 1,
+   "context": "audio-generation-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T23:52:08.914053+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "auto-picked-vs-human-chosen-provenance",
+    "generation-history-as-artifact",
+    "grade-the-selected-candidate",
+    "placeholder-is-not-an-asset"
+   ],
+   "deviations": 1,
+   "context": "pipeline-step-components",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
