@@ -705,3 +705,21 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
     - Hauler becomes Tonnage and Gearbox becomes Dent; the old ids stay as aliases.
 - **Root `gtai-n5`** (cast, look) keeps running. All four lanes share `gtai-n5/image.lock` and `bench.lock`.
 - **Morning merge order:** `d6-perf-city`, `d6-combat-notes`, `n5-cast`, `n5-look`, `n6-ghost-forms`, `n6-ghost-powers`.
+
+### 2026-11-05 morning: merge, decisions page, boss concepts
+- **Merged:** rtai main `1028c15d` (pushed) holds `d6-perf-city`, `d6-combat-notes`, `n5-cast`, `n5-look`, `n6-ghost-forms` and `n6-ghost-powers`.
+  - Gates green: unit 1089, scenarios 51, parity exact.
+  - Looks re-blessed once, for the slim cast and the riso print.
+  - The director reel's 19 chapters are clean.
+  - **Bench DEVIATION** (contended machine): re-check on an idle bench.
+  - Reels in `gtai-masters/n6/merge/`. Exe in `gtai-wt/int-day/build/export/windows/RTAI.exe`. Ghost controls: G picks, Q transforms, melee attacks.
+- **Owner's direction:** "slowly slow down with the development, we will switch to daily run with two builders and exchanges with me". Saved as a standing rule: at most two builder lanes, with exchanges during the day.
+- **Backup API key:** the owner added `ANTHROPIC_API_KEY_BACKUP` to `.env`. The runner now uses billing path `api`, then `api2` (the backup), then the subscription (`31e5b66d`, tests 19/19).
+- **The owner-calls decision page:** claude.ai/artifact/AYfehuXJMLPFRc7ywpfpZ7 holds 38 calls from the six reports, with stills or exe commands. It is db-backed (`decisions/<id>` {choice, comment}), and each lane has an accept-defaults button. Data is in the scratchpad `decisions/decisions.json`.
+- **Act boss concepts:** Look Table round 4 ("Act bosses"), 15 sheets, 3 per boss.
+  - Act 1 King: toll regent King, signal monarch Regent Red, registry king Rex Registry.
+  - Act 2 Servo: van Servo, drone hub Dispatch, strikebreaker Scab.
+  - Act 3 Torque: riveter Torque, drop hammer Hammerfall, coolant Fever.
+  - Act 4 Kronk: magnet crane Kronk, Scrap-God, crusher Messiah.
+  - Finale, Krump's machine: command walker Big Brass, Clean Sweep, tank-mech Top Brass.
+  - The owner fuses a concept, its powers and a name per boss. The winners become targets to chase in the daily runs.
