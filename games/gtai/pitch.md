@@ -95,6 +95,15 @@ source is the contest variant each came from. Read its `PITCH.md` for the origin
 | **Torque** | B/1 | Act 3: **crazy**. A fever-brained riveter. Krump promised him a military cooling chassis (CLEAN SWEEP firmware) |
 | **Kronk** | B/3 | Act 4: **crazy**. Magnetic dementia, worshipped as "Scrap-God Messiah". The final military-firmware boss before the Pentagon |
 
+**Boss looks [owner, 2026-11-05, Look Table round 4]:**
+- **Kronk** is the magnet-crane robot.
+- **Servo** is the drone hub.
+- **King** keeps his name and the original REG-1 approach, with him and his gang covered in luxury and wealth.
+- **Torque** follows the original design: a smaller, extremely agile bot.
+- **Finale:** the command walker and the brass tank-mech become finale mini-bosses; the main finale boss is open (round 5).
+- **Quest mini-bosses:** the toll regent (renamed), the strikebreaker and the drop hammer.
+- **Torque's Act 3 companions:** the big riveter (renamed) and Fever.
+
 **Friendly bosses and mission givers (pick about 5)**
 
 | Character | Source | Proposed role |
