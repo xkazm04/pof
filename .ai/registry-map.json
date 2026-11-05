@@ -1831,7 +1831,11 @@
           "revision": 4,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:125 The effect authoring form has no tick-period field (only durationSec and cooldownSec), so DoT and tick templates carry their tick rate in cooldownSec, which codegen deliberately emits as an ability cooldown and never as a Period. A 'DoT' therefore generates as one non-ticking application, with no declared period and no derivable total intake.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "voice-io",
@@ -11525,7 +11529,11 @@
           "revision": 4,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/dodge-math.ts:33 The shared dodge model scores the active defence as one ungraded i-frame window whose magnitudes (i-frame length, cooldown, stamina) are authored constants with no stat hook. That collapses the defence to the trigger axis: no tight-window grade and no build-scaled magnitude.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "metric-surface-contract",

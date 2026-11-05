@@ -19566,6 +19566,43 @@
       "evaluatedTs": "2026-11-05T22:28:33.376Z",
       "worker": "240375dd-0583-4507-a84f-7dafab15c6da",
       "techniques": []
+    },
+    "624dbc02-2484-441d-a200-9aa65fa41eab/realtime-combat-semantics": {
+      "context": "ability-blueprint",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:12:05.280Z",
+      "worker": "40ca23c5-a472-479e-ab05-ec38c8b5201e",
+      "techniques": [
+        {
+          "technique": "real-time-timers-with-an-escapable-window",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:125 The time kinds are not typed: tick period is missing, and cooldownSec stands in for it on GE_Ignite_DoT, GE_DrainBeam_Tick (line 164) and GE_ManaDrain_PerSec. codegen.ts:126 refuses to emit Period, so the stream becomes a single hit."
+        },
+        {
+          "technique": "death-via-state-tag-not-input-disable",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:53 State.Dead is a template-level activation block over Ability.*, alongside State.Stunned (line 54)."
+        }
+      ]
+    },
+    "38cdf098-fcb5-4c48-8100-de599eb863e0/realtime-combat-semantics": {
+      "context": "combat-metrics",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:12:05.280Z",
+      "worker": "40ca23c5-a472-479e-ab05-ec38c8b5201e",
+      "techniques": [
+        {
+          "technique": "active-defense-two-axis-split",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/dodge-math.ts:33 Single binary window, no perfect or normal grade, and DodgeParams has no stat-scaled magnitude. A repo-wide grep found no perfectDodge or stat-scaling of the dodge."
+        }
+      ]
     }
   }
 }
