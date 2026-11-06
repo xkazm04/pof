@@ -26,3 +26,11 @@
   - The grille and hood ornament are too close to a real luxury maker's trade dress (LEG-02), so they will be reshaped.
   - The red tail lamps become amber (red is for blood only).
 - **Servo:** the 70 sheet drifted from his design: closed ochre boxes instead of the open shelf racks. The 55 sheet keeps the design.
+
+## The owner's answers (page decisions db, 10:50-11:07; the page was later deleted, so they are recorded here)
+- **a-1, the angle:** "Run 55 and 70 in parallel on smaller sample size. There is a world we can combine: 70 for regular game experience, 55 for boss fights. I will need to see both in action before final decision". This became the `view70` lane in d8.
+- **a-2, Rivet's head:** the logo's visor (it supersedes d7's plain-head pick).
+- **Approved as the direction:** Rivet, Tonnage, Dent, Ohm, the King, the King's car and Servo.
+- **Kerf:** sent back: "lets make Kerf tall as Rivet and similarly thin. Currently for lightweight character looks still heavy".
+  - Kerf v2 (`angle-r2`, magenta background, `img/kerf_55_v2.jpg`) was approved in chat ("Kerf looks great").
+  - `gtai-art/angle-r1/out/kerf_55.png` is now v2; v1 is kept as `kerf_55_v1.png`.
