@@ -4975,12 +4975,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:176 The viewer builds a BudgetRequest from the class ceiling so the delivered-versus-requested grader can run. The visible budgetLine says 'ceiling', but the returned grade.budget carries requestedTriangles=ceiling and, past 1.1x, gradeFaceBudget's reason that 'the provider did not honour the requested budget' (or the quad-trap text) about a budget nobody sent. Example: chair.glb at 83,728 tris as a prop.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:83d174ba84bd1c83",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:176 The viewer builds a BudgetRequest out of the class ceiling so the delivered-versus-requested grader can run. The visible budgetLine says 'ceiling', but the returned grade.budget carries requestedTriangles equal to the ceiling and, past 1.1x, a reason saying the provider did not honour the requested budget (or the quad-trap text) about a budget nobody sent; for example, chair.glb at 83,728 triangles graded as a prop.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:fc75444ee7981874",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 1
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -6595,7 +6594,11 @@
           "revision": 3,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/blender-mcp/scripts/generate-lods.ts:59 The LOD script turns triangle targets into the decimator's ratio against a measured loop_triangles count (not polygons), then re-measures each level in triangles for the receipt, so the decimator edge converts explicitly from the one authored unit.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:fc75444ee7981874",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-runtime-assembly",
@@ -6741,12 +6744,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:54 The LOD tab commissions triangle targets from a measured source and an optional stated class. It then grades each delivered level against the target it was commissioned at, and leaves LOD0 ungraded when no class is chosen.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:83d174ba84bd1c83",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/LODGenerationTab.tsx:54 The LOD tab grades each delivered level against the triangle target it was commissioned at (from Blender's receipt), and it stands LOD0 against the class target and ceiling separately, or leaves it explicitly ungraded when no class is chosen.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:fc75444ee7981874",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
@@ -27323,7 +27325,11 @@
           "revision": 3,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/visual-gen/mesh-finish/route.ts:44 The mesh-finish HTTP contract accepts, and echoes back in its response, a bare 'targetFaces' budget with no unit in its name. An external caller has nothing telling them the number is triangles, which is the un-united budget field the authored-unit technique says to rename.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:fc75444ee7981874",
+          "evaluatedRevision": 3
         },
         {
           "subject": "generated-mesh-acceptance",
@@ -27508,12 +27514,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/lib/visual-gen/mesh-finish.ts:473 The triangle budget in targetFaces goes straight to QuadriFlow, whose target_faces counts quads (scripts/visual-gen/pof_mesh_finish.py:307 passes int(target_faces) unchanged). Nothing calls providerFaceLimit({topology:'quads'}), so a quadriflow finish triangulates on GLB export at about 2x the authored budget, which is the exact quad trap face-budget.ts was written to prevent.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:83d174ba84bd1c83",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:473 buildMeshFinishArgs switches the remesher to QuadriFlow, whose target_faces counts quads (scripts/visual-gen/pof_mesh_finish.py:307 passes int(target_faces) unchanged), without ever calling providerFaceLimit({topology:'quads'}). A quadriflow finish therefore aims at about 2x the authored triangle budget once the GLB export triangulates it, while finishGateRequest records the request as topology 'triangles'. This is latent: no caller outside mesh-finish.ts passes retopo:'quadriflow'.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:fc75444ee7981874",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 1
         },
         {
           "subject": "image-to-3d-input-gating",
