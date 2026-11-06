@@ -17,7 +17,7 @@ import { VOICE_API, VOICE_GATE_HEADER, VOICE_GATE_TTL_MS } from './voiceGateClie
 
 export type Read<T> = { kind: 'loading' } | { kind: 'error'; reason: string } | { kind: 'ready'; data: T };
 
-function useKeyedRead<T>(url: string | null, pollMs = 0): { read: Read<T>; reload: () => void } {
+export function useKeyedRead<T>(url: string | null, pollMs = 0): { read: Read<T>; reload: () => void } {
   const [attempt, setAttempt] = useState(0);
   // Re-read on an interval while the room is shown and the tab visible (the previous data stays on screen).
   useSuspendableEffect(() => {
@@ -45,6 +45,13 @@ function useKeyedRead<T>(url: string | null, pollMs = 0): { read: Read<T>; reloa
 export function useVoiceRoom() {
   return useKeyedRead<RoomState>(VOICE_API, UI_TIMEOUTS.voiceRoomPoll);
 }
+
+/** The Casting page for one character (null = no character picked yet). */
+export function useCasting<T>(character: string | null) {
+  return useKeyedRead<T>(character ? `${VOICE_API}/casting?character=${encodeURIComponent(character)}` : `${VOICE_API}/casting`, UI_TIMEOUTS.voiceRoomPoll);
+}
+
+export const castingArtUrl = (character: string, n: number) => `${VOICE_API}/casting/art?character=${encodeURIComponent(character)}&n=${n}`;
 
 export interface LineKey { questId: string; lineId: string }
 

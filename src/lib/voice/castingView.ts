@@ -1,0 +1,134 @@
+/**
+ * The Casting page's read model and the casting MEMORY.
+ *  - `castingView`: the character (bible title + the sections a voice is designed from), its art, every round.
+ *  - `writeCastingLog`: `games/gtai/voice/casting/<character>.md`, regenerated from the rounds on every change
+ *    (a new round, a verdict, a close, a cast), so the record of what led to a cast is never a memory exercise.
+ *    The distilled, reusable lessons live beside it in `CASTING.md` (written by people / Claude, not by this).
+ * Art: `games/gtai/voice/casting/art.json` maps a character to images under `games/gtai/` (served by
+ * `.../voice/casting/art` only when the map lists them).
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import type Database from 'better-sqlite3';
+import { readBible } from '@/lib/voice/design';
+import { listVoices } from '@/lib/voice/voice-db';
+import { roundViews, type RoundView } from '@/lib/voice/castingDb';
+import type { VoiceRow } from '@/lib/voice/types';
+
+export interface CastingArt { file: string; label: string }
+export interface CastingCharacter { id: string; title: string; hasArt: boolean; cast: boolean }
+
+export interface CastingView {
+  characterId: string;
+  title: string;
+  /** The bible sections a voice is designed from (want, rhythm, profanity, under pressure), as written. */
+  bibleExcerpt: string | null;
+  art: Array<{ n: number; label: string }>;
+  rounds: RoundView[];
+  cast: VoiceRow | null;
+  characters: CastingCharacter[];
+}
+
+const IMAGE = /\.(png|jpe?g|webp)$/i;
+export const castingDir = (root: string) => path.join(root, 'games', 'gtai', 'voice', 'casting');
+
+export function readArtMap(root: string): Record<string, CastingArt[]> {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(castingDir(root), 'art.json'), 'utf8')) as Record<string, unknown>;
+    const out: Record<string, CastingArt[]> = {};
+    for (const [k, v] of Object.entries(raw)) if (!k.startsWith('$') && Array.isArray(v)) out[k] = v as CastingArt[];
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** The absolute art file for `characterId`'s n-th image, or null unless the map lists an existing image under games/gtai. */
+export function resolveArt(root: string, characterId: string, n: number): string | null {
+  const art = readArtMap(root)[characterId]?.[n];
+  if (!art || !IMAGE.test(art.file)) return null;
+  const base = path.join(root, 'games', 'gtai');
+  const abs = path.resolve(base, art.file);
+  const rel = path.relative(base, abs);
+  if (rel.startsWith('..') || path.isAbsolute(rel) || !fs.existsSync(abs)) return null;
+  return abs;
+}
+
+const titleOf = (bible: string | null, id: string) =>
+  (bible ? /^#\s*Voice bible:\s*(.+)$/m.exec(bible)?.[1]?.trim() : null) ?? id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+export function bibleExcerpt(bible: string): string {
+  const keep = /^##\s*(Want|Status move|Rhythm|Profanity register|Under pressure)/;
+  const out: string[] = [];
+  let on = false;
+  for (const line of bible.split(/\r?\n/)) {
+    if (line.startsWith('## ')) on = keep.test(line);
+    if (on) out.push(line);
+  }
+  return out.join('\n').trim();
+}
+
+export function castingCharacters(db: Database.Database, root: string, gameId: string): CastingCharacter[] {
+  const art = readArtMap(root);
+  const cast = new Set(listVoices(db, gameId).filter((v) => v.status === 'cast').map((v) => v.characterId));
+  let bibles: string[] = [];
+  try { bibles = fs.readdirSync(path.join(root, 'games', 'gtai', 'voices')).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)); } catch { /* no bibles */ }
+  const ids = [...new Set([...Object.keys(art), ...bibles])];
+  return ids.map((id) => ({ id, title: titleOf(readBible(root, id), id), hasArt: (art[id]?.length ?? 0) > 0, cast: cast.has(id) }))
+    .sort((a, b) => Number(b.hasArt) - Number(a.hasArt) || a.title.localeCompare(b.title));
+}
+
+export function castingView(db: Database.Database, root: string, gameId: string, characterId: string): CastingView {
+  const bible = readBible(root, characterId);
+  return {
+    characterId,
+    title: titleOf(bible, characterId),
+    bibleExcerpt: bible ? bibleExcerpt(bible) : null,
+    art: (readArtMap(root)[characterId] ?? []).map((a, n) => ({ n, label: a.label })),
+    rounds: roundViews(db, gameId, characterId),
+    cast: listVoices(db, gameId).find((v) => v.characterId === characterId && v.status === 'cast') ?? null,
+    characters: castingCharacters(db, root, gameId),
+  };
+}
+
+const day = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+const cell = (s: string | null | undefined) => (s ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
+
+export function renderCastingLog(v: CastingView): string {
+  const castRound = v.rounds.find((r) => r.round.status === 'cast');
+  const winner = castRound?.candidates.find((c) => c.candidate.verdict === 'cast');
+  const lines = [
+    `# Casting log: ${v.title}`, '',
+    `Generated by PoF from the casting rounds (\`${v.characterId}\`); regenerated on every change, so do not edit it by hand.`,
+    'Reusable lessons go into `CASTING.md` beside this file.', '',
+    winner
+      ? `**Cast** in round ${castRound!.round.roundNo} (${day(castRound!.round.closedAt ?? castRound!.round.createdAt)}): "${winner.candidate.label}", seed ${winner.candidate.seed ?? 'unknown'}, model \`${castRound!.round.model}\`, voice row \`${winner.voice.id}\`${winner.voice.providerVoiceId ? `, provider voice \`${winner.voice.providerVoiceId}\`` : ''}.`
+      : `**Not cast yet**: ${v.rounds.length} round${v.rounds.length === 1 ? '' : 's'} so far.`,
+  ];
+  if (winner) lines.push('', '**Winning description:**', '', `> ${cell(winner.voice.designPrompt)}`, winner.candidate.note ? `\n**Owner on the winner:** ${winner.candidate.note}` : '');
+  for (const { round, candidates } of v.rounds) {
+    lines.push('', `## Round ${round.roundNo}: ${round.status} (${day(round.createdAt)})`, '', `**Brief:** ${round.brief}`, '', `**Sample text:** "${cell(round.sampleText)}"`, '');
+    lines.push('| # | Label | Verdict | Owner note | Seed | Iterates on |', '|---|---|---|---|---|---|');
+    const label = new Map(v.rounds.flatMap((r) => r.candidates.map((c) => [c.voice.id, `R${r.round.roundNo} ${c.candidate.label}`] as const)));
+    candidates.forEach((c, i) => lines.push(`| ${i + 1} | ${cell(c.candidate.label)} | ${c.candidate.verdict} | ${cell(c.candidate.note)} | ${c.candidate.seed ?? ''} | ${c.candidate.parentVoiceId ? cell(label.get(c.candidate.parentVoiceId) ?? c.candidate.parentVoiceId) : ''} |`));
+    lines.push('', '**Descriptions:**', '');
+    candidates.forEach((c, i) => lines.push(`${i + 1}. ${cell(c.voice.designPrompt)}`));
+    if (round.ownerNote) lines.push('', `**Owner's comment for the next round:** ${round.ownerNote}`);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+/** Regenerate the character's casting log; returns the file, or null when it could not be written (never throws). */
+export function writeCastingLog(db: Database.Database, root: string, gameId: string, characterId: string): string | null {
+  if (!/^[a-z0-9-]+$/.test(characterId)) return null;
+  try {
+    const view = castingView(db, root, gameId, characterId);
+    if (view.rounds.length === 0) return null;
+    fs.mkdirSync(castingDir(root), { recursive: true });
+    const file = path.join(castingDir(root), `${characterId}.md`);
+    fs.writeFileSync(file, renderCastingLog(view));
+    return file;
+  } catch {
+    return null;
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$comment": "Character art shown on the PoF Casting page (Voice room). Paths are relative to games/gtai/; only images listed here are served. Keys are character ids (the voice bible's file name).",
+  "rivet": [
+    { "file": "art-direction/targets-2026-11-04/img/r2_c3_lanky_android_hybrid.jpg", "label": "Default body target: the lanky + android hybrid (owner keep, 2026-11-04)" },
+    { "file": "art-direction/targets-2026-11-04/img/r2_c4_transformation_stages.jpg", "label": "The two-stage transformation" },
+    { "file": "art-direction/trivet/characters/rivet/rivet-hero-a.png", "label": "Trivet hero sheet (2026-11-01)" }
+  ],
+  "dent": [{ "file": "art-direction/targets-2026-11-04/img/ghost_dent_mechanic.jpg", "label": "Dent, the crash-test ghost (mechanic)" }],
+  "tonnage": [{ "file": "art-direction/targets-2026-11-04/img/ghost_tonnage_bulky.jpg", "label": "Tonnage, the stamping-press ghost (bulky)" }],
+  "kerf": [{ "file": "art-direction/targets-2026-11-04/img/ghost_kerf_fast.jpg", "label": "Kerf, the laser-cutter ghost (fast)" }],
+  "ohm": [{ "file": "art-direction/targets-2026-11-04/img/ghost_ohm_mage.jpg", "label": "Ohm, the elder spot-welder ghost (mage)" }],
+  "king": [{ "file": "art-direction/targets-2026-11-05-bosses/img/boss_king.jpg", "label": "King, the REG-1 press king (boss target)" }],
+  "general-krump": [{ "file": "art-direction/targets-2026-11-05-bosses/img/boss_finale_krump.jpg", "label": "General Krump in the medal-armoured command suit (finale)" }]
+}

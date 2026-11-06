@@ -186,7 +186,7 @@ describe('Voice room', () => {
     stubRoutes({ ...STATE, voices: [designed] });
     render(<VoiceRoom t={LIGHT} />);
     await waitFor(() => expect(screen.getAllByTestId('voice-quest').length).toBe(2));
-    fireEvent.click(screen.getByRole('tab', { name: /Cast/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /^Cast$/ }));
     await waitFor(() => expect(screen.queryByTestId('voice-candidate')).not.toBeNull());
     const btn = screen.getByTestId('voice-cast-btn') as HTMLButtonElement;
     await waitFor(() => expect(screen.getByTestId('voice-candidate').textContent).toContain('Cast unlocks once you have played the preview through'));
@@ -199,7 +199,7 @@ describe('Voice room', () => {
     stubRoutes();
     render(<VoiceRoom t={LIGHT} />);
     await waitFor(() => expect(screen.getAllByTestId('voice-quest').length).toBe(2));
-    fireEvent.click(screen.getByRole('tab', { name: /Cast/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /^Cast$/ }));
     await waitFor(() => expect(screen.queryByTestId('voice-gate-note')).not.toBeNull());
     expect(screen.getByTestId('voice-gate-note').textContent).toContain('Never imitate or clone');
   });

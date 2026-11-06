@@ -84,6 +84,10 @@ export interface SpeechDesignRequest {
   description: string;
   /** 100-1000 chars the previews speak. */
   text: string;
+  /** The design model; default `DESIGN_MODEL`. `eleven_ttv_v3` is the expressive v3 design model. */
+  model?: string;
+  /** A fixed seed: the same seed with a refined description keeps a voice's identity (casting "iterate"). */
+  seed?: number;
 }
 
 export interface SpeechDesignResult {

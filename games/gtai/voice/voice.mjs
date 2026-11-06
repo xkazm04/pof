@@ -14,6 +14,8 @@
  *   node games/gtai/voice/voice.mjs stock --character <id> --voice-id <provider id> --name <name> [--note <text>]
  *   node games/gtai/voice/voice.mjs stock --casting <casting.json>   every premade pick of a casting file (candidates)
  *   node games/gtai/voice/voice.mjs voices [--character <id>]
+ *   node games/gtai/voice/voice.mjs casting [--character <id>]       casting rounds: candidates, verdicts, notes, round comments
+ *   node games/gtai/voice/voice.mjs round --character <id> --file <round.json>   design one casting round (1-5 voices)
  *   node games/gtai/voice/voice.mjs export --quest <id>             writes ONLY approved takes into the game
  *
  * HUMAN GATED: there is deliberately no approve, reject or cast command. Verdicts and casting are the
@@ -174,8 +176,40 @@ async function main() {
       out(`${r.written.length} written, ${r.skipped.length} skipped (unproven lines are never exported)`);
       return;
     }
+    case 'casting': {
+      const who = opt('character');
+      if (!who) {
+        const r = await call('/casting');
+        for (const c of r.characters) out(`  ${pad(c.id, 20)} ${pad(c.title, 34)} ${c.cast ? 'cast' : 'not cast'}${c.hasArt ? '' : ' (no art)'}`);
+        return;
+      }
+      const v = await call(`/casting?character=${encodeURIComponent(who)}`);
+      out(`${v.title}: ${v.cast ? `CAST ${v.cast.name} (${v.cast.id})` : 'not cast'} · ${v.rounds.length} rounds`);
+      for (const { round, candidates } of v.rounds) {
+        out(`\nround ${round.roundNo} [${round.status}] ${round.model} · ${round.id}\n  brief: ${round.brief}`);
+        candidates.forEach((c, i) => {
+          out(`  #${i + 1} ${pad(c.candidate.verdict, 8)} ${c.candidate.label} · seed ${c.candidate.seed} · voice ${c.voice.id}${c.candidate.parentVoiceId ? ` · iterates ${c.candidate.parentVoiceId}` : ''}`);
+          out(`       desc: ${c.voice.designPrompt}`);
+          if (c.candidate.note) out(`       NOTE: ${c.candidate.note}`);
+        });
+        if (round.ownerNote) out(`  ROUND COMMENT: ${round.ownerNote}`);
+      }
+      return;
+    }
+    case 'round': {
+      // A round file: { "brief": "...", "candidates": [{ "label", "description", "seed"?, "parentVoiceId"? }], "sampleText"?, "model"? }
+      const who = opt('character');
+      const file = opt('file');
+      if (!who || !file) throw new Error('round needs --character <id> --file <round.json>');
+      const { readFileSync } = await import('node:fs');
+      const spec = JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, ''));
+      const r = await call('/casting', { characterId: who, ...spec });
+      out(`round ${r.round.roundNo} for ${who}: ${r.voices.length} voices designed · ${r.chars} chars${r.log ? ` · log ${r.log}` : ''}`);
+      for (const f of r.failed) out(`  FAILED ${f.label}: ${f.error}`);
+      return;
+    }
     default:
-      out('usage: voice.mjs status | next | line | verdicts | readback | takes | design | stock | voices | export (see the header). '
+      out('usage: voice.mjs status | next | line | verdicts | readback | takes | design | stock | voices | casting | round | export (see the header). '
         + 'There is no approve/reject/cast: the owner does that in the PoF Voice room.');
       process.exitCode = cmd ? 1 : 0;
   }

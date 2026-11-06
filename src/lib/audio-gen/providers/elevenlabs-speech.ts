@@ -19,6 +19,8 @@ const API = 'https://api.elevenlabs.io';
 export const DEFAULT_SPEECH_MODEL = 'eleven_v3';
 export const SPEECH_MODELS = ['eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'] as const;
 export const DESIGN_MODEL = 'eleven_multilingual_ttv_v2';
+/** The v3 design model (accepted by the live API 2026-11-06), used by casting rounds. */
+export const DESIGN_MODEL_V3 = 'eleven_ttv_v3';
 
 export const supportsAudioTags = (model: string): boolean => model === 'eleven_v3';
 
@@ -72,9 +74,10 @@ export async function synthesizeSpeech(req: SpeechRequest): Promise<SpeechResult
 export async function designVoice(req: SpeechDesignRequest): Promise<SpeechDesignResult> {
   const res = await post('/v1/text-to-voice/design?output_format=mp3_44100_128', {
     voice_description: req.description,
-    model_id: DESIGN_MODEL,
+    model_id: req.model ?? DESIGN_MODEL,
     text: req.text,
     auto_generate_text: false,
+    ...(typeof req.seed === 'number' ? { seed: req.seed } : {}),
   });
   const json = (await res.json()) as { text?: string; previews?: Array<{ audio_base_64: string; generated_voice_id: string; duration_secs?: number }> };
   const previews = (json.previews ?? []).map((p) => ({

@@ -506,6 +506,19 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   Python process per batch, offline HF cache, off under `NODE_ENV=test` and with `POF_VOICE_READBACK=0`),
   `readback` (backfill: re-score stored transcripts, then read back takes not heard yet), `takes/verdict` (gated), `voices` (list, design, stock candidate), `voices/cast`
   (gated), `gate`, `audio?takeId|voiceId`, `export`.
+- **Casting rounds** (2026-11-06; `castingDb.ts`, `castingRound.ts`, `castingView.ts`; Voice room tab "Casting
+  rounds", addressable as `?room=voice&cast=<character>`): a main character's voice is found over rounds of 1-5
+  designed candidates, each from its own description, all speaking the same sample text, on `eleven_ttv_v3`
+  with a recorded `seed`. Tables `voice_cast_rounds` (brief, sample, status `open`/`closed`/`cast`, the owner's
+  round comment) and `voice_cast_candidates` (a `voice_voices` row plus round, label, seed, `parentVoiceId`,
+  verdict `pending`/`cast`/`iterate`/`decline`, note). **Iterate** lineage: a child naming `parentVoiceId`
+  reuses the parent's seed, so a refined description keeps the voice's identity. Routes: `GET/POST
+  voice/casting` (view; design a round, which only adds candidates), `casting/verdict` and `casting/close`
+  (both **gated** like a take verdict; `cast` casts the voice, closes the round and saves the preview as a
+  provider voice), `casting/art` (only images `games/gtai/voice/casting/art.json` lists, under `games/gtai/`).
+  **Memory:** every change regenerates `games/gtai/voice/casting/<character>.md` (each round, description,
+  seed, verdict and note); the reusable lessons are curated in `CASTING.md` beside it. CLI: `voice.mjs
+  casting [--character]` and `voice.mjs round --character <id> --file <round.json>`.
 - **Export** (`exportQuest`): only proven lines, mp3 to mastered Ogg Vorbis (ffmpeg; ElevenLabs has no ogg output) at
   `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg`, and the game's
   `project/quests/<quest>/quest.json` line gets `audio: "res://…ogg"` (a String: the game's `quest_voice.gd` plays

@@ -191,7 +191,15 @@ The routes refuse any other caller (403), and `voice.mjs` has no approve, reject
 3. **Open the room.** Make sure the PoF dev server on `:3001` is up (start it if not), then give the owner the
    Voice room link.
 4. **The loop, per line:**
-   - No voice for the speaker yet: `voice.mjs design --character <id> --n 3` from the voice bible, or
+   - **A main character with no voice yet: run casting rounds** (owner, 2026-11-06). First read
+     `games/gtai/voice/casting/CASTING.md` and the character's log beside it. Write a round of 5 candidates,
+     each with its own description, and run `voice.mjs round --character <id> --file <round.json>`. Give the
+     owner the link `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=<id>`. The owner marks each candidate
+     cast, iterate or decline, and closes the round with a comment. Read it with `voice.mjs casting
+     --character <id>`, then write the next round: every iterate becomes a child with `parentVoiceId` (same
+     seed, refined description), and the other slots follow the comment. **After a cast, add a lesson to
+     `CASTING.md`:** which words carried the winning description, and what the notes kept asking for.
+   - A minor speaker with no voice yet: `voice.mjs design --character <id> --n 3` from the voice bible, or
      `voice.mjs stock ...` for a premade voice (`stock --casting <casting.json>` imports a whole casting file). The owner listens to the previews and casts one in the room.
      Never imitate or clone a real person's voice; no recordings are uploaded.
    - `voice.mjs takes --line <id> --n 3 --direction "<words>"`, with directions written from the speaker's bible

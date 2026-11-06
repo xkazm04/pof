@@ -6,6 +6,7 @@ import type Database from 'better-sqlite3';
 import { getDb } from '@/lib/db';
 import { resolveGamesRoot } from '@/lib/games/intake/files';
 import { createVoiceDb } from '@/lib/voice/voice-db';
+import { createCastingDb } from '@/lib/voice/castingDb';
 
 let ready = false;
 
@@ -13,6 +14,7 @@ export function getVoiceDb(): Database.Database {
   const db = getDb();
   if (!ready) {
     createVoiceDb(db);
+    createCastingDb(db);
     ready = true;
   }
   return db;

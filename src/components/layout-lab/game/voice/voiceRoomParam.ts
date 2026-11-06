@@ -36,3 +36,29 @@ export function openRoom(room: string | null): void {
   window.history.pushState({}, '', roomHref(room));
   window.dispatchEvent(new Event(EVENT));
 }
+
+const castSnapshot = () => new URLSearchParams(window.location.search).get('cast');
+
+/** `?cast=<character>` — the Casting page of the Voice room ('' = the character picker); null = not open. */
+export function useCastParam(): string | null {
+  return useSyncExternalStore(subscribe, castSnapshot, () => null);
+}
+
+function pushParam(name: string, value: string | null): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set('room', 'voice');
+  if (value === null) url.searchParams.delete(name);
+  else url.searchParams.set(name, value);
+  window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  window.dispatchEvent(new Event(EVENT));
+}
+
+/** Open the Casting page for `character` ('' = the picker); pushes a history entry. */
+export function openCasting(character: string): void {
+  pushParam('cast', character);
+}
+
+/** Leave the Casting page (drop `cast`), staying in the Voice room. */
+export function closeCasting(): void {
+  pushParam('cast', null);
+}

@@ -16,11 +16,12 @@ import { VoiceQueue, nextToJudge, type ExportNote } from './voiceQueue';
 import { VoiceLine } from './voiceLine';
 import { VoiceCast } from './voiceCast';
 import { postVoice, useGateToken, useVoiceRoom, type LineKey } from './voiceRoomData';
-import { openRoom } from './voiceRoomParam';
+import { closeCasting, openCasting, openRoom, useCastParam } from './voiceRoomParam';
+import { VoiceCasting } from './voiceCasting';
 import { useExclusivePlayback } from './voiceExclusivePlay';
 
-type Tab = 'queue' | 'cast';
-const TABS = [{ id: 'queue' as const, label: 'Queue' }, { id: 'cast' as const, label: 'Cast' }];
+type Tab = 'queue' | 'cast' | 'casting';
+const TABS = [{ id: 'queue' as const, label: 'Queue' }, { id: 'cast' as const, label: 'Cast' }, { id: 'casting' as const, label: 'Casting rounds' }];
 
 interface ExportReport {
   written: Array<{ lineId: string; onLevel: boolean | null }>; skipped: unknown[]; stale: Array<{ lineId: string }>;
@@ -43,7 +44,15 @@ export function VoiceRoom({ t }: { t: LabTheme }) {
   const { read, reload } = useVoiceRoom();
   const gate = useGateToken();
   const roomRef = useExclusivePlayback<HTMLElement>();
-  const [tab, setTab] = useState<Tab>('queue');
+  const [localTab, setLocalTab] = useState<Exclude<Tab, 'casting'>>('queue');
+  // The Casting page is addressable (`?cast=<character>`), so its tab is derived from the address.
+  const castParam = useCastParam();
+  const tab: Tab = castParam !== null ? 'casting' : localTab;
+  const setTab = (next: Tab) => {
+    if (next === 'casting') { openCasting(''); return; }
+    if (castParam !== null) closeCasting();
+    setLocalTab(next);
+  };
   const [picked, setPicked] = useState<LineKey | null>(null);
   const [exportNote, setExportNote] = useState<ExportNote | null>(null);
 
@@ -89,6 +98,7 @@ export function VoiceRoom({ t }: { t: LabTheme }) {
           </div>
         </div>
       )}
+      {tab === 'casting' && <VoiceCasting t={t} character={castParam || null} gate={gate.token} />}
       {data && tab === 'cast' && <VoiceCast t={t} queue={data.queue} voices={data.voices} gate={gate.token} onChanged={reload} />}
     </section>
   );
