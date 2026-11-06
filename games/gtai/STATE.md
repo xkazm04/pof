@@ -86,6 +86,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-03 | PoF's ElevenLabs provider calls only `/v1/sound-generation`: no text-to-speech, no voice catalogue, no music kind; the SFX craft pack exceeds the provider's 450-character limit (audio lane POF-GAP 1-3) | high (tts), medium (music, prompt length) | tts: building (lane `pof-voice`); music and prompt length: open |
 | 2026-11-03 | The night runner (`games/gtai/night/night.mjs`) does not recognise the subscription's 5-hour usage limit (`api_error: usage_limit_reached`, `resetsAt` in `rate_limit_info`): it logged a plain exit 1 and retried every lane every 2 minutes from 13:12 to 15:40, and the lanes' journals could not say why they stopped | medium | open: record LIMIT in the log and sleep until `resetsAt` |
 | 2026-11-06 | Casting a main character needs rounds: 5 distinct designs, cast/iterate/decline verdicts with notes, a round comment, seed lineage for iterate, the character art beside it, and a casting memory. The Voice room only designed 3 bible candidates per click | high | **built** 2026-11-06: the Casting rounds tab (`?room=voice&cast=<id>`), `voice.mjs round`/`casting`, the memory in `games/gtai/voice/casting/` (`CASTING.md` + a regenerated log per character) |
+| 2026-11-06 | The quest tooling still names the descoped souls: the campaign baseline (`src/lib/games/gtai-quest/campaignBaseline.ts`, unlock beats and `soul_*_unlocked` flags for gearbox / sentry / hauler) and the council brief (`games/gtai/quest/council.mjs`, act soul roster). Their voice bibles were removed 2026-11-06 (owner: "descoped"), so a council would still offer them as souls | medium | open: replace with Dent / Tonnage / Kerf / Ohm once the owner sets the ghost unlock order (pitch §4: discovered through Dr. Kilohm's questline) |
 
 ## Session log
 
@@ -953,3 +954,4 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - **Six declined voices are kept for other roles** (CASTING.md, "Declined here, wanted elsewhere").
 - **Cost:** about 16k ElevenLabs characters for the casts; 40,344 left until 13 Nov. Voice slots: 15 / 30.
 - **Open question:** the Cast toggle unlocks only after the preview is played 80 % through. The owner asked why it was blocked; whether to relax the rule is open.
+- **Descoped (owner):** the old souls Gearbox, Hauler and Sentry. Their voice bibles were removed, so they are off the casting roster. The quest tooling still names them (PoF gap row). **Next cast:** the bosses, King then General Krump; King round 1 is designed.
