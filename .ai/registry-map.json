@@ -2734,8 +2734,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "deviation",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:200 Test generation sends a builder's string straight to sendPrompt, skipping the execute()/composeTaskDispatch door that the same module's stimuli and test-run tasks use. That one prompt family therefore has two assembly paths: the generate path gets no project scan or dynamicContext (ctx at line 71 holds only name, path and version), no adopted variant, no skill packs, and no task type for model-policy pinning or spend attribution.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "eval-harness",
@@ -25598,8 +25602,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:15 The listed files probe bridge endpoints and run UE test specs over the bridge, with no model call. A search of BridgeEndpointHealth/ and TestHarnessPanel/ found no buildProjectContextHeader, PromptBuilder, composeTaskDispatch or sendPrompt; the one CLI hand-off in the directory (WaitingTestsTab.tsx, which is not in this context's file list) passes a server-built task to the shared cli.execute assembler.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-instruction-files",

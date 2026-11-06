@@ -1,0 +1,95 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d9a1e12e-637d-4776-a2ef-31cea9a436e9",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-11-06T02:11:41.550370+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ai-behavior-testing",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:200 Test generation sends a builder's string straight to sendPrompt, skipping the execute()/composeTaskDispatch door that the same module's stimuli and test-run tasks use. That one prompt family therefore has two assembly paths: the generate path gets no project scan or dynamicContext (ctx at line 71 holds only name, path and version), no adopted variant, no skill packs, and no task type for model-policy pinning or spend attribution.",
+   "techniques": [
+    {
+     "technique": "layered-composition",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:200 The same module also reaches the model through testGenCli.execute(TaskFactory.detectStimuli(...)) at line 215. Two doors for one family means part of what the model reads skips the enrichment and variant layers."
+    },
+    {
+     "technique": "variable-interpolation",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:71 The call site hand-builds the ProjectContext input and drops the declared dynamicContext. execute() builds ctx from the store with dynamicContext, so the input set depends on which door is used."
+    },
+    {
+     "technique": "fingerprinting-and-cache-keys",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/AITestingSandbox/runFreshness.ts:10 Freshness here is about whether a test result is stale after a scenario edit, not prompt or session staleness. No long-lived session is resumed against a changed prompt."
+    }
+   ]
+  },
+  {
+   "context": "ue5-bridge-monitoring",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:15 The listed files probe bridge endpoints and run UE test specs over the bridge, with no model call. A search of BridgeEndpointHealth/ and TestHarnessPanel/ found no buildProjectContextHeader, PromptBuilder, composeTaskDispatch or sendPrompt; the one CLI hand-off in the directory (WaitingTestsTab.tsx, which is not in this context's file list) passes a server-built task to the shared cli.execute assembler.",
+   "techniques": [],
+   "absenceTerms": [
+    "buildProjectContextHeader",
+    "PromptBuilder",
+    "composeTaskDispatch",
+    "sendPrompt"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "prompt-evolution",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "step-shared-primitives",
+   "reason": "evidence leans on lib/catalog/stepPrompt.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T02:11:41.550370+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [
+    "fingerprinting-and-cache-keys",
+    "layered-composition",
+    "variable-interpolation"
+   ],
+   "deviations": 1,
+   "context": "ai-behavior-testing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T02:11:41.550370+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ue5-bridge-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

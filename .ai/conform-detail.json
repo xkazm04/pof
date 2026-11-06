@@ -20178,6 +20178,42 @@
           "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/constants.ts:32 Selectable modules derive from the feature-definitions authority instead of a second hand-kept list."
         }
       ]
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/prompt-assembly": {
+      "context": "ai-behavior-testing",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:11:41.550Z",
+      "worker": "d9a1e12e-637d-4776-a2ef-31cea9a436e9",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:200 The same module also reaches the model through testGenCli.execute(TaskFactory.detectStimuli(...)) at line 215. Two doors for one family means part of what the model reads skips the enrichment and variant layers."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:71 The call site hand-builds the ProjectContext input and drops the declared dynamicContext. execute() builds ctx from the store with dynamicContext, so the input set depends on which door is used."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/AITestingSandbox/runFreshness.ts:10 Freshness here is about whether a test result is stale after a scenario edit, not prompt or session staleness. No long-lived session is resumed against a changed prompt."
+        }
+      ]
+    },
+    "940bbe98-a8c3-4d5e-b4e5-c447578e2123/prompt-assembly": {
+      "context": "ue5-bridge-monitoring",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:11:41.550Z",
+      "worker": "d9a1e12e-637d-4776-a2ef-31cea9a436e9",
+      "techniques": []
     }
   }
 }
