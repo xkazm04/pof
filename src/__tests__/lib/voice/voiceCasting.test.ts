@@ -119,3 +119,19 @@ describe('casting roles', () => {
     expect(groupOf('patch', 'the payphone job router')).toBe('Cast');
   });
 });
+
+describe('appending to an open round', () => {
+  it('adds voices to the open round (same sample, numbered on), up to 5, and refuses without an open round', async () => {
+    expect((await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'b', candidates: [cand('x')], append: true }, deps)).ok).toBe(false);
+    const r1 = await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'b', candidates: [cand('a'), cand('b'), cand('c')], sampleText: SAMPLE }, deps);
+    if (!r1.ok) throw new Error(r1.error);
+    const more = await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'retry', candidates: [cand('d'), cand('e')], append: true }, deps);
+    expect(more.ok).toBe(true);
+    if (!more.ok) return;
+    expect(more.data.round.id).toBe(r1.data.round.id);
+    expect(more.data.voices.map((v) => v.name)).toEqual(['R1·4 d', 'R1·5 e']);
+    expect(calls.at(-1)?.text).toBe(SAMPLE);
+    expect(roundViews(db, 'gtai', 'dock-guard')).toHaveLength(1);
+    expect((await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'b', candidates: [cand('f')], append: true }, deps)).ok).toBe(false);
+  });
+});

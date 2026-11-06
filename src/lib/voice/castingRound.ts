@@ -14,7 +14,7 @@ import { ORIGINAL_VOICE_CLAUSE, previewText } from '@/lib/voice/design';
 import { insertVoice } from '@/lib/voice/voice-db';
 import { writeVoiceFile } from '@/lib/voice/storage';
 import {
-  getCandidate, insertCandidate, insertRound, MAX_CANDIDATES_PER_ROUND, nextRoundNo, openRound, type CastRound,
+  getCandidate, insertCandidate, insertRound, MAX_CANDIDATES_PER_ROUND, nextRoundNo, openRound, roundViews, type CastRound,
 } from '@/lib/voice/castingDb';
 import type { VoiceRow } from '@/lib/voice/types';
 import type { Result } from '@/types/result';
@@ -37,6 +37,9 @@ export interface RoundRequest {
   /** Default: the character's own queue lines (100-1000 chars). */
   sampleText?: string;
   model?: string;
+  /** Add the candidates to the character's OPEN round (e.g. to re-run design calls that failed), up to 5 in all.
+   *  The round keeps its own sample text and model, so every voice in it still compares like with like. */
+  append?: boolean;
 }
 
 export interface RoundOutcome { round: CastRound; voices: VoiceRow[]; failed: Array<{ label: string; error: string }>; chars: number }
@@ -71,18 +74,24 @@ export async function designRound(db: Database.Database, req: RoundRequest, deps
   const invalid = validateRound(req);
   if (invalid) return { ok: false, error: invalid };
   const open = openRound(db, req.gameId, req.characterId);
-  if (open) return { ok: false, error: `round ${open.roundNo} for ${req.characterId} is still open: the owner closes it (or casts) first` };
-  const sampleText = (req.sampleText?.trim() || previewText(db, req.gameId, req.characterId)) ?? '';
+  if (open && !req.append) return { ok: false, error: `round ${open.roundNo} for ${req.characterId} is still open: the owner submits it first (or pass append to add voices to it)` };
+  if (!open && req.append) return { ok: false, error: `${req.characterId} has no open round to append to` };
+  const existing = open ? roundViews(db, req.gameId, req.characterId).find((r) => r.round.id === open.id)?.candidates.length ?? 0 : 0;
+  if (existing + req.candidates.length > MAX_CANDIDATES_PER_ROUND) return { ok: false, error: `round ${open?.roundNo} has ${existing} voices; at most ${MAX_CANDIDATES_PER_ROUND - existing} more fit` };
+  if (open && roundViews(db, req.gameId, req.characterId).find((r) => r.round.id === open.id)?.candidates.some((c) => c.candidate.verdict !== 'pending')) {
+    return { ok: false, error: `round ${open.roundNo} already has verdicts; a new voice would join a half-judged round` };
+  }
+  const sampleText = open?.sampleText ?? ((req.sampleText?.trim() || previewText(db, req.gameId, req.characterId)) ?? '');
   if (sampleText.length < 100 || sampleText.length > 1000) return { ok: false, error: `the sample text must be 100-1000 chars (it is ${sampleText.length}); pass sampleText` };
   const now = deps.now();
-  const round: CastRound = {
+  const round: CastRound = open ?? {
     id: randomUUID(), gameId: req.gameId, characterId: req.characterId, roundNo: nextRoundNo(db, req.gameId, req.characterId),
     brief: req.brief.trim(), sampleText, model: req.model ?? DESIGN_MODEL_V3, status: 'open', ownerNote: null, createdAt: now, closedAt: null,
   };
   const results = await mapLimited(req.candidates, CONCURRENCY, async (spec, i) => {
     const parentSeed = spec.parentVoiceId ? getCandidate(db, spec.parentVoiceId)?.seed ?? undefined : undefined;
     const seed = spec.seed ?? parentSeed ?? deps.seed();
-    const description = `${spec.description.trim()}. ${ORIGINAL_VOICE_CLAUSE}`;
+    const description = `${spec.description.trim().replace(/[.\s]+$/, '')}. ${ORIGINAL_VOICE_CLAUSE}`;
     try {
       const r = await deps.design({ description, text: sampleText, model: round.model, seed });
       const p = r.previews[0];
@@ -91,7 +100,7 @@ export async function designRound(db: Database.Database, req: RoundRequest, deps
       const file = writeVoiceFile(`${req.gameId}/previews/${req.characterId}/${id}.mp3`, p.bytes);
       const at = now + i;
       const voice: VoiceRow = {
-        id, gameId: req.gameId, characterId: req.characterId, name: `R${round.roundNo}·${i + 1} ${spec.label.trim()}`.slice(0, 80),
+        id, gameId: req.gameId, characterId: req.characterId, name: `R${round.roundNo}·${existing + i + 1} ${spec.label.trim()}`.slice(0, 80),
         providerVoiceId: null, source: 'designed', designPrompt: description,
         previews: [{ generatedVoiceId: p.generatedVoiceId, file, durationMs: p.durationMs }], status: 'candidate', createdAt: at, updatedAt: at,
       };
@@ -103,7 +112,7 @@ export async function designRound(db: Database.Database, req: RoundRequest, deps
   const made = results.filter((r) => r.ok);
   if (made.length === 0) return { ok: false, error: `no candidate was designed: ${results.map((r) => (r.ok ? '' : `${r.label}: ${r.error}`)).join('; ')}` };
   db.transaction(() => {
-    insertRound(db, round);
+    if (!open) insertRound(db, round);
     for (const m of made) {
       insertVoice(db, m.voice);
       insertCandidate(db, { voiceId: m.voice.id, roundId: round.id, label: m.spec.label.trim(), seed: m.seed, parentVoiceId: m.spec.parentVoiceId ?? null, verdict: 'pending', note: null, verdictAt: null });

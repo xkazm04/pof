@@ -513,7 +513,8 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   round comment) and `voice_cast_candidates` (a `voice_voices` row plus round, label, seed, `parentVoiceId`,
   verdict `pending`/`cast`/`iterate`/`decline`, note). **Iterate** lineage: a child naming `parentVoiceId`
   reuses the parent's seed, so a refined description keeps the voice's identity. Routes: `GET/POST
-  voice/casting` (view; design a round, which only adds candidates), `casting/submit` (**gated** like a take
+  voice/casting` (view; design a round, which only adds candidates; `append: true` adds voices to the open,
+  still unjudged round, up to 5, on its own sample text: used to re-run design calls that failed), `casting/submit` (**gated** like a take
   verdict: the owner's WHOLE round at once, `submitRound`: every voice judged, at most one `cast`; a cast casts
   the voice, ends the round `cast` and saves the preview as a provider voice), `casting/art` (only images
   `games/gtai/voice/casting/art.json` lists, under `games/gtai/`; its `$roles` gives a role line to characters

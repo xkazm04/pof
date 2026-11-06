@@ -60,6 +60,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       gameId, characterId: b.characterId, brief: typeof b.brief === 'string' ? b.brief : '', candidates,
       sampleText: typeof b.sampleText === 'string' ? b.sampleText : undefined,
       model: typeof b.model === 'string' ? b.model : undefined,
+      append: b.append === true,
     });
     if (!r.ok) return apiError(r.error, 422);
     const log = writeCastingLog(db, questRoot(), gameId, b.characterId);

@@ -127,7 +127,7 @@ export function castingView(db: Database.Database, root: string, gameId: string,
   };
 }
 
-const day = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+const day = (ms: number) => `${new Date(ms).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 const cell = (s: string | null | undefined) => (s ?? '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
 
 export function renderCastingLog(v: CastingView): string {

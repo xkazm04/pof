@@ -5,6 +5,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
+- **2026-11-06: voice casting runs in PoF.** **Rivet is cast**, in round 2 ("Glitch, faster and wider": a synthetic metallic voice with full human range, glitching under stress; seed 138026492, provider voice `d0s7NPEcGaJCnClrzPlS`). **Dent round 1 waits for the owner**: `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=dent`. The casting memory is `games/gtai/voice/casting/` (`CASTING.md` lessons + reusable voices; a regenerated log per character). Next: Dent, then Tonnage, Kerf, Ohm, Don Fax.
 - **2026-11-04 afternoon: the visual targets are set** (the owner judged image rounds 1-2 and said "no need to iterate next round. We have nice visual targets for next runs"): `art-direction/targets-2026-11-04/TARGETS.md`. In short: a slim default cast; Rivet as the lanky + android hybrid; a two-stage transformation; the look a middle ground between today's game and Inked Grime with a riso texture; the alley for close-ups; weapon sheets plus plasma sword +20 % and Gatling barrels +50 %. **Next:** a night run that chases these targets in the engine (rig re-proportioning, the riso texture in the D5 print, weapon art from the sheets).
 - **2026-11-04: the combat night is merged and approved.** rtai main `a1275c82` (pushed) holds the night lanes (weapon art, Rivet's arsenal, gunplay, human reactions, brutality, showcase), Rivet 50 % faster, and corpse decay (`corpse_decay.json`, `--horde`, `--no-decay`). Owner: "nice baselines, all approved"; all lane call defaults stand. Final reel and horde clip: `kiro/gtai-masters/keep-2026-11-04/`. Exe: `kiro/gtai-wt/int-day/build/export/windows/RTAI.exe`. Backlog: rtai `docs/backlog/combat-notes-2026-11-04.md` (electro and plasma-rifle reactions, melee hold and animation, plasma sword art, the homing-shard reaction delay, a Gatling gun, the city-fight lag). Night briefs: `games/gtai/day/2026-11-04/night/`.
 - **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
@@ -899,3 +900,18 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
     - `view70`: a small 70 sample (Rivet, Tonnage, the King) plus `--view=combo` (70 in play, 55 in boss fights).
   - The worktrees `gtai-wt/d8-*` are cut from `3e9a6e7c` and imported clean.
   - Launch with `kiro/gtai-d8/launch.cmd`: until 19:00, freeze 18:30, report 18:40. Update the times if the launch is late.
+
+### 2026-11-06 day: casting rounds built; Rivet cast; Dent round 1
+
+- **Built (PoF):** the Casting rounds tab in the Voice room (`?room=voice&cast=<id>`).
+  - One line per voice: a compact player, Cast / Iterate / Decline toggles and a note. The whole round goes in one gated submit.
+  - A grouped character roster (Lead / Souls / Bosses / Cast) with art and the bible as section cards.
+  - Rounds are designed headlessly with `voice.mjs round` (append re-runs failed calls).
+  - Commits `896e8200`, `245689d0`, `8192e816`, `8c3db632` and this wrap.
+- **Owner verdicts:**
+  - The layout prototype **A (Roster)** won over Dossier and Spotlight.
+  - **Rivet:** in round 1 every human voice was declined and #3, the glitching machine, was iterated. In round 2 the **iterate on the same seed was cast**.
+  - Three declined voices were kept for other roles (`CASTING.md`, "Declined here, wanted elsewhere").
+- **Dent round 1** is designed (5 machine voices; the sample is a casting side Claude wrote, not canon) and waits for the owner.
+- **Cost:** about 4,400 ElevenLabs characters this session; about 51k are left until 13 Nov.
+- **Environment:** the stale :3001 PoF dev server was replaced (Turbopack had cached a crashed CSS compile; the `.next/dev` cache was cleared). PoF now runs on :3001 from this session.
