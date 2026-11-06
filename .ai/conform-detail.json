@@ -19958,31 +19958,21 @@
       "context": "project-health-dashboards",
       "subject": "concept-scene-parity",
       "bundle": "game-production",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:37:00.601Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
-        "state": "not-applicable",
-        "at": "2026-11-06T00:37:36.441821+00:00",
-        "reason": "reviewer (sonnet): The anchor types.ts:13 is a RegressionAlert interface field, so it does not show that no scene is judged against a concept image, and the only support is a keyword search with narrow terms."
-      }
+      "evaluatedTs": "2026-11-06T03:00:07.222Z",
+      "worker": "ee0198b0-6011-4ac4-86a4-5511792c466d",
+      "techniques": []
     },
     "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/concept-scene-parity": {
       "context": "asset-visual-studio",
       "subject": "concept-scene-parity",
       "bundle": "game-production",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:37:00.601Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
-        "state": "not-applicable",
-        "at": "2026-11-06T00:37:36.524187+00:00",
-        "reason": "reviewer (sonnet): The anchor StudioHeader.tsx:102 is the A/B compare toggle, which shows the studio's own features but not that concept or scorecard input is absent. I also could not confirm the claims about manual colour-grading sliders or an acquisition tracker beyond that button."
-      }
+      "evaluatedTs": "2026-11-06T03:00:07.222Z",
+      "worker": "ee0198b0-6011-4ac4-86a4-5511792c466d",
+      "techniques": []
     },
     "2a39555c-9199-48bf-b54a-6a13db05036c/prompt-assembly": {
       "context": "cli-terminal-system",
@@ -20334,6 +20324,31 @@
           "evidence": "src/lib/blender-mcp/scripts/generate-lods.ts:19 Deterministic decimation, not generation, so the shaping effect does not apply"
         }
       ]
+    },
+    "15282b56-0d42-43ed-b76d-d61c8e6e0309/concept-scene-parity": {
+      "context": "material-style-tools",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:00:07.222Z",
+      "worker": "ee0198b0-6011-4ac4-86a4-5511792c466d",
+      "techniques": []
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/concept-scene-parity": {
+      "context": "project-setup-core",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:00:07.222Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ee0198b0-6011-4ac4-86a4-5511792c466d",
+        "state": "not-applicable",
+        "at": "2026-11-06T03:01:19.429029+00:00",
+        "reason": "reviewer (sonnet): The anchor nextStep.ts:11 is only a NextStepId type declaration, so it does not show that scene capture is absent. ProjectSetupModule.tsx:186 also mentions viewport, PIE and live state sync, and the claim that the context 'never captures' a scene was not confirmed."
+      }
     }
   }
 }

@@ -5125,7 +5125,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/CompareBar.tsx:5 The only comparison in this context is an A/B between two post-process stack snapshots (plus marketplace asset scouting); there is no concept image and no grade fitted to one, and a search for concept/scorecard/parity in AssetScoutView and PostProcessStudioView found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "mcp-tools",
@@ -19256,7 +19260,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/types.ts:28 The reference image here drives style-transfer analysis for a single material (palette, roughness, metallic), which is material-level reference work rather than a lit, composed scene judged against a concept, and concept/scorecard/parity have no hits in either tool folder.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "codebase-scanning",
@@ -22169,7 +22177,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/types.ts:13 These dashboards chart per-module code and feature quality scores (ModuleScore, avgQuality, stale reviews), and a search of both dashboard folders for concept/scorecard/parity found no hits, so no real-time scene is ever judged against a concept image here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "quality-gates",
