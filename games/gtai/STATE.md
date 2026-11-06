@@ -842,3 +842,27 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - **New art:** Rivet and the King redesigned for the chosen angle through Codex image_gen. Rivet's identity is the logo.
   - **Rules:** no 3D runtime. The deliverable is a same-seed side-by-side at 32 px/m, plus a cost table for the rest of the cast.
 - **Pace exception:** this is five lanes on one machine at the owner's request; the default pace stays two builders.
+
+### 2026-11-06 09:00 morning: night n7 reported, verdict page published
+- **All five lanes reported at 08:40.** The runners exited 0, and every lane's gates are green on its own branch: lint, unit, 52 scenarios, parity bit-exact, look goldens, and the director reel 19/19 with 0 SCRIPT ERROR.
+- **Scoreboards:** `games/gtai/day/2026-11-06/scoreboards/{n7,n7p,n7x}.md`.
+- **Cost:** king $102.90, servo $103.33, ranged $115.39, melee $114.59, view $47.16. The API key and the backup key drained overnight, and the subscription carried the rest.
+- **What each lane delivered:**
+  - **view** (`n7x-view`, from 02:00): `--view=top|top_lift|tilt|...`. The default `top` is md5-identical to today's game.
+    - The lane's answer is tilt at 55 degrees. Parts lifted by height keep free rotation; there are upright head and chest cards in 5 drawn facings for Rivet, the King, the gang and two cops; the King's car is an 18-slice sprite stack drawn from code.
+    - Also built: cast shadows, depth sort (interleaved parts 71 % -> 4 %), occlusion silhouettes, and aim unprojection (unit-tested only, not played with a mouse).
+    - Bench: tilt costs +15 % frame and +55 % draw calls, CONTENDED.
+    - Owed: the city's buildings and parked cars are still flat under tilt, and about 10 card rounds remain for the rest of the cast.
+  - **king:** the shared boss framework plus the King in 3 phases. Easy band: the human-like bot survives 10 of 10. A per-boss repair delay is the difficulty lever (20 s gives 7/10 survive).
+  - **servo:** Act 2's boss with the drone swarm and the depot. The bot downs him 10/10 and never dies.
+  - **ranged:** the shared feel layer, used by melee too, then Rivet's guns weakest first. 11 new shot cues, none listened to.
+  - **melee:** the non-lethal wound, melee weight, all four ghosts' attacks, and quest 1 now carries the katana.
+- **Verdict page:** https://claude.ai/artifact/5hVaA3Th9DZYhJHwaw5Sp6, with 57 calls in 6 sections: merge, view, king, servo, ranged and melee. It uses the `decisions` db and the "Copy answers for Claude" export.
+- **Next:**
+  - take the owner's answers;
+  - merge in this order: king, servo, ranged, melee, view (if the merge call says A);
+  - push main;
+  - apply the flips;
+  - clean the n7, n7p and n7x roots and worktrees once the verdicts are done.
+
+  The d7 verdicts (artifact AYfehuXJMLPFRc7ywpfpZ7) are still unanswered.
