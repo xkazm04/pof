@@ -81,3 +81,24 @@ owner's notes kept asking for, and what to try first next time.)_
 - **Next time:** for any robot, start round 1 with all five machine voices and vary age, pitch, fidelity and
   energy. Never spend a slot on a human voice. When a round 1 voice is iterated, spend two slots on its seed
   and push the axis the notes praised elsewhere.
+
+### Dent: cast in round 2 (2026-11-06), "Bigger flip", seed 1578267783, `eleven_ttv_v3`
+
+- **What decided it:** a comic CONTRAST beat the straight comedy voices. The daredevil, the punch-drunk veteran,
+  the announcer and the adrenaline unit all played one emotion. The winner was a flat procedural test unit
+  that FLIPS into ecstasy at every impact, then snaps back.
+- **Round 2 was five variants on one seed** (the owner's call). The winner exaggerated the contrast; it
+  did not refine the base: "a huge, ecstatic, overloaded shout with crackling distortion and a burst of
+  mechanical laughter, holding the euphoria a beat longer, then snaps instantly back to dead calm. Maximum comic
+  contrast." The variants that changed the base (lower and heavier, faster, joy leaking through, a glitch at the
+  switch) all lost.
+- **The pattern across two casts:** the cast is found in round 2, on the seed of the round-1 iterate. The words
+  that win push the quality the owner already liked FURTHER, and do not add a new idea.
+- **Next time:** for a ghost or a comic robot, give round 1 at least one CONTRAST voice: two registers that
+  switch on a trigger (calm to frenzy, polite to violent). In round 2, one variant should be "the same, but more".
+
+### The round plan that has worked twice
+
+- **Round 1:** five distinct machine voices; one axis per slot; one contrast voice for a comic role.
+- **Round 2:** about five slots on the iterated seed. Slot 1 is always "the same, but much more" of the praised
+  quality, and the rest vary one thing each.
