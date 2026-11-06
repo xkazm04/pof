@@ -97,8 +97,27 @@ owner's notes kept asking for, and what to try first next time.)_
 - **Next time:** for a ghost or a comic robot, give round 1 at least one CONTRAST voice: two registers that
   switch on a trigger (calm to frenzy, polite to violent). In round 2, one variant should be "the same, but more".
 
-### The round plan that has worked twice
+### Kerf: cast in round 4 (2026-11-06), "Fresh fusion, rapid-fire", seed 485640512, `eleven_ttv_v3`
+
+- **What decided it:** a voice the owner heard in a direction the brief did not name. "Cold whisper" was written
+  androgynous leaning male; the owner heard "sinister female voice" and wanted it, "Human voice can be layered into
+  robotic tones". The robotic layer of a second iterate (#4 Laconic blade) was merged in.
+- **The winner is a fresh seed that fused the two iterates** (round 2 #5), not either parent's seed: "a sinister
+  female robot voice: a close, breathy whisper fused with a hard, cold, metallic synthetic tone and a faint high
+  laser hum ... calm, deadly, faintly amused, never raises her voice. Half human breath, half machine." When the
+  owner asks to combine two voices, a description of the blend on a new seed can beat both parents' seeds.
+- **Rounds 3 and 4 were about pace only:** "Speed up into normal tempo", then "Speed up all" (+20 to +50 %). The
+  identity was found in round 2; tempo cost two more rounds. Pace words in a description work, but not exactly:
+  "rapid-fire, half again faster" measured x1.15 to x1.62 against the same seed's slower preview. The winner
+  measured x1.24, and its takes can add up to 1.2x (speed setting) to reach the asked pace.
+- **Next time:** write the pace into round 1's descriptions ("brisk, conversational tempo, no lingering"), because
+  slow, deliberate delivery read as too slow for every assassin variant. When a note is only about speed, the
+  player's 1.2x / 1.5x preview answers it inside the same round, so it doesn't cost a new round. Note the take
+  speed the cast voice needs: Kerf 1.2.
+
+### The round plan that has worked three times
 
 - **Round 1:** five distinct machine voices; one axis per slot; one contrast voice for a comic role.
 - **Round 2:** about five slots on the iterated seed. Slot 1 is always "the same, but much more" of the praised
-  quality, and the rest vary one thing each.
+  quality, and the rest vary one thing each. With two iterates, add a fresh-seed fusion of both (Kerf's winner).
+- **Always:** state the pace in every description; robots under stress and assassins both read better brisk.
