@@ -1,0 +1,175 @@
+{
+ "schema": "conform-run/1",
+ "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
+ "subject": "agent-memory",
+ "evaluatedAt": "2026-11-06T04:11:55.034478+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "code-quality-evaluation",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 An operator's correction to a mined pattern (a consolidated procedure memory derived from session_analytics) is applied as an in-place UPDATE that neither records the correction as an event nor marks the row operator-graded, and pattern-library-db's upsert preserves human text only when verified=1, so the next extractPatterns run silently overwrites the correction.",
+   "techniques": [
+    {
+     "technique": "memory-governance",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 Corrections must supersede and be remembered as operator-issued events that no future inference undoes. Here the edit is a bare patch (updatePatternMeta does not set verified), and re-mining with ON CONFLICT ... CASE WHEN verified = 1 reverts it."
+    },
+    {
+     "technique": "memory-value-model",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PatternLibraryView/AuthorPatternModal.tsx:94 The author grade is part of a single ranking (pinned, verified, success_rate: CURATION_ORDER in pattern-library-db) that both the library and dispatch suggestions use."
+    }
+   ]
+  },
+  {
+   "context": "prompt-evolution",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:132 The challenger gate (planStart/checkPairBlocks) refuses only a running test or text identical to the current incumbent. A rewrite that already lost a concluded A/B test can therefore be saved as a new variant and tested again, so the revision loop cycles instead of compounding.",
+   "techniques": [
+    {
+     "technique": "rejected-revision-leaves-its-evidence",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:132 Concluded tests persist, but neither the gate nor the optimizer reads losing challengers, so the rejected diagnosis never reaches the reviser."
+    },
+    {
+     "technique": "procedure-promotion",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:182 Adopting a procedure moves the active pointer over versioned variants (engine.restoreVariant -> setActiveVariant) and offers Undo, rather than overwriting the prompt."
+    }
+   ]
+  },
+  {
+   "context": "ai-developer-tools-api",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/prompt-evolution/route.ts:229 The prompt optimizer (the reviser) reads only module sessions and stats, never the concluded A/B tests its earlier challengers lost. On unchanged stats it deterministically re-proposes a rewrite that was already rejected.",
+   "techniques": [
+    {
+     "technique": "rejected-revision-leaves-its-evidence",
+     "verdict": "deviation",
+     "evidence": "src/app/api/prompt-evolution/route.ts:229 The accumulated rejection record should be the reviser's input. optimizePrompt's signature has no access to concluded tests."
+    },
+    {
+     "technique": "exposure-is-not-credit",
+     "verdict": "conformant",
+     "evidence": "src/app/api/prompt-evolution/route.ts:196 A run's outcome is credited only to the one variant it was actually served, and only while a test is running. The verdict is not spread across everything the session was shown."
+    },
+    {
+     "technique": "procedure-promotion",
+     "verdict": "conformant",
+     "evidence": "src/app/api/prompt-evolution/route.ts:217 Rollback re-activates a stored prior version (variants are kept with parent ids), so versions are not silently overwritten."
+    }
+   ]
+  },
+  {
+   "context": "save-system",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_save/schema/MemoryBanks.tsx:18 The 'Memory banks' panel renders USaveGame save slots from fixture data. A search of sub_save for recall, consolidat, episod, decay and embedding found no agent memory store; the only LLM touchpoint is a one-shot CLI fix dispatch in SaveHeaderAudit, with no store behind it.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "consolidat",
+    "episod",
+    "decay",
+    "embedding"
+   ]
+  },
+  {
+   "context": "debug-performance",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_debug/performance/MemorySection.tsx:14 Here 'memory' means runtime RAM allocation (MB slices, peak, budget). A search of sub_debug for recall, consolidat, episod, decay and embedding found no agent memory store or recall path, so this subject's precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "consolidat",
+    "episod",
+    "decay",
+    "embedding"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-06T04:11:55.034478+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [
+    "memory-governance",
+    "memory-value-model"
+   ],
+   "deviations": 1,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:11:55.034478+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [
+    "procedure-promotion",
+    "rejected-revision-leaves-its-evidence"
+   ],
+   "deviations": 1,
+   "context": "prompt-evolution",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:11:55.034478+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [
+    "exposure-is-not-credit",
+    "procedure-promotion",
+    "rejected-revision-leaves-its-evidence"
+   ],
+   "deviations": 1,
+   "context": "ai-developer-tools-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:11:55.034478+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "save-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:11:55.034478+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "debug-performance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

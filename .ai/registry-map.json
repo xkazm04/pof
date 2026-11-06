@@ -3014,8 +3014,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/prompt-evolution/route.ts:229 The prompt optimizer (the reviser) reads only module sessions and stats, never the concluded A/B tests its earlier challengers lost. On unchanged stats it deterministically re-proposes a rewrite that was already rejected.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "hitl-approval",
@@ -11011,7 +11015,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 An operator's correction to a mined pattern (a consolidated procedure memory derived from session_analytics) is applied as an in-place UPDATE that neither records the correction as an event nor marks the row operator-graded, and pattern-library-db's upsert preserves human text only when verified=1, so the next extractPatterns run silently overwrites the correction.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "supply-chain",
@@ -13330,8 +13338,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_debug/performance/MemorySection.tsx:14 Here 'memory' means runtime RAM allocation (MB slices, peak, budget). A search of sub_debug for recall, consolidat, episod, decay and embedding found no agent memory store or recall path, so this subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "guest-language-introspection",
@@ -23036,8 +23048,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:132 The challenger gate (planStart/checkPairBlocks) refuses only a running test or text identical to the current incumbent. A rewrite that already lost a concluded A/B test can therefore be saved as a new variant and tested again, so the revision loop cycles instead of compounding.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "session-continuation",
@@ -23630,8 +23646,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_save/schema/MemoryBanks.tsx:18 The 'Memory banks' panel renders USaveGame save slots from fixture data. A search of sub_save for recall, consolidat, episod, decay and embedding found no agent memory store; the only LLM touchpoint is a one-shot CLI fix dispatch in SaveHeaderAudit, with no store behind it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "prompt-assembly",

@@ -19854,39 +19854,44 @@
       "context": "code-quality-evaluation",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "deviation",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T03:48:05.668Z",
+      "evaluatedTs": "2026-11-06T04:11:55.034Z",
+      "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
       "techniques": [
-        {
-          "technique": "observation-clock",
-          "verdict": "deviation",
-          "evidence": "src/lib/pattern-extractor.ts:299 Seeded patterns with sessionCount 0 get the write instant as their 'last success', so the writer's clock stands in for an observation that never happened."
-        },
         {
           "technique": "memory-governance",
           "verdict": "deviation",
-          "evidence": "src/lib/pattern-extractor.ts:300 Patterns seeded from feature definitions are stamped source 'mined', the same label as patterns distilled from sessions, so provenance misnames who authored the evidence. Human curation does exist and survives re-mining (verify/pin at PatternCard.tsx:193; upsert preserves verified rows)."
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 Corrections must supersede and be remembered as operator-issued events that no future inference undoes. Here the edit is a bare patch (updatePatternMeta does not set verified), and re-mining with ON CONFLICT ... CASE WHEN verified = 1 reverts it."
+        },
+        {
+          "technique": "memory-value-model",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/AuthorPatternModal.tsx:94 The author grade is part of a single ranking (pinned, verified, success_rate: CURATION_ORDER in pattern-library-db) that both the library and dispatch suggestions use."
+        },
+        {
+          "technique": "observation-clock",
+          "verdict": "deviation",
+          "evidence": "src/lib/pattern-extractor.ts:299 Seeded patterns with sessionCount 0 get the write instant as their 'last success', so the writer's clock stands in for an observation that never happened.",
+          "carriedFrom": "2026-11-06"
         },
         {
           "technique": "exposure-is-not-credit",
           "verdict": "deviation",
-          "evidence": "src/lib/pattern-extractor.ts:186 Every failed session in a module becomes a pitfall on every approach pattern in that module, whatever approach the failed session used. Success rate was fixed to be per-approach; pitfalls were not."
-        },
-        {
-          "technique": "memory-value-model",
-          "verdict": "deviation",
-          "evidence": "src/lib/pattern-library-db.ts:188 Ranking has no trust-weighted age decay, so a stale pattern outranks a fresh one indefinitely as long as its counts are higher."
+          "evidence": "src/lib/pattern-extractor.ts:186 Every failed session in a module becomes a pitfall on every approach pattern in that module, whatever approach the failed session used. Success rate was fixed to be per-approach; pitfalls were not.",
+          "carriedFrom": "2026-11-06"
         },
         {
           "technique": "decay-and-forgetting",
           "verdict": "deviation",
-          "evidence": "src/lib/pattern-library-db.ts:217 The only removal path is a manual delete by id. Nothing retires patterns by age or value, so mined patterns accrete forever."
+          "evidence": "src/lib/pattern-library-db.ts:217 The only removal path is a manual delete by id. Nothing retires patterns by age or value, so mined patterns accrete forever.",
+          "carriedFrom": "2026-11-06"
         },
         {
           "technique": "scope-before-similarity",
           "verdict": "conformant",
-          "evidence": "src/lib/pattern-extractor.ts:156 The distiller scopes its input to one module before clustering by approach, so clusters never cross modules."
+          "evidence": "src/lib/pattern-extractor.ts:156 The distiller scopes its input to one module before clustering by approach, so clusters never cross modules.",
+          "carriedFrom": "2026-11-06"
         },
         {
           "technique": "consolidation",
@@ -19894,13 +19899,7 @@
           "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:77 Provenance is a count, not grounding episodes; src/types/pattern-library.ts:42 'sessionCount: number;' and no session-id field, so a pattern cannot be audited or read back against its sources.",
           "carriedFrom": "2026-11-06"
         }
-      ],
-      "withdrawn": {
-        "worker": "9cd4b2dd-c5bb-4f8f-a6a1-267695b49eb8",
-        "state": "deviation",
-        "at": "2026-11-06T03:48:44.596777+00:00",
-        "reason": "reviewer (sonnet): The evidence is about PatternLibraryView/PatternCard.tsx, pattern-extractor.ts and pattern-library-db.ts. The context's listed files are only DeepEvalResults and JudgeVerdictsView, so the verdict describes code outside this context. The cited lines themselves are accurate."
-      }
+      ]
     },
     "12c245d3-0dae-4736-afc8-fb30a8f60f76/agent-memory": {
       "context": "inventory-economy-simulator",
@@ -20488,6 +20487,73 @@
           "evidence": "src/components/modules/content/materials/tabs/PatternsTab.tsx:25 Call site renders prompt text and dispatches it raw instead of passing a typed task to the one assembler; ConfiguratorTab.tsx:27-30 names this exact path as forbidden."
         }
       ]
+    },
+    "234034cf-29e8-432e-aca8-490e30e9f45d/agent-memory": {
+      "context": "prompt-evolution",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:11:55.034Z",
+      "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
+      "techniques": [
+        {
+          "technique": "rejected-revision-leaves-its-evidence",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:132 Concluded tests persist, but neither the gate nor the optimizer reads losing challengers, so the rejected diagnosis never reaches the reviser."
+        },
+        {
+          "technique": "procedure-promotion",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:182 Adopting a procedure moves the active pointer over versioned variants (engine.restoreVariant -> setActiveVariant) and offers Undo, rather than overwriting the prompt."
+        }
+      ]
+    },
+    "202d11b4-cc1c-4497-9dd0-11aaf786d207/agent-memory": {
+      "context": "ai-developer-tools-api",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:11:55.034Z",
+      "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
+      "techniques": [
+        {
+          "technique": "rejected-revision-leaves-its-evidence",
+          "verdict": "deviation",
+          "evidence": "src/app/api/prompt-evolution/route.ts:229 The accumulated rejection record should be the reviser's input. optimizePrompt's signature has no access to concluded tests."
+        },
+        {
+          "technique": "exposure-is-not-credit",
+          "verdict": "conformant",
+          "evidence": "src/app/api/prompt-evolution/route.ts:196 A run's outcome is credited only to the one variant it was actually served, and only while a test is running. The verdict is not spread across everything the session was shown."
+        },
+        {
+          "technique": "procedure-promotion",
+          "verdict": "conformant",
+          "evidence": "src/app/api/prompt-evolution/route.ts:217 Rollback re-activates a stored prior version (variants are kept with parent ids), so versions are not silently overwritten."
+        }
+      ]
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/agent-memory": {
+      "context": "save-system",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:11:55.034Z",
+      "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
+      "techniques": []
+    },
+    "0f8602ad-d98f-4d1d-9644-0467be9e70b9/agent-memory": {
+      "context": "debug-performance",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:11:55.034Z",
+      "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
+      "techniques": []
     }
   }
 }
