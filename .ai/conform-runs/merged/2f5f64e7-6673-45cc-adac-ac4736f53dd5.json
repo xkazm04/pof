@@ -1,0 +1,135 @@
+{
+  "schema": "conform-run/1",
+  "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+  "subject": "voice-io",
+  "evaluatedAt": "2026-11-06T04:53:21.444223+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "animation-state-machine-editor",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/animations/StateMachineEditor/codegen.ts:21 The editor authors animation state graphs and emits UE5 C++; a case-insensitive search of the StateMachineEditor directory found zero hits for speech, voice, getUserMedia or speechSynthesis, so no listen/speak pipeline exists for the techniques to govern.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "speech",
+        "voice"
+      ]
+    },
+    {
+      "context": "image-generation",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/visual-gen/providers.ts:7 This context generates 2D and 3D imagery (Leonardo, Qwen vision, 3D providers), with no audio capture or synthesis; a case-insensitive search of src/lib/visual-gen, src/stores, src/app/api/visual-gen and src/app/api/leonardo found no getUserMedia, speechSynthesis, SpeechRecognition or MediaRecorder (src/lib/visual-gen also has zero speech/voice/tts/elevenlabs hits).",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "MediaRecorder"
+      ]
+    },
+    {
+      "context": "visual-gen-core",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/visual-gen/contact-sheet/route.ts:15 These routes submit and serve image, icon and mesh generation jobs only; a case-insensitive search of src/app/api/visual-gen found zero hits for speech, voice, getUserMedia or speechSynthesis, so the voice-io precondition (a product that listens or speaks) does not hold.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "speech",
+        "voice"
+      ]
+    },
+    {
+      "context": "catalog-seed-data",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/catalog/seed.ts:4 This context is static seed data and an entity reader with no speech I/O; a search of src/lib/catalog found no getUserMedia, speechSynthesis, SpeechRecognition or MediaRecorder, and its only voice reference (new-catalogs.ts:36, a dialog-trees catalog description naming 'voice') is content metadata, not a capture or synthesis channel.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "MediaRecorder"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "voice-io",
+      "context": "pipeline-acceptance-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor labAcceptance.ts:8 is a comment about a per-pipeline cache index and does not show that speech is absent. The evidence also says a search of src/components/layout-lab found no voice or speech channel, but that directory holds a whole game/voice room (voiceAudio.tsx, voiceGenerate.tsx and "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T04:53:21.444223+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "pipeline-acceptance-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:53:21.444223+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "animation-state-machine-editor",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:53:21.444223+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "image-generation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:53:21.444223+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "visual-gen-core",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:53:21.444223+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "catalog-seed-data",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

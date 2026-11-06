@@ -20638,13 +20638,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T04:32:47.345Z",
+      "evaluatedTs": "2026-11-06T04:53:21.444Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "11e89a14-eb21-4f7c-8305-3d35702f5074",
+        "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
         "state": "not-applicable",
-        "at": "2026-11-06T04:33:24.247069+00:00",
-        "reason": "reviewer (sonnet): The anchor labAcceptance.ts:44 is a resolveAccept doc comment, which does not show that voice handling is absent. The evidence also says a grep of layout-lab/ found nothing, but layout-lab/game/voice/ holds a voice room, voice generation and a voice queue. Those files are outside this context's four"
+        "at": "2026-11-06T04:54:07.589302+00:00",
+        "reason": "reviewer (sonnet): The anchor labAcceptance.ts:8 is a comment about a per-pipeline cache index and does not show that speech is absent. The evidence also says a search of src/components/layout-lab found no voice or speech channel, but that directory holds a whole game/voice room (voiceAudio.tsx, voiceGenerate.tsx and "
       }
     },
     "ac4cee9e-1527-46e9-8b16-f0f49affbe37/agent-memory": {
@@ -20707,6 +20707,46 @@
         "at": "2026-11-06T04:45:24.071471+00:00",
         "reason": "reviewer (sonnet): The claim of 'no agent' is contradicted by CatalogGearTab.tsx, which imports useModuleCLI and useGeneration and calls executeCli with a built prompt at lines ~54 and ~200. The anchor at line 42 is only the component signature, so it does not show that no agent is present."
       }
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/voice-io": {
+      "context": "animation-state-machine-editor",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:53:21.444Z",
+      "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+      "techniques": []
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/voice-io": {
+      "context": "image-generation",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:53:21.444Z",
+      "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+      "techniques": []
+    },
+    "71f2dcdd-a894-4fda-a381-1ca0388f2b51/voice-io": {
+      "context": "visual-gen-core",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:53:21.444Z",
+      "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+      "techniques": []
+    },
+    "b8a83374-4625-4d64-9823-c2a695ed155e/voice-io": {
+      "context": "catalog-seed-data",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:53:21.444Z",
+      "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+      "techniques": []
     }
   }
 }

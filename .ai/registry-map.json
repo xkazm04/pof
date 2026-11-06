@@ -3955,8 +3955,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/codegen.ts:21 The editor authors animation state graphs and emits UE5 C++; a case-insensitive search of the StateMachineEditor directory found zero hits for speech, voice, getUserMedia or speechSynthesis, so no listen/speak pipeline exists for the techniques to govern.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "mcp-tools",
@@ -9541,8 +9545,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/seed.ts:4 This context is static seed data and an entity reader with no speech I/O; a search of src/lib/catalog found no getUserMedia, speechSynthesis, SpeechRecognition or MediaRecorder, and its only voice reference (new-catalogs.ts:36, a dialog-trees catalog description naming 'voice') is content metadata, not a capture or synthesis channel.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "mcp-tools",
@@ -16028,8 +16036,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/visual-gen/providers.ts:7 This context generates 2D and 3D imagery (Leonardo, Qwen vision, 3D providers), with no audio capture or synthesis; a case-insensitive search of src/lib/visual-gen, src/stores, src/app/api/visual-gen and src/app/api/leonardo found no getUserMedia, speechSynthesis, SpeechRecognition or MediaRecorder (src/lib/visual-gen also has zero speech/voice/tts/elevenlabs hits).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "test-harness",
@@ -27208,8 +27220,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/visual-gen/contact-sheet/route.ts:15 These routes submit and serve image, icon and mesh generation jobs only; a case-insensitive search of src/app/api/visual-gen found zero hits for speech, voice, getUserMedia or speechSynthesis, so the voice-io precondition (a product that listens or speaks) does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "generated-video-motion-extraction",
