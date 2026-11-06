@@ -20699,13 +20699,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T04:44:33.386Z",
+      "evaluatedTs": "2026-11-06T05:07:32.316Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "846a2f94-e25a-4263-a03f-c3a7fb4bcfa9",
+        "worker": "6810bf6e-a833-4f88-acb8-006fcb6bd4d8",
         "state": "not-applicable",
-        "at": "2026-11-06T04:45:24.071471+00:00",
-        "reason": "reviewer (sonnet): The claim of 'no agent' is contradicted by CatalogGearTab.tsx, which imports useModuleCLI and useGeneration and calls executeCli with a built prompt at lines ~54 and ~200. The anchor at line 42 is only the component signature, so it does not show that no agent is present."
+        "at": "2026-11-06T05:08:11.886169+00:00",
+        "reason": "reviewer (sonnet): The anchor CatalogGearTab.tsx:15 is only a catalogStore import line and does not show that agent memory is absent. The same file also calls useModuleCLI and useGeneration (the file matches 8 times on useModuleCLI, useGeneration or prompt), so it does dispatch to agents, and the verdict rests on a ke"
       }
     },
     "f2a555f4-1b04-4196-bb1c-71049494f81a/voice-io": {
@@ -20746,6 +20746,26 @@
       "evaluatedAt": "2026-11-06",
       "evaluatedTs": "2026-11-06T04:53:21.444Z",
       "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+      "techniques": []
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/agent-memory": {
+      "context": "catalog-core-infrastructure",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:07:32.316Z",
+      "worker": "6810bf6e-a833-4f88-acb8-006fcb6bd4d8",
+      "techniques": []
+    },
+    "3cfee2b0-99a9-45c8-a31a-b4dfa89c2d97/agent-memory": {
+      "context": "catalog-pipeline-api",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:07:32.316Z",
+      "worker": "6810bf6e-a833-4f88-acb8-006fcb6bd4d8",
       "techniques": []
     }
   }

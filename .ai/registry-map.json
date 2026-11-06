@@ -8203,8 +8203,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/stepPrompt.ts:25 The only agent-facing code in this context assembles a produce prompt from static canon, contracts, evidence and the operator's direction, and states that it persists nothing; searching src/lib/catalog for episodic, agentMemory, belief and memoryStore found nothing (the 'remember' and 'memory' hits are game-lore text and audio memory budgets), so no agent memory exists here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "judgeable-spec-authoring",
@@ -8903,8 +8907,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:38 These routes persist and verify content-pipeline artifacts, revisions and drain evidence, not beliefs or episodes an agent recalls; searching src/app/api for episodic, agentMemory, belief and memoryStore found nothing, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "release-pipeline",
