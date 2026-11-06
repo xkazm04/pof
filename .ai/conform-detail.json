@@ -20767,6 +20767,51 @@
       "evaluatedTs": "2026-11-06T05:07:32.316Z",
       "worker": "6810bf6e-a833-4f88-acb8-006fcb6bd4d8",
       "techniques": []
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/mesh-finishing-for-engine-readiness": {
+      "context": "character-overview-input",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:17:48.681Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "5de4c729-8c66-4c3c-bc72-b95b7b1f2906",
+        "state": "not-applicable",
+        "at": "2026-11-06T05:18:25.546936+00:00",
+        "reason": "reviewer (sonnet): The anchor index.tsx:91 is only the tab-dispatch line. The wizard claim rests on sub_character/wizard/*, which is not in this context's file list. That wizard also names mesh/skeleton wiring (\"Wire mesh + skeleton + AnimBP\") and a Blender mesh import, so the 'bone' absence claim is shaky, and the cl"
+      }
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/mesh-finishing-for-engine-readiness": {
+      "context": "character-movement-playground",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:17:48.681Z",
+      "worker": "5de4c729-8c66-4c3c-bc72-b95b7b1f2906",
+      "techniques": []
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/mesh-finishing-for-engine-readiness": {
+      "context": "asset-visual-studio",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:17:48.681Z",
+      "worker": "5de4c729-8c66-4c3c-bc72-b95b7b1f2906",
+      "techniques": []
+    },
+    "15282b56-0d42-43ed-b76d-d61c8e6e0309/mesh-finishing-for-engine-readiness": {
+      "context": "material-style-tools",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:17:48.681Z",
+      "worker": "5de4c729-8c66-4c3c-bc72-b95b7b1f2906",
+      "techniques": []
     }
   }
 }

@@ -5197,7 +5197,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/helpers.ts:11 Asset integration here means downloadable C++ adapter files for marketplace assets, and the post-process studio tunes screen-space effects. No generated mesh is finished. Searching the evaluator view directories for retopo, decimate and bone found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "untrusted-extension-host",
@@ -9762,7 +9766,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/movement/MovementTab.tsx:15 The context is movement and feel tuning: dodge trajectory, state machine, curve editor and AI-feel presets. It handles no mesh, texture coordinates, bake or skeleton. Searching sub_character for unwrap, retopo, decimat and bone found nothing; the only 'bake' hit is a figurative comment about resolved feel layers.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",
@@ -19366,7 +19374,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/types.ts:13 Style transfer estimates material parameters (roughness, metallic) from a reference image. The golden path names that as the neighbouring texture-authoring concern, not a geometry bake. Neither tool reduces, unwraps, bakes or binds a mesh, and searching the materials directory for unwrap, retopo, decimat and bone found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "standalone-headset-frame-budgets",
