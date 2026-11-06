@@ -38,9 +38,11 @@ Reusable lessons go into `CASTING.md` beside this file.
 | 1 | Bombast, older | pending |  | 2060194651 | R1 Brassy self-adoring bombast |
 | 2 | Bombast, older, more bark | pending |  | 2060194651 | R1 Brassy self-adoring bombast |
 | 3 | Spry old firecracker | pending |  | 1273870962 |  |
+| 4 | Thundering old showboat | pending |  | 1090947374 |  |
 
 **Descriptions:**
 
 1. A brassy, high-energy American male voice in his late sixties, an original cartoon general constantly impressed with himself. An old man with the energy of a firework: loud, bombastic, overexcited by his own brilliance, interrupting himself to boast more, laughing at his own lines. Fast, relentless pace. Clean, natural human voice. An original fictional character voice; not an imitation of any real person.
 2. A brassy, weathered American male voice in his late sixties with a parade-ground bark, an original cartoon general in love with himself. Explosive, energetic, barking his boasts, cackling at his own jokes, talking over everyone including himself. Fast, relentless pace, no pauses. Clean, natural human voice. An original fictional character voice; not an imitation of any real person.
 3. An older American male voice around seventy, spry, wiry and bright with a little rasp, an original cartoon general. Hyperactive vanity: rattles off boasts at top speed, delighted with every word he says, whoops and chuckles, never slows down. Fast, relentless pace. Clean, natural human voice. An original fictional character voice; not an imitation of any real person.
+4. A big, resonant older American male voice in his late sixties, an original cartoon general and a showboat. Booms with huge energy and pride, rolls through boasts at speed like a victory parade, laughing grandly at himself, swelling to all-caps on the brag words. Fast, relentless pace. Clean, natural human voice. An original fictional character voice; not an imitation of any real person.
