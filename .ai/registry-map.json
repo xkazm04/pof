@@ -8549,8 +8549,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/gap-analysis/plugins/types.ts:8 The gap-analysis plugins compute deterministic histograms and expected-share gaps over catalog entities, with a deterministic summary feeding a proposal prompt. Searching src/lib/catalog/gap-analysis for memory, recall, episod, consolidat and distill found zero hits, so there is no agent memory store, capture, consolidation or recall here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "node-boot-and-declarative-bootstrap",
@@ -9002,7 +9006,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:14 The lab's stores hold pipeline step artifacts, acceptance and drift state for the UI. The closest memory-like construct, produceLog, is a read-only projection of persisted artifacts and is not recalled into an agent. Searching src/components/layout-lab recursively for episod, agentMemory, distill and forgetting found zero hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "quality-gates",
@@ -22754,8 +22762,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/prompt-context.ts:399 The shared header injects the build-error memory only when a non-empty list is passed. When nothing is passed, or the recall failed, the section is silently left out, so the agent cannot tell 'no past errors' from 'memory not consulted or unavailable'.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "mcp-tools",
@@ -28037,7 +28049,11 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/style-dna-db.ts:84 A vision-model distillation (the Style DNA) is persisted and injected into every later generation prompt. The row keeps only a count of source images: no image ids, no distiller model, no raw reply (the raw reply lives only in the in-memory job). A consolidated belief that is asserted on every call therefore cannot answer 'from what'.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "tiling-texture-acceptance",
