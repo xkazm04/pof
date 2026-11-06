@@ -19821,24 +19821,24 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:11:29.926Z",
+      "evaluatedTs": "2026-11-06T03:12:16.641Z",
       "techniques": [
         {
           "technique": "consolidation",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 The standard says supersede, don't replace: even an operator correction should be written as a superseding item whose provenance says so. This edit overwrites in place. Also, the card's only provenance is a session count (PatternCard.tsx:77), with no pointers to the episodes behind it."
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:77 Provenance is a count, not grounding episodes; src/types/pattern-library.ts:42 'sessionCount: number;' and no session-id field, so a pattern cannot be audited or read back against its sources."
         },
         {
           "technique": "memory-governance",
           "verdict": "conformant",
-          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:193 Mined patterns go through a human review lane: verify and pin controls, a source badge that separates mined from authored (line 70), and a 'Verified by' attribution (line 184). AuthorPatternModal:94 states that operator-authored patterns are saved as verified and outrank mined ones."
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:193 A human curates mined beliefs (verify, pin as canonical, edit), and the verifier is recorded and shown ('Verified by', line 184)."
         }
       ],
       "withdrawn": {
-        "worker": "775446ea-2ed2-48da-94a1-14fb34126f39",
+        "worker": "27087ff4-6057-4db4-a46a-3adbe6d07f8d",
         "state": "deviation",
-        "at": "2026-11-06T00:12:49.365503+00:00",
-        "reason": "reviewer (sonnet): PatternEditor.tsx, PatternCard.tsx and AuthorPatternModal.tsx are not among this context's paths, which are DeepEvalResults and JudgeVerdictsView files. The in-place UPDATE at pattern-library-db.ts:387 is real, but it is about a different context."
+        "at": "2026-11-06T03:12:44.083902+00:00",
+        "reason": "reviewer (sonnet): The evidence is about PatternLibraryView/PatternCard.tsx and types/pattern-library.ts. Neither is among the context's files, which are DeepEvalResults/* and JudgeVerdictsView/*. The sessionCount claim does hold in the code, but it describes a different context (the pattern library), not this one."
       }
     },
     "12c245d3-0dae-4736-afc8-fb30a8f60f76/agent-memory": {
@@ -20349,6 +20349,16 @@
         "at": "2026-11-06T03:01:19.429029+00:00",
         "reason": "reviewer (sonnet): The anchor nextStep.ts:11 is only a NextStepId type declaration, so it does not show that scene capture is absent. ProjectSetupModule.tsx:186 also mentions viewport, PIE and live state sync, and the claim that the context 'never captures' a scene was not confirmed."
       }
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/agent-memory": {
+      "context": "project-health-dashboards",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:12:16.641Z",
+      "worker": "27087ff4-6057-4db4-a46a-3adbe6d07f8d",
+      "techniques": []
     }
   }
 }

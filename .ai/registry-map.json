@@ -22086,8 +22086,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/evaluator/ProjectHealthDashboard/index.tsx:98 These dashboards render module quality-scan scores, radar charts and scan history, not an agent's carried-forward memory; a grep of ProjectHealthDashboard/ and AggregateQualityDashboard/ for memory, recall, consolidat, episod and forget returned no hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "eval-harness",
