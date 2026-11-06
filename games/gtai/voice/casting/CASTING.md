@@ -33,6 +33,15 @@ owner's notes) is in `<character>.md` beside this file, which PoF regenerates on
 - **Cost:** a design call bills the sample text once per candidate. A 5-voice round with a ~300-character
   sample costs about 1,500 characters.
 
+## Declined here, wanted elsewhere
+
+Voices the owner declined for one role but marked for another. Check this list before designing a new role:
+the voice row still has its design preview (`voice.mjs voices`), and its seed and description are in the log.
+
+- **Burnt-out line worker** (Rivet round 1 #2, voice `12e23eae-f6c4-40e5-add9-02b8e3f446c3`, seed 613633576):
+  a mid-30s raspy working-class human male who swings from clipped nervous bursts to strained shouting. Owner:
+  "It can be reused for another casting in game". It fits a human role, such as a cop, a dock guard or a contractor.
+
 ## Lessons from successful casts
 
 _(One entry per cast: the character, the round it landed in, the description words that carried it, what the
