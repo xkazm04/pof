@@ -20359,6 +20359,42 @@
       "evaluatedTs": "2026-11-06T03:12:16.641Z",
       "worker": "27087ff4-6057-4db4-a46a-3adbe6d07f8d",
       "techniques": []
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/prompt-assembly": {
+      "context": "step-shared-primitives",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:24:10.630Z",
+      "worker": "3d3404a4-0c67-4e8c-bc8a-59c3a2852dd9",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:33 The door accepts prose, not data. The component's own doc (line 82) says building the prompt 'stays the caller's job'."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/shared/libraryReference.ts:33 The list variable renders every picked asset with no cap coordinated with the budget. Missing values are handled honestly, though: NO_LICENSE here, and reasonClause's declared default at genericFixCopy.ts:61."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/stepEvidence.ts:77 Heavy material (images, meshes) moves out of line: it is cited by served URL for the session to fetch, never inlined."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:79 The corrective task's done criterion is the named acceptance criterion its checker reads. Line 80 scopes the change positively ('Change only what that criterion names')."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:54 Ledger aspect only: the full prompt text is kept per produced batch (bounded to 12 batches). No digest exists, and the session-gate half does not apply to one-shot dispatch."
+        }
+      ]
     }
   }
 }

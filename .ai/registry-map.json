@@ -24646,8 +24646,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "deviation",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:33 The shared Produce primitive takes a pre-rendered prompt string from every call site instead of typed inputs. Bespoke steps such as ItemArt.tsx and ItemGate.tsx (outside this context) build their own `${entity.name} ... ${dir}` strings this way, so text the model reads bypasses the single assembler in src/lib/catalog/stepPrompt.ts: the many-doors sprawl the standard names.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "quality-gates",
