@@ -4759,7 +4759,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:39 The forge generates single assets and gates each one in isolation with a geometry critique and CLIP fidelity against its input. That ground belongs to mesh finishing and reference parity, which the golden path hands off. No concept scene or lit placement exists here; a grep of the asset-forge directory for concept, lighting, reflection and tone curve found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "asset-class-poly-budgeting",
@@ -10162,7 +10166,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/SimulatorTab.tsx:21 The simulator scores numeric archetype balance (DPS, survival, sensitivity) and holds no rendered scene or concept image; a grep of the simulator directory for concept, scorecard, lighting, reflection and tone curve found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
@@ -22802,7 +22810,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/ProjectSetupModule.tsx:53 This context bootstraps the UE5 project (locate or create it, verify the build, install tooling, export the manifest) and holds no concept image or look scene; a grep of src/components/modules/project-setup for concept, scorecard, lighting, reflection, tone curve and play trace found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "codebase-scanning",
@@ -25413,7 +25425,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useSnapshots.ts:4 The only capture surface here is visual regression against an accepted baseline, which an instrument scores (the neighbouring parity-gating ground), not an eye-judged comparison with a concept image; a grep of src/hooks for concept, scorecard, tone curve, play trace and colour grade found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "media-playback",

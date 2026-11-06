@@ -20390,16 +20390,11 @@
       "context": "project-setup-core",
       "subject": "concept-scene-parity",
       "bundle": "game-production",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T03:00:07.222Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "ee0198b0-6011-4ac4-86a4-5511792c466d",
-        "state": "not-applicable",
-        "at": "2026-11-06T03:01:19.429029+00:00",
-        "reason": "reviewer (sonnet): The anchor nextStep.ts:11 is only a NextStepId type declaration, so it does not show that scene capture is absent. ProjectSetupModule.tsx:186 also mentions viewport, PIE and live state sync, and the claim that the context 'never captures' a scene was not confirmed."
-      }
+      "evaluatedTs": "2026-11-06T23:31:08.042Z",
+      "worker": "fbb05570-5bdf-4231-ad70-1e83524dc93a",
+      "techniques": []
     },
     "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/agent-memory": {
       "context": "project-health-dashboards",
@@ -20939,6 +20934,36 @@
       "evaluatedAt": "2026-11-06",
       "evaluatedTs": "2026-11-06T22:46:13.863Z",
       "worker": "30745a90-d789-4ba4-9b1d-f162abea1d25",
+      "techniques": []
+    },
+    "078fa4be-c8be-460f-97da-b6230a0612f8/concept-scene-parity": {
+      "context": "character-simulator",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:31:08.042Z",
+      "worker": "fbb05570-5bdf-4231-ad70-1e83524dc93a",
+      "techniques": []
+    },
+    "fd7a2f11-0208-4ec9-9abc-192a14a0171b/concept-scene-parity": {
+      "context": "ue5-asset-generation-hooks",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:31:08.042Z",
+      "worker": "fbb05570-5bdf-4231-ad70-1e83524dc93a",
+      "techniques": []
+    },
+    "aece38a1-8119-45ea-a968-6441cb31ee70/concept-scene-parity": {
+      "context": "asset-forge",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:31:08.042Z",
+      "worker": "fbb05570-5bdf-4231-ad70-1e83524dc93a",
       "techniques": []
     }
   }
