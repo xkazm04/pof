@@ -2611,8 +2611,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_ability/index.tsx:34 This context is the ARPG ability spellbook UI: search palette, cooldown wheels, compare radar and loadout. It has no microphone, transcription or speech output. A grep of sub_ability/ for the absence terms (plus tts, voiceId and transcrib) found no hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "mcp-tools",
@@ -5751,7 +5755,11 @@
           "changedAt": "2026-10-18",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioPropertyPanel/EmitterPropertyPanel.tsx:123 This context places sound emitters and zones in a simulated space (attenuation radius, volume, zone shapes). The voice-io golden path explicitly leaves 'placing it in a simulated space' to another craft. A grep of AudioScenePainter/ and AudioPropertyPanel/ for speechSynthesis, SpeechRecognition, getUserMedia and MediaRecorder (and also tts, elevenlabs, transcrib and microphone) found no hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "fire-tv-device-realities",
@@ -7870,8 +7878,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/acceptance/types.ts:2 This context is the L0-L4 acceptance verdict engine. Its only speech-related content is a dialogue invariant: VO line length in invariants.ts:141. That rule is about writing game dialogue, not a voice I/O channel. A grep of src/lib/catalog/acceptance and src/lib/catalog/packaging for the absence terms found no hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "invariant-placement",
@@ -8866,8 +8878,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:8 These routes register catalog entities and commit and drain pipeline artifacts. Nothing here captures or transcribes speech or plays synthesized speech. A grep of src/app/api/catalog, catalog-entities, pipeline and pipeline-artifacts for the absence terms (plus tts, voiceId, elevenlabs and microphone) found no hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-memory",
@@ -20478,8 +20494,8 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "test-harness",
