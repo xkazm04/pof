@@ -1,5 +1,11 @@
 {
   "$comment": "Character art shown on the PoF Casting page (Voice room). Paths are relative to games/gtai/; only images listed here are served. Keys are character ids (the voice bible's file name).",
+  "$roles": {
+    "dent": "soul · the crash-test ghost: seizes cars and rams them into enemies",
+    "tonnage": "soul · the stamping-press ghost: slow, enormous, a press-head slam",
+    "kerf": "soul · the laser-cutter ghost: blinks behind a target and slices",
+    "ohm": "soul · the elder spot-welder ghost: forked lightning, strong against machines"
+  },
   "rivet": [
     { "file": "art-direction/targets-2026-11-04/img/r2_c3_lanky_android_hybrid.jpg", "label": "Default body target: the lanky + android hybrid (owner keep, 2026-11-04)" },
     { "file": "art-direction/targets-2026-11-04/img/r2_c4_transformation_stages.jpg", "label": "The two-stage transformation" },

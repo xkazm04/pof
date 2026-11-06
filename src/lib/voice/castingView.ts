@@ -16,11 +16,27 @@ import { roundViews, type RoundView } from '@/lib/voice/castingDb';
 import type { VoiceRow } from '@/lib/voice/types';
 
 export interface CastingArt { file: string; label: string }
-export interface CastingCharacter { id: string; title: string; hasArt: boolean; cast: boolean }
+import { CASTING_GROUPS, type CastingCharacter, type CastingGroup } from '@/lib/voice/castingTypes';
+export { CASTING_GROUPS, type CastingCharacter, type CastingGroup };
+
+/** The bible's `- id:` line minus the id and `name:` segments: "protagonist · line unit L9-04, …". */
+export function bibleRole(bible: string | null): string {
+  const line = bible ? /^- id:.*$/m.exec(bible)?.[0] : undefined;
+  if (!line) return '';
+  return line.split('·').slice(1).map((s) => s.trim()).filter((s) => !/^name/i.test(s)).join(' · ').replace(/\*\*/g, '');
+}
+
+export function groupOf(id: string, role: string): CastingGroup {
+  if (id === 'rivet' || /protagonist/i.test(role)) return 'Lead';
+  if (/\b(soul|ghost)\b/i.test(role)) return 'Souls';
+  if (/\b(boss|antagonist)\b/i.test(role)) return 'Bosses';
+  return 'Cast';
+}
 
 export interface CastingView {
   characterId: string;
   title: string;
+  role: string;
   /** The bible sections a voice is designed from (want, rhythm, profanity, under pressure), as written. */
   bibleExcerpt: string | null;
   art: Array<{ n: number; label: string }>;
@@ -38,6 +54,16 @@ export function readArtMap(root: string): Record<string, CastingArt[]> {
     const out: Record<string, CastingArt[]> = {};
     for (const [k, v] of Object.entries(raw)) if (!k.startsWith('$') && Array.isArray(v)) out[k] = v as CastingArt[];
     return out;
+  } catch {
+    return {};
+  }
+}
+
+/** `art.json` `$roles`: a role line for characters without a bible (the ghosts) or to override the bible's. */
+export function readRoles(root: string): Record<string, string> {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(castingDir(root), 'art.json'), 'utf8')) as { $roles?: Record<string, string> };
+    return raw.$roles && typeof raw.$roles === 'object' ? raw.$roles : {};
   } catch {
     return {};
   }
@@ -73,9 +99,18 @@ export function castingCharacters(db: Database.Database, root: string, gameId: s
   const cast = new Set(listVoices(db, gameId).filter((v) => v.status === 'cast').map((v) => v.characterId));
   let bibles: string[] = [];
   try { bibles = fs.readdirSync(path.join(root, 'games', 'gtai', 'voices')).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)); } catch { /* no bibles */ }
+  const roles = readRoles(root);
   const ids = [...new Set([...Object.keys(art), ...bibles])];
-  return ids.map((id) => ({ id, title: titleOf(readBible(root, id), id), hasArt: (art[id]?.length ?? 0) > 0, cast: cast.has(id) }))
-    .sort((a, b) => Number(b.hasArt) - Number(a.hasArt) || a.title.localeCompare(b.title));
+  const rounds = db.prepare('SELECT characterId, COUNT(*) AS n, SUM(status = \'open\') AS open FROM voice_cast_rounds WHERE gameId=? GROUP BY characterId').all(gameId) as Array<{ characterId: string; n: number; open: number }>;
+  const byChar = new Map(rounds.map((r) => [r.characterId, r]));
+  return ids.map((id): CastingCharacter => {
+    const bible = readBible(root, id);
+    const role = roles[id] ?? bibleRole(bible);
+    return {
+      id, title: titleOf(bible, id), hasArt: (art[id]?.length ?? 0) > 0, cast: cast.has(id), role, group: groupOf(id, role),
+      rounds: byChar.get(id)?.n ?? 0, open: (byChar.get(id)?.open ?? 0) > 0,
+    };
+  }).sort((a, b) => CASTING_GROUPS.indexOf(a.group) - CASTING_GROUPS.indexOf(b.group) || Number(b.hasArt) - Number(a.hasArt) || a.title.localeCompare(b.title));
 }
 
 export function castingView(db: Database.Database, root: string, gameId: string, characterId: string): CastingView {
@@ -83,6 +118,7 @@ export function castingView(db: Database.Database, root: string, gameId: string,
   return {
     characterId,
     title: titleOf(bible, characterId),
+    role: readRoles(root)[characterId] ?? bibleRole(bible),
     bibleExcerpt: bible ? bibleExcerpt(bible) : null,
     art: (readArtMap(root)[characterId] ?? []).map((a, n) => ({ n, label: a.label })),
     rounds: roundViews(db, gameId, characterId),

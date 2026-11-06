@@ -105,34 +105,31 @@ export function roundViews(db: Db, gameId: string, characterId: string): RoundVi
 
 export type VerdictResult = { ok: true; round: CastRound } | { ok: false; error: string; status: number };
 
-/**
- * The owner's verdict on one candidate (the caller has passed the human gate). `cast` also casts the voice for
- * its character (`castVoice`: a prior cast returns to candidate) and closes the round as `cast`.
- */
-export function setCastVerdict(db: Db, voiceId: string, verdict: CastVerdict, note: string | null, at = Date.now()): VerdictResult {
-  const c = getCandidate(db, voiceId);
-  if (!c) return { ok: false, error: `voice ${voiceId} is not a casting candidate`, status: 404 };
-  const round = getRound(db, c.roundId);
-  if (!round) return { ok: false, error: `round ${c.roundId} is gone`, status: 404 };
-  if (round.status !== 'open') return { ok: false, error: `round ${round.roundNo} is already ${round.status}; verdicts are closed`, status: 409 };
-  db.transaction(() => {
-    db.prepare('UPDATE voice_cast_candidates SET verdict=?, note=?, verdictAt=? WHERE voiceId=?').run(verdict, note, verdict === 'pending' ? null : at, voiceId);
-    if (verdict === 'cast') {
-      castVoice(db, voiceId, at);
-      db.prepare("UPDATE voice_cast_rounds SET status='cast', closedAt=?, ownerNote=COALESCE(?, ownerNote) WHERE id=?").run(at, note, round.id);
-    }
-  })();
-  return { ok: true, round: getRound(db, round.id)! };
-}
+export interface SubmittedVerdict { voiceId: string; verdict: Exclude<CastVerdict, 'pending'>; note: string | null }
 
-/** Close an open round without a cast; every candidate needs a verdict first (unheard = no feedback). */
-export function closeRound(db: Db, roundId: string, note: string | null, at = Date.now()): VerdictResult {
+/**
+ * The owner's whole round in ONE submission (the Casting page sends every candidate's verdict and the round
+ * comment together). Every candidate of the round needs a verdict, at most one may be `cast`. With a cast, the
+ * voice is cast for its character and the round ends `cast`; without one it ends `closed`. All or nothing.
+ */
+export function submitRound(db: Db, roundId: string, verdicts: readonly SubmittedVerdict[], note: string | null, at = Date.now()): VerdictResult {
   const round = getRound(db, roundId);
   if (!round) return { ok: false, error: `no round ${roundId}`, status: 404 };
   if (round.status !== 'open') return { ok: false, error: `round ${round.roundNo} is already ${round.status}`, status: 409 };
-  const pending = (db.prepare("SELECT COUNT(*) AS n FROM voice_cast_candidates WHERE roundId=? AND verdict='pending'").get(roundId) as { n: number }).n;
-  if (pending > 0) return { ok: false, error: `${pending} candidate${pending === 1 ? '' : 's'} still without a verdict (cast, iterate or decline each one first)`, status: 409 };
-  db.prepare("UPDATE voice_cast_rounds SET status='closed', ownerNote=?, closedAt=? WHERE id=?").run(note, at, roundId);
+  const ids = (db.prepare('SELECT voiceId FROM voice_cast_candidates WHERE roundId=?').all(roundId) as Array<{ voiceId: string }>).map((r) => r.voiceId);
+  const byId = new Map(verdicts.map((v) => [v.voiceId, v]));
+  const foreign = verdicts.filter((v) => !ids.includes(v.voiceId));
+  if (foreign.length) return { ok: false, error: `not in round ${round.roundNo}: ${foreign.map((f) => f.voiceId).join(', ')}`, status: 400 };
+  const missing = ids.filter((id) => !byId.has(id)).length;
+  if (missing) return { ok: false, error: `${missing} voice${missing === 1 ? '' : 's'} still without a verdict: give every voice cast, iterate or decline`, status: 409 };
+  const casts = verdicts.filter((v) => v.verdict === 'cast');
+  if (casts.length > 1) return { ok: false, error: 'only one voice can be cast per round', status: 400 };
+  db.transaction(() => {
+    const upd = db.prepare('UPDATE voice_cast_candidates SET verdict=?, note=?, verdictAt=? WHERE voiceId=?');
+    for (const v of verdicts) upd.run(v.verdict, v.note, at, v.voiceId);
+    if (casts[0]) castVoice(db, casts[0].voiceId, at);
+    db.prepare('UPDATE voice_cast_rounds SET status=?, ownerNote=?, closedAt=? WHERE id=?').run(casts[0] ? 'cast' : 'closed', note, at, roundId);
+  })();
   return { ok: true, round: getRound(db, roundId)! };
 }
 

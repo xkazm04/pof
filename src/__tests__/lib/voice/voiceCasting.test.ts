@@ -9,7 +9,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { createVoiceDb, listVoices } from '@/lib/voice/voice-db';
 import { syncQueue } from '@/lib/voice/lineQueue';
-import { closeRound, createCastingDb, openRound, roundViews, setCastVerdict } from '@/lib/voice/castingDb';
+import { createCastingDb, openRound, roundViews, submitRound } from '@/lib/voice/castingDb';
 import { designRound, validateRound, type RoundDeps } from '@/lib/voice/castingRound';
 import { castingCharacters, castingView, renderCastingLog, resolveArt, writeCastingLog } from '@/lib/voice/castingView';
 import type { SpeechDesignRequest } from '@/lib/audio-gen/types';
@@ -60,14 +60,18 @@ describe('casting rounds', () => {
     if (!again.ok) expect(again.error).toMatch(/still open/);
   });
 
-  it('closes only when every candidate has a verdict; iterate keeps the parent seed in the next round', async () => {
+  it('a submission needs a verdict for every voice and at most one cast; iterate keeps the parent seed next round', async () => {
     const r1 = await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'b', candidates: [cand('a'), cand('b')] }, deps);
     if (!r1.ok) throw new Error(r1.error);
     const [a, b] = r1.data.voices;
-    setCastVerdict(db, a.id, 'iterate', 'close, but younger');
-    expect(closeRound(db, r1.data.round.id, 'more panic').ok).toBe(false);
-    setCastVerdict(db, b.id, 'decline', 'too calm');
-    expect(closeRound(db, r1.data.round.id, 'more panic').ok).toBe(true);
+    const partial = submitRound(db, r1.data.round.id, [{ voiceId: a.id, verdict: 'iterate', note: 'close, but younger' }], 'more panic');
+    expect(partial.ok).toBe(false);
+    const twoCasts = submitRound(db, r1.data.round.id, [{ voiceId: a.id, verdict: 'cast', note: null }, { voiceId: b.id, verdict: 'cast', note: null }], null);
+    expect(twoCasts.ok).toBe(false);
+    expect(roundViews(db, 'gtai', 'dock-guard')[0].candidates.every((c) => c.candidate.verdict === 'pending')).toBe(true);
+    const ok = submitRound(db, r1.data.round.id, [{ voiceId: a.id, verdict: 'iterate', note: 'close, but younger' }, { voiceId: b.id, verdict: 'decline', note: 'too calm' }], 'more panic');
+    expect(ok.ok && ok.round.status).toBe('closed');
+    expect(ok.ok && ok.round.ownerNote).toBe('more panic');
     expect(openRound(db, 'gtai', 'dock-guard')).toBeNull();
     const r2 = await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'iterate a', candidates: [cand('a younger', { parentVoiceId: a.id })], sampleText: SAMPLE }, deps);
     expect(r2.ok).toBe(true);
@@ -78,10 +82,11 @@ describe('casting rounds', () => {
   it('a cast verdict casts the voice, closes the round and is written into the casting log', async () => {
     const r1 = await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'b', candidates: [cand('a'), cand('b')] }, deps);
     if (!r1.ok) throw new Error(r1.error);
-    const res = setCastVerdict(db, r1.data.voices[1].id, 'cast', 'that is him');
+    const [a, b] = r1.data.voices;
+    const res = submitRound(db, r1.data.round.id, [{ voiceId: a.id, verdict: 'decline', note: null }, { voiceId: b.id, verdict: 'cast', note: 'that is him' }], null);
     expect(res.ok && res.round.status).toBe('cast');
-    expect(listVoices(db, 'gtai').find((v) => v.id === r1.data.voices[1].id)?.status).toBe('cast');
-    expect(setCastVerdict(db, r1.data.voices[0].id, 'decline', null).ok).toBe(false);
+    expect(listVoices(db, 'gtai').find((v) => v.id === b.id)?.status).toBe('cast');
+    expect(submitRound(db, r1.data.round.id, [{ voiceId: a.id, verdict: 'decline', note: null }, { voiceId: b.id, verdict: 'decline', note: null }], null).ok).toBe(false);
     const md = renderCastingLog(castingView(db, root, 'gtai', 'dock-guard'));
     expect(md).toMatch(/\*\*Cast\*\* in round 1/);
     expect(md).toMatch(/that is him/);
@@ -101,5 +106,16 @@ describe('casting art', () => {
     expect(resolveArt(root, 'dock-guard', 1)).toBeNull();
     expect(resolveArt(root, 'rivet', 0)).toBeNull();
     expect(castingCharacters(db, root, 'gtai')[0]).toMatchObject({ id: 'dock-guard', hasArt: true });
+  });
+});
+
+describe('casting roles', () => {
+  it('reads the role from the bible id line and groups the cast', async () => {
+    const { bibleRole, groupOf } = await import('@/lib/voice/castingView');
+    expect(bibleRole('- id: `gunsmith` · name: **Brass Halloran** · gives Rivet his first weapon')).toBe('gives Rivet his first weapon');
+    expect(groupOf('rivet', '')).toBe('Lead');
+    expect(groupOf('kerf', 'soul · the laser-cutter ghost')).toBe('Souls');
+    expect(groupOf('king', 'act antagonist (REG)')).toBe('Bosses');
+    expect(groupOf('patch', 'the payphone job router')).toBe('Cast');
   });
 });

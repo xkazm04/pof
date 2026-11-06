@@ -62,3 +62,17 @@ export function openCasting(character: string): void {
 export function closeCasting(): void {
   pushParam('cast', null);
 }
+
+const lookSnapshot = () => new URLSearchParams(window.location.search).get('look');
+
+/** `?look=a|b|c` — which Casting page prototype is shown (a UI comparison; default a). */
+export function useLookParam(): string | null {
+  return useSyncExternalStore(subscribe, lookSnapshot, () => null);
+}
+
+export function setLook(look: string): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set('look', look);
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  window.dispatchEvent(new Event(EVENT));
+}

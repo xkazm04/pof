@@ -15,7 +15,7 @@ Reusable lessons go into `CASTING.md` beside this file.
 |---|---|---|---|---|---|
 | 1 | Wired kid | pending |  | 462204911 |  |
 | 2 | Burnt-out line worker | pending |  | 613633576 |  |
-| 3 | Glitching machine | pending |  | 138026492 |  |
+| 3 | Glitching machine | iterate |  | 138026492 |  |
 | 4 | Trembling big guy | pending |  | 507281928 |  |
 | 5 | Nasal fast-talker | pending |  | 1263416861 |  |
 
