@@ -1,0 +1,243 @@
+<title>RTAI Owner Calls</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the Look Table's light-table, set as a docket - one card per call, evidence left, the question and the options right; lanes as sections. Single dark look by choice (stills read best on a dark table). */
+:root {
+  color-scheme: dark;
+  --table: #1c1b1f; --sheet: #26242a; --sheet-2: #2f2c33; --rule: #3c3841;
+  --paper: #efe6d4; --paper-dim: #b3aa9a; --ink: #141216;
+  --accent: #e8502a; --pick: #7fb069; --built: #8fb7c9; --default: #e3b23c;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { background: var(--table); color: var(--paper); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 64px; max-width: 1500px; margin: 0 auto; display: grid; gap: 30px; }
+header { display: grid; gap: 10px; }
+h1 { font-family: var(--display); font-weight: 900; font-size: clamp(34px, 5vw, 56px); line-height: 0.95; margin: 0; text-transform: uppercase; text-wrap: balance; }
+.sub { color: var(--paper-dim); margin: 0; max-width: 78ch; }
+.exe { font-family: var(--mono); font-size: 13px; color: var(--paper-dim); overflow-wrap: anywhere; }
+.status { font-family: var(--mono); font-size: 13px; color: var(--paper-dim); font-variant-numeric: tabular-nums; }
+.status b { color: var(--paper); font-weight: 500; }
+.banner { font-size: 13px; color: var(--default); }
+nav.lanes { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.lanes a { font-family: var(--mono); font-size: 13px; color: var(--paper-dim); text-decoration: none; border: 1px solid var(--rule); padding: 5px 10px; background: var(--sheet); }
+nav.lanes a:hover { color: var(--paper); }
+section.lane { display: grid; gap: 16px; scroll-margin-top: 12px; }
+.lane-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--paper); padding-bottom: 6px; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 30px; letter-spacing: 0.04em; text-transform: uppercase; margin: 0; }
+.lane-tools { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.count { font-family: var(--mono); font-size: 13px; color: var(--paper-dim); font-variant-numeric: tabular-nums; }
+button { font: inherit; cursor: pointer; }
+.btn { font-family: var(--mono); font-size: 12.5px; background: var(--sheet-2); color: var(--paper); border: 1px solid var(--rule); padding: 5px 10px; }
+.btn:hover { border-color: var(--paper-dim); }
+article.call { background: var(--sheet); border: 1px solid var(--rule); display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); min-width: 0; }
+article.call[data-picked="1"] { border-color: var(--pick); }
+@media (max-width: 900px) { article.call { grid-template-columns: 1fr; } }
+.ev { background: var(--ink); display: grid; gap: 2px; align-content: start; min-width: 0; }
+.ev figure { margin: 0; display: grid; }
+.ev button.shot { padding: 0; border: 0; background: transparent; cursor: zoom-in; display: block; width: 100%; }
+.ev img { width: 100%; height: auto; display: block; max-height: 520px; object-fit: contain; }
+.ev video { width: 100%; height: auto; display: block; max-height: 560px; background: #000; }
+.lane-sum { margin: 0; color: var(--paper-dim); max-width: 90ch; }
+.ev figcaption { font-size: 12.5px; color: var(--paper-dim); padding: 6px 10px 10px; }
+.ev .none { color: var(--paper-dim); font-size: 13px; padding: 18px; }
+.body { padding: 14px 16px 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.top { display: flex; gap: 10px; justify-content: space-between; align-items: baseline; }
+h3 { font-size: 17px; font-weight: 600; margin: 0; text-wrap: balance; }
+.id { font-family: var(--mono); font-size: 11.5px; color: var(--paper-dim); white-space: nowrap; }
+.q { margin: 0; font-size: 15px; }
+.opts { display: grid; gap: 8px; }
+.opt { text-align: left; background: var(--sheet-2); color: var(--paper); border: 1px solid var(--rule); padding: 9px 11px; display: grid; gap: 3px; }
+.opt:hover { border-color: var(--paper-dim); }
+.opt[aria-pressed="true"] { border: 2px solid var(--pick); padding: 8px 10px; background: #2f3a2c; }
+.opt .row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.opt .k { font-family: var(--display); font-weight: 900; font-size: 20px; line-height: 1; }
+.opt .l { font-weight: 600; }
+.opt .d { font-size: 13.5px; color: var(--paper-dim); }
+.tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid; padding: 0 5px; }
+.tag.built { color: var(--built); border-color: var(--built); }
+.tag.default { color: var(--default); border-color: var(--default); }
+.info { font-size: 13.5px; color: var(--paper-dim); border-left: 3px solid var(--rule); padding-left: 10px; }
+.play { display: grid; gap: 4px; }
+.play label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--paper-dim); }
+.play .cmd { display: flex; gap: 6px; align-items: stretch; }
+.play code { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12.5px; background: var(--ink); border: 1px solid var(--rule); padding: 7px 9px; overflow-wrap: anywhere; user-select: all; }
+textarea { width: 100%; min-height: 56px; resize: vertical; background: var(--sheet-2); color: var(--paper); border: 1px solid var(--rule); padding: 8px 10px; font: inherit; font-size: 14px; }
+textarea::placeholder { color: #8a8378; }
+.saved { font-family: var(--mono); font-size: 11.5px; color: var(--paper-dim); min-height: 1em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+dialog { border: 0; padding: 0; background: rgba(10, 9, 12, 0.96); max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; color: var(--paper); }
+dialog::backdrop { background: rgba(10, 9, 12, 0.9); }
+.lb { width: 100%; height: 100%; display: grid; grid-template-rows: 1fr auto; gap: 10px; padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.lb img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+.lb-bar { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>RTAI Angle Compare</h1>
+    <p class="sub">55 against 70 degrees for the main characters and bosses, before anything goes into the game. Pick the angle first, then mark each sheet: a good direction, redo, or partly (say what in the note). Your answers set the pitch and the source art for the 3-worker day run. Press "Copy answers for Claude" when done, or just tell me in chat.</p>
+    <p class="exe">Sheets: C:Userskazdakirogtai-artangle-r1out (full size PNG). Main keeps the 90-degree view as the default.</p>
+    <nav class="lanes" id="nav" aria-label="Lanes"></nav>
+    <span class="status" id="status"></span>
+    <span class="banner" id="banner" hidden></span>
+    <div class="export"><button class="btn" id="export" type="button">Copy answers for Claude</button> <span class="saved" id="export-msg">Copies every pick and note; paste it into the Claude Code chat.</span></div>
+    <textarea id="export-text" readonly hidden aria-label="Your answers as text to paste into the chat"></textarea>
+  </header>
+  <div id="lanes"></div>
+</div>
+
+<dialog id="lb" aria-label="Image viewer">
+  <div class="lb">
+    <img id="lb-img" alt="">
+    <div class="lb-bar"><span id="lb-cap"></span><button class="btn" id="lb-close" type="button">Close</button></div>
+  </div>
+</dialog>
+
+<script>
+const CALLS = [{"id":"a-1","lane":"angle","title":"The angle for the day run","question":"You set 55 degrees as the focus and asked for a 70-degree comparison first. Two things to know before you pick. (1) The game's real pitch is one number in view.json: the sheets only drive how the art is drawn, and the code projects it. (2) The image model follows a requested camera only loosely. The 70 sheets are clearly steeper for the King and Tonnage (crown, cape, top plate dominate), but Rivet's 70 sheet is only a little steeper than his 55. The mocks below each character use the real projection maths for size: at 32 px/m Rivet is about 48 px tall at 55 degrees and 35 px at 70 (today's straight-down Rivet is a ~30 px ring).","options":[{"key":"A","label":"55 degrees","detail":"Faces, chests and the cape read; figures are about 40 % taller on screen than at 70. Your stated focus.","built":true},{"key":"B","label":"70 degrees","detail":"Closer to today's top-down feel: tops of heads, crowns and racks dominate, faces smaller.","built":false},{"key":"C","label":"Between (60-65)","detail":"One value in view.json; the art from either sheet works there.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/rivet_55_mock32.png","caption":"Rivet at 55, 32 px/m (mock, 4x)."},{"file":"img/rivet_70_mock32.png","caption":"Rivet at 70, 32 px/m (mock, 4x)."},{"file":"img/king_55_mock32.png","caption":"The King at 55, 32 px/m (mock, 4x)."},{"file":"img/king_70_mock32.png","caption":"The King at 70, 32 px/m (mock, 4x)."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"a-2","lane":"angle","title":"Rivet's head: the logo's visor, or the plain head you picked on day d7","question":"On day d7 you picked a plain head with no visor slot (cast-8). The logo you chose that evening has the visor, and both new sheets follow the logo. Which one should the day run build?","options":[{"key":"A","label":"The logo's visor","detail":"Matches the brand; the face reads at 55 degrees.","built":true},{"key":"B","label":"Plain head","detail":"Your d7 pick; the sheet's head gets redrawn.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/rivet_55.jpg","caption":"Both sheets give Rivet the logo's visor slot."},{"file":"img/game-view-p2.jpg","caption":"Today in the game (32 px/m x2, top | tilt): the tilt card already shows the visor."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"c-rivet","lane":"main","title":"Rivet","question":"Identity held across both sheets: the logo's visor and bolt, light tan riveted plating, the vermilion hazard collar, the claw hands and the torch forearm. The action poses (claw jab, pistol, hit reaction) show the close-combat detail. Note: the 'side' facing came out closer to a back three-quarter; the day run draws the cards to the exact 8 directions.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/rivet_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/rivet_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (48 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/rivet_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (95 px tall), shown 2x."},{"file":"img/rivet_70.jpg","caption":"70-degree sheet: five facings on top, action poses below."},{"file":"img/rivet_70_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (35 px tall at 70 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/rivet_70_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (70 px tall), shown 2x."},{"file":"img/game-rivet.jpg","caption":"Today's lifted top-down parts under the view lab (top | 65 | 55, 48 px/m x3, before the cards)."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"c-tonnage","lane":"main","title":"Tonnage","question":"The press reads as a press from every facing, and the teal soul glow wisps at the edges. Production note: teal on a chroma-green background is hard to key cleanly, so the day run regenerates the ghosts' part sheets on magenta.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/tonnage_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/tonnage_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (90 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/tonnage_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (180 px tall), shown 2x."},{"file":"img/tonnage_70.jpg","caption":"70-degree sheet: five facings on top, action poses below."},{"file":"img/tonnage_70_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (74 px tall at 70 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/tonnage_70_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (148 px tall), shown 2x."},{"file":"img/game-melee-ram-wake.jpg","caption":"Today: Tonnage's ram, 32 and 48 px/m."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"c-dent","lane":"main","title":"Dent (55 only)","question":"The mechanic keeps his hazard-marked suit and wrench; the seize pose carries the teal tether.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/dent_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/dent_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (52 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/dent_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (105 px tall), shown 2x."},{"file":"img/game-melee-dent-debris.jpg","caption":"Today: Dent's car bomb, 32 and 48 px/m."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"c-kerf","lane":"main","title":"Kerf (55 only)","question":"The cutter reads as a hovering blade rig rather than a figure; the slash pose shows the blades extended.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/kerf_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/kerf_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (48 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/kerf_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (96 px tall), shown 2x."},{"file":"img/game-melee-kerf-sight.jpg","caption":"Today: Kerf's sight line, 32 and 48 px/m."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"c-ohm","lane":"main","title":"Ohm (55 only)","question":"The caster with coil arms; the cast pose throws a white forked bolt with ink edges.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/ohm_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/ohm_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (50 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/ohm_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (100 px tall), shown 2x."},{"file":"img/game-melee-ohm-rim.jpg","caption":"Today: Ohm's bolt rim, 32 and 48 px/m."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"b-king","lane":"bosses","title":"The King on foot","question":"The richer palette works: gold leaf, plum velvet, ivory ermine, amethyst and emerald gems, polished steel. Two colour-law slips to fix in production. (1) The crown's velvet cap is drawn blood-red on both sheets; it should be plum. (2) The 70-degree cape drifts toward brick red with gold embroidery, where the law keeps the cape vermilion. The 70 sheet also gave him a gem medallion in emerald instead of amethyst.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/king_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/king_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (77 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/king_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (155 px tall), shown 2x."},{"file":"img/king_70.jpg","caption":"70-degree sheet: five facings on top, action poses below."},{"file":"img/king_70_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (63 px tall at 70 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/king_70_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (127 px tall), shown 2x."},{"file":"img/game-view-grid.jpg","caption":"Today in the game: every view at 12 s, 32 px/m."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"b-car","lane":"bosses","title":"The King's throne-car (55 only)","question":"Five rotations of the limousine with the King on the throne, at a detail the code-drawn 18-slice stack cannot reach. Two fixes for production. (1) The radiator grille and hood ornament sit too close to a real luxury maker's trade dress; the day run reshapes them into our own gilded design. (2) The tail lamps are red, which the law keeps for blood; they become amber.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/king_car_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/king_car_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (98 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/king_car_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (196 px tall), shown 2x."},{"file":"img/game-view-p2.jpg","caption":"Today: the car, top | tilt (the code-drawn stack), 32 px/m x2."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"},{"id":"b-servo","lane":"bosses","title":"Servo","question":"The 55 sheet keeps his design: open shelf racks of docked drones, the spine with copper hose loops, hazard-striped octagonal pads, the visor head. The 70 sheet drifted: the racks became closed ochre boxes with the drones on top. If 70 wins, its racks are redrawn to match the 55 design.","options":[{"key":"A","label":"Good direction","detail":"Build from this sheet in the day run.","built":true},{"key":"B","label":"Redo","detail":"Regenerate with your note before the day run.","built":false},{"key":"C","label":"Partly","detail":"Keep what the note says, change the rest.","built":false}],"default":"A","gameplay":false,"images":[{"file":"img/servo_55.jpg","caption":"55-degree sheet: five facings on top, action poses below."},{"file":"img/servo_55_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (137 px tall at 55 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/servo_55_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (275 px tall), shown 2x."},{"file":"img/servo_70.jpg","caption":"70-degree sheet: five facings on top, action poses below."},{"file":"img/servo_70_mock32.png","caption":"MOCK, not a game frame: the five facings shrunk to their on-screen height at 32 px/m (125 px tall at 70 degrees), on the arena's asphalt grey, shown 4x, pixel for pixel."},{"file":"img/servo_70_mock64.png","caption":"MOCK: the same at 64 px/m, the close-combat zoom (250 px tall), shown 2x."},{"file":"img/game-servo-target.jpg","caption":"Today: the target sheet beside the game at 32 px/m."}],"videos":[],"play":"","source":"gtai-art/angle-r1/out"}];
+const LANES = [["angle","The angle"],["main","Main characters"],["bosses","Bosses"]];
+const SUMS = {"angle":"12 sheets from one Codex image round (each on the first try, 86-145 s). 55 degrees for everyone, 70 degrees for Rivet, Tonnage, the King and Servo. These are art-direction sheets, not game frames; the mocks show the real on-screen size.","main":"Rivet and the four ghosts. The ghosts keep their teal (souls only).","bosses":"The wider palette you allowed: gold, plum, ivory and gems for the King; ochre enamel, copper and kraft for Servo."};
+const state = { picks: {}, db: null, canWrite: true };
+const $ = (s, el = document) => el.querySelector(s);
+const el = (tag, attrs = {}, kids = []) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (v == null) continue; if (k === "text") n.textContent = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v); } for (const c of [].concat(kids)) if (c) n.append(c); return n; };
+
+const queues = {};
+function save(id, body, onDone) {
+  if (!state.db || !state.canWrite) { onDone && onDone("Not saved: open the page signed in with write access"); return Promise.resolve(); }
+  const q = queues[id] || (queues[id] = { busy: null, next: null });
+  q.next = { body, onDone };
+  if (q.busy) return q.busy;
+  const run = async () => {
+    while (q.next) {
+      const job = q.next; q.next = null;
+      try { await state.db.collection("decisions").doc(id).set(job.body); job.onDone && job.onDone("Saved " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); }
+      catch (e) { if (e && e.code === "invalid_argument") state.canWrite = false; job.onDone && job.onDone("Not saved (" + (e && e.code || "error") + ")"); }
+    }
+    q.busy = null;
+  };
+  q.busy = run();
+  return q.busy;
+}
+
+const decided = (c) => !!state.picks[c.id]?.choice || (c.options.length === 0 && !!state.picks[c.id]?.seen);
+function renderStatus() {
+  const n = CALLS.filter(decided).length;
+  $("#status").replaceChildren("Answered ", el("b", { text: n + " / " + CALLS.length }), " · unanswered calls keep their built default");
+  for (const [key] of LANES) { const cnt = document.getElementById("count-" + key); if (cnt) { const l = CALLS.filter(c => c.lane === key); cnt.textContent = l.filter(decided).length + " / " + l.length + " answered"; } }
+}
+
+function card(c) {
+  const p = state.picks[c.id] || {};
+  const art = el("article", { class: "call", id: "call-" + c.id, "data-picked": p.choice ? "1" : "0" });
+  const saved = el("div", { class: "saved", "aria-live": "polite" });
+  const ev = el("div", { class: "ev" });
+  for (const v of (c.videos || [])) ev.append(el("figure", {}, [el("video", { src: v.file, controls: "", preload: "metadata", playsinline: "", "aria-label": v.caption }), el("figcaption", { text: v.caption })]));
+  if (c.images.length) for (const im of c.images) ev.append(el("figure", {}, [
+    el("button", { class: "shot", type: "button", "aria-label": "Open the still full size", onclick: () => openLb(im) }, [el("img", { src: im.file, alt: im.caption, loading: "lazy" })]),
+    el("figcaption", { text: im.caption }),
+  ]));
+  else if (!(c.videos || []).length) ev.append(el("p", { class: "none", text: c.gameplay ? "No still: this call is judged by playing it (command on the right)." : "No still for this call." }));
+  const ta = el("textarea", { id: "n-" + c.id, placeholder: "A note for the lane (optional)", "aria-label": "Note on " + c.title });
+  ta.value = p.comment || "";
+  const body = () => ({ id: c.id, lane: c.lane, choice: state.picks[c.id]?.choice || null, comment: ta.value, seen: c.options.length === 0 ? true : undefined, at: new Date().toISOString() });
+  let t = null;
+  const pushNote = () => { const b = body(); if (b.seen === undefined) delete b.seen; state.picks[c.id] = b; save(c.id, b, m => saved.textContent = m); renderStatus(); };
+  ta.addEventListener("input", () => { clearTimeout(t); saved.textContent = "Typing…"; t = setTimeout(pushNote, 900); });
+  ta.addEventListener("blur", () => { if (t) { clearTimeout(t); t = null; pushNote(); } });
+  const opts = el("div", { class: "opts", role: "group", "aria-label": "Options" });
+  for (const o of c.options) {
+    const tags = [];
+    if (o.key === c.default) tags.push(el("span", { class: "tag default", text: "default" }));
+    if (o.built) tags.push(el("span", { class: "tag built", text: "built" }));
+    opts.append(el("button", { type: "button", class: "opt", "data-k": o.key, "aria-pressed": String(p.choice === o.key), onclick: () => {
+      const cur = state.picks[c.id]?.choice;
+      const next = cur === o.key ? null : o.key;
+      state.picks[c.id] = { ...(state.picks[c.id] || {}), choice: next };
+      for (const b of opts.children) b.setAttribute("aria-pressed", String(b.dataset.k === next));
+      art.dataset.picked = next ? "1" : "0";
+      const b = body(); if (b.seen === undefined) delete b.seen; state.picks[c.id] = b;
+      save(c.id, b, m => saved.textContent = m); renderStatus();
+    } }, [
+      el("span", { class: "row" }, [el("span", { class: "k", text: o.key }), el("span", { class: "l", text: o.label }), ...tags]),
+      el("span", { class: "d", text: o.detail }),
+    ]));
+  }
+  const kids = [
+    el("div", { class: "top" }, [el("h3", { text: c.title }), el("span", { class: "id", text: c.id })]),
+    el("p", { class: "q", text: c.question }),
+  ];
+  if (c.options.length) kids.push(opts);
+  else kids.push(el("p", { class: "info", text: "For information: nothing to choose. Leave a note if you disagree." }));
+  if (c.play) {
+    const code = el("code", { text: c.play });
+    const copy = el("button", { class: "btn", type: "button", text: "Copy", onclick: async () => { try { await navigator.clipboard.writeText(c.play); copy.textContent = "Copied"; } catch { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); copy.textContent = "Selected"; } setTimeout(() => copy.textContent = "Copy", 1500); } });
+    kids.push(el("div", { class: "play" }, [el("label", { text: "Try it in the exe" }), el("div", { class: "cmd" }, [code, copy])]));
+  }
+  kids.push(ta, saved);
+  art.append(ev, el("div", { class: "body" }, kids));
+  return art;
+}
+
+async function acceptDefaults(lane, btn) {
+  const open = CALLS.filter(c => c.lane === lane && c.options.length && !state.picks[c.id]?.choice);
+  if (!open.length) { btn.textContent = "Nothing left open"; return; }
+  btn.disabled = true; btn.textContent = "Saving " + open.length + "…";
+  for (const c of open) {
+    const b = { id: c.id, lane: c.lane, choice: c.default, comment: state.picks[c.id]?.comment || "", acceptedDefault: true, at: new Date().toISOString() };
+    state.picks[c.id] = b;
+    await save(c.id, b);
+  }
+  btn.textContent = "Defaults accepted"; btn.disabled = false;
+  render();
+}
+
+function render() {
+  const nav = $("#nav"); nav.replaceChildren();
+  const box = $("#lanes"); box.replaceChildren();
+  for (const [key, name] of LANES) {
+    const list = CALLS.filter(c => c.lane === key);
+    if (!list.length) continue;
+    nav.append(el("a", { href: "#lane-" + key, text: name + " (" + list.length + ")" }));
+    const btn = el("button", { class: "btn", type: "button", text: "Accept the defaults for the open calls", onclick: () => acceptDefaults(key, btn) });
+    box.append(el("section", { class: "lane", id: "lane-" + key, "aria-label": name }, [
+      el("div", { class: "lane-head" }, [el("h2", { text: name }), el("div", { class: "lane-tools" }, [el("span", { class: "count", id: "count-" + key }), btn])]),
+      ...(SUMS[key] ? [el("p", { class: "lane-sum", text: SUMS[key] })] : []),
+      ...list.map(card),
+    ]));
+  }
+  renderStatus();
+}
+
+function openLb(im) { $("#lb-img").src = im.file; $("#lb-img").alt = im.caption; $("#lb-cap").textContent = im.caption; $("#lb").showModal(); }
+$("#lb-close").addEventListener("click", () => $("#lb").close());
+$("#lb").addEventListener("click", e => { if (e.target === $("#lb") || e.target.classList.contains("lb")) $("#lb").close(); });
+
+$("#export").addEventListener("click", async () => {
+  const rows = CALLS.map(c => { const p = state.picks[c.id] || {}; return { id: c.id, choice: p.choice || null, note: p.comment || "", acceptedDefault: !!p.acceptedDefault }; }).filter(r => r.choice || r.note);
+  const text = "RTAI-CALLS " + JSON.stringify(rows);
+  const ta = $("#export-text"); ta.value = text; ta.hidden = false;
+  try { await navigator.clipboard.writeText(text); $("#export-msg").textContent = "Copied " + rows.length + " answers. Paste them into the Claude Code chat."; }
+  catch { ta.focus(); ta.select(); $("#export-msg").textContent = rows.length + " answers selected below: press Ctrl+C, then paste them into the chat."; }
+});
+
+render();
+(async () => {
+  const banner = $("#banner");
+  const db = window.claude ? await window.claude.use("db") : null;
+  if (!db) { banner.hidden = false; banner.textContent = "Saving is off in this view. Open the page signed in to answer."; state.canWrite = false; return; }
+  state.db = db;
+  try { const user = await window.claude.use("user"); const w = user && user.can ? await user.can("data.write") : null; if (w === false) { state.canWrite = false; banner.hidden = false; banner.textContent = "You can read these calls but not answer them."; } } catch (e) {}
+  const timer = setTimeout(() => { banner.hidden = false; banner.textContent = "Saved answers are not loading yet; anything you pick is still saved."; }, 10000);
+  db.collection("decisions").onSnapshot(snap => {
+    if (!snap.metadata.fromCache) { clearTimeout(timer); if (banner.textContent.startsWith("Saved answers")) banner.hidden = true; }
+    let changed = false;
+    for (const ch of snap.docChanges()) { if (ch.type === "removed") { delete state.picks[ch.doc.id]; changed = true; continue; } const d = ch.doc.data(); const cur = state.picks[ch.doc.id]; if (!cur || cur.at !== d.at) { state.picks[ch.doc.id] = d; changed = true; } }
+    if (changed && !document.activeElement?.matches("textarea")) render(); else if (changed) renderStatus();
+  }, err => { clearTimeout(timer); banner.hidden = false; banner.textContent = "Answers could not load (" + err.code + "). Reload the page to try again."; });
+})();
+</script>
