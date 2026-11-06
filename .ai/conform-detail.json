@@ -19844,6 +19844,83 @@
         "at": "2026-11-06T00:25:34.792879+00:00",
         "reason": "reviewer (sonnet): The anchor (blender-mcp/execute/route.ts:7) is a comment about the operator guard and does not show that no agent runtime is assembled. The absence claim rests only on a keyword grep for hook, checkpoint, subagent and middleware, which is incidental evidence."
       }
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/concept-scene-parity": {
+      "context": "asset-viewer-and-browser",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:37:00.601Z",
+      "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
+      "techniques": [
+        {
+          "technique": "judge-in-the-destination-light",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:212 Light and reflections are hardcoded to a neutral studio preset. Neither the toolbar nor the store offers the destination's light or reflection setup, so the rig is fixed rather than derived from the scene."
+        },
+        {
+          "technique": "element-scorecard-from-the-concept-camera",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:2 The grade covers geometry only (triangle budget, scale, orientation) on a single asset. No concept image and no scene elements are scored here."
+        },
+        {
+          "technique": "score-only-what-the-device-shows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:195 This is a free orbit inspection camera, not a scoring capture at a concept camera. No look score is read from it."
+        }
+      ]
+    },
+    "77c4a5c6-f0e9-4311-8cbf-504eda86e733/concept-scene-parity": {
+      "context": "material-lab",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:37:00.601Z",
+      "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
+      "techniques": [
+        {
+          "technique": "judge-in-the-destination-light",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialPreview.tsx:134 The texture/material review that comes before placement uses a fixed studio preset, and nothing in this context lets the reviewer choose the destination scene's light or reflections."
+        },
+        {
+          "technique": "score-only-what-the-device-shows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/UE5ExportPanel.tsx:10 This context authors materials and exports them. It takes no scorecard capture of a scene, so device-capture parity does not arise here."
+        }
+      ]
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/concept-scene-parity": {
+      "context": "project-health-dashboards",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:37:00.601Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
+        "state": "not-applicable",
+        "at": "2026-11-06T00:37:36.441821+00:00",
+        "reason": "reviewer (sonnet): The anchor types.ts:13 is a RegressionAlert interface field, so it does not show that no scene is judged against a concept image, and the only support is a keyword search with narrow terms."
+      }
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/concept-scene-parity": {
+      "context": "asset-visual-studio",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:37:00.601Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
+        "state": "not-applicable",
+        "at": "2026-11-06T00:37:36.524187+00:00",
+        "reason": "reviewer (sonnet): The anchor StudioHeader.tsx:102 is the A/B compare toggle, which shows the studio's own features but not that concept or scorecard input is absent. I also could not confirm the claims about manual colour-grading sliders or an acquisition tracker beyond that button."
+      }
     }
   }
 }

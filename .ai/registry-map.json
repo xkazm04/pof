@@ -4857,7 +4857,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:212 The screen where a person looks at a generated mesh before it goes into UE lights it with a fixed three-point rig and drei's neutral 'studio' environment, with no way to pick the destination scene's light or reflections, so hard edges, flat roughness and missing occlusion stay hidden, which is the grey-studio failure the technique names.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "generative-artifact-gating",
@@ -19080,7 +19084,11 @@
           "revision": 6,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialPreview.tsx:134 PBR materials are previewed, judged and then exported to UE5 under a hardcoded neutral studio environment and two fixed lights rather than the destination's light and reflections, so a material can pass here and still read as a generation old once placed.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:89508a335bb70197",
+          "evaluatedRevision": 6
         },
         {
           "subject": "render-submission-economy",

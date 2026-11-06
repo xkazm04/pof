@@ -1,0 +1,127 @@
+{
+  "schema": "conform-run/1",
+  "worker": "a020c3da-4758-4d8c-a68e-48d0e67f8d8e",
+  "subject": "concept-scene-parity",
+  "evaluatedAt": "2026-11-06T00:37:00.601124+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "asset-viewer-and-browser",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:212 The screen where a person looks at a generated mesh before it goes into UE lights it with a fixed three-point rig and drei's neutral 'studio' environment, with no way to pick the destination scene's light or reflections, so hard edges, flat roughness and missing occlusion stay hidden, which is the grey-studio failure the technique names.",
+      "techniques": [
+        {
+          "technique": "judge-in-the-destination-light",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:212 Light and reflections are hardcoded to a neutral studio preset. Neither the toolbar nor the store offers the destination's light or reflection setup, so the rig is fixed rather than derived from the scene."
+        },
+        {
+          "technique": "element-scorecard-from-the-concept-camera",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:2 The grade covers geometry only (triangle budget, scale, orientation) on a single asset. No concept image and no scene elements are scored here."
+        },
+        {
+          "technique": "score-only-what-the-device-shows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:195 This is a free orbit inspection camera, not a scoring capture at a concept camera. No look score is read from it."
+        }
+      ]
+    },
+    {
+      "context": "material-lab",
+      "subject": "concept-scene-parity",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/material-lab/MaterialPreview.tsx:134 PBR materials are previewed, judged and then exported to UE5 under a hardcoded neutral studio environment and two fixed lights rather than the destination's light and reflections, so a material can pass here and still read as a generation old once placed.",
+      "techniques": [
+        {
+          "technique": "judge-in-the-destination-light",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/material-lab/MaterialPreview.tsx:134 The texture/material review that comes before placement uses a fixed studio preset, and nothing in this context lets the reviewer choose the destination scene's light or reflections."
+        },
+        {
+          "technique": "score-only-what-the-device-shows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/material-lab/UE5ExportPanel.tsx:10 This context authors materials and exports them. It takes no scorecard capture of a scene, so device-capture parity does not arise here."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "concept-scene-parity",
+      "context": "visual-gen-contact-sheet-ue5-export",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "concept-scene-parity",
+      "context": "project-health-dashboards",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor types.ts:13 is a RegressionAlert interface field, so it does not show that no scene is judged against a concept image, and the only support is a keyword search with narrow terms."
+    },
+    {
+      "subject": "concept-scene-parity",
+      "context": "asset-visual-studio",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor StudioHeader.tsx:102 is the A/B compare toggle, which shows the studio's own features but not that concept or scorecard input is absent. I also could not confirm the claims about manual colour-grading sliders or an acquisition tracker beyond that button."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T00:37:00.601124+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "concept-scene-parity"
+      ],
+      "techniques": [
+        "element-scorecard-from-the-concept-camera",
+        "judge-in-the-destination-light",
+        "score-only-what-the-device-shows"
+      ],
+      "deviations": 1,
+      "context": "asset-viewer-and-browser",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T00:37:00.601124+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "concept-scene-parity"
+      ],
+      "techniques": [
+        "judge-in-the-destination-light",
+        "score-only-what-the-device-shows"
+      ],
+      "deviations": 1,
+      "context": "material-lab",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T00:37:00.601124+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "concept-scene-parity"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "project-health-dashboards",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T00:37:00.601124+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "concept-scene-parity"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "asset-visual-studio",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
