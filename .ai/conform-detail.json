@@ -19521,16 +19521,11 @@
       "context": "game-world-content-api",
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T02:42:08.960Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "c70a052e-afc6-4154-88f7-bc1650168b37",
-        "state": "not-applicable",
-        "at": "2026-11-04T02:42:57.553612+00:00",
-        "reason": "reviewer (sonnet): The anchor (procgen-result/route.ts:11) is a doc comment in one CRUD route and does not show the precondition is absent. The context also holds src/app/api/audio-gen/route.ts, which builds a prompt with audioPromptFor, calls a generation provider, and handles caching and quota. The same context hold"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:42:41.020Z",
+      "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
+      "techniques": []
     },
     "ee957a28-f90d-4863-8f75-c599520803a4/eval-harness": {
       "context": "ability-gas-balance",
@@ -19870,13 +19865,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:24:56.636Z",
+      "evaluatedTs": "2026-11-06T01:42:41.020Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "7f26382e-3944-4b56-b412-22f7bfd742ca",
+        "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
         "state": "not-applicable",
-        "at": "2026-11-06T00:25:34.792879+00:00",
-        "reason": "reviewer (sonnet): The anchor (blender-mcp/execute/route.ts:7) is a comment about the operator guard and does not show that no agent runtime is assembled. The absence claim rests only on a keyword grep for hook, checkpoint, subagent and middleware, which is incidental evidence."
+        "at": "2026-11-06T01:44:02.133397+00:00",
+        "reason": "reviewer (sonnet): The anchor at blender-mcp/generate/status/route.ts:34 is a comment on the mesh-gate verdict. It does not show that the UI forge queue (not a model loop) polls these jobs, or that no pof-mcp tool exposes them. pof-mcp's tools/assets.ts polls /api/visual-gen/generate/status, a different route, so I co"
       }
     },
     "70030182-3a81-467f-979d-7bbad209473b/concept-scene-parity": {
@@ -20114,6 +20109,48 @@
       "evaluatedAt": "2026-11-06",
       "evaluatedTs": "2026-11-06T01:28:40.338Z",
       "worker": "f379994c-9d74-4713-8a92-7f9c871f8d13",
+      "techniques": []
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/agent-runtime-assembly": {
+      "context": "ai-behavior-testing",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:42:41.020Z",
+      "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:110 An agent run whose outcome nobody knows is closed as 'error'. The unknown outcome is written into a message string instead of an indeterminate status, and the vocabulary (draft/ready/running/passed/failed/error) has none. Separately, runRef is an in-memory ref, so a page reload mid-run leaves rows 'running' with nothing to close them."
+        },
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:117 The view starts sibling CLI sessions under their own session keys. No agent run launches another run here, so the re-rooting precondition does not hold."
+        }
+      ],
+      "registryProposal": "indeterminate-closure-on-interruption is phrased around a restart that finds outstanding work. The same failure mode, closing an unknown outcome as a failure with the reason in a string, also occurs on the normal completion path of callback-driven task systems when a run exits without its report. The use_when triggers could name that case."
+    },
+    "3cfee2b0-99a9-45c8-a31a-b4dfa89c2d97/agent-runtime-assembly": {
+      "context": "catalog-pipeline-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:42:41.020Z",
+      "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
+      "techniques": []
+    },
+    "8982772c-2414-4c6a-a49b-0d33e98deaec/agent-runtime-assembly": {
+      "context": "audio-view-and-catalog",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:42:41.020Z",
+      "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
       "techniques": []
     }
   }
