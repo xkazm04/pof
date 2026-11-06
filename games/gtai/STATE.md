@@ -915,3 +915,23 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - **Dent round 1** is designed (5 machine voices; the sample is a casting side Claude wrote, not canon) and waits for the owner.
 - **Cost:** about 4,400 ElevenLabs characters this session; about 51k are left until 13 Nov.
 - **Environment:** the stale :3001 PoF dev server was replaced (Turbopack had cached a crashed CSS compile; the `.next/dev` cache was cleared). PoF now runs on :3001 from this session.
+
+### 2026-11-06 14:25: d8 launched; a fifth multi-day lane, `assets`
+- **d8 launched at 14:08.**
+  - The worktrees were fast-forwarded to main `0bea8b93`, after the parallel /perfect session's 26 toolset commits, and re-imported.
+  - Four lanes run on the subscription (both API keys are out of credit): chars, bosses, weapons and view70.
+  - Freeze 18:30, report 18:40, end 19:00.
+- **The assets lane (owner):** "dedicate one new separate builder for continous asset generation ... use [Codex] access at max to its image model, before we decide whether to prolong its use only for the images or throw and use Leonardo longterm".
+  - **Setup:** root `kiro/gtai-assets`, cwd `kiro/gtai-art/library` (a local git repo; images are git-ignored).
+  - **Runner:** `tools/gen-yield.mjs` takes the machine-wide image lock one job at a time and yields to a day lane's `image.want`. It logs `metrics.jsonl` (seconds, ok, limit hits, moderation).
+  - **Schedule:** `loop.sh` runs daily cycles: freeze 08:00, report 08:10, end 08:30. The last cycle ends 2026-11-09 08:30.
+  - **Coverage order:**
+    1. the remaining bosses at 55, with 70 twins;
+    2. the street cast;
+    3. vehicles;
+    4. the city kit and props;
+    5. improvements;
+    6. portraits.
+
+    Graded A/B/C in `catalog.json`, with a gallery in `index.html`.
+  - **Codex vs Leonardo:** `ab-leonardo/AB.md` holds 6 fixed prompts; the Director runs the Leonardo column (keys never go to a lane).
