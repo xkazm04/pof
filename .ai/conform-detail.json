@@ -7372,39 +7372,49 @@
       "subject": "generated-mesh-acceptance",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T23:18:14.935Z",
-      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:17:34.249Z",
+      "worker": "d71651d9-f13c-4e71-8963-1c7af8d01fb8",
       "techniques": [
         {
           "technique": "defect-code-taxonomy-not-prose",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/best-of-n.ts:153 failureShape parses prose and its result controls the repeat-failure stop at lines 305–306."
-        },
-        {
-          "technique": "face-rig-shell-readiness",
-          "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/mesh-critique.ts:84 The separate tri-state helper exists, but repository searches found references only in its implementation, tests, and documentation; it does not gate production rigging."
-        },
-        {
-          "technique": "floater-vs-part-face-share-rule",
-          "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/component-split.ts:33 The share denominator sums retained histogram bins rather than all mesh faces, so truncation changes the classification floor."
-        },
-        {
-          "technique": "stage-declared-grading",
-          "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/best-of-n.ts:235 An omitted caller stage becomes raw instead of unknown."
+          "evidence": "src/lib/visual-gen/best-of-n.ts:153 A closed FindingCode enum and published FINISH_RESOLVES/REROLL_RESOLVES lists exist (mesh-score.ts:67, critique-stage.ts:61/78), but failureShape still branches on prose, which the technique forbids."
         },
         {
           "technique": "structural-scorecard",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/mesh-score.ts:203 The independent pure scorer derives verdict and score from severity-tagged findings; a failure cannot be outweighed by clean properties."
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:242 trimesh extracts the metrics and a separate pure scorer grades them. The verdict is derived from the findings (fails first), density is a warn, and the score is 100-50f-15w (mesh-score.ts:179/203-204)."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/component-split.ts:34 Uses a 0.5% share and an 8-face absolute floor. Truncated histograms resolve toward the harsher side (lines 41-47). Parts and floaters get separate codes, and the blunt count rule is the fallback with no histogram. Minor: floaterFaces omits the faces of omitted specks."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/critique-stage.ts:143 Stage enum includes unknown. assessStage reads a verdict and never softens it. Caveats are derived from the actual codes, and an absent or errored critic returns the empty assessment."
         },
         {
           "technique": "unmeasured-is-not-pass",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:170 An unavailable critic is reported as ungated, not passed. ComponentSplit carries a measured flag, and budget/scale grades are absent without a request."
+        },
+        {
+          "technique": "face-rig-shell-readiness",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/mesh-critique.ts:51 A missing degenerate-face measurement becomes zero, allowing that unmeasured property to grade clean."
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:84 Correctly three-valued and kept out of scoreMesh, but step 5 (route on it, gating the rigging stage) is not realized: grep finds no non-test caller of faceRigReadiness, separableParts or FACE_RIG_MIN_SHELLS."
+        }
+      ],
+      "registryProposal": "defect-code-taxonomy-not-prose could name 'detecting a repeated defect across rolls' as a consumer: compare fail-code sets, not the primary reason sentence. That is the exact residue here, after codes were introduced.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:153 The retry guard still identifies repeated defects by normalizing human-readable reasons, so wording changes can alter retry decisions.",
+          "evaluatedAt": "2026-10-16T23:18:14.935Z",
+          "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+          "reason": "replaced by d71651d9-f13c-4e71-8963-1c7af8d01fb8"
         }
       ]
     },
@@ -7413,24 +7423,38 @@
       "subject": "generated-mesh-acceptance",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T23:18:14.935Z",
-      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:17:34.249Z",
+      "worker": "d71651d9-f13c-4e71-8963-1c7af8d01fb8",
       "techniques": [
-        {
-          "technique": "defect-code-taxonomy-not-prose",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/finish-routing.ts:147 Failure remediation refuses verdicts without defect codes and otherwise derives routing from the structured stage assessment."
-        },
         {
           "technique": "stage-declared-grading",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/finish-routing.ts:90 Missing stage declarations default to raw rather than remaining unknown."
+          "evidence": "src/lib/visual-gen/finish-routing.ts:90 The technique requires taking the stage from the caller and never defaulting. Undeclared must stay 'unknown'."
+        },
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:148 Routing is driven only by finding codes via assessStage. It refuses rather than parse prose."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:155 Applies the decision rule 'when debris survives a finishing pass, say so'. A floater-only fail is not routed into finish."
         },
         {
           "technique": "unmeasured-is-not-pass",
           "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/rig-gate.ts:382 Required facial deformation with an unread morph-target count produces an explicit failure distinct from measured zero targets."
+          "evidence": "src/lib/visual-gen/finish-routing.ts:118 A deferred-budget mesh with no face count is refused as unknown rather than routed or passed. rig-gate.ts:67-71 also separates undefined jointNames from []."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:90 The finish router treats an undeclared stage as raw, allowing routing assessments to claim a production stage the caller did not supply.",
+          "evaluatedAt": "2026-10-16T23:18:14.935Z",
+          "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+          "reason": "replaced by d71651d9-f13c-4e71-8963-1c7af8d01fb8"
         }
       ]
     },
@@ -7470,21 +7494,40 @@
       "subject": "generated-mesh-acceptance",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T23:18:14.935Z",
-      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:17:34.249Z",
       "techniques": [
-        {
-          "technique": "stage-declared-grading",
-          "verdict": "conformant",
-          "evidence": "src/lib/visual-gen/trellis-job-store.ts:69 The TRELLIS producer explicitly declares its newly generated delivery as raw when constructing the critique request."
-        },
         {
           "technique": "unmeasured-is-not-pass",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/tripo-skins.ts:154 Line 148 filters out unmeasured entries; two matching measured variants therefore yield consistent even when another variant lacks measurements."
+          "evidence": "src/lib/visual-gen/tripo-skins.ts:154 The technique says propagate the distinction upward: an aggregate that averages away a not-measured entry re-creates the lie. Here unmeasured skins vanish from a 'consistent' verdict."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/triposr-job-store.ts:69 Generator job stores declare raw as a fact of their position (also tripo-job-store.ts:118, trellis-job-store.ts:69)."
+        },
+        {
+          "technique": "structural-scorecard",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/triposr-job-store.ts:65 Every produced mesh is graded by the Tier-1 scorecard through the class gate request. accepted is never inferred from status."
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-skins.ts:154 Geometry parity can report an entire skin set as consistent after excluding unmeasured variants, hiding incomplete verification.",
+          "evaluatedAt": "2026-10-16T23:18:14.935Z",
+          "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+          "reason": "replaced by d71651d9-f13c-4e71-8963-1c7af8d01fb8"
+        }
+      ],
+      "withdrawn": {
+        "worker": "d71651d9-f13c-4e71-8963-1c7af8d01fb8",
+        "state": "deviation",
+        "at": "2026-11-06T01:18:08.710620+00:00",
+        "reason": "reviewer (sonnet): tripo-skins.ts is not one of this context's files, and none of the context's runners or job stores reference checkSkinGeometry (only generated-assets.ts does), so the verdict is about a different context's code."
+      }
     },
     "9aaa14f4-5109-4e11-a7c5-2684cc02ad11/render-mount-pipeline": {
       "context": "animation-state-machine-viewer",

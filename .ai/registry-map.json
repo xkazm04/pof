@@ -26565,11 +26565,7 @@
           "confidence": "probable",
           "state": "deviation",
           "evidence": "src/lib/visual-gen/tripo-skins.ts:154 Geometry parity can report an entire skin set as consistent after excluding unmeasured variants, hiding incomplete verification.",
-          "evaluatedAt": "2026-10-16",
-          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-10-16"
         },
         {
           "subject": "runner-fleet",
@@ -27439,12 +27435,11 @@
           "changedAt": "2026-10-24",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/lib/visual-gen/best-of-n.ts:153 The retry guard still identifies repeated defects by normalizing human-readable reasons, so wording changes can alter retry decisions.",
-          "evaluatedAt": "2026-10-16",
-          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/visual-gen/best-of-n.ts:153 The re-roll loop's repeat-failure guard (best-of-n.ts:305) still decides whether to stop by blanking digits out of the first reason sentence, although every scoreMesh finding now carries a stable code, so rewording a reason changes paid retry decisions.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:9c6867753eefa10b",
+          "evaluatedRevision": 2,
+          "revisionsBehind": 1
         },
         {
           "subject": "asset-class-poly-budgeting",
@@ -27856,12 +27851,11 @@
           "changedAt": "2026-10-24",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/lib/visual-gen/finish-routing.ts:90 The finish router treats an undeclared stage as raw, allowing routing assessments to claim a production stage the caller did not supply.",
-          "evaluatedAt": "2026-10-16",
-          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/visual-gen/finish-routing.ts:90 When the caller supplies no stage, the router substitutes 'raw' and passes it to assessStage, so a routing assessment can report misTiered/raw caveats for a stage nobody declared, instead of reporting it as unknown.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:9c6867753eefa10b",
+          "evaluatedRevision": 2,
+          "revisionsBehind": 1
         },
         {
           "subject": "image-to-3d-input-gating",
