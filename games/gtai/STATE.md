@@ -972,3 +972,20 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - **Cost:** about 25k ElevenLabs characters for all casts today; 32,451 left until 13 Nov.
 - **Open:** the Cast unlock rule (played 80 % through); the ghost unlock order (for the quest tooling).
 - **Owner decisions (end of day):** the 80 % Cast lock stays; the ghosts' story order is Dent, Tonnage, Kerf, Ohm. The PoF quest tooling, the guards and the bibles now follow the order (the fourth soul is no longer protected); the game-side soul ids are a follow-up for an rtai lane.
+
+### 2026-11-06 night: plan (n8, 5 lanes, 20:00 to 09:00)
+
+- **Owner:** "lets plan scope for 5 workers for the nightly run ... around 20:00". Lane 5 picked by the owner: HUD, portraits, pickups (over a Torque fight, slice gameplay, Kronk).
+- **Status at 17:43:** the d8 lanes are at the freeze with REPORT drafts. The asset lane has made 90 sheets in about 3.2 h (98 s each, no limit hits, no moderation blocks). Every street-cast type has an A. The bosses and minis are done at 55 and 70; vehicles are mostly A or B (the bike: C four times); props and the city kit are B.
+- **Lanes** (root `kiro/gtai-n8`, worktrees `gtai-wt/n8-<lane>`, evidence `gtai-masters/n8/<lane>`); four of them integrate the library's art:
+  - **view:** the owner's 18:40 pitch to production, the shared view code (it opens per-lane card-set registration), the camera in the city and the car, the d8 leftovers (death beat, tank and tube over the visor, draw order), and the frame cost;
+  - **street:** cops, the 9 ped types, the thug (the ink blob), contractors, cultists, Torque's gang;
+  - **vehicles:** slice stacks or rotation sets for 6 vehicles, plus the bike from its three-quarter views; damage, fire and skids at height; the hijack enter and exit;
+  - **city:** south facades under the roofs, props standing up, the depot and the King's district, the occlusion of tall facades, the streaming cost;
+  - **hud:** weapon icons from the 55 held art, a dialogue box with portraits (only approved looks; proposals go to a contact sheet; Don Fax and Patch get a device frame), the HUD pass, the pickups and the boss bar.
+- **The asset lane keeps running** and serves the night lanes' REQUESTs first (brief appended at 17:55).
+- **Sequence:**
+  1. 18:40: the d8 report and verdict page.
+  2. The owner's verdicts, then fill PITCH_VERDICT in `briefs/common.md`.
+  3. Merge d8, run the gates, push main.
+  4. `bash prep.sh`, then launch at 20:00.
