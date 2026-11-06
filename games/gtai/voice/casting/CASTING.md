@@ -162,7 +162,30 @@ owner's notes kept asking for, and what to try first next time.)_
 - **Next time:** with two iterates, always run both: the named base's seed moved toward the other, and a
   fresh-seed fusion.
 
-### The round plan that has worked six times
+### General Krump: cast in round 3 (2026-11-06), "Bombast, older, +20 %", seed 2060194651, `eleven_ttv_v3`
+
+- **The first human in the main cast.** No robotic layer, but every other rule held: clean, a behaviour named,
+  the pace stated, an original archetype ("an original cartoon general", no real person, never "sounds like").
+- **What won in round 1:** the most energetic and self-adoring voice: "brassy, high-energy ... constantly
+  impressed with himself ... interrupting himself to boast more, laughing at his own lines. Fast, relentless
+  pace". The owner then asked for it OLDER while keeping the energy: "an old man with the energy of a firework"
+  (late sixties).
+- **Pace words failed for Krump.** The pace-only round bracketed +10 / +20 / +30 % and measured x0.95 to x1.16;
+  two variants came out slower. The cast preview is x0.95 of the voice the owner asked to speed up by 10 %, so
+  **Krump's takes need speed ~1.15** to land where the owner asked.
+- **The rule from Kerf and Krump:** answer a pace-only note with the take speed (0.7 to 1.2) and the player's
+  speed preview (1.1x / 1.2x / 1.5x), not with a new design round. Two characters spent three rounds on pace
+  alone, and the words never landed reliably.
+
+### Take speed per cast voice (for `voice.mjs takes --speed`)
+
+| Character | Take speed | Why |
+|---|---|---|
+| Kerf | 1.2 | asked +50 %, the cast preview measured x1.24 |
+| General Krump | ~1.15 | asked +10 %, the cast preview measured x0.95 of the voice judged |
+| others | 1.0 | the cast preview's pace was accepted as is |
+
+### The round plan that has worked seven times
 
 - **Round 1:** five distinct machine voices; one axis per slot; one contrast voice for a comic role.
 - **Round 2:** about five slots on the iterated seed. Slot 1 is always "the same, but much more" of the praised

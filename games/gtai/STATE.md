@@ -5,7 +5,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
-- **2026-11-06: voice casting runs in PoF; Rivet and all four ghosts are cast.** Rivet R2 (synthetic glitch voice, `d0s7NPEcGaJCnClrzPlS`), Dent R2 (deadpan test unit that flips, `54wmKFV4oCKjWxNRrbxM`), Kerf R4 (sinister female whisper fused with a metallic tone, rapid-fire, `507ezU1ig3JLWLESU10A`; takes at speed 1.2), Ohm R1 (absent-minded tinkerer, `xOxrNSRk3ZZPu7Q3bfgE`), Tonnage R2 (loving giant who erupts, `rPGI5hHTUTgoyRcbLAUW`). Casting page: `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=<id>`. Memory and lessons: `games/gtai/voice/casting/CASTING.md` (read it before any round). Next: Don Fax, then the bosses; ghost lines and takes after.
+- **2026-11-06: seven main voices are cast through PoF Casting rounds.** Rivet R2 `d0s7NPEcGaJCnClrzPlS`, Dent R2 `54wmKFV4oCKjWxNRrbxM`, Kerf R4 `507ezU1ig3JLWLESU10A` (take speed 1.2), Ohm R1 `xOxrNSRk3ZZPu7Q3bfgE`, Tonnage R2 `rPGI5hHTUTgoyRcbLAUW`, King R2 `Eh5VfhZ1UnLFqUEn0olV`, General Krump R3 `mKQ5PXOa6PD5Nno2Zdri` (take speed ~1.15). Page: `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=<id>`. Before any round, read `games/gtai/voice/casting/CASTING.md` (lessons, round plan, take speeds, reusable voices). **Next:** Don Fax, then the other bosses and the supporting cast; then takes for the 23 `collect-call` lines in the Voice room Queue; ghost lines need writing (no quest lines yet).
 - **2026-11-04 afternoon: the visual targets are set** (the owner judged image rounds 1-2 and said "no need to iterate next round. We have nice visual targets for next runs"): `art-direction/targets-2026-11-04/TARGETS.md`. In short: a slim default cast; Rivet as the lanky + android hybrid; a two-stage transformation; the look a middle ground between today's game and Inked Grime with a riso texture; the alley for close-ups; weapon sheets plus plasma sword +20 % and Gatling barrels +50 %. **Next:** a night run that chases these targets in the engine (rig re-proportioning, the riso texture in the D5 print, weapon art from the sheets).
 - **2026-11-04: the combat night is merged and approved.** rtai main `a1275c82` (pushed) holds the night lanes (weapon art, Rivet's arsenal, gunplay, human reactions, brutality, showcase), Rivet 50 % faster, and corpse decay (`corpse_decay.json`, `--horde`, `--no-decay`). Owner: "nice baselines, all approved"; all lane call defaults stand. Final reel and horde clip: `kiro/gtai-masters/keep-2026-11-04/`. Exe: `kiro/gtai-wt/int-day/build/export/windows/RTAI.exe`. Backlog: rtai `docs/backlog/combat-notes-2026-11-04.md` (electro and plasma-rifle reactions, melee hold and animation, plasma sword art, the homing-shard reaction delay, a Gatling gun, the city-fight lag). Night briefs: `games/gtai/day/2026-11-04/night/`.
 - **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
@@ -955,3 +955,17 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - **Cost:** about 16k ElevenLabs characters for the casts; 40,344 left until 13 Nov. Voice slots: 15 / 30.
 - **Open question:** the Cast toggle unlocks only after the preview is played 80 % through. The owner asked why it was blocked; whether to relax the rule is open.
 - **Descoped (owner):** the old souls Gearbox, Hauler and Sentry. Their voice bibles were removed, so they are off the casting roster. The quest tooling still names them (PoF gap row). **Next cast:** the bosses, King then General Krump; King round 1 is designed.
+
+### 2026-11-06 day (end): King and General Krump cast; casting closed for today
+
+- **Casts:** King R2 ("Mob royal, toward the monarch [robot]"), General Krump R3 ("Bombast, older, +20 %").
+  Seven main voices in all; ElevenLabs voice slots: 17 of 30 used.
+- **Lessons added to CASTING.md:**
+  - "No robotic layer" meant "add one", even for a robot who denies being one.
+  - A named base moved toward the other iterate can beat the fresh-seed fusion; the fusion is now 2 wins in 3.
+  - Pace words are unreliable (Krump measured x0.95 to x1.16): answer pace notes with take speed and the speed preview.
+  - A take-speed table per cast voice.
+- **PoF:** the player's speed preview gained a 1.1x step.
+- **Descoped (owner):** the old souls Gearbox, Hauler, Sentry. Their bibles were removed; the quest-tooling gap is logged.
+- **Cost:** about 25k ElevenLabs characters for all casts today; 32,451 left until 13 Nov.
+- **Open:** the Cast unlock rule (played 80 % through); the ghost unlock order (for the quest tooling).
