@@ -20152,6 +20152,32 @@
       "evaluatedTs": "2026-11-06T01:42:41.020Z",
       "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
       "techniques": []
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/module-design": {
+      "context": "roadmap-workflow-management",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:58:06.650Z",
+      "worker": "bc8a18cd-d90a-45d6-8af8-e6255c0e9979",
+      "techniques": [
+        {
+          "technique": "io-free-core",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CalendarRoadmapView/useCalendarRoadmapView.ts:70 Also line 109 `dateToX(new Date().toISOString())`; geometry is mixed with fetch('/api/milestone-deadlines') at line 45."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CalendarRoadmapView/useCalendarRoadmapView.ts:39 Caller must collect four values from two other stores and pass two positional nulls, so the store's interface is about as large as what it does; the hook transports state it does not use."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/constants.ts:32 Selectable modules derive from the feature-definitions authority instead of a second hand-kept list."
+        }
+      ]
     }
   }
 }

@@ -23352,7 +23352,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/CalendarRoadmapView/useCalendarRoadmapView.ts:70 Timeline-range and today-marker geometry (pure logic over milestones/deadlines) reads the wall clock itself inside a hook that also does raw fetch persistence, so time is not a parameter and the logic can't be tested without rendering a hook and faking the clock; no test covers it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "generated-workflow-candidates",
