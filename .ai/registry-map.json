@@ -5364,8 +5364,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:49 The Sound Forge makes game sound assets from a creative brief (the golden path's out-of-scope 'producing' craft), and SpatialAudioGenerator emits UE5 spatial-audio configs; the panel lists a `tts` AudioKind, but its only provider (ElevenLabs) declares just ['sfx','ambient'] (src/lib/audio-gen/providers/elevenlabs.ts:36), so the panel shows tts as disabled; searching the context's dirs for speechSynthesis, SpeechRecognition, getUserMedia, transcri and microphone found 0 hits, so the product neither listens nor speaks here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "fire-tv-device-realities",
@@ -5725,8 +5729,8 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "fire-tv-device-realities",
@@ -8633,8 +8637,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/gap-analysis/plugins/audio.ts:4 Gap analysis is pure server-side catalog-completeness scoring (even the audio plugin only checks surface and license dimensions), with no listen or speak channel; searching gap-analysis for speechSynthesis, SpeechRecognition, getUserMedia, transcri and microphone found 0 hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "supply-chain",
@@ -9797,8 +9805,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputTab.tsx:16 'Input' here means keyboard and mouse bindings for UE5 character abilities, not speech capture; searching sub_character for speechSynthesis, SpeechRecognition, getUserMedia, transcri and microphone found 0 hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "quality-gates",
@@ -22512,8 +22524,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/project-setup/ProjectSetupModule.tsx:17 Project setup covers locating and building a UE5 project, verifying tooling and the UE5 connection, with no voice capture or speech output; searching project-setup for speechSynthesis, SpeechRecognition, getUserMedia, transcri and microphone found 0 hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "docs-sync",

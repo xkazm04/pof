@@ -20048,6 +20048,73 @@
       "evaluatedTs": "2026-11-06T01:06:18.087Z",
       "worker": "5911d04b-29f9-4375-9c01-727867274ec5",
       "techniques": []
+    },
+    "973ff033-ee2b-4edd-bdc7-e04454f54c7b/voice-io": {
+      "context": "audio-scene-designer",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:28:40.338Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "f379994c-9d74-4713-8a92-7f9c871f8d13",
+        "state": "not-applicable",
+        "at": "2026-11-06T01:29:10.450370+00:00",
+        "reason": "reviewer (sonnet): types.ts:17 is only `emitters: SoundEmitter[]`, so it doesn't show a 2D spatial canvas, and I couldn't confirm the 'golden path' claim that placing sound is out of voice-io scope. The not-applicable rests on an incidental anchor."
+      }
+    },
+    "60f0c3d8-4b81-4acf-9d2c-cfd92cf58737/voice-io": {
+      "context": "audio-generation-tools",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:28:40.338Z",
+      "worker": "f379994c-9d74-4713-8a92-7f9c871f8d13",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:153 tts is listed only as a disabled kind; no synthesis queue or playback lifecycle in this context"
+        },
+        {
+          "technique": "engine-abstraction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/audio/SoundForgePanel.tsx:47 a provider registry for SFX asset generation, not a speech engine interface; it names an engine in surface code, but for content production, not voice I/O"
+        }
+      ],
+      "registryProposal": "The 'plumbing vs producing' boundary would be easier to apply if the golden path said whether a content-production picker that exposes a `tts` asset kind (pre-rendered game dialogue) counts as producing (game-dialogue-voice-pipeline) or as voice-io synthesis."
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/voice-io": {
+      "context": "character-overview-input",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:28:40.338Z",
+      "worker": "f379994c-9d74-4713-8a92-7f9c871f8d13",
+      "techniques": []
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/voice-io": {
+      "context": "project-setup-core",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:28:40.338Z",
+      "worker": "f379994c-9d74-4713-8a92-7f9c871f8d13",
+      "techniques": []
+    },
+    "27a34084-b33e-4538-8173-600d5162f922/voice-io": {
+      "context": "catalog-gap-analysis",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:28:40.338Z",
+      "worker": "f379994c-9d74-4713-8a92-7f9c871f8d13",
+      "techniques": []
     }
   }
 }
