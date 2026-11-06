@@ -60,6 +60,9 @@ the voice row still has its design preview (`voice.mjs voices`), and its seed an
 - **Mystic sage** (Ohm round 1 #2, voice `323880a6-c08c-46c3-a850-fdb9128f3684`, seed 1646002308): a deep,
   resonant, elderly male robot with a transformer hum, who speaks in proverbs. Owner: "Note possibility to revisit with
   another cast". It fits an oracle, a cult leader (Kronk's cult) or a wise boss.
+- **Gentle giant, deeper and faster** (Tonnage round 2 #1, voice `10e8d460-5998-4dc3-a816-81d81bec8aa8`, seed
+  1807406790): a very deep, warm, clean bass robot, tender about smashing things, at a brisk pace. Owner: "Note
+  the voice core can be reused for future casting". It fits a big friendly robot, a heavy NPC or a gentle boss.
 
 ## Lessons from successful casts
 
@@ -131,9 +134,23 @@ owner's notes kept asking for, and what to try first next time.)_
 - **Next time:** put the character's built-in behaviour into the description (loses his thread then snaps back;
   flips at the impact), not only its sound. Across four casts, every winner names a behaviour.
 
-### The round plan that has worked four times
+### Tonnage: cast in round 2 (2026-11-06), "Fresh fusion: loving giant who erupts", seed 1218343789, `eleven_ttv_v3`
+
+- **The fresh-seed fusion won again (2 of 2 rounds with two iterates: Kerf, Tonnage).** Both parents' own seeds,
+  pushed "deeper" exactly as asked, lost to one new description that held both behaviours: "very deep and
+  clean, far below human range ... gentle, polite and tender, adoring the act of crushing; at the moment of the
+  slam it erupts into a huge, deep industrial bellow with hydraulic hiss, then coos softly over the flattened
+  metal." The win was the description: two behaviours in one arc, tenderness, then eruption, then tenderness.
+- **The owner's quality bar for a big voice:** "too human" and "low quality" were both declined. A giant must be
+  clearly a machine but CLEAN; lo-fi distortion reads as a cheap render, not as a big machine. Depth is said
+  in words ("far below human range"), not with effects.
+- **Kept:** the Gentle giant core (round 2 #1) for future casting.
+- **Next time:** with two iterates, write the fusion as an ARC (state A, trigger, state B, back to A). This is
+  the strongest slot so far; it could take two slots on two fresh seeds.
+
+### The round plan that has worked five times
 
 - **Round 1:** five distinct machine voices; one axis per slot; one contrast voice for a comic role.
 - **Round 2:** about five slots on the iterated seed. Slot 1 is always "the same, but much more" of the praised
-  quality, and the rest vary one thing each. With two iterates, add a fresh-seed fusion of both (Kerf's winner).
+  quality, and the rest vary one thing each. With two iterates, add a fresh-seed fusion of both, written as an arc; it won both times (Kerf, Tonnage).
 - **Always:** state the pace in every description; robots under stress and assassins both read better brisk.

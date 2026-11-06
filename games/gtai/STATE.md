@@ -5,7 +5,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
-- **2026-11-06: voice casting runs in PoF.** **Rivet is cast**, in round 2 ("Glitch, faster and wider": a synthetic metallic voice with full human range, glitching under stress; seed 138026492, provider voice `d0s7NPEcGaJCnClrzPlS`). **Dent round 1 waits for the owner**: `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=dent`. The casting memory is `games/gtai/voice/casting/` (`CASTING.md` lessons + reusable voices; a regenerated log per character). Next: Dent, then Tonnage, Kerf, Ohm, Don Fax.
+- **2026-11-06: voice casting runs in PoF; Rivet and all four ghosts are cast.** Rivet R2 (synthetic glitch voice, `d0s7NPEcGaJCnClrzPlS`), Dent R2 (deadpan test unit that flips, `54wmKFV4oCKjWxNRrbxM`), Kerf R4 (sinister female whisper fused with a metallic tone, rapid-fire, `507ezU1ig3JLWLESU10A`; takes at speed 1.2), Ohm R1 (absent-minded tinkerer, `xOxrNSRk3ZZPu7Q3bfgE`), Tonnage R2 (loving giant who erupts, `rPGI5hHTUTgoyRcbLAUW`). Casting page: `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=<id>`. Memory and lessons: `games/gtai/voice/casting/CASTING.md` (read it before any round). Next: Don Fax, then the bosses; ghost lines and takes after.
 - **2026-11-04 afternoon: the visual targets are set** (the owner judged image rounds 1-2 and said "no need to iterate next round. We have nice visual targets for next runs"): `art-direction/targets-2026-11-04/TARGETS.md`. In short: a slim default cast; Rivet as the lanky + android hybrid; a two-stage transformation; the look a middle ground between today's game and Inked Grime with a riso texture; the alley for close-ups; weapon sheets plus plasma sword +20 % and Gatling barrels +50 %. **Next:** a night run that chases these targets in the engine (rig re-proportioning, the riso texture in the D5 print, weapon art from the sheets).
 - **2026-11-04: the combat night is merged and approved.** rtai main `a1275c82` (pushed) holds the night lanes (weapon art, Rivet's arsenal, gunplay, human reactions, brutality, showcase), Rivet 50 % faster, and corpse decay (`corpse_decay.json`, `--horde`, `--no-decay`). Owner: "nice baselines, all approved"; all lane call defaults stand. Final reel and horde clip: `kiro/gtai-masters/keep-2026-11-04/`. Exe: `kiro/gtai-wt/int-day/build/export/windows/RTAI.exe`. Backlog: rtai `docs/backlog/combat-notes-2026-11-04.md` (electro and plasma-rifle reactions, melee hold and animation, plasma sword art, the homing-shard reaction delay, a Gatling gun, the city-fight lag). Night briefs: `games/gtai/day/2026-11-04/night/`.
 - **Phase 2: Foundation F-01..F-14 is done on rtai main; the D4->D5 vertical slice is next** (exit gates in `PHASE2.md`).
@@ -935,3 +935,21 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 
     Graded A/B/C in `catalog.json`, with a gallery in `index.html`.
   - **Codex vs Leonardo:** `ab-leonardo/AB.md` holds 6 fixed prompts; the Director runs the Leonardo column (keys never go to a lane).
+
+### 2026-11-06 day (cont.): Dent, Kerf, Ohm, Tonnage cast
+
+- **Casts:** Dent R2, Kerf R4, Ohm R1, Tonnage R2 (provider voice ids in `## Now` and each `voice/casting/<id>.md`).
+- **PoF changes:**
+  - append voices to an open round (re-run failed design calls);
+  - a new round speaks the previous round's sample;
+  - a speed preview on the casting player (1x / 1.2x / 1.5x);
+  - UTC times in the logs.
+- **CASTING.md now holds five lessons and a round plan.**
+  - Robots must sound synthetic, and clean.
+  - Name a behaviour, not only a sound.
+  - State the pace.
+  - Round 2 is "the same, but more" on the iterated seed.
+  - With two iterates, a fresh-seed fusion written as an arc won both times.
+- **Six declined voices are kept for other roles** (CASTING.md, "Declined here, wanted elsewhere").
+- **Cost:** about 16k ElevenLabs characters for the casts; 40,344 left until 13 Nov. Voice slots: 15 / 30.
+- **Open question:** the Cast toggle unlocks only after the preview is played 80 % through. The owner asked why it was blocked; whether to relax the rule is open.
