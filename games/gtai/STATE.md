@@ -826,3 +826,19 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
 
   Each has a plot, 7 scene cards with full video prompts (style plus shot), a negative prompt, and cast references (the logo, and the four ghost sheets).
   - The canon is fixed in all three. Teal is the dead only. The Act 3 military reveal is only hinted.
+
+### 2026-11-06 01:10 night: plan, a fifth lane `view` from 02:00 (owner request 00:50)
+- **Owner, verbatim:** "start alternative line to experiment with main character and one boss in different camera angle to see if we can achieve higher visual impression from the game. We won't go with 3D path, try to think whether we can stay with 2D,2.5D and with slight angle change and improved characters design we can push the visual side to another level".
+- **Why it is worth testing.** The evidence is `gtai-masters/n7/king/king_target_vs_game_32ppm_it7.png`. The boss target art is drawn from a raised three-quarter angle. At 90 degrees the game shows roofs and discs: a plum rectangle for the car, a crown on a disc for the King, black disc heads for the gang. Most of the gap is the angle. The owner-picked logo is Rivet at three-quarter, and the game never shows that face.
+- **Lane.** `view` on branch `n7x-view`, cut from `n7-king` 7ebf5569 so the King fight is playable.
+  - Root `kiro/gtai-n7x`; worktree `gtai-wt/n7x-view` (imported clean); evidence in `gtai-masters/n7/view`.
+  - Scheduled task "RTAI n7x view lane" runs at 02:00. It fast-forwards to King's newest commits, moves King's journal aside, re-imports, then starts the supervisor (until 09:00, freeze 08:30, report 08:40).
+- **The brief** (`kiro/gtai-n7x/briefs/view.md`):
+  - **Default unchanged:** a `--view` switch whose default `top` stays bit-identical (the 90-degree canon stands).
+  - **Candidate views:**
+    - `top_lift` adds height cues at 90 degrees;
+    - `tilt` is a slight pitch, chosen from about 75/65/55: 2.5D cutout parts with height, upright head/chest cards in a few facings, a sprite-stack limousine, depth sort, occlusion silhouettes, and mouse aim unprojected onto the ground;
+    - optionally, a three-quarter view with art drawn per facing.
+  - **New art:** Rivet and the King redesigned for the chosen angle through Codex image_gen. Rivet's identity is the logo.
+  - **Rules:** no 3D runtime. The deliverable is a same-seed side-by-side at 32 px/m, plus a cost table for the rest of the cast.
+- **Pace exception:** this is five lanes on one machine at the owner's request; the default pace stays two builders.
