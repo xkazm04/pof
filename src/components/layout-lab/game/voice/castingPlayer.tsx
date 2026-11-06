@@ -12,7 +12,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import { HEARD_FRACTION } from './voiceAudio';
 
 /** Preview speeds: 1.2x is the most a take's speed setting allows; 1.5x shows what a faster description must reach. */
-const RATES = [1, 1.2, 1.5];
+const RATES = [1, 1.1, 1.2, 1.5];
 
 const clock = (s: number) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '–:––');
 
