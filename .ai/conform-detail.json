@@ -20692,16 +20692,11 @@
       "context": "inventory-catalog",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T05:41:05.938Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
-        "state": "not-applicable",
-        "at": "2026-11-06T05:41:40.694843+00:00",
-        "reason": "reviewer (sonnet): The anchor CatalogGearTab.tsx:42 is a useState line, so it does not show that the precondition (no agent memory) is absent; the claim rests only on a keyword grep, and the search terms were narrow."
-      }
+      "evaluatedTs": "2026-11-06T23:50:12.365Z",
+      "worker": "e09c3bd9-373d-4fd2-a245-9f34ecc38daa",
+      "techniques": []
     },
     "f2a555f4-1b04-4196-bb1c-71049494f81a/voice-io": {
       "context": "animation-state-machine-editor",
@@ -20843,16 +20838,11 @@
       "context": "audio-generation-tools",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T05:41:05.938Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
-        "state": "not-applicable",
-        "at": "2026-11-06T05:41:40.776629+00:00",
-        "reason": "reviewer (sonnet): The anchor AudioCodeGenPanel.tsx:14 is an import line, so it does not show the absence of agent memory; the claim rests only on a keyword grep, and the search terms were narrow."
-      }
+      "evaluatedTs": "2026-11-06T23:50:12.365Z",
+      "worker": "e09c3bd9-373d-4fd2-a245-9f34ecc38daa",
+      "techniques": []
     },
     "3628b30f-1462-4e6a-a097-c27bd02990f0/mcp-tools": {
       "context": "catalog-database",
@@ -20964,6 +20954,26 @@
       "evaluatedAt": "2026-11-06",
       "evaluatedTs": "2026-11-06T23:31:08.042Z",
       "worker": "fbb05570-5bdf-4231-ad70-1e83524dc93a",
+      "techniques": []
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/agent-memory": {
+      "context": "session-analytics-reporting",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:50:12.365Z",
+      "worker": "e09c3bd9-373d-4fd2-a245-9f34ecc38daa",
+      "techniques": []
+    },
+    "dc6bda3e-9219-49b5-bdc5-844f99f5c4c2/agent-memory": {
+      "context": "models-asset-inventory",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:50:12.365Z",
+      "worker": "e09c3bd9-373d-4fd2-a245-9f34ecc38daa",
       "techniques": []
     }
   }

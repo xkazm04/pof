@@ -1,0 +1,122 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e09c3bd9-373d-4fd2-a245-9f34ecc38daa",
+ "subject": "agent-memory",
+ "evaluatedAt": "2026-11-06T23:50:12.365784+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "inventory-catalog",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:15 The only store in this context is the game's gear/item catalog (catalogStore item entries), rendered as grids, drawers and a stash; searching the catalog directory for recall, consolidat, episod, agentMemory and memory found 0 hits, so the context has no agent memory store and nothing is recalled into a model's context.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "consolidat",
+    "episod",
+    "agentMemory"
+   ]
+  },
+  {
+   "context": "audio-generation-tools",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioLibraryPanel.tsx:13 The persisted data here is an audio asset library (assets, sets, usage) plus CLI code-generation panels; searching src/components/modules/content/audio for recall, consolidat, episod, agentMemory and memory found 0 hits, so no agent memory layer exists here (the 'decay' match in the registry map is reverb decay, not memory decay).",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "consolidat",
+    "episod",
+    "agentMemory"
+   ]
+  },
+  {
+   "context": "session-analytics-reporting",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/index.tsx:177 These dashboards (session analytics, weekly digest, project wrapped, spend) only show CLI run records and token spend to the human operator and never inject anything into an agent's context; searching src/components/modules/evaluator for recall, consolidat and episod found 0 hits (the only real memory surface in that directory, ErrorMemoryPanel, is not one of this context's files).",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "consolidat",
+    "episod"
+   ]
+  },
+  {
+   "context": "models-asset-inventory",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:8 The context reconciles a filesystem scan of 3D assets against the UE bridge manifest for display, which is an asset inventory and not an agent memory store; searching src/components/modules/content/models for recall, consolidat, episod, agentMemory and memory found 0 hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "consolidat",
+    "episod",
+    "agentMemory"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-memory",
+   "context": "game-director-system",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T23:50:12.365784+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "inventory-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:50:12.365784+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-generation-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:50:12.365784+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "session-analytics-reporting",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:50:12.365784+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "models-asset-inventory",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

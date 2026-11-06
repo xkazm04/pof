@@ -5456,7 +5456,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioLibraryPanel.tsx:13 The persisted data here is an audio asset library (assets, sets, usage) plus CLI code-generation panels; searching src/components/modules/content/audio for recall, consolidat, episod, agentMemory and memory found 0 hits, so no agent memory layer exists here (the 'decay' match in the registry map is reverb decay, not memory decay).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "generative-artifact-gating",
@@ -16205,7 +16209,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:15 The only store in this context is the game's gear/item catalog (catalogStore item entries), rendered as grids, drawers and a stash; searching the catalog directory for recall, consolidat, episod, agentMemory and memory found 0 hits, so the context has no agent memory store and nothing is recalled into a model's context.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "mcp-tools",
@@ -19512,8 +19520,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:8 The context reconciles a filesystem scan of 3D assets against the UE bridge manifest for display, which is an asset inventory and not an agent memory store; searching src/components/modules/content/models for recall, consolidat, episod, agentMemory and memory found 0 hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -23964,8 +23976,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/index.tsx:177 These dashboards (session analytics, weekly digest, project wrapped, spend) only show CLI run records and token spend to the human operator and never inject anything into an agent's context; searching src/components/modules/evaluator for recall, consolidat and episod found 0 hits (the only real memory surface in that directory, ErrorMemoryPanel, is not one of this context's files).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "concurrent-vcs",
