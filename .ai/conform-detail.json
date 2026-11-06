@@ -19715,6 +19715,99 @@
           "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:101 Any populated asset path is graded as a generated pass; there is no acquisition-record branch, yet ArchetypeStep.tsx:434 passes library (downloaded) assets into the same produce."
         }
       ]
+    },
+    "9a11b0c7-a013-434b-8325-086ee4151f70/agent-memory": {
+      "context": "visual-gen-style-asset-library",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:11:29.926Z",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/style-dna.ts:113 The standard says never cut an item short. Here the combined prompt plus fragment is cut at a character count, so the injected style item can be clipped instead of skipped whole. Per-dimension capping (FRAGMENT_CAP at line 66) and the labelled prefix (line 72) are present, but the packing rule is broken."
+        },
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/style-dna-db.ts:56 The read path has no guard. getActiveStyleDna and styleDnaForProfile call toProfile, and style-apply.ts:66 calls styleDnaForProfile with no try/catch. A corrupt active row therefore throws on every style-applied generation instead of degrading to 'unavailable'. That is the fail-hard read posture the technique rejects."
+        },
+        {
+          "technique": "consolidation",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/style-dna-db.ts:33 Provenance for the distilled belief is only a count of source images. distillStyleDna returns `raw` (style-dna.ts:195), but the table has no column for the raw reply or for pointers to the source images, so 'why do we believe this style' cannot be traced back to evidence. forkStyleDna does correctly keep the parent row when a style is corrected."
+        }
+      ],
+      "registryProposal": "The subject never says whether a model-distilled, operator-curated profile that is injected into every generation prompt (a 'style DNA') counts as agent memory or as configuration. Stating that boundary would settle cases like this one.",
+      "withdrawn": {
+        "worker": "775446ea-2ed2-48da-94a1-14fb34126f39",
+        "state": "deviation",
+        "at": "2026-11-06T00:12:49.284670+00:00",
+        "reason": "reviewer (sonnet): The main anchor, style-dna.ts:113, belongs to the image-generation context in registry-map.json, not to visual-gen-style-asset-library. The slice at line 113 is real, but this context's 12 listed paths do not include style-dna.ts."
+      }
+    },
+    "8234e336-4af3-4c49-9e31-9740282bdde2/agent-memory": {
+      "context": "code-quality-evaluation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:11:29.926Z",
+      "techniques": [
+        {
+          "technique": "consolidation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternEditor.tsx:18 The standard says supersede, don't replace: even an operator correction should be written as a superseding item whose provenance says so. This edit overwrites in place. Also, the card's only provenance is a session count (PatternCard.tsx:77), with no pointers to the episodes behind it."
+        },
+        {
+          "technique": "memory-governance",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:193 Mined patterns go through a human review lane: verify and pin controls, a source badge that separates mined from authored (line 70), and a 'Verified by' attribution (line 184). AuthorPatternModal:94 states that operator-authored patterns are saved as verified and outrank mined ones."
+        }
+      ],
+      "withdrawn": {
+        "worker": "775446ea-2ed2-48da-94a1-14fb34126f39",
+        "state": "deviation",
+        "at": "2026-11-06T00:12:49.365503+00:00",
+        "reason": "reviewer (sonnet): PatternEditor.tsx, PatternCard.tsx and AuthorPatternModal.tsx are not among this context's paths, which are DeepEvalResults and JudgeVerdictsView files. The in-place UPDATE at pattern-library-db.ts:387 is real, but it is about a different context."
+      }
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/agent-memory": {
+      "context": "inventory-economy-simulator",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:11:29.926Z",
+      "worker": "775446ea-2ed2-48da-94a1-14fb34126f39",
+      "techniques": []
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/agent-memory": {
+      "context": "step-shared-primitives",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:11:29.926Z",
+      "worker": "775446ea-2ed2-48da-94a1-14fb34126f39",
+      "techniques": []
+    },
+    "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/agent-memory": {
+      "context": "catalog-pipeline-state",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:11:29.926Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "775446ea-2ed2-48da-94a1-14fb34126f39",
+        "state": "not-applicable",
+        "at": "2026-11-06T00:12:49.445196+00:00",
+        "reason": "reviewer (sonnet): The anchor produceLog.ts:14 is not among this context's 12 listed paths. The anchor shows what produceLog does but not that no agent memory exists in the context, so it is incidental. The search terms used, episodic and distill, were also too narrow."
+      }
     }
   }
 }

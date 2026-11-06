@@ -8993,8 +8993,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "quality-gates",
@@ -10950,8 +10950,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "supply-chain",
@@ -16248,8 +16248,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_inventory/_shared/balance-prompt.ts:7 The context's only model-facing piece is a stateless balance-prompt builder fed by a live economy-sim run. A grep of the whole sub_inventory directory for the subject's terms (memory, recall, episodic, distill) found nothing, so no store carries beliefs forward across agent sessions.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "arpg-systems-canon",
@@ -24506,8 +24510,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:5 The only persisted history here is a bounded gallery of generation candidates that an artist picks from again; it is never recalled into a model's context. A grep of steps/shared for memory, recall, episodic and distill found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "module-design",
@@ -28008,8 +28016,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "tiling-texture-acceptance",
