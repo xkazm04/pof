@@ -51,6 +51,12 @@ the voice row still has its design preview (`voice.mjs voices`), and its seed an
 - **Robot fast-talker** (Rivet round 2 #3, voice `aa6dd748-19af-49ea-8df5-9326a95fd6e4`, seed 632293156): a nasal,
   fast, comedic robot through a small metallic speaker. Owner: "Keep in memory for another casting". It fits a
   hustler, a vendor or a radio-type robot.
+- **Gleeful daredevil dummy** (Dent round 1 #1, voice `6c21016a-6715-4f83-943e-34cecb0b626a`, seed 896653423): a
+  mid-high synthetic male with a hollow plastic resonance, whooping and hungry for the next crash. Owner: "Keep in
+  memory possibility to recast". It fits a reckless thrill-seeker robot, such as a racer or a stunt gang member.
+- **Crash show announcer** (Dent round 1 #4, voice `d6b86656-aa75-4527-849c-9c60a93c78bd`, seed 932328204): a deep,
+  booming robot showman through a dented megaphone horn. Owner: "Keep in memory possibility to recast". It fits an
+  MC, a pit-fight or race announcer, or a boss's herald.
 
 ## Lessons from successful casts
 

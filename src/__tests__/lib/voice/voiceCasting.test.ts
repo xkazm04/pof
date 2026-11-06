@@ -135,3 +135,13 @@ describe('appending to an open round', () => {
     expect((await designRound(db, { gameId: 'gtai', characterId: 'dock-guard', brief: 'b', candidates: [cand('f')], append: true }, deps)).ok).toBe(false);
   });
 });
+
+describe('sample carry-over', () => {
+  it('a new round without sampleText speaks the previous round text', async () => {
+    const r1 = await designRound(db, { gameId: 'gtai', characterId: 'nobody', brief: 'b', candidates: [cand('a')], sampleText: SAMPLE }, deps);
+    if (!r1.ok) throw new Error(r1.error);
+    submitRound(db, r1.data.round.id, [{ voiceId: r1.data.voices[0].id, verdict: 'iterate', note: null }], null);
+    const r2 = await designRound(db, { gameId: 'gtai', characterId: 'nobody', brief: 'b2', candidates: [cand('a2', { parentVoiceId: r1.data.voices[0].id })] }, deps);
+    expect(r2.ok && r2.data.round.sampleText).toBe(SAMPLE);
+  });
+});

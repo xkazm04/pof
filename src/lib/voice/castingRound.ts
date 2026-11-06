@@ -14,7 +14,7 @@ import { ORIGINAL_VOICE_CLAUSE, previewText } from '@/lib/voice/design';
 import { insertVoice } from '@/lib/voice/voice-db';
 import { writeVoiceFile } from '@/lib/voice/storage';
 import {
-  getCandidate, insertCandidate, insertRound, MAX_CANDIDATES_PER_ROUND, nextRoundNo, openRound, roundViews, type CastRound,
+  getCandidate, insertCandidate, insertRound, listRounds, MAX_CANDIDATES_PER_ROUND, nextRoundNo, openRound, roundViews, type CastRound,
 } from '@/lib/voice/castingDb';
 import type { VoiceRow } from '@/lib/voice/types';
 import type { Result } from '@/types/result';
@@ -81,7 +81,9 @@ export async function designRound(db: Database.Database, req: RoundRequest, deps
   if (open && roundViews(db, req.gameId, req.characterId).find((r) => r.round.id === open.id)?.candidates.some((c) => c.candidate.verdict !== 'pending')) {
     return { ok: false, error: `round ${open.roundNo} already has verdicts; a new voice would join a half-judged round` };
   }
-  const sampleText = open?.sampleText ?? ((req.sampleText?.trim() || previewText(db, req.gameId, req.characterId)) ?? '');
+  // Rounds compare like with like: the open round's text, else the one given, else the last round's, else own lines.
+  const lastSample = listRounds(db, req.gameId, req.characterId).at(-1)?.sampleText;
+  const sampleText = open?.sampleText ?? ((req.sampleText?.trim() || lastSample || previewText(db, req.gameId, req.characterId)) ?? '');
   if (sampleText.length < 100 || sampleText.length > 1000) return { ok: false, error: `the sample text must be 100-1000 chars (it is ${sampleText.length}); pass sampleText` };
   const now = deps.now();
   const round: CastRound = open ?? {
