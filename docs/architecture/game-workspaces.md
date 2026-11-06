@@ -519,8 +519,8 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   `games/gtai/voice/casting/art.json` lists, under `games/gtai/`; its `$roles` gives a role line to characters
   without a bible). The page is one line per voice (compact player, verdict toggles, a note) with the draft held
   in sessionStorage until the submit; characters are grouped Lead / Souls / Bosses / Cast (`castingTypes.ts`,
-  client-safe). Three visual prototypes share that list (`?look=a` Roster sidebar, `b` Dossier, `c` Spotlight
-  hero) until the owner picks one.
+  client-safe) in the Roster layout (`castingRoster.tsx`: a sticky grouped sidebar, the art beside the bible
+  as section cards, the rounds below), the owner's pick on 2026-11-06 over two other prototypes.
   **Memory:** every change regenerates `games/gtai/voice/casting/<character>.md` (each round, description,
   seed, verdict and note); the reusable lessons are curated in `CASTING.md` beside it. CLI: `voice.mjs
   casting [--character]` and `voice.mjs round --character <id> --file <round.json>`.

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Casting look A, "Roster": a sticky sidebar lists the cast grouped by role (Lead, Souls, Bosses, Cast) with
+ * The Casting page layout ("Roster", the owner's pick 2026-11-06 over Dossier and Spotlight): a sticky sidebar lists the cast grouped by role (Lead, Souls, Bosses, Cast) with
  * avatars and status; the main column opens with a compact header (art left, name + role + bible sections as
  * small cards right) and then the rounds as a striped list.
  */
@@ -43,12 +43,12 @@ function Roster({ t, characters, current }: { t: LabTheme; characters: CastingCh
   );
 }
 
-export function CastingLookRoster({ t, v, characters, current, gate, onChanged }: {
+export function CastingRoster({ t, v, characters, current, gate, onChanged }: {
   t: LabTheme; v: CastingView | null; characters: CastingCharacter[]; current: string | null; gate: string | null; onChanged: () => void;
 }) {
   const sections = parseBible(v?.bibleExcerpt ?? null);
   return (
-    <div data-testid="casting-look-a" style={{ display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'flex-start' }}>
+    <div data-testid="casting-roster" style={{ display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'flex-start' }}>
       <div style={{ flex: '1 1 200px', maxWidth: 240, minWidth: 0, position: 'sticky', top: 0 }}><Roster t={t} characters={characters} current={current} /></div>
       {!v ? <p style={{ color: t.muted, fontSize: 'var(--lab-fs-sm)' }}>Pick a character from the roster.</p> : (
         <div style={{ flex: '999 1 520px', display: 'grid', gap: 24, minWidth: 0 }}>
@@ -69,7 +69,7 @@ export function CastingLookRoster({ t, v, characters, current, gate, onChanged }
               </div>
             </div>
           </header>
-          <CastingRounds t={t} v={v} look="a" gate={gate} onChanged={onChanged} />
+          <CastingRounds t={t} v={v} gate={gate} onChanged={onChanged} />
         </div>
       )}
     </div>

@@ -13,8 +13,6 @@ import type { Pick } from './castingDraft';
 import { CastingPlayer } from './castingPlayer';
 import { previewAudioUrl } from './voiceRoomData';
 
-export type CastingLook = 'a' | 'b' | 'c';
-
 const PICKS: Array<{ id: Pick; word: string; Icon: typeof Check; tone: 'ok' | 'warn' | 'bad' }> = [
   { id: 'cast', word: 'Cast', Icon: Check, tone: 'ok' },
   { id: 'iterate', word: 'Iterate', Icon: RotateCw, tone: 'warn' },
@@ -44,18 +42,16 @@ export function VerdictToggles({ t, value, onPick, castLocked, readOnly }: {
   );
 }
 
-export function CastingRow({ t, c, index, look, pick, note, heard, onPick, onNote, onHeard, readOnly, lineage }: {
-  t: LabTheme; c: CandidateView; index: number; look: CastingLook; pick: Pick | null; note: string; heard: boolean;
+export function CastingRow({ t, c, index, pick, note, heard, onPick, onNote, onHeard, readOnly, lineage }: {
+  t: LabTheme; c: CandidateView; index: number; pick: Pick | null; note: string; heard: boolean;
   onPick?: (p: Pick) => void; onNote?: (v: string) => void; onHeard?: () => void; readOnly?: boolean; lineage: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const { voice, candidate } = c;
-  const card = look === 'b';
   return (
     <li data-testid="casting-candidate" data-voice={voice.id} data-verdict={readOnly ? candidate.verdict : pick ?? 'pending'}
-      style={{ listStyle: 'none', padding: look === 'c' ? '6px 10px' : '8px 12px', borderRadius: card ? 8 : 0,
-        border: card ? `1px solid ${pick === 'cast' ? t.ok : t.line}` : 'none', borderBottom: card ? undefined : `1px solid ${t.line}`,
-        background: card ? t.panel : index % 2 && look === 'a' ? `color-mix(in srgb, ${t.line} 18%, transparent)` : 'transparent' }}>
+      style={{ listStyle: 'none', padding: '8px 12px', borderBottom: `1px solid ${t.line}`,
+        background: index % 2 ? `color-mix(in srgb, ${t.line} 18%, transparent)` : 'transparent' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-sm)', color: t.muted, width: 22, flex: 'none' }}>{index + 1}</span>
         <button type="button" className="focus-ring" onClick={() => setOpen((o) => !o)} aria-expanded={open} title="Show the design description"

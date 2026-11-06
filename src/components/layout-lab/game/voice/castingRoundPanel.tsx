@@ -10,7 +10,7 @@ import { LabButton } from '@/components/layout-lab/steps/controls';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import type { RoundView } from '@/lib/voice/castingDb';
 import { useRoundDraft } from './castingDraft';
-import { CastingRow, type CastingLook } from './castingRow';
+import { CastingRow } from './castingRow';
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -28,8 +28,8 @@ function RoundHead({ t, r, compact }: { t: LabTheme; r: RoundView; compact?: boo
   );
 }
 
-export function OpenRound({ t, r, look, gate, onChanged, lineageName }: {
-  t: LabTheme; r: RoundView; look: CastingLook; gate: string | null; onChanged: () => void; lineageName: (id: string) => string | null;
+export function OpenRound({ t, r, gate, onChanged, lineageName }: {
+  t: LabTheme; r: RoundView; gate: string | null; onChanged: () => void; lineageName: (id: string) => string | null;
 }) {
   const d = useRoundDraft(r, gate, onChanged);
   const castLabel = d.castId ? r.candidates.find((c) => c.voice.id === d.castId)?.candidate.label : null;
@@ -41,9 +41,9 @@ export function OpenRound({ t, r, look, gate, onChanged, lineageName }: {
         <summary style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, cursor: 'pointer' }}>What every voice says</summary>
         <p style={{ margin: '4px 0 0', fontSize: 'var(--lab-fs-sm)', fontStyle: 'italic', color: t.text, maxWidth: '80ch' }}>&ldquo;{r.round.sampleText}&rdquo;</p>
       </details>
-      <ul style={{ margin: 0, padding: 0, display: 'grid', gap: look === 'b' ? 6 : 0, borderTop: look === 'b' ? 'none' : `1px solid ${t.line}` }}>
+      <ul style={{ margin: 0, padding: 0, display: 'grid', borderTop: `1px solid ${t.line}` }}>
         {r.candidates.map((c, i) => (
-          <CastingRow key={c.voice.id} t={t} c={c} index={i} look={look} pick={d.draft.picks[c.voice.id] ?? null} note={d.draft.notes[c.voice.id] ?? ''}
+          <CastingRow key={c.voice.id} t={t} c={c} index={i} pick={d.draft.picks[c.voice.id] ?? null} note={d.draft.notes[c.voice.id] ?? ''}
             heard={d.draft.heard.includes(c.voice.id)} onPick={(p) => d.pick(c.voice.id, p)} onNote={(v) => d.note(c.voice.id, v)} onHeard={() => d.heard(c.voice.id)}
             lineage={c.candidate.parentVoiceId ? lineageName(c.candidate.parentVoiceId) : null} />
         ))}
@@ -66,15 +66,15 @@ export function OpenRound({ t, r, look, gate, onChanged, lineageName }: {
   );
 }
 
-export function PastRound({ t, r, look, lineageName }: { t: LabTheme; r: RoundView; look: CastingLook; lineageName: (id: string) => string | null }) {
+export function PastRound({ t, r, lineageName }: { t: LabTheme; r: RoundView; lineageName: (id: string) => string | null }) {
   return (
     <details data-testid="casting-round" data-round={r.round.roundNo} data-status={r.round.status} open={r.round.status === 'cast'}
       style={{ borderTop: `1px solid ${t.line}`, paddingTop: 8 }}>
       <summary style={{ cursor: 'pointer', listStyle: 'revert' }}><span style={{ display: 'inline-block', verticalAlign: 'middle' }}><RoundHead t={t} r={r} compact /></span></summary>
       <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
         <p style={{ margin: 0, fontSize: 'var(--lab-fs-xs)', color: t.muted }}>{r.round.brief}</p>
-        <ul style={{ margin: 0, padding: 0, display: 'grid', gap: look === 'b' ? 6 : 0 }}>
-          {r.candidates.map((c, i) => <CastingRow key={c.voice.id} t={t} c={c} index={i} look={look} pick={null} note="" heard readOnly
+        <ul style={{ margin: 0, padding: 0, display: 'grid' }}>
+          {r.candidates.map((c, i) => <CastingRow key={c.voice.id} t={t} c={c} index={i} pick={null} note="" heard readOnly
             lineage={c.candidate.parentVoiceId ? lineageName(c.candidate.parentVoiceId) : null} />)}
         </ul>
         {r.round.ownerNote && <p style={{ margin: 0, fontSize: 'var(--lab-fs-sm)', color: t.text }}><strong>Your comment:</strong> {r.round.ownerNote}</p>}

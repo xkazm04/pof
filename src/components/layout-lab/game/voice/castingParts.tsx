@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Pieces every Casting look shares: the character avatar (its first art image, else initials), the art viewer
+ * Pieces of the Casting page: the character avatar (its first art image, else initials), the art viewer
  * (a large image + thumbnails), the status words, and the rounds section (open round, waiting state, history).
  */
 import { useState } from 'react';
@@ -9,7 +9,6 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import type { CastingCharacter, CastingView } from '@/lib/voice/castingView';
 import { castingArtUrl } from './voiceRoomData';
 import { OpenRound, PastRound } from './castingRoundPanel';
-import type { CastingLook } from './castingRow';
 
 export const initials = (title: string) => title.replace(/\(.*\)/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 
@@ -53,7 +52,7 @@ export function ArtViewer({ t, v, height }: { t: LabTheme; v: CastingView; heigh
   );
 }
 
-export function CastingRounds({ t, v, look, gate, onChanged }: { t: LabTheme; v: CastingView; look: CastingLook; gate: string | null; onChanged: () => void }) {
+export function CastingRounds({ t, v, gate, onChanged }: { t: LabTheme; v: CastingView; gate: string | null; onChanged: () => void }) {
   const names = new Map(v.rounds.flatMap((r) => r.candidates.map((c, i) => [c.voice.id, `R${r.round.roundNo} #${i + 1} ${c.candidate.label}`] as const)));
   const lineageName = (id: string) => names.get(id) ?? null;
   const open = v.rounds.find((r) => r.round.status === 'open');
@@ -63,8 +62,8 @@ export function CastingRounds({ t, v, look, gate, onChanged }: { t: LabTheme; v:
     <div style={{ display: 'grid', gap: 16, alignContent: 'start', minWidth: 0 }}>
       {v.rounds.length === 0 && <p data-testid="casting-empty" style={note}>No rounds yet. Claude designs round 1 (<code>voice.mjs round --character {v.characterId}</code>); it appears here on its own.</p>}
       {!open && past.length > 0 && !v.cast && <p data-testid="casting-waiting" role="status" style={note}>Round {past[0].round.roundNo} is submitted. The next round is being designed from your verdicts and comment; it appears here on its own.</p>}
-      {open && <OpenRound key={open.round.id} t={t} r={open} look={look} gate={gate} onChanged={onChanged} lineageName={lineageName} />}
-      {past.map((r) => <PastRound key={r.round.id} t={t} r={r} look={look} lineageName={lineageName} />)}
+      {open && <OpenRound key={open.round.id} t={t} r={open} gate={gate} onChanged={onChanged} lineageName={lineageName} />}
+      {past.map((r) => <PastRound key={r.round.id} t={t} r={r} lineageName={lineageName} />)}
     </div>
   );
 }
