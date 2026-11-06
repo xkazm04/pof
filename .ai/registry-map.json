@@ -9006,9 +9006,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "src/components/layout-lab/produceLog.ts:85 These files record whether a stored produce direction already contained a prompt and persist canon rules that prompts read elsewhere; a search of the listed files for PromptBuilder, '## ', 'You are', and buildPrompt found no assembler.",
-          "evaluatedAt": "2026-10-13",
-          "stale": true
+          "evidence": "src/components/layout-lab/produceLog.ts:85 The listed files only record whether a stored produce direction carried a prompt and cache canon rules that prompts read elsewhere; a search of the files and of the whole src/components/layout-lab tree for PromptBuilder, systemPrompt, assemblePrompt and compaction found nothing (buildPrompt occurs only in steps/, outside this context's files), so no prompt is assembled, budgeted or compacted here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "test-harness",
@@ -18932,8 +18933,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "deviation",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/content/materials/tabs/PatternsTab.tsx:25 Patterns (and StyleTransfer, line 25 of its tab) hand pre-rendered prompt text to sendPrompt, bypassing the execute→composeTaskDispatch assembler that Configurator/PostProcess/Ask use, so the same module dispatches through two doors with different context layers (no dynamicContext, no variant resolution, no preview parity).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "codebase-scanning",
@@ -22959,7 +22964,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "priorNotApplicable": 3,
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/OptimizerPanel.tsx:125 The optimizer presents a shortened prompt as an improvement on predicted success rate alone (the backing shorten() strips parentheticals and em-dash asides wholesale) and offers it for adoption, with no check for deleted conditionals or behavioural tests, so a shrink that hardens a deferred decision passes a suite that is blind to it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "eval-harness",

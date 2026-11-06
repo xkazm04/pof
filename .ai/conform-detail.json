@@ -1381,9 +1381,16 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T03:02:31.139Z",
-      "techniques": [],
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:02:12.033Z",
+      "worker": "2e879aae-a76d-44be-a0fd-a04efb7ff5d9",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/canonStore.ts:15 The store is a feeder of canon rules read by an assembler that lives in another context; it owns no section rendering or ordering."
+        }
+      ],
       "superseded": [
         {
           "state": "not-applicable",
@@ -1391,14 +1398,15 @@
           "evaluatedAt": "2026-10-13T01:28:21.100Z",
           "worker": "548eaa26-88cb-45cc-a50e-d3b14a02b8c4",
           "reason": "replaced by 06bf860b-ce15-4ee4-ac6a-41e5d5351b59"
+        },
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/produceLog.ts:85 These files record whether a stored produce direction already contained a prompt and persist canon rules that prompts read elsewhere; a search of the listed files for PromptBuilder, '## ', 'You are', and buildPrompt found no assembler.",
+          "evaluatedAt": "2026-10-13",
+          "worker": null,
+          "reason": "replaced by 2e879aae-a76d-44be-a0fd-a04efb7ff5d9"
         }
-      ],
-      "withdrawn": {
-        "worker": "06bf860b-ce15-4ee4-ac6a-41e5d5351b59",
-        "state": "not-applicable",
-        "at": "2026-10-24T03:02:50.239837+00:00",
-        "reason": "reviewer (sonnet): The anchor produceLog.ts:85 (hadPrompt) is not one of the context's listed files, so it doesn't show that this context's stores assemble no prompt. The context's own files show only prompt-related comments (labProduceMode, labPipelineStore), and I couldn't confirm that the 'buildPrompt hits in sibli"
-      }
+      ]
     },
     "df4c39c5-ee71-4d66-bb13-3ac27bbc52e5/prompt-assembly": {
       "context": "build-history-config",
@@ -20062,27 +20070,23 @@
       "context": "prompt-evolution",
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "deviation",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:50:35.688Z",
+      "evaluatedTs": "2026-11-06T04:02:12.033Z",
+      "worker": "2e879aae-a76d-44be-a0fd-a04efb7ff5d9",
       "techniques": [
         {
           "technique": "compression-hardens-deferred-decisions",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:141 A shortened candidate is written and tested with no check of which conditioned branch the shortening picked."
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/OptimizerPanel.tsx:22 An automated pass proposes shorter prompts, justified only by success-rate correlation (cost-and-success suite) without reading the candidate for removed branches."
         },
         {
           "technique": "recovery-path-as-loss-signal",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/PromptEvolutionView/OptimizerPanel.tsx:249 The saving is reported at the transform's own output (characters removed). Moderate confidence: the downstream A/B partly offsets this."
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/OptimizerPanel.tsx:249 The saving is reported at the transform's own output (characters removed). Moderate confidence: the downstream A/B partly offsets this.",
+          "carriedFrom": "2026-11-06"
         }
-      ],
-      "withdrawn": {
-        "worker": "7bc4bbf2-ba67-47f9-bc5d-a5833cb6a414",
-        "state": "deviation",
-        "at": "2026-11-06T00:51:18.115995+00:00",
-        "reason": "reviewer (sonnet): The evidence says an optimizer rewrite becomes a challenger with no review of dropped hedges, but OptimizerPanel.tsx (~line 245) shows a word-level PromptDiffView of before and after to the user before the 'Save as challenger variant' click, and the `planStart` check in handleSaveChallenger also gat"
-      }
+      ]
     },
     "099d3014-5d1c-47d0-9d2c-e4b078222cb7/agent-memory": {
       "context": "prompt-engineering",
@@ -20468,6 +20472,22 @@
       "evaluatedTs": "2026-11-06T03:48:05.668Z",
       "worker": "9cd4b2dd-c5bb-4f8f-a6a1-267695b49eb8",
       "techniques": []
+    },
+    "b6266959-0161-4ca0-b9e9-249804753b1c/prompt-assembly": {
+      "context": "material-configurator",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:02:12.033Z",
+      "worker": "2e879aae-a76d-44be-a0fd-a04efb7ff5d9",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/materials/tabs/PatternsTab.tsx:25 Call site renders prompt text and dispatches it raw instead of passing a typed task to the one assembler; ConfiguratorTab.tsx:27-30 names this exact path as forbidden."
+        }
+      ]
     }
   }
 }
