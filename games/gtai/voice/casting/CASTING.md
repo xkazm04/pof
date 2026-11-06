@@ -57,6 +57,9 @@ the voice row still has its design preview (`voice.mjs voices`), and its seed an
 - **Crash show announcer** (Dent round 1 #4, voice `d6b86656-aa75-4527-849c-9c60a93c78bd`, seed 932328204): a deep,
   booming robot showman through a dented megaphone horn. Owner: "Keep in memory possibility to recast". It fits an
   MC, a pit-fight or race announcer, or a boss's herald.
+- **Mystic sage** (Ohm round 1 #2, voice `323880a6-c08c-46c3-a850-fdb9128f3684`, seed 1646002308): a deep,
+  resonant, elderly male robot with a transformer hum, who speaks in proverbs. Owner: "Note possibility to revisit with
+  another cast". It fits an oracle, a cult leader (Kronk's cult) or a wise boss.
 
 ## Lessons from successful casts
 
@@ -115,7 +118,20 @@ owner's notes kept asking for, and what to try first next time.)_
   player's 1.2x / 1.5x preview answers it inside the same round, so it doesn't cost a new round. Note the take
   speed the cast voice needs: Kerf 1.2.
 
-### The round plan that has worked three times
+### Ohm: cast in round 1 (2026-11-06), "Absent-minded tinkerer", seed 1592267672, `eleven_ttv_v3`
+
+- **The first one-round cast.** It used everything learned before it: all machine voices, the pace written into
+  every description, one axis per slot, and no echo of the voices already cast.
+- **What won:** a CHARACTER voice with a behaviour in it, not a timbre alone: "an old, wavering male robot
+  voice, mid-high and a little reedy, with a faint buzzing tremor. A forgetful, chuckling tinkerer who loses his
+  thread, wanders, then snaps back sharp and precise when it matters. Lively, quick conversational pace with
+  sudden halts." It is an old voice, but with the pace kept lively.
+- **What lost:** the cranky old-timer, the elder matriarch, and the big frail-to-thunder contrast. The stock
+  "wise old mage" (Mystic sage) lost too, but was kept for another role.
+- **Next time:** put the character's built-in behaviour into the description (loses his thread then snaps back;
+  flips at the impact), not only its sound. Across four casts, every winner names a behaviour.
+
+### The round plan that has worked four times
 
 - **Round 1:** five distinct machine voices; one axis per slot; one contrast voice for a comic role.
 - **Round 2:** about five slots on the iterated seed. Slot 1 is always "the same, but much more" of the praised
