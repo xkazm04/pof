@@ -866,3 +866,35 @@ Handshake: an interactive day session. Three lanes run in parallel on disjoint f
   - clean the n7, n7p and n7x roots and worktrees once the verdicts are done.
 
   The d7 verdicts (artifact AYfehuXJMLPFRc7ywpfpZ7) are still unanswered.
+
+### 2026-11-06 day: plan, voice casting rounds (first cast: Rivet)
+
+Owner request: a casting subpage in the PoF Voice room for designing the main characters' voices with ElevenLabs.
+- The page shows the character's art.
+- Each round has 5 designed voices. The owner gives each a verdict of cast, iterate or decline, and writes a comment for the next round when none is cast.
+- A successful cast is written into a casting memory, so later casts start more precisely.
+
+Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gtai/voice/casting/` holds a `CASTING.md` playbook and a log per character.
+- PoF gap: the Voice room designs 3 candidates per click from the bible. It has no rounds, no iterate verdict, no seed lineage, no character art and no casting memory. **Building it** this session.
+
+### 2026-11-06 11:30 day: verdicts applied, main pushed, angle round, d8 prepared (not launched)
+- **Verdicts (page 5hVaA3Th9DZYhJHwaw5Sp6)** are applied on rtai main.
+  - All five n7 lanes are merged.
+  - King: "fair" (repair delay 20). Servo is harder: repair delay 30, 2-hp drones, drop rings only over the hover, crates deal 12.
+  - Shot trails are 4 ticks.
+  - Quest 1 fights with Rivet's own claws.
+  - Three tests now pin the new values.
+- **Gates on the merge:** lint, unit 1403/0, scenarios 52/52, parity, selftest goldens, and the director reel 19/19 with 0 SCRIPT ERROR (arena scene).
+- **main** is `3e9a6e7c`, pushed.
+  - **Side effect:** a first `git push origin main` also published the parallel /perfect session's commit `fc1cfd7a` (tooling docs) together with the logo commit `170356e4`.
+  - The main checkout is on that session's `perfect/2026-11-06` branch with its WIP. It was not touched; main was moved as a ref only.
+- **Angle round 1:**
+  - The page is https://claude.ai/artifact/Wzv6jpYGGSf5Ewbn4m9N6S; the source is `art-direction/angle-r1/`.
+  - **Owner:** every sheet is approved. Kerf was sent back ("tall as Rivet and similarly thin"), and **Kerf v2 was approved** (magenta background). Rivet keeps the logo's visor.
+  - **The angle is still open.** The owner's note: "Run 55 and 70 in parallel on smaller sample size ... 70 for regular game experience, 55 for boss fights. I will need to see both in action before final decision".
+- **d8 day run is prepared and NOT launched** (the owner said wait: a parallel session is adjusting the dev and test toolset first).
+  - Root `kiro/gtai-d8`, 4 lanes:
+    - `chars`, `bosses` and `weapons` at 55;
+    - `view70`: a small 70 sample (Rivet, Tonnage, the King) plus `--view=combo` (70 in play, 55 in boss fights).
+  - The worktrees `gtai-wt/d8-*` are cut from `3e9a6e7c` and imported clean.
+  - Launch with `kiro/gtai-d8/launch.cmd`: until 19:00, freeze 18:30, report 18:40. Update the times if the launch is late.
