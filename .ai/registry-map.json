@@ -13020,8 +13020,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:16 This panel is the operator's view of the error_memory store, which is injected into agent prompts. It presents every recorded error as 'internalized' by the assistant. But the agent's read path (getRelevantErrors in src/lib/error-memory-db.ts) shortlists 30 rows and injects at most 5 per prompt, so the operator sees rows the agent never saw, with no omission notice.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "module-design",
@@ -16156,8 +16160,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "mcp-tools",
@@ -16944,8 +16948,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/judge/rubrics.ts:156 The judge is a stateless call. Its prompt is built only from subject, payload, siblingContext (the entity's other steps right now) and canonContext. Stored verdict history (verdictTrend, craft history) and calibration labels are evaluation records for operators and measurement, never memory carried into the judge. A case-insensitive search of src/lib/judge, src/lib/craft and both API route dirs for memory/recall/consolidat/forget returned zero hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "prompt-assembly",
@@ -21398,8 +21406,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:36 These are UI tools for procedural geometry, scene trees, rig presets and import automation, backed by local Zustand state. No agent carries memory forward here. A search of the procedural-engine, scene-composer, auto-rig and import-automation dirs for memory/recall/consolidat/forget returned zero hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "image-to-3d-input-gating",

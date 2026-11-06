@@ -1,0 +1,128 @@
+{
+  "schema": "conform-run/1",
+  "worker": "846a2f94-e25a-4263-a03f-c3a7fb4bcfa9",
+  "subject": "agent-memory",
+  "evaluatedAt": "2026-11-06T04:44:33.386439+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "judge-craft-quality",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/judge/rubrics.ts:156 The judge is a stateless call. Its prompt is built only from subject, payload, siblingContext (the entity's other steps right now) and canonContext. Stored verdict history (verdictTrend, craft history) and calibration labels are evaluation records for operators and measurement, never memory carried into the judge. A case-insensitive search of src/lib/judge, src/lib/craft and both API route dirs for memory/recall/consolidat/forget returned zero hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "memory",
+        "recall",
+        "consolidat",
+        "forget"
+      ]
+    },
+    {
+      "context": "procedural-scene-tools",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/visual-gen/procedural-engine/useProceduralStore.ts:36 These are UI tools for procedural geometry, scene trees, rig presets and import automation, backed by local Zustand state. No agent carries memory forward here. A search of the procedural-engine, scene-composer, auto-rig and import-automation dirs for memory/recall/consolidat/forget returned zero hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "memory",
+        "recall",
+        "consolidat",
+        "forget"
+      ]
+    },
+    {
+      "context": "cross-module-features",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:16 This panel is the operator's view of the error_memory store, which is injected into agent prompts. It presents every recorded error as 'internalized' by the assistant. But the agent's read path (getRelevantErrors in src/lib/error-memory-db.ts) shortlists 30 rows and injects at most 5 per prompt, so the operator sees rows the agent never saw, with no omission notice.",
+      "techniques": [
+        {
+          "technique": "loss-site-inventory",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:16 Second-door loss site: the operator view counts the whole store, while the agent's injection path takes its own number (LIMIT 30 then top 5 in error-memory-db.ts:193 and :184). Nothing tells the operator the two views differ."
+        },
+        {
+          "technique": "coverage-instrumentation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:115 Health is shown as bare row counts (total/unique/unresolved), not as coverage over the tracked population such as modules with confirmed memory in a window. The docstring calls the surface 'reassuring'."
+        },
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:92 A failed read is shown as an alert, separate from the empty state at line 105, so an unreadable store never reads as 'nothing recorded'."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-memory",
+      "context": "game-director-system",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "agent-memory",
+      "context": "inventory-catalog",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim of 'no agent' is contradicted by CatalogGearTab.tsx, which imports useModuleCLI and useGeneration and calls executeCli with a built prompt at lines ~54 and ~200. The anchor at line 42 is only the component signature, so it does not show that no agent is present."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T04:44:33.386439+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "judge-craft-quality",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:44:33.386439+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:44:33.386439+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "coverage-instrumentation",
+        "durable-store-failure-posture",
+        "loss-site-inventory"
+      ],
+      "deviations": 1,
+      "context": "cross-module-features",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T04:44:33.386439+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "inventory-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

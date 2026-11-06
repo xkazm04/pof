@@ -20646,6 +20646,67 @@
         "at": "2026-11-06T04:33:24.247069+00:00",
         "reason": "reviewer (sonnet): The anchor labAcceptance.ts:44 is a resolveAccept doc comment, which does not show that voice handling is absent. The evidence also says a grep of layout-lab/ found nothing, but layout-lab/game/voice/ holds a voice room, voice generation and a voice queue. Those files are outside this context's four"
       }
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/agent-memory": {
+      "context": "judge-craft-quality",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:44:33.386Z",
+      "worker": "846a2f94-e25a-4263-a03f-c3a7fb4bcfa9",
+      "techniques": []
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/agent-memory": {
+      "context": "procedural-scene-tools",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:44:33.386Z",
+      "worker": "846a2f94-e25a-4263-a03f-c3a7fb4bcfa9",
+      "techniques": []
+    },
+    "a2e69711-c5de-469c-8672-5863ff80ba72/agent-memory": {
+      "context": "cross-module-features",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:44:33.386Z",
+      "worker": "846a2f94-e25a-4263-a03f-c3a7fb4bcfa9",
+      "techniques": [
+        {
+          "technique": "loss-site-inventory",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:16 Second-door loss site: the operator view counts the whole store, while the agent's injection path takes its own number (LIMIT 30 then top 5 in error-memory-db.ts:193 and :184). Nothing tells the operator the two views differ."
+        },
+        {
+          "technique": "coverage-instrumentation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:115 Health is shown as bare row counts (total/unique/unresolved), not as coverage over the tracked population such as modules with confirmed memory in a window. The docstring calls the surface 'reassuring'."
+        },
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/ErrorMemoryPanel.tsx:92 A failed read is shown as an alert, separate from the empty state at line 105, so an unreadable store never reads as 'nothing recorded'."
+        }
+      ]
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/agent-memory": {
+      "context": "inventory-catalog",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:44:33.386Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "846a2f94-e25a-4263-a03f-c3a7fb4bcfa9",
+        "state": "not-applicable",
+        "at": "2026-11-06T04:45:24.071471+00:00",
+        "reason": "reviewer (sonnet): The claim of 'no agent' is contradicted by CatalogGearTab.tsx, which imports useModuleCLI and useGeneration and calls executeCli with a built prompt at lines ~54 and ~200. The anchor at line 42 is only the component signature, so it does not show that no agent is present."
+      }
     }
   }
 }
