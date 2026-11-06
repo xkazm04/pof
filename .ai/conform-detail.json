@@ -20920,6 +20920,26 @@
           "evidence": "src/app/api/visual-gen/generate/route.ts:90 The server rejects a bad argument and the error names the accepted values, so the caller can recover in one turn."
         }
       ]
+    },
+    "3aa2c4eb-2fdb-4429-b2f1-611fa0626af5/prompt-assembly": {
+      "context": "coach-and-guidance",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T22:46:13.863Z",
+      "worker": "30745a90-d789-4ba4-9b1d-f162abea1d25",
+      "techniques": []
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/prompt-assembly": {
+      "context": "status-health-dashboard",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T22:46:13.863Z",
+      "worker": "30745a90-d789-4ba4-9b1d-f162abea1d25",
+      "techniques": []
     }
   }
 }
