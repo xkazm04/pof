@@ -989,3 +989,37 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
   2. The owner's verdicts, then fill PITCH_VERDICT in `briefs/common.md`.
   3. Merge d8, run the gates, push main.
   4. `bash prep.sh`, then launch at 20:00.
+
+### 2026-11-06 evening: d8 verdicts, merge, Rivet triage rounds 1-2, night n8 launched
+
+- **d8 verdicts** (page `XewtD2ub387by7LgRDWtkE`):
+  - the pitch is **combo**: 70 in play, 55 in boss fights, a 1.0 s ease, hard swap, the strip's bell; `top` stays the default on main;
+  - Kerf's card 20 % bigger; Rivet gets a ~1 s death beat; no cape train; a bigger King bust; the gems stay;
+  - fix the boss attack target so it is fixed once the attack begins (bosses clip 0:14);
+  - weapons note: "No weapon looks natural in his hand ... Rivet ... massively degraded from concept art ... create combinations with all weapons equipped instead of combining two pictures together". Weapons get two art forms: showcase and equipped.
+- **Merged** d8-view70, chars, bosses and weapons on int-day. Gates green on 7e07b20e:
+  - evidence PASS;
+  - director reel 19/19 with 0 SCRIPT ERROR in top, tilt, tilt70 and combo;
+  - rig_stress passed alone.
+
+  rtai main pushed `0bea8b93..8e9eeb78` (with the owner's verdicts in `docs/decisions.md`). Lane notes are in `docs/day/2026-11-06/<lane>/`.
+- **Rivet triage:**
+  - Round 1 (`gtai-art/rivet-r1`, page `QdvwUH7YShKcEAPGUNoihG`): 10 variants (Codex, all first try). The owner picked **v01, the logo look** (dark gunmetal, rust edges, the welder helmet). The model drew about 50-60 degrees when asked for 70; only v07 hit 70.
+  - Round 2 (`gtai-art/rivet-r2`, page `E2prMMB2QmpQ4ZZ5UoLq8v`; 22 images, 2 streams, all first try):
+    - the visor is **amber eye bars**;
+    - 12 weapons approved as drawn with Rivet: pistol, machine pistol, hand cannon, gloria, plasma rifle, gatling, rocket launcher (its backward rocket pose is to be fixed), flamethrower, molotov, katana, electro baton, chainsaw;
+    - to redesign with 3 variants and a richer palette: electro gun, homing shard, ray gun, mini-nuke (too like the rocket launcher);
+    - the plasma sword becomes two-handed in the concept-art style;
+    - the owner asked for one more round before production.
+  - Round 3 (`gtai-art/rivet-r3`, 15 weapon showcase sheets) is running.
+- **Night n8** was launched at 20:25 (root `kiro/gtai-n8`, until 09:00, freeze 08:30, report 08:40), on the subscription (both API keys are low on credit). Lanes:
+  - `view`: combo to production, the owner's values, the boss target fix, the death beat;
+  - `street`, `vehicles`, `city`: 70 first;
+  - `hud`: showcase weapons from the approved designs, the HUD, portraits.
+
+  Rivet's art and the held weapons are frozen. The asset lane serves the night lanes' REQUESTs first.
+- **Director image exception:** rounds 2 and 3 ran two Codex streams at once (one under `image.lock`, one outside it) with `image.want` held fresh, so the owner's loop was not queued behind the asset lane.
+- **Next:**
+  1. Round 3 page.
+  2. Rivet production: the final v01 with the amber visor at a true 70 and 55, 8 facings, and an equipped sheet per weapon; whole-figure frames replace the head card.
+  3. 08:40 the n8 report.
