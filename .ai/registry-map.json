@@ -8393,8 +8393,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/pipeline-artifacts-db.ts:8 The context persists catalog entities, pipeline artifacts with revision history and acceptance verdicts. It is a content/acceptance store, not something an agent carries forward as memory: no layer captures, consolidates, decays or injects beliefs. A search of src/lib, src/lib/catalog, src/stores and src/app/api for agentMemory, memories and recallBudget found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "mcp-tools",
@@ -20310,8 +20314,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/types/observation.ts:2 The context's 'observation' is runtime telemetry from a UE5 scenario (ObsSample rows), and the drain route flips deferred acceptance verdicts. It has no agent working memory, episodes, consolidated beliefs or recall: a search of src/app/api/pipeline-artifacts (incl. drain) and src/types for agentMemory, episod, consolidat and memories found nothing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "runtime-observation-evidence",

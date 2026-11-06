@@ -19848,24 +19848,50 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T03:12:16.641Z",
+      "evaluatedTs": "2026-11-06T03:48:05.668Z",
       "techniques": [
         {
-          "technique": "consolidation",
+          "technique": "observation-clock",
           "verdict": "deviation",
-          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:77 Provenance is a count, not grounding episodes; src/types/pattern-library.ts:42 'sessionCount: number;' and no session-id field, so a pattern cannot be audited or read back against its sources."
+          "evidence": "src/lib/pattern-extractor.ts:299 Seeded patterns with sessionCount 0 get the write instant as their 'last success', so the writer's clock stands in for an observation that never happened."
         },
         {
           "technique": "memory-governance",
+          "verdict": "deviation",
+          "evidence": "src/lib/pattern-extractor.ts:300 Patterns seeded from feature definitions are stamped source 'mined', the same label as patterns distilled from sessions, so provenance misnames who authored the evidence. Human curation does exist and survives re-mining (verify/pin at PatternCard.tsx:193; upsert preserves verified rows)."
+        },
+        {
+          "technique": "exposure-is-not-credit",
+          "verdict": "deviation",
+          "evidence": "src/lib/pattern-extractor.ts:186 Every failed session in a module becomes a pitfall on every approach pattern in that module, whatever approach the failed session used. Success rate was fixed to be per-approach; pitfalls were not."
+        },
+        {
+          "technique": "memory-value-model",
+          "verdict": "deviation",
+          "evidence": "src/lib/pattern-library-db.ts:188 Ranking has no trust-weighted age decay, so a stale pattern outranks a fresh one indefinitely as long as its counts are higher."
+        },
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "deviation",
+          "evidence": "src/lib/pattern-library-db.ts:217 The only removal path is a manual delete by id. Nothing retires patterns by age or value, so mined patterns accrete forever."
+        },
+        {
+          "technique": "scope-before-similarity",
           "verdict": "conformant",
-          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:193 A human curates mined beliefs (verify, pin as canonical, edit), and the verifier is recorded and shown ('Verified by', line 184)."
+          "evidence": "src/lib/pattern-extractor.ts:156 The distiller scopes its input to one module before clustering by approach, so clusters never cross modules."
+        },
+        {
+          "technique": "consolidation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PatternLibraryView/PatternCard.tsx:77 Provenance is a count, not grounding episodes; src/types/pattern-library.ts:42 'sessionCount: number;' and no session-id field, so a pattern cannot be audited or read back against its sources.",
+          "carriedFrom": "2026-11-06"
         }
       ],
       "withdrawn": {
-        "worker": "27087ff4-6057-4db4-a46a-3adbe6d07f8d",
+        "worker": "9cd4b2dd-c5bb-4f8f-a6a1-267695b49eb8",
         "state": "deviation",
-        "at": "2026-11-06T03:12:44.083902+00:00",
-        "reason": "reviewer (sonnet): The evidence is about PatternLibraryView/PatternCard.tsx and types/pattern-library.ts. Neither is among the context's files, which are DeepEvalResults/* and JudgeVerdictsView/*. The sessionCount claim does hold in the code, but it describes a different context (the pattern library), not this one."
+        "at": "2026-11-06T03:48:44.596777+00:00",
+        "reason": "reviewer (sonnet): The evidence is about PatternLibraryView/PatternCard.tsx, pattern-extractor.ts and pattern-library-db.ts. The context's listed files are only DeepEvalResults and JudgeVerdictsView, so the verdict describes code outside this context. The cited lines themselves are accurate."
       }
     },
     "12c245d3-0dae-4736-afc8-fb30a8f60f76/agent-memory": {
@@ -20422,6 +20448,26 @@
           "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:54 Ledger aspect only: the full prompt text is kept per produced batch (bounded to 12 batches). No digest exists, and the session-gate half does not apply to one-shot dispatch."
         }
       ]
+    },
+    "89b3215f-69e9-4aa4-8c8b-27316cccc59d/agent-memory": {
+      "context": "observation-testing",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:48:05.668Z",
+      "worker": "9cd4b2dd-c5bb-4f8f-a6a1-267695b49eb8",
+      "techniques": []
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/agent-memory": {
+      "context": "catalog-database",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:48:05.668Z",
+      "worker": "9cd4b2dd-c5bb-4f8f-a6a1-267695b49eb8",
+      "techniques": []
     }
   }
 }
