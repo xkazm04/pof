@@ -19263,42 +19263,39 @@
       "context": "ai-developer-tools-api",
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T01:22:31.958Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:50:35.688Z",
+      "worker": "7bc4bbf2-ba67-47f9-bc5d-a5833cb6a414",
       "techniques": [
         {
-          "technique": "capability-documentation",
+          "technique": "layered-composition",
           "verdict": "deviation",
-          "evidence": "src/app/api/agents/live-token/route.ts:82 Hand-written. Line 43 declares 'arpg-combat-effects' etc. and line 15 says the declarations 'mirror advisorTools.ts' rather than being derived from it."
+          "evidence": "src/app/api/agents/forge-ability/route.ts:96 A pre-rendered prompt arrives from the call site instead of typed inputs. The one-shot/step route (line 261, buildStepProducePrompt) is the conformant counter-example in the same context."
         },
         {
           "technique": "response-reservation-sizing",
           "verdict": "deviation",
-          "evidence": "src/app/api/agents/forge-ability/route.ts:48 Raised from 4096 after truncations rather than derived from a measured length percentile. There is no escalate-on-cut retry, although truncation is honestly detected at line 110."
-        },
-        {
-          "technique": "fingerprinting-and-cache-keys",
-          "verdict": "deviation",
-          "evidence": "src/app/api/claude-terminal/query/route.ts:64 The resume id is forwarded straight to the CLI. No session fingerprint is stored or compared before continuing."
+          "evidence": "src/app/api/agents/forge-ability/route.ts:48 A fixed ceiling explained by a comment but never derived from a measured length distribution. Truncation is detected (line 110) but there is no escalate-on-cut retry."
         },
         {
           "technique": "variable-interpolation",
           "verdict": "conformant",
-          "evidence": "src/app/api/one-shot/step/route.ts:32 Client inputs are typed and capped (400 chars). Malformed evidence entries are dropped rather than rendered half-formed."
+          "evidence": "src/app/api/one-shot/step/route.ts:46 Client evidence comes in as typed input with an enumerated kind, and malformed entries are dropped instead of rendering as empty holes."
         },
         {
-          "technique": "layered-composition",
-          "verdict": "conformant",
-          "evidence": "src/app/api/one-shot/step/route.ts:257 The step route composes server-side through the single buildStepProducePrompt. Caveat: forge-ability and claude-terminal/query still proxy prompt text built by client-side assemblers."
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "src/app/api/agents/live-token/route.ts:82 Hand-written. Line 43 declares 'arpg-combat-effects' etc. and line 15 says the declarations 'mirror advisorTools.ts' rather than being derived from it.",
+          "carriedFrom": "2026-11-04"
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "src/app/api/claude-terminal/query/route.ts:64 The resume id is forwarded straight to the CLI. No session fingerprint is stored or compared before continuing.",
+          "carriedFrom": "2026-11-04"
         }
-      ],
-      "withdrawn": {
-        "worker": "d23ae61e-7853-4126-8127-b217abd67a98",
-        "state": "deviation",
-        "at": "2026-11-04T01:23:27.040360+00:00",
-        "reason": "reviewer (sonnet): I found no advisorTools.ts anywhere in the repo, and I did not find the dispatcher that decides which panel names are accepted; the evidence says the declaration 'does not accept' the short names and that both texts are hand-copied from advisorTools.ts, and neither claim can be confirmed. Line 82 it"
-      }
+      ]
     },
     "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/prompt-assembly": {
       "context": "session-analytics-reporting",
@@ -19920,6 +19917,63 @@
         "state": "not-applicable",
         "at": "2026-11-06T00:37:36.524187+00:00",
         "reason": "reviewer (sonnet): The anchor StudioHeader.tsx:102 is the A/B compare toggle, which shows the studio's own features but not that concept or scorecard input is absent. I also could not confirm the claims about manual colour-grading sliders or an acquisition tracker beyond that button."
+      }
+    },
+    "2a39555c-9199-48bf-b54a-6a13db05036c/prompt-assembly": {
+      "context": "cli-terminal-system",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:50:35.688Z",
+      "worker": "7bc4bbf2-ba67-47f9-bc5d-a5833cb6a414",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:46 The assembler output is a plain string and the dispatch door is unsealed, so call sites send their own rendered prompts."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "src/lib/cli-task.ts:691 The assembler has no global budget, floors or degradation ladder; searching cli-task.ts, cli-task-handlers.ts and prompt-context.ts for budget/truncat/MAX_ found nothing."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "src/lib/cli-task.ts:751 Prior model output (a review's nextSteps) becomes the task prompt with no declared trust class; CLITask.prompt is an untyped raw string."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "src/lib/cli-task.ts:84 The callback section gives a machine-checkable done shape (a JSON schema between exact markers) that the terminal validates."
+        }
+      ]
+    },
+    "234034cf-29e8-432e-aca8-490e30e9f45d/prompt-assembly": {
+      "context": "prompt-evolution",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:50:35.688Z",
+      "techniques": [
+        {
+          "technique": "compression-hardens-deferred-decisions",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/usePromptEvolution.ts:141 A shortened candidate is written and tested with no check of which conditioned branch the shortening picked."
+        },
+        {
+          "technique": "recovery-path-as-loss-signal",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/PromptEvolutionView/OptimizerPanel.tsx:249 The saving is reported at the transform's own output (characters removed). Moderate confidence: the downstream A/B partly offsets this."
+        }
+      ],
+      "withdrawn": {
+        "worker": "7bc4bbf2-ba67-47f9-bc5d-a5833cb6a414",
+        "state": "deviation",
+        "at": "2026-11-06T00:51:18.115995+00:00",
+        "reason": "reviewer (sonnet): The evidence says an optimizer rewrite becomes a challenger with no review of dropped hedges, but OptimizerPanel.tsx (~line 245) shows a word-level PromptDiffView of before and after to the user before the 'Save as challenger variant' click, and the `planStart` check in handleSaveChallenger also gat"
       }
     }
   }

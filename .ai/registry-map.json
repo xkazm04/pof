@@ -2923,7 +2923,11 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "priorNotApplicable": 3,
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/agents/forge-ability/route.ts:96 The forge-ability route forwards a prompt string the client built straight to Gemini, so the server has no assembler, budget, trust classification or fingerprint for it; the sibling one-shot/step route refuses to accept client prompt strings for this very reason.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "mcp-tools",
@@ -10610,8 +10614,12 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "deviation",
+          "priorNotApplicable": 3,
+          "evidence": "src/hooks/useModuleCLI.ts:46 buildTaskPrompt calls itself the single code path, but the hook also exports a raw-string sendPrompt door; about 29 call sites across the repo pass pre-rendered prompt text through it, outside the assembler's budget, variant resolution and review.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-runtime-assembly",
@@ -22871,8 +22879,8 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "eval-harness",
