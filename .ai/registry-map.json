@@ -5451,8 +5451,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "generative-artifact-gating",
@@ -16014,8 +16014,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/visual-gen/style-dna-db.ts:2 The only persisted, prompt-injected state is a style profile the user creates from a mood board and activates themselves. No agent carries memory of what happened forward. A grep of src/lib/visual-gen, src/stores, src/app/api/visual-gen and src/app/api/leonardo for episod, memories, agentMemory and recallMemor returned zero files.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "tiling-texture-acceptance",
@@ -19718,8 +19722,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/hooks/useModuleCLI.ts:260 Skill packs chosen from mined telemetry patterns are injected into the agent's prompt, but a failed or non-ok read is swallowed and treated exactly like an empty result, so the agent runs without its learned packs and nobody is told.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "eval-harness",

@@ -1,0 +1,113 @@
+{
+  "schema": "conform-run/1",
+  "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
+  "subject": "agent-memory",
+  "evaluatedAt": "2026-11-06T05:41:05.938475+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/hooks/useModuleCLI.ts:260 Skill packs chosen from mined telemetry patterns are injected into the agent's prompt, but a failed or non-ok read is swallowed and treated exactly like an empty result, so the agent runs without its learned packs and nobody is told.",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:260 resolveAndApplySkills drops the read on error (and on !res.ok) with no status signal, so failed recall looks the same as empty recall. The sibling useModuleRunEvidence does separate them (RunEvidenceState loading/ready/failed)."
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:121 The run-outcome episode copies the full enriched prompt, with no distilled body and no pointer to the source. pattern-extractor.ts then clusters those raw prompts, so the episode store is a second prompt-transcript store. The capture boundary (endRun) is correctly event-based."
+        }
+      ]
+    },
+    {
+      "context": "image-generation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/visual-gen/style-dna-db.ts:2 The only persisted, prompt-injected state is a style profile the user creates from a mood board and activates themselves. No agent carries memory of what happened forward. A grep of src/lib/visual-gen, src/stores, src/app/api/visual-gen and src/app/api/leonardo for episod, memories, agentMemory and recallMemor returned zero files.",
+      "techniques": [],
+      "absenceTerms": [
+        "episod",
+        "memories",
+        "agentMemory",
+        "recallMemor"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-memory",
+      "context": "game-director-system",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "agent-memory",
+      "context": "inventory-catalog",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor CatalogGearTab.tsx:42 is a useState line, so it does not show that the precondition (no agent memory) is absent; the claim rests only on a keyword grep, and the search terms were narrow."
+    },
+    {
+      "subject": "agent-memory",
+      "context": "audio-generation-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor AudioCodeGenPanel.tsx:14 is an import line, so it does not show the absence of agent memory; the claim rests only on a keyword grep, and the search terms were narrow."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T05:41:05.938475+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "inventory-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T05:41:05.938475+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "episodic-capture",
+        "recall-injection"
+      ],
+      "deviations": 1,
+      "context": "module-cli-orchestration-hooks",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T05:41:05.938475+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "image-generation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T05:41:05.938475+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "audio-generation-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

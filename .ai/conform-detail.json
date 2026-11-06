@@ -20699,13 +20699,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T05:07:32.316Z",
+      "evaluatedTs": "2026-11-06T05:41:05.938Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "6810bf6e-a833-4f88-acb8-006fcb6bd4d8",
+        "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
         "state": "not-applicable",
-        "at": "2026-11-06T05:08:11.886169+00:00",
-        "reason": "reviewer (sonnet): The anchor CatalogGearTab.tsx:15 is only a catalogStore import line and does not show that agent memory is absent. The same file also calls useModuleCLI and useGeneration (the file matches 8 times on useModuleCLI, useGeneration or prompt), so it does dispatch to agents, and the verdict rests on a ke"
+        "at": "2026-11-06T05:41:40.694843+00:00",
+        "reason": "reviewer (sonnet): The anchor CatalogGearTab.tsx:42 is a useState line, so it does not show that the precondition (no agent memory) is absent; the claim rests only on a keyword grep, and the search terms were narrow."
       }
     },
     "f2a555f4-1b04-4196-bb1c-71049494f81a/voice-io": {
@@ -20812,6 +20812,52 @@
       "evaluatedTs": "2026-11-06T05:17:48.681Z",
       "worker": "5de4c729-8c66-4c3c-bc72-b95b7b1f2906",
       "techniques": []
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/agent-memory": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:41:05.938Z",
+      "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:260 resolveAndApplySkills drops the read on error (and on !res.ok) with no status signal, so failed recall looks the same as empty recall. The sibling useModuleRunEvidence does separate them (RunEvidenceState loading/ready/failed)."
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:121 The run-outcome episode copies the full enriched prompt, with no distilled body and no pointer to the source. pattern-extractor.ts then clusters those raw prompts, so the episode store is a second prompt-transcript store. The capture boundary (endRun) is correctly event-based."
+        }
+      ]
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/agent-memory": {
+      "context": "image-generation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:41:05.938Z",
+      "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
+      "techniques": []
+    },
+    "60f0c3d8-4b81-4acf-9d2c-cfd92cf58737/agent-memory": {
+      "context": "audio-generation-tools",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:41:05.938Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "60e75df5-5e8b-4126-a188-c327a38eccbe",
+        "state": "not-applicable",
+        "at": "2026-11-06T05:41:40.776629+00:00",
+        "reason": "reviewer (sonnet): The anchor AudioCodeGenPanel.tsx:14 is an import line, so it does not show the absence of agent memory; the claim rests only on a keyword grep, and the search terms were narrow."
+      }
     }
   }
 }
