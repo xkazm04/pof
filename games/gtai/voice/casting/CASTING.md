@@ -148,7 +148,21 @@ owner's notes kept asking for, and what to try first next time.)_
 - **Next time:** with two iterates, write the fusion as an ARC (state A, trigger, state B, back to A). This is
   the strongest slot so far; it could take two slots on two fresh seeds.
 
-### The round plan that has worked five times
+### King: cast in round 2 (2026-11-06), "Mob royal, toward the monarch [robot]", seed 1423539092, `eleven_ttv_v3`
+
+- **"No robotic layer" meant "it is missing one, add it".** Round 2 tested both readings, and the winner is a
+  [robot] slot. A robot boss sounds synthetic too, even one who refuses to be called a robot. Both [no robot]
+  slots lost. A note that names a lack is a request to add it. When a note can be read two ways, test both in one
+  round; that cost no extra round here.
+- **This time the fresh-seed fusion LOST.** The middle ground the owner asked for ("find middle ground with the
+  monarch variant") won on the second iterate's OWN seed, moved toward the first: "a smooth, gravelly, low robot
+  voice with a gold-plated metallic rasp, now with a plummy, over-enunciated aristocratic polish: a rich gangster
+  boss who has learned to speak like royalty". The fusion is now 2 wins in 3. When the owner names a base ("middle
+  ground WITH the monarch" was a note on the mob royal), keep that voice's seed and move it.
+- **Next time:** with two iterates, always run both: the named base's seed moved toward the other, and a
+  fresh-seed fusion.
+
+### The round plan that has worked six times
 
 - **Round 1:** five distinct machine voices; one axis per slot; one contrast voice for a comic role.
 - **Round 2:** about five slots on the iterated seed. Slot 1 is always "the same, but much more" of the praised
