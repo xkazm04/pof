@@ -6554,25 +6554,34 @@
       "subject": "page-load-pipeline",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T00:12:27.914Z",
-      "worker": "936addb8-2073-4b5d-8408-6f8c5290c23f",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:36:05.551Z",
+      "worker": "2fb3cd92-3de6-41c0-8809-cc2f735d1836",
       "techniques": [
         {
           "technique": "font-loading-discipline",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/CatalogTree.tsx:243 className={t.fontMono} at line 241 maps to ibmPlexMono.className (theme.ts:30), declared 400/500/600 only, so 700 has no face. PipelineRail.tsx:387/404 also ask for 700 on var(--lab-font-mono)."
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:252 A weight is requested that no declared face provides; the technique names this exact failure."
+        },
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:154 The view wrapper's opacity-0 start state is suppressed on first render. The served markup is the settled state, so first paint is not hidden until script runs."
         },
         {
           "technique": "layout-stability-by-reservation",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/Baseline/index.tsx:242 The loaded Baseline is three columns (tree 260 + pipeline 320 + canvas). Its first-paint placeholder (NewHome.tsx:71) restates a two-column '260px 1fr' literal, so the canvas placeholder sits 320px off where the canvas lands. The placeholder is not derived from the same source as the loaded layout."
-        },
+          "evidence": "src/components/layout-lab/Baseline/index.tsx:242 The loaded Baseline is three columns (tree 260 + pipeline 320 + canvas). Its first-paint placeholder (NewHome.tsx:71) restates a two-column '260px 1fr' literal, so the canvas placeholder sits 320px off where the canvas lands. The placeholder is not derived from the same source as the loaded layout.",
+          "carriedFrom": "2026-10-25"
+        }
+      ],
+      "superseded": [
         {
-          "technique": "script-cost-is-main-thread-time",
-          "verdict": "deviation",
-          "evidence": "src/components/layout-lab/CatalogTree.tsx:382 Nested rows set their own entrance; LayoutLab's AnimatePresence initial={false} does not cover them. Server-side reduced-motion state stays null, so the opacity 0 branch is what is served.",
-          "carriedFrom": "2026-10-16"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:243 The catalog tree asks for weight 700 in `t.fontMono`. Under the default Blueprint theme (theme.ts:30) that resolves to IBM Plex Mono, which is declared only at 400/500/600, so the browser falls back to the 600 face (or a synthesized bold) without a warning. The technique names exactly this failure: a requested weight with no face behind it.",
+          "evaluatedAt": "2026-10-25T00:12:27.914Z",
+          "worker": "936addb8-2073-4b5d-8408-6f8c5290c23f",
+          "reason": "replaced by 2fb3cd92-3de6-41c0-8809-cc2f735d1836"
         }
       ]
     },
@@ -6580,32 +6589,27 @@
       "context": "lab-shell-and-navigation",
       "subject": "page-load-pipeline",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T01:45:32.691Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:36:05.551Z",
+      "worker": "2fb3cd92-3de6-41c0-8809-cc2f735d1836",
       "techniques": [
         {
-          "technique": "script-cost-is-main-thread-time",
+          "technique": "font-loading-discipline",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/CatalogTree.tsx:382 Same entrance on the rail steps (PipelineRail.tsx:252). The view wrapper's AnimatePresence initial={false} only settles the outer motion.div."
+          "evidence": "src/components/layout-lab/fonts.ts:8 display swap, latin subset and the same-origin next/font are good, but the declared weight set does not cover the weights the styles request (700)."
         },
         {
           "technique": "layout-stability-by-reservation",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/NewHome.tsx:71 Placeholder columns do not match Baseline's wide grid of 260px 320px 1fr, so replacing the skeleton moves the canvas."
+          "evidence": "src/components/layout-lab/MatrixSkeleton.tsx:25 The skeleton restates the 30x30 cell size instead of deriving it from matrixCellStyle.ts. It also caps rows at 8 and uses a 20px name cell against the real two-line name cell, so it does not match the loaded geometry."
         },
         {
-          "technique": "font-loading-discipline",
-          "verdict": "deviation",
-          "evidence": "src/components/layout-lab/fonts.ts:11 Three families are always attached. display is swap and subsets are latin, but preload is left at the next/font default of true, including JetBrains Mono which the default light theme does not draw."
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:154 The entrance animation's hidden start state is not applied on first render, so the served and first-painted view is the settled state."
         }
-      ],
-      "withdrawn": {
-        "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
-        "state": "deviation",
-        "at": "2026-10-16T01:46:15.419339+00:00",
-        "reason": "reviewer (sonnet): The opacity-0 claim is not about served markup. NewHome.tsx's hydration gate uses getServerSnapshot `() => false`, so the server renders only NewHomeSkeleton and never renders CatalogTree or PipelineRail rows. Both verdicts therefore rest on an unconfirmed claim that the served HTML hides labels."
-      }
+      ]
     },
     "c3f566ea-1570-4687-86df-d8a0925984d5/page-load-pipeline": {
       "context": "lab-hooks",
@@ -6654,32 +6658,46 @@
       "subject": "page-load-pipeline",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T01:45:32.691Z",
-      "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:36:05.551Z",
+      "worker": "2fb3cd92-3de6-41c0-8809-cc2f735d1836",
       "techniques": [
         {
           "technique": "layout-stability-by-reservation",
           "verdict": "deviation",
-          "evidence": "src/hooks/useViewportWidth.ts:45 useViewportAtLeast seeds state from WIDE_FALLBACK_WIDTH (1440) and updates only inside the effect. AppShell and Baseline both call it for the first-paint column split."
-        },
-        {
-          "technique": "script-cost-is-main-thread-time",
-          "verdict": "deviation",
-          "evidence": "src/app/page.tsx:4 The home route is a client module that also imports NewHome and renders exactly one of them, so the unseen legacy shell is still in the first-load graph."
+          "evidence": "src/hooks/useViewportWidth.ts:58 The first render guesses the layout instead of reserving the real one (a CSS media condition would do that); the narrow case shifts after script."
         },
         {
           "technique": "font-loading-discipline",
-          "verdict": "deviation",
-          "evidence": "src/app/layout.tsx:43 Both Geist families are on every document. Neither call passes preload:false; the installed next/font validator defaults preload to true, display to swap, and adjustFontFallback to true."
+          "verdict": "conformant",
+          "evidence": "src/app/layout.tsx:2 next/font serves the files and declarations from the app's own origin, latin subset only, with a metric-adjusted fallback. Geist is a variable font, so every requested weight has a face."
         },
         {
           "technique": "render-blocking-budget",
           "verdict": "conformant",
-          "evidence": "src/app/layout.tsx:6 The server layout's only stylesheet import is the app's own global CSS. The layout renders no classic parser-blocking script."
+          "evidence": "src/app/layout.tsx:6 The only render-blocking resource is one same-origin global stylesheet (the lab-tokens @import is flattened at build time). No third-party tags or head scripts."
+        },
+        {
+          "technique": "navigation-reuse",
+          "verdict": "conformant",
+          "evidence": "src/app/page.tsx:17 The leave guard registers beforeunload (useLeaveGuard.ts:29), not unload; no unload handler exists anywhere under src. It is registered unconditionally, though."
+        },
+        {
+          "technique": "script-cost-is-main-thread-time",
+          "verdict": "deviation",
+          "evidence": "src/app/page.tsx:4 The home route is a client module that also imports NewHome and renders exactly one of them, so the unseen legacy shell is still in the first-load graph.",
+          "carriedFrom": "2026-10-16"
         }
       ],
-      "registryProposal": "navigation-reuse names an unload listener as the back/forward opt-out and does not say whether a beforeunload listener that only calls preventDefault to confirm in-flight work is the same failure; pagehide cannot show that dialog."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/hooks/useViewportWidth.ts:45 The shell hook used by the home shells defaults to the wide layout and only collapses after a ResizeObserver measurement, so a narrow first viewport moves once script runs.",
+          "evaluatedAt": "2026-10-16T01:45:32.691Z",
+          "worker": "b2bced6e-f363-48ff-b360-da6ffb75e2a0",
+          "reason": "replaced by 2fb3cd92-3de6-41c0-8809-cc2f735d1836"
+        }
+      ]
     },
     "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/session-continuation": {
       "context": "quality-evaluation-api",
@@ -16579,19 +16597,28 @@
       "subject": "page-load-pipeline",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T00:12:27.914Z",
-      "worker": "936addb8-2073-4b5d-8408-6f8c5290c23f",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:36:05.551Z",
+      "worker": "2fb3cd92-3de6-41c0-8809-cc2f735d1836",
       "techniques": [
         {
           "technique": "layout-stability-by-reservation",
           "verdict": "deviation",
-          "evidence": "src/components/layout/ShellSkeleton.tsx:13 Restated rather than derived from SidebarL1's COLLAPSED_WIDTH (SidebarL1.tsx:11). Plus: ModuleSkeleton is shared by the Suspense fallback and the shell skeleton (ShellSkeleton.tsx:68), so the one-placeholder rule is met for the content slot."
+          "evidence": "src/components/layout/ShellSkeleton.tsx:13 The placeholder size restates a constant instead of deriving it from the loaded component's source, and ignores the persisted expanded state."
         },
         {
           "technique": "script-cost-is-main-thread-time",
           "verdict": "conformant",
-          "evidence": "src/components/layout/ModuleRenderer/registry.tsx:13 Module views are split per module with React.lazy, so each module's code loads on demand instead of riding the shell's first load."
+          "evidence": "src/components/layout/ModuleRenderer/registry.tsx:13 Module views are code-split and loaded on navigation behind a Suspense boundary, not shipped in the shell's first load."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/layout/ShellSkeleton.tsx:13 The first-paint shell skeleton restates the rail width as its own literal (the comment says it mirrors COLLAPSED_WIDTH in SidebarL1.tsx, kept un-imported on purpose). It also reserves only the collapsed 56px L1 rail, while SidebarL1 animates between 56 and EXPANDED_WIDTH 180. The placeholder and the loaded rail can disagree, which is the restated-constant failure the technique names.",
+          "evaluatedAt": "2026-10-25T00:12:27.914Z",
+          "worker": "936addb8-2073-4b5d-8408-6f8c5290c23f",
+          "reason": "replaced by 2fb3cd92-3de6-41c0-8809-cc2f735d1836"
         }
       ]
     },

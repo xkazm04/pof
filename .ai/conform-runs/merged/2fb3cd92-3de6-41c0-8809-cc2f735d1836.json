@@ -1,0 +1,173 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2fb3cd92-3de6-41c0-8809-cc2f735d1836",
+ "subject": "page-load-pipeline",
+ "evaluatedAt": "2026-11-06T03:36:05.551631+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-browser-ui",
+   "subject": "page-load-pipeline",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/CatalogTree.tsx:252 The browser-only chip (className={t.fontMono} on line 250) asks for weight 700. Under the default Blueprint theme, t.fontMono is IBM Plex Mono (theme.ts:30), declared only at 400/500/600 in fonts.ts. So the requested weight has no face, and the browser silently uses 600 or synthesizes a bold.",
+   "techniques": [
+    {
+     "technique": "font-loading-discipline",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/CatalogTree.tsx:252 A weight is requested that no declared face provides; the technique names this exact failure."
+    },
+    {
+     "technique": "script-cost-is-main-thread-time",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/LayoutLab.tsx:154 The view wrapper's opacity-0 start state is suppressed on first render. The served markup is the settled state, so first paint is not hidden until script runs."
+    }
+   ]
+  },
+  {
+   "context": "app-navigation",
+   "subject": "page-load-pipeline",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useViewportWidth.ts:58 The shell breakpoint hook renders the wide (1440px) layout first and corrects only after a ResizeObserver callback. On a narrow viewport the first render claims the wrong geometry, then moves.",
+   "techniques": [
+    {
+     "technique": "layout-stability-by-reservation",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useViewportWidth.ts:58 The first render guesses the layout instead of reserving the real one (a CSS media condition would do that); the narrow case shifts after script."
+    },
+    {
+     "technique": "font-loading-discipline",
+     "verdict": "conformant",
+     "evidence": "src/app/layout.tsx:2 next/font serves the files and declarations from the app's own origin, latin subset only, with a metric-adjusted fallback. Geist is a variable font, so every requested weight has a face."
+    },
+    {
+     "technique": "render-blocking-budget",
+     "verdict": "conformant",
+     "evidence": "src/app/layout.tsx:6 The only render-blocking resource is one same-origin global stylesheet (the lab-tokens @import is flattened at build time). No third-party tags or head scripts."
+    },
+    {
+     "technique": "navigation-reuse",
+     "verdict": "conformant",
+     "evidence": "src/app/page.tsx:17 The leave guard registers beforeunload (useLeaveGuard.ts:29), not unload; no unload handler exists anywhere under src. It is registered unconditionally, though."
+    }
+   ]
+  },
+  {
+   "context": "app-shell-and-chrome",
+   "subject": "page-load-pipeline",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout/ShellSkeleton.tsx:13 The first-paint skeleton restates the rail width instead of importing COLLAPSED_WIDTH from SidebarL1.tsx, and reserves only the collapsed rail. SidebarL1 reads l1Expanded, which navigationStore persists with no partialize, so a user who left the rail expanded gets a 56px placeholder followed by a 180px rail.",
+   "techniques": [
+    {
+     "technique": "layout-stability-by-reservation",
+     "verdict": "deviation",
+     "evidence": "src/components/layout/ShellSkeleton.tsx:13 The placeholder size restates a constant instead of deriving it from the loaded component's source, and ignores the persisted expanded state."
+    },
+    {
+     "technique": "script-cost-is-main-thread-time",
+     "verdict": "conformant",
+     "evidence": "src/components/layout/ModuleRenderer/registry.tsx:13 Module views are code-split and loaded on navigation behind a Suspense boundary, not shipped in the shell's first load."
+    }
+   ]
+  },
+  {
+   "context": "lab-shell-and-navigation",
+   "subject": "page-load-pipeline",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/fonts.ts:8 The Blueprint mono face is declared at 400/500/600 only, while lab surfaces set in t.fontMono ask for 700 (CatalogTree.tsx:252, StepCrashBoundary.tsx:36, and the matrix table's cells via matrixCellStyle.ts:37). Those requests have no face and fall back silently.",
+   "techniques": [
+    {
+     "technique": "font-loading-discipline",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/fonts.ts:8 display swap, latin subset and the same-origin next/font are good, but the declared weight set does not cover the weights the styles request (700)."
+    },
+    {
+     "technique": "layout-stability-by-reservation",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/MatrixSkeleton.tsx:25 The skeleton restates the 30x30 cell size instead of deriving it from matrixCellStyle.ts. It also caps rows at 8 and uses a 20px name cell against the real two-line name cell, so it does not match the loaded geometry."
+    },
+    {
+     "technique": "script-cost-is-main-thread-time",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/LayoutLab.tsx:154 The entrance animation's hidden start state is not applied on first render, so the served and first-painted view is the settled state."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "page-load-pipeline",
+   "context": "coach-and-guidance",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T03:36:05.551631+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "page-load-pipeline"
+   ],
+   "techniques": [
+    "font-loading-discipline",
+    "script-cost-is-main-thread-time"
+   ],
+   "deviations": 1,
+   "context": "catalog-browser-ui",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:36:05.551631+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "page-load-pipeline"
+   ],
+   "techniques": [
+    "font-loading-discipline",
+    "layout-stability-by-reservation",
+    "navigation-reuse",
+    "render-blocking-budget"
+   ],
+   "deviations": 1,
+   "context": "app-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:36:05.551631+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "page-load-pipeline"
+   ],
+   "techniques": [
+    "layout-stability-by-reservation",
+    "script-cost-is-main-thread-time"
+   ],
+   "deviations": 1,
+   "context": "app-shell-and-chrome",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:36:05.551631+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "page-load-pipeline"
+   ],
+   "techniques": [
+    "font-loading-discipline",
+    "layout-stability-by-reservation",
+    "script-cost-is-main-thread-time"
+   ],
+   "deviations": 1,
+   "context": "lab-shell-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

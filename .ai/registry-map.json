@@ -4346,12 +4346,11 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/hooks/useViewportWidth.ts:45 The shell hook used by the home shells defaults to the wide layout and only collapses after a ResizeObserver measurement, so a narrow first viewport moves once script runs.",
-          "evaluatedAt": "2026-10-16",
-          "evaluatedAgainst": "sha256-b2:f51109a4fa17ac48",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "src/hooks/useViewportWidth.ts:58 The shell breakpoint hook renders the wide (1440px) layout first and corrects only after a ResizeObserver callback. On a narrow viewport the first render claims the wrong geometry, then moves.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6eb078a45499ad8a",
+          "evaluatedRevision": 5,
+          "revisionsBehind": 2
         },
         {
           "subject": "lazy-section-addressability",
@@ -4613,13 +4612,12 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/layout/ShellSkeleton.tsx:13 The first-paint shell skeleton restates the rail width as its own literal (the comment says it mirrors COLLAPSED_WIDTH in SidebarL1.tsx, kept un-imported on purpose). It also reserves only the collapsed 56px L1 rail, while SidebarL1 animates between 56 and EXPANDED_WIDTH 180. The placeholder and the loaded rail can disagree, which is the restated-constant failure the technique names.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:449e36ca8d3fe3a6",
-          "evaluatedRevision": 4,
+          "evidence": "src/components/layout/ShellSkeleton.tsx:13 The first-paint skeleton restates the rail width instead of importing COLLAPSED_WIDTH from SidebarL1.tsx, and reserves only the collapsed rail. SidebarL1 reads l1Expanded, which navigationStore persists with no partialize, so a user who left the rail expanded gets a 56px placeholder followed by a 180px rail.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6eb078a45499ad8a",
+          "evaluatedRevision": 5,
           "source": "retained",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "docs-content-model",
@@ -7946,12 +7944,11 @@
           "changedAt": "2026-10-31",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "src/components/layout-lab/CatalogTree.tsx:243 The catalog tree asks for weight 700 in `t.fontMono`. Under the default Blueprint theme (theme.ts:30) that resolves to IBM Plex Mono, which is declared only at 400/500/600, so the browser falls back to the 600 face (or a synthesized bold) without a warning. The technique names exactly this failure: a requested weight with no face behind it.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:449e36ca8d3fe3a6",
-          "evaluatedRevision": 4,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:252 The browser-only chip (className={t.fontMono} on line 250) asks for weight 700. Under the default Blueprint theme, t.fontMono is IBM Plex Mono (theme.ts:30), declared only at 400/500/600 in fonts.ts. So the requested weight has no face, and the browser silently uses 600 or synthesizes a bold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6eb078a45499ad8a",
+          "evaluatedRevision": 5,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -17351,7 +17348,11 @@
           "revision": 5,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/fonts.ts:8 The Blueprint mono face is declared at 400/500/600 only, while lab surfaces set in t.fontMono ask for 700 (CatalogTree.tsx:252, StepCrashBoundary.tsx:36, and the matrix table's cells via matrixCellStyle.ts:37). Those requests have no face and fall back silently.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:6eb078a45499ad8a",
+          "evaluatedRevision": 5
         },
         {
           "subject": "mcp-tools",
