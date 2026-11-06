@@ -26,7 +26,7 @@ describe('assessLines: structural', () => {
     ['LINE_UNUSED', 'warn', mutate((d) => { d.lines.push({ id: 'stray', speaker: 'rivet', purpose: ['character'], text: 'Nobody hears this one.', audio: null }); })],
     ['DUPLICATE_LINE_ID', 'error', mutate((d) => { d.lines[1].id = d.lines[0].id; })],
     ['LINE_REUSED_FROM_LEDGER', 'error', mutate((d) => { d.lines[1].text = 'witnesses are CRUMBS, child -- crumbs go in the bag!'; })],
-    ['NO_VOICE_BIBLE', 'error', CLEAN, ctx({ voiceBibles: new Set(['rivet', 'gearbox']) })],
+    ['NO_VOICE_BIBLE', 'error', CLEAN, ctx({ voiceBibles: new Set(['rivet', 'dent']) })],
     ['EDITORIAL_TELL', 'warn', mutate((d) => { d.lines[1].text = "It's not a factory, it's a graveyard with a parking lot."; })],
     ['TOO_FEW_LINES', 'error', mutate((d) => { d.lines = d.lines.slice(0, 5); })],
   ];
@@ -44,9 +44,9 @@ describe('assessLines: structural', () => {
   });
 
   it('soul voices are speakable only from their own act on', () => {
-    expect(codes(mutate((d) => { d.lines[1].speaker = 'sentry'; }))).toContain('LINE_UNKNOWN_SPEAKER');
-    const act2 = mutate((d) => { d.act = 'act2'; d.lines[1].speaker = 'sentry'; });
-    expect(codes(act2, ctx({ voiceBibles: new Set(['rivet', 'don-fax', 'gearbox', 'sentry']) }))).toEqual([]);
+    expect(codes(mutate((d) => { d.lines[1].speaker = 'tonnage'; }))).toContain('LINE_UNKNOWN_SPEAKER');
+    const act2 = mutate((d) => { d.act = 'act2'; d.lines[1].speaker = 'tonnage'; });
+    expect(codes(act2, ctx({ voiceBibles: new Set(['rivet', 'don-fax', 'dent', 'tonnage']) }))).toEqual([]);
   });
 
   it('each editorial tell pattern is caught and labelled unmeasured', () => {

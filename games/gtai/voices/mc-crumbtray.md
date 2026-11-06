@@ -57,4 +57,4 @@ Neutral jester to the city's voice of the uprising. Never changes: no dead air.
 
 ## Differs from closest voices
 - vs **General Krump** (also on air): Krump broadcasts at people and never listens; Crumbtray reacts to everything and talks to listeners as friends.
-- vs **Gearbox** (also fast): Gearbox's speed is panic for one driver; Crumbtray's is performance for a city.
+- vs **Kerf** (also fast): Kerf's speed is a cold whisper for one target; Crumbtray's is performance for a city.

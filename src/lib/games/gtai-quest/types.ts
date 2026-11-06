@@ -29,12 +29,12 @@ export const LINE_PURPOSES: readonly LinePurpose[] = ['funny', 'character', 'pro
 export interface QuestLine {
   /** Unique inside the quest, kebab: `fax-intro-1`. */
   id: string;
-  /** Character id (a `QuestCharacter.id`), e.g. `don-fax`, `rivet`, `gearbox`. */
+  /** Character id (a `QuestCharacter.id`), e.g. `don-fax`, `rivet`, `dent`. */
   speaker: string;
   /** Non-empty. */
   purpose: readonly LinePurpose[];
   text: string;
-  /** Condition tags for barks: `soul:hauler`, `madness:choir`, `heat:>=3`. Omit = always. */
+  /** Condition tags for barks: `soul:tonnage`, `madness:choir`, `heat:>=3`. Omit = always. */
   when?: readonly string[];
   /** The voice file the game plays (`res://assets/audio/voice/...ogg`, read as a String by the game's
    *  `quest_voice.gd`). `null` = not recorded. Written by the Voice room export (or the audio lane's temp pass). */
@@ -97,7 +97,7 @@ export interface QuestMechanic {
 export interface QuestReward {
   /** Cash paid on success (the one soft currency, pitch §7). */
   cash: number;
-  /** Unlock ids granted: `soul:gearbox`, `upgrade:gearbox-residue`, `weapon:smg`, `giver:vend-etta`. */
+  /** Unlock ids granted: `soul:dent`, `upgrade:dent-overload`, `weapon:smg`, `giver:vend-etta`. */
   unlocks: readonly string[];
 }
 
@@ -122,7 +122,7 @@ export interface QuestStoryWrite {
 }
 
 export interface QuestStoryHook {
-  /** Campaign variables the quest requires (read), e.g. `soul_gearbox_unlocked`. */
+  /** Campaign variables the quest requires (read), e.g. `soul_dent_unlocked`. */
   reads: readonly string[];
   writes: readonly QuestStoryWrite[];
 }

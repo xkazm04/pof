@@ -163,6 +163,7 @@ The owner, verbatim:
   - **Kerf** (fast): the freed laser-cutter head; this settles the fast ghost's origin.
   - **Ohm** (mage): the elder spot-welder, with the name Ohm taken from the substation keeper.
   - The owner: "add into nightly run effort to create these characters, animate transformation between characters, design and implement their attacks."
+- **[owner, 2026-11-06] The order of the ghosts in the story: Dent, Tonnage, Kerf, Ohm.** The ghosts are the souls; the old souls Gearbox, Sentry and Hauler are descoped (owner, 2026-11-06), which resolves the overlaps above. **[proposal]** One ghost unlocks per act in that order (act 1 Dent, act 2 Tonnage, act 3 Kerf, act 4 Ohm), wired in the PoF quest tooling (`ACT_SOUL`).
 
 
 The owner set three of the abilities: car manipulation, remote turret manipulation, and transforming into a large

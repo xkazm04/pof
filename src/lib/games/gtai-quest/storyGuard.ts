@@ -42,7 +42,7 @@ const BEATS = new Map(GTAI_ARC.flatMap((a) => a.beats.map((b) => [b.id, { ...b, 
 
 /** Beats whose realisation would resolve open canon (who betrays; what the 4th soul is). Claimable only
  *  after the owner decides, by removing the id here in the same change that records the decision. */
-export const OPEN_CANON_BEATS: readonly string[] = ['act3.betrayal', 'act4.soul-4'];
+export const OPEN_CANON_BEATS: readonly string[] = ['act3.betrayal'];
 
 /** Arc beats a quest may realise (`claimsBeat`): beats that write campaign state, none of it protected,
  *  and none whose realisation would resolve open canon. */

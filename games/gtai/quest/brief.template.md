@@ -30,10 +30,12 @@ Souls unlocked by the end of this act: {{souls}}.
 ## Protected canon: hard rule
 
 These are owner-only. No quest may resolve, hint the answer to, or contradict them:
-- The fourth soul. Do not name it, use it, unlock it or give it a voice.
 - The betrayer: Don Fax or Vend-Etta. Neither may betray, be cleared, or be shown reporting to anyone.
 - The act-antagonist order and allegiance (King, Servo, Torque, Kronk). Do not place them in an act or say who they serve.
-- Never write the story variables `soul4_identity`, `betrayer` or `act_antagonist_order`.
+- Never write the story variables `betrayer` or `act_antagonist_order`.
+
+The souls are the four ghosts in story order (owner, 2026-11-06): Dent, Tonnage, Kerf, Ohm. A ghost may
+speak only from the act it unlocks in (the list above); never name a ghost before its unlock.
 
 ## Tone (pitch §6)
 

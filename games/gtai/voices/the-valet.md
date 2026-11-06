@@ -2,7 +2,7 @@
 
 [proposal] Host draft 2026-11-02 from pitch.md §3, §6. The owner signs off before lines are generated from it. Reference lines are `illustrative` (model-written): replace them with owner-chosen anchors.
 
-- id: `the-valet` · car-theft and delivery giver · a parking-garage kingpin ("never a scratch"). Ties to Gearbox's car manipulation.
+- id: `the-valet` · car-theft and delivery giver · a parking-garage kingpin ("never a scratch"). Ties to Dent's car seizing.
 
 ## Want, hidden thing, refusal
 - Wants (own words): "Every car returned. Never a scratch. Tip optional, sir. Not really."
@@ -38,7 +38,7 @@ Hissed through the service voice, only when a car is hurt ("Sir. Is that a — f
 Even more polite, and the swearing leaks through the politeness.
 
 ## Registers by listener
-- Rivet: deferential. Gearbox (heard through Rivet): professional disdain for his driving. Owners of cars: contempt in perfect manners.
+- Rivet: deferential. Dent (heard through Rivet): professional horror at what he does to cars. Owners of cars: contempt in perfect manners.
 
 ## Arc
 Learns a car is worth a scratch, once. Never changes: the service register.
@@ -56,5 +56,5 @@ Learns a car is worth a scratch, once. Never changes: the service register.
 - Off-voice: "Grab the ride and floor it, man!" (casual, "grab", no service).
 
 ## Differs from closest voices
-- vs **Gearbox** (also cars): Gearbox panics and asks; The Valet is calm and instructs.
+- vs **Dent** (also cars): Dent wrecks cars for joy; The Valet returns them without a scratch.
 - vs **Lady Cathode** (also refined): Cathode's refinement is aristocratic ownership; The Valet's is servile, and he owns nothing he loves.

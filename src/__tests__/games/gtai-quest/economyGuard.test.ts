@@ -36,7 +36,7 @@ describe('assessEconomy', () => {
     ['TIMER_NOT_ALLOWED', 'error', mutate((d) => { d.act = 'clock-out'; d.reward.cash = 100; })],
     ['MINUTES_OUT_OF_BAND', 'warn', mutate((d) => { d.difficulty.minutes = 30; })],
     ['NO_FAIL_STATE', 'error', mutate((d) => { d.difficulty.failStates = []; })],
-    ['SOUL_UNLOCK_WRONG_ACT', 'error', mutate((d) => { d.reward.unlocks.push('soul:sentry'); })],
+    ['SOUL_UNLOCK_WRONG_ACT', 'error', mutate((d) => { d.reward.unlocks.push('soul:tonnage'); })],
   ];
   it.each(cases)('%s fires as %s on its mutation and not on the clean fixture', (code, severity, d) => {
     expect(find(d, code)?.severity).toBe(severity);
@@ -45,8 +45,8 @@ describe('assessEconomy', () => {
   });
 
   it('lets an act unlock its own soul', () => {
-    expect(find(mutate((d) => { d.reward.unlocks.push('soul:gearbox'); }), 'SOUL_UNLOCK_WRONG_ACT')).toBeUndefined();
-    const act4 = mutate((d) => { d.act = 'act4'; d.reward.cash = 6000; d.reward.unlocks.push('soul:soul-4'); });
+    expect(find(mutate((d) => { d.reward.unlocks.push('soul:dent'); }), 'SOUL_UNLOCK_WRONG_ACT')).toBeUndefined();
+    const act4 = mutate((d) => { d.act = 'act4'; d.reward.cash = 6000; d.reward.unlocks.push('soul:ohm'); });
     expect(find(act4, 'SOUL_UNLOCK_WRONG_ACT')).toBeUndefined();
   });
 });

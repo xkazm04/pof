@@ -26,7 +26,7 @@ describe('campaign baseline', () => {
   });
 
   it('protects the three open-canon variables with an empty writers list', () => {
-    expect([...PROTECTED_VARS].sort()).toEqual(['act_antagonist_order', 'betrayer', 'soul4_identity']);
+    expect([...PROTECTED_VARS].sort()).toEqual(['act_antagonist_order', 'betrayer']);
     const g = buildCampaignGraph([]);
     for (const name of PROTECTED_VARS) expect(g.variables.find((v) => v.name === name)?.writers).toEqual([]);
   });
@@ -37,10 +37,10 @@ describe('campaign baseline', () => {
     expect(g.nodes.find((n) => n.id === 'act3.twist')).toMatchObject({ authoring: 'authored', status: '[owner]' });
   });
 
-  it('casts the placeholder soul-4 and never the protected fourth soul', () => {
+  it('casts the four ghosts as the souls, in the owner\'s story order, and none of the descoped souls', () => {
+    expect(GTAI_CAST.filter((c) => c.kind === 'soul').map((c) => c.id)).toEqual(['dent', 'tonnage', 'kerf', 'ohm']);
     const ids = GTAI_CAST.map((c) => c.id);
-    expect(ids).toContain('soul-4');
-    expect(ids).not.toContain('mop');
+    for (const gone of ['gearbox', 'sentry', 'hauler', 'soul-4', 'mop']) expect(ids).not.toContain(gone);
   });
 });
 
@@ -102,7 +102,7 @@ describe('claimsBeat (a quest realises an arc beat)', () => {
   const soulQuest = (over: Partial<QuestDesign> = {}): QuestDesign => ({
     ...CLEAN,
     claimsBeat: 'act1.soul-1',
-    story: { reads: [], writes: [...CLEAN.story.writes, { var: 'soul_gearbox_unlocked', value: true }] },
+    story: { reads: [], writes: [...CLEAN.story.writes, { var: 'soul_dent_unlocked', value: true }] },
     ...over,
   });
   const asPackage = (d: QuestDesign, id: string): QuestPackage => ({ ...LEDGER_QUEST, ...d, id });
@@ -125,7 +125,8 @@ describe('claimsBeat (a quest realises an arc beat)', () => {
     expect(claimCodes(soulQuest({ claimsBeat: 'act2.soul-2' }))).toContain('BEAT_WRONG_ACT');
     expect(claimCodes(soulQuest({ act: 'act3', claimsBeat: 'act3.betrayal', story: { reads: [], writes: [{ var: 'betrayal_happened', value: true }] } })))
       .toContain('BEAT_NOT_CLAIMABLE');
-    expect(claimableBeats().map((b) => b.id)).not.toContain('act4.soul-4');
+    expect(claimableBeats().map((b) => b.id)).toContain('act4.soul-4');
+    expect(claimableBeats().map((b) => b.id)).not.toContain('act3.betrayal');
     expect(claimableBeats().map((b) => b.id)).toContain('act1.soul-1');
   });
   it('allows one quest per beat', () => {
@@ -134,7 +135,7 @@ describe('claimsBeat (a quest realises an arc beat)', () => {
   it('removes the claimed beat node and makes the quest the writer', () => {
     const g = buildCampaignGraph([asPackage(soulQuest(), 'soul-job')]);
     expect(g.nodes.some((n) => n.id === 'act1.soul-1')).toBe(false);
-    expect(g.variables.find((v) => v.name === 'soul_gearbox_unlocked')?.writers).toEqual(['quest.soul-job']);
+    expect(g.variables.find((v) => v.name === 'soul_dent_unlocked')?.writers).toEqual(['quest.soul-job']);
     expect(validateStoryGraph(g).filter((f) => f.severity === 'error')).toEqual([]);
   });
 });

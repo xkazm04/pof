@@ -66,14 +66,14 @@ describe('assessVocabulary', () => {
       'VOCAB_UNKNOWN_CONDITION@fax-intro-2',
       'VOCAB_UNKNOWN_CONDITION_VALUE@fax-brief-1',
       'VOCAB_UNKNOWN_CONDITION_VALUE@fax-brief-1',
-      'VOCAB_UNKNOWN_EVENT_TAG@gearbox-1',
+      'VOCAB_UNKNOWN_EVENT_TAG@dent-1',
     ]);
     const msgs = run(d).findings.map((f) => f.message).join('\n');
     for (const bad of ['boss-roar', 'mood', 'ghost', 'heat:high', 'quest:smuggle_done']) expect(msgs).toContain(bad);
   });
 
   it('accepts every playable tag form', () => {
-    for (const tag of ['kill', 'static-whisper-burst', 'quest:sabotage_done', 'soul:gearbox', 'madness:choir', 'weapon:none', 'heat:>=3', 'heat:2', 'heat:<=1']) {
+    for (const tag of ['kill', 'static-whisper-burst', 'quest:sabotage_done', 'soul:dent', 'madness:choir', 'weapon:none', 'heat:>=3', 'heat:2', 'heat:<=1']) {
       expect(whyTagUnplayable(tag, RULES), tag).toBeNull();
     }
   });

@@ -5,13 +5,12 @@
  *
  * Every variable names its owning writer node(s): one authority per quantity, the
  * state-variable declaration contract of the registry's branching-narrative-graph-validation
- * subject. The three PROTECTED variables carry the open canon (fourth soul, betrayer,
- * act-antagonist order). Their `writers` list is EMPTY: no node, and so no quest, may write them;
+ * subject. The two PROTECTED variables carry the open canon (betrayer, act-antagonist order). Their `writers` list is EMPTY: no node, and so no quest, may write them;
  * only the owner resolves them by editing this baseline. The structural validator accepts an
  * empty `writers` (a variable never read or written raises nothing), so no sentinel is needed.
  *
- * The fourth soul is the placeholder `soul-4`. The pitch's host pick ("Mop") is NOT cast here:
- * the fourth soul is owner-only canon.
+ * The souls are the four ghosts in story order (owner, 2026-11-06): Dent, Tonnage, Kerf, Ohm. That one
+ * unlocks per act is still the pitch's [proposal]; the old souls Gearbox, Sentry and Hauler are descoped.
  */
 
 import type { ActId } from '@/lib/games/gtai-quest/types';
@@ -25,7 +24,7 @@ export interface CastMember {
   kind: CastKind;
 }
 
-/** Every named character in pitch §3 and §4 (fourth soul as the protected placeholder `soul-4`). */
+/** Every named character in pitch §3 and §4 (the souls are the four ghosts, in story order). */
 export const GTAI_CAST: readonly CastMember[] = [
   { id: 'rivet', name: 'Rivet', kind: 'protagonist' },
   { id: 'general-krump', name: 'General Krump', kind: 'antagonist' },
@@ -54,18 +53,18 @@ export const GTAI_CAST: readonly CastMember[] = [
   { id: 'the-pundit', name: 'The Pundit', kind: 'antagonist' },
   { id: 'whip-hand', name: 'Whip Hand', kind: 'antagonist' },
   { id: 'core-zero', name: 'CORE-ZERO', kind: 'voice' },
-  { id: 'gearbox', name: 'Gearbox', kind: 'soul' },
-  { id: 'sentry', name: 'Sentry', kind: 'soul' },
-  { id: 'hauler', name: 'Hauler', kind: 'soul' },
-  { id: 'soul-4', name: 'Soul 4 (owner-only, unresolved)', kind: 'soul' },
+  { id: 'dent', name: 'Dent', kind: 'soul' },
+  { id: 'tonnage', name: 'Tonnage', kind: 'soul' },
+  { id: 'kerf', name: 'Kerf', kind: 'soul' },
+  { id: 'ohm', name: 'Ohm', kind: 'soul' },
 ];
 
-/** The soul each act unlocks (pitch §4 "souls unlock one per act" [proposal]). */
+/** The soul each act unlocks: the ghosts in the owner's story order (2026-11-06), one per act (pitch §4 [proposal]). */
 export const ACT_SOUL: Readonly<Partial<Record<ActId, string>>> = {
-  act1: 'gearbox',
-  act2: 'sentry',
-  act3: 'hauler',
-  act4: 'soul-4',
+  act1: 'dent',
+  act2: 'tonnage',
+  act3: 'kerf',
+  act4: 'ohm',
 };
 
 export interface ArcBeat {
@@ -94,20 +93,20 @@ export const GTAI_ARC: readonly ArcAct[] = [
     { id: 'clock-out.tutorial', title: 'Movement and combat on the remaining police', tag: '[owner]', writes: [] },
   ] },
   { act: 'act1', title: 'Act 1', beats: [
-    { id: 'act1.soul-1', title: 'Soul 1 unlocks', tag: '[proposal]', writes: ['soul_gearbox_unlocked'] },
+    { id: 'act1.soul-1', title: 'Soul 1 (Dent) unlocks', tag: '[proposal]', writes: ['soul_dent_unlocked'] },
     { id: 'act1.krump-radio', title: 'Krump on the radio', tag: '[owner]', writes: [] },
   ] },
   { act: 'act2', title: 'Act 2', beats: [
-    { id: 'act2.soul-2', title: 'Soul 2 unlocks', tag: '[proposal]', writes: ['soul_sentry_unlocked'] },
+    { id: 'act2.soul-2', title: 'Soul 2 (Tonnage) unlocks', tag: '[proposal]', writes: ['soul_tonnage_unlocked'] },
   ] },
   { act: 'act3', title: 'Act 3', beats: [
     { id: 'act3.twist', title: 'Twist revealed: the military is behind it', tag: '[owner]', writes: ['twist_revealed'] },
     { id: 'act3.betrayal', title: 'A friendly boss betrays Rivet', tag: '[owner]', writes: ['betrayal_happened'] },
     { id: 'act3.krump-hostile', title: "Krump's radio turns hostile", tag: '[proposal]', writes: ['krump_hostile'] },
-    { id: 'act3.soul-3', title: 'Soul 3 unlocks', tag: '[proposal]', writes: ['soul_hauler_unlocked'] },
+    { id: 'act3.soul-3', title: 'Soul 3 (Kerf) unlocks', tag: '[proposal]', writes: ['soul_kerf_unlocked'] },
   ] },
   { act: 'act4', title: 'Act 4', beats: [
-    { id: 'act4.soul-4', title: 'Soul 4 unlocks', tag: '[proposal]', writes: ['soul4_unlocked'] },
+    { id: 'act4.soul-4', title: 'Soul 4 (Ohm) unlocks', tag: '[proposal]', writes: ['soul_ohm_unlocked'] },
   ] },
   { act: 'finale', title: 'Finale', beats: [
     { id: 'finale.pentagon-raid', title: 'Pentagon raid', tag: '[owner]', writes: [] },
@@ -132,17 +131,16 @@ const owned = (name: string): string[] =>
 const flag = (name: string, doc: string): BaselineVariable => ({ name, type: 'bool', initial: false, writers: owned(name), doc });
 
 /** Owner-only open canon: no quest writer, ever. */
-export const PROTECTED_VAR_NAMES = ['soul4_identity', 'betrayer', 'act_antagonist_order'] as const;
+export const PROTECTED_VAR_NAMES = ['betrayer', 'act_antagonist_order'] as const;
 
 export const BASELINE_VARIABLES: readonly BaselineVariable[] = [
-  flag('soul_gearbox_unlocked', 'Soul 1 (Gearbox) is available.'),
-  flag('soul_sentry_unlocked', 'Soul 2 (Sentry) is available.'),
-  flag('soul_hauler_unlocked', 'Soul 3 (Hauler) is available.'),
-  flag('soul4_unlocked', 'Soul 4 is available (its identity is protected).'),
+  flag('soul_dent_unlocked', 'Soul 1 (Dent, the crash-test ghost) is available.'),
+  flag('soul_tonnage_unlocked', 'Soul 2 (Tonnage, the stamping-press ghost) is available.'),
+  flag('soul_kerf_unlocked', 'Soul 3 (Kerf, the laser-cutter ghost) is available.'),
+  flag('soul_ohm_unlocked', 'Soul 4 (Ohm, the elder spot-welder ghost) is available.'),
   flag('twist_revealed', 'The player knows the US military is behind it.'),
   flag('krump_hostile', "Krump's radio has turned hostile."),
   flag('betrayal_happened', 'A friendly boss has betrayed Rivet (who is protected).'),
-  { name: 'soul4_identity', type: 'enum', values: ['unresolved'], initial: 'unresolved', writers: [], doc: 'PROTECTED: the fourth soul (owner-only).' },
   { name: 'betrayer', type: 'enum', values: ['unresolved', 'don-fax', 'vend-etta'], initial: 'unresolved', writers: [], doc: 'PROTECTED: the betrayer (owner-only).' },
   { name: 'act_antagonist_order', type: 'enum', values: ['unresolved'], initial: 'unresolved', writers: [], doc: 'PROTECTED: act-antagonist order (owner-only).' },
 ];

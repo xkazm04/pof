@@ -379,10 +379,10 @@ entities. Nothing reaches the canon or the catalogs until the operator accepts a
   HTML artifact. The Director writes the package (`games/gtai/quests/<id>/quest.json`, `gtai.quest/1`), the
   guards re-score it, and a Godot runtime plays it. A red guard blocks unless the package carries an
   override for that guard with a non-blank reason (`assessQuest` in `assess.ts`).
-- **Campaign baseline** (`campaignBaseline.ts`). Pitch §2-4 as data: `GTAI_CAST` (the fourth soul is the
-  placeholder `soul-4`, never a named soul), `GTAI_ARC` (owner beats per act, `[owner]` or `[proposal]`),
-  and the campaign variables with their owning writer beats. `soul4_identity`, `betrayer` and
-  `act_antagonist_order` are protected open canon: declared with an **empty `writers`** list (the structural
+- **Campaign baseline** (`campaignBaseline.ts`). Pitch §2-4 as data: `GTAI_CAST` (the souls are the four
+  ghosts in the owner's story order, 2026-11-06: Dent, Tonnage, Kerf, Ohm, one per act via `ACT_SOUL`),
+  `GTAI_ARC` (owner beats per act, `[owner]` or `[proposal]`), and the campaign variables with their owning
+  writer beats (`soul_<ghost>_unlocked`). `betrayer` and `act_antagonist_order` are protected open canon: declared with an **empty `writers`** list (the structural
   validator accepts it), so no quest may write them.
 - **Story guard** (`storyGuard.ts`). `buildCampaignGraph(ledger)` emits `pof.storygraph/1` (project `gtai`,
   graph `gtai-campaign`): an entry, one `container` per act, the owner beats, then each ledger quest as a

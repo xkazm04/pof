@@ -37,7 +37,7 @@ Louder, faster, more self-interruption; he argues with the voices mid-fight.
 Act 1 opens at peak instability. Through the scientist's questline he learns to listen to the voices; the owner sets the steps.
 
 ## Never says (literal, machine-read)
-- `I am in control` · `the voices are my friends` · `Gearbox` (before the soul unlock) · `Pentagon`
+- `I am in control` · `the voices are my friends` · `Dent` (before the soul unlock) · `Pentagon`
 
 ## Reference lines (approved, quest `collect-call`)
 1. "Okay. Okay okay okay. The line stopped. The line stopped and I didn't. I stopped a cop. With another cop. THROUGH another cop. Fuck. Fuck! Stay in the dumpster, Rivet. Dumpsters are where you think."

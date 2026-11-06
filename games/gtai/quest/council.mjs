@@ -37,9 +37,9 @@ export const ACT_IDS = ['prologue', 'clock-out', 'act1', 'act2', 'act3', 'act4',
 const ACT_LABEL = { prologue: 'Prologue', 'clock-out': 'Clock-Out', act1: 'Act 1', act2: 'Act 2', act3: 'Act 3', act4: 'Act 4', finale: 'Finale' };
 /** Souls unlocked by the END of each act (pitch §4: one per act; the 4th is protected and never named). */
 const SOULS_BY_ACT = {
-  prologue: [], 'clock-out': [], act1: ['gearbox'], act2: ['gearbox', 'sentry'], act3: ['gearbox', 'sentry', 'hauler'],
-  act4: ['gearbox', 'sentry', 'hauler', 'the fourth soul (protected: never name or use it)'],
-  finale: ['gearbox', 'sentry', 'hauler', 'the fourth soul (protected: never name or use it)'],
+  prologue: [], 'clock-out': [], act1: ['dent'], act2: ['dent', 'tonnage'], act3: ['dent', 'tonnage', 'kerf'],
+  act4: ['dent', 'tonnage', 'kerf', 'ohm'],
+  finale: ['dent', 'tonnage', 'kerf', 'ohm'],
 };
 /** The council's seats (brief WP3). */
 export const SEATS = {

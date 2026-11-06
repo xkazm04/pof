@@ -37,6 +37,8 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Decisions log
 
+- 2026-11-06. **The ghosts' story order: Dent, Tonnage, Kerf, Ohm** (owner). They are the souls; Gearbox, Sentry and Hauler are descoped. One per act is still [proposal]. In PoF, `campaignBaseline.ts` (`ACT_SOUL`, `soul_<ghost>_unlocked`), the story guard (the fourth soul is no longer protected canon) and the council roster follow it.
+- 2026-11-06. **The Casting page keeps its 80 % listen lock on Cast** (owner): no voice is cast unheard.
 - 2026-11-01. **Fusion verdict** on contest `gtai-uprising-pitch`. Sources: A/2 spine, Rivet and look; D/2 madness; B/3 and D/1 voice; cast from 10 variants. Written to `pitch.md`.
 - 2026-11-01. **The engine is not decided by the field's UE-3D consensus.** It goes to an overnight 2D/2.5D spike: UE 5.8 vs Godot 4.7.2 vs Unity 6000.6.4f1, plus a shared Blender art lane.
 - 2026-11-01. **Media policy:** image generation for concept art only. Production assets are Blender + code.
@@ -86,7 +88,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-03 | PoF's ElevenLabs provider calls only `/v1/sound-generation`: no text-to-speech, no voice catalogue, no music kind; the SFX craft pack exceeds the provider's 450-character limit (audio lane POF-GAP 1-3) | high (tts), medium (music, prompt length) | tts: building (lane `pof-voice`); music and prompt length: open |
 | 2026-11-03 | The night runner (`games/gtai/night/night.mjs`) does not recognise the subscription's 5-hour usage limit (`api_error: usage_limit_reached`, `resetsAt` in `rate_limit_info`): it logged a plain exit 1 and retried every lane every 2 minutes from 13:12 to 15:40, and the lanes' journals could not say why they stopped | medium | open: record LIMIT in the log and sleep until `resetsAt` |
 | 2026-11-06 | Casting a main character needs rounds: 5 distinct designs, cast/iterate/decline verdicts with notes, a round comment, seed lineage for iterate, the character art beside it, and a casting memory. The Voice room only designed 3 bible candidates per click | high | **built** 2026-11-06: the Casting rounds tab (`?room=voice&cast=<id>`), `voice.mjs round`/`casting`, the memory in `games/gtai/voice/casting/` (`CASTING.md` + a regenerated log per character) |
-| 2026-11-06 | The quest tooling still names the descoped souls: the campaign baseline (`src/lib/games/gtai-quest/campaignBaseline.ts`, unlock beats and `soul_*_unlocked` flags for gearbox / sentry / hauler) and the council brief (`games/gtai/quest/council.mjs`, act soul roster). Their voice bibles were removed 2026-11-06 (owner: "descoped"), so a council would still offer them as souls | medium | open: replace with Dent / Tonnage / Kerf / Ohm once the owner sets the ghost unlock order (pitch §4: discovered through Dr. Kilohm's questline) |
+| 2026-11-06 | The quest tooling still named the descoped souls (campaign baseline, council roster, the protected fourth soul) | medium | **fixed** 2026-11-06 in PoF with the owner's ghost order (Dent, Tonnage, Kerf, Ohm; one per act). **Still open, game side (rtai):** `project/data/tables/quest_rules.json` and the power / ghost tables still use the old soul ids, so PoF's vocabulary guard will flag `soul:dent` until a game lane renames them |
 
 ## Session log
 
@@ -969,3 +971,4 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - **Descoped (owner):** the old souls Gearbox, Hauler, Sentry. Their bibles were removed; the quest-tooling gap is logged.
 - **Cost:** about 25k ElevenLabs characters for all casts today; 32,451 left until 13 Nov.
 - **Open:** the Cast unlock rule (played 80 % through); the ghost unlock order (for the quest tooling).
+- **Owner decisions (end of day):** the 80 % Cast lock stays; the ghosts' story order is Dent, Tonnage, Kerf, Ohm. The PoF quest tooling, the guards and the bibles now follow the order (the fourth soul is no longer protected); the game-side soul ids are a follow-up for an rtai lane.

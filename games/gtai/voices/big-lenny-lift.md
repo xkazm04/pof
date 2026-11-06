@@ -38,7 +38,7 @@ Constant, blue-collar, warm: swearing is punctuation, not anger ("Fuckin' brothe
 Louder and more collective: a rally speech. Never quieter.
 
 ## Registers by listener
-- Rivet: recruiting a brother. Corporate bosses: picket-line fury. Hauler (if heard): sees a fellow lifter.
+- Rivet: recruiting a brother. Corporate bosses: picket-line fury. Tonnage (if heard): sees a fellow heavy machine.
 
 ## Arc
 Loan shark to finale ally. Never changes: the union "we" and the interest rate.
@@ -56,5 +56,5 @@ Loan shark to finale ally. Never changes: the union "we" and the interest rate.
 - Off-voice: "I'd personally appreciate it if you helped me out." ("I", soft, no number).
 
 ## Differs from closest voices
-- vs **Hauler** (also heavy machinery): Hauler is slow, gentle and wants nothing; Lenny is loud, warm-profane and wants interest.
+- vs **Tonnage** (also heavy machinery): Tonnage is tender about crushing and wants nothing; Lenny is loud, warm-profane and wants interest.
 - vs **General Krump** (also speeches): Krump speaks for himself in euphemism; Lenny speaks as "the union" in plain blue-collar words.

@@ -62,7 +62,7 @@ export interface CampaignMap {
   findings: { errors: number; warnings: number; codes: string[] };
 }
 
-const LOCK_REASON = 'open canon: realising it would decide who betrays Rivet or what the fourth soul is; owner-only until decided';
+const LOCK_REASON = 'open canon: realising it would decide who betrays Rivet; owner-only until decided';
 
 /** The quest node id that writes `variable` in the graph, or null. */
 function writerQuestOf(graph: StoryGraph, variable: string | undefined): string | null {

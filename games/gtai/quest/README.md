@@ -83,5 +83,6 @@ Each bible follows the registry technique `voice-bible-per-speaker` (want, hidde
 move, a checkable rhythm row, vocabulary, profanity register, moves, pressure, registers by listener, arc,
 surface marker, a machine-readable "never says" row, illustrative reference lines with an off-voice line, and
 how the voice differs from its two closest). All are `[proposal]` drafts: the owner signs off the refusal rows
-and replaces the illustrative reference lines with chosen anchors. There is no bible for the fourth soul
-(protected canon), and the bibles of Don Fax, Vend-Etta and King keep their protected questions open.
+and replaces the illustrative reference lines with chosen anchors. The four ghosts (Dent, Tonnage, Kerf, Ohm,
+the souls since 2026-11-06) have no bibles yet; their voices are cast (`games/gtai/voice/casting/`). The bibles
+of Don Fax, Vend-Etta and King keep their protected questions open.

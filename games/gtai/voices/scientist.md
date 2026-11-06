@@ -3,7 +3,7 @@
 [owner-approved design 2026-11-02] New for the cast reset (pitch §3: Don Fax's place). Name and look approved by the owner. Source: quest `collect-call` (council `20261102-act1-q1-r1`, path `claude-A`).
 
 - id: `scientist` · name: **Dr. Ingrid Kilohm** · wants to know what is wrong with Rivet's head · an oscilloscope-faced robot built like a folding desk lamp.
-- **Questline (later sessions):** teaches Rivet to handle the voices across the game. **Completing her first quest unlocks Gearbox** (owner, pitch §3).
+- **Questline (later sessions):** teaches Rivet to handle the voices across the game. **Completing her first quest unlocks the first ghost, Dent** (owner, pitch §3; the ghosts replaced the old souls 2026-11-06).
 - **Protected canon:** she may suspect, never explain, that the voices are the dead robots of the line (that reveal is an owner beat).
 
 ## Want, hidden thing, refusal
@@ -31,7 +31,7 @@ Almost none; her bluntness does the work.
 - Rivet: fascinated, then gently firm. Juno: competing for the patient. Don Fax: polite, keeps her findings to herself.
 
 ## Never says (literal, machine-read)
-- `the voices are the dead` · `Gearbox` (before the unlock) · `you're crazy`
+- `the voices are the dead` · `Dent` (before the unlock) · `you're crazy`
 
 ## Reference lines (approved, quest `collect-call`)
 1. "Hold still. You've been muttering since you walked in, in accents that aren't yours. My scanner says your head is running warm, crowded and very, very rude. Fascinating. Horrible. Mostly fascinating."

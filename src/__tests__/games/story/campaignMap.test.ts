@@ -21,7 +21,7 @@ const soulJob: QuestPackage = {
   id: 'soul-job',
   title: 'Soul Job',
   claimsBeat: 'act1.soul-1',
-  story: { reads: [], writes: [{ var: 'soul_gearbox_unlocked', value: true }] },
+  story: { reads: [], writes: [{ var: 'soul_dent_unlocked', value: true }] },
 } as QuestPackage;
 
 const beat = (m: ReturnType<typeof campaignMapOf>, id: string) => m.acts.flatMap((a) => a.beats).find((b) => b.id === id);
@@ -39,10 +39,10 @@ describe('campaignMapOf', () => {
 
   it('locks the protected beats (the betrayal, soul 4) with a reason', () => {
     const m = campaignMapOf([]);
-    expect(m.protectedBeats.map((b) => b.id).sort()).toEqual(['act3.betrayal', 'act4.soul-4']);
+    expect(m.protectedBeats.map((b) => b.id).sort()).toEqual(['act3.betrayal']);
     expect(beat(m, 'act3.betrayal')).toMatchObject({ state: 'locked' });
-    expect(beat(m, 'act4.soul-4')?.lockReason).toMatch(/owner-only/);
-    expect(m.protectedVars.sort()).toEqual(['act_antagonist_order', 'betrayer', 'soul4_identity']);
+    expect(beat(m, 'act3.betrayal')?.lockReason).toMatch(/owner-only/);
+    expect(m.protectedVars.sort()).toEqual(['act_antagonist_order', 'betrayer']);
   });
 
   it('places a quest that realises no beat in its act', () => {
