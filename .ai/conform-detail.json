@@ -20554,6 +20554,58 @@
       "evaluatedTs": "2026-11-06T04:11:55.034Z",
       "worker": "73e93e09-8aba-41d8-8101-40706fcd3400",
       "techniques": []
+    },
+    "7bd9e87a-be16-4ec4-b792-b4761bc0e742/realtime-combat-semantics": {
+      "context": "simulation-tools",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:24:04.345Z",
+      "worker": "dbb29f2f-bde7-4162-9b3c-6e9e7a044aff",
+      "techniques": [
+        {
+          "technique": "telegraph-or-homing-for-area-effects",
+          "verdict": "deviation",
+          "evidence": "src/types/combat-simulator.ts:38 Area abilities carry a radius and nothing else: no lead time, no cue, no homing flag. The engine ignores the radius and hits every living enemy at once."
+        },
+        {
+          "technique": "active-defense-two-axis-split",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:368 Dodge is a flat invulnerability duration (default 0.5 s) that an RNG/low-HP rule picks. It has no trigger window relative to the incoming hit and no stat-scaled magnitude, so both axes are collapsed. (The engine sits outside the context's file list, but the context's route calls it directly.)"
+        },
+        {
+          "technique": "real-time-timers-with-an-escapable-window",
+          "verdict": "conformant",
+          "evidence": "src/types/combat-simulator.ts:32 Every time value is typed in seconds and named by its kind (cooldownSec, castTimeSec, durationSec, attackIntervalSec, stun duration in seconds). There is no tick period to confuse with a cooldown. Escape windows are not modelled, because there are no regions."
+        }
+      ]
+    },
+    "968f37ed-d663-4839-8eb0-4dd445d129ed/realtime-combat-semantics": {
+      "context": "ability-forge",
+      "subject": "realtime-combat-semantics",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:24:04.345Z",
+      "worker": "dbb29f2f-bde7-4162-9b3c-6e9e7a044aff",
+      "techniques": [
+        {
+          "technique": "telegraph-or-homing-for-area-effects",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/constants.ts:14 Area abilities are a first-class forge output, but neither the output schema nor the prompt rules mention a telegraph or lead time (searched for 'telegraph', 'lead time' and 'period' in the prompt builder: no hits)."
+        },
+        {
+          "technique": "real-time-timers-with-an-escapable-window",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/ability-diff.ts:22 Cooldown, anim duration, damage start/end and recovery are each typed with a unit and kept in separate groups. The prompt also enforces the 0.4-1.5 s wind-up and 0.1-0.5 s recovery bands. Caveat: the schema has no tick-period field for lingering effects such as the 'fire patch'."
+        },
+        {
+          "technique": "death-via-state-tag-not-input-disable",
+          "verdict": "conformant",
+          "evidence": "src/lib/prompts/ability-forge.ts:272 The forge's own prompt builder makes the dead tag a mandatory member of the activation-blocked set for every generated ability. That is technique step 2 verbatim. ForgeResult.tsx:127 renders the blocked tags."
+        }
+      ]
     }
   }
 }

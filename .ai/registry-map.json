@@ -2211,7 +2211,11 @@
           "revision": 4,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/constants.ts:14 The forge invites position-resolved area abilities (this example, plus the 'Make it AoE' refine chip). Yet ForgedAbility's stats/comboEntry schema and the GAS_RULES in src/lib/prompts/ability-forge.ts carry no telegraph, lead-time or homing requirement, so generated AoE abilities are never asked to owe the player a cue.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",
@@ -24133,7 +24137,11 @@
           "revision": 4,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/types/combat-simulator.ts:38 CombatAbility gives area abilities only a radius, with no telegraph, lead-time or homing field, and the engine the route calls (simulation-engine.ts:371) resolves an AoE instantly on every living enemy, so the sim models the forbidden instant, untelegraphed, positional case and can never surface it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:aa744914205e9faf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "encounter-balance-simulation",

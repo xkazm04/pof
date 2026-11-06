@@ -1,0 +1,109 @@
+{
+ "schema": "conform-run/1",
+ "worker": "dbb29f2f-bde7-4162-9b3c-6e9e7a044aff",
+ "subject": "realtime-combat-semantics",
+ "evaluatedAt": "2026-11-06T04:24:04.345124+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "simulation-tools",
+   "subject": "realtime-combat-semantics",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/types/combat-simulator.ts:38 CombatAbility gives area abilities only a radius, with no telegraph, lead-time or homing field, and the engine the route calls (simulation-engine.ts:371) resolves an AoE instantly on every living enemy, so the sim models the forbidden instant, untelegraphed, positional case and can never surface it.",
+   "techniques": [
+    {
+     "technique": "telegraph-or-homing-for-area-effects",
+     "verdict": "deviation",
+     "evidence": "src/types/combat-simulator.ts:38 Area abilities carry a radius and nothing else: no lead time, no cue, no homing flag. The engine ignores the radius and hits every living enemy at once."
+    },
+    {
+     "technique": "active-defense-two-axis-split",
+     "verdict": "deviation",
+     "evidence": "src/lib/combat/simulation-engine.ts:368 Dodge is a flat invulnerability duration (default 0.5 s) that an RNG/low-HP rule picks. It has no trigger window relative to the incoming hit and no stat-scaled magnitude, so both axes are collapsed. (The engine sits outside the context's file list, but the context's route calls it directly.)"
+    },
+    {
+     "technique": "real-time-timers-with-an-escapable-window",
+     "verdict": "conformant",
+     "evidence": "src/types/combat-simulator.ts:32 Every time value is typed in seconds and named by its kind (cooldownSec, castTimeSec, durationSec, attackIntervalSec, stun duration in seconds). There is no tick period to confuse with a cooldown. Escape windows are not modelled, because there are no regions."
+    }
+   ]
+  },
+  {
+   "context": "ability-forge",
+   "subject": "realtime-combat-semantics",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ability/forge/constants.ts:14 The forge invites position-resolved area abilities (this example, plus the 'Make it AoE' refine chip). Yet ForgedAbility's stats/comboEntry schema and the GAS_RULES in src/lib/prompts/ability-forge.ts carry no telegraph, lead-time or homing requirement, so generated AoE abilities are never asked to owe the player a cue.",
+   "techniques": [
+    {
+     "technique": "telegraph-or-homing-for-area-effects",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/forge/constants.ts:14 Area abilities are a first-class forge output, but neither the output schema nor the prompt rules mention a telegraph or lead time (searched for 'telegraph', 'lead time' and 'period' in the prompt builder: no hits)."
+    },
+    {
+     "technique": "real-time-timers-with-an-escapable-window",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ability/forge/ability-diff.ts:22 Cooldown, anim duration, damage start/end and recovery are each typed with a unit and kept in separate groups. The prompt also enforces the 0.4-1.5 s wind-up and 0.1-0.5 s recovery bands. Caveat: the schema has no tick-period field for lingering effects such as the 'fire patch'."
+    },
+    {
+     "technique": "death-via-state-tag-not-input-disable",
+     "verdict": "conformant",
+     "evidence": "src/lib/prompts/ability-forge.ts:272 The forge's own prompt builder makes the dead tag a mandatory member of the activation-blocked set for every generated ability. That is technique step 2 verbatim. ForgeResult.tsx:127 renders the blocked tags."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "realtime-combat-semantics",
+   "context": "combat-damage-pipeline",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "realtime-combat-semantics",
+   "context": "hud-damage-and-navigation",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "realtime-combat-semantics",
+   "context": "ability-gas-balance",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T04:24:04.345124+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "realtime-combat-semantics"
+   ],
+   "techniques": [
+    "active-defense-two-axis-split",
+    "real-time-timers-with-an-escapable-window",
+    "telegraph-or-homing-for-area-effects"
+   ],
+   "deviations": 1,
+   "context": "simulation-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:24:04.345124+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "realtime-combat-semantics"
+   ],
+   "techniques": [
+    "death-via-state-tag-not-input-disable",
+    "real-time-timers-with-an-escapable-window",
+    "telegraph-or-homing-for-area-effects"
+   ],
+   "deviations": 1,
+   "context": "ability-forge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
