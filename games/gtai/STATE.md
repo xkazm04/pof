@@ -1023,3 +1023,24 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
   1. Round 3 page.
   2. Rivet production: the final v01 with the amber visor at a true 70 and 55, 8 facings, and an equipped sheet per weapon; whole-figure frames replace the head card.
   3. 08:40 the n8 report.
+
+### 2026-11-06 21:10: Rivet triage round 3 and production
+
+- **Round 3** (`gtai-art/rivet-r3`, page `6St8b1hp6Xr2GRkyo8Zhuf`; 15 showcase sheets; one moderation block, "violence" on the mini-nuke catapult, passed on a softened retry). The owner picked:
+  - electro gun v3, the olive arc projector;
+  - homing shard v1, the amethyst crystals;
+  - ray gun v3, the junkyard dish ray;
+  - mini-nuke v2, the drum bomb-thrower;
+  - plasma sword v1, the two-handed plasma cleaver.
+- **All 17 weapons now have an approved design**, and Rivet = v01 + the amber visor. The source of truth is `kiro/gtai-art/rivet-final/` (README + refs).
+- **Production (owner: start tonight in the asset lane, generation only; integration waits for the owner).** Appended to the asset lane brief as top priority after the night lanes' REQUESTs:
+  - base sheets at 70 and 55 (plus left facings, so the weapon hand never swaps);
+  - equipped sheets for all 17 weapons at 70, then at 55;
+  - showcase sheets for the 5 redesigns.
+
+  Grade below 65 degrees = C (the model drifts to 50-60). The gallery is in `rivet-final/index.html`.
+- **The asset lane already delivered 4 showcase sheets** (12 weapons) to the night `hud` lane.
+- **Next (morning):**
+  1. The n8 report at 08:40.
+  2. The asset lane's Rivet gallery: judge the true-70 base sheet first.
+  3. Plan the Rivet integration (whole-figure frames replacing the head card).
