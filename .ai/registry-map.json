@@ -14157,7 +14157,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:81 When a batch-review module run times out, settleExecution aborts it and the route records it as plain 'error' with the typed reason flattened into a message string, because ModuleReviewStatus has no indeterminate state. A killed MCP-enabled run whose effects are unknown therefore reads as a failure, which is the case indeterminate-closure-on-interruption names.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "mcp-tools",

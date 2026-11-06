@@ -19808,6 +19808,42 @@
         "at": "2026-11-06T00:12:49.445196+00:00",
         "reason": "reviewer (sonnet): The anchor produceLog.ts:14 is not among this context's 12 listed paths. The anchor shows what produceLog does but not that no agent memory exists in the context, so it is incidental. The search terms used, episodic and distill, were also too narrow."
       }
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/agent-runtime-assembly": {
+      "context": "game-design-studio-api",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:24:56.636Z",
+      "worker": "7f26382e-3944-4b56-b412-22f7bfd742ca",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/app/api/feature-matrix/batch-review/route.ts:81 Timeout and kill reasons are encoded in a string under status 'error'. The vocabulary ('pending'|'running'|'completed'|'error'|'skipped', src/types/batch-review.ts:24) has no indeterminate status. Batch state is also held only in memory (route.ts:15), so a restart in the middle of a batch leaves nothing to close."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "src/app/api/ability-spec/codegen/route.ts:31 The target identity for the agent's report comes from server-merged static fields, so the governed agent cannot retarget which record it writes."
+        }
+      ]
+    },
+    "ec9c55a2-90ee-463e-bf53-7fcad9dd29b7/agent-runtime-assembly": {
+      "context": "ue5-filesystem",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:24:56.636Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "7f26382e-3944-4b56-b412-22f7bfd742ca",
+        "state": "not-applicable",
+        "at": "2026-11-06T00:25:34.792879+00:00",
+        "reason": "reviewer (sonnet): The anchor (blender-mcp/execute/route.ts:7) is a comment about the operator guard and does not show that no agent runtime is assembled. The absence claim rests only on a keyword grep for hook, checkpoint, subagent and middleware, which is incidental evidence."
+      }
     }
   }
 }
