@@ -11,6 +11,9 @@ import { Check, Pause, Play } from 'lucide-react';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import { HEARD_FRACTION } from './voiceAudio';
 
+/** Preview speeds: 1.2x is the most a take's speed setting allows; 1.5x shows what a faster description must reach. */
+const RATES = [1, 1.2, 1.5];
+
 const clock = (s: number) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '–:––');
 
 export function CastingPlayer({ t, src, fallbackSrc, label, heard, onHeard }: {
@@ -22,6 +25,12 @@ export function CastingPlayer({ t, src, fallbackSrc, label, heard, onHeard }: {
   const [dur, setDur] = useState(Number.NaN);
   const [fellBack, setFellBack] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [rate, setRate] = useState(1);
+  const cycleRate = () => {
+    const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length];
+    setRate(next);
+    if (ref.current) { ref.current.defaultPlaybackRate = next; ref.current.playbackRate = next; ref.current.preservesPitch = true; }
+  };
   const toggle = () => {
     const a = ref.current;
     if (!a) return;
@@ -53,6 +62,12 @@ export function CastingPlayer({ t, src, fallbackSrc, label, heard, onHeard }: {
       <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: t.muted, flex: 'none', minWidth: 74, textAlign: 'right' }}>
         {clock(pos)} / {clock(dur)}
       </span>
+      <button type="button" className="focus-ring" onClick={cycleRate} data-testid="casting-rate" aria-label={`Preview speed ${rate}x for ${label}`}
+        title="Preview speed (pitch kept). A take can run up to 1.2x; faster than that has to come from the voice description"
+        style={{ flex: 'none', minWidth: 40, padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)',
+          border: `1px solid ${rate === 1 ? t.line : t.ink}`, background: rate === 1 ? 'transparent' : t.accentBg, color: rate === 1 ? t.muted : t.inkDeep }}>
+        {rate}x
+      </button>
       <span title={heard ? 'Heard through' : 'Not heard through yet'} aria-label={heard ? 'heard' : 'not heard yet'}
         style={{ flex: 'none', width: 16, display: 'grid', placeItems: 'center', color: heard ? t.ok : t.line }}>
         <Check size={14} />
