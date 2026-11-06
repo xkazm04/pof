@@ -20214,6 +20214,67 @@
       "evaluatedTs": "2026-11-06T02:11:41.550Z",
       "worker": "d9a1e12e-637d-4776-a2ef-31cea9a436e9",
       "techniques": []
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/mesh-finishing-for-engine-readiness": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:24:11.303Z",
+      "worker": "009c5d24-f7ae-4d9f-b680-d99901a3d592",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:644 Delivery is claimed from the file existing, not from a content read-back. The script's export step ends with only an os.path.exists check, and the receipt has no checked/counts/issues fields."
+        },
+        {
+          "technique": "pack-existing-vs-smart-unwrap",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:480 Projection is the explicit default, which the technique names as the failure: a caller who omits the mode overwrites authored UVs. The pack→smart fallback is reported (UV_MODE_FALLBACK, line 591), which is the conformant part."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:389 unwrapPlan refuses an unwrap with no decimation, or one above a 200k-face ceiling, and gives a named reason (unwrapSkippedReason). Bakes are gated on the unwrap."
+        },
+        {
+          "technique": "crease-angle-and-custom-normals",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:265 Shading has one owner: authored custom normals win, the angle pass is refused with shadingSkippedReason, and the applied shading is recorded."
+        },
+        {
+          "technique": "high-to-low-bake-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:439 Metallic is named as absent with its reason (bakeSkipped), not faked with a constant. Bakes that ran and failed are reported separately (bakeFailed)."
+        },
+        {
+          "technique": "headless-dcc-capability-limits",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:112 Behaviour in headless mode is live-probed and recorded with the app version and date. The cull-operator limits and the custom-normal no-op are measured on Blender 4.2 the same way."
+        }
+      ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/mesh-finishing-for-engine-readiness": {
+      "context": "step-shared-primitives",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:24:11.303Z",
+      "worker": "009c5d24-f7ae-4d9f-b680-d99901a3d592",
+      "techniques": []
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/mesh-finishing-for-engine-readiness": {
+      "context": "asset-viewer-and-browser",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:24:11.303Z",
+      "worker": "009c5d24-f7ae-4d9f-b680-d99901a3d592",
+      "techniques": []
     }
   }
 }

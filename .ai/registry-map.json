@@ -4996,7 +4996,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:116 The viewer and browser display and grade finished assets against face-budget ceilings, which the subject says the bench does not decide, and point to decimation elsewhere. They run no finishing operation themselves. A case-insensitive search of asset-viewer and asset-browser for unwrap/retopo/crease/bake returned zero hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "image-to-3d-input-gating",
@@ -24741,7 +24745,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/layout-lab/steps/shared/useGeneratedMeshAssets.ts:14 The shared step primitives only list and preview already-served .glb files, mesh-finish output among them, through a read-only route. They never reduce, unwrap, bake, bind or export a mesh. A case-insensitive search of src/components/layout-lab/steps/shared for unwrap/retopo/crease/bake returned zero hits.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "rate-limiting",
@@ -27563,7 +27571,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-finish.ts:644 The finished low-poly counts as delivered once the script's DONE marker names a path that exists. Neither the TS runner nor pof_mesh_finish.py (which checks only os.path.exists after export_scene.gltf) reads the GLB back to count meshes and objects or to check bounds, so an empty or foreign-object export would still pass. A second deviation: the UV mode defaults to an explicit 'smart' projection instead of first detecting authored UVs.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-memory",
