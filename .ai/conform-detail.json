@@ -20858,6 +20858,68 @@
         "at": "2026-11-06T05:41:40.776629+00:00",
         "reason": "reviewer (sonnet): The anchor AudioCodeGenPanel.tsx:14 is an import line, so it does not show the absence of agent memory; the claim rests only on a keyword grep, and the search terms were narrow."
       }
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/mcp-tools": {
+      "context": "catalog-database",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T22:21:15.141Z",
+      "techniques": [
+        {
+          "technique": "budgeted-partial-response",
+          "verdict": "deviation",
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 Count limit only. There is no deadline, and no complete/partial/timed-out envelope or next probe."
+        },
+        {
+          "technique": "first-party-agent-is-a-principal",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:63 The app's @@CALLBACK write path and the MCP submit path both go through one commit door with the same server-side grading, so neither gets a looser path."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:77 The server enforces the schema and puts the offending field names in the error string, so the caller can fix its arguments and retry."
+        },
+        {
+          "technique": "server-composition",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:45 One authority defines the drain argument surface, and the pof_drain_gates tool shares it. A parity test checks the tool schema against these keys."
+        }
+      ],
+      "withdrawn": {
+        "worker": "2f0a7055-e482-4901-ae8c-cb98ce43158b",
+        "state": "deviation",
+        "at": "2026-11-06T22:22:54.372862+00:00",
+        "reason": "reviewer (sonnet): The anchor (src/app/api/pipeline-artifacts/drain/route.ts) is an API route outside this context's files, which are src/lib/catalog-db.ts, pipeline-db.ts, pipeline-artifacts-db.ts and the catalog seed files, so the drain verdict is about a different context."
+      }
+    },
+    "71f2dcdd-a894-4fda-a381-1ca0388f2b51/mcp-tools": {
+      "context": "visual-gen-core",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T22:21:15.141Z",
+      "worker": "2f0a7055-e482-4901-ae8c-cb98ce43158b",
+      "techniques": [
+        {
+          "technique": "transport-selection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:45 This is the local-port trap: the HTTP listener behind a stdio tool server has no origin validation and no token."
+        },
+        {
+          "technique": "budgeted-partial-response",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:173 Long-running generation returns a pollable job handle (202), so the agent's call is never held open."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:90 The server rejects a bad argument and the error names the accepted values, so the caller can recover in one turn."
+        }
+      ]
     }
   }
 }

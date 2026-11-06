@@ -8446,8 +8446,8 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "priorNotApplicable": 6,
+          "state": "unknown"
         },
         {
           "subject": "catalog-pipeline-authoring",
@@ -27193,8 +27193,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "state": "deviation",
+          "priorNotApplicable": 6,
+          "evidence": "src/app/api/visual-gen/generate/route.ts:45 The pof_asset_generate MCP tool proxies this localhost HTTP route. The handler parses the body straight away, with no origin check and no token (the requireOperator guard used by pipeline-artifacts and visual-gen/chaos-cloth is missing). request.json() also parses a text/plain cross-site POST, so any web page could start paid provider generation jobs.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "image-to-3d-input-gating",

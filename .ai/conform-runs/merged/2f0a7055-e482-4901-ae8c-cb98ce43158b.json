@@ -1,0 +1,112 @@
+{
+  "schema": "conform-run/1",
+  "worker": "2f0a7055-e482-4901-ae8c-cb98ce43158b",
+  "subject": "mcp-tools",
+  "evaluatedAt": "2026-11-06T22:21:15.141594+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "crash-analysis",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:36 The context is presentation only: it reads crash data from a Zustand store and publishes, calls and consumes no tool. A grep over src/components/modules/evaluator for mcp, inputSchema, tools/call and tool_use found nothing. The repo's pof_crash_analyze MCP tool proxies /api/crash-analyzer, a route outside this context's files.",
+      "techniques": [],
+      "absenceTerms": [
+        "mcp",
+        "inputSchema",
+        "tools/call",
+        "tool_use"
+      ]
+    },
+    {
+      "context": "visual-gen-core",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/visual-gen/generate/route.ts:45 The pof_asset_generate MCP tool proxies this localhost HTTP route. The handler parses the body straight away, with no origin check and no token (the requireOperator guard used by pipeline-artifacts and visual-gen/chaos-cloth is missing). request.json() also parses a text/plain cross-site POST, so any web page could start paid provider generation jobs.",
+      "techniques": [
+        {
+          "technique": "transport-selection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:45 This is the local-port trap: the HTTP listener behind a stdio tool server has no origin validation and no token."
+        },
+        {
+          "technique": "budgeted-partial-response",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:173 Long-running generation returns a pollable job handle (202), so the agent's call is never held open."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/generate/route.ts:90 The server rejects a bad argument and the error names the accepted values, so the caller can recover in one turn."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "mcp-tools",
+      "context": "procedural-scene-tools",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "cli-terminal-output",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "catalog-database",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (src/app/api/pipeline-artifacts/drain/route.ts) is an API route outside this context's files, which are src/lib/catalog-db.ts, pipeline-db.ts, pipeline-artifacts-db.ts and the catalog seed files, so the drain verdict is about a different context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T22:21:15.141594+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "crash-analysis",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T22:21:15.141594+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [
+        "budgeted-partial-response",
+        "first-party-agent-is-a-principal",
+        "server-composition",
+        "tool-schema-design"
+      ],
+      "deviations": 1,
+      "context": "catalog-database",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T22:21:15.141594+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [
+        "budgeted-partial-response",
+        "tool-schema-design",
+        "transport-selection"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-core",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
