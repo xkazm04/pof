@@ -1,0 +1,37 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5dc2f93b-bc08-40d4-96a7-e3b21e4f0b8f",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-11-07T01:12:17.010679+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "platform-services-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "project-ops-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "quality-evaluation-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "game-director-system",
+   "reason": "The listed files (projectHealthStore, game-director/regression/session-analytics types, useSessionAnalytics, consistency-grade, game-director-db, ecw helpers, project-health route) only record and analyse prompts after the fact (promptLength, hadProjectContext, prompt suggestions); none of them builds a prompt. I can't call it not-applicable because a search of the context's directories (src/lib, src/types, src/hooks) turns up the subject's terms everywhere, and I found no in-context construct to judge."
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "save-system",
+   "reason": "None of the 18 listed sub_save files contains prompt-assembly code. But the same directory holds SaveHeaderAudit.tsx (not in the list), which sends a fix prompt built by buildSaveFixPrompt through TaskFactory.askClaude. So I can't honestly claim absence, and judging that prompt means reading a builder outside the listed files."
+  }
+ ],
+ "consults": []
+}
