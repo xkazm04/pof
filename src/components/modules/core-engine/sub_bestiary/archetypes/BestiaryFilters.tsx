@@ -73,10 +73,10 @@ export function BestiaryFilters({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Group by:</span>
+      <div className="flex items-center gap-2" role="group" aria-label="Group by">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted" aria-hidden>Group by:</span>
         {(['none', 'category', 'area', 'tier', 'role', 'class'] as const).map((g) => (
-          <button key={g} onClick={() => setGroupBy(g)}
+          <button key={g} onClick={() => setGroupBy(g)} aria-pressed={groupBy === g}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
               groupBy === g ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text hover:bg-surface-hover/50'
             }`}>

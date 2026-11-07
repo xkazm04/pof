@@ -24,9 +24,9 @@ export function DecisionDebugger() {
       <SectionHeader icon={Bug} label="AI Decision Debugger" color={STATUS_WARNING} />
       <div className="mt-3 space-y-3">
         {/* Filter buttons */}
-        <div className="flex gap-1.5 mb-2">
+        <div className="flex gap-1.5 mb-2" role="group" aria-label="Filter decisions">
           {(['all', 'evaluation', 'selection', 'unexpected'] as const).map(f => (
-            <button key={f} onClick={() => setDebugFilter(f)}
+            <button key={f} onClick={() => setDebugFilter(f)} aria-pressed={debugFilter === f}
               className="px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer border"
               style={debugFilter === f
                 ? f === 'unexpected'
