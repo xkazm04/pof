@@ -21094,6 +21094,32 @@
       "evaluatedTs": "2026-11-07T00:40:31.618Z",
       "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
       "techniques": []
+    },
+    "0d01d401-5b37-4dbc-a199-d68b00a5dc4d/prompt-assembly": {
+      "context": "module-cli-orchestration-hooks",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:58:10.435Z",
+      "worker": "5c18340a-9158-46d8-a398-5153f0ff5339",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleActions.ts:41 execute() goes through the assembler, but a second door dispatches pre-rendered prompt text. That is the call-site sprawl the technique names."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:121 The ledger stores the pre-dispatch string, but useTaskQueue sends dispatchPrompt with skill packs injected later (useTaskQueue.ts:817). The record is therefore not of the bytes sent and has no digest. Line 115 also infers context inclusion by substring sniffing ('## Project Context'), not from a fingerprint."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useModuleCLI.ts:218 On the preferred path the hook passes the assembler typed context inputs (a ProjectContext shape) plus a CLITask, not rendered text. The trust-class side is not visible in this hook."
+        }
+      ]
     }
   }
 }
