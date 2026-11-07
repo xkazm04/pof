@@ -116,3 +116,37 @@ describe('placing and drawing over an existing zone works for both shapes', () =
     expect((props.onUpdateZones.mock.calls[0][0] as AudioZone[]).length).toBe(3);
   });
 });
+
+describe('click vs drag: a movement threshold in screen pixels', () => {
+  function press(container: HTMLElement, selector: string, moves: Array<[number, number]>) {
+    const el = container.querySelector(selector)!;
+    const svg = el.closest('svg')!;
+    fireEvent.mouseDown(el, { clientX: 140, clientY: 130 });
+    for (const [x, y] of moves) fireEvent.mouseMove(svg, { clientX: x, clientY: y });
+    fireEvent.mouseUp(svg);
+  }
+
+  it('a selection click with 1-2px of hand jitter on a zone writes nothing', () => {
+    const { container, props } = renderPainter({ emitters: [] });
+    press(container, '[data-zone-id="z1"]', [[141, 130], [142, 131]]);
+    expect(props.onUpdateZones).not.toHaveBeenCalled();
+    expect(props.onSelectZone).toHaveBeenCalledWith('z1');
+  });
+
+  it('a selection click with jitter on an emitter writes nothing', () => {
+    const { container, props } = renderPainter();
+    const body = Array.from(container.querySelectorAll('circle')).find((c) => c.getAttribute('r') === '10')!;
+    body.setAttribute('data-test-emitter', 'e1');
+    press(container, '[data-test-emitter="e1"]', [[141, 131]]);
+    expect(props.onUpdateEmitters).not.toHaveBeenCalled();
+  });
+
+  it('a real drag past the threshold still commits exactly once, from the press origin', () => {
+    const { container, props } = renderPainter({ emitters: [] });
+    press(container, '[data-zone-id="z1"]', [[141, 130], [150, 140], [160, 150]]);
+    expect(props.onUpdateZones).toHaveBeenCalledTimes(1);
+    const moved = (props.onUpdateZones.mock.calls[0][0] as AudioZone[])[0];
+    expect(moved.x).toBe(120);
+    expect(moved.y).toBe(120);
+  });
+});

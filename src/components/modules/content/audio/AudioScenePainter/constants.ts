@@ -9,6 +9,9 @@ import type { EmitterType } from '@/types/audio-scene';
 export const MINIMAP_W = 120;
 export const MINIMAP_H = 90;
 
+/** Screen pixels an item press must travel before it becomes a drag (below it: a click). */
+export const DRAG_THRESHOLD_PX = 3;
+
 export const CHROME_ACCENT = MODULE_COLORS.content;
 
 // ── Constants ──

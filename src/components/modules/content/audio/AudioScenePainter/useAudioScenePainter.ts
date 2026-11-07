@@ -10,7 +10,7 @@ import { useElementSize } from '@/hooks/useElementSize';
 import { resolveMembership } from '@/lib/audio-scene-ops';
 import type { ListenerPoint } from '@/lib/audio-scene-audition';
 import { useSceneBuffer } from '@/components/modules/content/audio/AudioView/useSceneBuffer';
-import { MINIMAP_W, MINIMAP_H, ZONE_COLORS } from './constants';
+import { MINIMAP_W, MINIMAP_H, ZONE_COLORS, DRAG_THRESHOLD_PX } from './constants';
 import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
 
 export function useAudioScenePainter({
@@ -59,6 +59,14 @@ export function useAudioScenePainter({
   // without one the painter builds its own over the write callbacks.
   /** True once a pointer gesture has actually moved something. */
   const gestureDirty = useRef(false);
+  /**
+   * Screen-space origin of the current item press. A press stays a CLICK until the
+   * pointer travels DRAG_THRESHOLD_PX from here; before that nothing is staged, so
+   * a selection click with hand jitter never writes the scene.
+   */
+  const pressOrigin = useRef({ x: 0, y: 0 });
+  const pastThreshold = useCallback((e: React.MouseEvent) => gestureDirty.current
+    || Math.hypot(e.clientX - pressOrigin.current.x, e.clientY - pressOrigin.current.y) >= DRAG_THRESHOLD_PX, []);
 
   const serverScene = useMemo<SceneDraft>(() => ({ zones, emitters }), [zones, emitters]);
 
@@ -191,6 +199,7 @@ export function useAudioScenePainter({
     }
 
     if (resizeState) {
+      if (!pastThreshold(e)) return;
       const pt = getSVGPoint(e);
       const dx = pt.x - resizeState.startX;
       const dy = pt.y - resizeState.startY;
@@ -211,6 +220,7 @@ export function useAudioScenePainter({
     }
 
     if (dragState) {
+      if (!pastThreshold(e)) return;
       const pt = getSVGPoint(e);
       gestureDirty.current = true;
       const x = pt.x - dragState.offsetX;
@@ -220,7 +230,7 @@ export function useAudioScenePainter({
         ? { kind: 'moveZone', id: dragState.id, x, y }
         : { kind: 'moveEmitter', id: dragState.id, x, y }]);
     }
-  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, stageOps]);
+  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, stageOps, pastThreshold]);
 
   const handleMouseUp = useCallback(() => {
     listenerDrag.current = false;
@@ -281,6 +291,7 @@ export function useAudioScenePainter({
     if (paintMode !== 'select') return;
     e.stopPropagation();
     const pt = getSVGPoint(e);
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     const zone = sceneZones.find((z) => z.id === zoneId);
     if (!zone) return;
     setDragState({ id: zoneId, type: 'zone', offsetX: pt.x - zone.x, offsetY: pt.y - zone.y });
@@ -292,6 +303,7 @@ export function useAudioScenePainter({
     if (paintMode !== 'select') return;
     e.stopPropagation();
     const pt = getSVGPoint(e);
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     const em = sceneEmitters.find((em) => em.id === emitterId);
     if (!em) return;
     setDragState({ id: emitterId, type: 'emitter', offsetX: pt.x - em.x, offsetY: pt.y - em.y });
@@ -302,6 +314,7 @@ export function useAudioScenePainter({
   const handleResizeStart = useCallback((e: React.MouseEvent, zoneId: string, handle: string) => {
     e.stopPropagation();
     const pt = getSVGPoint(e);
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     const zone = sceneZones.find((z) => z.id === zoneId);
     if (!zone) return;
     setResizeState({ zoneId, handle, startX: pt.x, startY: pt.y, origW: zone.width, origH: zone.height });
