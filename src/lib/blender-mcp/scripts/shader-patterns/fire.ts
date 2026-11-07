@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 
 export function fireShaderScript(params: {
   materialName?: string;
@@ -16,7 +16,7 @@ nodes.clear()
 
 output = nodes.new('ShaderNodeOutputMaterial')
 emission = nodes.new('ShaderNodeEmission')
-emission.inputs["Strength"].default_value = ${params.intensity ?? 5.0}
+emission.inputs["Strength"].default_value = ${pyNum(params.intensity ?? 5.0)}
 
 noise = nodes.new('ShaderNodeTexNoise')
 noise.inputs["Scale"].default_value = 4.0

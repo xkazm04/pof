@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 import { channelSpec, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
 
 /** The image node's colourspace for a channel, read from the lab's per-role table. */
@@ -96,10 +96,10 @@ export function createMaterialScript(params: CreateMaterialParams): string {
   body.push('links = mat.node_tree.links');
   body.push('bsdf = nodes["Principled BSDF"]');
   body.push(
-    `bsdf.inputs["Base Color"].default_value = (${params.baseColor[0]}, ${params.baseColor[1]}, ${params.baseColor[2]}, 1.0)`,
+    `bsdf.inputs["Base Color"].default_value = (${pyNum(params.baseColor[0])}, ${pyNum(params.baseColor[1])}, ${pyNum(params.baseColor[2])}, 1.0)`,
   );
-  body.push(`bsdf.inputs["Metallic"].default_value = ${params.metallic}`);
-  body.push(`bsdf.inputs["Roughness"].default_value = ${params.roughness}`);
+  body.push(`bsdf.inputs["Metallic"].default_value = ${pyNum(params.metallic)}`);
+  body.push(`bsdf.inputs["Roughness"].default_value = ${pyNum(params.roughness)}`);
   body.push('applied = ["Base Color", "Metallic", "Roughness"]');
 
   // Base colour chain: albedo image (if any) optionally multiplied by the AO map.
@@ -109,18 +109,18 @@ export function createMaterialScript(params: CreateMaterialParams): string {
   }
   if (tex.ao) {
     body.push(`ao_tex = _tex_node(nodes, "${py(tex.ao)}", "${colorspace('ao')}", -300)`);
-    body.push(`ao_mix, ao_a, ao_b, ao_out = _multiply_node(nodes, ${params.aoStrength})`);
+    body.push(`ao_mix, ao_a, ao_b, ao_out = _multiply_node(nodes, ${pyNum(params.aoStrength)})`);
     body.push("ao_mix.location = (-400, 200)");
     if (tex.albedo) {
       body.push('links.new(albedo_tex.outputs["Color"], ao_a)');
     } else {
       body.push(
-        `ao_a.default_value = (${params.baseColor[0]}, ${params.baseColor[1]}, ${params.baseColor[2]}, 1.0)`,
+        `ao_a.default_value = (${pyNum(params.baseColor[0])}, ${pyNum(params.baseColor[1])}, ${pyNum(params.baseColor[2])}, 1.0)`,
       );
     }
     body.push('links.new(ao_tex.outputs["Color"], ao_b)');
     body.push('links.new(ao_out, bsdf.inputs["Base Color"])');
-    body.push(`applied.append("AO map x AO Strength ${params.aoStrength}")`);
+    body.push(`applied.append("AO map x AO Strength ${pyNum(params.aoStrength)}")`);
   } else if (tex.albedo) {
     body.push('links.new(albedo_tex.outputs["Color"], bsdf.inputs["Base Color"])');
   }
@@ -139,10 +139,10 @@ export function createMaterialScript(params: CreateMaterialParams): string {
     body.push(`normal_tex = _tex_node(nodes, "${py(tex.normal)}", "${colorspace('normal')}", 150)`);
     body.push('normal_map = nodes.new("ShaderNodeNormalMap")');
     body.push('normal_map.location = (-400, 150)');
-    body.push(`normal_map.inputs["Strength"].default_value = ${params.normalStrength}`);
+    body.push(`normal_map.inputs["Strength"].default_value = ${pyNum(params.normalStrength)}`);
     body.push('links.new(normal_tex.outputs["Color"], normal_map.inputs["Color"])');
     body.push('links.new(normal_map.outputs["Normal"], bsdf.inputs["Normal"])');
-    body.push(`applied.append("Normal map x Normal Strength ${params.normalStrength}")`);
+    body.push(`applied.append("Normal map x Normal Strength ${pyNum(params.normalStrength)}")`);
   }
 
   return `

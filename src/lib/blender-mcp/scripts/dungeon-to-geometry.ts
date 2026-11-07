@@ -1,3 +1,5 @@
+import { pyNum } from '@/lib/blender-mcp/escape';
+
 export type CellType = 'empty' | 'floor' | 'wall' | 'door' | 'corridor';
 
 /** Numeric encoding of {@link CellType} the generated Python switches on. */
@@ -81,8 +83,8 @@ export function dungeonToGeometryScript(params: {
 
 grid = [${flatGrid}]
 rows, cols = ${rows}, ${cols}
-cell_size = ${params.cellSize}
-wall_height = ${params.wallHeight}
+cell_size = ${pyNum(params.cellSize)}
+wall_height = ${pyNum(params.wallHeight)}
 
 collection = bpy.data.collections.new("Dungeon")
 bpy.context.scene.collection.children.link(collection)

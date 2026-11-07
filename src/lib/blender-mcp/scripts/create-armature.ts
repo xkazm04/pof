@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 import { pyReceipt } from '@/lib/blender-mcp/receipt';
 
 export interface BoneDefinition {
@@ -16,8 +16,8 @@ export function createArmatureScript(params: {
     .map(
       (b) => `
 bone = amt.edit_bones.new("${py(b.name)}")
-bone.head = (${b.head.join(', ')})
-bone.tail = (${b.tail.join(', ')})
+bone.head = (${b.head.map(pyNum).join(', ')})
+bone.tail = (${b.tail.map(pyNum).join(', ')})
 ${b.parent ? `bone.parent = amt.edit_bones["${py(b.parent)}"]` : ''}`,
     )
     .join('\n');

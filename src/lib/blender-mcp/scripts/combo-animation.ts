@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 
 export interface ComboHit {
   time: number;
@@ -13,9 +13,10 @@ export function comboAnimationScript(params: {
   totalDuration: number;
 }): string {
   const fps = 30;
+  const endFrame = pyNum(Math.round(params.totalDuration * fps));
   const keyframes = params.hits
     .map((hit) => {
-      const frame = Math.round(hit.time * fps);
+      const frame = pyNum(Math.round(hit.time * fps));
       return `
 # ${hit.type} hit at frame ${frame}
 bpy.context.scene.frame_set(${frame})
@@ -36,7 +37,7 @@ armature.name = "${py(params.comboName)}_Preview"
 
 scene = bpy.context.scene
 scene.frame_start = 1
-scene.frame_end = ${Math.round(params.totalDuration * fps)}
+scene.frame_end = ${endFrame}
 
 bpy.ops.object.mode_set(mode='POSE')
 
@@ -49,13 +50,13 @@ for bone in armature.pose.bones:
 ${keyframes}
 
 # Reset at end
-scene.frame_set(${Math.round(params.totalDuration * fps)})
+scene.frame_set(${endFrame})
 for bone in armature.pose.bones:
     bone.rotation_quaternion = (1, 0, 0, 0)
     bone.keyframe_insert(data_path="rotation_quaternion")
 
 bpy.ops.object.mode_set(mode='OBJECT')
 scene.frame_set(1)
-print(f"Created combo preview: ${py(params.comboName)} (${params.hits.length} hits, ${params.totalDuration}s)")
+print(f"Created combo preview: ${py(params.comboName)} (${params.hits.length} hits, ${pyNum(params.totalDuration)}s)")
 `.trim();
 }

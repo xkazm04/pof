@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 
 export function dissolveShaderScript(params: {
   materialName?: string;
@@ -27,7 +27,7 @@ output = nodes.new('ShaderNodeOutputMaterial')
 mix_shader = nodes.new('ShaderNodeMixShader')
 principled = nodes.new('ShaderNodeBsdfPrincipled')
 emission = nodes.new('ShaderNodeEmission')
-emission.inputs["Color"].default_value = (${ec[0]}, ${ec[1]}, ${ec[2]}, 1.0)
+emission.inputs["Color"].default_value = (${pyNum(ec[0])}, ${pyNum(ec[1])}, ${pyNum(ec[2])}, 1.0)
 emission.inputs["Strength"].default_value = 8.0
 
 noise = nodes.new('ShaderNodeTexNoise')
@@ -35,8 +35,8 @@ noise.inputs["Scale"].default_value = 6.0
 noise.inputs["Detail"].default_value = 4.0
 
 ramp = nodes.new('ShaderNodeValToRGB')
-ramp.color_ramp.elements[0].position = ${params.threshold ?? 0.4}
-ramp.color_ramp.elements[1].position = ${(params.threshold ?? 0.4) + 0.05}
+ramp.color_ramp.elements[0].position = ${pyNum(params.threshold ?? 0.4)}
+ramp.color_ramp.elements[1].position = ${pyNum((params.threshold ?? 0.4) + 0.05)}
 
 transparent = nodes.new('ShaderNodeBsdfTransparent')
 
