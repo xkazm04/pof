@@ -65,10 +65,11 @@ export function EmitterPropertyPanel({
           {EMITTER_TYPES.map((type) => (
             <button
               key={type}
+              type="button"
               onClick={() => buf.pick('type', type)}
               aria-label={`Emitter type ${type}`}
               aria-pressed={v.type === type}
-              className={`px-2 py-1 rounded text-2xs capitalize transition-colors ${
+              className={`px-2 py-1 rounded text-2xs capitalize transition-colors focus-ring-inset ${
                 v.type === type
                   ? 'bg-border-bright text-text'
                   : 'bg-surface text-text-muted hover:bg-surface-hover'

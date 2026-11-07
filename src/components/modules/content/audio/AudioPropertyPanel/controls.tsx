@@ -53,9 +53,10 @@ export function ActionButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50 focus-ring"
       style={{
         backgroundColor: `${accentColor}24`,
         color: accentColor,
