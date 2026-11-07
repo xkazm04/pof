@@ -7359,8 +7359,12 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:122 Build history and config profiles are client UI over the app's own SQLite-backed /api/packaging/history; grep over src/components/modules/game-systems for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so the subject's crossings (dependencies, archives, secrets in history, unsafe loaders) do not occur in this context.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "optional-dependency-degradation",
@@ -7634,8 +7638,12 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/evaluator/PerformanceProfilingView/CSVImportPanel.tsx:23 The only external-input path is a user-picked profiler CSV read as plain text (a data-only format), and the remaining views read /api JSON; grep over src/components/modules/evaluator for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so neither unsafe deserialization nor any other supply-chain crossing occurs here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "table",
@@ -11199,8 +11207,12 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:151 The context is client UI that reads app-internal JSON over relative /api routes; grep over src/components/modules/evaluator for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so nothing here crosses a supply-chain boundary (no dependency resolution, archive extraction, object deserialization or execution of a foreign tree).",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "codebase-scanning",
@@ -19684,8 +19696,12 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is client UI over an app API scan result, and its 'DependencyGraph' is an asset graph, not a package graph; grep over src/components/modules/content/models for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so no supply-chain crossing lives in this context.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "generative-artifact-gating",

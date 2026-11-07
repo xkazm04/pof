@@ -1,0 +1,127 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f635f1e4-4821-4675-977c-755f472f1fdc",
+ "subject": "supply-chain",
+ "evaluatedAt": "2026-11-07T05:33:49.691802+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "code-quality-evaluation",
+   "subject": "supply-chain",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:151 The context is client UI that reads app-internal JSON over relative /api routes; grep over src/components/modules/evaluator for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so nothing here crosses a supply-chain boundary (no dependency resolution, archive extraction, object deserialization or execution of a foreign tree).",
+   "techniques": [],
+   "absenceTerms": [
+    "child_process",
+    "spawn(",
+    "unzip",
+    "pickle",
+    "package-lock"
+   ]
+  },
+  {
+   "context": "build-history-config",
+   "subject": "supply-chain",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/BuildHistoryDashboard/index.tsx:122 Build history and config profiles are client UI over the app's own SQLite-backed /api/packaging/history; grep over src/components/modules/game-systems for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so the subject's crossings (dependencies, archives, secrets in history, unsafe loaders) do not occur in this context.",
+   "techniques": [],
+   "absenceTerms": [
+    "child_process",
+    "spawn(",
+    "unzip",
+    "pickle",
+    "package-lock"
+   ]
+  },
+  {
+   "context": "models-asset-inventory",
+   "subject": "supply-chain",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/models/AssetInventory/useAssetInventory.ts:45 The inventory is client UI over an app API scan result, and its 'DependencyGraph' is an asset graph, not a package graph; grep over src/components/modules/content/models for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so no supply-chain crossing lives in this context.",
+   "techniques": [],
+   "absenceTerms": [
+    "child_process",
+    "spawn(",
+    "unzip",
+    "pickle",
+    "package-lock"
+   ]
+  },
+  {
+   "context": "build-quality-monitoring",
+   "subject": "supply-chain",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/PerformanceProfilingView/CSVImportPanel.tsx:23 The only external-input path is a user-picked profiler CSV read as plain text (a data-only format), and the remaining views read /api JSON; grep over src/components/modules/evaluator for child_process, spawn(, unzip, pickle and package-lock found 0 hits, so neither unsafe deserialization nor any other supply-chain crossing occurs here.",
+   "techniques": [],
+   "absenceTerms": [
+    "child_process",
+    "spawn(",
+    "unzip",
+    "pickle",
+    "package-lock"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "supply-chain",
+   "context": "ue5-build-bridge",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T05:33:49.691802+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "supply-chain"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T05:33:49.691802+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "supply-chain"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "build-history-config",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T05:33:49.691802+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "supply-chain"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "models-asset-inventory",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T05:33:49.691802+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "supply-chain"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "build-quality-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
