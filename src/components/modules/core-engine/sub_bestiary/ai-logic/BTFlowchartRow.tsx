@@ -14,6 +14,9 @@ interface BTFlowchartRowProps {
   isSelected: boolean;
   isMatch: boolean | undefined;
   isCollapsed: boolean;
+  /** Roving tabindex: only the tree's current stop is Tab-reachable (default true for standalone use). */
+  isTabStop?: boolean;
+  onFocusRow?: (id: string) => void;
   accent: string;
   onNodeClick: (id: string) => void;
   onToggleCollapse: (id: string) => void;
@@ -21,14 +24,15 @@ interface BTFlowchartRowProps {
 }
 
 export function BTFlowchartRow({
-  row, idx, isSelected, isMatch, isCollapsed,
+  row, idx, isSelected, isMatch, isCollapsed, isTabStop = true, onFocusRow,
   accent, onNodeClick, onToggleCollapse, onKeyDown,
 }: BTFlowchartRowProps) {
   const { node, depth, hasChildren } = row;
   return (
     <div
       key={node.id}
-      tabIndex={0}
+      tabIndex={isTabStop ? 0 : -1}
+      onFocus={() => onFocusRow?.(node.id)}
       role="treeitem"
       aria-selected={isSelected}
       aria-expanded={hasChildren ? !isCollapsed : undefined}

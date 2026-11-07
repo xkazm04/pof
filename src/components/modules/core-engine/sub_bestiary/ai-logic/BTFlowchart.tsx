@@ -18,6 +18,8 @@ interface BTFlowchartProps {
 export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCESS }: BTFlowchartProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState('');
+  /* Roving tabindex: the tree is one tab stop; this node id holds it (null = first row). */
+  const [focusId, setFocusId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   /* Stable node.id -> focusable row element map, rebuilt after each render from
      the logical row order. Keyboard navigation resolves focus targets by node
@@ -80,6 +82,11 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
     if (!matchIds) return flatRows;
     return flatRows.filter(r => matchIds.has(r.node.id));
   }, [flatRows, matchIds]);
+
+  /* The tab-stop row, keyed by node identity; a filtered-out or collapsed-away
+     node falls back to the first visible row so the tree never loses its stop. */
+  const tabStopId = focusId != null && visibleRows.some(r => r.node.id === focusId)
+    ? focusId : visibleRows[0]?.node.id ?? null;
 
   /* Map each visible row's node.id to its rendered focusable element. Rebuilt
      after every render by aligning the actual treeitem elements (queried by
@@ -180,6 +187,8 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
             isSelected={expandedNodeId === row.node.id}
             isMatch={matchIds?.has(row.node.id)}
             isCollapsed={effectiveCollapsed.has(row.node.id)}
+            isTabStop={row.node.id === tabStopId}
+            onFocusRow={setFocusId}
             accent={accent}
             onNodeClick={onNodeClick}
             onToggleCollapse={toggleCollapse}
