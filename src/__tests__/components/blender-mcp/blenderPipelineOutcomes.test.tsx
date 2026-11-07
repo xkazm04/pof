@@ -83,3 +83,16 @@ describe('FBX Conversion receipt states only what the route measured', () => {
     expect(text).toMatch(/12,840 triangles/);
   });
 });
+
+describe('FBX receipt sizes come from the shared lib/format formatBytes', () => {
+  it('a sub-KB GLB reads in bytes, like every other byte label in the app', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: true, data: { converted: true, name: 'm.glb', url: '/x', meshes: 1, tris: 2, bytes: 512 },
+    }))));
+    render(<FBXConversionTab />);
+    fireEvent.change(screen.getByPlaceholderText('C:/Assets/model.fbx'), { target: { value: 'C:/in/m.fbx' } });
+    fireEvent.click(screen.getByRole('button', { name: /convert/i }));
+    await waitFor(() => expect(screen.getByText('Run succeeded')).toBeTruthy());
+    expect(screen.getByRole('status').textContent).toMatch(/· 512 B/);
+  });
+});
