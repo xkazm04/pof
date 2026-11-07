@@ -3810,8 +3810,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_animation/index.tsx:11 The context covers animation state graphs, montage and budget panels and works only on animation data. A search of sub_animation for speech, voice, tts, transcri, microphone, getUserMedia and elevenlabs found nothing, so it has no voice capture or synthesis surface.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "motion",
@@ -4144,8 +4148,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/content/animations/AnimationStateMachine/useAnimBpScan.ts:6 The context is a read-only diagram of a scanned AnimBlueprint, built from a filesystem scan route. A search of src/components/modules/content/animations for speech, voice, tts, transcri, microphone, getUserMedia and elevenlabs found nothing, so voice I/O does not apply.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "render-mount-pipeline",
@@ -10133,8 +10141,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/SimulatorTab.tsx:9 The context is made of stat-balance simulation and chart panels. A search of its directory for speech, voice, tts, transcri, microphone, getUserMedia, speak and elevenlabs found nothing, so the product neither listens nor speaks here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "vehicle-archetype-balance",
@@ -25931,8 +25943,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:7 The context probes UE5 bridge HTTP and WebSocket endpoints for health and latency and runs integration test scenarios. A search of src/components/modules/project-setup for speech, voice, tts, transcri, microphone, getUserMedia and elevenlabs found nothing, so voice I/O does not apply.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "remote-capability-probing",

@@ -20674,14 +20674,14 @@
       "subject": "voice-io",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T04:53:21.444Z",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:57:26.027Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "2f5f64e7-6673-45cc-adac-ac4736f53dd5",
+        "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
         "state": "not-applicable",
-        "at": "2026-11-06T04:54:07.589302+00:00",
-        "reason": "reviewer (sonnet): The anchor labAcceptance.ts:8 is a comment about a per-pipeline cache index and does not show that speech is absent. The evidence also says a search of src/components/layout-lab found no voice or speech channel, but that directory holds a whole game/voice room (voiceAudio.tsx, voiceGenerate.tsx and "
+        "at": "2026-11-07T02:58:06.893452+00:00",
+        "reason": "reviewer (sonnet): The claim that no playback pipeline exists under src/components/layout-lab is contradicted. layout-lab/game/voice/castingPlayer.tsx plays voice audio through a hidden <audio> element (.play(), a fallback source). The seat's search terms missed it, and the dataCheckers.ts:299 anchor shows only word-c"
       }
     },
     "ac4cee9e-1527-46e9-8b16-f0f49affbe37/agent-memory": {
@@ -21338,6 +21338,46 @@
         "at": "2026-11-07T02:50:03.234556+00:00",
         "reason": "reviewer (sonnet): The anchor characters.ts:89 is just the registerCatalogPipeline call and does not show that no tool contract exists. The claim that the only tool-name hits are TODO comments is also wrong: character-pipeline.ts:126 references pof_tripo.mjs, and the directory has a contracts/ subfolder (contracts.ts,"
       }
+    },
+    "078fa4be-c8be-460f-97da-b6230a0612f8/voice-io": {
+      "context": "character-simulator",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:57:26.027Z",
+      "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
+      "techniques": []
+    },
+    "9aaa14f4-5109-4e11-a7c5-2684cc02ad11/voice-io": {
+      "context": "animation-state-machine-viewer",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:57:26.027Z",
+      "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
+      "techniques": []
+    },
+    "0550cd65-c2cd-4171-9401-8a64dfe09656/voice-io": {
+      "context": "animation-state-graph",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:57:26.027Z",
+      "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
+      "techniques": []
+    },
+    "940bbe98-a8c3-4d5e-b4e5-c447578e2123/voice-io": {
+      "context": "ue5-bridge-monitoring",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:57:26.027Z",
+      "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
+      "techniques": []
     }
   }
 }
