@@ -480,10 +480,14 @@ class BlenderMCPService {
     const result = await this.sendCommand({ type, params: { prompt } });
     if (!result.ok) return result;
     const data = result.data as Record<string, unknown>;
-    return ok({
-      jobId: String(data?.jobId ?? ''),
-      status: 'pending',
-    });
+    const jobId = typeof data?.jobId === 'string' || typeof data?.jobId === 'number' ? String(data.jobId) : '';
+    // No id = nothing to poll, import or ledger. Coercing it to '' filed every such job
+    // under one empty key; name the gap instead (the provider may still have billed it).
+    if (!jobId) {
+      logger.warn(`[BlenderMCP] ${type} reply carried no jobId: ${JSON.stringify(data).slice(0, 200)}`);
+      return err(`Blender addon accepted ${type} but returned no job id, so the job cannot be tracked`);
+    }
+    return ok({ jobId, status: 'pending' });
   }
 
   // ── Asset sourcing ──────────────────────────────────────────────────────
