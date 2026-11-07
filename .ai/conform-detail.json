@@ -20670,13 +20670,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T02:57:26.027Z",
+      "evaluatedTs": "2026-11-07T03:14:54.464Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
+        "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
         "state": "not-applicable",
-        "at": "2026-11-07T02:58:06.893452+00:00",
-        "reason": "reviewer (sonnet): The claim that no playback pipeline exists under src/components/layout-lab is contradicted. layout-lab/game/voice/castingPlayer.tsx plays voice audio through a hidden <audio> element (.play(), a fallback source). The seat's search terms missed it, and the dataCheckers.ts:299 anchor shows only word-c"
+        "at": "2026-11-07T03:15:49.487764+00:00",
+        "reason": "reviewer (sonnet): The anchor labAcceptance.ts:44 is only the resolveAccept signature and doesn't show that nothing in the context listens or speaks, so it is an incidental anchor. The grep absence itself holds."
       }
     },
     "ac4cee9e-1527-46e9-8b16-f0f49affbe37/agent-memory": {
@@ -21413,6 +21413,46 @@
       "evaluatedAt": "2026-11-07",
       "evaluatedTs": "2026-11-07T03:10:30.662Z",
       "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
+      "techniques": []
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/voice-io": {
+      "context": "catalog-pipelines",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:14:54.464Z",
+      "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
+      "techniques": []
+    },
+    "fa9f8d2d-67ac-4ffd-8ad0-63287cfc2149/voice-io": {
+      "context": "pipeline-step-components",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:14:54.464Z",
+      "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
+      "techniques": []
+    },
+    "968f37ed-d663-4839-8eb0-4dd445d129ed/voice-io": {
+      "context": "ability-forge",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:14:54.464Z",
+      "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
+      "techniques": []
+    },
+    "dadc026b-804a-4632-ad7f-0c8254660f2c/voice-io": {
+      "context": "combat-choreography",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:14:54.464Z",
+      "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
       "techniques": []
     }
   }

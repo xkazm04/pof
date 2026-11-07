@@ -2264,8 +2264,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_ability/forge/ForgeInput.tsx:42 The forge takes its natural-language ability description through a typed textarea, not dictation, and returns code and diffs with no spoken output; a search of the forge directory (and all of sub_ability) for speechSynthesis, SpeechRecognition, getUserMedia, MediaRecorder, transcribe and elevenlabs found 0 hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "proof-carrying-agent-actions",
@@ -9314,8 +9318,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/pipelines/dialog-trees.ts:19 Every voice reference here is game content written for UE: dialog voice-over hooks, speaker fields, Wwise voice virtualization and music/voice buses. The golden path says that kind of audio production belongs to a different craft from plumbing voice through the product. A search of src/lib/catalog/pipelines for speechSynthesis, SpeechRecognition, getUserMedia, MediaRecorder, transcribe and elevenlabs found 0 hits, so no capture or synthesis pipeline runs in this context.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "reversible-transform-pipelines",
@@ -11361,8 +11369,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_combat/index.tsx:20 The combat module root composes choreography and flow visualisation tabs (timelines, grids, diagrams), with no audio capture or synthesis; a search of src/components/modules/core-engine/sub_combat for speechSynthesis, SpeechRecognition, getUserMedia, MediaRecorder, transcribe and elevenlabs found 0 hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -20961,8 +20973,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:5 Step panels take a typed direction through the shared CliProduce textarea and render data tables, charts and galleries, with no microphone or speech output; a search of src/components/layout-lab/steps and src/components/layout-lab/one-shot for speechSynthesis, SpeechRecognition, getUserMedia, MediaRecorder, transcribe and elevenlabs found 0 hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "prompt-assembly",
