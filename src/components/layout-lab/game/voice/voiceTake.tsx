@@ -11,7 +11,7 @@ import { MicroLabel } from '@/components/ui/MicroLabel';
 import { LabButton, LabTextarea } from '@/components/layout-lab/steps/controls';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import type { TakeView } from '@/lib/voice/room';
-import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type TakeVerdict } from '@/lib/voice/types';
+import { READBACK_FLAG_WER, SILENCE_FLAG_MS, STALE_REASON_WORDS, type TakeVerdict } from '@/lib/voice/types';
 import type { StatusLevel } from '@/lib/status-token';
 import { fmtLufs, fmtMs, fmtWer, postVoice, takeAudioUrl } from './voiceRoomData';
 import { VoiceAudio } from './voiceAudio';
@@ -52,7 +52,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
       style={{ listStyle: 'none', display: 'grid', gap: 'var(--lab-s2)', padding: 'var(--lab-s3)', border: `1px solid ${t.line}`, borderRadius: 6, opacity: take.stale ? 0.7 : 1 }}>
       <div style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap' }}>
         <StatusTag level={v.level} word={v.word} />
-        {take.stale && <StatusTag level="bad" word="stale: older line text or not the cast voice" />}
+        {take.reason && <StatusTag level="bad" word={STALE_REASON_WORDS[take.reason]} />}
         <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · <span title="The provider's level; the player below plays it at the game's voice level unless you switch to the original">delivered {fmtLufs(take.loudnessLufs)}</span> · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
         {take.maxSilenceMs !== null && take.maxSilenceMs > SILENCE_FLAG_MS && <StatusTag level="warn" word={`long pause ${fmtMs(take.maxSilenceMs)}: listen for a dropout`} />}
         <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>

@@ -7,8 +7,9 @@
 import type { NextRequest } from 'next/server';
 import { apiError, apiSuccess } from '@/lib/api-utils';
 import { getVoiceDb, questRoot, VOICE_GAMES } from '@/lib/voice/conn';
-import { syncQueue } from '@/lib/voice/lineQueue';
+import { staleReason, syncQueue, voiceCtx } from '@/lib/voice/lineQueue';
 import { takeView } from '@/lib/voice/room';
+import { getLine } from '@/lib/voice/voice-db';
 import { generateTakes } from '@/lib/voice/takes';
 import { readbackTakes } from '@/lib/voice/readback';
 import type { TakeSettings } from '@/lib/voice/types';
@@ -32,7 +33,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     });
     if (!r.ok) return apiError(r.error, 422);
     if (process.env.NODE_ENV !== 'test' && process.env.POF_VOICE_READBACK !== '0') void readbackTakes(db, r.data.map((t) => t.id));
-    return apiSuccess({ takes: r.data.map((t) => takeView(t, false)), chars: r.data.reduce((n, t) => n + t.chars, 0) });
+    const line = getLine(db, gameId, b.questId, b.lineId);
+    const vctx = voiceCtx(db, gameId);
+    return apiSuccess({ takes: r.data.map((t) => takeView(t, line ? staleReason(t, line, vctx) : 'text-edited')), chars: r.data.reduce((n, t) => n + t.chars, 0) });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'voice takes POST failed', 500);
   }

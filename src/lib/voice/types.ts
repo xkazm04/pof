@@ -17,6 +17,23 @@ export type LineState = 'no-takes' | 'awaiting-verdict' | 'all-rejected' | 'prov
  */
 export type LineClass = 'story' | 'bark';
 
+/**
+ * Why a take is NOT the current take of its line (`staleReason` in `lineQueue.ts`, the one place this is
+ * decided). A render is bound to everything that produced it (registry `game-dialogue-voice-pipeline`):
+ *  - `text-edited`: the line's text changed after the take spoke it.
+ *  - `wrong-speaker`: the take's voice belongs to another character than the line's speaker now (the quest
+ *    package reassigned the line), or has no voice row at all.
+ *  - `recast`: the speaker has a cast voice and it is a different one.
+ */
+export type StaleReason = 'text-edited' | 'wrong-speaker' | 'recast';
+
+/** The reason in words, for the room (client-safe: no node imports here). */
+export const STALE_REASON_WORDS: Record<StaleReason, string> = {
+  'text-edited': 'stale: the line text changed after this take',
+  'wrong-speaker': "stale: this voice is not the line's speaker (the line was reassigned)",
+  recast: "stale: not the speaker's cast voice",
+};
+
 export interface VoicePreview {
   /** The provider's temporary design id (`generated_voice_id`). */
   generatedVoiceId: string | null;

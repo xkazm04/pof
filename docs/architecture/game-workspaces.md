@@ -483,9 +483,13 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
     the verdict history.
 - **States:** `no-takes`, `awaiting-verdict`, `all-rejected`, `proven`. A line is proven only by an approved take
   on its current text (a take carries the hash of the text it spoke, so a package edit makes it stale). At most
-  one approved take per line: approving another marks the previous one `superseded`, history kept. Once the speaker has a cast
-  voice, only takes in that voice count: casting a different voice un-proves the character's lines (a re-cast
-  event, registry `game-dialogue-voice-pipeline`); approving a take outside the cast voice is refused 409.
+  one approved take per line: approving another marks the previous one `superseded`, history kept. **One definition
+  of "current take":** `staleReason` in `lineQueue.ts` returns why a take is NOT current (`text-edited`; `wrong-speaker`:
+  the take's voice row belongs to another character than the line's speaker now, e.g. a quest package reassigned the
+  line; `recast`: the speaker has a cast voice and it is another one), and the queue, the line view (`TakeView.reason`),
+  export (skipped / stale-in-game lines carry the reason) and `voice.mjs` all read it. Casting a different voice
+  un-proves the character's lines (a re-cast event, registry `game-dialogue-voice-pipeline`); approving a take that
+  is not current is refused 409 with the reason (`approval.ts`).
 - **Provider** (`src/lib/audio-gen/providers/elevenlabs-speech.ts`, the `tts` kind): `/v1/text-to-speech/{voice_id}`
   with `eleven_v3` by default, where the direction becomes inline audio tags (`[whispers] [panicking] …`); on
   `eleven_multilingual_v2` the direction is recorded but not sent (tags would be spoken). Voice design is

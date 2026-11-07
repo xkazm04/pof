@@ -186,7 +186,7 @@ describe('export', () => {
     const again = await exportQuest(db, 'gtai', 'zulu', game, { convert: async () => { throw new Error('nothing proven: must not convert'); }, measureLufs: async () => null });
     if (!again.ok) throw new Error(again.error);
     expect(again.data.written).toEqual([]);
-    expect(again.data.stale).toEqual([{ lineId: 'z1', takeId: r.data[0].id, reason: `the game still plays take ${r.data[0].id.slice(0, 8)}, no longer proven here (no-takes)` }]);
+    expect(again.data.stale).toEqual([{ lineId: 'z1', takeId: r.data[0].id, reason: `the game still plays take ${r.data[0].id.slice(0, 8)}, no longer proven here (no-takes: text-edited)` }]);
     expect(fs.readFileSync(qf, 'utf8')).toBe(before);
   });
 

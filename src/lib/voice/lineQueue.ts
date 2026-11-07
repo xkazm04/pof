@@ -14,7 +14,7 @@ import type Database from 'better-sqlite3';
 import { loadLedger } from '@/lib/games/gtai-quest/loadContext';
 import type { QuestPackage } from '@/lib/games/gtai-quest/types';
 import { listLines, listTakes, listVoices, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
-import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type TakeRow, type VoiceStatusView } from '@/lib/voice/types';
+import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type StaleReason, type TakeRow, type VoiceRow, type VoiceStatusView } from '@/lib/voice/types';
 
 export const hashText = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
 
@@ -78,25 +78,50 @@ export function syncQueue(db: Database.Database, gameId: string, root: string, a
   return listLines(db, gameId);
 }
 
+/** What `staleReason` needs to know about the voices: every voice row, and the cast voice per speaker. */
+export interface VoiceCtx { voices: ReadonlyMap<string, VoiceRow>; cast: ReadonlyMap<string, string> }
+
+export function voiceCtx(db: Database.Database, gameId: string): VoiceCtx {
+  const all = listVoices(db, gameId);
+  return { voices: new Map(all.map((v) => [v.id, v])), cast: new Map(all.filter((v) => v.status === 'cast').map((v) => [v.characterId, v.id])) };
+}
+
 /**
- * A take counts only for the text it spoke (a package edit makes it stale) and, once the speaker has a
- * cast voice, only in that voice: re-casting is a re-cast event (registry `game-dialogue-voice-pipeline`).
+ * THE definition of "current take": null when `t` counts for `line`, else why not. The queue, the line view,
+ * export and `voice.mjs` all read this, so a take is never proven in one place and stale in another. A take
+ * counts only for the text it spoke, only in a voice that belongs to the line's speaker (`pickVoice` checks
+ * that at generation; a package that reassigns the line afterwards is caught here), and, once the speaker
+ * has a cast voice, only in that voice (re-casting is a re-cast event, registry `game-dialogue-voice-pipeline`).
  */
-export const isCurrent = (t: TakeRow, line: QueueLine, castVoiceId: string | null = null): boolean =>
-  t.textHash === line.textHash && (castVoiceId === null || t.voiceId === castVoiceId);
+export function staleReason(t: TakeRow, line: QueueLine, ctx: VoiceCtx): StaleReason | null {
+  if (t.textHash !== line.textHash) return 'text-edited';
+  if (ctx.voices.get(t.voiceId)?.characterId !== line.speaker) return 'wrong-speaker';
+  const cast = ctx.cast.get(line.speaker) ?? null;
+  if (cast !== null && t.voiceId !== cast) return 'recast';
+  return null;
+}
+
+export const isCurrent = (t: TakeRow, line: QueueLine, ctx: VoiceCtx): boolean => staleReason(t, line, ctx) === null;
 
 /** speaker -> cast voice row id. */
 export function castMap(db: Database.Database, gameId: string): Map<string, string> {
-  return new Map(listVoices(db, gameId).filter((v) => v.status === 'cast').map((v) => [v.characterId, v.id]));
+  return new Map(voiceCtx(db, gameId).cast);
 }
 
-export function lineState(line: QueueLine, takes: readonly TakeRow[], castVoiceId: string | null = null): { state: LineState; approvedTakeId: string | null; pending: number } {
-  const current = takes.filter((t) => isCurrent(t, line, castVoiceId));
+/** `takes` = every take of the line; only the current ones decide its state. */
+export function lineState(line: QueueLine, takes: readonly TakeRow[], ctx: VoiceCtx): { state: LineState; approvedTakeId: string | null; pending: number } {
+  const current = takes.filter((t) => isCurrent(t, line, ctx));
   const approved = current.find((t) => t.verdict === 'approved') ?? null;
   const pending = current.filter((t) => t.verdict === 'pending').length;
   if (approved) return { state: 'proven', approvedTakeId: approved.id, pending };
   if (current.length === 0) return { state: 'no-takes', approvedTakeId: null, pending };
   return { state: pending > 0 ? 'awaiting-verdict' : 'all-rejected', approvedTakeId: null, pending };
+}
+
+/** Why a line is not proven although takes exist: the stale reason of its approved take(s), in words; else null. */
+export function whyNotProven(line: QueueLine, takes: readonly TakeRow[], ctx: VoiceCtx): string | null {
+  const why = takes.filter((t) => t.verdict === 'approved').flatMap((t) => { const r = staleReason(t, line, ctx); return r ? [`approved take ${t.id.slice(0, 8)} is stale: ${r}`] : []; });
+  return why.length > 0 ? why.join('; ') : null;
 }
 
 /** A take one of the automatic screens flags (the owner still decides; this only says where to listen). */
@@ -109,11 +134,11 @@ export function queueEntries(db: Database.Database, gameId: string, lines: reado
     const k = `${t.questId}/${t.lineId}`;
     byLine.set(k, [...(byLine.get(k) ?? []), t]);
   }
-  const cast = castMap(db, gameId);
+  const ctx = voiceCtx(db, gameId);
   return lines.map((l) => {
-    const c = cast.get(l.speaker) ?? null;
-    const takes = (byLine.get(`${l.questId}/${l.lineId}`) ?? []).filter((t) => isCurrent(t, l, c));
-    return { ...l, ...lineState(l, takes, c), takes: takes.length, flagged: takes.filter(isFlagged).length };
+    const all = byLine.get(`${l.questId}/${l.lineId}`) ?? [];
+    const current = all.filter((t) => isCurrent(t, l, ctx));
+    return { ...l, ...lineState(l, all, ctx), takes: current.length, flagged: current.filter(isFlagged).length };
   });
 }
 

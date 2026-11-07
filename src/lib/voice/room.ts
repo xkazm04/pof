@@ -4,9 +4,9 @@
  */
 import type Database from 'better-sqlite3';
 import { listTakes, listVoices, totalChars, verdictHistory, getLine } from '@/lib/voice/voice-db';
-import { castMap, isCurrent, queueEntries, questTitles, statusView, syncQueue } from '@/lib/voice/lineQueue';
+import { queueEntries, questTitles, statusView, staleReason, syncQueue, voiceCtx } from '@/lib/voice/lineQueue';
 import { readBible } from '@/lib/voice/design';
-import type { QueueEntry, TakeRow, VerdictEvent, VoiceRow, VoiceStatusView } from '@/lib/voice/types';
+import type { QueueEntry, StaleReason, TakeRow, VerdictEvent, VoiceRow, VoiceStatusView } from '@/lib/voice/types';
 
 export interface RoomState { status: VoiceStatusView; queue: QueueEntry[]; voices: VoiceRow[] }
 
@@ -15,8 +15,9 @@ export function roomState(db: Database.Database, gameId: string, root: string, n
   return { status: statusView(queue, questTitles(root), totalChars(db, gameId), nextN), queue, voices: listVoices(db, gameId) };
 }
 
-/** A take as the client sees it: no absolute file path, plus `stale` (older text, or not the cast voice). */
-export type TakeView = Omit<TakeRow, 'file'> & { stale: boolean };
+/** A take as the client sees it: no absolute file path, plus `reason` (why it is not the line's current take,
+ *  null when it is) and `stale` (= reason !== null). */
+export type TakeView = Omit<TakeRow, 'file'> & { stale: boolean; reason: StaleReason | null };
 
 export interface LineDetail {
   line: QueueEntry;
@@ -26,10 +27,10 @@ export interface LineDetail {
   voices: VoiceRow[];
 }
 
-export const takeView = (t: TakeRow, stale: boolean): TakeView => {
+export const takeView = (t: TakeRow, reason: StaleReason | null): TakeView => {
   const { file: _file, ...rest } = t;
   void _file;
-  return { ...rest, stale };
+  return { ...rest, stale: reason !== null, reason };
 };
 
 export function lineDetail(db: Database.Database, gameId: string, root: string, questId: string, lineId: string): LineDetail | null {
@@ -38,10 +39,11 @@ export function lineDetail(db: Database.Database, gameId: string, root: string, 
   const line = getLine(db, gameId, questId, lineId);
   if (!entry || !line) return null;
   const takes = listTakes(db, gameId, questId, lineId);
+  const ctx = voiceCtx(db, gameId);
   return {
     line: entry,
     bible: readBible(root, line.speaker),
-    takes: takes.map((t) => takeView(t, !isCurrent(t, line, castMap(db, gameId).get(line.speaker) ?? null))).reverse(),
+    takes: takes.map((t) => takeView(t, staleReason(t, line, ctx))).reverse(),
     history: verdictHistory(db, takes.map((t) => t.id)),
     voices: listVoices(db, gameId).filter((v) => v.characterId === line.speaker),
   };

@@ -3,8 +3,9 @@
  * `voice.mjs export`. Writes `<gameRoot>/project/assets/audio/voice/<quest>/<line>.ogg` and, in
  * `<gameRoot>/project/quests/<quest>/quest.json`, sets the line's `audio` to the `res://` path — a STRING,
  * because the game's `quest_voice.gd` plays `audio` only when it is a String — and its `audioTake` to
- * `{ takeId, voiceId, model }` (the model is recorded per line: a model change is a re-cast event, registry
- * `game-dialogue-voice-pipeline`). Unproven lines are not touched (a temp voice the audio lane set stays).
+ * `{ takeId, voiceId, model }` (the model is recorded per line so the game's record says what rendered it).
+ * A line is proven only by a CURRENT approved take (`staleReason` in `lineQueue.ts`: the text it spoke, a voice
+ * of the line's speaker, the speaker's cast voice); a take that went stale is skipped with its reason. Unproven lines are not touched (a temp voice the audio lane set stays).
  * Nothing unproven is ever written: a line without a current approved take is skipped and listed.
  * Every written file is MASTERED to the game's voice target (`mastering.ts`: mono, loudnorm to the
  * `audio_mix.json` loudness) and measured after, so the report shows each line's level against it. The file
@@ -14,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { listLines, listTakes } from '@/lib/voice/voice-db';
-import { castMap, lineState } from '@/lib/voice/lineQueue';
+import { lineState, staleReason, voiceCtx, whyNotProven } from '@/lib/voice/lineQueue';
 import { convertToOgg, measureAudio } from '@/lib/voice/storage';
 import { MASTER_TOLERANCE_LU, voiceMasterTarget, type VoiceMasterTarget } from '@/lib/voice/mastering';
 import { asGameFile } from '@/lib/voice/asGame';
@@ -54,15 +55,18 @@ export async function exportQuest(
   const report: ExportReport = { questId, written: [], skipped: [], stale: [], mastering, questFile };
   const inGame = exportedTakes(questFile);
   const audioByLine = new Map<string, { path: string; takeId: string; voiceId: string; model: string }>();
-  const cast = castMap(db, gameId);
+  const ctx = voiceCtx(db, gameId);
   for (const line of lines) {
     const mine = takes.filter((t) => t.lineId === line.lineId);
-    const st = lineState(line, mine, cast.get(line.speaker) ?? null);
+    const st = lineState(line, mine, ctx);
     const take = st.approvedTakeId ? mine.find((t) => t.id === st.approvedTakeId) : undefined;
     if (!take) {
-      report.skipped.push({ lineId: line.lineId, reason: `not proven (${st.state})` });
+      const why = whyNotProven(line, mine, ctx);
+      report.skipped.push({ lineId: line.lineId, reason: `not proven (${st.state})${why ? `: ${why}` : ''}` });
       const played = inGame.get(line.lineId);
-      if (played) report.stale.push({ lineId: line.lineId, takeId: played, reason: `the game still plays take ${played.slice(0, 8)}, no longer proven here (${st.state})` });
+      const playedTake = played ? mine.find((t) => t.id === played) : undefined;
+      const playedWhy = playedTake ? staleReason(playedTake, line, ctx) : null;
+      if (played) report.stale.push({ lineId: line.lineId, takeId: played, reason: `the game still plays take ${played.slice(0, 8)}, no longer proven here (${st.state}${playedWhy ? `: ${playedWhy}` : ''})` });
       continue;
     }
     const rel = `assets/audio/voice/${questId}/${line.lineId}.ogg`;

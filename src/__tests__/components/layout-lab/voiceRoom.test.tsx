@@ -37,7 +37,7 @@ const STATE = {
 const TAKE = {
   id: 'take-1', gameId: 'gtai', questId: 'first-quest', lineId: 'a1', voiceId: 'v1', providerVoiceId: 'p1', textHash: 'h', direction: 'whispered, fast',
   sentText: '[whispered] [fast] a1 text', settings: { model: 'eleven_v3', stability: 0.5, similarityBoost: 0.75, style: 0.3, speed: 1 },
-  durationMs: 2100, loudnessLufs: -18.2, chars: 26, verdict: 'pending', verdictNote: null, verdictAt: null, createdAt: 1, stale: false,
+  durationMs: 2100, loudnessLufs: -18.2, chars: 26, verdict: 'pending', verdictNote: null, verdictAt: null, createdAt: 1, stale: false, reason: null,
   maxSilenceMs: 200, readbackText: 'a one text whispers', readbackWer: 0.5,
 };
 const DETAIL = { line: QUEUE[0], bible: '# Voice bible: Rivet', takes: [TAKE], history: [], voices: [] };

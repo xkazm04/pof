@@ -98,7 +98,7 @@ async function main() {
       out(`${d.line.questId}/${d.line.lineId} · ${d.line.speaker} · ${d.line.state}\n  "${d.line.text}"`);
       out(contextOf(d.line));
       for (const t of d.takes) {
-        out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.stale ? ' (stale text)' : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch ${t.readbackWer === null ? 'read-back pending' : `heard ${Math.round(t.readbackWer * 100)}% wrong`}${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
+        out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.stale ? ` (not current: ${t.reason ?? 'stale'})` : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch ${t.readbackWer === null ? 'read-back pending' : `heard ${Math.round(t.readbackWer * 100)}% wrong`}${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
       }
       return;
     }
