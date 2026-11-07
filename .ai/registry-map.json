@@ -5314,13 +5314,12 @@
           "changedAt": "2026-10-26",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/evaluator/PostProcessStudioView/constants.ts:30 Context searches found no headset, OpenXR or multiview references; asset scouting and resolution-tier post-process estimates do not establish standalone-headset authoring budgets.",
-          "evaluatedAt": "2026-10-21",
-          "evaluatedAgainst": "sha256-b2:559b15da64446e2f",
-          "evaluatedRevision": 2,
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/constants.ts:30 The post-process studio costs effects only against flat-display resolution tiers, with no per-eye or mobile-tiler target; searching AssetScoutView and PostProcessStudioView found no headset, openxr, thermal or overdraw terms, so the precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:1622a8b76d8483fd",
+          "evaluatedRevision": 8,
           "source": "retained",
-          "revisionsBehind": 6,
-          "stale": true
+          "revisionsBehind": 6
         },
         {
           "subject": "optional-dependency-degradation",
@@ -5968,13 +5967,12 @@
           "changedAt": "2026-10-26",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:75 Context searches found no headset, OpenXR or multiview references; the module provides a desktop SVG audio editor rather than a standalone-headset renderer or frame-budget authoring system.",
-          "evaluatedAt": "2026-10-21",
-          "evaluatedAgainst": "sha256-b2:559b15da64446e2f",
-          "evaluatedRevision": 2,
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:75 This is a desktop browser editor for placing audio emitters and zones, and it has no renderer or frame-budget authoring; searching AudioScenePainter and AudioPropertyPanel found no headset, openxr, thermal or overdraw terms (the only 'stereo' hits are a Web Audio StereoPannerNode).",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:1622a8b76d8483fd",
+          "evaluatedRevision": 8,
           "source": "retained",
-          "revisionsBehind": 6,
-          "stale": true
+          "revisionsBehind": 6
         }
       ],
       "governance": "governed"
@@ -7676,8 +7674,8 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "background-jobs",
@@ -19451,12 +19449,11 @@
           "changedAt": "2026-10-26",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/index.tsx:63 Context searches found no headset, OpenXR or multiview references; these tools generate material properties and post-process recipes without selecting a standalone-headset target.",
-          "evaluatedAt": "2026-10-21",
-          "evaluatedAgainst": "sha256-b2:559b15da64446e2f",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 6,
-          "stale": true
+          "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/constants.ts:35 The post-process GPU budget is computed against one fixed desktop 1080p target, not a per-eye buffer on a standalone headset; a case-insensitive search of both tool folders found no headset, openxr, thermal or overdraw terms, so the subject's standalone-headset precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:1622a8b76d8483fd",
+          "evaluatedRevision": 8,
+          "revisionsBehind": 6
         },
         {
           "subject": "tiling-texture-acceptance",

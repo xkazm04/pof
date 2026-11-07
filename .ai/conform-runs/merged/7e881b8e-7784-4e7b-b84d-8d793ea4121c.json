@@ -1,0 +1,109 @@
+{
+  "schema": "conform-run/1",
+  "worker": "7e881b8e-7784-4e7b-b84d-8d793ea4121c",
+  "subject": "standalone-headset-frame-budgets",
+  "evaluatedAt": "2026-11-07T01:36:33.197148+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "material-style-tools",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/materials/PostProcessStackBuilder/constants.ts:35 The post-process GPU budget is computed against one fixed desktop 1080p target, not a per-eye buffer on a standalone headset; a case-insensitive search of both tool folders found no headset, openxr, thermal or overdraw terms, so the subject's standalone-headset precondition does not hold.",
+      "techniques": [],
+      "absenceTerms": [
+        "headset",
+        "openxr",
+        "thermal",
+        "overdraw"
+      ]
+    },
+    {
+      "context": "audio-scene-designer",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:75 This is a desktop browser editor for placing audio emitters and zones, and it has no renderer or frame-budget authoring; searching AudioScenePainter and AudioPropertyPanel found no headset, openxr, thermal or overdraw terms (the only 'stereo' hits are a Web Audio StereoPannerNode).",
+      "techniques": [],
+      "absenceTerms": [
+        "headset",
+        "openxr",
+        "thermal",
+        "overdraw"
+      ]
+    },
+    {
+      "context": "asset-visual-studio",
+      "subject": "standalone-headset-frame-budgets",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/PostProcessStudioView/constants.ts:30 The post-process studio costs effects only against flat-display resolution tiers, with no per-eye or mobile-tiler target; searching AssetScoutView and PostProcessStudioView found no headset, openxr, thermal or overdraw terms, so the precondition does not hold.",
+      "techniques": [],
+      "absenceTerms": [
+        "headset",
+        "openxr",
+        "thermal",
+        "overdraw"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "standalone-headset-frame-budgets",
+      "context": "build-quality-monitoring",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, CSVImportPanel.tsx:64, is only a help-text line about pasting a UE5 stat CSV. It doesn't show the single frameBudgetMs budget or the single-view draw-call count the evidence relies on. Those do appear in FrameTimeChart.tsx and index.tsx, but the anchor itself is incidental."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T01:36:33.197148+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "material-style-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T01:36:33.197148+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "audio-scene-designer",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T01:36:33.197148+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "asset-visual-studio",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T01:36:33.197148+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "standalone-headset-frame-budgets"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "build-quality-monitoring",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
