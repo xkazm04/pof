@@ -38,8 +38,10 @@ function ScriptCard({ job }: { job: ScriptJob }) {
         <StatusIcon
           size={14}
           className={`${config.color} ${job.status === 'running' ? 'animate-spin' : ''}`}
+          aria-hidden="true"
         />
         <span className="text-xs font-medium text-text flex-1">{job.scriptName}</span>
+        <span className={`text-xs ${config.color}`}>{config.label}</span>
         <span className="text-xs text-text-muted">{elapsed}s</span>
         <button
           type="button"

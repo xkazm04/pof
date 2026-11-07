@@ -118,3 +118,17 @@ describe('Script history controls are reachable and named', () => {
     expect(screen.getByRole('button', { name: /clear finished/i }).classList.contains('focus-ring')).toBe(true);
   });
 });
+
+describe('Script history states each job status in words, not by icon hue alone', () => {
+  it('renders the STATUS_CONFIG label for done and failed jobs', () => {
+    useBlenderStore.setState({
+      scripts: [
+        { id: 'a', scriptName: 'Mesh Stats', args: [], status: 'failed', output: '', error: 'boom', startedAt: 1, completedAt: 2 },
+        { id: 'b', scriptName: 'LOD Generation', args: [], status: 'completed', output: 'ok', startedAt: 1, completedAt: 2 },
+      ],
+    });
+    render(<ScriptRunner />);
+    expect(screen.getByText('Failed')).toBeTruthy();
+    expect(screen.getByText('Done')).toBeTruthy();
+  });
+});
