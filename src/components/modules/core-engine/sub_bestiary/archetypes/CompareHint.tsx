@@ -10,7 +10,7 @@ interface CompareHintProps {
 
 export function CompareHint({ compareIds, compareArchetypes, toggleCompare }: CompareHintProps) {
   if (compareIds.length === 0) {
-    return <p className="text-xs text-text-muted">Click enemies to compare (up to 4)</p>;
+    return <p className="text-xs text-text-muted">Press + on an enemy card to compare (up to 4)</p>;
   }
   return (
     <div className="text-sm text-text-muted mb-2">
